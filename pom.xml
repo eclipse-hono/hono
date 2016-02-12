@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2016 Bosch Software Innovations GmbH.
+
+    All rights reserved. This program and the accompanying materials 
+    are made available under the terms of the Eclipse Public License v1.0
+    which accompanies this distribution, and is available at
+    http://www.eclipse.org/legal/epl-v10.html
+    
+    Contributors:
+    Bosch Software Innovations GmbH - initial API and implementation and initial documentation
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.eclipse.hono</groupId>
+  <artifactId>hono-parent</artifactId>
+  <version>0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Hono</name>
+  <description>Hono provides a scalable messaging infrastructure targeted at Internet of Things use cases.</description>
+  <url>https://projects.eclipse.org/projects/iot.hono</url>
+  <inceptionYear>2016</inceptionYear>
+
+  <organization>
+    <name>Eclipse Foundation</name>
+    <url>http://www.eclipse.org/</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>Eclipse Public License - Version 1.0</name>
+      <url>http://www.eclipse.org/org/documents/epl-v10.php</url>
+    </license>
+  </licenses>
+  <scm>
+    <developerConnection>scm:git:https://github.com/eclipse/hono.git</developerConnection>
+    <url>https://github.com/eclipse/hono</url>
+    <tag>HEAD</tag>
+  </scm>
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/eclipse/hono/issues</url>
+  </issueManagement>
+  <developers>
+    <developer>
+      <id>hkonsyk</id>
+      <name>Henryk Konsek</name>
+      <email>hekonsek@gmail.com</email>
+      <roles>
+        <role>Lead</role>
+        <role>Committer</role>
+      </roles>
+    </developer>
+    <developer>
+      <id>khudalla</id>
+      <name>Kai Hudalla</name>
+      <email>kai.hudalla@bosch-si.com</email>
+      <url>https://github.com/sophokles73</url>
+      <organization>Bosch Software Innovations GmbH</organization>
+      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <roles>
+        <role>Lead</role>
+        <role>Committer</role>
+      </roles>
+    </developer>
+    <developer>
+      <id>dbosanac</id>
+      <name>Dejan Bosanac</name>
+      <email>dejan@sensatic.net</email>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
+    <developer>
+      <id>dguggemos</id>
+      <name>Dominik Guggemos</name>
+      <email>dominik.guggemos@bosch-si.com</email>
+      <organization>Bosch Software Innovations GmbH</organization>
+      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
+  </developers>
+
+  <distributionManagement>
+    <repository>
+      <id>repo.eclipse.org</id>
+      <name>Hono Releases</name>
+      <url>https://repo.eclipse.org/content/repositories/hono-releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>repo.eclipse.org</id>
+      <name>Hono Snapshots</name>
+      <url>https://repo.eclipse.org/content/repositories/hono-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <modules>
+    <module>api</module>
+    <module>client</module>
+    <module>dispatcher</module>
+    <module>example</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.7.2</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.3</version>
+          <configuration>
+            <source>1.8</source>
+            <target>1.8</target>
+            <encoding>UTF-8</encoding>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

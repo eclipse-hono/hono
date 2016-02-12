@@ -1,0 +1,9 @@
+**/target/
+**/.idea/
+**/*.iml
+**/bin/
+
+# Eclipse files
+**/.classpath
+**/.project
+**/.settings/
