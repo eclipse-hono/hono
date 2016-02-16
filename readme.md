@@ -14,7 +14,7 @@ This will build all libraries and example code.
 
 ##### Run the Example
 
-Please see [Hono Example](hono-example/readme.md) for details on how to run the demo application.
+Please see [Hono Example](example/readme.md) for details on how to run the demo application.
 
 ### Using Hono
 
