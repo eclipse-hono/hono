@@ -14,8 +14,8 @@ In order to run the example you will need the following
 The easiest way to run the example is by using [Docker Compose](https://docs.docker.com/compose) to start up *RabbitMQ* and *Hono Dispatcher* *Docker* images. However, it is also possible to run these images individually using plain *Docker* (see next section).
 
 1. If you do not already have *Docker* and *Docker Compose* installed on your system follow these instructions to
-  * [install docker](https://docs.docker.com/engine/installation/) and
-  * **optionally** [install docker-compose](https://docs.docker.com/compose/install/)
+  * [install Docker](https://docs.docker.com/engine/installation/) and
+  * **optionally** [install Docker Compose](https://docs.docker.com/compose/install/)
 1. In order to build the *Hono Dispatcher* Docker image run the following from the `dispatcher` folder
    `$ mvn install -Pbuild-docker-image`
 
@@ -31,6 +31,10 @@ Use the following to stop the server components
 
     $ docker-compose stop
 
+If you want to restart the services later use
+
+    $ docker-compose start
+
 ### Start Server Components using plain Docker
 
 If you do not want to install *Docker Compose* or simply want to have more fine grained control over the process
@@ -41,20 +45,13 @@ you can also use plain *Docker* to run and wire up the images manually from the 
 In order to start a broker using [the official RabbitMQ image](https://hub.docker.com/_/rabbitmq/) run the following from the
 command line
 
-    $ docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 -h rabbit rabbitmq:3-management
+    $ docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 -h rabbitmq rabbitmq:3-management
 
 ##### Start Hono Dispatcher
 
 Once the *RabbitMQ* Docker image has been started using the command above the *Hono Dispatcher* image can be run as follows
 
-    $ docker run --name hono -d \
-    >   -e QUEUE_CONFIG='{"in":{"exchange":{"name":"in","declare":true},"queue":{"name":"queue.in"}, \
-    >   "binding":["message","registerTopic"]},"out":{"exchange":{"name":"out","declare":true}}}' \
-    >   --link rabbitmq:rabbitmq hono/dispatcher:0.1-SNAPSHOT
-
-or as single-line command (easier to copy/paste)
-
-    docker run --name hono -d -e QUEUE_CONFIG='{"in":{"exchange":{"name":"in","declare":true},"queue":{"name":"queue.in"},"binding":["message","registerTopic"]},"out":{"exchange":{"name":"out","declare":true}}}' --link rabbitmq:rabbitmq hono/dispatcher:0.1-SNAPSHOT
+    $ docker run -d --name hono --link rabbitmq hono/dispatcher:0.1-SNAPSHOT
 
 ### Run Clients
 
@@ -62,15 +59,13 @@ Now that the required server components have been started you can run the exampl
 * `Client1_Sender` can send messages typed on the console to the *Hono Dispatcher* and also listens to messages received from the dispatcher and logs them to the console.
 * `Client2_Receiver` listens to messages sent to the *Hono Dispatcher*, e.g. using `Client1_Sender`, and prints them to the console.
 
-Set environment variables on Linux
+Set environment variable on Linux (**NOTE**: replace *localhost* with the IP address of the machine running the *RabbitMQ* broker)
 
-    $ export AMQP_HOST=localhost
-    $ export AMQP_PORT=5672
+    $ export AMQP_URI=amqp://localhost:5672
 
 or on Windows
 
-    $ set AMQP_HOST=localhost
-    $ set AMQP_PORT=5672
+    $ set AMQP_URI=amqp://localhost:5672
 
 then run either `Client1_Sender` or `Client2_Receiver` from the `example/target` folder.
 
@@ -84,12 +79,10 @@ If you want to start the *Hono Dispatcher* service from within your IDE or from 
 Set the following environment variables in order to make the *RabbitMQ* broker's host and port available to the *Hono Dispatcher* (make sure to replace the host and port with the host and port your broker is running on). On Linux use
 
     $ export AMQP_URI=amqp://localhost:5672
-    $ export QUEUE_CONFIG='{"in":{"exchange":{"name":"in","declare":true},"queue":{"name":"queue.in"},"binding":["message","registerTopic"]},"out":{"exchange":{"name":"out","declare":true}}}'
 
 or on Windows use
 
     $ set AMQP_URI=amqp://localhost:5672
-    $ set QUEUE_CONFIG='{"in":{"exchange":{"name":"in","declare":true},"queue":{"name":"queue.in"},"binding":["message","registerTopic"]},"out":{"exchange":{"name":"out","declare":true}}}'
 
 Then run the following from the `dispatcher` folder using Maven
 

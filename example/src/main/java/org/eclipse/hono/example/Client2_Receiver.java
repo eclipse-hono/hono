@@ -13,8 +13,6 @@ package org.eclipse.hono.example;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.eclipse.hono.example.Constants.CLIENT_ID_2;
-import static org.eclipse.hono.example.Constants.HOST;
-import static org.eclipse.hono.example.Constants.PORT;
 import static org.eclipse.hono.example.Constants.TOPIC_1;
 import static org.eclipse.hono.example.Constants.TOPIC_2;
 
@@ -32,7 +30,7 @@ public final class Client2_Receiver
    private static final Logger LOGGER    = LoggerFactory.getLogger(Client2_Receiver.class);
 
    public static void main(final String[] args) throws Exception {
-      final ConnectionConfig connectionConfig = new AmqpConnectionConfig(HOST, PORT);
+        final ConnectionConfig connectionConfig = new AmqpConnectionConfig(Constants.AMQP_URI);
       final AmqpConnectorClient client = new AmqpConnectorClient(CLIENT_ID_2, connectionConfig);
 
       client.connect();

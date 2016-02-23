@@ -17,46 +17,46 @@ import org.eclipse.hono.client.api.ConnectionConfig;
 
 public class AmqpConnectionConfig implements ConnectionConfig {
     private static final String AMQP_PREFIX = "amqp://";
-    private final String        host;
-    private final String        port;
-    private final String        username;
-    private final String        password;
-    private final String        vhost;
+    private final String        uri;
+
+    public AmqpConnectionConfig(final String uri) {
+        requireNonNull(uri, "AMQP uri must not be null");
+        if (!uri.toLowerCase().startsWith(AMQP_PREFIX)) {
+            throw new IllegalArgumentException("AMQP uri must begin with \"amqp://\"");
+        } else {
+            this.uri = uri;
+        }
+    }
 
     public AmqpConnectionConfig(final String host, final String port) {
-        this(requireNonNull(host, "amqp host must be specified."),
-           requireNonNull(port, "amqp port must be specified."),
-           null, null, null);
+        this(host, port, null, null, null);
     }
 
     public AmqpConnectionConfig(final String host, final String port, final String username, final String password,
             final String vhost) {
-        requireNonNull(host);
-        requireNonNull(port);
-        this.host = host;
-        this.port = port;
-        this.username = username;
-        this.password = password;
-        this.vhost = vhost;
+        this.uri = createConnectionUri(requireNonNull(host, "amqp host must be specified."),
+                requireNonNull(port, "amqp port must be specified."),
+                username,
+                password,
+                vhost);
+    }
+
+    private String createConnectionUri(final String host, final String port, final String username,
+            final String password, final String vhost) {
+        final StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(AmqpConnectionConfig.AMQP_PREFIX);
+        if (username != null && password != null) {
+            stringBuilder.append(username).append(":").append(password).append("@");
+        }
+        stringBuilder.append(host).append(":").append(port);
+        if (vhost != null) {
+            stringBuilder.append("/").append(vhost);
+        }
+        return stringBuilder.toString();
     }
 
     @Override
     public String getConnectionUri() {
-        final StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(AmqpConnectionConfig.AMQP_PREFIX);
-        if (username != null && password != null) {
-            stringBuilder.append(username);
-            stringBuilder.append(":");
-            stringBuilder.append(password);
-            stringBuilder.append("");
-        }
-        stringBuilder.append(host);
-        stringBuilder.append(":");
-        stringBuilder.append(port);
-        if (vhost != null) {
-            stringBuilder.append("/");
-            stringBuilder.append(vhost);
-        }
-        return stringBuilder.toString();
+        return uri;
     }
 }

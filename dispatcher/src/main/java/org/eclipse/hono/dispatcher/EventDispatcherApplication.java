@@ -31,11 +31,11 @@ import reactor.bus.EventBus;
  * Launcher for outgoing event dispatcher.
  */
 public final class EventDispatcherApplication {
+    private static final String            DEFAULT_AMQP_URI = "amqp://rabbitmq:5672";
+    private static final String ENV_VAR_AMQP_URI = "AMQP_URI";
     private static final Logger LOGGER = LoggerFactory.getLogger(EventDispatcherApplication.class);
     private static final CountDownLatch    LATCH       = new CountDownLatch(1);
     public static final DefaultEnvironment ENVIRONMENT = new DefaultEnvironment();
-    public static final String DOCKER_RABBITMQ_ADDR = "RABBITMQ_PORT_5672_TCP_ADDR";
-    public static final String DOCKER_RABBITMQ_PORT = "RABBITMQ_PORT_5672_TCP_PORT";
 
     /**
      * Java main method. Launches the EventDispatcherApplication.
@@ -78,11 +78,7 @@ public final class EventDispatcherApplication {
     }
 
     private String determineAmqpUri() {
-        if (EventDispatcherApplication.ENVIRONMENT.get("RABBITMQ_PORT_5672_TCP") != null) {
-            return "amqp://" + System.getenv(DOCKER_RABBITMQ_ADDR) + ":" + System.getenv(DOCKER_RABBITMQ_PORT);
-        } else {
-            return EventDispatcherApplication.ENVIRONMENT.get("AMQP_URI");
-        }
+        return EventDispatcherApplication.ENVIRONMENT.getOrDefault(ENV_VAR_AMQP_URI, DEFAULT_AMQP_URI);
     }
 
     protected void initDispatcher(final EventBus reactor, final Connection connection,

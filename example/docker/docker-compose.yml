@@ -1,11 +1,12 @@
 rabbitmq:
   image: rabbitmq:3-management
   ports:
-   - "5672:5672"
-   - "15672:15672"
+    - "5672:5672"
+    - "15672:15672"
 dispatcher:
   image: hono/dispatcher:0.1-SNAPSHOT
   links:
-   - rabbitmq:rabbitmq
+    - rabbitmq
   environment:
-   - QUEUE_CONFIG={"in":{"exchange":{"name":"in","declare":true},"queue":{"name":"queue.in"},"binding":["message","registerTopic"]},"out":{"exchange":{"name":"out","declare":true}}}
+    - AMQP_URI=amqp://rabbitmq:5672
+

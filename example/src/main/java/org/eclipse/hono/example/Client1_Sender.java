@@ -17,8 +17,6 @@ import static org.eclipse.hono.client.api.model.Permission.RECEIVE;
 import static org.eclipse.hono.client.api.model.Permission.SEND;
 import static org.eclipse.hono.example.Constants.CLIENT_ID_1;
 import static org.eclipse.hono.example.Constants.CLIENT_ID_2;
-import static org.eclipse.hono.example.Constants.HOST;
-import static org.eclipse.hono.example.Constants.PORT;
 import static org.eclipse.hono.example.Constants.TOPIC_1;
 import static org.eclipse.hono.example.Constants.TOPIC_2;
 
@@ -45,7 +43,7 @@ public final class Client1_Sender
     private static final Logger LOGGER = LoggerFactory.getLogger(Client1_Sender.class);
 
     public static void main(final String[] args) throws Exception {
-        final ConnectionConfig connectionConfig = new AmqpConnectionConfig(HOST, PORT);
+        final ConnectionConfig connectionConfig = new AmqpConnectionConfig(Constants.AMQP_URI);
         final TopicAcl topic1Acl1_Admin = new TopicAcl(Constants.CLIENT_ID_1,
                 new Permissions(SEND, RECEIVE, ADMINISTRATE));
         final AmqpConnectorClient client = new AmqpConnectorClient(Constants.CLIENT_ID_1, connectionConfig);

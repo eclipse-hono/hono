@@ -13,7 +13,6 @@ package org.eclipse.hono.dispatcher.amqp.configuration;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonObject;
@@ -53,6 +52,24 @@ public final class QueueConfigurationLoader {
      * Name of the environment variable containing the queue configuration.
      */
     public static final String              QUEUE_CONFIG = "QUEUE_CONFIG";
+    public static final String              DEFAULT_QUEUE_CONFIG = new StringBuilder()
+                                                                         .append("{\"in\" : {")
+                                                                         .append("\"exchange\" : {")
+                                                                         .append("\"name\" : \"in\",")
+                                                                         .append("\"declare\" : true")
+                                                                         .append("},")
+                                                                         .append("\"queue\" : {")
+                                                                         .append("\"name\" : \"queue.in\"")
+                                                                         .append("},")
+                                                                         .append("\"binding\" : [\"message\",\"registerTopic\"]")
+                                                                         .append("},")
+                                                                         .append("\"out\" : {")
+                                                                         .append("\"exchange\" : {")
+                                                                         .append("\"name\" : \"out\",")
+                                                                         .append("\"declare\" : true")
+                                                                         .append("}")
+                                                                         .append("}}")
+                                                                         .toString();
     private Map<String, QueueConfiguration> configs      = new HashMap<>();
 
     private QueueConfigurationLoader(final Map<String, QueueConfiguration> configs) {
@@ -76,9 +93,10 @@ public final class QueueConfigurationLoader {
      */
     public static QueueConfigurationLoader fromEnv(final Environment env) {
         final Map<String, QueueConfiguration> configs = new HashMap<>();
-        final String queueConfig = Objects
-                .requireNonNull(env.get(QueueConfigurationLoader.QUEUE_CONFIG),
-                        "Env variable " + QueueConfigurationLoader.QUEUE_CONFIG + " must not be empty.");
+        String queueConfig = env.get(QueueConfigurationLoader.QUEUE_CONFIG);
+        if (queueConfig == null) {
+            queueConfig = DEFAULT_QUEUE_CONFIG;
+        }
         final JsonObject json = Json.parse(queueConfig).asObject();
         json.forEach(m -> configs.put(m.getName(), QueueConfiguration.parse(m.getValue().asObject())));
         return new QueueConfigurationLoader(configs);
