@@ -18,8 +18,9 @@
 
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-parent</artifactId>
+    <artifactId>hono-bom</artifactId>
     <version>0.1-SNAPSHOT</version>
+    <relativePath>../bom</relativePath>
   </parent>
 
   <artifactId>hono-api</artifactId>

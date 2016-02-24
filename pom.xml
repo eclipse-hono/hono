@@ -99,6 +99,7 @@
   </distributionManagement>
 
   <modules>
+    <module>bom</module>
     <module>api</module>
     <module>client</module>
     <module>dispatcher</module>
