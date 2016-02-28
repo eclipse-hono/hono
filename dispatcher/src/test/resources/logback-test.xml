@@ -14,4 +14,5 @@
   </root>
 
 <logger name="org.eclipse.hono" level="DEBUG"/>
+<logger name="org.eclipse.hono.dispatcher" level="TRACE"/>
 </configuration>

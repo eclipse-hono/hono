@@ -110,6 +110,7 @@
     <module>adapters</module>
     <module>example</module>
     <module>vertx-proton</module>
+    <module>server</module>
   </modules>
 
   <dependencyManagement>
