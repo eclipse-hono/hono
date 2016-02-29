@@ -18,8 +18,9 @@
 
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-parent</artifactId>
+    <artifactId>hono-bom</artifactId>
     <version>0.1-SNAPSHOT</version>
+    <relativePath>../bom</relativePath>
   </parent>
 
   <artifactId>hono-example</artifactId>
@@ -28,7 +29,6 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>hono-client</artifactId>
-      <version>${project.version}</version>
     </dependency>
   </dependencies>
 
