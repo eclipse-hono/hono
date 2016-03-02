@@ -1,47 +1,70 @@
 package org.eclipse.hono.adapter.rest;
 
-import com.google.common.truth.Truth;
-import org.apache.activemq.broker.BrokerService;
-import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit4.CamelTestSupport;
-import org.apache.commons.io.IOUtils;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.web.client.RestTemplate;
-
-import java.io.IOException;
-import java.net.URL;
-
 import static org.apache.camel.component.amqp.AMQPComponent.amqp10Component;
 
+import static org.hamcrest.CoreMatchers.is;
+
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.broker.TransportConnector;
+import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.test.junit4.CamelTestSupport;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.springframework.web.client.RestTemplate;
+
 public class RestProtocolAdapterTest extends CamelTestSupport {
+
+    private static InetSocketAddress brokerAddress;
+    private static MessageConsumer consumer = new MessageConsumer();
+    private static BrokerService broker;
 
     // Fixtures
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        BrokerService broker = new BrokerService();
+        broker = new BrokerService();
         broker.setPersistent(false);
-        broker.addConnector("amqp://0.0.0.0:9999?transport.transformer=jms");
+        TransportConnector connector = broker
+                .addConnector("amqp://0.0.0.0:0?transport.transformer=jms&deliveryPeristent=false");
         broker.start();
+        brokerAddress = connector.getServer().getSocketAddress();
+    }
+
+    @Before
+    public void setup() {
+        consumer.clear();
+        consumer.setLatch(new CountDownLatch(1));
+    }
+
+    @AfterClass
+    public static void afterClass() throws Exception {
+        if (broker != null) {
+            broker.stop();
+        }
     }
 
     @Override
     protected RouteBuilder[] createRouteBuilders() throws Exception {
-        context.addComponent("amqp", amqp10Component("amqp://guest:guest@localhost:9999"));
-
+        String brokerUri = String.format("amqp://guest:guest@%s:%d", brokerAddress.getHostString(),
+                brokerAddress.getPort());
+        context.addComponent("amqp", amqp10Component(brokerUri));
         BinaryHttpRequestMapping requestMapping = new BinaryHttpRequestMapping();
         RestProtocolAdapter adapter = new RestProtocolAdapter(requestMapping, 8888);
 
         RouteBuilder serviceRoute = new RouteBuilder() {
             @Override
             public void configure() throws Exception {
-                from("amqp:hello").setBody().constant("hello service");
-                from("amqp:echo").log("Executing echo service.");
-                from("amqp:echoheader").setBody().header("foo");
+                from("amqp:telemetry").setExchangePattern(ExchangePattern.InOnly).bean(consumer);
             }
         };
 
@@ -51,24 +74,49 @@ public class RestProtocolAdapterTest extends CamelTestSupport {
     // Tests
 
     @Test
-    public void shouldReceiveResponseFromService() throws IOException {
-        String response = IOUtils.toString(new URL("http://localhost:8888/hello"));
-        Truth.assertThat(response).isEqualTo("hello service");
+    public void shouldHaveReceivedMessage() throws Exception {
+        String json = "{\"temp\" : 15}";
+        new RestTemplate().put("http://localhost:8888/hello", json);
+
+        assertTrue(consumer.getLatch().await(2, TimeUnit.SECONDS));
+        assertFalse(consumer.isEmpty());
+        assertThat(consumer.get(0), is(json));
     }
 
-    @Test
-    public void shouldReceiveBodyFromService() throws IOException {
-        String response = new RestTemplate().postForObject("http://localhost:8888/echo", "foo", String.class);
-        Truth.assertThat(response).isEqualTo("foo");
-    }
+    public static class MessageConsumer {
+        private List<String> incomingMessages = new ArrayList<>();
+        private CountDownLatch latch;
 
-    @Test
-    public void shouldReceiveHeader() throws IOException {
-        HttpHeaders requestHeaders = new HttpHeaders();
-        requestHeaders.add("foo", "bar");
-        HttpEntity<?> requestEntity = new HttpEntity<>(requestHeaders);
-        String response = new RestTemplate().exchange("http://localhost:8888/echoheader", HttpMethod.GET, requestEntity, String.class).getBody();
-        Truth.assertThat(response).isEqualTo("bar");
-    }
+        public void setLatch(CountDownLatch newLatch) {
+            this.latch = newLatch;
+        }
 
+        public CountDownLatch getLatch() {
+            return latch;
+        }
+
+        public void process(Exchange exchange) {
+            String message = exchange.getIn().getBody(String.class);
+            addMessage(message);
+        }
+
+        public void addMessage(String message) {
+            if (message != null) {
+                incomingMessages.add(message);
+                latch.countDown();
+            }
+        }
+
+        public boolean isEmpty() {
+            return incomingMessages.isEmpty();
+        }
+
+        public String get(int idx) {
+            return incomingMessages.get(idx);
+        }
+
+        public void clear() {
+            incomingMessages.clear();
+        }
+    }
 }
