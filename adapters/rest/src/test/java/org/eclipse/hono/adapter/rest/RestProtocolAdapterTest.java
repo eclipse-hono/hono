@@ -2,6 +2,7 @@ package org.eclipse.hono.adapter.rest;
 
 import static org.apache.camel.component.amqp.AMQPComponent.amqp10Component;
 
+import static org.eclipse.hono.adapter.rest.RestProtocolAdapter.HONO_IN_ONLY;
 import static org.hamcrest.CoreMatchers.is;
 
 import java.net.InetSocketAddress;
@@ -20,6 +21,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestTemplate;
 
 public class RestProtocolAdapterTest extends CamelTestSupport {
@@ -76,7 +80,10 @@ public class RestProtocolAdapterTest extends CamelTestSupport {
     @Test
     public void shouldHaveReceivedMessage() throws Exception {
         String json = "{\"temp\" : 15}";
-        new RestTemplate().put("http://localhost:8888/hello", json);
+        HttpHeaders requestHeaders = new HttpHeaders();
+        requestHeaders.add(HONO_IN_ONLY, "true");
+        HttpEntity<?> requestEntity = new HttpEntity<>(json, requestHeaders);
+        new RestTemplate().exchange("http://localhost:8888/telemetry", HttpMethod.PUT, requestEntity, String.class);
 
         assertTrue(consumer.getLatch().await(2, TimeUnit.SECONDS));
         assertFalse(consumer.isEmpty());
