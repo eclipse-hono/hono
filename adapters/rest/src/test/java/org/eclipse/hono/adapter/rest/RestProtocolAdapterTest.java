@@ -1,7 +1,6 @@
 package org.eclipse.hono.adapter.rest;
 
 import static org.apache.camel.component.amqp.AMQPComponent.amqp10Component;
-
 import static org.eclipse.hono.adapter.rest.RestProtocolAdapter.HONO_IN_ONLY;
 import static org.hamcrest.CoreMatchers.is;
 
