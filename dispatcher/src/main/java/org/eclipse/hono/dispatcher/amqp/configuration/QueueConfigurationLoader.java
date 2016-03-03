@@ -82,7 +82,7 @@ public final class QueueConfigurationLoader {
      * @return the resolved configuration.
      */
     public static QueueConfigurationLoader fromEnv() {
-        return QueueConfigurationLoader.fromEnv(new DefaultEnvironment());
+        return QueueConfigurationLoader.fromEnv(new SystemEnvironment());
     }
 
     /**

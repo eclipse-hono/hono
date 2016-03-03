@@ -84,13 +84,14 @@ public final class Exchange {
 
     @Override
     public String toString() {
-        return "Exchange{" +
-                "name='" + name + '\'' +
-                ", type=" + type +
-                ", durable=" + durable +
-                ", autodelete=" + autodelete +
-                ", declare=" + declare +
-                '}';
+        return new StringBuffer("Exchange{")
+                .append("name='").append(name).append('\'')
+                .append(", type=").append(type)
+                .append(", durable=").append(durable)
+                .append(", autodelete=").append(autodelete)
+                .append(", declare=").append(declare)
+                .append('}')
+                .toString();
     }
 
     /**

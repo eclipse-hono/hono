@@ -17,7 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import org.eclipse.hono.dispatcher.amqp.AmqpConnection;
 import org.eclipse.hono.dispatcher.amqp.AmqpHelper;
 import org.eclipse.hono.dispatcher.amqp.DefaultAmqpHelper;
-import org.eclipse.hono.dispatcher.amqp.configuration.DefaultEnvironment;
+import org.eclipse.hono.dispatcher.amqp.configuration.SystemEnvironment;
 import org.eclipse.hono.dispatcher.amqp.configuration.QueueConfigurationLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +35,7 @@ public final class EventDispatcherApplication {
     private static final String ENV_VAR_AMQP_URI = "AMQP_URI";
     private static final Logger LOGGER = LoggerFactory.getLogger(EventDispatcherApplication.class);
     private static final CountDownLatch    LATCH       = new CountDownLatch(1);
-    public static final DefaultEnvironment ENVIRONMENT = new DefaultEnvironment();
+    public static final SystemEnvironment ENVIRONMENT = new SystemEnvironment();
 
     /**
      * Java main method. Launches the EventDispatcherApplication.

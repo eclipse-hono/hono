@@ -14,7 +14,7 @@ package org.eclipse.hono.dispatcher.amqp.configuration;
 /**
  * Default implementation, loads from System.getenv.
  */
-public final class DefaultEnvironment implements Environment {
+public final class SystemEnvironment implements Environment {
     @Override
     public String get(final String key) {
         return System.getenv(key);

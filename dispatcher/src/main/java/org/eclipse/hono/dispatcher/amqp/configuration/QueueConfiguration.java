@@ -63,6 +63,10 @@ public final class QueueConfiguration {
 
     @Override
     public String toString() {
-        return "Config{" + "exchange=" + exchange + ", queue=" + queue + ",binding=" + binding + '}';
+        return new StringBuilder("Config{exchange=").append(exchange)
+                .append(", queue=").append(queue)
+                .append(",binding=").append(binding)
+                .append('}')
+                .toString();
     }
 }
