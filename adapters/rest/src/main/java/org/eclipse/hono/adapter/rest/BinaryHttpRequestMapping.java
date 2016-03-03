@@ -1,12 +1,12 @@
 package org.eclipse.hono.adapter.rest;
 
-import org.apache.camel.Exchange;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import static org.apache.camel.Exchange.CONTENT_TYPE;
 import static org.apache.camel.Exchange.HTTP_URI;
 import static org.apache.commons.lang3.StringUtils.removeEnd;
+
+import org.apache.camel.Exchange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BinaryHttpRequestMapping implements HttpRequestMapping {
 
@@ -38,6 +38,7 @@ public class BinaryHttpRequestMapping implements HttpRequestMapping {
         LOG.debug("Trimmed request URI: {}", trimmedUri);
         String busChannel = trimmedUri.substring(1).replaceAll("\\/", ".");
         exc.setProperty("target", "amqp:" + busChannel);
+        exc.getIn().setHeader("resource", trimmedUri);
     }
 
 }
