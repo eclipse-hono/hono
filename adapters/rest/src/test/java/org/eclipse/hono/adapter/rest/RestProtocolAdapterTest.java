@@ -4,6 +4,7 @@ import static org.apache.camel.component.amqp.AMQPComponent.amqp10Component;
 import static org.eclipse.hono.adapter.rest.RestProtocolAdapter.HONO_IN_ONLY;
 import static org.hamcrest.CoreMatchers.is;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,10 @@ public class RestProtocolAdapterTest extends CamelTestSupport {
         RouteBuilder serviceRoute = new RouteBuilder() {
             @Override
             public void configure() throws Exception {
+                from("amqp:hello").setBody().constant("hello service");
+                from("amqp:echo").log("Executing echo service.");
+                from("amqp:echoheader").setBody().header("foo");
+
                 from("amqp:telemetry").setExchangePattern(ExchangePattern.InOnly).bean(consumer);
             }
         };
@@ -75,6 +80,27 @@ public class RestProtocolAdapterTest extends CamelTestSupport {
     }
 
     // Tests
+
+    @Test
+    public void shouldReceiveResponseFromService() throws IOException {
+        String response = new RestTemplate().getForObject("http://localhost:8888/hello", String.class);
+        assertThat(response, is("hello service"));
+    }
+
+    @Test
+    public void shouldReceiveBodyFromService() throws IOException {
+        String response = new RestTemplate().postForObject("http://localhost:8888/echo", "foo", String.class);
+        assertThat(response, is("foo"));
+    }
+
+    @Test
+    public void shouldReceiveHeader() throws IOException {
+        HttpHeaders requestHeaders = new HttpHeaders();
+        requestHeaders.add("foo", "bar");
+        HttpEntity<?> requestEntity = new HttpEntity<>(requestHeaders);
+        String response = new RestTemplate().exchange("http://localhost:8888/echoheader", HttpMethod.GET, requestEntity, String.class).getBody();
+        assertThat(response, is("bar"));
+    }
 
     @Test
     public void shouldHaveReceivedMessage() throws Exception {
