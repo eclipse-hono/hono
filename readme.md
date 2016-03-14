@@ -32,3 +32,8 @@ Please take a look at the [example clients](example) which illustrate how client
 ### Get in Touch
 
 Please check out the [Hono project home page](https://projects.eclipse.org/projects/iot.hono) for details.
+
+### Build status
+
+Travis CI ![Build status](https://travis-ci.org/eclipse/hono.svg)
+[Hudson](https://hudson.eclipse.org/hono/)
