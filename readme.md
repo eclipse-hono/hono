@@ -35,5 +35,5 @@ Please check out the [Hono project home page](https://projects.eclipse.org/proje
 
 ### Build status
 
-Travis CI ![Build status](https://travis-ci.org/eclipse/hono.svg)
-[Hudson](https://hudson.eclipse.org/hono/)
+- Travis CI ![Build status](https://travis-ci.org/eclipse/hono.svg)
+- [Hudson](https://hudson.eclipse.org/hono/)
