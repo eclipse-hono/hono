@@ -6,4 +6,6 @@ public interface HttpRequestMapping {
 
     void mapRequest(Exchange exchange);
 
+    void mapResponse(Exchange exchange);
+
 }

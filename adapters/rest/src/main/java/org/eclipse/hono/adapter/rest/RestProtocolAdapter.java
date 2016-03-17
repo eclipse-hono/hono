@@ -7,7 +7,13 @@ import org.slf4j.LoggerFactory;
 import static org.apache.camel.Exchange.HTTP_METHOD;
 import static org.apache.camel.ExchangePattern.InOnly;
 
+/**
+ * Exposes Camel REST endpoint (using Netty HTTP) and maps incoming requests/responses into AMQP messages. Can be used
+ * to expose AMQP-based services using REST API.
+ */
 public class RestProtocolAdapter extends RouteBuilder {
+
+    // Logger
 
     private static final Logger LOG = LoggerFactory.getLogger(RestProtocolAdapter.class);
 
@@ -19,17 +25,25 @@ public class RestProtocolAdapter extends RouteBuilder {
 
     private final HttpRequestMapping httpRequestMapping;
 
+    private final String host;
+
     private final int port;
 
     // Constructors
 
-    public RestProtocolAdapter(HttpRequestMapping httpRequestMapping) {
-        this(httpRequestMapping, 0);
+
+    public RestProtocolAdapter(HttpRequestMapping httpRequestMapping, String host, int port) {
+        this.httpRequestMapping = httpRequestMapping;
+        this.host = host;
+        this.port = port;
     }
 
     public RestProtocolAdapter(HttpRequestMapping httpRequestMapping, int port) {
-        this.httpRequestMapping = httpRequestMapping;
-        this.port = port;
+        this(httpRequestMapping, "0.0.0.0", port);
+    }
+
+    public RestProtocolAdapter(HttpRequestMapping httpRequestMapping) {
+        this(httpRequestMapping, "0.0.0.0", 0);
     }
 
     // Routes
@@ -37,14 +51,14 @@ public class RestProtocolAdapter extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         LOG.debug("Started REST protocol adapter at port {}.", port);
-            from("netty4-http:http://0.0.0.0:" + port + "/?matchOnUriPrefix=true&httpMethodRestrict=OPTIONS,GET,POST,PUT,DELETE").
+            from("netty4-http:http://" + host + ":" + port + "/?matchOnUriPrefix=true&httpMethodRestrict=OPTIONS,GET,POST,PUT,DELETE").
                 choice().
                     when(header(HONO_IN_ONLY).isEqualToIgnoreCase("true")).setExchangePattern(InOnly).
                 end().
                 choice().
                     when(header(HTTP_METHOD).isEqualTo("OPTIONS")).setBody().constant("").endChoice().
                 otherwise().
-                    process(httpRequestMapping::mapRequest).toD("${property.target}").endChoice().
+                    process(httpRequestMapping::mapRequest).toD("${property.target}").process(httpRequestMapping::mapResponse).endChoice().
                 end().
                 setHeader("Access-Control-Allow-Origin").constant("*").
                 setHeader("Access-Control-Allow-Headers").constant("Origin, X-Requested-With, Content-Type, Accept");

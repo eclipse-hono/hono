@@ -8,22 +8,29 @@ import org.apache.camel.Exchange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BinaryHttpRequestMapping implements HttpRequestMapping {
+import java.util.Optional;
 
-    private static final Logger LOG = LoggerFactory.getLogger(BinaryHttpRequestMapping.class);
+public class DefaultHttpRequestMapping implements HttpRequestMapping {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultHttpRequestMapping.class);
 
     // Constants
 
     public static final String DEFAULT_CONTENT_TYPE = "application/json";
 
+    private Optional<PayloadEncoder> payloadEncoder;
+
     private final String contentType;
 
-    public BinaryHttpRequestMapping(String contentType) {
+    // Constructors
+
+    public DefaultHttpRequestMapping(Optional<PayloadEncoder> payloadEncoder, String contentType) {
+        this.payloadEncoder = payloadEncoder;
         this.contentType = contentType;
     }
 
-    public BinaryHttpRequestMapping() {
-        this(DEFAULT_CONTENT_TYPE);
+    public DefaultHttpRequestMapping(Optional<PayloadEncoder> payloadEncoder) {
+        this(payloadEncoder, DEFAULT_CONTENT_TYPE);
     }
 
     // Operations
@@ -39,6 +46,20 @@ public class BinaryHttpRequestMapping implements HttpRequestMapping {
         String busChannel = trimmedUri.substring(1).replaceAll("\\/", ".");
         exc.setProperty("target", "amqp:" + busChannel);
         exc.getIn().setHeader("resource", trimmedUri);
+
+        byte[] body = exc.getIn().getBody(byte[].class);
+        if (payloadEncoder.isPresent() && body.length > 0) {
+            Object payload = payloadEncoder.get().decode(body);
+            exc.getIn().setBody(payload);
+        }
+    }
+
+    @Override
+    public void mapResponse(Exchange exchange) {
+        if(payloadEncoder.isPresent()) {
+            byte[] payload = payloadEncoder.get().encode(exchange.getIn().getBody());
+            exchange.getIn().setBody(payload);
+        }
     }
 
 }
