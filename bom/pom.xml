@@ -29,6 +29,7 @@
     <activemq.version>5.13.0</activemq.version>
     <camel.version>2.16.1</camel.version>
     <commons-lang3.version>3.4</commons-lang3.version>
+    <geronimo-jms-spec-version>1.1.1</geronimo-jms-spec-version>
     <hono.version>0.1-SNAPSHOT</hono.version>
     <jackson.version>2.7.3</jackson.version>
     <junit.version>4.12</junit.version>
