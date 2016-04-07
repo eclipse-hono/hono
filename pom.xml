@@ -109,6 +109,7 @@
     <module>dispatcher</module>
     <module>adapters</module>
     <module>example</module>
+    <module>vertx-proton</module>
   </modules>
 
   <dependencyManagement>
