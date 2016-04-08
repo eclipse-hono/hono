@@ -11,12 +11,14 @@
  */
 package org.eclipse.hono.server;
 
-import java.util.Objects;
+import static org.eclipse.hono.telemetry.TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX;
+
 import java.util.UUID;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,7 +46,6 @@ public final class HonoServer extends AbstractVerticle {
      * 
      */
     public static final String  EVENT_BUS_ADDRESS_TELEMETRY_IN = "telemetry.in";
-    public static final String  NODE_ADDRESS_TELEMETRY_UPLOAD = "telemetry/upload";
     private static final Logger LOG                           = LoggerFactory.getLogger(HonoServer.class);
     private String              host;
     private int                 port;
@@ -103,14 +104,13 @@ public final class HonoServer extends AbstractVerticle {
 
     void helloProcessConnection(final ProtonConnection connection) {
         connection.sessionOpenHandler(session -> session.open());
-        connection.receiverOpenHandler(this::handleReceiverOpen);
+        connection.receiverOpenHandler(openedReceiver -> handleReceiverOpen(connection, openedReceiver));
         connection.disconnectHandler(HonoServer::handleDisconnected);
         connection.closeHandler(HonoServer::handleConnectionClosed);
         connection.openHandler(result -> {
             LOG.debug("Client [{}:{}] connected", connection.getRemoteHostname(), connection.getRemoteContainer());
-            connection.setContainer("Hono").open();
+            connection.setContainer(String.format("Hono-%s:%d", this.host, server.actualPort())).open();
         });
-
     }
 
     private static void handleConnectionClosed(AsyncResult<ProtonConnection> res) {
@@ -128,12 +128,16 @@ public final class HonoServer extends AbstractVerticle {
     /**
      * Handles a request from a client to establish a link for sending messages to this server.
      * 
+     * @param con the connection to the client.
      * @param receiver the receiver created for the link.
      */
-    void handleReceiverOpen(final ProtonReceiver receiver) {
-        LOG.debug("client wants to upload data [address: {}]", receiver.getRemoteTarget());
+    void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
+        LOG.debug("client wants to open a link for sending messages [address: {}]", receiver.getRemoteTarget());
         receiver.setTarget(receiver.getRemoteTarget());
-        if (NODE_ADDRESS_TELEMETRY_UPLOAD.equals(receiver.getRemoteTarget().getAddress())) {
+        if (receiver.getRemoteTarget() == null) {
+            LOG.debug("discarding ATTACH from client [{}] for default address", con.getRemoteHostname());
+            receiver.close();
+        } else if (receiver.getRemoteTarget().getAddress().startsWith(NODE_ADDRESS_TELEMETRY_PREFIX)) {
             // client wants to upload telemetry data
             handleTelemetryUpload(receiver);
         } else {
@@ -144,17 +148,35 @@ public final class HonoServer extends AbstractVerticle {
     }
 
     private void handleTelemetryUpload(final ProtonReceiver receiver) {
-        Objects.requireNonNull(receiver);
-        receiver.setAutoAccept(false);
-        LOG.debug("client uses QoS: {}", receiver.getRemoteQoS());
-        receiver.handler((delivery, message) -> {
-            LOG.trace("received message [id: {}]", message.getMessageId());
-            if (TelemetryMessageFilter.verify(message)) {
-                sendTelemetryData(delivery, message);
-            } else {
-                ProtonHelper.rejected(delivery, true);
-            }
-        }).flow(20).open();
+        final String tenantId = determineTenant(receiver);
+        if (!isClientAuthorizedToUploadTelemetryData(receiver, tenantId)) {
+            LOG.debug("client is not authorized to upload telemetry data for tenant [id: {}], closing link", tenantId);
+            receiver.close();
+        } else {
+            receiver.setAutoAccept(false);
+            LOG.debug("client uses QoS: {}", receiver.getRemoteQoS());
+            receiver.handler((delivery, message) -> {
+                if (TelemetryMessageFilter.verify(tenantId, message)) {
+                    sendTelemetryData(delivery, message);
+                } else {
+                    ProtonHelper.rejected(delivery, true);
+                }
+            }).flow(20).open();
+        }
+    }
+
+    private String determineTenant(final ProtonReceiver receiver) {
+        String tenantId = receiver.getRemoteTarget().getAddress().substring(NODE_ADDRESS_TELEMETRY_PREFIX.length());
+        if (tenantId.isEmpty()) {
+            return Constants.DEFAULT_TENANT;
+        } else {
+            return tenantId;
+        }
+    }
+
+    private boolean isClientAuthorizedToUploadTelemetryData(final ProtonReceiver receiver, final String tenantId) {
+        // TODO: do proper authorization
+        return true;
     }
 
     private void sendTelemetryData(final ProtonDelivery delivery, final Message msg) {

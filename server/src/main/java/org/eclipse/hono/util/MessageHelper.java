@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.server;
+package org.eclipse.hono.util;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -95,8 +95,17 @@ public final class MessageHelper {
         if (props == null) {
             return null;
         } else {
-            return (String) props.getValue().get(name);
+            return props.getValue().get(name);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void addTenantId(final org.apache.qpid.proton.message.Message msg, final String tenantId) {
+        ApplicationProperties props = msg.getApplicationProperties();
+        if (props == null) {
+            props = new ApplicationProperties(new HashMap<String, Object>());
+        }
+        props.getValue().put(APP_PROPERTY_TENANT_ID, tenantId);
     }
 
     public static DeliveryOptions toVertxDeliveryOptions(final org.apache.qpid.proton.message.Message msg) {

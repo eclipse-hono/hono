@@ -11,10 +11,10 @@
  */
 package org.eclipse.hono.mom.rabbitmq;
 
-import static org.eclipse.hono.server.MessageHelper.PREFIX_APPLICATION_PROPERTY;
-import static org.eclipse.hono.server.MessageHelper.PROPERTY_CONTENT_TYPE;
-import static org.eclipse.hono.server.MessageHelper.PROPERTY_CORRELATION_ID;
-import static org.eclipse.hono.server.MessageHelper.PROPERTY_MESSAGE_ID;
+import static org.eclipse.hono.util.MessageHelper.PREFIX_APPLICATION_PROPERTY;
+import static org.eclipse.hono.util.MessageHelper.PROPERTY_CONTENT_TYPE;
+import static org.eclipse.hono.util.MessageHelper.PROPERTY_CORRELATION_ID;
+import static org.eclipse.hono.util.MessageHelper.PROPERTY_MESSAGE_ID;
 
 import java.io.IOException;
 import java.util.HashMap;

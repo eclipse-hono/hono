@@ -20,6 +20,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.impl.ProtonSenderWriteStream;
 import org.eclipse.hono.mom.rabbitmq.RabbitMqHelper;
 import org.eclipse.hono.server.HonoServer;
+import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -49,6 +50,10 @@ import io.vertx.proton.ProtonSender;
 @RunWith(VertxUnitRunner.class)
 public class HonoServerTest {
 
+    /**
+     * 
+     */
+    private static final String TENANT_ID_BOSCH = "BOSCH";
     private static final Logger    LOG                     = LoggerFactory.getLogger(HonoServerTest.class);
     static Vertx                   vertx;
     static HonoServer           server;
@@ -107,7 +112,7 @@ public class HonoServerTest {
         int timeout = 2000; // milliseconds
         final AtomicLong start = new AtomicLong();
 
-        protonSender = connection.createSender(HonoServer.NODE_ADDRESS_TELEMETRY_UPLOAD);
+        protonSender = connection.createSender(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + TENANT_ID_BOSCH);
         protonSender
                 .setQoS(ProtonQoS.AT_MOST_ONCE)
                 .openHandler(senderOpen -> {
@@ -128,7 +133,7 @@ public class HonoServerTest {
     private void uploadTelemetryData(final int count, final ProtonSender sender, final Handler<Void> allProducedHandler,
             final Async sentMessages) {
         vertx.executeBlocking(future -> {
-            ReadStream<Message> rs = new TelemetryDataReadStream(vertx, count);
+            ReadStream<Message> rs = new TelemetryDataReadStream(vertx, count, TENANT_ID_BOSCH);
             WriteStream<Message> ws = new ProtonSenderWriteStream(sender, delivered -> sentMessages.countDown());
             rs.endHandler(done -> future.complete());
             LOG.debug("pumping test telemetry data to Hono server");
