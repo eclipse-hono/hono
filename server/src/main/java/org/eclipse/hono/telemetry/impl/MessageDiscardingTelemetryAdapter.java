@@ -11,9 +11,9 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
-import static org.eclipse.hono.server.MessageHelper.getDeviceId;
-import static org.eclipse.hono.server.MessageHelper.getMessageId;
-import static org.eclipse.hono.server.MessageHelper.getTenantId;
+import static org.eclipse.hono.util.MessageHelper.getDeviceId;
+import static org.eclipse.hono.util.MessageHelper.getMessageId;
+import static org.eclipse.hono.util.MessageHelper.getTenantId;
 
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;

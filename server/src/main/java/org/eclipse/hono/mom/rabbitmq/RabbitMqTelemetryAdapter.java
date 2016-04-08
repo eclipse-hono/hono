@@ -11,8 +11,8 @@
  */
 package org.eclipse.hono.mom.rabbitmq;
 
-import static org.eclipse.hono.server.MessageHelper.getMessageId;
-import static org.eclipse.hono.server.MessageHelper.getTenantId;
+import static org.eclipse.hono.util.MessageHelper.getMessageId;
+import static org.eclipse.hono.util.MessageHelper.getTenantId;
 
 import java.io.IOException;
 import java.util.Optional;

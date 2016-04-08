@@ -11,10 +11,9 @@
  */
 package org.eclipse.hono.telemetry;
 
-import static org.eclipse.hono.server.MessageHelper.APP_PROPERTY_DEVICE_ID;
-import static org.eclipse.hono.server.MessageHelper.APP_PROPERTY_TENANT_ID;
-
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,31 +23,60 @@ import org.slf4j.LoggerFactory;
  */
 public final class TelemetryMessageFilter {
 
-    private static final String DEFAULT_TENANT_ID = "default";
-
     private static final Logger LOG = LoggerFactory.getLogger(TelemetryMessageFilter.class);
+
+    private TelemetryMessageFilter() {
+    }
 
     /**
      * Checks whether a given telemetry message contains all required properties.
      * 
+     * @param linkAddressTenant the ID of the tenant to upload telemetry data for as determined from the target address
+     *            of the link established by the client.
      * @param msg the message to verify.
-     * @return {@code true} if the given message complies with the <em>Telemetry</em> API, {@code false} otherwise.
+     * @return {@code true} if the given message complies with the <em>Telemetry</em> API specification, {@code false}
+     *         otherwise.
      */
-    @SuppressWarnings("unchecked")
-    public static boolean verify(final Message msg) {
-        String deviceId = (String) msg.getApplicationProperties().getValue().get(APP_PROPERTY_DEVICE_ID);
-        if (deviceId == null) {
-            LOG.trace("dropping message [id: {}] due to missing device ID", msg.getMessageId());
+    public static boolean verify(final String linkAddressTenant, final Message msg) {
+        return hasConsistentToField(linkAddressTenant, msg);
+    }
+
+    static boolean hasConsistentToField(final String linkAddressTenant, final Message msg) {
+        if (msg.getAddress() == null
+                || !msg.getAddress().startsWith(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX)) {
+            LOG.trace("message [id: {}] has no valid address [to: {}]", msg.getMessageId(), msg.getAddress());
             return false;
-        }
-        String tenant = (String) msg.getApplicationProperties().getValue().get(APP_PROPERTY_TENANT_ID);
-        if (tenant == null) {
-            LOG.trace("no tenant-id found in telemetry message [id: {}], using default [{}]", msg.getMessageId(),
-                    DEFAULT_TENANT_ID);
-            msg.getApplicationProperties().getValue().put(APP_PROPERTY_TENANT_ID, DEFAULT_TENANT_ID);
         } else {
-            LOG.trace("telemetry message passed [id: {}, tenant: {}]", msg.getMessageId(), tenant);
+            return hasConsistentDeviceIdProperty(msg) && hasConsistentTenantIdProperty(linkAddressTenant, msg);
         }
-        return true;
+    }
+
+    private static boolean hasConsistentDeviceIdProperty(final Message msg) {
+        Object deviceId = MessageHelper.getDeviceId(msg);
+        final String deviceIdFromAddress = msg.getAddress()
+                .substring(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX.length());
+        boolean consistent = deviceIdFromAddress.equals(deviceId);
+        if (!consistent) {
+            LOG.trace(
+                    "message's [id: {}] application-property [device-id: {}] is inconsistent with message address [to: {}]",
+                    msg.getMessageId(), deviceId, msg.getAddress());
+        }
+        return consistent;
+    }
+
+    private static boolean hasConsistentTenantIdProperty(final String linkAddressTenant, final Message msg) {
+        Object tenantId = MessageHelper.getTenantId(msg);
+        if (tenantId == null && Constants.isDefaultTenant(linkAddressTenant)) {
+            // add DEFAULT_TENANT to message
+            tenantId = Constants.DEFAULT_TENANT;
+            MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
+        }
+        boolean consistent = linkAddressTenant.equals(tenantId);
+        if (!consistent) {
+            LOG.trace(
+                    "message's [id: {}] application-property [tenant-id: {}] is inconsistent with link target address [tenant: {}]",
+                    msg.getMessageId(), tenantId, linkAddressTenant);
+        }
+        return consistent;
     }
 }

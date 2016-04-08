@@ -16,17 +16,18 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
-import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.streams.ReadStream;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * A stream producing a given number of telemetry data messages.
@@ -43,13 +44,15 @@ public class TelemetryDataReadStream implements ReadStream<Message> {
     private Handler<Message>    handler;
     private boolean             paused;
     private Vertx               vertx;
+    private String              tenantId;
 
     /**
      * @param count the number of messages to produce.
      */
-    public TelemetryDataReadStream(final Vertx vertx, final int count) {
+    public TelemetryDataReadStream(final Vertx vertx, final int count, final String tenantId) {
         this.vertx = Objects.requireNonNull(vertx);
         messagesToSend = count;
+        this.tenantId = tenantId;
     }
 
     /*
@@ -89,7 +92,7 @@ public class TelemetryDataReadStream implements ReadStream<Message> {
             if (sendMore()) {
                 int messageId = counter++;
                 LOG.trace("producing new telemetry message [id: {}]", messageId);
-                handler.handle(newTelemetryData(messageId, "Bosch", messageId % 2 == 0, messageId % 35));
+                handler.handle(newTelemetryData(messageId, tenantId, messageId % 2 == 0, messageId % 35));
             }
             if (isFinished()) {
                 vertx.cancelTimer(id);
@@ -137,20 +140,18 @@ public class TelemetryDataReadStream implements ReadStream<Message> {
         return this;
     }
 
-    private Message newTelemetryData(final long messageId, final String tenant, final boolean includeTenant,
+    private Message newTelemetryData(final long messageId, final String tenantId, final boolean includeTenant,
             final int temperature) {
-        Message message = Message.Factory.create();
-        Properties properties = new Properties();
-        properties.setMessageId(String.valueOf(messageId));
-        properties.setContentType(Symbol.valueOf("application/octet-stream"));
-        Map<String, String> appProps = new HashMap<>();
+        Message message = ProtonHelper.message();
+        message.setMessageId(String.valueOf(messageId));
+        message.setContentType("application/octet-stream");
+        message.setAddress(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + DEVICE_BUMLUX_TEMP_4711);
+        Map<String, Object> appProps = new HashMap<>();
         if (includeTenant) {
-            properties.setTo(tenant);
-            appProps.put("tenant-id", tenant);
+            appProps.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         }
-        appProps.put("device-id", DEVICE_BUMLUX_TEMP_4711);
+        appProps.put(MessageHelper.APP_PROPERTY_DEVICE_ID, DEVICE_BUMLUX_TEMP_4711);
 
-        message.setProperties(properties);
         message.setApplicationProperties(new ApplicationProperties(appProps));
         message.setBody(new Data(new Binary(String.format("{\"temp\" : %d}", temperature).getBytes())));
         return message;
