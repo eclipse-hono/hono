@@ -130,7 +130,7 @@
        <version>${vertx.version}</version>
       </dependency>
       <dependency>
-       <groupId>io.vertx</groupId>
+       <groupId>org.eclipse.hono</groupId>
        <artifactId>vertx-proton</artifactId>
        <version>${vertx-proton.version}</version>
       </dependency>

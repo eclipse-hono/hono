@@ -11,6 +11,7 @@
   <artifactId>hono-server</artifactId>
   <name>hono-server</name>
   <url>http://maven.apache.org</url>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -42,7 +43,7 @@
       <artifactId>proton-j</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.vertx</groupId>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>vertx-proton</artifactId>
     </dependency>
     <dependency>
