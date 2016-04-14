@@ -12,8 +12,8 @@
 package org.eclipse.hono.telemetry.impl;
 
 import org.eclipse.hono.AmqpMessage;
-import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
+import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
      */
     @Override
     public final void start() throws Exception {
-        telemetryDataConsumer = vertx.eventBus().consumer(HonoServer.EVENT_BUS_ADDRESS_TELEMETRY_IN);
+        telemetryDataConsumer = vertx.eventBus().consumer(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN);
         telemetryDataConsumer.handler(this::processMessage);
         doStart();
     }
@@ -64,7 +64,8 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
     }
 
     private void processMessage(final Message<String> message) {
-        Object obj = vertx.sharedData().getLocalMap(HonoServer.EVENT_BUS_ADDRESS_TELEMETRY_IN).remove(message.body());
+        Object obj = vertx.sharedData().getLocalMap(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN)
+                .remove(message.body());
         if (obj instanceof AmqpMessage) {
             AmqpMessage telemetryMsg = (AmqpMessage) obj;
             if (processTelemetryData(telemetryMsg.getMessage())) {
@@ -75,7 +76,7 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
             }
         } else {
             LOG.warn("expected {} in shared local map {} but found {}", AmqpMessage.class.getName(),
-                    HonoServer.EVENT_BUS_ADDRESS_TELEMETRY_IN, obj.getClass().getName());
+                    TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN, obj.getClass().getName());
         }
     }
 }

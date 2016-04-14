@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.server;
 
-import static org.eclipse.hono.telemetry.TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX;
+import static org.eclipse.hono.telemetry.TelemetryConstants.*;
 
 import java.util.UUID;
 
@@ -42,11 +42,7 @@ import io.vertx.proton.ProtonServerOptions;
 @Component
 public final class HonoServer extends AbstractVerticle {
 
-    /**
-     * 
-     */
-    public static final String  EVENT_BUS_ADDRESS_TELEMETRY_IN = "telemetry.in";
-    private static final Logger LOG                           = LoggerFactory.getLogger(HonoServer.class);
+    private static final Logger LOG                            = LoggerFactory.getLogger(HonoServer.class);
     private String              host;
     private int                 port;
     private ProtonServer        server;
@@ -84,11 +80,28 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
+    /**
+     * Sets the port Hono will listen on for AMQP 1.0 connections.
+     * <p>
+     * If set to 0 Hono will bind to an arbitrary free port chosen by the operating system.
+     * </p>
+     * 
+     * @param port the port to bind to.
+     */
     @Value(value = "${hono.server.port}")
     public void setPort(int port) {
         this.port = port;
     }
 
+    /**
+     * Gets the port Hono listens on for AMQP 1.0 connections.
+     * <p>
+     * If the port has been set to 0 Hono will bind to an arbitrary free port chosen by the operating system during
+     * startup. Once Hono is up and running this method returns the <em>actual port</em> Hono has bound to.
+     * </p>
+     * 
+     * @return the port Hono listens on.
+     */
     public int getPort() {
         return this.port;
     }
