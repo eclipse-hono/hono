@@ -42,7 +42,7 @@ import io.vertx.proton.ProtonServerOptions;
 @Component
 public final class HonoServer extends AbstractVerticle {
 
-    private static final Logger LOG                            = LoggerFactory.getLogger(HonoServer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HonoServer.class);
     private String              host;
     private int                 port;
     private ProtonServer        server;
