@@ -11,8 +11,7 @@
  */
 package org.eclipse.hono.mom.rabbitmq;
 
-import static org.eclipse.hono.util.MessageHelper.getMessageId;
-import static org.eclipse.hono.util.MessageHelper.getTenantId;
+import static org.eclipse.hono.util.MessageHelper.*;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -31,6 +30,8 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Connection;
 
+import io.vertx.core.Future;
+
 /**
  * 
  */
@@ -45,10 +46,11 @@ public final class RabbitMqTelemetryAdapter extends BaseTelemetryAdapter {
     private RabbitMqHelper          channel;
 
     @Override
-    public void doStart() throws Exception {
+    public void doStart(final Future<Void> startFuture) throws Exception {
         connectToBroker();
         declareTelemetryUploadExchange();
         LOGGER.info("telemetry adapter started");
+        startFuture.complete();
     }
 
     /**
@@ -71,11 +73,16 @@ public final class RabbitMqTelemetryAdapter extends BaseTelemetryAdapter {
     }
 
     @Override
-    public void doStop() throws Exception {
+    public void doStop(final Future<Void> stopFuture) {
         if (brokerConnection != null) {
-            brokerConnection.close(2000);
-            LOGGER.info("disconnected from RabbitMQ broker [{}]", brokerUri);
+            try {
+                brokerConnection.close(2000);
+                LOGGER.info("disconnected from RabbitMQ broker [{}]", brokerUri);
+            } catch (IOException e) {
+                LOGGER.error("problem disconnecting from RabbitMQ broker [{}]", brokerUri);
+            }
         }
+        stopFuture.complete();
     }
 
     private void connectToBroker() throws IOException {

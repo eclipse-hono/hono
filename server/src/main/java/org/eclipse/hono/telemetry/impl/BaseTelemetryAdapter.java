@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 
@@ -38,14 +39,17 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
      * @see io.vertx.core.AbstractVerticle#start()
      */
     @Override
-    public final void start() throws Exception {
+    public final void start(final Future<Void> startFuture) throws Exception {
         telemetryDataConsumer = vertx.eventBus().consumer(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN);
         telemetryDataConsumer.handler(this::processMessage);
-        doStart();
+        LOG.info("listening on event bus [address: {}] for incoming telemetry messages",
+                TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN);
+        doStart(startFuture);
     }
 
-    protected void doStart() throws Exception {
+    protected void doStart(final Future<Void> startFuture) throws Exception {
         // should be overridden by subclasses
+        startFuture.complete();
     }
 
     /*
@@ -54,13 +58,20 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
      * @see io.vertx.core.AbstractVerticle#stop()
      */
     @Override
-    public final void stop() throws Exception {
-        telemetryDataConsumer.unregister();
-        doStop();
+    public final void stop(final Future<Void> stopFuture) {
+        telemetryDataConsumer.unregister(unregistered -> {
+            if (unregistered.succeeded()) {
+                LOG.info("unregistered message consumer from event bus");
+                doStop(stopFuture);
+            } else {
+                stopFuture.fail(unregistered.cause());
+            }
+        });
     }
 
-    protected void doStop() throws Exception {
+    protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
+        stopFuture.complete();
     }
 
     private void processMessage(final Message<String> message) {
