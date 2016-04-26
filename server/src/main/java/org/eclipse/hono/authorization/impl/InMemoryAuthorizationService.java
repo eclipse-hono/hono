@@ -11,11 +11,10 @@
  */
 package org.eclipse.hono.authorization.impl;
 
-import static java.util.Collections.emptySet;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 import java.util.EnumSet;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -41,20 +40,17 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
    public InMemoryAuthorizationService()
    {
-      // allow default subject SEND permission on telemetry endpoint of default tenant
-      addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + Constants.DEFAULT_TENANT, Permission.SEND);
-   }
-
-   @Override
-   public Set<String> getAuthorizedSubjects(final String resource, final Permission permission)
-   {
-      return ofNullable(resources.get(resource)).map(acl -> acl.getAuthorizedSubjectsFor(permission))
-         .orElse(emptySet());
+      // allow default subject WRITE permission on telemetry endpoint of default tenant
+      addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + Constants.DEFAULT_TENANT, Permission.WRITE);
    }
 
    @Override
    public boolean hasPermission(final String subject, final String resource, final Permission permission)
    {
+      requireNonNull(subject, "subject is required");
+      requireNonNull(resource, "resource is required");
+      requireNonNull(permission, "permission is required");
+
       return ofNullable(resources.get(resource)).map(acl -> acl.hasPermission(subject, permission)).orElse(false);
    }
 
@@ -62,6 +58,10 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
    public void addPermission(final String subject, final String resource, final Permission first,
       final Permission... rest)
    {
+      requireNonNull(subject, "subject is required");
+      requireNonNull(resource, "resource is required");
+      requireNonNull(first, "permission is required");
+
       final EnumSet<Permission> permissions = EnumSet.of(first, rest);
       LOGGER.debug("Add permission {} for subject {} on resource {}.", permissions, subject, resource);
       resources.computeIfAbsent(resource, key -> new AccessControlList())
@@ -72,6 +72,10 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
    public void removePermission(final String subject, final String resource, final Permission first,
       final Permission... rest)
    {
+      requireNonNull(subject, "subject is required");
+      requireNonNull(resource, "resource is required");
+      requireNonNull(first, "permission is required");
+
       final EnumSet<Permission> permissions = EnumSet.of(first, rest);
       LOGGER.debug("Delete permission {} for subject {} on resource {}.", first, subject, resource);
       resources.computeIfPresent(resource, (key, value) -> {

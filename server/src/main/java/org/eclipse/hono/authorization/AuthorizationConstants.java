@@ -12,7 +12,7 @@
 package org.eclipse.hono.authorization;
 
 /**
- *
+ * Constants related to authorization.
  */
 public final class AuthorizationConstants
 {

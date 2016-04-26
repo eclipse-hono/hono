@@ -206,7 +206,7 @@ public final class HonoServer extends AbstractVerticle {
         // TODO how to obtain subject information?
         body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
         body.put(RESOURCE_FIELD, receiver.getTarget().getAddress());
-        body.put(PERMISSION_FIELD, Permission.SEND.toString());
+        body.put(PERMISSION_FIELD, Permission.WRITE.toString());
         vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,
            res -> handler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
@@ -224,7 +224,7 @@ public final class HonoServer extends AbstractVerticle {
         // TODO how to obtain subject information?
         body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
         body.put(RESOURCE_FIELD, amqpMessage.getMessage().getProperties().getTo());
-        body.put(PERMISSION_FIELD, Permission.SEND.toString());
+        body.put(PERMISSION_FIELD, Permission.WRITE.toString());
 
         vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,
            res -> {

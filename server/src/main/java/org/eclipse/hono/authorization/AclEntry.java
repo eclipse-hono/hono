@@ -18,6 +18,9 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 
+/**
+ * Wraps an authorization subject and a set of {@link Permission}s.
+ */
 public class AclEntry implements Serializable
 {
    private final String authSubject;

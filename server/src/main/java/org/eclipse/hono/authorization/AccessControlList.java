@@ -18,6 +18,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Holds a list of @{@link AclEntry}s.
+ */
 public class AccessControlList
 {
    private final Map<String, AclEntry> entries = new HashMap<>();

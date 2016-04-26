@@ -76,8 +76,8 @@ public class HonoServerTest {
         vertx.deployVerticle(MessageDiscardingTelemetryAdapter.class.getName(), ctx.asyncAssertSuccess());
 
         final InMemoryAuthorizationService authorizationService = new InMemoryAuthorizationService();
-        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + TENANT_ID_BOSCH, Permission.SEND);
-        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + DEVICE_BUMLUX_TEMP_4711, Permission.SEND);
+        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + TENANT_ID_BOSCH, Permission.WRITE);
+        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + DEVICE_BUMLUX_TEMP_4711, Permission.WRITE);
         vertx.deployVerticle(authorizationService, ctx.asyncAssertSuccess());
 
     }

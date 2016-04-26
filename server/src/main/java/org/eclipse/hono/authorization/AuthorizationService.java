@@ -11,16 +11,39 @@
  */
 package org.eclipse.hono.authorization;
 
-import java.util.Set;
-
+/**
+ * Provides methods to add, remove or retrieve permissions on a resource for a given subject.
+ */
 public interface AuthorizationService
 {
 
-   Set<String> getAuthorizedSubjects(String resource, Permission permission);
-
+   /**
+    * Checks a permission for a subject and resource.
+    *
+    * @param subject the authorization subject
+    * @param resource the resource on which the subject want to be authorized
+    * @param permission the requested permission
+    * @return true if the subject has the requested permission on the given resource
+    */
    boolean hasPermission(String subject, String resource, Permission permission);
 
+   /**
+    * Adds a permission for a subject/resource.
+    *
+    * @param subject the authorization subject
+    * @param resource the resource for which to add a permission
+    * @param first the permission to add
+    * @param rest more permission to add optionally
+    */
    void addPermission(String subject, String resource, final Permission first, final Permission... rest);
 
+   /**
+    * Removes a permission for a subject/resource.
+    *
+    * @param subject the authorization subject
+    * @param resource the resource for which to remove a permission
+    * @param first the permission to remove
+    * @param rest more permission to remove optionally
+    */
    void removePermission(String subject, String resource, final Permission first, final Permission... rest);
 }

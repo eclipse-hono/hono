@@ -11,7 +11,10 @@
  */
 package org.eclipse.hono.authorization;
 
+/**
+ * Defines permissions that are required to access Hono service resources.
+ */
 public enum Permission
 {
-   RECEIVE, SEND, ADMINISTRATE
+   READ, WRITE, ADMINISTRATE
 }
