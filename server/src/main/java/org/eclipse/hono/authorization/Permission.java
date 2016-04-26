@@ -16,5 +16,5 @@ package org.eclipse.hono.authorization;
  */
 public enum Permission
 {
-   READ, WRITE, ADMINISTRATE
+   READ, WRITE
 }
