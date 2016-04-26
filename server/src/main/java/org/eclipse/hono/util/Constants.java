@@ -18,6 +18,7 @@ package org.eclipse.hono.util;
 public final class Constants {
 
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
+    public static final String DEFAULT_SUBJECT = "SUBJECT";
 
     private Constants() {
     }
