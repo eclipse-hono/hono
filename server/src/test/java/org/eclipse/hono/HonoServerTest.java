@@ -11,17 +11,20 @@
  */
 package org.eclipse.hono;
 
+import static org.eclipse.hono.TelemetryDataReadStream.DEVICE_BUMLUX_TEMP_4711;
+
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.impl.ProtonSenderWriteStream;
-import org.eclipse.hono.mom.rabbitmq.RabbitMqHelper;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
+import org.eclipse.hono.util.Constants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -57,8 +60,6 @@ public class HonoServerTest {
     private static final Logger    LOG                     = LoggerFactory.getLogger(HonoServerTest.class);
     static Vertx                   vertx;
     static HonoServer           server;
-    Random                         rnd;
-    RabbitMqHelper                 rabbitMq;
     ProtonConnection               connection;
     ProtonSender                   protonSender;
 
@@ -73,6 +74,12 @@ public class HonoServerTest {
 
         vertx.deployVerticle(server, ctx.asyncAssertSuccess());
         vertx.deployVerticle(MessageDiscardingTelemetryAdapter.class.getName(), ctx.asyncAssertSuccess());
+
+        final InMemoryAuthorizationService authorizationService = new InMemoryAuthorizationService();
+        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + TENANT_ID_BOSCH, Permission.SEND);
+        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + DEVICE_BUMLUX_TEMP_4711, Permission.SEND);
+        vertx.deployVerticle(authorizationService, ctx.asyncAssertSuccess());
+
     }
 
     @Before

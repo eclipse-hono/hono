@@ -49,6 +49,8 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
    {
       authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
       authRequestConsumer.handler(this::processMessage);
+      LOG.info("listening on event bus [address: {}] for incoming auth messages",
+              EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
       doStart();
    }
 

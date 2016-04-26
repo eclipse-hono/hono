@@ -43,8 +43,6 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
    {
       // allow default subject SEND permission on telemetry endpoint of default tenant
       addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + Constants.DEFAULT_TENANT, Permission.SEND);
-      addPermission(Constants.DEFAULT_SUBJECT, "telemetry/BOSCH", Permission.SEND);
-      addPermission(Constants.DEFAULT_SUBJECT, "telemetry/bumlux:temp:4711", Permission.SEND);
    }
 
    @Override

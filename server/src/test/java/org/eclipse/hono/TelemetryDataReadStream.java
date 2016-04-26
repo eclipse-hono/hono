@@ -36,7 +36,7 @@ import io.vertx.proton.ProtonHelper;
 public class TelemetryDataReadStream implements ReadStream<Message> {
 
     private static final Logger LOG                     = LoggerFactory.getLogger(TelemetryDataReadStream.class);
-    private static final String DEVICE_BUMLUX_TEMP_4711 = "bumlux:temp:4711";
+    static final String DEVICE_BUMLUX_TEMP_4711 = "bumlux:temp:4711";
 
     private int                 messagesToSend;
     private int                 counter;
