@@ -16,8 +16,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.EnumSet;
@@ -101,27 +101,29 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     private void loadPermissionsFromFile() {
-        try
-        {
-            final URI uri = InMemoryAuthorizationService.class.getResource(PERMISSIONS_JSON).toURI();
-            final String permissionsJson = new String(Files.readAllBytes(Paths.get(uri)), UTF_8);
-            final JsonObject permissionsObject = new JsonObject(permissionsJson);
+        final URL resource = InMemoryAuthorizationService.class.getResource(PERMISSIONS_JSON);
+        if (resource != null) {
+            try
+            {
+                final String permissionsJson = new String(Files.readAllBytes(Paths.get(resource.toURI())), UTF_8);
+                final JsonObject permissionsObject = new JsonObject(permissionsJson);
 
-            permissionsObject
-                    .stream().filter(resources -> resources.getValue() instanceof JsonObject)
-                    .forEach(resources -> {
-                        final JsonObject subjects = (JsonObject) resources.getValue();
-                        subjects
-                                .stream().filter(subject -> subject.getValue() instanceof JsonArray)
-                                .forEach(subject -> {
-                                    final JsonArray permissions = (JsonArray) subject.getValue();
-                                    addPermission(subject.getKey(), resources.getKey(), toSet(permissions));
-                                });
-                    });
-        }
-        catch (IOException | URISyntaxException e)
-        {
-            LOGGER.debug("Failed to load permissions from {}.", PERMISSIONS_JSON);
+                permissionsObject
+                        .stream().filter(resources -> resources.getValue() instanceof JsonObject)
+                        .forEach(resources -> {
+                            final JsonObject subjects = (JsonObject) resources.getValue();
+                            subjects
+                                    .stream().filter(subject -> subject.getValue() instanceof JsonArray)
+                                    .forEach(subject -> {
+                                        final JsonArray permissions = (JsonArray) subject.getValue();
+                                        addPermission(subject.getKey(), resources.getKey(), toSet(permissions));
+                                    });
+                        });
+            }
+            catch (IOException | URISyntaxException e)
+            {
+                LOGGER.debug("Failed to load permissions from {}: {}", PERMISSIONS_JSON, e.getMessage());
+            }
         }
     }
 
@@ -133,5 +135,4 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
                 .map(Permission::valueOf)
                 .collect(Collectors.<Permission>toSet());
     }
-
 }
