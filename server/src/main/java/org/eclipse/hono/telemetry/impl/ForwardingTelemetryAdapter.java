@@ -11,6 +11,9 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +41,14 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
     private ProtonSender        downstreamSender;
     private String              downstreamContainerHost;
     private int                 downstreamContainerPort;
+    private AtomicLong          messageTagCounter;
+
+    /**
+     * 
+     */
+    public ForwardingTelemetryAdapter() {
+        messageTagCounter = new AtomicLong();
+    }
 
     /**
      * @param host the hostname of the downstream AMQP 1.0 container to forward telemetry data to.
@@ -82,11 +93,12 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         if (downstreamConnection == null) {
             startFuture.fail("Downstream connection must be opened before creating sender");
         } else {
-            downstreamSender = downstreamConnection.createSender(null);
-            downstreamSender.setQoS(ProtonQoS.AT_MOST_ONCE);
-            downstreamSender.openHandler(openAttempt -> {
+            ProtonSender sender = downstreamConnection.createSender(null);
+            sender.setQoS(ProtonQoS.AT_MOST_ONCE);
+            sender.openHandler(openAttempt -> {
                 if (openAttempt.succeeded()) {
                     LOG.info("sender for downstream container [{}] open", downstreamConnection.getRemoteContainer());
+                    setSender(openAttempt.result());
                     startFuture.complete();
                 } else {
                     LOG.warn("could not open sender for downstream container [{}]",
@@ -95,6 +107,10 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                 }
             }).open();
         }
+    }
+
+    void setSender(final ProtonSender sender) {
+        this.downstreamSender = sender;
     }
 
     @Override
@@ -131,10 +147,13 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
     public boolean processTelemetryData(final Message telemetryData) {
         if (downstreamSender != null && downstreamSender.isOpen()) {
             // TODO flow control with downstream container
-            downstreamSender.send(new byte[] { 0x01 }, telemetryData);
+            ByteBuffer b = ByteBuffer.allocate(8);
+            b.putLong(messageTagCounter.getAndIncrement());
+            b.flip();
+            downstreamSender.send(b.array(), telemetryData);
             return true;
         } else {
-            LOG.warn("downstream sender for container [{}] is not open", downstreamConnection.getRemoteContainer());
+            LOG.warn("sender for downstream container is not open");
             return false;
         }
     }

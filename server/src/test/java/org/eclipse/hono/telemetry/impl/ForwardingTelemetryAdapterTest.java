@@ -11,58 +11,58 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
-import org.apache.qpid.proton.message.Message;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
-import io.vertx.core.Vertx;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import static org.junit.Assert.*;
+
+import org.apache.qpid.proton.message.Message;
+import org.junit.Test;
+
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonSender;
 
 /**
  * 
  *
  */
-@RunWith(VertxUnitRunner.class)
 public class ForwardingTelemetryAdapterTest {
 
-    static Vertx               vertx;
-    ForwardingTelemetryAdapter adapter;
-    String                     adapterDeploymentId;
+    /**
+     * 
+     */
+    private static final String TELEMETRY_MSG_CONTENT = "hello";
+    /**
+     * 
+     */
+    private static final String TELEMETRY_MSG_ADDRESS = "telemetry/myTenant";
 
-    @BeforeClass
-    public static void init(final TestContext ctx) {
+    @Test
+    public void testAdapterForwardsMessageToSender() {
+        // GIVEN an adapter with a connection to a downstream container
+        ProtonSender sender = mock(ProtonSender.class);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
+        ForwardingTelemetryAdapter adapter = new ForwardingTelemetryAdapter();
+        adapter.setSender(sender);
 
-        // Create the Vert.x instance
-        vertx = Vertx.vertx();
-    }
+        // WHEN processing a telemetry message
+        Message msg = ProtonHelper.message(TELEMETRY_MSG_ADDRESS, TELEMETRY_MSG_CONTENT);
+        assertTrue(adapter.processTelemetryData(msg));
 
-    @Before
-    public void deploy(final TestContext ctx) {
-        adapter = new ForwardingTelemetryAdapter();
-        adapter.setDownstreamContainerHost("192.168.11.10");
-        adapter.setDownstreamContainerPort(5672);
-        vertx.deployVerticle(adapter, ctx.asyncAssertSuccess(id -> adapterDeploymentId = id));
+        // THEN the message has been delivered to the downstream container
+        verify(sender).send(any(), any());
     }
 
     @Test
-    public void test(final TestContext ctx) {
-        Message msg = ProtonHelper.message("telemetry/4711", "hello");
-        ctx.assertTrue(adapter.processTelemetryData(msg));
-    }
+    public void testAdapterDetectsMissingConnectionToDownstreamContainer() {
+        // GIVEN an adapter with a broken connection to a downstream container
+        ForwardingTelemetryAdapter adapter = new ForwardingTelemetryAdapter();
 
-    @After
-    public void undeploy(final TestContext ctx) {
-        vertx.undeploy(adapterDeploymentId, ctx.asyncAssertSuccess());
-    }
+        // WHEN processing a telemetry message
+        Message msg = ProtonHelper.message(TELEMETRY_MSG_ADDRESS, TELEMETRY_MSG_CONTENT);
+        boolean result = adapter.processTelemetryData(msg);
 
-    @AfterClass
-    public static void close(final TestContext ctx) {
-        vertx.close(ctx.asyncAssertSuccess());
+        // THEN the message has not been delivered to the downstream container
+        assertFalse(result);
     }
 }
