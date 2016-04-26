@@ -12,18 +12,19 @@
   <root level="WARN">
     <appender-ref ref="STDOUT" />
   </root>
-<logger name="org.apache.activemq" level="INFO"/>
-<logger name="org.apache.activemq.transport.amqp" level="INFO"/>
 
-<logger name="org.eclipse.hono" level="INFO"/>
-<logger name="org.eclipse.hono.TelemetryDataReadStream" level="INFO"/>
-<logger name="org.eclipse.hono.HonoServerTest" level="INFO"/>
-<logger name="org.eclipse.hono.impl" level="INFO"/>
-<logger name="org.eclipse.hono.impl.ProtonSenderWriteStream" level="INFO"/>
-<logger name="org.eclipse.hono.mom.rabbitmq" level="INFO"/>
-<logger name="org.eclipse.hono.telemetry" level="INFO"/>
-<logger name="org.eclipse.hono.telemetry.impl" level="INFO"/>
+  <logger name="org.apache.activemq" level="INFO"/>
+  <logger name="org.apache.activemq.transport.amqp" level="INFO"/>
 
-<logger name="io.vertx.proton.impl" level="INFO"/>
+  <logger name="org.eclipse.hono" level="INFO"/>
+  <logger name="org.eclipse.hono.TelemetryDataReadStream" level="INFO"/>
+  <logger name="org.eclipse.hono.HonoServerTest" level="INFO"/>
+  <logger name="org.eclipse.hono.impl" level="INFO"/>
+  <logger name="org.eclipse.hono.impl.ProtonSenderWriteStream" level="INFO"/>
+  <logger name="org.eclipse.hono.mom.rabbitmq" level="INFO"/>
+  <logger name="org.eclipse.hono.telemetry" level="INFO"/>
+  <logger name="org.eclipse.hono.telemetry.impl" level="INFO"/>
+
+  <logger name="io.vertx.proton.impl" level="INFO"/>
 
 </configuration>
