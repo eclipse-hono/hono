@@ -23,58 +23,58 @@ import java.util.Set;
  */
 public class AclEntry implements Serializable
 {
-   private final String authSubject;
-   private final Set<Permission> permissions;
+    private final String authSubject;
+    private final Set<Permission> permissions;
 
-   public AclEntry(final String authSubject, final Permission... permissions)
-   {
-      this.authSubject = requireNonNull(authSubject);
-      this.permissions = EnumSet.copyOf(Arrays.asList(permissions));
-   }
+    public AclEntry(final String authSubject, final Permission... permissions)
+    {
+        this.authSubject = requireNonNull(authSubject);
+        this.permissions = EnumSet.copyOf(Arrays.asList(permissions));
+    }
 
-   public AclEntry(final String authSubject, final Set<Permission> permissions)
-   {
-      this.authSubject = requireNonNull(authSubject);
-      this.permissions = EnumSet.copyOf(permissions);
-   }
+    public AclEntry(final String authSubject, final Set<Permission> permissions)
+    {
+        this.authSubject = requireNonNull(authSubject);
+        this.permissions = EnumSet.copyOf(permissions);
+    }
 
-   public String getAuthSubject()
-   {
-      return authSubject;
-   }
+    public String getAuthSubject()
+    {
+        return authSubject;
+    }
 
-   public Set<Permission> getPermissions()
-   {
-      return permissions;
-   }
+    public Set<Permission> getPermissions()
+    {
+        return permissions;
+    }
 
-   @Override
-   public String toString()
-   {
-      return "AclEntry{" + "authSubject='" + authSubject + '\'' + ", permissions=" + permissions + '}';
-   }
+    @Override
+    public String toString()
+    {
+        return "AclEntry{" + "authSubject='" + authSubject + '\'' + ", permissions=" + permissions + '}';
+    }
 
-   @Override
-   public boolean equals(final Object o)
-   {
-      if (this == o)
-         return true;
-      if (o == null || getClass() != o.getClass())
-         return false;
+    @Override
+    public boolean equals(final Object o)
+    {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
-      final AclEntry aclEntry = (AclEntry) o;
+        final AclEntry aclEntry = (AclEntry) o;
 
-      if (!authSubject.equals(aclEntry.authSubject))
-         return false;
-      return permissions.equals(aclEntry.permissions);
+        if (!authSubject.equals(aclEntry.authSubject))
+            return false;
+        return permissions.equals(aclEntry.permissions);
 
-   }
+    }
 
-   @Override
-   public int hashCode()
-   {
-      int result = authSubject.hashCode();
-      result = 31 * result + permissions.hashCode();
-      return result;
-   }
+    @Override
+    public int hashCode()
+    {
+        int result = authSubject.hashCode();
+        result = 31 * result + permissions.hashCode();
+        return result;
+    }
 }

@@ -11,20 +11,16 @@
  */
 package org.eclipse.hono;
 
-import static org.eclipse.hono.TelemetryDataReadStream.DEVICE_BUMLUX_TEMP_4711;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.impl.ProtonSenderWriteStream;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
-import org.eclipse.hono.util.Constants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -74,12 +70,7 @@ public class HonoServerTest {
 
         vertx.deployVerticle(server, ctx.asyncAssertSuccess());
         vertx.deployVerticle(MessageDiscardingTelemetryAdapter.class.getName(), ctx.asyncAssertSuccess());
-
-        final InMemoryAuthorizationService authorizationService = new InMemoryAuthorizationService();
-        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + MY_TENANT_ID, Permission.WRITE);
-        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + DEVICE_BUMLUX_TEMP_4711, Permission.WRITE);
-        vertx.deployVerticle(authorizationService, ctx.asyncAssertSuccess());
-
+        vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), ctx.asyncAssertSuccess());
     }
 
     @Before
