@@ -14,10 +14,16 @@ package org.eclipse.hono.telemetry;
 import org.apache.qpid.proton.message.Message;
 
 /**
- * A strategy for processing telemetry data.
+ * A strategy for processing downstream telemetry data.
  *
  */
 public interface TelemetryAdapter {
 
+    /**
+     * Processes a message containing telemetry data produced by a device.
+     * 
+     * @param telemetryData the message containing the data.
+     * @return {@code true} if the message could be processed successfully.
+     */
     boolean processTelemetryData(Message telemetryData);
 }
