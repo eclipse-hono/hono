@@ -56,8 +56,8 @@ public class HonoServerTest {
     /**
      * 
      */
-    private static final String TENANT_ID_BOSCH = "BOSCH";
-    private static final Logger    LOG                     = LoggerFactory.getLogger(HonoServerTest.class);
+    private static final String MY_TENANT_ID = "MY_TENANT";
+    private static final Logger LOG          = LoggerFactory.getLogger(HonoServerTest.class);
     static Vertx                   vertx;
     static HonoServer           server;
     ProtonConnection               connection;
@@ -76,7 +76,7 @@ public class HonoServerTest {
         vertx.deployVerticle(MessageDiscardingTelemetryAdapter.class.getName(), ctx.asyncAssertSuccess());
 
         final InMemoryAuthorizationService authorizationService = new InMemoryAuthorizationService();
-        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + TENANT_ID_BOSCH, Permission.WRITE);
+        authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + MY_TENANT_ID, Permission.WRITE);
         authorizationService.addPermission(Constants.DEFAULT_SUBJECT, "telemetry/" + DEVICE_BUMLUX_TEMP_4711, Permission.WRITE);
         vertx.deployVerticle(authorizationService, ctx.asyncAssertSuccess());
 
@@ -119,7 +119,7 @@ public class HonoServerTest {
         int timeout = 2000; // milliseconds
         final AtomicLong start = new AtomicLong();
 
-        protonSender = connection.createSender(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + TENANT_ID_BOSCH);
+        protonSender = connection.createSender(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + MY_TENANT_ID);
         protonSender
                 .setQoS(ProtonQoS.AT_MOST_ONCE)
                 .openHandler(senderOpen -> {
@@ -140,7 +140,7 @@ public class HonoServerTest {
     private void uploadTelemetryData(final int count, final ProtonSender sender, final Handler<Void> allProducedHandler,
             final Async sentMessages) {
         vertx.executeBlocking(future -> {
-            ReadStream<Message> rs = new TelemetryDataReadStream(vertx, count, TENANT_ID_BOSCH);
+            ReadStream<Message> rs = new TelemetryDataReadStream(vertx, count, MY_TENANT_ID);
             WriteStream<Message> ws = new ProtonSenderWriteStream(sender, delivered -> sentMessages.countDown());
             rs.endHandler(done -> future.complete());
             LOG.debug("pumping test telemetry data to Hono server");
