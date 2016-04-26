@@ -1,12 +1,13 @@
-rabbitmq:
-  image: rabbitmq:3-management
+qdrouter:
+  image: gordons/qpid-dispatch:0.6.0-beta2
+  ports:
+    - "15672:5672"
+hono:
+  image: hono/server:0.1-SNAPSHOT
   ports:
     - "5672:5672"
-    - "15672:15672"
-dispatcher:
-  image: hono/dispatcher:0.1-SNAPSHOT
   links:
-    - rabbitmq
+    - qdrouter
   environment:
-    - AMQP_URI=amqp://rabbitmq:5672
+    - HONO_TELEMETRY_DOWNSTREAM_HOST=qdrouter
 

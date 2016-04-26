@@ -7,25 +7,27 @@ This module contains sample code illustrating how clients can use Hono to send a
 In order to run the example you will need the following
 
 * The compiled *Hono* artifacts
-* A *RabbitMQ* message broker
+* An *Apache Qpid Dispatch Router* instance
 
 ##### Prerequisites
 
-The easiest way to run the example is by using [Docker Compose](https://docs.docker.com/compose) to start up *RabbitMQ* and *Hono Dispatcher* *Docker* images. However, it is also possible to run these images individually using plain *Docker* (see next section).
+The easiest way to run the example is by using [Docker Compose](https://docs.docker.com/compose) to start up *Dispatch Router* and *Hono Server* *Docker* images. However, it is also possible to run these images individually using plain *Docker* (see next section).
 
 1. If you do not already have *Docker* and *Docker Compose* installed on your system follow these instructions to
   * [install Docker](https://docs.docker.com/engine/installation/) and
   * **optionally** [install Docker Compose](https://docs.docker.com/compose/install/)
-1. In order to build the *Hono Dispatcher* Docker image run the following from the `dispatcher` folder
-   `$ mvn install -Pbuild-docker-image`
+1. In order to build the *Hono Server* Docker image run the following from the `server` folder
+    `$ mvn install -Ddocker.host=tcp://${host}:${port}`
 
+with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. If you are running on Linux and Docker is installed locally, you can omit the `docker.host` property.
+ 
 ### Start Server Components using Docker Compose
 
-The easiest way to start the server components is by using *Docker Compose*. Simply run the following from the `docker` directory
+The easiest way to start the server components is by using *Docker Compose*. Simply run the following from the `example/docker` directory
 
     $ docker-compose up -d
 
-This will start up both a *RabbitMQ* broker instance as well as the *Hono Dispatcher* wired up with each other automatically.
+This will start up both a *Dispatch Router* instance as well as the *Hono Server* wired up with each other automatically.
 
 Use the following to stop the server components
 
@@ -40,51 +42,44 @@ If you want to restart the services later use
 If you do not want to install *Docker Compose* or simply want to have more fine grained control over the process
 you can also use plain *Docker* to run and wire up the images manually from the command line.
 
-##### Start RabbitMQ
+##### Start Dispatch Router
 
-In order to start a broker using [the official RabbitMQ image](https://hub.docker.com/_/rabbitmq/) run the following from the
+In order to start a broker using [Gordon Sim's Qpid Dispatch Router image](https://hub.docker.com/r/gordons/qpid-dispatch/) run the following from the
 command line
 
-    $ docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 -h rabbitmq rabbitmq:3-management
+    $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter gordons/qpid-dispatch:0.6.0-beta2
 
-##### Start Hono Dispatcher
+##### Start Hono Server
 
-Once the *RabbitMQ* Docker image has been started using the command above the *Hono Dispatcher* image can be run as follows
+Once the *Dispatch Router* Docker image has been started using the command above the *Hono Server* image can be run as follows
 
-    $ docker run -d --name hono --link rabbitmq hono/dispatcher:0.1-SNAPSHOT
+    $ docker run -d --name hono --link qdrouter -p 5672:5672 hono/server:0.1-SNAPSHOT
 
-### Run Clients
+### Run Client
 
-Now that the required server components have been started you can run the example clients.
-* `Client1_Sender` can send messages typed on the console to the *Hono Dispatcher* and also listens to messages received from the dispatcher and logs them to the console.
-* `Client2_Receiver` listens to messages sent to the *Hono Dispatcher*, e.g. using `Client1_Sender`, and prints them to the console.
+Now that the required server components have been started you can run the example client.
 
-Set environment variable on Linux (**NOTE**: replace *localhost* with the IP address of the machine running the *RabbitMQ* broker)
+The example client can be used to send telemetry messages typed on the console to the *Hono Server*. It can also be used to log uploaded telemetry messages to the console.
 
-    $ export AMQP_URI=amqp://localhost:5672
+In order to receive and log telemetry messages uploaded to Hono, run the client from the `example` folder as follows:
 
-or on Windows
+    $ java -jar target/hono-example-0.1-SNAPSHOT.jar --hono.server.host=localhost
 
-    $ set AMQP_URI=amqp://localhost:5672
+ **NOTE**: Replace `localhost` with the name or IP address of the host that the *Dispatch Router* is running on. If the *Dispatch Router* is running on `localhost` you can omit the option.
 
-then run either `Client1_Sender` or `Client2_Receiver` from the `example/target` folder.
+In order to upload telemetry messages entered on the command line, run the client from the `example` folder as follows:
 
-    $ java -cp hono-example-0.1-SNAPSHOT-jar-with-dependencies.jar org.eclipse.hono.example.Client1_Sender
-    $ java -cp hono-example-0.1-SNAPSHOT-jar-with-dependencies.jar org.eclipse.hono.example.Client2_Receiver
+    $ java -jar target/hono-example-0.1-SNAPSHOT.jar --spring.profiles.active=sender --hono.server.host=localhost
 
-### Start Hono Dispatcher using Maven
+ **NOTE**: Replace `localhost` with the name or IP address of the host that the *Hono Server* is running on. If the *Dispatch Router* is running on `localhost` you can omit the option.
 
-If you want to start the *Hono Dispatcher* service from within your IDE or from the command line, e.g. in order to more easily attach a debugger or take advantage of hot code replacement with incremental compilation, you can follow the instructions below.
+### Start Hono Server using Maven
 
-Set the following environment variables in order to make the *RabbitMQ* broker's host and port available to the *Hono Dispatcher* (make sure to replace the host and port with the host and port your broker is running on). On Linux use
+You may want to start the *Hono Server* from within your IDE or from the command line, e.g. in order to more easily attach a debugger or take advantage of hot code replacement with incremental compilation.
 
-    $ export AMQP_URI=amqp://localhost:5672
+1. Start up the *Dispatch Router* Docker image as described above.
+1. Run the following Maven command from the `server` folder
 
-or on Windows use
+    $ mvn spring-boot:run -Dhono.telemetry.downstream.host=localhost -Dhono.telemetry.downstream.port=15672
 
-    $ set AMQP_URI=amqp://localhost:5672
-
-Then run the following from the `dispatcher` folder using Maven
-
-    $ mvn exec:java -Dexec.mainClass=org.eclipse.hono.dispatcher.EventDispatcherApplication
-
+**Note**: Replace `localhost` with the name or IP address of the host that the *Dispatch Router* is running on.
