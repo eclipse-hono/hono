@@ -121,18 +121,19 @@ public class TelemetryClient {
 
     private void readMessagesFromStdin() {
         final BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        LOG.info("Enter some message to send (empty message to quit): ");
         String input;
         String address = String.format("telemetry/%s/%s", tenantId, deviceId);
         ByteBuffer b = ByteBuffer.allocate(8);
         try {
-            while ((input = reader.readLine()) != null && !input.isEmpty()) {
+            do {
+                LOG.info("Enter some message to send (empty message to quit): ");
+                input = reader.readLine();
                 b.putLong(messageTagCounter.getAndIncrement());
                 b.flip();
                 Message msg = ProtonHelper.message(address, input);
                 honoSender.send(b.array(), msg);
                 b.clear();
-            }
+            } while (input != null && !input.isEmpty());
         } catch (IOException e) {
             LOG.error("problem reading message from STDIN", e);
         }

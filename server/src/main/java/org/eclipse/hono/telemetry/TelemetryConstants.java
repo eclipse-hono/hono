@@ -17,7 +17,8 @@ package org.eclipse.hono.telemetry;
  */
 public final class TelemetryConstants {
 
-    public static final String NODE_ADDRESS_TELEMETRY_PREFIX = "telemetry/";
+    public static final String TELEMETRY_ENDPOINT             = "telemetry";
+    public static final String NODE_ADDRESS_TELEMETRY_PREFIX  = TELEMETRY_ENDPOINT + "/";
     /**
      * The vert.x event bus address inbound telemetry data is published on.
      */

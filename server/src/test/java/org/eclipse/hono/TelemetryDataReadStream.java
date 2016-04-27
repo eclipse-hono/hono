@@ -11,16 +11,13 @@
  */
 package org.eclipse.hono;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.telemetry.TelemetryConstants;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,14 +142,9 @@ public class TelemetryDataReadStream implements ReadStream<Message> {
         Message message = ProtonHelper.message();
         message.setMessageId(String.valueOf(messageId));
         message.setContentType("application/octet-stream");
-        message.setAddress(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + DEVICE_BUMLUX_TEMP_4711);
-        Map<String, Object> appProps = new HashMap<>();
-        if (includeTenant) {
-            appProps.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        appProps.put(MessageHelper.APP_PROPERTY_DEVICE_ID, DEVICE_BUMLUX_TEMP_4711);
-
-        message.setApplicationProperties(new ApplicationProperties(appProps));
+        String address = String.format("%s%s/%s", TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX,
+                Constants.DEFAULT_TENANT, DEVICE_BUMLUX_TEMP_4711);
+        message.setAddress(address);
         message.setBody(new Data(new Binary(String.format("{\"temp\" : %d}", temperature).getBytes())));
         return message;
     }
