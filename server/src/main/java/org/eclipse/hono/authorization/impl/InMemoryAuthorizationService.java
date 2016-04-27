@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.EnumSet;
 import java.util.Set;
@@ -44,19 +45,17 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
-    public static final String PERMISSIONS_JSON = "/permissions.json";
+    private static final String PERMISSIONS_JSON = "permissions.json";
 
     // holds mapping resource -> acl
     private final ConcurrentMap<String, AccessControlList> resources = new ConcurrentHashMap<>();
 
-    public InMemoryAuthorizationService()
-    {
+    @Override protected void doStart() throws Exception {
         loadPermissionsFromFile();
     }
 
     @Override
-    public boolean hasPermission(final String subject, final String resource, final Permission permission)
-    {
+    public boolean hasPermission(final String subject, final String resource, final Permission permission) {
         requireNonNull(subject, "subject is required");
         requireNonNull(resource, "resource is required");
         requireNonNull(permission, "permission is required");
@@ -65,8 +64,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
     @Override
     public void addPermission(final String subject, final String resource, final Permission first,
-            final Permission... rest)
-    {
+            final Permission... rest) {
         requireNonNull(first, "permission is required");
         final EnumSet<Permission> permissions = EnumSet.of(first, rest);
         addPermission(subject, resource, permissions);
@@ -84,8 +82,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
     @Override
     public void removePermission(final String subject, final String resource, final Permission first,
-            final Permission... rest)
-    {
+            final Permission... rest) {
         requireNonNull(subject, "subject is required");
         requireNonNull(resource, "resource is required");
         requireNonNull(first, "permission is required");
@@ -101,34 +98,40 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     private void loadPermissionsFromFile() {
-        final URL resource = InMemoryAuthorizationService.class.getResource(PERMISSIONS_JSON);
-        if (resource != null) {
-            try
-            {
-                final String permissionsJson = new String(Files.readAllBytes(Paths.get(resource.toURI())), UTF_8);
-                final JsonObject permissionsObject = new JsonObject(permissionsJson);
+        try {
+            final URL resource = InMemoryAuthorizationService.class.getResource("/" + PERMISSIONS_JSON);
+            final Path pathToPermissions;
+            // first try find file in resources e.g. for tests
+            if (resource != null) {
+                pathToPermissions = Paths.get(resource.toURI());
+            }
+            // then try current working dir
+            else {
+                pathToPermissions = Paths.get(".", PERMISSIONS_JSON);
+            }
 
-                permissionsObject
-                        .stream().filter(resources -> resources.getValue() instanceof JsonObject)
-                        .forEach(resources -> {
-                            final JsonObject subjects = (JsonObject) resources.getValue();
-                            subjects
-                                    .stream().filter(subject -> subject.getValue() instanceof JsonArray)
-                                    .forEach(subject -> {
-                                        final JsonArray permissions = (JsonArray) subject.getValue();
-                                        addPermission(subject.getKey(), resources.getKey(), toSet(permissions));
-                                    });
-                        });
-            }
-            catch (IOException | URISyntaxException e)
-            {
-                LOGGER.debug("Failed to load permissions from {}: {}", PERMISSIONS_JSON, e.getMessage());
-            }
+            LOGGER.debug("Try to load permissions from: {}", pathToPermissions.toAbsolutePath());
+            final String permissionsJson = new String(Files.readAllBytes(pathToPermissions), UTF_8);
+            final JsonObject permissionsObject = new JsonObject(permissionsJson);
+
+            permissionsObject
+                    .stream().filter(resources -> resources.getValue() instanceof JsonObject)
+                    .forEach(resources -> {
+                        final JsonObject subjects = (JsonObject) resources.getValue();
+                        subjects
+                                .stream().filter(subject -> subject.getValue() instanceof JsonArray)
+                                .forEach(subject -> {
+                                    final JsonArray permissions = (JsonArray) subject.getValue();
+                                    addPermission(subject.getKey(), resources.getKey(), toSet(permissions));
+                                });
+                    });
+        }
+        catch (IOException | URISyntaxException e) {
+            LOGGER.debug("Failed to load permissions from {}: {}", PERMISSIONS_JSON, e.getMessage());
         }
     }
 
-    private Set<Permission> toSet(final JsonArray array)
-    {
+    private Set<Permission> toSet(final JsonArray array) {
         return array.stream()
                 .filter(element -> element instanceof String)
                 .map(element -> (String) element)

@@ -1,0 +1,8 @@
+{
+  "telemetry/myTenant": {
+    "SUBJECT": ["WRITE"]
+  },
+  "telemetry/myTenant/4711": {
+    "SUBJECT": ["WRITE"]
+  }
+}

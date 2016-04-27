@@ -10,4 +10,5 @@ hono:
     - qdrouter
   environment:
     - HONO_TELEMETRY_DOWNSTREAM_HOST=qdrouter
-
+  volumes:
+    - "./permissions.json:/permissions.json"
