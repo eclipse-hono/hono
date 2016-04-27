@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.authorization;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -28,6 +29,16 @@ public interface AuthorizationService
      * @return true if the subject has the requested permission on the given resource
      */
     boolean hasPermission(String subject, String resource, Permission permission);
+
+    /**
+     * Checks if a a subject has permission on any of the given resources.
+     *
+     * @param subject the authorization subject
+     * @param resources the resources on which the subject want to be authorized
+     * @param permission the requested permission
+     * @return true if the subject has the requested permission on the given resource
+     */
+    boolean hasPermission(String subject, List<String> resources, Permission permission);
 
     /**
      * Adds permission(s) for a subject/resource.

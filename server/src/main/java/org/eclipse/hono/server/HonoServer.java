@@ -11,8 +11,12 @@
  */
 package org.eclipse.hono.server;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.*;
-import static org.eclipse.hono.telemetry.TelemetryConstants.*;
+import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
+import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
+import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
+import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
+import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN;
+import static org.eclipse.hono.telemetry.TelemetryConstants.TELEMETRY_ENDPOINT;
 
 import java.util.UUID;
 
@@ -32,6 +36,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -132,7 +137,7 @@ public final class HonoServer extends AbstractVerticle {
     /**
      * @param singleTenant the singleTenant to set
      */
-    @Value(value = "hono.single.tenant")
+    @Value(value = "${hono.single.tenant}")
     public void setSingleTenant(final boolean singleTenant) {
         this.singleTenant = singleTenant;
     }
@@ -198,7 +203,7 @@ public final class HonoServer extends AbstractVerticle {
                         LOG.debug("client uses QoS: {}", receiver.getRemoteQoS());
                         receiver.handler((delivery, message) -> {
                             if (TelemetryMessageFilter.verify(targetResource.getTenantId(), message)) {
-                                sendTelemetryData(delivery, message);
+                                sendTelemetryData(targetResource, delivery, message);
                             } else {
                                 ProtonHelper.rejected(delivery, true);
                             }
@@ -221,25 +226,32 @@ public final class HonoServer extends AbstractVerticle {
         final JsonObject body = new JsonObject();
         // TODO how to obtain subject information?
         body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        body.put(RESOURCE_FIELD, receiver.getTarget().getAddress());
+        body.put(RESOURCE_FIELD, new JsonArray().add(receiver.getTarget().getAddress()));
         body.put(PERMISSION_FIELD, Permission.WRITE.toString());
         vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,
                 res -> handler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 
-    private void sendTelemetryData(final ProtonDelivery delivery, final Message msg) {
+    private void sendTelemetryData(final ResourceIdentifier targetResource, final ProtonDelivery delivery,
+            final Message msg) {
         final String messageId = UUID.randomUUID().toString();
         final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
         vertx.sharedData().getLocalMap(EVENT_BUS_ADDRESS_TELEMETRY_IN).put(messageId, amqpMessage);
-        checkPermissionAndSend(messageId, amqpMessage);
+        checkPermissionAndSend(messageId, targetResource, amqpMessage);
     }
 
-    private void checkPermissionAndSend(final String messageId, final AmqpMessage amqpMessage)
+    private void checkPermissionAndSend(final String messageId, final ResourceIdentifier targetResource,
+            final AmqpMessage amqpMessage)
     {
         final JsonObject body = new JsonObject();
         // TODO how to obtain subject information?
         body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        body.put(RESOURCE_FIELD, amqpMessage.getMessage().getProperties().getTo());
+
+        // check for permission on tenant level *or* device level
+        final JsonArray resourcesToCheck = new JsonArray();
+        resourcesToCheck.add(targetResource.toTenantString());
+        resourcesToCheck.add(targetResource.toString());
+        body.put(RESOURCE_FIELD, resourcesToCheck);
         body.put(PERMISSION_FIELD, Permission.WRITE.toString());
 
         vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,

@@ -2,6 +2,9 @@ package org.eclipse.hono.authorization.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
+import org.assertj.core.util.Lists;
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.authorization.Permission;
 import org.junit.Before;
@@ -39,6 +42,19 @@ public class InMemoryAuthorizationServiceTest {
 
         assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.READ)).isTrue();
         assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.WRITE)).isTrue();
+
+    }
+
+    @Test
+    public void testHasPermissionInSet() throws Exception {
+
+        final List<String> controlSet = Lists.newArrayList(CONTROL);
+        final List<String> telemetrySet = Lists.newArrayList(TELEMETRY);
+        final List<String> telemetryAndControlSet = Lists.newArrayList(TELEMETRY, CONTROL);
+
+        assertThat(underTest.hasPermission(READER, telemetrySet, Permission.READ)).isTrue();
+        assertThat(underTest.hasPermission(READER, telemetryAndControlSet, Permission.READ)).isTrue();
+        assertThat(underTest.hasPermission(READER, controlSet, Permission.READ)).isFalse();
 
     }
 

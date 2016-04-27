@@ -27,6 +27,7 @@ import java.util.Objects;
 public final class ResourceIdentifier {
 
     private String resourceId;
+    private String tenantResourceId;
     private String endpoint;
     private String tenantId;
     private String deviceId;
@@ -55,6 +56,7 @@ public final class ResourceIdentifier {
 
     private void setFields(final String endpoint, final String tenantId, final String deviceId) {
         this.resourceId = String.format("%s/%s/%s", endpoint, tenantId, deviceId);
+        this.tenantResourceId = String.format("%s/%s", endpoint, tenantId);
         this.endpoint = endpoint;
         this.tenantId = tenantId;
         this.deviceId = deviceId;
@@ -115,6 +117,14 @@ public final class ResourceIdentifier {
      */
     public String getDeviceId() {
         return deviceId;
+    }
+
+    /**
+     * @return the string representation of the resource containing only the tenantId e.g. telemetry/myTenant
+     */
+    public String toTenantString()
+    {
+        return tenantResourceId;
     }
 
     /**

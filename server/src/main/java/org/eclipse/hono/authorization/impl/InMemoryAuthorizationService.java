@@ -21,7 +21,10 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -56,10 +59,22 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
     @Override
     public boolean hasPermission(final String subject, final String resource, final Permission permission) {
-        requireNonNull(subject, "subject is required");
         requireNonNull(resource, "resource is required");
+        return hasPermission(subject, Collections.singletonList(resource), permission);
+    }
+
+    @Override
+    public boolean hasPermission(final String subject, final List<String> resourceSet, final Permission permission) {
+        requireNonNull(subject, "subject is required");
+        requireNonNull(resourceSet, "resources is required");
         requireNonNull(permission, "permission is required");
-        return ofNullable(resources.get(resource)).map(acl -> acl.hasPermission(subject, permission)).orElse(false);
+        return resourceSet
+                .stream()
+                .map(resources::get)
+                .filter(Objects::nonNull)
+                .map(acl -> acl.hasPermission(subject, permission))
+                .findFirst()
+                .orElse(false);
     }
 
     @Override
