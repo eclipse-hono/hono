@@ -31,6 +31,7 @@ import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Connection;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 
 /**
  * 
@@ -102,14 +103,13 @@ public final class RabbitMqTelemetryAdapter extends BaseTelemetryAdapter {
     }
 
     @Override
-    public boolean processTelemetryData(final Message msg) {
-        String tenantId = getTenantId(msg);
+    public void processTelemetryData(final Message msg, final String tenantId, final Handler<Boolean> resultHandler) {
         Data body = (Data) msg.getBody();
         LOGGER.trace("forwarding telemetry message [id: {}, tenant-id: {}] to RabbitMQ broker", msg.getMessageId(), tenantId);
         channel.publishMessage(createProperties(msg), body.getValue().getArray(),
                 TELEMETRY_UPLOAD_EXCHANGE,
                 tenantId);
-        return true;
+        resultHandler.handle(Boolean.TRUE);
     }
 
     @SuppressWarnings("unchecked")

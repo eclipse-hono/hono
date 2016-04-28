@@ -17,8 +17,8 @@ import static org.hamcrest.CoreMatchers.is;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
 
 import io.vertx.proton.ProtonHelper;
@@ -34,25 +34,27 @@ public class TelemetryMessageFilterTest {
     @Test
     public void testVerifyDetectsWrongPrefix() {
         // GIVEN a telemetry message with an address not starting with the "telemetry" prefix
-        Message msg = givenAMessageHavingRecipient("wrongPrefix/myTenant/myDevice");
+        ResourceIdentifier messageAddress = getResourceIdentifier("wrongPrefix", MY_TENANT, MY_DEVICE);
+        Message msg = givenAMessageHavingRecipient(messageAddress);
 
         // WHEN receiving the message via a link with target address telemetry/myTenant
-        String tenantFromLink = MY_TENANT;
+        ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
-        assertFalse(TelemetryMessageFilter.verify(tenantFromLink, msg));
+        assertFalse(TelemetryMessageFilter.verify(linkTarget, messageAddress, msg));
     }
 
     @Test
     public void testVerifyDetectsTenantIdMismatch() {
         // GIVEN a telemetry message
-        Message msg = givenAMessageHavingRecipient("telemetry/anotherTenant/myDevice");
+        ResourceIdentifier messageAddress = getResourceIdentifier("anotherTenant", MY_DEVICE);
+        Message msg = givenAMessageHavingRecipient(messageAddress);
 
         // WHEN receiving the message via a link with target address telemetry/myTenant
-        String tenantFromLink = MY_TENANT;
+        ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
-        assertFalse(TelemetryMessageFilter.verify(tenantFromLink, msg));
+        assertFalse(TelemetryMessageFilter.verify(linkTarget, messageAddress, msg));
     }
 
     @Test
@@ -60,28 +62,15 @@ public class TelemetryMessageFilterTest {
         // GIVEN a telemetry message for myDevice
         String myTenant = MY_TENANT;
         String myDevice = MY_DEVICE;
-        Message msg = givenAMessageHavingRecipient(String.format("telemetry/%s/%s", myTenant, myDevice));
+        ResourceIdentifier messageAddress = getResourceIdentifier(myTenant, myDevice);
+        Message msg = givenAMessageHavingRecipient(messageAddress);
 
         // WHEN receiving the message via a link with matching target address
-        String tenantFromLink = MY_TENANT;
+        ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation succeeds
-        assertTrue(TelemetryMessageFilter.verify(tenantFromLink, msg));
+        assertTrue(TelemetryMessageFilter.verify(linkTarget, messageAddress, msg));
         assertMessageAnnotationsContainTenantAndDeviceId(msg, myTenant, myDevice);
-    }
-
-    @Test
-    public void testVerifySucceedsForDefaultTenant() {
-        // GIVEN a telemetry message for default tenant
-        String myDevice = MY_DEVICE;
-        Message msg = givenAMessageHavingRecipient(String.format("telemetry/%s", myDevice));
-
-        // WHEN receiving the message via a link with target address telemetry/DEFAULT_TENANT
-        String tenantFromLink = Constants.DEFAULT_TENANT;
-
-        // THEN message validation succeeds
-        assertTrue(TelemetryMessageFilter.verify(tenantFromLink, msg, true));
-        assertMessageAnnotationsContainTenantAndDeviceId(msg, Constants.DEFAULT_TENANT, myDevice);
     }
 
     private void assertMessageAnnotationsContainTenantAndDeviceId(final Message msg, final String tenantId,
@@ -93,8 +82,24 @@ public class TelemetryMessageFilterTest {
                 is(deviceId));
     }
 
-    private Message givenAMessageHavingRecipient(final String address) {
-        Message msg = ProtonHelper.message(address, "Hello");
+    private ResourceIdentifier getResourceIdentifier(final String tenant) {
+        return getResourceIdentifier(tenant, null);
+    }
+
+    private ResourceIdentifier getResourceIdentifier(final String tenant, final String device) {
+        return getResourceIdentifier(TelemetryConstants.TELEMETRY_ENDPOINT, tenant, device);
+    }
+
+    private ResourceIdentifier getResourceIdentifier(final String endpoint, final String tenant, final String device) {
+        StringBuilder resourcePath = new StringBuilder(endpoint).append("/").append(tenant);
+        if (device != null) {
+            resourcePath.append("/").append(device);
+        } 
+        return ResourceIdentifier.fromString(resourcePath.toString());
+    }
+
+    private Message givenAMessageHavingRecipient(final ResourceIdentifier address) {
+        Message msg = ProtonHelper.message(address.toString(), "Hello");
         return msg;
     }
 }

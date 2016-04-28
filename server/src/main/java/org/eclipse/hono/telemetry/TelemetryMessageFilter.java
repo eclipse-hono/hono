@@ -35,67 +35,38 @@ public final class TelemetryMessageFilter {
     /**
      * Checks whether a given telemetry message contains all required properties.
      * 
-     * @param linkAddressTenant the ID of the tenant to upload telemetry data for as determined from the target address
-     *            of the link established by the client.
+     * @param linkTarget the link target address to match the telemetry message's address against.
+     * @param messageAddress the resource identifier representing the message's address as taken from its
+     *                       <em>to</em> property.
      * @param msg the message to verify.
      * @return {@code true} if the given message complies with the <em>Telemetry</em> API specification, {@code false}
      *         otherwise.
      */
-    public static boolean verify(final String linkAddressTenant, final Message msg) {
-        return verify(linkAddressTenant, msg, false);
-    }
-
-    /**
-     * Checks whether a given telemetry message contains all required properties.
-     * 
-     * @param linkAddressTenant the ID of the tenant to upload telemetry data for as determined from the target address
-     *            of the link established by the client.
-     * @param msg the message to verify.
-     * @param assumeDefaultTenant if{@code true} assume the default tenant as the tenant when parsing the message's
-     *            address field.
-     * @return {@code true} if the given message complies with the <em>Telemetry</em> API specification, {@code false}
-     *         otherwise.
-     */
-    public static boolean verify(final String linkAddressTenant, final Message msg, final boolean assumeDefaultTenant) {
-        if (msg.getAddress() == null
-                || !msg.getAddress().startsWith(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX)) {
+     public static boolean verify(final ResourceIdentifier linkTarget, final ResourceIdentifier messageAddress, final Message msg) {
+        if (messageAddress == null
+                || !TelemetryConstants.TELEMETRY_ENDPOINT.equals(messageAddress.getEndpoint())) {
             LOG.trace("message [id: {}] has no telemetry endpoint address [to: {}]", msg.getMessageId(),
-                    msg.getAddress());
+                    messageAddress);
             return false;
         } else {
-            return hasValidAddress(linkAddressTenant, msg, assumeDefaultTenant);
+            return hasValidAddress(linkTarget, messageAddress, msg);
         }
     }
 
-    private static boolean hasValidAddress(final String linkAddressTenant, final Message msg,
-            final boolean assumeDefaultTenant) {
-        try {
-            if (assumeDefaultTenant) {
-                return hasValidAddress(linkAddressTenant,
-                        ResourceIdentifier.fromStringAssumingDefaultTenant(msg.getAddress()), msg);
-            } else {
-                return hasValidAddress(linkAddressTenant, ResourceIdentifier.fromString(msg.getAddress()), msg);
-            }
-        } catch (IllegalArgumentException e) {
-            LOG.trace("message has invalid address", e);
-            return false;
-        }
-    }
-
-    private static boolean hasValidAddress(final String linkAddressTenant, final ResourceIdentifier resourceId,
+    private static boolean hasValidAddress(final ResourceIdentifier linkTarget, final ResourceIdentifier messageAddress,
             final Message msg) {
-        if (linkAddressTenant.equals(resourceId.getTenantId())) {
+        if (linkTarget.getTenantId().equals(messageAddress.getTenantId())) {
             MessageAnnotations annotations = msg.getMessageAnnotations();
             if (annotations == null) {
                 annotations = new MessageAnnotations(new HashMap<>());
                 msg.setMessageAnnotations(annotations);
             }
-            annotations.getValue().put(Symbol.valueOf(MessageHelper.APP_PROPERTY_TENANT_ID), resourceId.getTenantId());
-            annotations.getValue().put(Symbol.valueOf(MessageHelper.APP_PROPERTY_DEVICE_ID), resourceId.getDeviceId());
+            annotations.getValue().put(Symbol.valueOf(MessageHelper.APP_PROPERTY_TENANT_ID), messageAddress.getTenantId());
+            annotations.getValue().put(Symbol.valueOf(MessageHelper.APP_PROPERTY_DEVICE_ID), messageAddress.getDeviceId());
             return true;
         } else {
-            LOG.trace("message address contains invalid tenant ID [expected: {}, but was: {}]", linkAddressTenant,
-                    resourceId.getTenantId());
+            LOG.trace("message address contains invalid tenant ID [expected: {}, but was: {}]", linkTarget.getTenantId(),
+                    messageAddress.getTenantId());
             return false;
         }
     }

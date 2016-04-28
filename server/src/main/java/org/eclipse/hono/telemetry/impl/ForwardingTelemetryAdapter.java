@@ -12,16 +12,22 @@
 package org.eclipse.hono.telemetry.impl;
 
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
@@ -36,17 +42,18 @@ import io.vertx.proton.ProtonSender;
 @Profile("forwarding-telemetry")
 public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ForwardingTelemetryAdapter.class);
-    private ProtonConnection    downstreamConnection;
-    private ProtonSender        downstreamSender;
-    private String              downstreamContainerHost;
-    private int                 downstreamContainerPort;
-    private AtomicLong          messageTagCounter;
+    private static final Logger  LOG = LoggerFactory.getLogger(ForwardingTelemetryAdapter.class);
+    private final Map<String, ProtonSender> senders;
+    private final AtomicLong           messageTagCounter;
+    private ProtonConnection     downstreamConnection;
+    private String               downstreamContainerHost;
+    private int                  downstreamContainerPort;
 
     /**
      * 
      */
     public ForwardingTelemetryAdapter() {
+        senders = new HashMap<>();
         messageTagCounter = new AtomicLong();
     }
 
@@ -78,7 +85,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                         downstreamConnection = result.result();
                         LOG.info("connection to downstream container [{}] open",
                                 downstreamConnection.getRemoteContainer());
-                        createSender(startFuture);
+                        startFuture.complete();
                     } else {
                         startFuture.fail(result.cause());
                     }
@@ -89,28 +96,43 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         });
     }
 
-    private void createSender(final Future<Void> startFuture) {
-        if (downstreamConnection == null) {
-            startFuture.fail("Downstream connection must be opened before creating sender");
+    private void getSenderForTenant(final String tenantId, final Handler<AsyncResult<ProtonSender>> resultHandler) {
+        Future<ProtonSender> result = Future.future();
+        ProtonSender sender = senders.get(tenantId);
+        if (sender == null) {
+            createSender(tenantId, resultHandler);
         } else {
-            ProtonSender sender = downstreamConnection.createSender(null);
+            result.complete(sender);
+            resultHandler.handle(result);
+        }
+    }
+
+    private void createSender(final String tenantId, final Handler<AsyncResult<ProtonSender>> handler) {
+        Objects.requireNonNull(tenantId);
+        Future<ProtonSender> result = Future.future();
+        if (downstreamConnection == null) {
+            result.fail("Downstream connection must be opened before creating sender");
+            handler.handle(result);
+        } else {
+            ProtonSender sender = downstreamConnection.createSender(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + tenantId);
             sender.setQoS(ProtonQoS.AT_MOST_ONCE);
             sender.openHandler(openAttempt -> {
                 if (openAttempt.succeeded()) {
                     LOG.info("sender for downstream container [{}] open", downstreamConnection.getRemoteContainer());
-                    setSender(openAttempt.result());
-                    startFuture.complete();
+                    addSender(tenantId, openAttempt.result());
+                    result.complete(openAttempt.result());
                 } else {
                     LOG.warn("could not open sender for downstream container [{}]",
                             downstreamConnection.getRemoteContainer());
-                    startFuture.fail(openAttempt.cause());
+                    result.fail(openAttempt.cause());
                 }
+                handler.handle(result);
             }).open();
         }
     }
 
-    void setSender(final ProtonSender sender) {
-        this.downstreamSender = sender;
+    void addSender(final String tenantId, final ProtonSender sender) {
+        senders.put(tenantId, sender);
     }
 
     @Override
@@ -144,17 +166,26 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
      * @see org.eclipse.hono.telemetry.TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message)
      */
     @Override
-    public boolean processTelemetryData(final Message telemetryData) {
-        if (downstreamSender != null && downstreamSender.isOpen()) {
-            // TODO flow control with downstream container
-            ByteBuffer b = ByteBuffer.allocate(8);
-            b.putLong(messageTagCounter.getAndIncrement());
-            b.flip();
-            downstreamSender.send(b.array(), telemetryData);
-            return true;
-        } else {
-            LOG.warn("sender for downstream container is not open");
-            return false;
-        }
+    public void processTelemetryData(final Message telemetryData, final String tenantId, final Handler<Boolean> resultHandler) {
+        LOG.debug("forwarding telemetry message [id: {}, to: {}] to downstream container",
+                telemetryData.getMessageId(), telemetryData.getAddress());
+        getSenderForTenant(tenantId, req -> {
+            if (req.succeeded()) {
+                ProtonSender sender = req.result();
+                if (sender.isOpen()) {
+                    // TODO flow control with downstream container
+                    ByteBuffer b = ByteBuffer.allocate(8);
+                    b.putLong(messageTagCounter.getAndIncrement());
+                    b.flip();
+                    sender.send(b.array(), telemetryData);
+                    resultHandler.handle(Boolean.TRUE);
+                } else {
+                    LOG.warn("sender for downstream container is not open");
+                    resultHandler.handle(Boolean.FALSE);
+                }
+            } else {
+                resultHandler.handle(Boolean.FALSE);
+            }
+        });
     }
 }

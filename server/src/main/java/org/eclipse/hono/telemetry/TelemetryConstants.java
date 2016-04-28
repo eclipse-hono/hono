@@ -11,12 +11,20 @@
  */
 package org.eclipse.hono.telemetry;
 
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
+
+import io.vertx.core.json.JsonObject;
+
 /**
- * Constants used throughout the Telemetry API.
- *
+ * Constants & utility methods used throughout the Telemetry API.
  */
 public final class TelemetryConstants {
 
+    public static final String FIELD_NAME_MSG_UUID = "uuid";
+    public static final String FIELD_NAME_ENDPOINT = "endpoint";
+    public static final String RESULT_ACCEPTED = "accepted";
+    public static final String RESULT_ERROR = "error";
     public static final String TELEMETRY_ENDPOINT             = "telemetry";
     public static final String NODE_ADDRESS_TELEMETRY_PREFIX  = TELEMETRY_ENDPOINT + "/";
     /**
@@ -25,5 +33,12 @@ public final class TelemetryConstants {
     public static final String EVENT_BUS_ADDRESS_TELEMETRY_IN = "telemetry.in";
 
     private TelemetryConstants() {
+    }
+
+    public static JsonObject getTelemetryMsg(final String messageId, final ResourceIdentifier messageAddress) {
+        JsonObject msg = new JsonObject();
+        msg.put(FIELD_NAME_MSG_UUID, messageId);
+        msg.put(MessageHelper.APP_PROPERTY_TENANT_ID, messageAddress.getTenantId());
+        return msg;
     }
 }

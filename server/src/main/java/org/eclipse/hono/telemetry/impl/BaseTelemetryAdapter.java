@@ -14,6 +14,7 @@ package org.eclipse.hono.telemetry.impl;
 import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
 import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +22,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Base class for implementing {@code TelemetryAdapter}s.
@@ -30,8 +32,8 @@ import io.vertx.core.eventbus.MessageConsumer;
  */
 public abstract class BaseTelemetryAdapter extends AbstractVerticle implements TelemetryAdapter {
 
-    private static final Logger     LOG = LoggerFactory.getLogger(BaseTelemetryAdapter.class);
-    private MessageConsumer<String> telemetryDataConsumer;
+    private static final Logger         LOG = LoggerFactory.getLogger(BaseTelemetryAdapter.class);
+    private MessageConsumer<JsonObject> telemetryDataConsumer;
 
     /*
      * (non-Javadoc)
@@ -74,17 +76,20 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
         stopFuture.complete();
     }
 
-    private void processMessage(final Message<String> message) {
+    private void processMessage(final Message<JsonObject> message) {
+        JsonObject body = message.body();
         Object obj = vertx.sharedData().getLocalMap(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN)
-                .remove(message.body());
+                .remove(body.getString(TelemetryConstants.FIELD_NAME_MSG_UUID));
         if (obj instanceof AmqpMessage) {
             AmqpMessage telemetryMsg = (AmqpMessage) obj;
-            if (processTelemetryData(telemetryMsg.getMessage())) {
-                message.reply("accepted");
-            } else {
-                LOG.warn("cannot process telemetry message [uuid: {}]", message.body());
-                message.reply("error");
-            }
+            processTelemetryData(telemetryMsg.getMessage(), body.getString(MessageHelper.APP_PROPERTY_TENANT_ID), ok -> {
+                if (ok) {
+                    message.reply(TelemetryConstants.RESULT_ACCEPTED);
+                } else {
+                    LOG.warn("cannot process telemetry message [uuid: {}]", message.body());
+                    message.reply(TelemetryConstants.RESULT_ERROR);
+                }
+            });
         } else {
             LOG.warn("expected {} in shared local map {} but found {}", AmqpMessage.class.getName(),
                     TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN, obj.getClass().getName());
