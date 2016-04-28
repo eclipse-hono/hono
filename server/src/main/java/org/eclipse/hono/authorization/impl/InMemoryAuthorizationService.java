@@ -51,7 +51,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     private static final String PERMISSIONS_JSON = "permissions.json";
 
     // holds mapping resource -> acl
-    private final ConcurrentMap<String, AccessControlList> resources = new ConcurrentHashMap<>();
+    private final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
 
     @Value(value = "${hono.single.tenant}")
     private boolean singleTenant;
@@ -74,11 +74,18 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         requireNonNull(resource, "resources is required");
         requireNonNull(permission, "permission is required");
 
-        return hasPermission(subject, resource.toTenantString(), permission)
-                || hasPermission(subject, resource.toString(), permission);
+        return hasPermissionForTenant(subject, resource, permission) || hasPermissionInternal(subject, resource, permission);
     }
 
-    private boolean hasPermission(final String subject, final String resource, final Permission permission)
+    private boolean hasPermissionForTenant(final String subject, final ResourceIdentifier resource, final Permission permission) {
+        if (resource.getDeviceId() != null) {
+            final ResourceIdentifier tenantResource = ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null);
+            return hasPermissionInternal(subject, tenantResource, permission);
+        }
+        return false;
+    }
+
+    private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Permission permission)
     {
         return ofNullable(resources.get(resource)).map(acl -> acl.hasPermission(subject, permission)).orElse(false);
     }
@@ -97,7 +104,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         requireNonNull(permissions, "permission is required");
 
         LOGGER.debug("Add permission {} for subject {} on resource {}.", permissions, subject, resource);
-        resources.computeIfAbsent(resource.toString(), key -> new AccessControlList())
+        resources.computeIfAbsent(resource, key -> new AccessControlList())
                 .setAclEntry(new AclEntry(subject, permissions));
     }
 
@@ -110,7 +117,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
         final EnumSet<Permission> permissions = EnumSet.of(first, rest);
         LOGGER.debug("Delete permission {} for subject {} on resource {}.", first, subject, resource);
-        resources.computeIfPresent(resource.toString(), (key, value) -> {
+        resources.computeIfPresent(resource, (key, value) -> {
             ofNullable(value.getAclEntry(subject))
                     .map(AclEntry::getPermissions)
                     .ifPresent(p -> p.removeAll(permissions));

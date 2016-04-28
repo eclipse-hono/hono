@@ -27,7 +27,6 @@ import java.util.Objects;
 public final class ResourceIdentifier {
 
     private String resourceId;
-    private String tenantResourceId;
     private String endpoint;
     private String tenantId;
     private String deviceId;
@@ -54,13 +53,16 @@ public final class ResourceIdentifier {
         }
     }
 
+    private ResourceIdentifier(final String endpoint, final String tenantId, final String deviceId) {
+       setFields(endpoint, tenantId, deviceId);
+    }
+
     private void setFields(final String endpoint, final String tenantId, final String deviceId) {
-        this.tenantResourceId = String.format("%s/%s", endpoint, tenantId);
         if (deviceId != null) {
             this.resourceId = String.format("%s/%s/%s", endpoint, tenantId, deviceId);
         }
         else {
-            this.resourceId = tenantResourceId;
+            this.resourceId = String.format("%s/%s", endpoint, tenantId);
         }
         this.endpoint = endpoint;
         this.tenantId = tenantId;
@@ -104,6 +106,21 @@ public final class ResourceIdentifier {
     }
 
     /**
+     * Creates a resource identifier from endpoint, tenantId and optionally deviceId.
+     *
+     * @param endpoint the endpoint of the resource.
+     * @param tenantId the tenant identifier.
+     * @param deviceId the device identifier, may be {@code null}.
+     * @return the resource identifier.
+     * @throws NullPointerException if endpoint or tenantId is {@code null}.
+     */
+    public static ResourceIdentifier from(final String endpoint, final String tenantId, final String deviceId) {
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(tenantId);
+        return new ResourceIdentifier(endpoint, tenantId, deviceId);
+    }
+
+    /**
      * @return the endpoint
      */
     public String getEndpoint() {
@@ -125,14 +142,6 @@ public final class ResourceIdentifier {
     }
 
     /**
-     * @return the string representation of the resource containing only the tenantId e.g. telemetry/myTenant
-     */
-    public String toTenantString()
-    {
-        return tenantResourceId;
-    }
-
-    /**
      * Creates a string representation of this resource identifier.
      * <p>
      * The string representation consists of the endpoint, the tenant and (optionally) the device ID all separated by a
@@ -142,5 +151,29 @@ public final class ResourceIdentifier {
     @Override
     public String toString() {
         return resourceId;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        final ResourceIdentifier that = (ResourceIdentifier) o;
+
+        if (endpoint != null ? !endpoint.equals(that.endpoint) : that.endpoint != null)
+            return false;
+        if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null)
+            return false;
+        return deviceId != null ? deviceId.equals(that.deviceId) : that.deviceId == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = endpoint != null ? endpoint.hashCode() : 0;
+        result = 31 * result + (tenantId != null ? tenantId.hashCode() : 0);
+        result = 31 * result + (deviceId != null ? deviceId.hashCode() : 0);
+        return result;
     }
 }

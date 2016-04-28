@@ -26,7 +26,7 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.getEndpoint(), is("telemetry"));
         assertThat(resourceId.getTenantId(), is("myTenant"));
         assertNull(resourceId.getDeviceId());
-        assertThat(resourceId.toTenantString(), is("telemetry/myTenant"));
+        assertThat(resourceId.toString(), is("telemetry/myTenant"));
     }
 
     @Test
@@ -36,6 +36,6 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.getEndpoint(), is("telemetry"));
         assertThat(resourceId.getTenantId(), is(Constants.DEFAULT_TENANT));
         assertNull(resourceId.getDeviceId());
-        assertThat(resourceId.toTenantString(), is("telemetry/" + Constants.DEFAULT_TENANT));
+        assertThat(resourceId.toString(), is("telemetry/" + Constants.DEFAULT_TENANT));
     }
 }
