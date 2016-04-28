@@ -93,6 +93,9 @@
                     <tags>
                       <tag>${project.version}</tag>
                     </tags>
+                    <volumes>
+                      <volume>/config</volume>
+                    </volumes>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/config</basedir>

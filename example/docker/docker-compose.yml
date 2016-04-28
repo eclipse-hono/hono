@@ -4,8 +4,6 @@ qdrouter:
     - "15672:5672"
 config:
   image: hono/example-config:0.1-SNAPSHOT
-  volumes:
-      - /config
 hono:
   image: hono/server:0.1-SNAPSHOT
   ports:
@@ -15,4 +13,4 @@ hono:
   environment:
     - HONO_TELEMETRY_DOWNSTREAM_HOST=qdrouter
   volumes_from:
-     - config
+    - config
