@@ -166,9 +166,9 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
      * @see org.eclipse.hono.telemetry.TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message)
      */
     @Override
-    public void processTelemetryData(final Message telemetryData, final String tenantId, final Handler<Boolean> resultHandler) {
-        LOG.debug("forwarding telemetry message [id: {}, to: {}] to downstream container",
-                telemetryData.getMessageId(), telemetryData.getAddress());
+    public void processTelemetryData(final Message msg, final String tenantId, final Handler<Boolean> resultHandler) {
+        LOG.debug("forwarding telemetry message [id: {}, to: {}, content-type: {}] to downstream container",
+                msg.getMessageId(), msg.getAddress(), msg.getContentType());
         getSenderForTenant(tenantId, req -> {
             if (req.succeeded()) {
                 ProtonSender sender = req.result();
@@ -177,7 +177,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                     ByteBuffer b = ByteBuffer.allocate(8);
                     b.putLong(messageTagCounter.getAndIncrement());
                     b.flip();
-                    sender.send(b.array(), telemetryData);
+                    sender.send(b.array(), msg);
                     resultHandler.handle(Boolean.TRUE);
                 } else {
                     LOG.warn("sender for downstream container is not open");

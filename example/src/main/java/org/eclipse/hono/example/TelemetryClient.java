@@ -15,12 +15,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
+import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
@@ -126,17 +129,26 @@ public class TelemetryClient {
         ByteBuffer b = ByteBuffer.allocate(8);
         try {
             do {
-                LOG.info("Enter some message to send (empty message to quit): ");
+                System.out.println("Enter some message to send (empty message to quit):");
                 input = reader.readLine();
                 b.putLong(messageTagCounter.getAndIncrement());
                 b.flip();
-                Message msg = ProtonHelper.message(address, input);
-                honoSender.send(b.array(), msg);
+                honoSender.send(b.array(), createMessage(address, input));
                 b.clear();
             } while (input != null && !input.isEmpty());
         } catch (IOException e) {
             LOG.error("problem reading message from STDIN", e);
         }
+    }
+
+    private Message createMessage(final String address, final String content) {
+        Data body = new Data(new Binary(content.getBytes(StandardCharsets.UTF_8)));
+        Message msg = ProtonHelper.message();
+        msg.setMessageId(UUID.randomUUID().toString());
+        msg.setAddress(address);
+        msg.setBody(body);
+        msg.setContentType("text/plain; charset=\"utf-8\"");
+        return msg;
     }
 
     private void startReceiver(final CountDownLatch latch) {
