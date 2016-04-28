@@ -3,10 +3,5 @@
     "SUBJECT": [
       "WRITE"
     ]
-  },
-  "telemetry/bumlux:temp:4711": {
-    "SUBJECT": [
-      "WRITE"
-    ]
   }
 }

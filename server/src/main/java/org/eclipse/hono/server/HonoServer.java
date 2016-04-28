@@ -36,7 +36,6 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -191,7 +190,7 @@ public final class HonoServer extends AbstractVerticle {
     }
 
     private void handleTelemetryUpload(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
-        isClientAuthorizedToAttachToTelemetryEndpoint(receiver,
+        isClientAuthorizedToAttachToTelemetryEndpoint(targetResource,
                 authorizedToAttach -> {
                     if (!authorizedToAttach) {
                         LOG.debug(
@@ -221,12 +220,12 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
-    private void isClientAuthorizedToAttachToTelemetryEndpoint(final ProtonReceiver receiver,
+    private void isClientAuthorizedToAttachToTelemetryEndpoint(final ResourceIdentifier targetResource,
             final Handler<Boolean> handler) {
         final JsonObject body = new JsonObject();
         // TODO how to obtain subject information?
         body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        body.put(RESOURCE_FIELD, new JsonArray().add(receiver.getTarget().getAddress()));
+        body.put(RESOURCE_FIELD, targetResource.toString());
         body.put(PERMISSION_FIELD, Permission.WRITE.toString());
         vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,
                 res -> handler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
@@ -246,12 +245,7 @@ public final class HonoServer extends AbstractVerticle {
         final JsonObject body = new JsonObject();
         // TODO how to obtain subject information?
         body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-
-        // check for permission on tenant level *or* device level
-        final JsonArray resourcesToCheck = new JsonArray();
-        resourcesToCheck.add(targetResource.toTenantString());
-        resourcesToCheck.add(targetResource.toString());
-        body.put(RESOURCE_FIELD, resourcesToCheck);
+        body.put(RESOURCE_FIELD, targetResource.toString());
         body.put(PERMISSION_FIELD, Permission.WRITE.toString());
 
         vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,

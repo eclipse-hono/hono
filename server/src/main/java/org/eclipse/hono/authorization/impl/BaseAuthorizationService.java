@@ -18,11 +18,9 @@ import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_AD
 import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
 import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,11 +82,7 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
       final JsonObject body = message.body();
       final String authSubject = body.getString(AUTH_SUBJECT_FIELD);
       final Permission permission = Permission.valueOf(body.getString(PERMISSION_FIELD));
-      final List<String> resource = body.getJsonArray(RESOURCE_FIELD)
-              .stream()
-              .filter(o -> o instanceof String)
-              .map(o -> (String)o)
-              .collect(Collectors.toList());
+      final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(RESOURCE_FIELD));
 
       if (hasPermission(authSubject, resource, permission))
       {

@@ -11,8 +11,9 @@
  */
 package org.eclipse.hono.authorization;
 
-import java.util.List;
 import java.util.Set;
+
+import org.eclipse.hono.util.ResourceIdentifier;
 
 /**
  * Provides methods to add, remove or retrieve permissions on a resource for a given subject.
@@ -28,17 +29,7 @@ public interface AuthorizationService
      * @param permission the requested permission
      * @return true if the subject has the requested permission on the given resource
      */
-    boolean hasPermission(String subject, String resource, Permission permission);
-
-    /**
-     * Checks if a a subject has permission on any of the given resources.
-     *
-     * @param subject the authorization subject
-     * @param resources the resources on which the subject want to be authorized
-     * @param permission the requested permission
-     * @return true if the subject has the requested permission on the given resource
-     */
-    boolean hasPermission(String subject, List<String> resources, Permission permission);
+    boolean hasPermission(String subject, ResourceIdentifier resource, Permission permission);
 
     /**
      * Adds permission(s) for a subject/resource.
@@ -48,7 +39,7 @@ public interface AuthorizationService
      * @param first the permission to add
      * @param rest more permission to add optionally
      */
-    void addPermission(String subject, String resource, final Permission first, final Permission... rest);
+    void addPermission(String subject, ResourceIdentifier resource, final Permission first, final Permission... rest);
 
     /**
      * Adds permission(s) for a subject/resource.
@@ -57,7 +48,7 @@ public interface AuthorizationService
      * @param resource the resource for which to add a permission
      * @param permissions set of permissions to add
      */
-    void addPermission(String subject, String resource, final Set<Permission> permissions);
+    void addPermission(String subject, ResourceIdentifier resource, final Set<Permission> permissions);
 
     /**
      * Removes permission(s) for a subject/resource.
@@ -67,5 +58,5 @@ public interface AuthorizationService
      * @param first the permission to remove
      * @param rest more permission to remove optionally
      */
-    void removePermission(String subject, String resource, final Permission first, final Permission... rest);
+    void removePermission(String subject, ResourceIdentifier resource, final Permission first, final Permission... rest);
 }

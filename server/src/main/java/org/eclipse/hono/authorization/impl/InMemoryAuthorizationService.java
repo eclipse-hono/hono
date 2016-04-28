@@ -21,10 +21,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -33,8 +31,10 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.authorization.AccessControlList;
 import org.eclipse.hono.authorization.AclEntry;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.json.JsonArray;
@@ -53,50 +53,56 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     // holds mapping resource -> acl
     private final ConcurrentMap<String, AccessControlList> resources = new ConcurrentHashMap<>();
 
+    @Value(value = "${hono.single.tenant}")
+    private boolean singleTenant;
+
     @Override protected void doStart() throws Exception {
         loadPermissionsFromFile();
     }
 
-    @Override
-    public boolean hasPermission(final String subject, final String resource, final Permission permission) {
-        requireNonNull(resource, "resource is required");
-        return hasPermission(subject, Collections.singletonList(resource), permission);
+    /**
+     * @param singleTenant true if system is running in single tenant mode
+     */
+    @Value(value = "${hono.single.tenant}")
+    public void setSingleTenant(final boolean singleTenant) {
+        this.singleTenant = singleTenant;
     }
 
     @Override
-    public boolean hasPermission(final String subject, final List<String> resourceSet, final Permission permission) {
+    public boolean hasPermission(final String subject, final ResourceIdentifier resource, final Permission permission) {
         requireNonNull(subject, "subject is required");
-        requireNonNull(resourceSet, "resources is required");
+        requireNonNull(resource, "resources is required");
         requireNonNull(permission, "permission is required");
-        return resourceSet
-                .stream()
-                .map(resources::get)
-                .filter(Objects::nonNull)
-                .map(acl -> acl.hasPermission(subject, permission))
-                .findFirst()
-                .orElse(false);
+
+        return hasPermission(subject, resource.toTenantString(), permission)
+                || hasPermission(subject, resource.toString(), permission);
+    }
+
+    private boolean hasPermission(final String subject, final String resource, final Permission permission)
+    {
+        return ofNullable(resources.get(resource)).map(acl -> acl.hasPermission(subject, permission)).orElse(false);
     }
 
     @Override
-    public void addPermission(final String subject, final String resource, final Permission first,
+    public void addPermission(final String subject, final ResourceIdentifier resource, final Permission first,
             final Permission... rest) {
         requireNonNull(first, "permission is required");
         final EnumSet<Permission> permissions = EnumSet.of(first, rest);
         addPermission(subject, resource, permissions);
     }
 
-    @Override public void addPermission(final String subject, final String resource, final Set<Permission> permissions) {
+    @Override public void addPermission(final String subject, final ResourceIdentifier resource, final Set<Permission> permissions) {
         requireNonNull(subject, "subject is required");
         requireNonNull(resource, "resource is required");
         requireNonNull(permissions, "permission is required");
 
         LOGGER.debug("Add permission {} for subject {} on resource {}.", permissions, subject, resource);
-        resources.computeIfAbsent(resource, key -> new AccessControlList())
+        resources.computeIfAbsent(resource.toString(), key -> new AccessControlList())
                 .setAclEntry(new AclEntry(subject, permissions));
     }
 
     @Override
-    public void removePermission(final String subject, final String resource, final Permission first,
+    public void removePermission(final String subject, final ResourceIdentifier resource, final Permission first,
             final Permission... rest) {
         requireNonNull(subject, "subject is required");
         requireNonNull(resource, "resource is required");
@@ -104,7 +110,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
         final EnumSet<Permission> permissions = EnumSet.of(first, rest);
         LOGGER.debug("Delete permission {} for subject {} on resource {}.", first, subject, resource);
-        resources.computeIfPresent(resource, (key, value) -> {
+        resources.computeIfPresent(resource.toString(), (key, value) -> {
             ofNullable(value.getAclEntry(subject))
                     .map(AclEntry::getPermissions)
                     .ifPresent(p -> p.removeAll(permissions));
@@ -132,17 +138,29 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
             permissionsObject
                     .stream().filter(resources -> resources.getValue() instanceof JsonObject)
                     .forEach(resources -> {
+                        final ResourceIdentifier resourceIdentifier = getResourceIdentifier(resources);
                         final JsonObject subjects = (JsonObject) resources.getValue();
                         subjects
                                 .stream().filter(subject -> subject.getValue() instanceof JsonArray)
                                 .forEach(subject -> {
                                     final JsonArray permissions = (JsonArray) subject.getValue();
-                                    addPermission(subject.getKey(), resources.getKey(), toSet(permissions));
+                                    addPermission(subject.getKey(), resourceIdentifier, toSet(permissions));
                                 });
                     });
         }
         catch (IOException | URISyntaxException e) {
             LOGGER.debug("Failed to load permissions from {}: {}", PERMISSIONS_JSON, e.getMessage());
+        }
+    }
+
+    private ResourceIdentifier getResourceIdentifier(final Map.Entry<String, Object> resources) {
+        if (singleTenant)
+        {
+            return ResourceIdentifier.fromStringAssumingDefaultTenant(resources.getKey());
+        }
+        else
+        {
+            return ResourceIdentifier.fromString(resources.getKey());
         }
     }
 

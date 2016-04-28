@@ -55,8 +55,13 @@ public final class ResourceIdentifier {
     }
 
     private void setFields(final String endpoint, final String tenantId, final String deviceId) {
-        this.resourceId = String.format("%s/%s/%s", endpoint, tenantId, deviceId);
         this.tenantResourceId = String.format("%s/%s", endpoint, tenantId);
+        if (deviceId != null) {
+            this.resourceId = String.format("%s/%s/%s", endpoint, tenantId, deviceId);
+        }
+        else {
+            this.resourceId = tenantResourceId;
+        }
         this.endpoint = endpoint;
         this.tenantId = tenantId;
         this.deviceId = deviceId;

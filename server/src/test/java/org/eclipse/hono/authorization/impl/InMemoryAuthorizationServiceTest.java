@@ -2,11 +2,9 @@ package org.eclipse.hono.authorization.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-
-import org.assertj.core.util.Lists;
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -15,12 +13,13 @@ import org.junit.Test;
  */
 public class InMemoryAuthorizationServiceTest {
 
-    public static final String TELEMETRY = "/telemetry";
-    public static final String CONTROL   = "/control";
+    public static final ResourceIdentifier TELEMETRY = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
+    public static final ResourceIdentifier CONTROL   = ResourceIdentifier.fromStringAssumingDefaultTenant("control");
 
     public static final String SUBJECT   = "subject";
     public static final String READER    = "reader";
     public static final String WRITER    = "writer";
+
     private AuthorizationService underTest;
 
     @Before
@@ -46,16 +45,18 @@ public class InMemoryAuthorizationServiceTest {
     }
 
     @Test
-    public void testHasPermissionInSet() throws Exception {
+    public void testDeviceLevelPermission() throws Exception {
 
-        final List<String> controlSet = Lists.newArrayList(CONTROL);
-        final List<String> telemetrySet = Lists.newArrayList(TELEMETRY);
-        final List<String> telemetryAndControlSet = Lists.newArrayList(TELEMETRY, CONTROL);
+        final ResourceIdentifier TENANT1 = ResourceIdentifier.fromString("telemetry/tenant1");
+        final ResourceIdentifier DEVICE1 = ResourceIdentifier.fromString("telemetry/tenant1/device1");
 
-        assertThat(underTest.hasPermission(READER, telemetrySet, Permission.READ)).isTrue();
-        assertThat(underTest.hasPermission(READER, telemetryAndControlSet, Permission.READ)).isTrue();
-        assertThat(underTest.hasPermission(READER, controlSet, Permission.READ)).isFalse();
+        underTest.addPermission("TENANT", TENANT1, Permission.WRITE);
+        underTest.addPermission("DEVICE", DEVICE1, Permission.WRITE);
 
+        assertThat(underTest.hasPermission("DEVICE", DEVICE1, Permission.WRITE)).isTrue();
+        assertThat(underTest.hasPermission("TENANT", DEVICE1, Permission.WRITE)).isTrue();
+        assertThat(underTest.hasPermission("TENANT", TENANT1, Permission.WRITE)).isTrue();
+        assertThat(underTest.hasPermission("DEVICE", TENANT1, Permission.WRITE)).isFalse();
     }
 
     @Test
