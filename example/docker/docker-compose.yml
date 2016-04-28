@@ -2,6 +2,10 @@ qdrouter:
   image: gordons/qpid-dispatch:0.6.0-beta2
   ports:
     - "15672:5672"
+config:
+  image: hono/example-config:0.1-SNAPSHOT
+  volumes:
+      - /config
 hono:
   image: hono/server:0.1-SNAPSHOT
   ports:
@@ -10,5 +14,5 @@ hono:
     - qdrouter
   environment:
     - HONO_TELEMETRY_DOWNSTREAM_HOST=qdrouter
-  volumes:
-    - "./permissions.json:/permissions.json"
+  volumes_from:
+     - config

@@ -48,7 +48,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
-    private static final String PERMISSIONS_JSON = "permissions.json";
+    private static final String PERMISSIONS_JSON = "/config/permissions.json";
 
     // holds mapping resource -> acl
     private final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
@@ -127,7 +127,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
     private void loadPermissionsFromFile() {
         try {
-            final URL resource = InMemoryAuthorizationService.class.getResource("/" + PERMISSIONS_JSON);
+            final URL resource = InMemoryAuthorizationService.class.getResource(PERMISSIONS_JSON);
             final Path pathToPermissions;
             // first try find file in resources e.g. for tests
             if (resource != null) {
@@ -135,7 +135,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
             }
             // then try current working dir
             else {
-                pathToPermissions = Paths.get(".", PERMISSIONS_JSON);
+                pathToPermissions = Paths.get(PERMISSIONS_JSON);
             }
 
             LOGGER.debug("Try to load permissions from: {}", pathToPermissions.toAbsolutePath());

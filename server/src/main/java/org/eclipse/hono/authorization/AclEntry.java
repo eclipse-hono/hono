@@ -13,7 +13,6 @@ package org.eclipse.hono.authorization;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
@@ -21,7 +20,7 @@ import java.util.Set;
 /**
  * Wraps an authorization subject and a set of {@link Permission}s.
  */
-public class AclEntry implements Serializable
+public class AclEntry
 {
     private final String authSubject;
     private final Set<Permission> permissions;

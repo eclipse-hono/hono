@@ -68,4 +68,62 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <activation>
+        <property>
+          <name>docker.host</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jolokia</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>0.13.9</version>
+            <configuration>
+              <images>
+                <image>
+                  <alias>hono-example-config</alias>
+                  <name>hono/example-config:${project.version}</name>
+                  <build>
+                    <from>tianon/true</from>
+                    <tags>
+                      <tag>${project.version}</tag>
+                    </tags>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/config</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/config</directory>
+                            <outputDirectory>/</outputDirectory>
+                            <includes>
+                              <include>**/*</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
