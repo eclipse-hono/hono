@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
@@ -37,61 +38,51 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class BaseAuthorizationService extends AbstractVerticle implements AuthorizationService
 {
-   private static final Logger LOG = LoggerFactory.getLogger(BaseAuthorizationService.class);
-   private MessageConsumer<JsonObject> authRequestConsumer;
+    private static final Logger LOG = LoggerFactory.getLogger(BaseAuthorizationService.class);
+    private MessageConsumer<JsonObject> authRequestConsumer;
 
-   /*
-    * (non-Javadoc)
-    * 
-    * @see io.vertx.core.AbstractVerticle#start()
-    */
-   @Override
-   public final void start() throws Exception
-   {
-      authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
-      authRequestConsumer.handler(this::processMessage);
-      LOG.info("listening on event bus [address: {}] for incoming auth messages",
-              EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
-      doStart();
-   }
+    @Override
+    public void start(final Future<Void> startFuture) throws Exception {
+        authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
+        authRequestConsumer.handler(this::processMessage);
+        LOG.info("listening on event bus [address: {}] for incoming auth messages",
+                EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
+        doStart(startFuture);
+    }
 
-   protected void doStart() throws Exception
-   {
-      // should be overridden by subclasses
-   }
+    protected void doStart(final Future<Void> startFuture) throws Exception
+    {
+        // should be overridden by subclasses
+        startFuture.complete();
+    }
 
-   /*
-    * (non-Javadoc)
-    * 
-    * @see io.vertx.core.AbstractVerticle#stop()
-    */
-   @Override
-   public final void stop() throws Exception
-   {
-      authRequestConsumer.unregister();
-      doStop();
-   }
+    @Override
+    public void stop(final Future<Void> stopFuture) throws Exception {
+        authRequestConsumer.unregister();
+        doStop(stopFuture);
+    }
 
-   protected void doStop() throws Exception
-   {
-      // to be overridden by subclasses
-   }
+    protected void doStop(final Future<Void> stopFuture) throws Exception
+    {
+        // to be overridden by subclasses
+        stopFuture.complete();
+    }
 
-   private void processMessage(final Message<JsonObject> message)
-   {
-      final JsonObject body = message.body();
-      final String authSubject = body.getString(AUTH_SUBJECT_FIELD);
-      final Permission permission = Permission.valueOf(body.getString(PERMISSION_FIELD));
-      final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(RESOURCE_FIELD));
+    private void processMessage(final Message<JsonObject> message)
+    {
+        final JsonObject body = message.body();
+        final String authSubject = body.getString(AUTH_SUBJECT_FIELD);
+        final Permission permission = Permission.valueOf(body.getString(PERMISSION_FIELD));
+        final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(RESOURCE_FIELD));
 
-      if (hasPermission(authSubject, resource, permission))
-      {
-         message.reply(ALLOWED);
-      }
-      else
-      {
-         LOG.debug("{} not allowed to {} on resource {}", authSubject, permission, resource);
-         message.reply(DENIED);
-      }
-   }
+        if (hasPermission(authSubject, resource, permission))
+        {
+            message.reply(ALLOWED);
+        }
+        else
+        {
+            LOG.debug("{} not allowed to {} on resource {}", authSubject, permission, resource);
+            message.reply(DENIED);
+        }
+    }
 }

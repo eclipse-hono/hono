@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -56,8 +57,10 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     @Value(value = "${hono.single.tenant}")
     private boolean singleTenant;
 
-    @Override protected void doStart() throws Exception {
+    @Override
+    protected void doStart(final Future startFuture) throws Exception {
         loadPermissionsFromFile();
+        startFuture.complete();
     }
 
     /**

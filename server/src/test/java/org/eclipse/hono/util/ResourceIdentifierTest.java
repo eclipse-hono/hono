@@ -38,4 +38,24 @@ public class ResourceIdentifierTest {
         assertNull(resourceId.getDeviceId());
         assertThat(resourceId.toString(), is("telemetry/" + Constants.DEFAULT_TENANT));
     }
+
+    @Test
+    public void testFromIndividualParameters() {
+        ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", "myDevice");
+        assertNotNull(resourceId);
+        assertThat(resourceId.getEndpoint(), is("telemetry"));
+        assertThat(resourceId.getTenantId(), is("myTenant"));
+        assertThat(resourceId.getDeviceId(), is("myDevice"));
+        assertThat(resourceId.toString(), is("telemetry/myTenant/myDevice"));
+    }
+
+    @Test
+    public void testFromAllowsMissingDeviceId() {
+        ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", null);
+        assertNotNull(resourceId);
+        assertThat(resourceId.getEndpoint(), is("telemetry"));
+        assertThat(resourceId.getTenantId(), is("myTenant"));
+        assertNull(resourceId.getDeviceId());
+        assertThat(resourceId.toString(), is("telemetry/myTenant"));
+    }
 }
