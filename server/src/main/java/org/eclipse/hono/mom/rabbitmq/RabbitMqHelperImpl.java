@@ -11,11 +11,6 @@
  */
 package org.eclipse.hono.mom.rabbitmq;
 
-import static org.eclipse.hono.util.MessageHelper.PREFIX_APPLICATION_PROPERTY;
-import static org.eclipse.hono.util.MessageHelper.PROPERTY_CONTENT_TYPE;
-import static org.eclipse.hono.util.MessageHelper.PROPERTY_CORRELATION_ID;
-import static org.eclipse.hono.util.MessageHelper.PROPERTY_MESSAGE_ID;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +20,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.eclipse.hono.mom.BrokerException;
 import org.eclipse.hono.mom.rabbitmq.Exchange.Type;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +38,13 @@ public final class RabbitMqHelperImpl implements RabbitMqHelper {
     public static final String  X_MESSAGE_TTL = "x-message-ttl";
     public static final String  X_EXPIRES     = "x-expires";
     public static final String  X_MAX_LENGTH  = "x-max-length";
+
+    public static final String PREFIX_APPLICATION_PROPERTY = "app.";
+    public static final String PROPERTY_CONTENT_TYPE = "content-type";
+    public static final String PROPERTY_CORRELATION_ID = "correlation-id";
+    public static final String PROPERTY_MESSAGE_ID   = "message-id";
+    public static final String APP_PROPERTY_DEVICE_ID_PREFIXED = PREFIX_APPLICATION_PROPERTY + MessageHelper.APP_PROPERTY_DEVICE_ID;
+    public static final String APP_PROPERTY_TENANT_ID_PREFIXED = PREFIX_APPLICATION_PROPERTY + MessageHelper.APP_PROPERTY_TENANT_ID;
 
     private static final Logger LOGGER        = LoggerFactory.getLogger(RabbitMqHelperImpl.class);
     private final Connection    connection;

@@ -105,7 +105,7 @@ public final class RabbitMqTelemetryAdapter extends BaseTelemetryAdapter {
     public boolean processTelemetryData(final Message msg) {
         String tenantId = getTenantId(msg);
         Data body = (Data) msg.getBody();
-        LOGGER.trace("forwarding telemetry message [id: {}, tenant-id: {}] to RabbitMQ broker", getMessageId(msg), tenantId);
+        LOGGER.trace("forwarding telemetry message [id: {}, tenant-id: {}] to RabbitMQ broker", msg.getMessageId(), tenantId);
         channel.publishMessage(createProperties(msg), body.getValue().getArray(),
                 TELEMETRY_UPLOAD_EXCHANGE,
                 tenantId);

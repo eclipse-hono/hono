@@ -11,10 +11,6 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
-import static org.eclipse.hono.util.MessageHelper.getDeviceId;
-import static org.eclipse.hono.util.MessageHelper.getMessageId;
-import static org.eclipse.hono.util.MessageHelper.getTenantId;
-
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +29,7 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
 
     @Override
     public boolean processTelemetryData(final Message data) {
-        LOG.debug("processing telemetry data [id: {}, device-id: {}, tenant-id: {}]", getMessageId(data),
-                getDeviceId(data), getTenantId(data));
+        LOG.debug("processing telemetry data [id: {}, to: {}]", data.getMessageId(), data.getAddress());
         return true;
     }
-
 }
