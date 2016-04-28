@@ -49,7 +49,6 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
-    private static final String PERMISSIONS_JSON = "/config/permissions.json";
 
     // holds mapping resource -> acl
     private final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
@@ -57,18 +56,13 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     @Value(value = "${hono.single.tenant}")
     private boolean singleTenant;
 
+    @Value(value = "${hono.permissions.path:/config/permissions.json}")
+    private String permissionsPath;
+
     @Override
     protected void doStart(final Future startFuture) throws Exception {
         loadPermissionsFromFile();
         startFuture.complete();
-    }
-
-    /**
-     * @param singleTenant true if system is running in single tenant mode
-     */
-    @Value(value = "${hono.single.tenant}")
-    public void setSingleTenant(final boolean singleTenant) {
-        this.singleTenant = singleTenant;
     }
 
     @Override
@@ -130,7 +124,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
     private void loadPermissionsFromFile() {
         try {
-            final URL resource = InMemoryAuthorizationService.class.getResource(PERMISSIONS_JSON);
+            final URL resource = InMemoryAuthorizationService.class.getResource(permissionsPath);
             final Path pathToPermissions;
             // first try find file in resources e.g. for tests
             if (resource != null) {
@@ -138,7 +132,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
             }
             // then try current working dir
             else {
-                pathToPermissions = Paths.get(PERMISSIONS_JSON);
+                pathToPermissions = Paths.get(permissionsPath);
             }
 
             LOGGER.debug("Try to load permissions from: {}", pathToPermissions.toAbsolutePath());
@@ -159,7 +153,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
                     });
         }
         catch (IOException | URISyntaxException e) {
-            LOGGER.debug("Failed to load permissions from {}: {}", PERMISSIONS_JSON, e.getMessage());
+            LOGGER.debug("Failed to load permissions from {}: {}", permissionsPath, e.getMessage());
         }
     }
 
