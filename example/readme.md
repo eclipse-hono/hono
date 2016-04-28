@@ -88,6 +88,7 @@ You may want to start the *Hono Server* from within your IDE or from the command
 1. Start up the *Dispatch Router* Docker image as described above.
 1. Run the following Maven command from the `server` folder
 
-    $ mvn spring-boot:run -Dhono.telemetry.downstream.host=localhost -Dhono.telemetry.downstream.port=15672
 
-**Note**: Replace `localhost` with the name or IP address of the host that the *Dispatch Router* is running on.
+    $ mvn spring-boot:run -Dhono.telemetry.downstream.host=localhost -Dhono.telemetry.downstream.port=15672 -Dhono.permissions.path=../example/config/permissions.json
+
+  **NOTE**: Replace `localhost` with the name or IP address of the host that the *Dispatch Router* is running on.
