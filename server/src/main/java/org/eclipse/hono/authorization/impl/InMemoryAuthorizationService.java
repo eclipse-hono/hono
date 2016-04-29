@@ -57,7 +57,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     private boolean singleTenant;
 
     @Value(value = "${hono.permissions.path:/config/permissions.json}")
-    private String permissionsPath;
+    private String permissionsPath = "/config/permissions.json";
 
     @Override
     protected void doStart(final Future startFuture) throws Exception {
