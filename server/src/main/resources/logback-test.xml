@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+  </root>
+
+  <logger name="org.apache.activemq" level="INFO"/>
+  <logger name="org.apache.activemq.transport.amqp" level="INFO"/>
+
+  <logger name="org.eclipse.hono" level="DEBUG"/>
+  <logger name="org.eclipse.hono.TelemetryDataReadStream" level="DEBUG"/>
+  <logger name="org.eclipse.hono.HonoServerTest" level="DEBUG"/>
+  <logger name="org.eclipse.hono.impl" level="DEBUG"/>
+  <logger name="org.eclipse.hono.impl.ProtonSenderWriteStream" level="DEBUG"/>
+  <logger name="org.eclipse.hono.mom.rabbitmq" level="DEBUG"/>
+  <logger name="org.eclipse.hono.telemetry" level="DEBUG"/>
+  <logger name="org.eclipse.hono.telemetry.impl" level="DEBUG"/>
+  <logger name="org.eclipse.hono.authorization" level="DEBUG"/>
+  <logger name="org.eclipse.hono.authorization.impl" level="DEBUG"/>
+
+  <logger name="io.vertx.proton.impl" level="INFO"/>
+
+</configuration>

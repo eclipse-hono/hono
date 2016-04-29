@@ -39,7 +39,7 @@ import io.vertx.proton.ProtonSender;
  *
  */
 @Service
-@Profile("forwarding-telemetry")
+@Profile({"forwarding-telemetry", "activemq"})
 public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     private static final Logger  LOG = LoggerFactory.getLogger(ForwardingTelemetryAdapter.class);
