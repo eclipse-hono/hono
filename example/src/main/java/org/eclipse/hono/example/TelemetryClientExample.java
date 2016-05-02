@@ -53,6 +53,8 @@ public class TelemetryClientExample {
     private String              deviceId;
     @Value(value = "${role}")
     private String              role;
+    @Value(value = "${hono.server.pathSeparator:/}")
+    private String pathSeparator;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -64,7 +66,7 @@ public class TelemetryClientExample {
             client.createSender()
                     .setHandler(r -> executor.execute(this::readMessagesFromStdin));
         } else if (ROLE_RECEIVER.equalsIgnoreCase(role)) {
-            client.createReceiver(content -> LOG.info("received telemetry message: {}", content))
+            client.createReceiver(content -> LOG.info("received telemetry message: {}", content), "telemetry" + pathSeparator + "%s")
                     .setHandler(v -> executor.execute(this::waitForInput));
         } else {
             throw new IllegalArgumentException("role parameter must be either " + ROLE_SENDER + " or " + ROLE_RECEIVER);

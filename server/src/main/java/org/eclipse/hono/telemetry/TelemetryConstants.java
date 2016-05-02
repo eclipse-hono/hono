@@ -26,7 +26,8 @@ public final class TelemetryConstants {
     public static final String RESULT_ACCEPTED = "accepted";
     public static final String RESULT_ERROR = "error";
     public static final String TELEMETRY_ENDPOINT             = "telemetry";
-    public static final String NODE_ADDRESS_TELEMETRY_PREFIX  = TELEMETRY_ENDPOINT + "/";
+    public static final String PATH_SEPARATOR = "/";
+    public static final String NODE_ADDRESS_TELEMETRY_PREFIX  = TELEMETRY_ENDPOINT + PATH_SEPARATOR;
     /**
      * The vert.x event bus address inbound telemetry data is published on.
      */

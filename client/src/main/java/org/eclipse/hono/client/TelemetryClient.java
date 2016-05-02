@@ -109,10 +109,14 @@ public class TelemetryClient {
     }
 
     public Future<Void> createReceiver(final Consumer<String> consumer) throws Exception {
+        return createReceiver(consumer, RECEIVER_SOURCE_ADDRESS);
+    }
+
+    public Future<Void> createReceiver(final Consumer<String> consumer, String receiverAddress) throws Exception {
         final Future<Void> future = Future.future();
         connection.thenAccept(connection ->
         {
-            final String address = String.format(RECEIVER_SOURCE_ADDRESS, tenantId);
+            final String address = String.format(receiverAddress, tenantId);
             LOG.info("creating receiver at [{}]", address);
             connection.createReceiver(address)
                     .openHandler(recOpen -> {

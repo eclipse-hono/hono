@@ -48,6 +48,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
     private ProtonConnection     downstreamConnection;
     private String               downstreamContainerHost;
     private int                  downstreamContainerPort;
+    private String pathSeparator = TelemetryConstants.PATH_SEPARATOR;
 
     /**
      * 
@@ -114,7 +115,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
             result.fail("Downstream connection must be opened before creating sender");
             handler.handle(result);
         } else {
-            ProtonSender sender = downstreamConnection.createSender(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + tenantId);
+            ProtonSender sender = downstreamConnection.createSender(TelemetryConstants.TELEMETRY_ENDPOINT + pathSeparator + tenantId);
             sender.setQoS(ProtonQoS.AT_MOST_ONCE);
             sender.openHandler(openAttempt -> {
                 if (openAttempt.succeeded()) {
@@ -187,5 +188,14 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                 resultHandler.handle(Boolean.FALSE);
             }
         });
+    }
+
+    public String getPathSeparator() {
+        return pathSeparator;
+    }
+
+    @Value(value = "${hono.telemetry.pathSeparator:/}")
+    public void setPathSeparator(String pathSeparator) {
+        this.pathSeparator = pathSeparator;
     }
 }
