@@ -104,9 +104,7 @@
 
   <modules>
     <module>bom</module>
-    <module>api</module>
     <module>client</module>
-    <module>dispatcher</module>
     <module>adapters</module>
     <module>example</module>
     <module>vertx-proton</module>
