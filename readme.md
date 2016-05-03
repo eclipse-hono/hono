@@ -22,12 +22,10 @@ Please take a look at the [example clients](example) which illustrate how client
 
 ### Modules
 
-* `api`: defines the hono client api interfaces
-* `client`: implementation of the hono api, based on amqp-client
+* `client`: simple java client based on vertx-proton 
 * `adapters`: implementation of core protocol adapters 
-* `dispatcher`: the hono message dispatcher
-* `docker`: ready to use docker compose file to start the hono server with all requirement runtime components.
-* `example`: simple example that uses the hono-client to send and receive messages via the hono-dispatcher
+* `example`: simple example that uses the hono-client to send and receive messages via the hono-server
+* `server`: the hono server component exposing the Hono API via AMQP 1.0
 
 ### Get in Touch
 
