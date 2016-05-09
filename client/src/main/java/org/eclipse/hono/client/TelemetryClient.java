@@ -112,7 +112,7 @@ public class TelemetryClient {
         return createReceiver(consumer, RECEIVER_SOURCE_ADDRESS);
     }
 
-    public Future<Void> createReceiver(final Consumer<String> consumer, String receiverAddress) throws Exception {
+    public Future<Void> createReceiver(final Consumer<String> consumer, final String receiverAddress) throws Exception {
         final Future<Void> future = Future.future();
         connection.thenAccept(connection ->
         {
@@ -137,7 +137,8 @@ public class TelemetryClient {
                         } else if (section instanceof Data) {
                             content = ((Data) section).toString();
                         } else if (section instanceof AmqpValue) {
-                            content = ((AmqpValue) section).toString();
+                            final AmqpValue amqpValue = (AmqpValue) section;
+                            content = String.valueOf (amqpValue.getValue());
                         }
                         consumer.accept(content);
                         ProtonHelper.accepted(delivery, true);
@@ -164,8 +165,13 @@ public class TelemetryClient {
 
     @PreDestroy
     public void shutdown() {
+        shutdown(null);
+    }
+
+    @PreDestroy
+    public void shutdown(Handler<AsyncResult<Void>> completionHandler) {
         connection.thenAccept(ProtonConnection::close);
-        vertx.close();
+        vertx.close(completionHandler);
     }
 
     private <T> Handler<AsyncResult<T>> loggingHandler(final String label)
