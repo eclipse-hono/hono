@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.proton.ProtonClientOptions;
 
 /**
  * A simple tests that uses the TelemetryClient to send some messages to Hono server and verifies they are received at
@@ -49,11 +50,13 @@ public class TelemetryClientIT {
 
     @Before
     public void init(final TestContext ctx) throws Exception {
+        final ProtonClientOptions options = new ProtonClientOptions();
+        options.setReconnectAttempts(10);
 
-        sender = new TelemetryClient(HONO_HOST, HONO_PORT, TEST_TENANT_ID);
+        sender = new TelemetryClient(HONO_HOST, HONO_PORT, TEST_TENANT_ID, options);
         sender.createSender().setHandler(ctx.asyncAssertSuccess());
 
-        receiver = new TelemetryClient(QPID_HOST, QPID_PORT, TEST_TENANT_ID);
+        receiver = new TelemetryClient(QPID_HOST, QPID_PORT, TEST_TENANT_ID, options);
     }
 
     @After
