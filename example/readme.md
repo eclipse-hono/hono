@@ -19,7 +19,7 @@ The easiest way to run the example is by using [Docker Compose](https://docs.doc
 1. In order to build the *Hono Server* Docker image run the following from the `server` folder
     `$ mvn install -Ddocker.host=tcp://${host}:${port}`
 1. In order to build the *Example Configuration* Docker image run the following command in the `example` folder
-    `$ mvn install -Ddocker.host=tcp://${host}:${port}` (repeat this step whenever you want to change your example configuration)
+    `$ mvn install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image` (repeat this step whenever you want to change your example configuration)
 
 with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. If you are running on Linux and Docker is installed locally, you can omit the `docker.host` property.
  
