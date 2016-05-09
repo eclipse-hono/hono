@@ -35,7 +35,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
@@ -79,27 +78,17 @@ public final class TelemetryEndpoint implements Endpoint {
     }
 
     @Override
-    public void handleReceiverOpen(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
-        checkAuthorizationToAttach(targetResource,
-                isAuthorized -> {
-                    if (!isAuthorized) {
-                        LOG.debug(
-                                "client is not authorized to upload telemetry data for tenant [id: {}], closing link",
-                                targetResource.getTenantId());
-                        receiver.close();
-                    } else {
-                        receiver.setAutoAccept(false);
-                        LOG.debug("client uses QoS: {}", receiver.getRemoteQoS());
-                        receiver.handler((delivery, message) -> {
-                            final ResourceIdentifier messageAddress = getResourceIdentifier(message.getAddress());
-                            if (TelemetryMessageFilter.verify(targetResource, messageAddress, message)) {
-                                sendTelemetryData(delivery, message, messageAddress);
-                            } else {
-                                ProtonHelper.rejected(delivery, true);
-                            }
-                        }).setPrefetch(20).open(); // TODO: change to manual flow control
-                    }
-                });
+    public void establishLink(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
+        receiver.setAutoAccept(false);
+        LOG.debug("client uses QoS: {}", receiver.getRemoteQoS());
+        receiver.handler((delivery, message) -> {
+            final ResourceIdentifier messageAddress = getResourceIdentifier(message.getAddress());
+            if (TelemetryMessageFilter.verify(targetResource, messageAddress, message)) {
+                sendTelemetryData(delivery, message, messageAddress);
+            } else {
+                ProtonHelper.rejected(delivery, true);
+            }
+        }).setPrefetch(20).open(); // TODO: change to manual flow control
     }
 
     private ResourceIdentifier getResourceIdentifier(final String address) {
@@ -108,16 +97,6 @@ public final class TelemetryEndpoint implements Endpoint {
         } else {
             return ResourceIdentifier.fromString(address);
         }
-    }
-
-    private void checkAuthorizationToAttach(final ResourceIdentifier targetResource, final Handler<Boolean> handler) {
-        final JsonObject body = new JsonObject();
-        // TODO how to obtain subject information?
-        body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        body.put(RESOURCE_FIELD, targetResource.toString());
-        body.put(PERMISSION_FIELD, Permission.WRITE.toString());
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,
-                res -> handler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 
     private void sendTelemetryData(final ProtonDelivery delivery, final Message msg, final ResourceIdentifier messageAddress) {

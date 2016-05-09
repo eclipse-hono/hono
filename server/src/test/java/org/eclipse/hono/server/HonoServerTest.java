@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono;
+package org.eclipse.hono.server;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -22,6 +22,8 @@ import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
+import org.eclipse.hono.util.TelemetryDataReadStream;
+import org.eclipse.hono.util.TestSupport;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;

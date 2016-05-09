@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono;
+package org.eclipse.hono.util;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;

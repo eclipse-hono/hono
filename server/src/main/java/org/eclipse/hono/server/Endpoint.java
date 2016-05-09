@@ -38,5 +38,5 @@ public interface Endpoint {
      * @param receiver the link to be established.
      * @param targetResource the target address from the client's AMQP <em>ATTACH</em> message.
      */
-    void handleReceiverOpen(ProtonReceiver receiver, ResourceIdentifier targetResource);
+    void establishLink(ProtonReceiver receiver, ResourceIdentifier targetResource);
 }

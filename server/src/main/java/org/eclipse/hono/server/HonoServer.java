@@ -11,12 +11,20 @@
  */
 package org.eclipse.hono.server;
 
+import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
+import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
+import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
+import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.eclipse.hono.authorization.AuthorizationConstants;
+import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +35,8 @@ import org.springframework.stereotype.Component;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonServer;
@@ -187,13 +197,20 @@ public final class HonoServer extends AbstractVerticle {
         LOG.debug("client wants to open a link for sending messages [address: {}]", receiver.getRemoteTarget());
         try {
             final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
-            Endpoint endpoint = getEndpoint(targetResource.getEndpoint());
+            Endpoint endpoint = getEndpoint(targetResource);
             if (endpoint == null) {
-                LOG.info("no endpoint registered for address [{}]", receiver.getRemoteTarget().getAddress());
+                LOG.info("no matching endpoint registered for address [{}]", receiver.getRemoteTarget().getAddress());
                 receiver.close();
             } else {
-                receiver.setTarget(receiver.getRemoteTarget());
-                endpoint.handleReceiverOpen(receiver, targetResource);
+                checkAuthorizationToAttach(targetResource, isAuthorized -> {
+                    if (isAuthorized) {
+                        receiver.setTarget(receiver.getRemoteTarget());
+                        endpoint.establishLink(receiver, targetResource);
+                    } else {
+                        LOG.debug("client is not authorized to attach to endpoint [{}], closing link", targetResource);
+                        receiver.close();
+                    }
+                });
             }
         } catch (IllegalArgumentException e) {
             LOG.debug("client has provided invalid resource identifier as target address", e);
@@ -201,8 +218,18 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
-    private Endpoint getEndpoint(final String name) {
-        return endpoints.get(name);
+    private Endpoint getEndpoint(final ResourceIdentifier targetAddress) {
+        return endpoints.get(targetAddress.getEndpoint());
+    }
+
+    private void checkAuthorizationToAttach(final ResourceIdentifier targetResource, final Handler<Boolean> handler) {
+        final JsonObject body = new JsonObject();
+        // TODO how to obtain subject information?
+        body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
+        body.put(RESOURCE_FIELD, targetResource.toString());
+        body.put(PERMISSION_FIELD, Permission.WRITE.toString());
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,
+                res -> handler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 
     private ResourceIdentifier getResourceIdentifier(final String address) {
