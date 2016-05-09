@@ -87,6 +87,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
 
   <distributionManagement>
@@ -109,6 +110,7 @@
     <module>example</module>
     <module>vertx-proton</module>
     <module>server</module>
+    <module>tests</module>
   </modules>
 
   <dependencyManagement>
@@ -173,6 +175,16 @@
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.19.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>2.19.1</version>
         </plugin>
       </plugins>
     </pluginManagement>
