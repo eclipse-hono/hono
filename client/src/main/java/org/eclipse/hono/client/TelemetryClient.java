@@ -30,6 +30,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClient;
+import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
@@ -53,6 +54,13 @@ public class TelemetryClient {
     private final int    port;
     private final String tenantId;
 
+    /**
+     * Instantiates a new TelemetryClient.
+     *
+     * @param host the Hono host
+     * @param port the Hono port
+     * @param tenantId the ID of the tenant for which this client instance sends/receives messages
+     */
     public TelemetryClient(final String host, final int port, final String tenantId) {
         this.host = host;
         this.port = port;
@@ -65,12 +73,36 @@ public class TelemetryClient {
                 LOG.info("Connection to Hono ({}:{}) failed.", host, port, t);
             }
         });
-        connectToHono();
+        connectToHono(new ProtonClientOptions());
     }
 
-    private void connectToHono() {
+    /**
+     * Instantiates a new TelemetryClient.
+     *
+     * @param host the Hono host
+     * @param port the Hono port
+     * @param tenantId the ID of the tenant for which this client instance sends/receives messages
+     * @param clientOptions options for configuring the created TelemetryClient
+     */
+    public TelemetryClient(final String host, final int port, final String tenantId, final ProtonClientOptions clientOptions) {
+        this.host = host;
+        this.port = port;
+        this.tenantId = tenantId;
+        vertx = Vertx.vertx();
+        connection = new CompletableFuture<>();
+        connection.whenComplete((o,t) -> {
+            if (t != null)
+            {
+                LOG.info("Connection to Hono ({}:{}) failed.", host, port, t);
+            }
+        });
+        connectToHono(clientOptions);
+    }
+
+    private void connectToHono(final ProtonClientOptions options) {
         final ProtonClient client = ProtonClient.create(vertx);
-        client.connect(host, port, conAttempt -> {
+
+        client.connect(options, host, port, conAttempt -> {
             if (conAttempt.succeeded()) {
                 LOG.debug("connected to Hono server [{}:{}]", host, port);
                 conAttempt.result()
@@ -169,7 +201,7 @@ public class TelemetryClient {
     }
 
     @PreDestroy
-    public void shutdown(Handler<AsyncResult<Void>> completionHandler) {
+    public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         connection.thenAccept(ProtonConnection::close);
         vertx.close(completionHandler);
     }
