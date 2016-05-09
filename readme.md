@@ -29,7 +29,7 @@ Please take a look at the [example clients](example) which illustrate how client
 
 ### Get in Touch
 
-Please check out the [Hono project home page](https://projects.eclipse.org/projects/iot.hono) for details.
+Please check out the [Hono project home page](https://projects.eclipse.org/projects/iot.hono) for details. We are also available on `#rhiot` IRC channel on Freenode and [Hono Dev mailing list](https://dev.eclipse.org/mailman/listinfo/hono-dev).
 
 ### Build status
 
