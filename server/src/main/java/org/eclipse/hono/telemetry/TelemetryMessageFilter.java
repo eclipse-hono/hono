@@ -11,10 +11,6 @@
  */
 package org.eclipse.hono.telemetry;
 
-import java.util.HashMap;
-
-import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -34,6 +30,14 @@ public final class TelemetryMessageFilter {
 
     /**
      * Checks whether a given telemetry message contains all required properties.
+     * <p>
+     * If verification is successful, the following two properties are added to the message's
+     * <em>annotations</em>:
+     * </p>
+     * <ul>
+     * <li><em>device-id</em> - the ID of the device that reported the data.</li>
+     * <li><em>tenant-id</em> - the ID of the tenant the device belongs to.</li>
+     * </ul>
      * 
      * @param linkTarget the link target address to match the telemetry message's address against.
      * @param messageAddress the resource identifier representing the message's address as taken from its
@@ -56,13 +60,8 @@ public final class TelemetryMessageFilter {
     private static boolean hasValidAddress(final ResourceIdentifier linkTarget, final ResourceIdentifier messageAddress,
             final Message msg) {
         if (linkTarget.getTenantId().equals(messageAddress.getTenantId())) {
-            MessageAnnotations annotations = msg.getMessageAnnotations();
-            if (annotations == null) {
-                annotations = new MessageAnnotations(new HashMap<>());
-                msg.setMessageAnnotations(annotations);
-            }
-            annotations.getValue().put(Symbol.valueOf(MessageHelper.APP_PROPERTY_TENANT_ID), messageAddress.getTenantId());
-            annotations.getValue().put(Symbol.valueOf(MessageHelper.APP_PROPERTY_DEVICE_ID), messageAddress.getDeviceId());
+            MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_TENANT_ID, messageAddress.getTenantId());
+            MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_DEVICE_ID, messageAddress.getDeviceId());
             return true;
         } else {
             LOG.trace("message address contains invalid tenant ID [expected: {}, but was: {}]", linkTarget.getTenantId(),

@@ -14,7 +14,9 @@ package org.eclipse.hono.util;
 import java.util.HashMap;
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 
 /**
@@ -62,5 +64,21 @@ public final class MessageHelper {
             props = new ApplicationProperties(new HashMap<String, Object>());
         }
         props.getValue().put(APP_PROPERTY_TENANT_ID, tenantId);
+    }
+
+    /**
+     * Adds a value for a symbol to an AMQP 1.0 message's <em>annotations</em>.
+     * 
+     * @param msg the message to add the symbol to.
+     * @param key the name of the symbol to add a value for.
+     * @param value the value to add.
+     */
+    public static void addAnnotation(final Message msg, final String key, final String value) {
+        MessageAnnotations annotations = msg.getMessageAnnotations();
+        if (annotations == null) {
+            annotations = new MessageAnnotations(new HashMap<>());
+            msg.setMessageAnnotations(annotations);
+        }
+        annotations.getValue().put(Symbol.getSymbol(key), value);
     }
 }
