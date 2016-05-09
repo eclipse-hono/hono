@@ -16,7 +16,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -122,20 +122,10 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         });
     }
 
-    private void loadPermissionsFromFile() {
-        try {
-            final URL resource = InMemoryAuthorizationService.class.getResource(permissionsPath);
-            final Path pathToPermissions;
-            // first try find file in resources e.g. for tests
-            if (resource != null) {
-                pathToPermissions = Paths.get(resource.toURI());
-            }
-            // then try current working dir
-            else {
-                pathToPermissions = Paths.get(permissionsPath);
-            }
+    private void loadPermissionsFromFile() throws IOException {
 
-            LOGGER.debug("Try to load permissions from: {}", pathToPermissions.toAbsolutePath());
+            final Path pathToPermissions = resolvePathToPermissions();
+            LOGGER.debug("Loading permissions from: {}", pathToPermissions.toAbsolutePath());
             final String permissionsJson = new String(Files.readAllBytes(pathToPermissions), UTF_8);
             final JsonObject permissionsObject = new JsonObject(permissionsJson);
 
@@ -151,10 +141,19 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
                                     addPermission(subject.getKey(), resourceIdentifier, toSet(permissions));
                                 });
                     });
+    }
+
+    private Path resolvePathToPermissions() {
+        // first try to load from configured path
+        final Path pathToPermissions = Paths.get(permissionsPath);
+        if (pathToPermissions != null && pathToPermissions.toFile().exists() && pathToPermissions.toFile().canRead())
+        {
+            return pathToPermissions;
         }
-        catch (IOException | URISyntaxException e) {
-            LOGGER.debug("Failed to load permissions from {}: {}", permissionsPath, e.getMessage());
-        }
+
+        // then try to load default from classpath
+        final URL resource = InMemoryAuthorizationService.class.getResource(permissionsPath);
+        return Paths.get(URI.create(resource.toString()));
     }
 
     private ResourceIdentifier getResourceIdentifier(final Map.Entry<String, Object> resources) {
