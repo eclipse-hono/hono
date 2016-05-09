@@ -11,36 +11,23 @@
  */
 package org.eclipse.hono.server;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
-import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN;
-import static org.eclipse.hono.telemetry.TelemetryConstants.TELEMETRY_ENDPOINT;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
-import java.util.UUID;
-
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.AmqpMessage;
-import org.eclipse.hono.authorization.AuthorizationConstants;
-import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.telemetry.TelemetryConstants;
-import org.eclipse.hono.telemetry.TelemetryMessageFilter;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
@@ -53,27 +40,36 @@ import io.vertx.proton.ProtonServerOptions;
 @Component
 public final class HonoServer extends AbstractVerticle {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HonoServer.class);
-    private String              host;
-    private int                 port;
-    private boolean             singleTenant;
-    private ProtonServer        server;
+    private static final Logger   LOG = LoggerFactory.getLogger(HonoServer.class);
+    private String                host;
+    private int                   port;
+    private boolean               singleTenant;
+    private ProtonServer          server;
+    private Map<String, Endpoint> endpoints = new HashMap<>();
 
     @Override
     public void start(final Future<Void> startupHandler) {
-        final ProtonServerOptions options = createServerOptions();
-        server = ProtonServer.create(vertx, options)
-                .connectHandler(this::helloProcessConnection)
-                .listen(port, host, bindAttempt -> {
-                    if (bindAttempt.succeeded()) {
-                        this.port = bindAttempt.result().actualPort();
-                        LOG.info("HonoServer running at [{}:{}]", host, this.port);
-                        startupHandler.complete();
-                    } else {
-                        LOG.error("Cannot start up HonoServer", bindAttempt.cause());
-                        startupHandler.fail(bindAttempt.cause());
-                    }
-                });
+        if (!isTelemetryEndpointConfigured()) {
+            startupHandler.fail("Telemetry endpoint must be configured");
+        } else {
+            final ProtonServerOptions options = createServerOptions();
+            server = ProtonServer.create(vertx, options)
+                    .connectHandler(this::helloProcessConnection)
+                    .listen(port, host, bindAttempt -> {
+                        if (bindAttempt.succeeded()) {
+                            this.port = bindAttempt.result().actualPort();
+                            LOG.info("HonoServer running at [{}:{}]", host, this.port);
+                            startupHandler.complete();
+                        } else {
+                            LOG.error("Cannot start up HonoServer", bindAttempt.cause());
+                            startupHandler.fail(bindAttempt.cause());
+                        }
+                    });
+        }
+    }
+
+    private boolean isTelemetryEndpointConfigured() {
+        return endpoints.containsKey(TelemetryConstants.TELEMETRY_ENDPOINT);
     }
 
     ProtonServerOptions createServerOptions() {
@@ -89,6 +85,22 @@ public final class HonoServer extends AbstractVerticle {
     public void stop(Future<Void> shutdownHandler) {
         if (server != null) {
             server.close(done -> shutdownHandler.complete());
+        }
+    }
+
+    @Autowired
+    public void setEndpoints(final List<Endpoint> definedEndpoints) {
+        Objects.requireNonNull(definedEndpoints);
+        for (Endpoint ep : definedEndpoints) {
+            addEndpoint(ep);
+        }
+    }
+
+    public void addEndpoint(final Endpoint ep) {
+        if (endpoints.putIfAbsent(ep.getName(), ep) != null) {
+            LOG.warn("multiple endpoints defined with name [{}]", ep.getName());
+        } else {
+            LOG.debug("registering endpoint [{}]", ep.getName());
         }
     }
 
@@ -175,14 +187,14 @@ public final class HonoServer extends AbstractVerticle {
         LOG.debug("client wants to open a link for sending messages [address: {}]", receiver.getRemoteTarget());
         try {
             final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
-            receiver.setTarget(receiver.getRemoteTarget());
-            if (targetResource.getEndpoint().equals(TELEMETRY_ENDPOINT)) {
-                // client wants to upload telemetry data
-                handleTelemetryUpload(receiver, targetResource);
-            } else {
+            Endpoint endpoint = getEndpoint(targetResource.getEndpoint());
+            if (endpoint == null) {
                 LOG.info("client wants to connect to unsupported endpoint [address: {}]",
                         receiver.getRemoteTarget().getAddress());
                 receiver.close();
+            } else {
+                receiver.setTarget(receiver.getRemoteTarget());
+                endpoint.handleReceiverOpen(receiver, targetResource);
             }
         } catch (IllegalArgumentException e) {
             LOG.debug("client has provided invalid resource identifier as target address", e);
@@ -190,27 +202,8 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
-    private void handleTelemetryUpload(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
-        isClientAuthorizedToAttachToTelemetryEndpoint(targetResource,
-                authorizedToAttach -> {
-                    if (!authorizedToAttach) {
-                        LOG.debug(
-                                "client is not authorized to upload telemetry data for tenant [id: {}], closing link",
-                                targetResource.getTenantId());
-                        receiver.close();
-                    } else {
-                        receiver.setAutoAccept(false);
-                        LOG.debug("client uses QoS: {}", receiver.getRemoteQoS());
-                        receiver.handler((delivery, message) -> {
-                            final ResourceIdentifier messageAddress = getResourceIdentifier(message.getAddress());
-                            if (TelemetryMessageFilter.verify(targetResource, messageAddress, message)) {
-                                sendTelemetryData(delivery, message, messageAddress);
-                            } else {
-                                ProtonHelper.rejected(delivery, true);
-                            }
-                        }).flow(20).open();
-                    }
-                });
+    private Endpoint getEndpoint(final String name) {
+        return endpoints.get(name);
     }
 
     private ResourceIdentifier getResourceIdentifier(final String address) {
@@ -219,67 +212,5 @@ public final class HonoServer extends AbstractVerticle {
         } else {
             return ResourceIdentifier.fromString(address);
         }
-    }
-
-    private void isClientAuthorizedToAttachToTelemetryEndpoint(final ResourceIdentifier targetResource,
-            final Handler<Boolean> handler) {
-        final JsonObject body = new JsonObject();
-        // TODO how to obtain subject information?
-        body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        body.put(RESOURCE_FIELD, targetResource.toString());
-        body.put(PERMISSION_FIELD, Permission.WRITE.toString());
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,
-                res -> handler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
-    }
-
-    private void sendTelemetryData(final ProtonDelivery delivery, final Message msg, final ResourceIdentifier messageAddress) {
-        final String messageId = UUID.randomUUID().toString();
-        final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
-        vertx.sharedData().getLocalMap(EVENT_BUS_ADDRESS_TELEMETRY_IN).put(messageId, amqpMessage);
-        checkPermissionAndSend(messageId, amqpMessage, messageAddress);
-    }
-
-    private void checkPermissionAndSend(final String messageId, final AmqpMessage amqpMessage, final ResourceIdentifier messageAddress)
-    {
-        final JsonObject authMsg = new JsonObject();
-        // TODO how to obtain subject information?
-        authMsg.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        authMsg.put(RESOURCE_FIELD, messageAddress.toString());
-        authMsg.put(PERMISSION_FIELD, Permission.WRITE.toString());
-
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, authMsg,
-           res -> {
-               if (res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())) {
-                   vertx.runOnContext(run -> {
-                       final ProtonDelivery delivery = amqpMessage.getDelivery();
-                       if (delivery.remotelySettled()) {
-                           // client uses AT MOST ONCE semantics
-                           sendAtMostOnce(messageId, delivery, messageAddress);
-                       } else {
-                           // client uses AT LEAST ONCE semantics
-                           sendAtLeastOnce(messageId, delivery, messageAddress);
-                       }
-                   });
-               } else {
-                   LOG.debug("not allowed to upload telemetry data", res.cause());
-               }
-           });
-    }
-
-    private void sendAtMostOnce(final String messageId, final ProtonDelivery delivery, final ResourceIdentifier messageAddress) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_IN, TelemetryConstants.getTelemetryMsg(messageId, messageAddress));
-        ProtonHelper.accepted(delivery, true);
-    }
-
-    private void sendAtLeastOnce(final String messageId, final ProtonDelivery delivery, final ResourceIdentifier messageAddress) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_IN, TelemetryConstants.getTelemetryMsg(messageId, messageAddress),
-                res -> {
-                    if (res.succeeded() && TelemetryConstants.RESULT_ACCEPTED.equals(res.result().body())) {
-                        vertx.runOnContext(run -> ProtonHelper.accepted(delivery, true));
-                    } else {
-                        LOG.debug("did not receive response for telemetry data message", res.cause());
-                        vertx.runOnContext(run -> ProtonHelper.rejected(delivery, true));
-                    }
-                });
     }
 }

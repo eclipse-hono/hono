@@ -35,15 +35,16 @@ import io.vertx.core.Vertx;
 public class Application {
 
     @Autowired
-    private BaseTelemetryAdapter adapter;
+    private Vertx                    vertx;
+    @Autowired
+    private BaseTelemetryAdapter     adapter;
     @Autowired
     private BaseAuthorizationService authService;
     @Autowired
-    private HonoServer           server;
+    private HonoServer               server;
 
     @PostConstruct
     public void registerVerticles() {
-        Vertx vertx = Vertx.vertx();
         vertx.deployVerticle(adapter);
         vertx.deployVerticle(authService);
         vertx.deployVerticle(server);

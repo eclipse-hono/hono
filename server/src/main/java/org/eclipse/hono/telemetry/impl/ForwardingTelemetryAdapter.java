@@ -42,13 +42,13 @@ import io.vertx.proton.ProtonSender;
 @Profile({"forwarding-telemetry", "activemq"})
 public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
-    private static final Logger  LOG = LoggerFactory.getLogger(ForwardingTelemetryAdapter.class);
+    private static final Logger             LOG                       = LoggerFactory.getLogger(ForwardingTelemetryAdapter.class);
     private final Map<String, ProtonSender> senders;
-    private final AtomicLong           messageTagCounter;
-    private ProtonConnection     downstreamConnection;
-    private String               downstreamContainerHost;
-    private int                  downstreamContainerPort;
-    private String pathSeparator = TelemetryConstants.PATH_SEPARATOR;
+    private final AtomicLong                messageTagCounter;
+    private ProtonConnection                downstreamConnection;
+    private String                          downstreamContainerHost;
+    private int                             downstreamContainerPort;
+    private String                          pathSeparator             = TelemetryConstants.PATH_SEPARATOR;
 
     /**
      * 
@@ -174,11 +174,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
             if (req.succeeded()) {
                 ProtonSender sender = req.result();
                 if (sender.isOpen()) {
-                    // TODO flow control with downstream container
-                    ByteBuffer b = ByteBuffer.allocate(8);
-                    b.putLong(messageTagCounter.getAndIncrement());
-                    b.flip();
-                    sender.send(b.array(), msg);
+                    forwardMessage(sender, msg);
                     resultHandler.handle(Boolean.TRUE);
                 } else {
                     LOG.warn("sender for downstream container is not open");
@@ -188,6 +184,17 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                 resultHandler.handle(Boolean.FALSE);
             }
         });
+    }
+
+    private void forwardMessage(final ProtonSender sender, final Message msg) {
+        ByteBuffer b = ByteBuffer.allocate(8);
+        b.putLong(messageTagCounter.getAndIncrement());
+        b.flip();
+        sender.send(b.array(), msg);
+        if (sender.sendQueueFull()) {
+            // TODO flow control with downstream container
+            // register callback to be notified when credit is replenished
+        }
     }
 
     public String getPathSeparator() {

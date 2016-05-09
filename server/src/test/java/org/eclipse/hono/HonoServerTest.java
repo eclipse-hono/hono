@@ -21,6 +21,7 @@ import org.eclipse.hono.impl.ProtonSenderWriteStream;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
+import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -54,19 +55,21 @@ public class HonoServerTest {
      */
     private static final String MY_TENANT_ID = "MY_TENANT";
     private static final Logger LOG          = LoggerFactory.getLogger(HonoServerTest.class);
-    static Vertx                   vertx;
+    static Vertx                vertx;
     static HonoServer           server;
-    ProtonConnection               connection;
-    ProtonSender                   protonSender;
+    ProtonConnection            connection;
+    ProtonSender                protonSender;
 
     @BeforeClass
     public static void init(final TestContext ctx) {
 
         // Create the Vert.x instance
         vertx = Vertx.vertx();
+        TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
         server = new HonoServer();
         server.setPort(0);
         server.setHost("0.0.0.0");
+        server.addEndpoint(telemetryEndpoint);
 
         vertx.deployVerticle(server, ctx.asyncAssertSuccess());
         vertx.deployVerticle(MessageDiscardingTelemetryAdapter.class.getName(), ctx.asyncAssertSuccess());
