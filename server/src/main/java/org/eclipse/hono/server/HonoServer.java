@@ -189,8 +189,7 @@ public final class HonoServer extends AbstractVerticle {
             final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
             Endpoint endpoint = getEndpoint(targetResource.getEndpoint());
             if (endpoint == null) {
-                LOG.info("client wants to connect to unsupported endpoint [address: {}]",
-                        receiver.getRemoteTarget().getAddress());
+                LOG.info("no endpoint registered for address [{}]", receiver.getRemoteTarget().getAddress());
                 receiver.close();
             } else {
                 receiver.setTarget(receiver.getRemoteTarget());

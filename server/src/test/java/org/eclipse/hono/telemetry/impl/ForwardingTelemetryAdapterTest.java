@@ -54,7 +54,7 @@ public class ForwardingTelemetryAdapterTest {
 
         // THEN the message has been delivered to the downstream container
         assertTrue(latch.await(1, TimeUnit.SECONDS));
-        verify(sender).send(any(), any());
+        verify(sender).send(any(byte[].class), any(Message.class));
     }
 
     @Test

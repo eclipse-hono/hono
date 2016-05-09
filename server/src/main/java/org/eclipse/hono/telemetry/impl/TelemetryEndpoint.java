@@ -97,7 +97,7 @@ public final class TelemetryEndpoint implements Endpoint {
                             } else {
                                 ProtonHelper.rejected(delivery, true);
                             }
-                        }).flow(20).open();
+                        }).setPrefetch(20).open(); // TODO: change to manual flow control
                     }
                 });
     }
