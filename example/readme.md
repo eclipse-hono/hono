@@ -49,7 +49,7 @@ you can also use plain *Docker* to run and wire up the images manually from the 
 In order to start a broker using [Gordon Sim's Qpid Dispatch Router image](https://hub.docker.com/r/gordons/qpid-dispatch/) run the following from the
 command line
 
-    $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter gordons/qpid-dispatch:0.6.0-beta2
+    $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter gordons/qpid-dispatch:0.6.0-rc1
 
 ##### Example Configuration
 

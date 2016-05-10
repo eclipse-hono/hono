@@ -82,10 +82,11 @@ public class TelemetryClientExample {
                 input = reader.readLine();
                 client.send(deviceId, input);
             } while (input != null && !input.isEmpty());
-            client.shutdown();
-            executor.shutdown();
         } catch (final IOException e) {
             LOG.error("problem reading message from STDIN", e);
+        } finally {
+            client.shutdown();
+            executor.shutdown();
         }
     }
 
@@ -93,10 +94,11 @@ public class TelemetryClientExample {
         try {
             LOG.info("Press enter to stop receiver.");
             System.in.read();
-            client.shutdown();
-            executor.shutdown();
         } catch (final IOException e) {
             LOG.error("problem reading message from STDIN", e);
+        } finally {
+            client.shutdown();
+            executor.shutdown();
         }
     }
 

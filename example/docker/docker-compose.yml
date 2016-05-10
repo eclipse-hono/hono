@@ -1,5 +1,5 @@
 qdrouter:
-  image: gordons/qpid-dispatch:0.6.0-beta2
+  image: gordons/qpid-dispatch:0.6.0-rc1
   ports:
     - "15672:5672"
 config:
