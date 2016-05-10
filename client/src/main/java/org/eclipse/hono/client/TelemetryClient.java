@@ -122,6 +122,10 @@ public class TelemetryClient {
     }
 
     public Future<Void> createSender() throws Exception {
+        return createSender(null);
+    }
+
+    public Future<Void> createSender(final Handler<AsyncResult<?>> closeHandler) throws Exception {
         final Future<Void> future = Future.future();
         connection.thenAccept(connection ->
         {
@@ -135,7 +139,7 @@ public class TelemetryClient {
                 } else {
                     future.fail(new IllegalStateException("cannot open sender for telemetry data", senderOpen.cause()));
                 }
-            }).closeHandler(loggingHandler("sender closed")).open();
+            }).closeHandler(loggingHandler("sender closed", closeHandler)).open();
         });
         return future;
     }
@@ -182,6 +186,10 @@ public class TelemetryClient {
     public void send(final String deviceId, final String body)
     {
         if (honoSender != null) {
+            if (!honoSender.isOpen())
+            {
+                throw new IllegalStateException("Sender is not open, failed to send message.");
+            }
             final ByteBuffer b = ByteBuffer.allocate(8);
             b.putLong(messageTagCounter.getAndIncrement());
             b.flip();
@@ -208,11 +216,19 @@ public class TelemetryClient {
 
     private <T> Handler<AsyncResult<T>> loggingHandler(final String label)
     {
+        return loggingHandler(label, null);
+    }
+
+    private <T> Handler<AsyncResult<T>> loggingHandler(final String label, final Handler<AsyncResult<?>> delegate)
+    {
         return result -> {
             if (result.succeeded()) {
                 LOG.info("{} [{}]", label, tenantId);
             } else {
                 LOG.info("{} [{}]", label, tenantId, result.cause());
+            }
+            if (delegate!= null) {
+                delegate.handle(result);
             }
         };
     }
