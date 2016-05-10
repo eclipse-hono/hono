@@ -178,7 +178,7 @@ public class TelemetryClient {
                         }
                         consumer.accept(content);
                         ProtonHelper.accepted(delivery, true);
-                    }).flow(DEFAULT_RECEIVER_CREDITS).open();
+                    }).setPrefetch(DEFAULT_RECEIVER_CREDITS).open();
         });
         return future;
     }
