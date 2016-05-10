@@ -40,6 +40,10 @@
          <version>${hono-client.version}</version>
       </dependency>
       <dependency>
+         <groupId>io.vertx</groupId>
+         <artifactId>vertx-proton</artifactId>
+      </dependency>
+      <dependency>
          <groupId>ch.qos.logback</groupId>
          <artifactId>logback-classic</artifactId>
       </dependency>
