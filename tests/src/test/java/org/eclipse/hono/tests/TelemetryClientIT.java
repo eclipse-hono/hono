@@ -83,33 +83,33 @@ public class TelemetryClientIT {
     public void testAttachDenied(final TestContext ctx) throws Exception {
 
         /* create client for tenant that has no permission */
-        sender = new TelemetryClient(HONO_HOST, HONO_PORT, "evil");
+        final TelemetryClient unauthorized = new TelemetryClient(HONO_HOST, HONO_PORT, "evil");
 
         /* and expect that the link is closed immediately */
         final Async senderClosed = ctx.async();
-        sender.createSender(closed ->
+        unauthorized.createSender(closed ->
         {
             LOGGER.info("Sender was closed");
             senderClosed.complete();
         });
 
         senderClosed.awaitSuccess(5000);
-        sender.shutdown(ctx.asyncAssertSuccess());
+        unauthorized.shutdown(ctx.asyncAssertSuccess());
     }
 
     @Test
     public void testExpectExceptionWhenSenderIsNotOpen(final TestContext ctx) throws Exception {
 
         /* create client for tenant that has no permission */
-        sender = new TelemetryClient(HONO_HOST, HONO_PORT, "evil");
+        final TelemetryClient unauthorized = new TelemetryClient(HONO_HOST, HONO_PORT, "evil");
 
         try {
-            sender.createSender().setHandler(result -> sender.send("test1", "should fail"));
+            unauthorized.createSender().setHandler(result -> sender.send("test1", "should fail"));
         } catch (final IllegalStateException e) {
             // ok
             LOGGER.info("Caught exception as expected: ", e.getMessage());
         } finally {
-            sender.shutdown(ctx.asyncAssertSuccess());
+            unauthorized.shutdown(ctx.asyncAssertSuccess());
         }
     }
 }
