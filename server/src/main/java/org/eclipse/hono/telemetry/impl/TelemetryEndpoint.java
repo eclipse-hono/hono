@@ -58,14 +58,23 @@ public final class TelemetryEndpoint implements Endpoint {
     }
 
     /**
-     * @return the singleTenant
+     * Checks if Hono runs in single-tenant mode.
+     * <p>
+     * In single-tenant mode Hono will accept target addresses in {@code ATTACH} messages
+     * that do not contain a tenant ID and will assume {@link Constants#DEFAULT_TENANT} instead.
+     * </p>
+     * <p>
+     * The default value of this property is {@code false}.
+     * </p>
+     * 
+     * @return {@code true} if Hono runs in single-tenant mode.
      */
     public boolean isSingleTenant() {
         return singleTenant;
     }
 
     /**
-     * @param singleTenant the singleTenant to set
+     * @param singleTenant {@code true} to configure Hono for single-tenant mode.
      */
     @Value(value = "${hono.single.tenant:false}")
     public void setSingleTenant(final boolean singleTenant) {

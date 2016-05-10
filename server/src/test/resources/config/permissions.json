@@ -1,5 +1,5 @@
 {
-  "telemetry/MY_TENANT": {
+  "telemetry/DEFAULT_TENANT": {
     "SUBJECT": [
       "WRITE"
     ]

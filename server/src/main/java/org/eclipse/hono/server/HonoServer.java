@@ -60,6 +60,7 @@ public final class HonoServer extends AbstractVerticle {
     @Override
     public void start(final Future<Void> startupHandler) {
         if (!isTelemetryEndpointConfigured()) {
+            LOG.warn("No Telemetry endpoint has been configured, aborting start up ...");
             startupHandler.fail("Telemetry endpoint must be configured");
         } else {
             final ProtonServerOptions options = createServerOptions();
