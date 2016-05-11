@@ -53,14 +53,14 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     // holds mapping resource -> acl
     private final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
 
-    @Value(value = "${hono.single.tenant}")
+    @Value(value = "${hono.single.tenant:false}")
     private boolean singleTenant;
 
     @Value(value = "${hono.permissions.path:/config/permissions.json}")
     private String permissionsPath = "/config/permissions.json";
 
     @Override
-    protected void doStart(final Future startFuture) throws Exception {
+    protected void doStart(final Future<Void> startFuture) throws Exception {
         loadPermissionsFromFile();
         startFuture.complete();
     }
