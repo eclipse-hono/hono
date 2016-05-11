@@ -11,6 +11,8 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
+import static org.eclipse.hono.telemetry.TelemetryConstants.*;
+
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,9 +20,10 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.telemetry.SenderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -43,18 +46,21 @@ import io.vertx.proton.ProtonSender;
 public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     private static final Logger             LOG                       = LoggerFactory.getLogger(ForwardingTelemetryAdapter.class);
-    private final Map<String, ProtonSender> senders;
+    private final Map<String, ProtonSender> activeSenders;
     private final AtomicLong                messageTagCounter;
     private ProtonConnection                downstreamConnection;
     private String                          downstreamContainerHost;
     private int                             downstreamContainerPort;
-    private String                          pathSeparator             = TelemetryConstants.PATH_SEPARATOR;
+    private String                          pathSeparator             = PATH_SEPARATOR;
+    private SenderFactory                   senderFactory;
 
     /**
      * 
      */
-    public ForwardingTelemetryAdapter() {
-        senders = new HashMap<>();
+    @Autowired
+    public ForwardingTelemetryAdapter(final SenderFactory senderFactory) {
+        this.senderFactory = Objects.requireNonNull(senderFactory);
+        activeSenders = new HashMap<>();
         messageTagCounter = new AtomicLong();
     }
 
@@ -97,43 +103,67 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         });
     }
 
-    private void getSenderForTenant(final String tenantId, final Handler<AsyncResult<ProtonSender>> resultHandler) {
-        Future<ProtonSender> result = Future.future();
-        ProtonSender sender = senders.get(tenantId);
-        if (sender == null) {
-            createSender(tenantId, resultHandler);
+    void setDownstreamConnection(final ProtonConnection con) {
+        this.downstreamConnection = con;
+    }
+
+    @Override
+    protected void linkAttached(final String linkId, final String targetAddress) {
+        ProtonSender sender = activeSenders.get(linkId);
+        if (sender != null) {
+            LOG.info("reusing existing downstream sender for link [{}]", linkId);
+            // make sure client gets notified once more credit is available
+            isSendQueueFull(linkId, sender);
         } else {
-            result.complete(sender);
-            resultHandler.handle(result);
+            createSender(targetAddress, created -> {
+                if (created.succeeded()) {
+                    ProtonSender createdSender = created.result();
+                    createdSender.setQoS(ProtonQoS.AT_MOST_ONCE);
+                    addSender(linkId, createdSender);
+                    if (!isSendQueueFull(linkId, createdSender)) {
+                        sendFlowControlMessage(linkId, false);
+                    }
+                } else {
+                    sendErrorMessage(linkId, true);
+                }
+            });
         }
     }
 
-    private void createSender(final String tenantId, final Handler<AsyncResult<ProtonSender>> handler) {
-        Objects.requireNonNull(tenantId);
+    private void createSender(final String targetAddress, final Handler<AsyncResult<ProtonSender>> handler) {
         Future<ProtonSender> result = Future.future();
+        result.setHandler(handler);
         if (downstreamConnection == null) {
             result.fail("Downstream connection must be opened before creating sender");
-            handler.handle(result);
         } else {
-            ProtonSender sender = downstreamConnection.createSender(TelemetryConstants.TELEMETRY_ENDPOINT + pathSeparator + tenantId);
-            sender.setQoS(ProtonQoS.AT_MOST_ONCE);
-            sender.openHandler(openAttempt -> {
-                if (openAttempt.succeeded()) {
-                    LOG.info("sender for downstream container [{}] open", downstreamConnection.getRemoteContainer());
-                    addSender(tenantId, openAttempt.result());
-                    result.complete(openAttempt.result());
-                } else {
-                    LOG.warn("could not open sender for downstream container [{}]",
-                            downstreamConnection.getRemoteContainer());
-                    result.fail(openAttempt.cause());
-                }
-                handler.handle(result);
-            }).open();
+            String address = targetAddress.replace("/", pathSeparator);
+            senderFactory.createSender(downstreamConnection, address, result);
         }
     }
 
-    void addSender(final String tenantId, final ProtonSender sender) {
-        senders.put(tenantId, sender);
+    void addSender(final String linkId, final ProtonSender sender) {
+        activeSenders.put(linkId, sender);
+    }
+
+    private boolean isSendQueueFull(final String linkId, final ProtonSender sender) {
+        if (sender.sendQueueFull()) {
+            LOG.debug("downstream sender queue for link [{}] is full, registering drain handler ...", linkId);
+            sender.sendQueueDrainHandler(replenish -> {
+                LOG.debug("downstream sender for link [{}] has been replenished with credit, notfying telemetry endpoint...", linkId);
+                sendFlowControlMessage(linkId, false);});
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    protected void linkDetached(final String linkId) {
+        LOG.debug("closing downstream sender for link [{}]", linkId);
+        ProtonSender sender = activeSenders.remove(linkId);
+        if (sender != null) {
+            sender.close();
+        }
     }
 
     @Override
@@ -161,40 +191,32 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         return options;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.eclipse.hono.telemetry.TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message)
-     */
     @Override
-    public void processTelemetryData(final Message msg, final String tenantId, final Handler<Boolean> resultHandler) {
-        LOG.debug("forwarding telemetry message [id: {}, to: {}, content-type: {}] to downstream container",
-                msg.getMessageId(), msg.getAddress(), msg.getContentType());
-        getSenderForTenant(tenantId, req -> {
-            if (req.succeeded()) {
-                ProtonSender sender = req.result();
-                if (sender.isOpen()) {
-                    forwardMessage(sender, msg);
-                    resultHandler.handle(Boolean.TRUE);
-                } else {
-                    LOG.warn("sender for downstream container is not open");
-                    resultHandler.handle(Boolean.FALSE);
-                }
-            } else {
-                resultHandler.handle(Boolean.FALSE);
-            }
-        });
+    public void processTelemetryData(final Message msg, final String linkId) {
+        Objects.requireNonNull(msg);
+        Objects.requireNonNull(linkId);
+        ProtonSender sender = activeSenders.get(linkId);
+        if (sender == null) {
+            LOG.debug("no downstream sender for link [{}] available, discarding message and closing link with client", linkId);
+            sendErrorMessage(linkId, true);
+        } else if (sender.isOpen()) {
+            forwardMessage(sender, msg);
+            // check if sender has credit left
+            isSendQueueFull(linkId, sender);
+        } else {
+            LOG.warn("downstream sender for link [{}] is not open, discarding message and closing link with client", linkId);
+            sendErrorMessage(linkId, true);
+            linkDetached(linkId);
+        }
     }
 
     private void forwardMessage(final ProtonSender sender, final Message msg) {
+        LOG.debug("forwarding telemetry message [id: {}, to: {}, content-type: {}] to downstream container",
+                msg.getMessageId(), msg.getAddress(), msg.getContentType());
         ByteBuffer b = ByteBuffer.allocate(8);
         b.putLong(messageTagCounter.getAndIncrement());
         b.flip();
         sender.send(b.array(), msg);
-        if (sender.sendQueueFull()) {
-            // TODO flow control with downstream container
-            // register callback to be notified when credit is replenished
-        }
     }
 
     public String getPathSeparator() {

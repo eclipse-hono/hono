@@ -25,7 +25,7 @@ public interface Endpoint {
      * Gets the name of this endpoint.
      * <p>
      * The Hono server uses this name to determine the {@code Endpoint} implementation that
-     * is responsible for handling an incoming link establishement request.
+     * is responsible for handling requests to establish a link with a target address starting with this name.
      * </p>
      *  
      * @return the name.
@@ -33,10 +33,10 @@ public interface Endpoint {
     String getName();
 
     /**
-     * Handles an incoming link establishment request from a client.
+     * Handles a client's request to establish a link with Hono for sending messages to a given target address.
      * 
      * @param receiver the link to be established.
      * @param targetResource the target address from the client's AMQP <em>ATTACH</em> message.
      */
-    void establishLink(ProtonReceiver receiver, ResourceIdentifier targetResource);
+    void onLinkAttach(ProtonReceiver receiver, ResourceIdentifier targetResource);
 }

@@ -160,7 +160,7 @@ public final class HonoServer extends AbstractVerticle {
     /**
      * @param singleTenant the singleTenant to set
      */
-    @Value(value = "${hono.single.tenant}")
+    @Value(value = "${hono.single.tenant:false}")
     public void setSingleTenant(final boolean singleTenant) {
         this.singleTenant = singleTenant;
     }
@@ -206,7 +206,7 @@ public final class HonoServer extends AbstractVerticle {
                 checkAuthorizationToAttach(targetResource, isAuthorized -> {
                     if (isAuthorized) {
                         receiver.setTarget(receiver.getRemoteTarget());
-                        endpoint.establishLink(receiver, targetResource);
+                        endpoint.onLinkAttach(receiver, targetResource);
                     } else {
                         LOG.debug("client is not authorized to attach to endpoint [{}], closing link", targetResource);
                         receiver.close();

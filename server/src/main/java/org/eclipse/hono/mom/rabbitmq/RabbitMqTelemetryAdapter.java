@@ -11,8 +11,6 @@
  */
 package org.eclipse.hono.mom.rabbitmq;
 
-import static org.eclipse.hono.util.MessageHelper.*;
-
 import java.io.IOException;
 import java.util.Optional;
 
@@ -31,7 +29,6 @@ import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Connection;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 
 /**
  * 
@@ -103,13 +100,12 @@ public final class RabbitMqTelemetryAdapter extends BaseTelemetryAdapter {
     }
 
     @Override
-    public void processTelemetryData(final Message msg, final String tenantId, final Handler<Boolean> resultHandler) {
+    public void processTelemetryData(final Message msg, final String clientId) {
         Data body = (Data) msg.getBody();
-        LOGGER.trace("forwarding telemetry message [id: {}, tenant-id: {}] to RabbitMQ broker", msg.getMessageId(), tenantId);
+        LOGGER.trace("forwarding telemetry message [id: {}, to: {}] to RabbitMQ broker", msg.getMessageId(), msg.getAddress());
         channel.publishMessage(createProperties(msg), body.getValue().getArray(),
                 TELEMETRY_UPLOAD_EXCHANGE,
-                tenantId);
-        resultHandler.handle(Boolean.TRUE);
+                clientId);
     }
 
     @SuppressWarnings("unchecked")

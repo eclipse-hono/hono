@@ -17,8 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
-import io.vertx.core.Handler;
-
 /**
  * A telemetry adapter that simply logs and discards all messages.
  *
@@ -30,8 +28,7 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
     private static final Logger LOG = LoggerFactory.getLogger(MessageDiscardingTelemetryAdapter.class);
 
     @Override
-    public void processTelemetryData(final Message data, final String tenantId, final Handler<Boolean> resultHandler) {
+    public void processTelemetryData(final Message data, final String clientId) {
         LOG.debug("processing telemetry data [id: {}, to: {}]", data.getMessageId(), data.getAddress());
-        resultHandler.handle(Boolean.TRUE);
     }
 }

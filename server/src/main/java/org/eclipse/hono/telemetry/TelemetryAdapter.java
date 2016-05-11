@@ -13,8 +13,6 @@ package org.eclipse.hono.telemetry;
 
 import org.apache.qpid.proton.message.Message;
 
-import io.vertx.core.Handler;
-
 /**
  * A strategy for processing downstream telemetry data.
  *
@@ -25,8 +23,10 @@ public interface TelemetryAdapter {
      * Processes a message containing telemetry data produced by a device.
      * 
      * @param telemetryData the message containing the data.
-     * @param tenantId the ID of the tenant the device belongs to.
-     * @param result the handler to invoke with the outcome of the operation.
+     * @param clientId the ID of the client that has sent the message.
+     * @param resultHandler the handler to invoke with the outcome of the operation. The result will be returned
+     *        to the sender of the message.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void processTelemetryData(Message telemetryData, String tenantId, Handler<Boolean> result);
+    void processTelemetryData(Message telemetryData, String clientId);
 }

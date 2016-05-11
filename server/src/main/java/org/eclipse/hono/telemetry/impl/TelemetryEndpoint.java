@@ -15,10 +15,13 @@ import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT
 import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
 import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
 import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
-import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN;
+import static org.eclipse.hono.telemetry.TelemetryConstants.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.AmqpMessage;
@@ -35,10 +38,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 /**
@@ -48,13 +54,55 @@ import io.vertx.proton.ProtonReceiver;
 @Component
 public final class TelemetryEndpoint implements Endpoint {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TelemetryEndpoint.class);
-    private Vertx               vertx;
-    private boolean             singleTenant;
+    private static final Logger           LOG                          = LoggerFactory.getLogger(TelemetryEndpoint.class);
+    private Map<String, LinkWrapper>      activeClients                = new HashMap<>();
+    private Vertx                         vertx;
+    private boolean                       singleTenant;
+    private MessageConsumer<JsonObject>   flowControlConsumer;
 
     @Autowired
     public TelemetryEndpoint(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
+        flowControlConsumer = this.vertx.eventBus().consumer(
+                EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, this::handleFlowControlMsg);
+    }
+
+    private void handleFlowControlMsg(final io.vertx.core.eventbus.Message<JsonObject> msg) {
+        if (msg.body() == null) {
+            LOG.warn("received empty message from telemetry adapter, is this a bug?");
+        } else if (isFlowControlMessage(msg.body())) {
+            handleFlowControlMsg(msg.body().getJsonObject(MSG_TYPE_FLOW_CONTROL));
+        } else if (isErrorMessage(msg.body())) {
+            handleErrorMessage(msg.body().getJsonObject(MSG_TYPE_ERROR));
+        } else {
+            // discard message
+            LOG.debug("received unsupported message from telemetry adapter: {}", msg.body().encode());
+        }
+    }
+
+    private void handleFlowControlMsg(final JsonObject msg) {
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("received flow control message from telemetry adapter: {}", msg.encodePrettily());
+        }
+        String linkId = msg.getString(FIELD_NAME_LINK_ID);
+        LinkWrapper client = activeClients.get(linkId);
+        if (client != null) {
+            client.setSuspended(msg.getBoolean(FIELD_NAME_SUSPEND, false));
+        }
+    }
+
+    private void handleErrorMessage(final JsonObject msg) {
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("received error message from telemetry adapter: {}", msg.encodePrettily());
+        }
+        String linkId = msg.getString(FIELD_NAME_LINK_ID);
+        LinkWrapper client = activeClients.get(linkId);
+        if (client != null) {
+            boolean closeLink = msg.getBoolean(FIELD_NAME_CLOSE_LINK, false);
+            if (closeLink) {
+                onLinkDetach(client);
+            }
+        }
     }
 
     /**
@@ -87,17 +135,38 @@ public final class TelemetryEndpoint implements Endpoint {
     }
 
     @Override
-    public void establishLink(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
-        receiver.setAutoAccept(false);
-        LOG.debug("client uses QoS: {}", receiver.getRemoteQoS());
-        receiver.handler((delivery, message) -> {
+    public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
+        if (ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
+            LOG.debug("client wants to use AT LEAST ONCE delivery mode, ignoring ...");
+        }
+        final String linkId = UUID.randomUUID().toString();
+        final LinkWrapper client = new LinkWrapper(linkId, receiver);
+
+        receiver.closeHandler(clientDetached -> {
+            // client has closed link -> inform TelemetryAdapter about client detach
+            onLinkDetach(client);
+        }).handler((delivery, message) -> {
             final ResourceIdentifier messageAddress = getResourceIdentifier(message.getAddress());
-            if (TelemetryMessageFilter.verify(targetResource, messageAddress, message)) {
-                sendTelemetryData(delivery, message, messageAddress);
+            if (TelemetryMessageFilter.verify(targetAddress, messageAddress, message)) {
+                sendTelemetryData(client, delivery, message, messageAddress);
+                client.decrementAndGetRemainingCredit();
             } else {
-                ProtonHelper.rejected(delivery, true);
+                onLinkDetach(client);
             }
-        }).setPrefetch(20).open(); // TODO: change to manual flow control
+        }).open();
+
+        LOG.debug("registering new link for client [{}]", linkId);
+        activeClients.put(linkId, client);
+        JsonObject msg = getLinkAttachedMsg(linkId, targetAddress);
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL, msg);
+    }
+
+    private void onLinkDetach(final LinkWrapper client) {
+        LOG.debug("closing receiver for client [{}]", client.getLinkId());
+        client.close();
+        activeClients.remove(client.getLinkId());
+        JsonObject msg = getLinkDetachedMsg(client.getLinkId());
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL, msg);
     }
 
     private ResourceIdentifier getResourceIdentifier(final String address) {
@@ -108,14 +177,23 @@ public final class TelemetryEndpoint implements Endpoint {
         }
     }
 
-    private void sendTelemetryData(final ProtonDelivery delivery, final Message msg, final ResourceIdentifier messageAddress) {
-        final String messageId = UUID.randomUUID().toString();
-        final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
-        vertx.sharedData().getLocalMap(EVENT_BUS_ADDRESS_TELEMETRY_IN).put(messageId, amqpMessage);
-        checkPermissionAndSend(messageId, amqpMessage, messageAddress);
+    private void sendTelemetryData(final LinkWrapper link, final ProtonDelivery delivery, final Message msg, final ResourceIdentifier messageAddress) {
+        checkPermission(messageAddress, permissionGranted -> {
+            if (permissionGranted) {
+                vertx.runOnContext(run -> {
+                    final String messageId = UUID.randomUUID().toString();
+                    final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
+                    vertx.sharedData().getLocalMap(EVENT_BUS_ADDRESS_TELEMETRY_IN).put(messageId, amqpMessage);
+                    sendAtMostOnce(link.getLinkId(), messageId, delivery);
+                });
+            } else {
+                LOG.debug("client is not authorized to upload telemetry data for address [{}]", messageAddress);
+                onLinkDetach(link); // inform downstream adapter about client detach
+            }
+        });
     }
 
-    private void checkPermissionAndSend(final String messageId, final AmqpMessage amqpMessage, final ResourceIdentifier messageAddress)
+    private void checkPermission(final ResourceIdentifier messageAddress, final Handler<Boolean> permissionCheckHandler)
     {
         final JsonObject authMsg = new JsonObject();
         // TODO how to obtain subject information?
@@ -124,38 +202,87 @@ public final class TelemetryEndpoint implements Endpoint {
         authMsg.put(PERMISSION_FIELD, Permission.WRITE.toString());
 
         vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, authMsg,
-           res -> {
-               if (res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())) {
-                   vertx.runOnContext(run -> {
-                       final ProtonDelivery delivery = amqpMessage.getDelivery();
-                       if (delivery.remotelySettled()) {
-                           // client uses AT MOST ONCE semantics
-                           sendAtMostOnce(messageId, delivery, messageAddress);
-                       } else {
-                           // client uses AT LEAST ONCE semantics
-                           sendAtLeastOnce(messageId, delivery, messageAddress);
-                       }
-                   });
-               } else {
-                   LOG.debug("not allowed to upload telemetry data", res.cause());
-               }
-           });
+           res -> permissionCheckHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 
-    private void sendAtMostOnce(final String messageId, final ProtonDelivery delivery, final ResourceIdentifier messageAddress) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_IN, TelemetryConstants.getTelemetryMsg(messageId, messageAddress));
+    private void sendAtMostOnce(final String clientId, final String messageId, final ProtonDelivery delivery) {
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_IN, TelemetryConstants.getTelemetryMsg(messageId, clientId));
         ProtonHelper.accepted(delivery, true);
     }
 
-    private void sendAtLeastOnce(final String messageId, final ProtonDelivery delivery, final ResourceIdentifier messageAddress) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_IN, TelemetryConstants.getTelemetryMsg(messageId, messageAddress),
-                res -> {
-                    if (res.succeeded() && TelemetryConstants.RESULT_ACCEPTED.equals(res.result().body())) {
-                        vertx.runOnContext(run -> ProtonHelper.accepted(delivery, true));
-                    } else {
-                        LOG.debug("did not receive response for telemetry data message", res.cause());
-                        vertx.runOnContext(run -> ProtonHelper.rejected(delivery, true));
-                    }
-                });
+    public static class LinkWrapper {
+        private static final int INITIAL_CREDIT = 500;
+        private ProtonReceiver link;
+        private String id;
+        private boolean suspended;
+        private AtomicInteger credit = new AtomicInteger(INITIAL_CREDIT);
+
+        /**
+         * @param receiver
+         */
+        public LinkWrapper(final String linkId, final ProtonReceiver receiver) {
+            this.id = Objects.requireNonNull(linkId);
+            link = Objects.requireNonNull(receiver);
+            link.setAutoAccept(false).setQoS(ProtonQoS.AT_MOST_ONCE).setPrefetch(0); // use manual flow control
+            suspend();
+        }
+
+        /**
+         * @return the creditAvailable
+         */
+        public boolean isSuspended() {
+            return suspended;
+        }
+
+        public void suspend() {
+            LOG.debug("suspending client [{}]", id);
+            suspended = true;
+            credit.set(0);
+            link.flow(0);
+        }
+
+        public void resume() {
+            suspended = false;
+            credit.set(INITIAL_CREDIT);
+            LOG.debug("replenishing client [{}] with {} credits", id, credit);
+            link.flow(INITIAL_CREDIT);
+        }
+
+        public void setSuspended(final boolean suspend) {
+            if (suspend) {
+                suspend();
+            } else {
+                resume();
+            }
+        }
+
+        public int decrementAndGetRemainingCredit() {
+            if (!suspended) {
+                int remainingCredit = credit.decrementAndGet();
+                if (remainingCredit == 0) {
+                    resume();
+                }
+            }
+            LOG.trace("remaining credit for sender [{}]: {}", id, credit.get());
+            return credit.get();
+        }
+
+        public void close() {
+            link.close();
+        }
+
+        /**
+         * @return the link
+         */
+        public ProtonReceiver getLink() {
+            return link;
+        }
+
+        /**
+         * @return the link ID
+         */
+        public String getLinkId() {
+            return id;
+        }
     }
 }

@@ -116,7 +116,7 @@ public class HonoServerTest {
             }
 
             @Override
-            public void establishLink(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
+            public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
                 linkEstablished.complete();
             }
         };

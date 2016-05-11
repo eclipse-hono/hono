@@ -11,7 +11,8 @@
  */
 package org.eclipse.hono.telemetry;
 
-import org.eclipse.hono.util.MessageHelper;
+import java.util.Objects;
+
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.json.JsonObject;
@@ -21,25 +22,87 @@ import io.vertx.core.json.JsonObject;
  */
 public final class TelemetryConstants {
 
-    public static final String FIELD_NAME_MSG_UUID = "uuid";
+    public static final String EVENT_DETACHED = "detached";
+    public static final String EVENT_ATTACHED = "attached";
+    public static final String FIELD_NAME_LINK_ID = "link-id";
+    public static final String FIELD_NAME_CLOSE_LINK = "close-link";
+    public static final String FIELD_NAME_CREDIT = "credit";
     public static final String FIELD_NAME_ENDPOINT = "endpoint";
+    public static final String FIELD_NAME_EVENT = "event";
+    public static final String FIELD_NAME_MSG_UUID = "uuid";
+    public static final String FIELD_NAME_SUSPEND = "suspend";
+    public static final String FIELD_NAME_TARGET_ADDRESS = "target-address";
     public static final String RESULT_ACCEPTED = "accepted";
-    public static final String RESULT_ERROR = "error";
+    public static final String MSG_TYPE_ERROR = "error";
+    public static final String MSG_TYPE_FLOW_CONTROL = "flow-control";
     public static final String TELEMETRY_ENDPOINT             = "telemetry";
     public static final String PATH_SEPARATOR = "/";
     public static final String NODE_ADDRESS_TELEMETRY_PREFIX  = TELEMETRY_ENDPOINT + PATH_SEPARATOR;
     /**
-     * The vert.x event bus address inbound telemetry data is published on.
+     * The vert.x event bus address to which inbound telemetry data is published.
      */
     public static final String EVENT_BUS_ADDRESS_TELEMETRY_IN = "telemetry.in";
+    /**
+     * The vert.x event bus address to which link control messages are published.
+     */
+    public static final String EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL = "telemetry.link.control";
+    /**
+     * The vert.x event bus address to which credit replenishment messages are published.
+     */
+    public static final String EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL = "telemetry.flow.control";
 
     private TelemetryConstants() {
     }
 
-    public static JsonObject getTelemetryMsg(final String messageId, final ResourceIdentifier messageAddress) {
+    public static JsonObject getLinkAttachedMsg(final String linkId, final ResourceIdentifier targetAddress) {
         JsonObject msg = new JsonObject();
-        msg.put(FIELD_NAME_MSG_UUID, messageId);
-        msg.put(MessageHelper.APP_PROPERTY_TENANT_ID, messageAddress.getTenantId());
+        msg.put(FIELD_NAME_EVENT, EVENT_ATTACHED);
+        msg.put(FIELD_NAME_LINK_ID, linkId);
+        msg.put(FIELD_NAME_TARGET_ADDRESS, targetAddress.toString());
         return msg;
+    }
+
+    public static JsonObject getLinkDetachedMsg(final String linkId) {
+        JsonObject msg = new JsonObject();
+        msg.put(FIELD_NAME_EVENT, EVENT_DETACHED);
+        msg.put(FIELD_NAME_LINK_ID, linkId);
+        return msg;
+    }
+
+    public static JsonObject getTelemetryMsg(final String messageId, final String linkId) {
+        JsonObject msg = new JsonObject();
+        msg.put(FIELD_NAME_LINK_ID, linkId);
+        msg.put(FIELD_NAME_MSG_UUID, messageId);
+        return msg;
+    }
+
+    public static JsonObject getFlowControlMsg(final String linkId, final boolean suspend) {
+        return new JsonObject().put(MSG_TYPE_FLOW_CONTROL, new JsonObject()
+                .put(FIELD_NAME_LINK_ID, linkId)
+                .put(FIELD_NAME_SUSPEND, suspend));
+    }
+
+    public static boolean isFlowControlMessage(final JsonObject msg) {
+        Objects.requireNonNull(msg);
+        return msg.containsKey(MSG_TYPE_FLOW_CONTROL);
+    }
+
+    public static JsonObject getCreditReplenishmentMsg(final String linkId, final int credit) {
+        JsonObject msg = new JsonObject();
+        msg.put(FIELD_NAME_LINK_ID, linkId);
+        msg.put(FIELD_NAME_CREDIT, credit);
+        return msg;
+    }
+
+    public static JsonObject getErrorMessage(final String linkId, final boolean closeLink) {
+        return new JsonObject().put(
+                MSG_TYPE_ERROR,
+                new JsonObject().put(FIELD_NAME_CLOSE_LINK, closeLink)
+                    .put(FIELD_NAME_LINK_ID, linkId));
+    }
+
+    public static boolean isErrorMessage(final JsonObject msg) {
+        Objects.requireNonNull(msg);
+        return msg.containsKey(MSG_TYPE_ERROR);
     }
 }

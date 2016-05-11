@@ -13,19 +13,11 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.apache.activemq" level="INFO"/>
-  <logger name="org.apache.activemq.transport.amqp" level="INFO"/>
-
-  <logger name="org.eclipse.hono" level="DEBUG"/>
-  <logger name="org.eclipse.hono.TelemetryDataReadStream" level="DEBUG"/>
-  <logger name="org.eclipse.hono.HonoServerTest" level="DEBUG"/>
-  <logger name="org.eclipse.hono.impl" level="DEBUG"/>
-  <logger name="org.eclipse.hono.impl.ProtonSenderWriteStream" level="DEBUG"/>
-  <logger name="org.eclipse.hono.mom.rabbitmq" level="DEBUG"/>
-  <logger name="org.eclipse.hono.telemetry" level="DEBUG"/>
-  <logger name="org.eclipse.hono.telemetry.impl" level="DEBUG"/>
-  <logger name="org.eclipse.hono.authorization" level="DEBUG"/>
-  <logger name="org.eclipse.hono.authorization.impl" level="DEBUG"/>
+  <logger name="org.eclipse.hono" level="INFO"/>
+  <logger name="org.eclipse.hono.impl" level="INFO"/>
+  <logger name="org.eclipse.hono.telemetry.impl" level="INFO"/>
+  <logger name="org.eclipse.hono.authorization" level="INFO"/>
+  <logger name="org.eclipse.hono.authorization.impl" level="INFO"/>
 
   <logger name="io.vertx.proton.impl" level="INFO"/>
 

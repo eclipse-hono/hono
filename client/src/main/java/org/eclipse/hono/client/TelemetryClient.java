@@ -33,6 +33,7 @@ import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -131,6 +132,7 @@ public class TelemetryClient {
         {
             final String address = String.format(SENDER_TARGET_ADDRESS, tenantId);
             final ProtonSender sender = connection.createSender(address);
+            sender.setQoS(ProtonQoS.AT_MOST_ONCE);
             sender.openHandler(senderOpen -> {
                 if (senderOpen.succeeded()) {
                     honoSender = senderOpen.result();
