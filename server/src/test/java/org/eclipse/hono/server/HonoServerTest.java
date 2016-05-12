@@ -65,6 +65,7 @@ import io.vertx.proton.ProtonSender;
 public class HonoServerTest {
 
     private static final Logger LOG          = LoggerFactory.getLogger(HonoServerTest.class);
+    private static final String BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
     Vertx                       vertx;
     ProtonConnection            connection;
     ProtonSender                protonSender;
@@ -81,7 +82,7 @@ public class HonoServerTest {
 
     private static HonoServer createServer(final Endpoint telemetryEndpoint) {
         HonoServer result = new HonoServer();
-        result.setHost("0.0.0.0");
+        result.setHost(BIND_ADDRESS);
         result.setPort(0);
         if (telemetryEndpoint != null) {
             result.addEndpoint(telemetryEndpoint);
@@ -91,9 +92,7 @@ public class HonoServerTest {
 
     private void connectToServer(final TestContext ctx, final HonoServer server) {
 
-        String host = InetAddress.getLoopbackAddress().getHostAddress();
-        int port = server.getPort();
-        connection = TestSupport.openConnection(ctx, vertx, host, port);
+        connection = TestSupport.openConnection(ctx, vertx, BIND_ADDRESS, server.getPort());
     }
 
     @Test
