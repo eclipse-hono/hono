@@ -185,12 +185,12 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
         }
     }
 
-    protected final void sendFlowControlMessage(final String senderId, final boolean suspend) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, getFlowControlMsg(senderId, suspend));
+    protected final void sendFlowControlMessage(final String linkId, final boolean suspend) {
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, getFlowControlMsg(linkId, suspend));
     }
 
-    protected final void sendErrorMessage(final String senderId, final boolean closeLink) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, getErrorMessage(senderId, closeLink));
+    protected final void sendErrorMessage(final String linkId, final boolean closeLink) {
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, getErrorMessage(linkId, closeLink));
     }
 
 

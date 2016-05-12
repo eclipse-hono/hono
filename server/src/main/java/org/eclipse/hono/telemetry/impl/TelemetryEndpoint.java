@@ -211,7 +211,7 @@ public final class TelemetryEndpoint implements Endpoint {
     }
 
     public static class LinkWrapper {
-        private static final int INITIAL_CREDIT = 500;
+        private static final int INITIAL_CREDIT = 200;
         private ProtonReceiver link;
         private String id;
         private boolean suspended;
@@ -242,10 +242,10 @@ public final class TelemetryEndpoint implements Endpoint {
         }
 
         public void resume() {
-            suspended = false;
             credit.set(INITIAL_CREDIT);
             LOG.debug("replenishing client [{}] with {} credits", id, credit);
             link.flow(INITIAL_CREDIT);
+            suspended = false;
         }
 
         public void setSuspended(final boolean suspend) {

@@ -121,6 +121,8 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                     createdSender.setQoS(ProtonQoS.AT_MOST_ONCE);
                     addSender(linkId, createdSender);
                     if (!isSendQueueFull(linkId, createdSender)) {
+                        // if we have been granted some credit from downstream container
+                        // notify endpoint about it so that client can start to send messages
                         sendFlowControlMessage(linkId, false);
                     }
                 } else {
@@ -147,7 +149,8 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     private boolean isSendQueueFull(final String linkId, final ProtonSender sender) {
         if (sender.sendQueueFull()) {
-            LOG.debug("downstream sender queue for link [{}] is full, registering drain handler ...", linkId);
+            sendFlowControlMessage(linkId, true);
+            LOG.debug("downstream send queue for link [{}] is full, registering drain handler ...", linkId);
             sender.sendQueueDrainHandler(replenish -> {
                 LOG.debug("downstream sender for link [{}] has been replenished with credit, notfying telemetry endpoint...", linkId);
                 sendFlowControlMessage(linkId, false);});
@@ -197,7 +200,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         Objects.requireNonNull(linkId);
         ProtonSender sender = activeSenders.get(linkId);
         if (sender == null) {
-            LOG.debug("no downstream sender for link [{}] available, discarding message and closing link with client", linkId);
+            LOG.info("no downstream sender for link [{}] available, discarding message and closing link with client", linkId);
             sendErrorMessage(linkId, true);
         } else if (sender.isOpen()) {
             forwardMessage(sender, msg);
