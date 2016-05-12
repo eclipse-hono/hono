@@ -11,10 +11,19 @@
  */
 package org.eclipse.hono.util;
 
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
+
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClient;
@@ -63,5 +72,30 @@ public class TestSupport {
         }).open();
         connectionAttempt.await(500);
         return con;
+    }
+
+    /**
+     * Prepares a Mockito mock {@code EventBus} to send a given reply for a message sent to a specific address.
+     * 
+     * @param bus the mock event bus.
+     * @param address the address to expect the message to be sent to.
+     * @param msg the message to expect.
+     * @param reply the reply to send.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> void expectReplyForMessage(final EventBus bus, final String address, final Object msg, final T reply) {
+        when(bus.send(eq(address), eq(msg), any(Handler.class)))
+            .then(new Answer<EventBus>() {
+                @Override
+                public EventBus answer(InvocationOnMock invocation) throws Throwable {
+                    io.vertx.core.eventbus.Message<T> response = mock(io.vertx.core.eventbus.Message.class);
+                    when(response.body()).thenReturn(reply);
+                    Future<io.vertx.core.eventbus.Message<T>> future = Future.succeededFuture(response);
+                    Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>> handler = 
+                            (Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>>) invocation.getArguments()[2];
+                    handler.handle(future);
+                    return bus;
+                }
+            });
     }
 }

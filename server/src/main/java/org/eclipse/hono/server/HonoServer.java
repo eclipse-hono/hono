@@ -11,10 +11,7 @@
  */
 package org.eclipse.hono.server;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
 import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
 
 import java.util.HashMap;
 import java.util.List;
@@ -223,14 +220,12 @@ public final class HonoServer extends AbstractVerticle {
         return endpoints.get(targetAddress.getEndpoint());
     }
 
-    private void checkAuthorizationToAttach(final ResourceIdentifier targetResource, final Handler<Boolean> handler) {
-        final JsonObject body = new JsonObject();
-        // TODO how to obtain subject information?
-        body.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        body.put(RESOURCE_FIELD, targetResource.toString());
-        body.put(PERMISSION_FIELD, Permission.WRITE.toString());
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, body,
-                res -> handler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
+    private void checkAuthorizationToAttach(final ResourceIdentifier targetResource, final Handler<Boolean> authResultHandler) {
+        final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetResource.toString(), Permission.WRITE.toString());
+        vertx.eventBus().send(
+                EVENT_BUS_ADDRESS_AUTHORIZATION_IN,
+                authRequest,
+                res -> authResultHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 
     private ResourceIdentifier getResourceIdentifier(final String address) {

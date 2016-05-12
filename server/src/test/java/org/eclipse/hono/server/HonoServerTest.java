@@ -11,13 +11,18 @@
  */
 package org.eclipse.hono.server;
 
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.net.InetAddress;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.authorization.AuthorizationConstants;
+import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.impl.ProtonSenderWriteStream;
 import org.eclipse.hono.telemetry.TelemetryConstants;
@@ -28,7 +33,6 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryDataReadStream;
 import org.eclipse.hono.util.TestSupport;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.invocation.InvocationOnMock;
@@ -36,8 +40,12 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.Pump;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.core.streams.WriteStream;
@@ -61,17 +69,14 @@ public class HonoServerTest {
     ProtonConnection            connection;
     ProtonSender                protonSender;
 
-    @Before
-    public void init() {
-        vertx = Vertx.vertx();
-    }
-
     @After
     public void disconnect(final TestContext ctx) {
         if (connection != null) {
             connection.close();
         }
-        vertx.close(ctx.asyncAssertSuccess(done -> LOG.info("Vertx has been shut down")));
+        if (vertx != null) {
+            vertx.close(ctx.asyncAssertSuccess(done -> LOG.info("Vertx has been shut down")));
+        }
     }
 
     private static HonoServer createServer(final Endpoint telemetryEndpoint) {
@@ -92,22 +97,29 @@ public class HonoServerTest {
     }
 
     @Test
-    public void testStartFailsIfTelemetryEndpointIsNotConfigured(final TestContext ctx) {
+    public void testStartFailsIfTelemetryEndpointIsNotConfigured() {
 
         // GIVEN a Hono server without a telemetry endpoint configured
         HonoServer server = createServer(null);
+        server.init(mock(Vertx.class), mock(Context.class));
 
         // WHEN starting the server
-        vertx.deployVerticle(server,
-                // THEN startup fails
-                ctx.asyncAssertFailure());
+        Future<Void> startupFuture = Future.future();
+        server.start(startupFuture);
+        assertTrue(startupFuture.failed());
     }
 
     @Test
-    public void testHandleReceiverOpenForwardsToTelemetryEndpoint(final TestContext ctx) {
+    public void testHandleReceiverOpenForwardsToTelemetryEndpoint() throws InterruptedException {
 
         // GIVEN a server with a telemetry endpoint
-        final Async linkEstablished = ctx.async();
+        final String targetAddress = TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + Constants.DEFAULT_TENANT;
+        final EventBus eventBus = mock(EventBus.class);
+        final JsonObject authMsg = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetAddress, Permission.WRITE.toString());
+        TestSupport.expectReplyForMessage(eventBus, AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN, authMsg, AuthorizationConstants.ALLOWED);
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
+        final CountDownLatch linkEstablished = new CountDownLatch(1);
         final Endpoint telemetryEndpoint = new Endpoint() {
 
             @Override
@@ -117,65 +129,59 @@ public class HonoServerTest {
 
             @Override
             public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
-                linkEstablished.complete();
+                linkEstablished.countDown();
             }
         };
         HonoServer server = createServer(telemetryEndpoint);
-
-        final Async deployment = ctx.async();
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName());
-        vertx.deployVerticle(server, res -> {
-            ctx.assertTrue(res.succeeded());
-            deployment.complete();
-        });
-        deployment.await(1000);
+        server.init(vertx, mock(Context.class));
 
         // WHEN a client connects to the server using a telemetry address
-        final Target target = getTarget(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + Constants.DEFAULT_TENANT);
+        final Target target = getTarget(targetAddress);
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteTarget()).thenReturn(target);
         server.handleReceiverOpen(mock(ProtonConnection.class), receiver);
 
         // THEN the server delegates link establishment to the telemetry endpoint 
-        linkEstablished.await(1000);
+        assertTrue(linkEstablished.await(1, TimeUnit.SECONDS));
     }
 
     @Test
-    public void testHandleReceiverOpenRejectsUnauthorizedClient(final TestContext ctx) {
+    public void testHandleReceiverOpenRejectsUnauthorizedClient() throws InterruptedException {
 
         // GIVEN a server with a telemetry endpoint
-        final Async linkClosed = ctx.async();
+        final String restrictedTargetAddress = TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + "RESTRICTED_TENANT";
+        final EventBus eventBus = mock(EventBus.class);
+        final JsonObject authMsg = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, restrictedTargetAddress, Permission.WRITE.toString());
+        TestSupport.expectReplyForMessage(eventBus, AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN, authMsg, AuthorizationConstants.DENIED);
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
+
         final Endpoint telemetryEndpoint = mock(Endpoint.class);
         when(telemetryEndpoint.getName()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
         HonoServer server = createServer(telemetryEndpoint);
-
-        final Async deployment = ctx.async();
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName());
-        vertx.deployVerticle(server, res -> {
-            ctx.assertTrue(res.succeeded());
-            deployment.complete();
-        });
-        deployment.await(1000);
+        server.init(vertx, mock(Context.class));
 
         // WHEN a client connects to the server using a telemetry address for a tenant it is not authorized to write to
-        final Target target = getTarget(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + "RESTRICTED_TENANT");
+        final CountDownLatch linkClosed = new CountDownLatch(1);
+        final Target target = getTarget(restrictedTargetAddress);
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteTarget()).thenReturn(target);
         when(receiver.close()).thenAnswer(new Answer<ProtonReceiver>() {
             @Override
             public ProtonReceiver answer(final InvocationOnMock invocation) throws Throwable {
-                linkClosed.complete();
+                linkClosed.countDown();
                 return receiver;
             }
         });
         server.handleReceiverOpen(mock(ProtonConnection.class), receiver);
 
         // THEN the server closes the link with the client
-        linkClosed.await(1000);
+        assertTrue(linkClosed.await(1, TimeUnit.SECONDS));
     }
 
     @Test
     public void testTelemetryUpload(final TestContext ctx) {
+        vertx = Vertx.vertx();
         LOG.debug("starting telemetry upload test");
         final int messagesToBeSent = 30;
         final Async deployed = ctx.async();
