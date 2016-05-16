@@ -61,7 +61,7 @@ Start volume container to provide required configuration
 
 Once the *Dispatch Router* Docker image has been started using the command above the *Hono Server* image can be run as follows
 
-    $ docker run -d --name hono --link qdrouter -p 5672:5672 --volumes-from="example-config" hono/server:0.1-SNAPSHOT
+    $ docker run -d --name hono --link qdrouter -p 5672:5672 --volumes-from="example-config" eclipsehono/server:0.1-SNAPSHOT
 
 ### Run Client
 

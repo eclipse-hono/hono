@@ -114,7 +114,7 @@
                         <!-- ##### Hono server ##### -->
                         <image>
                            <alias>hono-server</alias>
-                           <name>hono/server:${hono-server.version}</name>
+                           <name>eclipsehono/server:${hono-server.version}</name>
                            <run>
                               <ports>
                                  <port>+hono.ip:hono.amqp.port:5672</port>

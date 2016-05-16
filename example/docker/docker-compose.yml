@@ -5,7 +5,7 @@ qdrouter:
 config:
   image: eclipsehono/example-config:0.1-SNAPSHOT
 hono:
-  image: hono/server:0.1-SNAPSHOT
+  image: eclipsehono/server:0.1-SNAPSHOT
   ports:
     - "5672:5672"
   links:
