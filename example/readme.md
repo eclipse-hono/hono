@@ -55,7 +55,7 @@ command line
 
 Start volume container to provide required configuration
     
-    $ docker run -d --name example-config hono/example-config:0.1-SNAPSHOT
+    $ docker run -d --name example-config eclipsehono/example-config:0.1-SNAPSHOT
 
 ##### Start Hono Server
 

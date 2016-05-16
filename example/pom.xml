@@ -91,7 +91,7 @@
               <images>
                 <image>
                   <alias>hono-example-config</alias>
-                  <name>hono/example-config:${project.version}</name>
+                  <name>eclipsehono/example-config:${project.version}</name>
                   <build>
                     <from>tianon/true</from>
                     <tags>
