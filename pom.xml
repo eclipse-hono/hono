@@ -88,6 +88,14 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Plugins versions -->
+    <docker-maven-plugin.version>0.15.1</docker-maven-plugin.version>
+
+    <!-- Docker configuration -->
+    <image.target>${artifactId}</image.target>
+    <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
+    <timestamp>${maven.build.timestamp}</timestamp>
   </properties>
 
   <distributionManagement>
@@ -137,6 +145,25 @@
     </resources>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>docker-maven-plugin</artifactId>
+          <version>${docker-maven-plugin.version}</version>
+          <configuration>
+            <images>
+              <image>
+                <name>eclipsehono/${image.target}</name>
+                <build>
+                  <tags>
+                    <tag>latest</tag>
+                    <tag>${project.version}</tag>
+                    <tag>${timestamp}</tag>
+                  </tags>
+                </build>
+              </image>
+            </images>
+          </configuration>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>

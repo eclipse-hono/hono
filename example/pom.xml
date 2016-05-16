@@ -25,6 +25,10 @@
 
   <artifactId>hono-example</artifactId>
 
+  <properties>
+    <image.target>example-config</image.target>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -84,19 +88,14 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.jolokia</groupId>
+            <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
-            <version>0.13.9</version>
             <configuration>
               <images>
                 <image>
                   <alias>hono-example-config</alias>
-                  <name>eclipsehono/example-config:${project.version}</name>
                   <build>
                     <from>tianon/true</from>
-                    <tags>
-                      <tag>${project.version}</tag>
-                    </tags>
                     <volumes>
                       <volume>/config</volume>
                     </volumes>
