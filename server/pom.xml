@@ -12,6 +12,10 @@
   <name>hono-server</name>
   <url>http://maven.apache.org</url>
 
+  <properties>
+    <image.target>server</image.target>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -113,20 +117,15 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.jolokia</groupId>
+            <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
-            <version>0.13.9</version>
             <configuration>
               <verbose>true</verbose>
               <images>
                 <image>
                   <alias>hono</alias>
-                  <name>hono/server:${project.version}</name>
                   <build>
                     <from>anapsix/alpine-java:jre8</from>
-                    <tags>
-                      <tag>${project.version}</tag>
-                    </tags>
                     <ports>
                       <port>5672</port>
                     </ports>

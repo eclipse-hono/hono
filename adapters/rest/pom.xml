@@ -128,11 +128,7 @@
     <spring.version>4.2.3.RELEASE</spring.version>
 
     <fatjar.mainClass>org.eclipse.hono.adapter.rest.runtime.spring.RestProtocolAdapterConfiguration</fatjar.mainClass>
-    <docker.image.target>adapter-rest</docker.image.target>
-    <timestamp>${maven.build.timestamp}</timestamp>
-    <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
-
-    <docker-maven-plugin.version>0.13.5</docker-maven-plugin.version>
+    <image.target>adapter-rest</image.target>
   </properties>
 
   <build>
@@ -146,20 +142,13 @@
     </resources>
     <plugins>
       <plugin>
-        <groupId>org.jolokia</groupId>
+        <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
-        <version>${docker-maven-plugin.version}</version>
         <configuration>
           <images>
             <image>
-              <name>eclipsehono/${docker.image.target}</name>
               <build>
                 <from>rhiot/fatjar:0.1.4</from>
-                <tags>
-                  <tag>latest</tag>
-                  <tag>${project.version}</tag>
-                  <tag>${timestamp}</tag>
-                </tags>
                 <assembly>
                   <basedir>/jars</basedir>
                   <descriptorRef>artifact</descriptorRef>
