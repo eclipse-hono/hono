@@ -16,6 +16,10 @@ import static org.mockito.Mockito.*;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -28,6 +32,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
 
 /**
  *
@@ -98,4 +103,24 @@ public class TestSupport {
                 }
             });
     }
+
+    /**
+     * Creates a new <em>Proton</em> message containing a JSON encoded temperature reading.
+     * 
+     * @param messageId the value to set as the message ID.
+     * @param tenantId the ID of the tenant the device belongs to.
+     * @param deviceId the ID of the device that produced the reading.
+     * @param temperature the temperature in degrees centigrade.
+     * @return the message containing the reading as a binary payload.
+     */
+    public static Message newTelemetryData(final String messageId, final String tenantId, final String deviceId, final int temperature) {
+        Message message = ProtonHelper.message();
+        message.setMessageId(messageId);
+        message.setContentType("application/json");
+        ResourceIdentifier address = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, deviceId);
+        message.setAddress(address.toString());
+        message.setBody(new Data(new Binary(String.format("{\"temp\" : %d}", temperature).getBytes())));
+        return message;
+    }
+
 }

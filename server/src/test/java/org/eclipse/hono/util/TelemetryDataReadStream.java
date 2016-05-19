@@ -13,18 +13,13 @@ package org.eclipse.hono.util;
 
 import java.util.Objects;
 
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.telemetry.TelemetryConstants;
-import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.streams.ReadStream;
-import io.vertx.proton.ProtonHelper;
 
 /**
  * A stream producing a given number of telemetry data messages.
@@ -33,7 +28,7 @@ import io.vertx.proton.ProtonHelper;
 public class TelemetryDataReadStream implements ReadStream<Message> {
 
     private static final Logger LOG                     = LoggerFactory.getLogger(TelemetryDataReadStream.class);
-    static final String DEVICE_BUMLUX_TEMP_4711 = "bumlux:temp:4711";
+    private static final String DEVICE_BUMLUX_TEMP_4711 = "bumlux:temp:4711";
 
     private int                 messagesToSend;
     private int                 counter;
@@ -89,7 +84,7 @@ public class TelemetryDataReadStream implements ReadStream<Message> {
             if (sendMore()) {
                 int messageId = counter++;
                 LOG.trace("producing new telemetry message [id: {}]", messageId);
-                handler.handle(newTelemetryData(messageId, tenantId, messageId % 2 == 0, messageId % 35));
+                handler.handle(TestSupport.newTelemetryData(String.valueOf(messageId), tenantId, DEVICE_BUMLUX_TEMP_4711, messageId % 35));
             }
             if (isFinished()) {
                 vertx.cancelTimer(id);
@@ -136,17 +131,4 @@ public class TelemetryDataReadStream implements ReadStream<Message> {
         this.endHandler = endHandler;
         return this;
     }
-
-    private Message newTelemetryData(final long messageId, final String tenantId, final boolean includeTenant,
-            final int temperature) {
-        Message message = ProtonHelper.message();
-        message.setMessageId(String.valueOf(messageId));
-        message.setContentType("application/octet-stream");
-        String address = String.format("%s%s/%s", TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX,
-                Constants.DEFAULT_TENANT, DEVICE_BUMLUX_TEMP_4711);
-        message.setAddress(address);
-        message.setBody(new Data(new Binary(String.format("{\"temp\" : %d}", temperature).getBytes())));
-        return message;
-    }
-
 }
