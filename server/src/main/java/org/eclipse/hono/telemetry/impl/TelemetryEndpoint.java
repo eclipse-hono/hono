@@ -68,16 +68,18 @@ public final class TelemetryEndpoint implements Endpoint {
     }
 
     private void handleFlowControlMsg(final io.vertx.core.eventbus.Message<JsonObject> msg) {
-        if (msg.body() == null) {
-            LOG.warn("received empty message from telemetry adapter, is this a bug?");
-        } else if (isFlowControlMessage(msg.body())) {
-            handleFlowControlMsg(msg.body().getJsonObject(MSG_TYPE_FLOW_CONTROL));
-        } else if (isErrorMessage(msg.body())) {
-            handleErrorMessage(msg.body().getJsonObject(MSG_TYPE_ERROR));
-        } else {
-            // discard message
-            LOG.debug("received unsupported message from telemetry adapter: {}", msg.body().encode());
-        }
+        vertx.runOnContext(run -> {
+            if (msg.body() == null) {
+                LOG.warn("received empty message from telemetry adapter, is this a bug?");
+            } else if (isFlowControlMessage(msg.body())) {
+                handleFlowControlMsg(msg.body().getJsonObject(MSG_TYPE_FLOW_CONTROL));
+            } else if (isErrorMessage(msg.body())) {
+                handleErrorMessage(msg.body().getJsonObject(MSG_TYPE_ERROR));
+            } else {
+                // discard message
+                LOG.debug("received unsupported message from telemetry adapter: {}", msg.body().encode());
+            }
+        });
     }
 
     private void handleFlowControlMsg(final JsonObject msg) {
@@ -149,7 +151,6 @@ public final class TelemetryEndpoint implements Endpoint {
             final ResourceIdentifier messageAddress = getResourceIdentifier(message.getAddress());
             if (TelemetryMessageFilter.verify(targetAddress, messageAddress, message)) {
                 sendTelemetryData(client, delivery, message, messageAddress);
-                client.decrementAndGetRemainingCredit();
             } else {
                 onLinkDetach(client);
             }
@@ -178,6 +179,9 @@ public final class TelemetryEndpoint implements Endpoint {
     }
 
     private void sendTelemetryData(final LinkWrapper link, final ProtonDelivery delivery, final Message msg, final ResourceIdentifier messageAddress) {
+        if (!delivery.remotelySettled()) {
+            LOG.trace("received un-settled telemetry message on link [{}]", link.getLinkId());
+        }
         checkPermission(messageAddress, permissionGranted -> {
             if (permissionGranted) {
                 vertx.runOnContext(run -> {
@@ -185,6 +189,8 @@ public final class TelemetryEndpoint implements Endpoint {
                     final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
                     vertx.sharedData().getLocalMap(EVENT_BUS_ADDRESS_TELEMETRY_IN).put(messageId, amqpMessage);
                     sendAtMostOnce(link.getLinkId(), messageId, delivery);
+                    int creditLeft = link.decrementAndGetRemainingCredit();
+                    LOG.trace("forwarding msg [link: {}] to downstream adapter [credit left: {}]", link.getLinkId(), creditLeft);
                 });
             } else {
                 LOG.debug("client is not authorized to upload telemetry data for address [{}]", messageAddress);
@@ -211,7 +217,7 @@ public final class TelemetryEndpoint implements Endpoint {
     }
 
     public static class LinkWrapper {
-        private static final int INITIAL_CREDIT = 200;
+        private static final int INITIAL_CREDIT = 50;
         private ProtonReceiver link;
         private String id;
         private boolean suspended;
@@ -237,14 +243,12 @@ public final class TelemetryEndpoint implements Endpoint {
         public void suspend() {
             LOG.debug("suspending client [{}]", id);
             suspended = true;
-            credit.set(0);
-            link.flow(0);
         }
 
         public void resume() {
             credit.set(INITIAL_CREDIT);
-            LOG.debug("replenishing client [{}] with {} credits", id, credit);
-            link.flow(INITIAL_CREDIT);
+            LOG.debug("replenishing client [{}] with {} credits", id, credit.get());
+            link.flow(credit.get());
             suspended = false;
         }
 
@@ -257,13 +261,12 @@ public final class TelemetryEndpoint implements Endpoint {
         }
 
         public int decrementAndGetRemainingCredit() {
-            if (!suspended) {
-                int remainingCredit = credit.decrementAndGet();
-                if (remainingCredit == 0) {
+            if (credit.decrementAndGet() == 0) {
+                if (!suspended) {
+                    // automatically replenish client with new credit
                     resume();
                 }
             }
-            LOG.trace("remaining credit for sender [{}]: {}", id, credit.get());
             return credit.get();
         }
 
