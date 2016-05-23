@@ -51,6 +51,11 @@
          <groupId>io.vertx</groupId>
          <artifactId>vertx-unit</artifactId>
       </dependency>
+      <dependency>
+         <groupId>org.apache.qpid</groupId>
+         <artifactId>qpid-jms-client</artifactId>
+         <version>0.9.0</version>
+      </dependency>
    </dependencies>
 
    <profiles>
@@ -135,6 +140,9 @@
                                     <image>test-config</image>
                                  </from>
                               </volumes>
+                              <wait>
+                                 <time>5000</time>
+                              </wait>
                            </run>
                         </image>
                      </images>
