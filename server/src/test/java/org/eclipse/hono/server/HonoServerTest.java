@@ -119,7 +119,7 @@ public class HonoServerTest {
         final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
         final CountDownLatch linkEstablished = new CountDownLatch(1);
-        final Endpoint telemetryEndpoint = new Endpoint() {
+        final Endpoint telemetryEndpoint = new BaseEndpoint(vertx) {
 
             @Override
             public String getName() {
