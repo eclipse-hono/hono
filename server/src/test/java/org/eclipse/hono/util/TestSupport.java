@@ -14,11 +14,14 @@ package org.eclipse.hono.util;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.registration.RegistrationConstants;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -120,6 +123,28 @@ public class TestSupport {
         ResourceIdentifier address = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, deviceId);
         message.setAddress(address.toString());
         message.setBody(new Data(new Binary(String.format("{\"temp\" : %d}", temperature).getBytes())));
+        return message;
+    }
+
+    /**
+     * Creates a new <em>Proton</em> message containing a JSON encoded temperature reading.
+     *
+     * @param messageId the value to set as the message ID.
+     * @param tenantId the ID of the tenant the device belongs to.
+     * @param deviceId the ID of the device that produced the reading.
+     * @return the message containing the reading as a binary payload.
+     */
+    public static Message newRegistrationMessage(final String messageId, final String action, final String tenantId, final String deviceId) {
+        Message message = ProtonHelper.message();
+        message.setMessageId(messageId);
+        final HashMap<String, String> map = new HashMap<>();
+        map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        map.put(RegistrationConstants.FIELD_NAME_ACTION, action);
+        final ApplicationProperties applicationProperties = new ApplicationProperties(map);
+        message.setApplicationProperties(applicationProperties);
+        ResourceIdentifier address = ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId);
+        message.setAddress(address.toString());
         return message;
     }
 

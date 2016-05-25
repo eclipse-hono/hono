@@ -19,6 +19,10 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 
+import io.vertx.proton.ProtonLink;
+import io.vertx.proton.impl.ProtonReceiverImpl;
+import io.vertx.proton.impl.ProtonSenderImpl;
+
 /**
  * Utility methods for working with Proton {@code Message}s.
  *
@@ -49,7 +53,7 @@ public final class MessageHelper {
         return (String) getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID);
     }
 
-    private static Object getApplicationProperty(final ApplicationProperties props, final String name) {
+    public static Object getApplicationProperty(final ApplicationProperties props, final String name) {
         if (props == null) {
             return null;
         } else {
@@ -80,5 +84,18 @@ public final class MessageHelper {
             msg.setMessageAnnotations(annotations);
         }
         annotations.getValue().put(Symbol.getSymbol(key), value);
+    }
+
+    public static String getLinkName(final ProtonLink link)
+    {
+        if (link instanceof ProtonReceiverImpl)
+        {
+            return ((ProtonReceiverImpl)link).getName();
+        } else if (link instanceof ProtonSenderImpl)
+        {
+            return ((ProtonSenderImpl)link).getName();
+        } else {
+            return "unknown";
+        }
     }
 }

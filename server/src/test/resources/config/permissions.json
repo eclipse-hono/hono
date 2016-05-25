@@ -3,5 +3,10 @@
     "SUBJECT": [
       "WRITE"
     ]
+  },
+  "registration/DEFAULT_TENANT": {
+    "SUBJECT": [
+      "READ","WRITE"
+    ]
   }
 }

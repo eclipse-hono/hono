@@ -11,11 +11,18 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
-import static org.eclipse.hono.telemetry.TelemetryConstants.*;
+import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL;
+import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN;
+import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL;
+import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_CLOSE_LINK;
+import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_LINK_ID;
+import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_SUSPEND;
+import static org.eclipse.hono.telemetry.TelemetryConstants.MSG_TYPE_ERROR;
+import static org.eclipse.hono.telemetry.TelemetryConstants.MSG_TYPE_FLOW_CONTROL;
+import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkAttachedMsg;
+import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkDetachedMsg;
+import static org.eclipse.hono.telemetry.TelemetryConstants.isErrorMessage;
+import static org.eclipse.hono.telemetry.TelemetryConstants.isFlowControlMessage;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,20 +32,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.AmqpMessage;
-import org.eclipse.hono.authorization.AuthorizationConstants;
-import org.eclipse.hono.authorization.Permission;
-import org.eclipse.hono.server.Endpoint;
+import org.eclipse.hono.server.BaseEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
@@ -52,17 +54,15 @@ import io.vertx.proton.ProtonReceiver;
  *
  */
 @Component
-public final class TelemetryEndpoint implements Endpoint {
+public final class TelemetryEndpoint extends BaseEndpoint {
 
     private static final Logger           LOG                          = LoggerFactory.getLogger(TelemetryEndpoint.class);
     private Map<String, LinkWrapper>      activeClients                = new HashMap<>();
-    private Vertx                         vertx;
-    private boolean                       singleTenant;
     private MessageConsumer<JsonObject>   flowControlConsumer;
 
     @Autowired
     public TelemetryEndpoint(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
+        super(Objects.requireNonNull(vertx));
         flowControlConsumer = this.vertx.eventBus().consumer(
                 EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, this::handleFlowControlMsg);
     }
@@ -107,30 +107,6 @@ public final class TelemetryEndpoint implements Endpoint {
         }
     }
 
-    /**
-     * Checks if Hono runs in single-tenant mode.
-     * <p>
-     * In single-tenant mode Hono will accept target addresses in {@code ATTACH} messages
-     * that do not contain a tenant ID and will assume {@link Constants#DEFAULT_TENANT} instead.
-     * </p>
-     * <p>
-     * The default value of this property is {@code false}.
-     * </p>
-     * 
-     * @return {@code true} if Hono runs in single-tenant mode.
-     */
-    public boolean isSingleTenant() {
-        return singleTenant;
-    }
-
-    /**
-     * @param singleTenant {@code true} to configure Hono for single-tenant mode.
-     */
-    @Value(value = "${hono.single.tenant:false}")
-    public void setSingleTenant(final boolean singleTenant) {
-        this.singleTenant = singleTenant;
-    }
-
     @Override
     public String getName() {
         return TelemetryConstants.TELEMETRY_ENDPOINT;
@@ -170,14 +146,6 @@ public final class TelemetryEndpoint implements Endpoint {
         vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL, msg);
     }
 
-    private ResourceIdentifier getResourceIdentifier(final String address) {
-        if (isSingleTenant()) {
-            return ResourceIdentifier.fromStringAssumingDefaultTenant(address);
-        } else {
-            return ResourceIdentifier.fromString(address);
-        }
-    }
-
     private void sendTelemetryData(final LinkWrapper link, final ProtonDelivery delivery, final Message msg, final ResourceIdentifier messageAddress) {
         if (!delivery.remotelySettled()) {
             LOG.trace("received un-settled telemetry message on link [{}]", link.getLinkId());
@@ -197,18 +165,6 @@ public final class TelemetryEndpoint implements Endpoint {
                 onLinkDetach(link); // inform downstream adapter about client detach
             }
         });
-    }
-
-    private void checkPermission(final ResourceIdentifier messageAddress, final Handler<Boolean> permissionCheckHandler)
-    {
-        final JsonObject authMsg = new JsonObject();
-        // TODO how to obtain subject information?
-        authMsg.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        authMsg.put(RESOURCE_FIELD, messageAddress.toString());
-        authMsg.put(PERMISSION_FIELD, Permission.WRITE.toString());
-
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, authMsg,
-           res -> permissionCheckHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 
     private void sendAtMostOnce(final String clientId, final String messageId, final ProtonDelivery delivery) {

@@ -14,6 +14,7 @@ package org.eclipse.hono;
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.authorization.impl.BaseAuthorizationService;
+import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.impl.BaseTelemetryAdapter;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -39,6 +40,8 @@ public class Application {
     @Autowired
     private BaseTelemetryAdapter     adapter;
     @Autowired
+    private BaseRegistrationAdapter  registration;
+    @Autowired
     private BaseAuthorizationService authService;
     @Autowired
     private HonoServer               server;
@@ -46,6 +49,7 @@ public class Application {
     @PostConstruct
     public void registerVerticles() {
         vertx.deployVerticle(adapter);
+        vertx.deployVerticle(registration);
         vertx.deployVerticle(authService);
         vertx.deployVerticle(server);
     }

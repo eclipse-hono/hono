@@ -14,6 +14,7 @@ package org.eclipse.hono.server;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
  * A message endpoint providing an API that clients can interact with by means of AMQP 1.0 based message exchanges. 
@@ -39,4 +40,12 @@ public interface Endpoint {
      * @param targetResource the target address from the client's AMQP <em>ATTACH</em> message.
      */
     void onLinkAttach(ProtonReceiver receiver, ResourceIdentifier targetResource);
+
+    /**
+     * Handles a client's request to establish a link with Hono for receiving messages from a given address.
+     *
+     * @param sender the link to be established.
+     * @param targetResource the target address from the client's AMQP <em>ATTACH</em> message.
+     */
+    void onLinkAttach(ProtonSender sender, ResourceIdentifier targetResource);
 }

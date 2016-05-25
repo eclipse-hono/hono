@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.telemetry.TelemetryConstants;
@@ -36,6 +37,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
 
@@ -165,6 +167,7 @@ public final class HonoServer extends AbstractVerticle {
     void helloProcessConnection(final ProtonConnection connection) {
         connection.sessionOpenHandler(session -> session.open());
         connection.receiverOpenHandler(openedReceiver -> handleReceiverOpen(connection, openedReceiver));
+        connection.senderOpenHandler(openedSender -> handleSenderOpen(connection, openedSender));
         connection.disconnectHandler(HonoServer::handleDisconnected);
         connection.closeHandler(HonoServer::handleConnectionClosed);
         connection.openHandler(result -> {
@@ -195,12 +198,12 @@ public final class HonoServer extends AbstractVerticle {
         LOG.debug("client wants to open a link for sending messages [address: {}]", receiver.getRemoteTarget());
         try {
             final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
-            Endpoint endpoint = getEndpoint(targetResource);
+            final Endpoint endpoint = getEndpoint(targetResource);
             if (endpoint == null) {
                 LOG.info("no matching endpoint registered for address [{}]", receiver.getRemoteTarget().getAddress());
                 receiver.close();
             } else {
-                checkAuthorizationToAttach(targetResource, isAuthorized -> {
+                checkAuthorizationToAttach(targetResource, Permission.WRITE, isAuthorized -> {
                     if (isAuthorized) {
                         receiver.setTarget(receiver.getRemoteTarget());
                         endpoint.onLinkAttach(receiver, targetResource);
@@ -216,16 +219,52 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
+    /**
+     * Handles a request from a client to establish a link for receiving messages from this server.
+     *
+     * @param con the connection to the client.
+     * @param sender the sender created for the link.
+     */
+    void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
+        final Source remoteSource = sender.getRemoteSource();
+        LOG.debug("client wants to open a link for receiving messages [address: {}]", remoteSource);
+        try {
+            final String source = remoteSource.getAddress();
+            final ResourceIdentifier targetResource = getResourceIdentifier(source);
+            final Endpoint endpoint = getEndpoint(targetResource);
+            if (endpoint == null) {
+                LOG.info("no matching endpoint registered for address [{}]", source);
+                sender.close();
+            } else {
+                checkAuthorizationToAttach(targetResource, Permission.READ, isAuthorized -> {
+                    if (isAuthorized) {
+                        LOG.debug("client is authorized to attach to endpoint [{}]", targetResource);
+                        sender.setSource(sender.getRemoteSource());
+                        endpoint.onLinkAttach(sender, targetResource);
+                    } else {
+                        LOG.debug("client is not authorized to attach to endpoint [{}], closing link", targetResource);
+                        sender.close();
+                    }
+                });
+            }
+        } catch (final IllegalArgumentException e) {
+            LOG.debug("client has provided invalid resource identifier as target address", e);
+            sender.close();
+        }
+    }
+
     private Endpoint getEndpoint(final ResourceIdentifier targetAddress) {
         return endpoints.get(targetAddress.getEndpoint());
     }
 
-    private void checkAuthorizationToAttach(final ResourceIdentifier targetResource, final Handler<Boolean> authResultHandler) {
-        final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetResource.toString(), Permission.WRITE.toString());
+    private void checkAuthorizationToAttach(final ResourceIdentifier targetResource, final Permission permission,
+       final Handler<Boolean> authResultHandler) {
+        final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetResource.toString(),
+           permission.toString());
         vertx.eventBus().send(
-                EVENT_BUS_ADDRESS_AUTHORIZATION_IN,
-                authRequest,
-                res -> authResultHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
+           EVENT_BUS_ADDRESS_AUTHORIZATION_IN,
+           authRequest,
+           res -> authResultHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 
     private ResourceIdentifier getResourceIdentifier(final String address) {
