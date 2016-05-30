@@ -27,10 +27,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.impl.ConcurrentHashSet;
+import org.springframework.stereotype.Service;
 
 /**
  * Simple "in memory" device registration.
  */
+@Service
 public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryRegistrationAdapter.class);
