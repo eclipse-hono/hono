@@ -27,6 +27,8 @@
       <qpid-dispatch.version>0.6.0-rc1</qpid-dispatch.version>
       <hono-server.version>${project.version}</hono-server.version>
       <hono-client.version>${project.version}</hono-client.version>
+      <activemq.version>5.13.3</activemq.version>
+      <spring.version>4.2.6.RELEASE</spring.version>
    </properties>
 
    <dependencies>
@@ -39,6 +41,16 @@
          <artifactId>hono-client</artifactId>
          <version>${hono-client.version}</version>
       </dependency>
+     <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-server</artifactId>
+        <version>${hono-server.version}</version>
+     </dependency>
+     <dependency>
+       <groupId>io.vertx</groupId>
+       <artifactId>vertx-core</artifactId>
+       <scope>test</scope>
+     </dependency>
       <dependency>
          <groupId>io.vertx</groupId>
          <artifactId>vertx-proton</artifactId>
@@ -56,6 +68,23 @@
          <artifactId>qpid-jms-client</artifactId>
          <version>0.9.0</version>
       </dependency>
+     <dependency>
+       <groupId>org.springframework</groupId>
+       <artifactId>spring-test</artifactId>
+       <version>${spring.version}</version>
+       <scope>test</scope>
+     </dependency>
+     <dependency>
+       <groupId>org.springframework</groupId>
+       <artifactId>spring-messaging</artifactId>
+       <version>${spring.version}</version>
+       <scope>test</scope>
+     </dependency>
+     <dependency>
+       <groupId>org.apache.activemq</groupId>
+       <artifactId>activemq-all</artifactId>
+       <version>${activemq.version}</version>
+     </dependency>
    </dependencies>
 
    <profiles>
