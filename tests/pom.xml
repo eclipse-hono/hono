@@ -24,7 +24,7 @@
    <artifactId>hono-tests</artifactId>
 
    <properties>
-      <qpid-dispatch.version>0.6.0-rc1</qpid-dispatch.version>
+      <qpid-dispatch.version>0.6.0-rc4</qpid-dispatch.version>
       <hono-server.version>${project.version}</hono-server.version>
       <hono-client.version>${project.version}</hono-client.version>
       <activemq.version>5.13.3</activemq.version>
