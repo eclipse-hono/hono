@@ -172,8 +172,8 @@ public final class HonoServer extends AbstractVerticle {
         connection.closeHandler(HonoServer::handleConnectionClosed);
         connection.openHandler(result -> {
             LOG.debug("Client [{}:{}] connected", connection.getRemoteHostname(), connection.getRemoteContainer());
-            connection.setContainer(String.format("Hono-%s:%d", this.host, server.actualPort())).open();
-        });
+            connection.setContainer(String.format("Hono-%s:%d", this.host, server.actualPort()));
+        }).open();
     }
 
     private static void handleConnectionClosed(AsyncResult<ProtonConnection> res) {

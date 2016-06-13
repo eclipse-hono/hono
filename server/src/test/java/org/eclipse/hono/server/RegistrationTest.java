@@ -40,7 +40,6 @@ import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.TestSupport;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -61,7 +60,6 @@ import io.vertx.proton.impl.ProtonReceiverImpl;
  * Tests sending registration messages to Hono Server.
  */
 @RunWith(VertxUnitRunner.class)
-@Ignore("there is a conflict with other tests using vertx e.g. HonoServerTest, ignored this test until it is resolved")
 public class RegistrationTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationTest.class);
@@ -216,9 +214,6 @@ public class RegistrationTest {
     }
 
     private void connectToServer(final TestContext ctx, final HonoServer server) {
-
-        LOG.info("Connect to {}:{}", BIND_ADDRESS, server.getPort());
-
-        connection = TestSupport.openConnection(ctx, vertx, BIND_ADDRESS, server.getPort());
+        connection = TestSupport.openConnection(ctx, vertx, server.getHost(), server.getPort());
     }
 }

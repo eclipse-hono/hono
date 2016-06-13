@@ -106,16 +106,12 @@ public class TelemetryClient {
         client.connect(options, host, port, conAttempt -> {
             if (conAttempt.succeeded()) {
                 LOG.debug("connected to Hono server [{}:{}]", host, port);
-                conAttempt.result()
-                        .openHandler(conOpen -> {
-                            if (conOpen.succeeded()) {
-                                connection.complete(conOpen.result());
-                            } else {
-                                connection.completeExceptionally(conOpen.cause());
-                            }
-                        })
-                        .closeHandler(loggingHandler("connection closed"))
-                        .open();
+                final ProtonConnection protonConnection = conAttempt.result();
+                protonConnection
+                   .openHandler(loggingHandler("connection opened"))
+                   .closeHandler(loggingHandler("connection closed"))
+                   .open();
+                this.connection.complete(protonConnection);
             } else {
                 connection.completeExceptionally(conAttempt.cause());
             }

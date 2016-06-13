@@ -11,8 +11,10 @@
  */
 package org.eclipse.hono.util;
 
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,46 +42,30 @@ import io.vertx.proton.ProtonHelper;
 /**
  *
  */
-public class TestSupport {
+public final class TestSupport {
 
-    public static void connect(final TestContext ctx, final Vertx vertx, final String host, final int port,
-            Handler<ProtonConnection> handler) {
-        ProtonClient client = ProtonClient.create(vertx);
-        client.connect(host, port, res -> {
-            ctx.assertTrue(res.succeeded());
-            handler.handle(res.result());
+    public static ProtonConnection openConnection(final TestContext ctx, final Vertx vertx, final String host, final int port)
+    {
+        final Async connected = ctx.async();
+        final AtomicReference<ProtonConnection> protonConnection = new AtomicReference<>();
+
+        final ProtonClient client = ProtonClient.create(vertx);
+
+        client.connect(host, port, ar -> {
+            if (ar.succeeded())
+            {
+                protonConnection.set(ar.result());
+                protonConnection.get().open();
+                connected.complete();
+            }
+            else
+            {
+                ctx.fail(ar.cause());
+            }
         });
-    }
 
-    public static ProtonConnection connect(final TestContext ctx, final Vertx vertx, final String host, final int port) {
-        Async connectionAttempt = ctx.async();
-        AtomicReference<ProtonConnection> result = new AtomicReference<>();
-        connect(ctx, vertx, host, port, res -> {
-            result.set(res);
-            connectionAttempt.complete();
-        });
-        connectionAttempt.await(500);
-        return result.get();
-    }
-
-    /**
-     * Establishes an opened connection to a Hono server.
-     * 
-     * @param ctx
-     * @param vertx
-     * @param host
-     * @param port
-     * @return the opened connection.
-     */
-    public static ProtonConnection openConnection(final TestContext ctx, final Vertx vertx, final String host, final int port) {
-        Async connectionAttempt = ctx.async();
-        ProtonConnection con = connect(ctx, vertx, host, port);
-        con.openHandler(openAttempt -> {
-            ctx.assertTrue(openAttempt.succeeded());
-            connectionAttempt.complete();
-        }).open();
-        connectionAttempt.await(500);
-        return con;
+        connected.awaitSuccess(2000);
+        return protonConnection.get();
     }
 
     /**
