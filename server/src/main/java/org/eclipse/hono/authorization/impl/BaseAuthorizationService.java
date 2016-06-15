@@ -40,9 +40,17 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
 {
     private static final Logger LOG = LoggerFactory.getLogger(BaseAuthorizationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;
+    protected boolean singleTenant;
+
+    /**
+     * 
+     */
+    protected BaseAuthorizationService(final boolean singleTenant) {
+        this.singleTenant = singleTenant;
+    }
 
     @Override
-    public void start(final Future<Void> startFuture) throws Exception {
+    public final void start(final Future<Void> startFuture) throws Exception {
         authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
         authRequestConsumer.handler(this::processMessage);
         LOG.info("listening on event bus [address: {}] for incoming auth messages",
@@ -57,7 +65,7 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
     }
 
     @Override
-    public void stop(final Future<Void> stopFuture) throws Exception {
+    public final void stop(final Future<Void> stopFuture) throws Exception {
         authRequestConsumer.unregister();
         doStop(stopFuture);
     }
@@ -68,19 +76,15 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
         stopFuture.complete();
     }
 
-    private void processMessage(final Message<JsonObject> message)
-    {
+    private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
         final String authSubject = body.getString(AUTH_SUBJECT_FIELD);
         final Permission permission = Permission.valueOf(body.getString(PERMISSION_FIELD));
         final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(RESOURCE_FIELD));
 
-        if (hasPermission(authSubject, resource, permission))
-        {
+        if (hasPermission(authSubject, resource, permission)) {
             message.reply(ALLOWED);
-        }
-        else
-        {
+        } else {
             LOG.debug("{} not allowed to {} on resource {}", authSubject, permission, resource);
             message.reply(DENIED);
         }

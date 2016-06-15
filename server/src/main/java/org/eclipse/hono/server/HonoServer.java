@@ -26,9 +26,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
@@ -46,15 +43,26 @@ import io.vertx.proton.ProtonServerOptions;
  * <em>Command &amp; Control</em> and <em>Device Registration</em> APIs that <em>Protocol Adapters</em> and
  * <em>Solutions</em> use to interact with devices.
  */
-@Component
 public final class HonoServer extends AbstractVerticle {
 
     private static final Logger   LOG = LoggerFactory.getLogger(HonoServer.class);
-    private String                host;
+    private String                bindAddress;
     private int                   port;
     private boolean               singleTenant;
+    private final int             id;
     private ProtonServer          server;
     private Map<String, Endpoint> endpoints = new HashMap<>();
+
+    HonoServer(final String bindAddress, final int port, final boolean singleTenant) {
+        this(bindAddress, port, singleTenant, 0);
+    }
+
+    HonoServer(final String bindAddress, final int port, final boolean singleTenant, final int id) {
+        this.bindAddress = Objects.requireNonNull(bindAddress);
+        this.port = port;
+        this.singleTenant = singleTenant;
+        this.id = id;
+    }
 
     @Override
     public void start(final Future<Void> startupHandler) {
@@ -65,10 +73,10 @@ public final class HonoServer extends AbstractVerticle {
             final ProtonServerOptions options = createServerOptions();
             server = ProtonServer.create(vertx, options)
                     .connectHandler(this::helloProcessConnection)
-                    .listen(port, host, bindAttempt -> {
+                    .listen(port, bindAddress, bindAttempt -> {
                         if (bindAttempt.succeeded()) {
                             this.port = bindAttempt.result().actualPort();
-                            LOG.info("HonoServer running at [{}:{}]", host, this.port);
+                            LOG.info("HonoServer running at [{}:{}]", bindAddress, this.port);
                             startupHandler.complete();
                         } else {
                             LOG.error("Cannot start up HonoServer", bindAttempt.cause());
@@ -98,8 +106,7 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
-    @Autowired
-    public void setEndpoints(final List<Endpoint> definedEndpoints) {
+    public void addEndpoints(final List<Endpoint> definedEndpoints) {
         Objects.requireNonNull(definedEndpoints);
         for (Endpoint ep : definedEndpoints) {
             addEndpoint(ep);
@@ -115,19 +122,6 @@ public final class HonoServer extends AbstractVerticle {
     }
 
     /**
-     * Sets the port Hono will listen on for AMQP 1.0 connections.
-     * <p>
-     * If set to 0 Hono will bind to an arbitrary free port chosen by the operating system.
-     * </p>
-     *
-     * @param port the port to bind to.
-     */
-    @Value(value = "${hono.server.port}")
-    public void setPort(int port) {
-        this.port = port;
-    }
-
-    /**
      * Gets the port Hono listens on for AMQP 1.0 connections.
      * <p>
      * If the port has been set to 0 Hono will bind to an arbitrary free port chosen by the operating system during
@@ -137,16 +131,15 @@ public final class HonoServer extends AbstractVerticle {
      * @return the port Hono listens on.
      */
     public int getPort() {
-        return this.port;
+        if (server != null) {
+            return server.actualPort();
+        } else {
+            return this.port;
+        }
     }
 
-    @Value(value = "${hono.server.bindaddress}")
-    public void setHost(final String host) {
-        this.host = host;
-    }
-
-    public String getHost() {
-        return host;
+    public String getBindAddress() {
+        return bindAddress;
     }
 
     /**
@@ -156,15 +149,8 @@ public final class HonoServer extends AbstractVerticle {
         return singleTenant;
     }
 
-    /**
-     * @param singleTenant the singleTenant to set
-     */
-    @Value(value = "${hono.single.tenant:false}")
-    public void setSingleTenant(final boolean singleTenant) {
-        this.singleTenant = singleTenant;
-    }
-
     void helloProcessConnection(final ProtonConnection connection) {
+        connection.setContainer(String.format("Hono-%s:%d-%d", this.bindAddress, server.actualPort(), id));
         connection.sessionOpenHandler(session -> session.open());
         connection.receiverOpenHandler(openedReceiver -> handleReceiverOpen(connection, openedReceiver));
         connection.senderOpenHandler(openedSender -> handleSenderOpen(connection, openedSender));
@@ -172,8 +158,8 @@ public final class HonoServer extends AbstractVerticle {
         connection.closeHandler(HonoServer::handleConnectionClosed);
         connection.openHandler(result -> {
             LOG.debug("Client [{}:{}] connected", connection.getRemoteHostname(), connection.getRemoteContainer());
-            connection.setContainer(String.format("Hono-%s:%d", this.host, server.actualPort()));
-        }).open();
+        });
+        connection.open();
     }
 
     private static void handleConnectionClosed(AsyncResult<ProtonConnection> res) {

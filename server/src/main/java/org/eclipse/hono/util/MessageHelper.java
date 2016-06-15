@@ -86,14 +86,12 @@ public final class MessageHelper {
         annotations.getValue().put(Symbol.getSymbol(key), value);
     }
 
-    public static String getLinkName(final ProtonLink link)
+    public static String getLinkName(final ProtonLink<?> link)
     {
-        if (link instanceof ProtonReceiverImpl)
-        {
-            return ((ProtonReceiverImpl)link).getName();
-        } else if (link instanceof ProtonSenderImpl)
-        {
-            return ((ProtonSenderImpl)link).getName();
+        if (link instanceof ProtonReceiverImpl) {
+            return ((ProtonReceiverImpl) link).getName();
+        } else if (link instanceof ProtonSenderImpl) {
+            return ((ProtonSenderImpl) link).getName();
         } else {
             return "unknown";
         }

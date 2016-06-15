@@ -34,8 +34,6 @@ import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -44,20 +42,25 @@ import io.vertx.core.json.JsonObject;
 /**
  * Implementation of AuthorizationService that holds acl data in memory i.e. no persistent storage.
  */
-@Service
-public final class InMemoryAuthorizationService extends BaseAuthorizationService
-{
+public final class InMemoryAuthorizationService extends BaseAuthorizationService {
 
+    static final String PERMISSIONS_FILE_PATH = "/config/permissions.json";
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
-
     // holds mapping resource -> acl
-    private final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
+    private final String permissionsPath;
 
-    @Value(value = "${hono.single.tenant:false}")
-    private boolean singleTenant;
+    public InMemoryAuthorizationService() {
+        this(false, PERMISSIONS_FILE_PATH);
+    }
 
-    @Value(value = "${hono.permissions.path:/config/permissions.json}")
-    private String permissionsPath = "/config/permissions.json";
+    /**
+     * 
+     */
+    public InMemoryAuthorizationService(final boolean singleTenant, final String permissionsPath) {
+        super(singleTenant);
+        this.permissionsPath = permissionsPath;
+    }
 
     @Override
     protected void doStart(final Future<Void> startFuture) throws Exception {
@@ -82,8 +85,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         return false;
     }
 
-    private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Permission permission)
-    {
+    private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Permission permission) {
         return ofNullable(resources.get(resource)).map(acl -> acl.hasPermission(subject, permission)).orElse(false);
     }
 
@@ -95,7 +97,8 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         addPermission(subject, resource, permissions);
     }
 
-    @Override public void addPermission(final String subject, final ResourceIdentifier resource, final Set<Permission> permissions) {
+    @Override
+    public void addPermission(final String subject, final ResourceIdentifier resource, final Set<Permission> permissions) {
         requireNonNull(subject, "subject is required");
         requireNonNull(resource, "resource is required");
         requireNonNull(permissions, "permission is required");
@@ -146,8 +149,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     private Path resolvePathToPermissions() {
         // first try to load from configured path
         final Path pathToPermissions = Paths.get(permissionsPath);
-        if (pathToPermissions != null && pathToPermissions.toFile().exists() && pathToPermissions.toFile().canRead())
-        {
+        if (pathToPermissions != null && pathToPermissions.toFile().exists() && pathToPermissions.toFile().canRead()) {
             return pathToPermissions;
         }
 
@@ -157,12 +159,9 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     private ResourceIdentifier getResourceIdentifier(final Map.Entry<String, Object> resources) {
-        if (singleTenant)
-        {
+        if (singleTenant) {
             return ResourceIdentifier.fromStringAssumingDefaultTenant(resources.getKey());
-        }
-        else
-        {
+        } else {
             return ResourceIdentifier.fromString(resources.getKey());
         }
     }

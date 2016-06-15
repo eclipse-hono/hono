@@ -15,6 +15,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -32,6 +33,7 @@ public final class TelemetryConstants {
     public static final String FIELD_NAME_MSG_UUID = "uuid";
     public static final String FIELD_NAME_SUSPEND = "suspend";
     public static final String FIELD_NAME_TARGET_ADDRESS = "target-address";
+    public static final String HEADER_NAME_REPLY_TO = "reply-to";
     public static final String RESULT_ACCEPTED = "accepted";
     public static final String MSG_TYPE_ERROR = "error";
     public static final String MSG_TYPE_FLOW_CONTROL = "flow-control";
@@ -104,5 +106,10 @@ public final class TelemetryConstants {
     public static boolean isErrorMessage(final JsonObject msg) {
         Objects.requireNonNull(msg);
         return msg.containsKey(MSG_TYPE_ERROR);
+    }
+
+    public static DeliveryOptions addReplyToHeader(final DeliveryOptions options, final String address) {
+        Objects.requireNonNull(options);
+        return options.addHeader(HEADER_NAME_REPLY_TO, address);
     }
 }

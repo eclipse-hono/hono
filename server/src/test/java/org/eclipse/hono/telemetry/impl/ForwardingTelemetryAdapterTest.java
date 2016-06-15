@@ -11,17 +11,19 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
-
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.telemetry.SenderFactory;
 import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -42,6 +44,9 @@ import io.vertx.proton.ProtonSender;
  */
 public class ForwardingTelemetryAdapterTest {
 
+    /**
+     * 
+     */
     private static final String TELEMETRY_MSG_CONTENT = "hello";
     private static final String CLIENT_ID = "protocol_adapter";
     private static final String TELEMETRY_MSG_ADDRESS = "telemetry/myTenant/myDevice";
@@ -101,7 +106,8 @@ public class ForwardingTelemetryAdapterTest {
         adapter.setDownstreamConnection(con);
 
         // WHEN a client wants to attach to Hono for uploading telemetry data
-        adapter.linkAttached(CLIENT_ID, TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + "myTenant");
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX, "myTenant", null);
+        adapter.processLinkAttachedMessage(CLIENT_ID, targetAddress.toString(), TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
 
         // THEN assert that an error message has been sent via event bus
         assertTrue(errorMessageSent.await(1, TimeUnit.SECONDS));
@@ -119,7 +125,8 @@ public class ForwardingTelemetryAdapterTest {
         adapter.init(vertx, ctx);
 
         // WHEN a client wants to attach to Hono for uploading telemetry data
-        adapter.linkAttached(CLIENT_ID, TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + "myTenant");
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX, "myTenant", null);
+        adapter.processLinkAttachedMessage(CLIENT_ID, targetAddress.toString(), TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
 
         // THEN assert that an error message has been sent via event bus
         verify(eventBus).send(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, TelemetryConstants.getErrorMessage(CLIENT_ID, true));

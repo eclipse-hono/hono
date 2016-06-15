@@ -16,13 +16,14 @@ import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_AD
 import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
 import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
 
+import java.util.Objects;
+
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -34,15 +35,34 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class BaseEndpoint implements Endpoint{
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BaseEndpoint.class);
+    private static final       Logger LOGGER = LoggerFactory.getLogger(BaseEndpoint.class);
 
-    private boolean singleTenant;
+    protected final boolean    singleTenant;
+    protected final Vertx      vertx;
+    protected final int        id;
 
-    protected final Vertx vertx;
-
+    /**
+     * 
+     * @param vertx the Vertx instance to use for accessing the event bus.
+     */
     protected BaseEndpoint(final Vertx vertx)
     {
-        this.vertx = vertx;
+        this(vertx, false, 0);
+    }
+
+    protected BaseEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceId)
+    {
+        this.vertx = Objects.requireNonNull(vertx);
+        this.singleTenant = singleTenant;
+        this.id = instanceId;
+    }
+
+    protected final String getAddressWithId(final String baseAddress) {
+        StringBuilder b = new StringBuilder(baseAddress);
+        if (id > 0) {
+            b.append(".").append(id);
+        }
+        return b.toString();
     }
 
     /**
@@ -57,16 +77,8 @@ public abstract class BaseEndpoint implements Endpoint{
      *
      * @return {@code true} if Hono runs in single-tenant mode.
      */
-    public boolean isSingleTenant() {
+    public final boolean isSingleTenant() {
         return singleTenant;
-    }
-
-    /**
-     * @param singleTenant {@code true} to configure Hono for single-tenant mode.
-     */
-    @Value(value = "${hono.single.tenant:false}")
-    public void setSingleTenant(final boolean singleTenant) {
-        this.singleTenant = singleTenant;
     }
 
     @Override
@@ -75,7 +87,7 @@ public abstract class BaseEndpoint implements Endpoint{
         sender.close();
     }
 
-    protected ResourceIdentifier getResourceIdentifier(final String address) {
+    protected final ResourceIdentifier getResourceIdentifier(final String address) {
         if (isSingleTenant()) {
             return ResourceIdentifier.fromStringAssumingDefaultTenant(address);
         } else {
@@ -83,7 +95,7 @@ public abstract class BaseEndpoint implements Endpoint{
         }
     }
 
-    protected void checkPermission(final ResourceIdentifier messageAddress, final Handler<Boolean> permissionCheckHandler)
+    protected final void checkPermission(final ResourceIdentifier messageAddress, final Handler<Boolean> permissionCheckHandler)
     {
         final JsonObject authMsg = new JsonObject();
         // TODO how to obtain subject information?

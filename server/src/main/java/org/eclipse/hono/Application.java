@@ -11,12 +11,17 @@
  */
 package org.eclipse.hono;
 
+import java.util.List;
+
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.authorization.impl.BaseAuthorizationService;
+import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
+import org.eclipse.hono.server.Endpoint;
 import org.eclipse.hono.server.HonoServer;
-import org.eclipse.hono.telemetry.impl.BaseTelemetryAdapter;
+import org.eclipse.hono.server.HonoServerFactory;
+import org.eclipse.hono.telemetry.TelemetryAdapter;
+import org.eclipse.hono.util.ComponentFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -36,25 +41,53 @@ import io.vertx.core.Vertx;
 public class Application {
 
     @Autowired
-    private Vertx                    vertx;
+    private Vertx                                  vertx;
     @Autowired
-    private BaseTelemetryAdapter     adapter;
+    private ComponentFactory<TelemetryAdapter>     adapterFactory;
     @Autowired
-    private BaseRegistrationAdapter  registration;
+    private BaseRegistrationAdapter                registration;
     @Autowired
-    private BaseAuthorizationService authService;
+    private ComponentFactory<AuthorizationService> authServiceFactory;
     @Autowired
-    private HonoServer               server;
+    private HonoServerFactory                      serverFactory;
+    @Autowired
+    private List<ComponentFactory<Endpoint>>       endpointFactories;
 
     @PostConstruct
     public void registerVerticles() {
-        vertx.deployVerticle(adapter);
+        if (vertx == null) {
+            throw new IllegalStateException("no Vert.x instance has been configured");
+        }
+        int instanceCount = Runtime.getRuntime().availableProcessors();
+        deployTelemetryAdapter(instanceCount);
+        deployAuthorizationService(instanceCount);
+        deployServer(instanceCount);
         vertx.deployVerticle(registration);
-        vertx.deployVerticle(authService);
-        vertx.deployVerticle(server);
     }
 
-    public static void main(String[] args) {
+    private void deployAuthorizationService(final int instanceCount) {
+        for (int i = 1; i <= instanceCount; i++) {
+            vertx.deployVerticle(authServiceFactory.newInstance(i, instanceCount));
+        }
+    }
+
+    private void deployTelemetryAdapter(final int instanceCount) {
+        for (int i = 1; i <= instanceCount; i++) {
+            vertx.deployVerticle(adapterFactory.newInstance(i, instanceCount));
+        }
+    }
+
+    private void deployServer(final int instanceCount) {
+        for (int i = 1; i <= instanceCount; i++) {
+            HonoServer server = serverFactory.newInstance(i, instanceCount);
+            for (ComponentFactory<Endpoint> ef : endpointFactories) {
+                server.addEndpoint(ef.newInstance(i, instanceCount));
+            }
+            vertx.deployVerticle(server);
+        }
+    }
+
+    public static void main(final String[] args) {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
         SpringApplication.run(Application.class, args);

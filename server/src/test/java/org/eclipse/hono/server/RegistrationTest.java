@@ -112,7 +112,7 @@ public class RegistrationTest {
         final AtomicLong start = new AtomicLong();
 
         final Endpoint registrationEndpoint = new RegistrationEndpoint(vertx);
-        final Endpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
+        final Endpoint telemetryEndpoint = new TelemetryEndpoint(vertx, false);
         final HonoServer server = createServer(telemetryEndpoint, registrationEndpoint);
 
         vertx.deployVerticle(MessageDiscardingTelemetryAdapter.class.getName());
@@ -206,14 +206,12 @@ public class RegistrationTest {
     }
 
     private static HonoServer createServer(final Endpoint... endpoint) {
-        final HonoServer result = new HonoServer();
-        result.setHost(BIND_ADDRESS);
-        result.setPort(0);
+        final HonoServer result = new HonoServer(BIND_ADDRESS, 0, false);
         Stream.of(endpoint).filter(Objects::nonNull).forEach(result::addEndpoint);
         return result;
     }
 
     private void connectToServer(final TestContext ctx, final HonoServer server) {
-        connection = TestSupport.openConnection(ctx, vertx, server.getHost(), server.getPort());
+        connection = TestSupport.openConnection(ctx, vertx, server.getBindAddress(), server.getPort());
     }
 }

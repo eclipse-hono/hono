@@ -25,14 +25,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
 
 import io.vertx.core.impl.ConcurrentHashSet;
-import org.springframework.stereotype.Service;
 
 /**
  * Simple "in memory" device registration.
  */
 @Service
+@Profile({"forwarding-telemetry", "activemq"})
 public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryRegistrationAdapter.class);

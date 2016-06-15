@@ -45,6 +45,7 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
      * @param pausePeriod the number of milliseconds after which the sender is resumed.
      */
     public MessageDiscardingTelemetryAdapter(final long pauseThreshold, final long pausePeriod) {
+        super(0, 1);
         this.pauseThreshold = pauseThreshold;
         this.pausePeriod = pausePeriod;
     }

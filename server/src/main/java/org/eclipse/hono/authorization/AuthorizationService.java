@@ -15,11 +15,12 @@ import java.util.Set;
 
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.vertx.core.Verticle;
+
 /**
  * Provides methods to add, remove or retrieve permissions on a resource for a given subject.
  */
-public interface AuthorizationService
-{
+public interface AuthorizationService extends Verticle {
 
     /**
      * Checks a permission for a subject and resource.

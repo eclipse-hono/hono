@@ -11,7 +11,17 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
-import static org.eclipse.hono.telemetry.TelemetryConstants.*;
+import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_ATTACHED;
+import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL;
+import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_DETACHED;
+import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_EVENT;
+import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_LINK_ID;
+import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_TARGET_ADDRESS;
+import static org.eclipse.hono.telemetry.TelemetryConstants.getErrorMessage;
+import static org.eclipse.hono.telemetry.TelemetryConstants.getFlowControlMsg;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
@@ -52,9 +62,22 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class BaseTelemetryAdapter extends AbstractVerticle implements TelemetryAdapter {
 
-    private static final Logger         LOG                    = LoggerFactory.getLogger(BaseTelemetryAdapter.class);
+    protected final int                 instanceNo;
+    protected final int                 totalNoOfInstances;
+    private static final Logger         LOG                        = LoggerFactory.getLogger(BaseTelemetryAdapter.class);
+    private final Map<String, String>   flowControlAddressRegistry = new HashMap<>();
     private MessageConsumer<JsonObject> telemetryDataConsumer;
     private MessageConsumer<JsonObject> linkControlConsumer;
+    private String                      dataAddress;
+
+    protected BaseTelemetryAdapter() {
+        this(0, 1);
+    }
+
+    protected BaseTelemetryAdapter(final int instanceNo, final int totalNoOfInstances) {
+        this.instanceNo = instanceNo;
+        this.totalNoOfInstances = totalNoOfInstances;
+    }
 
     /**
      * Registers a Vert.x event consumer for address {@link TelemetryConstants#EVENT_BUS_ADDRESS_TELEMETRY_IN}
@@ -84,17 +107,26 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
     }
 
     private void registerTelemetryDataConsumer() {
-        telemetryDataConsumer = vertx.eventBus().consumer(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN);
+        dataAddress = getAddressWithId(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN);
+        telemetryDataConsumer = vertx.eventBus().consumer(dataAddress);
         telemetryDataConsumer.handler(this::processMessage);
-        LOG.info("listening on event bus [address: {}] for incoming telemetry messages",
-                TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN);
+        LOG.info("listening on event bus [address: {}] for downstream telemetry messages",
+                dataAddress);
     }
 
     private void registerLinkControlConsumer() {
-        linkControlConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL);
+        String address = getAddressWithId(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL);
+        linkControlConsumer = vertx.eventBus().consumer(address);
         linkControlConsumer.handler(this::processLinkControlMessage);
-        LOG.info("listening on event bus [address: {}] for link control messages",
-                EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL);
+        LOG.info("listening on event bus [address: {}] for downstream link control messages", address);
+    }
+
+    private String getAddressWithId(final String baseAddress) {
+        StringBuilder b = new StringBuilder(baseAddress);
+        if (instanceNo > 0) {
+            b.append(".").append(instanceNo);
+        }
+        return b.toString();
     }
 
     /**
@@ -127,15 +159,32 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
     private void processLinkControlMessage(final Message<JsonObject> msg) {
         JsonObject body = msg.body();
         String event = body.getString(FIELD_NAME_EVENT);
-        String clientId = body.getString(FIELD_NAME_LINK_ID);
-        LOG.trace("received link control msg from client [{}]: {}", clientId, body.encode());
+        String linkId = body.getString(FIELD_NAME_LINK_ID);
+        LOG.trace("received link [{}] control msg: {}", linkId, body.encode());
         if (EVENT_ATTACHED.equalsIgnoreCase(event)) {
-            linkAttached(clientId, body.getString(FIELD_NAME_TARGET_ADDRESS));
+            processLinkAttachedMessage(
+                    linkId,
+                    body.getString(FIELD_NAME_TARGET_ADDRESS),
+                    msg.headers().get(TelemetryConstants.HEADER_NAME_REPLY_TO));
         } else if (EVENT_DETACHED.equalsIgnoreCase(event)) {
-            linkDetached(clientId);
+            linkDetached(linkId);
+            unregisterReplyToAddress(linkId);
         } else {
             LOG.warn("discarding unsupported link control command [{}]", event);
         }
+    }
+
+    final void processLinkAttachedMessage(final String linkId, final String targetAddress, final String replyToAddress) {
+        if (replyToAddress != null) {
+            flowControlAddressRegistry.put(linkId, replyToAddress);
+            linkAttached(linkId, targetAddress);
+        } else {
+            LOG.warn("discarding link [{}] control message lacking required header [{}]", linkId, TelemetryConstants.HEADER_NAME_REPLY_TO);
+        }
+    }
+
+    private void unregisterReplyToAddress(final String linkId) {
+        flowControlAddressRegistry.remove(linkId);
     }
 
     /**
@@ -152,6 +201,7 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
      * @param targetAddress the target address to upload data to.
      */
     protected void linkAttached(final String linkId, final String targetAddress) {
+        // by default resume link so that the client can start to send messages
         sendFlowControlMessage(linkId, false);
     }
 
@@ -173,25 +223,33 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
 
     private void processMessage(final Message<JsonObject> message) {
         JsonObject body = message.body();
-        String clientId = body.getString(TelemetryConstants.FIELD_NAME_LINK_ID);
+        String linkId = body.getString(TelemetryConstants.FIELD_NAME_LINK_ID);
         String msgId = body.getString(TelemetryConstants.FIELD_NAME_MSG_UUID);
-        Object obj = vertx.sharedData().getLocalMap(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN).remove(msgId);
+        Object obj = vertx.sharedData().getLocalMap(dataAddress).remove(msgId);
         if (obj instanceof AmqpMessage) {
             AmqpMessage telemetryMsg = (AmqpMessage) obj;
-            processTelemetryData(telemetryMsg.getMessage(), clientId);
+            processTelemetryData(telemetryMsg.getMessage(), linkId);
         } else {
             LOG.warn("expected {} in shared local map {} but found {}", AmqpMessage.class.getName(),
-                    TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN, obj.getClass().getName());
+                    dataAddress, obj.getClass().getName());
         }
     }
 
     protected final void sendFlowControlMessage(final String linkId, final boolean suspend) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, getFlowControlMsg(linkId, suspend));
+        sendMessage(linkId, getFlowControlMsg(linkId, suspend));
     }
 
     protected final void sendErrorMessage(final String linkId, final boolean closeLink) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, getErrorMessage(linkId, closeLink));
+        sendMessage(linkId, getErrorMessage(linkId, closeLink));
     }
 
-
+    private void sendMessage(final String linkId, final JsonObject msg) {
+        String address = flowControlAddressRegistry.get(linkId);
+        if (address != null) {
+            LOG.trace("sending flow control message for link [{}] to address [{}]: {}", linkId, address, msg.encodePrettily());
+            vertx.eventBus().send(address, msg);
+        } else {
+            LOG.warn("cannot send flow control message upstream for link [{}], no event bus address registered", linkId);
+        }
+    }
 }

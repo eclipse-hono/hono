@@ -13,11 +13,13 @@ package org.eclipse.hono.telemetry;
 
 import org.apache.qpid.proton.message.Message;
 
+import io.vertx.core.Verticle;
+
 /**
  * A strategy for processing downstream telemetry data.
  *
  */
-public interface TelemetryAdapter {
+public interface TelemetryAdapter extends Verticle {
 
     /**
      * Processes a message containing telemetry data produced by a device.

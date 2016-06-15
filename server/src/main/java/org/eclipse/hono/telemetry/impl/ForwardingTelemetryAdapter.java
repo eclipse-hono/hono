@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
-import static org.eclipse.hono.telemetry.TelemetryConstants.*;
+import static org.eclipse.hono.telemetry.TelemetryConstants.PATH_SEPARATOR;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -23,10 +23,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.telemetry.SenderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Service;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -41,8 +37,6 @@ import io.vertx.proton.ProtonSender;
  * A telemetry adapter that forwards uploaded messages to another AMQP 1.0 container.
  *
  */
-@Service
-@Profile({"forwarding-telemetry", "activemq"})
 public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     private static final Logger             LOG                       = LoggerFactory.getLogger(ForwardingTelemetryAdapter.class);
@@ -54,11 +48,16 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
     private String                          pathSeparator             = PATH_SEPARATOR;
     private SenderFactory                   senderFactory;
 
-    /**
-     * 
-     */
-    @Autowired
     public ForwardingTelemetryAdapter(final SenderFactory senderFactory) {
+        this(senderFactory, 0, 1);
+    }
+
+    /**
+     * Creates a new adapter instance for a {@code ProtonSender} factory, an instance number
+     * and a total number of instances.
+     */
+    public ForwardingTelemetryAdapter(final SenderFactory senderFactory, final int instanceNo, final int totalNoOfInstances) {
+        super(instanceNo, totalNoOfInstances);
         this.senderFactory = Objects.requireNonNull(senderFactory);
         activeSenders = new HashMap<>();
         messageTagCounter = new AtomicLong();
@@ -66,22 +65,36 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     /**
      * @param host the hostname of the downstream AMQP 1.0 container to forward telemetry data to.
+     * @throws NullPointerException if the host is {@code null}.
      */
-    @Value(value = "${hono.telemetry.downstream.host}")
-    public void setDownstreamContainerHost(final String host) {
-        this.downstreamContainerHost = host;
+    void setDownstreamContainerHost(final String host) {
+        this.downstreamContainerHost = Objects.requireNonNull(host);
     }
 
     /**
      * @param port the port of the downstream AMQP 1.0 container to forward telemetry data to.
+     * @throws IllegalArgumentException if the given port is not a valid IP port.
      */
-    @Value(value = "${hono.telemetry.downstream.port}")
-    public void setDownstreamContainerPort(final int port) {
+    void setDownstreamContainerPort(final int port) {
         this.downstreamContainerPort = port;
+    }
+
+    /**
+     * @param pathSeparator the character to use for separating the segments
+     *                      of message addresses. 
+     * @throws NullPointerException if the given character is {@code null}.
+     */
+    void setPathSeparator(final String pathSeparator) {
+        this.pathSeparator = Objects.requireNonNull(pathSeparator);
     }
 
     @Override
     public void doStart(final Future<Void> startFuture) throws Exception {
+        if (downstreamContainerHost == null) {
+            throw new IllegalStateException("downstream container host is not set");
+        } else if (downstreamContainerPort == 0) {
+            throw new IllegalStateException("downstream container port is not set");
+        }
         ProtonClient client = ProtonClient.create(vertx);
         client.connect(createClientOptions(), downstreamContainerHost, downstreamContainerPort, conAttempt -> {
             if (conAttempt.succeeded()) {
@@ -136,7 +149,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         Future<ProtonSender> result = Future.future();
         result.setHandler(handler);
         if (downstreamConnection == null) {
-            result.fail("Downstream connection must be opened before creating sender");
+            result.fail("downstream connection must be opened before creating sender");
         } else {
             String address = targetAddress.replace("/", pathSeparator);
             senderFactory.createSender(downstreamConnection, address, result);
@@ -220,14 +233,5 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         b.putLong(messageTagCounter.getAndIncrement());
         b.flip();
         sender.send(b.array(), msg);
-    }
-
-    public String getPathSeparator() {
-        return pathSeparator;
-    }
-
-    @Value(value = "${hono.telemetry.pathSeparator:/}")
-    public void setPathSeparator(String pathSeparator) {
-        this.pathSeparator = pathSeparator;
     }
 }

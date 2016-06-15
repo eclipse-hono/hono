@@ -81,9 +81,7 @@ public class HonoServerTest {
     }
 
     private static HonoServer createServer(final Endpoint telemetryEndpoint) {
-        HonoServer result = new HonoServer();
-        result.setHost(BIND_ADDRESS);
-        result.setPort(0);
+        HonoServer result = new HonoServer(BIND_ADDRESS, 0, false);
         if (telemetryEndpoint != null) {
             result.addEndpoint(telemetryEndpoint);
         }
@@ -188,10 +186,10 @@ public class HonoServerTest {
         int timeout = 2000; // milliseconds
         final AtomicLong start = new AtomicLong();
 
-        TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
+        TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx, false);
         HonoServer server = createServer(telemetryEndpoint);
         vertx.deployVerticle(MessageDiscardingTelemetryAdapter.class.getName());
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName());
+        vertx.deployVerticle(new InMemoryAuthorizationService());
         vertx.deployVerticle(server, res -> {
             ctx.assertTrue(res.succeeded());
             deployed.complete();

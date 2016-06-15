@@ -38,10 +38,9 @@ import org.eclipse.hono.telemetry.TelemetryMessageFilter;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
@@ -53,18 +52,34 @@ import io.vertx.proton.ProtonReceiver;
  * A Hono {@code Endpoint} for uploading telemetry data.
  *
  */
-@Component
 public final class TelemetryEndpoint extends BaseEndpoint {
 
-    private static final Logger           LOG                          = LoggerFactory.getLogger(TelemetryEndpoint.class);
-    private Map<String, LinkWrapper>      activeClients                = new HashMap<>();
-    private MessageConsumer<JsonObject>   flowControlConsumer;
+    private static final Logger             LOG                   = LoggerFactory.getLogger(TelemetryEndpoint.class);
+    private Map<String, LinkWrapper>        activeClients         = new HashMap<>();
+    private MessageConsumer<JsonObject>     flowControlConsumer;
+    private String                          flowControlAddress;
+    private String                          linkControlAddress;
+    private String                          dataAddress;
 
-    @Autowired
-    public TelemetryEndpoint(final Vertx vertx) {
-        super(Objects.requireNonNull(vertx));
-        flowControlConsumer = this.vertx.eventBus().consumer(
-                EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, this::handleFlowControlMsg);
+    public TelemetryEndpoint(final Vertx vertx, final boolean singleTenant) {
+        this(vertx, singleTenant, 0);
+    }
+
+    public TelemetryEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceId) {
+        super(Objects.requireNonNull(vertx), singleTenant, instanceId);
+        registerFlowControlConsumer();
+
+        linkControlAddress = getAddressWithId(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL);
+        LOG.info("publishing downstream link control messages on event bus [address: {}]", linkControlAddress);
+        dataAddress = getAddressWithId(EVENT_BUS_ADDRESS_TELEMETRY_IN);
+        LOG.info("publishing downstream telemetry messages on event bus [address: {}]", dataAddress);
+    }
+
+    private void registerFlowControlConsumer() {
+        flowControlAddress = getAddressWithId(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
+        flowControlConsumer = this.vertx.eventBus().consumer(flowControlAddress, this::handleFlowControlMsg);
+        LOG.info("listening on event bus [address: {}] for downstream flow control messages",
+                flowControlAddress);
     }
 
     private void handleFlowControlMsg(final io.vertx.core.eventbus.Message<JsonObject> msg) {
@@ -118,24 +133,25 @@ public final class TelemetryEndpoint extends BaseEndpoint {
             LOG.debug("client wants to use AT LEAST ONCE delivery mode, ignoring ...");
         }
         final String linkId = UUID.randomUUID().toString();
-        final LinkWrapper client = new LinkWrapper(linkId, receiver);
+        final LinkWrapper link = new LinkWrapper(linkId, receiver);
 
         receiver.closeHandler(clientDetached -> {
             // client has closed link -> inform TelemetryAdapter about client detach
-            onLinkDetach(client);
+            onLinkDetach(link);
         }).handler((delivery, message) -> {
             final ResourceIdentifier messageAddress = getResourceIdentifier(message.getAddress());
             if (TelemetryMessageFilter.verify(targetAddress, messageAddress, message)) {
-                sendTelemetryData(client, delivery, message, messageAddress);
+                sendTelemetryData(link, delivery, message, messageAddress);
             } else {
-                onLinkDetach(client);
+                onLinkDetach(link);
             }
         }).open();
 
         LOG.debug("registering new link for client [{}]", linkId);
-        activeClients.put(linkId, client);
+        activeClients.put(linkId, link);
         JsonObject msg = getLinkAttachedMsg(linkId, targetAddress);
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL, msg);
+        DeliveryOptions headers = TelemetryConstants.addReplyToHeader(new DeliveryOptions(), flowControlAddress);
+        vertx.eventBus().send(linkControlAddress, msg, headers);
     }
 
     private void onLinkDetach(final LinkWrapper client) {
@@ -143,7 +159,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         client.close();
         activeClients.remove(client.getLinkId());
         JsonObject msg = getLinkDetachedMsg(client.getLinkId());
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL, msg);
+        vertx.eventBus().send(linkControlAddress, msg);
     }
 
     private void sendTelemetryData(final LinkWrapper link, final ProtonDelivery delivery, final Message msg, final ResourceIdentifier messageAddress) {
@@ -155,21 +171,22 @@ public final class TelemetryEndpoint extends BaseEndpoint {
                 vertx.runOnContext(run -> {
                     final String messageId = UUID.randomUUID().toString();
                     final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
-                    vertx.sharedData().getLocalMap(EVENT_BUS_ADDRESS_TELEMETRY_IN).put(messageId, amqpMessage);
-                    sendAtMostOnce(link.getLinkId(), messageId, delivery);
-                    int creditLeft = link.decrementAndGetRemainingCredit();
-                    LOG.trace("forwarding msg [link: {}] to downstream adapter [credit left: {}]", link.getLinkId(), creditLeft);
+                    vertx.sharedData().getLocalMap(dataAddress).put(messageId, amqpMessage);
+                    sendAtMostOnce(link, messageId, delivery);
                 });
             } else {
-                LOG.debug("client is not authorized to upload telemetry data for address [{}]", messageAddress);
+                LOG.debug("client is not authorized to upload telemetry data for address [{}], closing link ...", messageAddress);
                 onLinkDetach(link); // inform downstream adapter about client detach
             }
         });
     }
 
-    private void sendAtMostOnce(final String clientId, final String messageId, final ProtonDelivery delivery) {
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_TELEMETRY_IN, TelemetryConstants.getTelemetryMsg(messageId, clientId));
+    private void sendAtMostOnce(final LinkWrapper link, final String messageId, final ProtonDelivery delivery) {
+        vertx.eventBus().send(dataAddress, TelemetryConstants.getTelemetryMsg(messageId, link.getLinkId()));
         ProtonHelper.accepted(delivery, true);
+        int creditLeft = link.decrementAndGetRemainingCredit();
+        LOG.trace("publishing telemetry msg received via Link[id: {}, credit left: {}] to {}",
+                link.getLinkId(), creditLeft, dataAddress);
     }
 
     public static class LinkWrapper {
