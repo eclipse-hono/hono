@@ -37,15 +37,15 @@ public interface Endpoint {
      * Handles a client's request to establish a link with Hono for sending messages to a given target address.
      * 
      * @param receiver the link to be established.
-     * @param targetResource the target address from the client's AMQP <em>ATTACH</em> message.
+     * @param targetAddress the target address from the client's AMQP <em>ATTACH</em> message.
      */
-    void onLinkAttach(ProtonReceiver receiver, ResourceIdentifier targetResource);
+    void onLinkAttach(ProtonReceiver receiver, ResourceIdentifier targetAddress);
 
     /**
      * Handles a client's request to establish a link with Hono for receiving messages from a given address.
      *
      * @param sender the link to be established.
-     * @param targetResource the target address from the client's AMQP <em>ATTACH</em> message.
+     * @param sourceAddress the source address from the client's AMQP <em>ATTACH</em> message.
      */
-    void onLinkAttach(ProtonSender sender, ResourceIdentifier targetResource);
+    void onLinkAttach(ProtonSender sender, ResourceIdentifier sourceAddress);
 }

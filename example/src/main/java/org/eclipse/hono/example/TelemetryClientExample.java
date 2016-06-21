@@ -31,32 +31,28 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * An example of using TelemetryClient for uploading and retrieving telemetry data to/from Hono.
  *
  */
-//@ComponentScan
-//@Configuration
-//@EnableAutoConfiguration
 @SpringBootApplication
 public class TelemetryClientExample {
 
-    private static final Logger LOG               = LoggerFactory.getLogger(TelemetryClientExample.class);
-    private static final String ROLE_SENDER       = "sender";
-    private static final String ROLE_RECEIVER     = "receiver";
-
-    private TelemetryClient     client;
-
-    @Value(value = "${hono.server.host}")
-    private String              host;
-    @Value(value = "${hono.server.port}")
-    private int                 port;
-    @Value(value = "${tenant.id}")
-    private String              tenantId;
-    @Value(value = "${device.id}")
-    private String              deviceId;
-    @Value(value = "${role}")
-    private String              role;
-    @Value(value = "${hono.server.pathSeparator:/}")
-    private String pathSeparator;
+    private static final Logger   LOG               = LoggerFactory.getLogger(TelemetryClientExample.class);
+    private static final String   ROLE_SENDER       = "sender";
+    private static final String   ROLE_RECEIVER     = "receiver";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private TelemetryClient       client;
+
+    @Value(value = "${hono.server.host}")
+    private String                host;
+    @Value(value = "${hono.server.port}")
+    private int                   port;
+    @Value(value = "${tenant.id}")
+    private String                tenantId;
+    @Value(value = "${device.id}")
+    private String                deviceId;
+    @Value(value = "${role}")
+    private String                role;
+    @Value(value = "${hono.server.pathSeparator:/}")
+    private String                pathSeparator;
 
     @PostConstruct
     private void start() throws Exception {
