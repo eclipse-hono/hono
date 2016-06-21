@@ -48,4 +48,26 @@ public interface Endpoint {
      * @param sourceAddress the source address from the client's AMQP <em>ATTACH</em> message.
      */
     void onLinkAttach(ProtonSender sender, ResourceIdentifier sourceAddress);
+
+    /**
+     * Starts this endpoint.
+     * <p>
+     * This method should be used to allocate any required resources.
+     * However, no long running tasks should be executed.
+     * </p>
+     * 
+     * @return {@code true} if this endpoint has started successfully.
+     */
+    boolean start();
+
+    /**
+     * Stops this endpoint.
+     * <p>
+     * This method should be used to release any allocated resources.
+     * However, no long running tasks should be executed.
+     * </p>
+     * 
+     * @return {@code true} if this endpoint has stopped successfully.
+     */
+    boolean stop();
 }

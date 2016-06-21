@@ -58,6 +58,32 @@ public abstract class BaseEndpoint implements Endpoint{
     }
 
     /**
+     * Subclasses should override this method to create required resources
+     * during startup.
+     * <p>
+     * This implementation always returns {@code true}.
+     * </p>
+     * @return {@code true} if startup succeeded.
+     */
+    @Override
+    public boolean start() {
+        return true;
+    }
+
+    /**
+     * Subclasses should override this method to release resources
+     * during shutdown.
+     * <p>
+     * This implementation always returns {@code true}.
+     * </p>
+     * @return {@code true} if shutdown succeeded.
+     */
+    @Override
+    public boolean stop() {
+        return true;
+    }
+
+    /**
      * Appends this endpoint's instance number to a given base address.
      * 
      * @param baseAddress the base address.

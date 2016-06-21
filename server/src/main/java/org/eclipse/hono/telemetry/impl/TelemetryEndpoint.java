@@ -67,12 +67,24 @@ public final class TelemetryEndpoint extends BaseEndpoint {
 
     public TelemetryEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceId) {
         super(Objects.requireNonNull(vertx), singleTenant, instanceId);
-        registerFlowControlConsumer();
+    }
 
+    @Override
+    public boolean start() {
+        registerFlowControlConsumer();
         linkControlAddress = getAddressForInstanceNo(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL);
         LOG.info("publishing downstream link control messages on event bus [address: {}]", linkControlAddress);
         dataAddress = getAddressForInstanceNo(EVENT_BUS_ADDRESS_TELEMETRY_IN);
         LOG.info("publishing downstream telemetry messages on event bus [address: {}]", dataAddress);
+        return true;
+    }
+
+    @Override
+    public boolean stop() {
+        if (flowControlConsumer != null) {
+            flowControlConsumer.unregister();
+        }
+        return true;
     }
 
     private void registerFlowControlConsumer() {

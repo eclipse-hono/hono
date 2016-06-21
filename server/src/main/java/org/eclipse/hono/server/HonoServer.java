@@ -69,6 +69,8 @@ public final class HonoServer extends AbstractVerticle {
         if (!isTelemetryEndpointConfigured()) {
             LOG.warn("No Telemetry endpoint has been configured, aborting start up ...");
             startupHandler.fail("Telemetry endpoint must be configured");
+        } else if (!startEndpoints()) {
+            startupHandler.fail("Some registered endpoints failed to start");
         } else {
             final ProtonServerOptions options = createServerOptions();
             server = ProtonServer.create(vertx, options)
@@ -88,6 +90,19 @@ public final class HonoServer extends AbstractVerticle {
 
     private boolean isTelemetryEndpointConfigured() {
         return endpoints.containsKey(TelemetryConstants.TELEMETRY_ENDPOINT);
+    }
+
+    private boolean startEndpoints() {
+        boolean succeeded = true;
+        for (Endpoint ep : endpoints.values()) {
+            LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+            succeeded &= ep.start();
+            if (!succeeded) {
+                LOG.error("could not start endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+                break;
+            }
+        }
+        return succeeded;
     }
 
     ProtonServerOptions createServerOptions() {
