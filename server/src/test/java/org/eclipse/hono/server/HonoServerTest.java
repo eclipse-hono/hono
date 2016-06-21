@@ -11,74 +11,40 @@
  */
 package org.eclipse.hono.server;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.amqp.transport.Target;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
-import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
-import org.eclipse.hono.impl.ProtonSenderWriteStream;
 import org.eclipse.hono.telemetry.TelemetryConstants;
-import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
-import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TelemetryDataReadStream;
 import org.eclipse.hono.util.TestSupport;
-import org.junit.After;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.streams.Pump;
-import io.vertx.core.streams.ReadStream;
-import io.vertx.core.streams.WriteStream;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
 
 /**
- * Integration tests for Hono Server.
+ * Unit tests for Hono Server.
  *
  */
-@RunWith(VertxUnitRunner.class)
 public class HonoServerTest {
 
-    private static final Logger LOG          = LoggerFactory.getLogger(HonoServerTest.class);
     private static final String BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
-    Vertx                       vertx;
-    ProtonConnection            connection;
-    ProtonSender                protonSender;
-
-    @After
-    public void disconnect(final TestContext ctx) {
-        if (connection != null) {
-            connection.close();
-        }
-        if (vertx != null) {
-            vertx.close(ctx.asyncAssertSuccess(done -> LOG.info("Vertx has been shut down")));
-        }
-    }
 
     private static HonoServer createServer(final Endpoint telemetryEndpoint) {
         HonoServer result = new HonoServer(BIND_ADDRESS, 0, false);
@@ -86,11 +52,6 @@ public class HonoServerTest {
             result.addEndpoint(telemetryEndpoint);
         }
         return result;
-    }
-
-    private void connectToServer(final TestContext ctx, final HonoServer server) {
-
-        connection = TestSupport.openConnection(ctx, vertx, BIND_ADDRESS, server.getPort());
     }
 
     @Test
@@ -176,59 +137,9 @@ public class HonoServerTest {
         assertTrue(linkClosed.await(1, TimeUnit.SECONDS));
     }
 
-    @Test
-    public void testTelemetryUpload(final TestContext ctx) {
-        vertx = Vertx.vertx();
-        LOG.debug("starting telemetry upload test");
-        final int messagesToBeSent = 30;
-        final Async deployed = ctx.async();
-        final Async sent = ctx.async(messagesToBeSent);
-        int timeout = 2000; // milliseconds
-        final AtomicLong start = new AtomicLong();
-
-        TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx, false);
-        HonoServer server = createServer(telemetryEndpoint);
-        vertx.deployVerticle(MessageDiscardingTelemetryAdapter.class.getName());
-        vertx.deployVerticle(new InMemoryAuthorizationService());
-        vertx.deployVerticle(server, res -> {
-            ctx.assertTrue(res.succeeded());
-            deployed.complete();
-        });
-        deployed.await(1000);
-        connectToServer(ctx, server);
-
-        protonSender = connection.createSender(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + Constants.DEFAULT_TENANT);
-        protonSender
-                .setQoS(ProtonQoS.AT_MOST_ONCE)
-                .openHandler(senderOpen -> {
-                    ctx.assertTrue(senderOpen.succeeded());
-                    LOG.debug("outbound link created, now starting to send messages");
-                    start.set(System.currentTimeMillis());
-                    uploadTelemetryData(messagesToBeSent, protonSender, allProduced -> {
-                        LOG.debug("all {} telemetry messages have been produced", messagesToBeSent);
-                    }, sent);
-                }).open();
-
-        sent.await(timeout);
-        LOG.info("messages sent after {} milliseconds: {}", System.currentTimeMillis() - start.get(),
-                messagesToBeSent - sent.count());
-        protonSender.close();
-    }
-
     private Target getTarget(final String targetAddress) {
         Target result = mock(Target.class);
         when(result.getAddress()).thenReturn(targetAddress);
         return result;
-    }
-
-    private void uploadTelemetryData(final int count, final ProtonSender sender, final Handler<Void> allProducedHandler,
-            final Async sentMessages) {
-        vertx.executeBlocking(future -> {
-            ReadStream<Message> rs = new TelemetryDataReadStream(vertx, count, Constants.DEFAULT_TENANT);
-            WriteStream<Message> ws = new ProtonSenderWriteStream(sender, delivered -> sentMessages.countDown());
-            rs.endHandler(done -> future.complete());
-            LOG.debug("pumping test telemetry data to Hono server");
-            Pump.pump(rs, ws).start();
-        }, done -> allProducedHandler.handle(null));
     }
 }

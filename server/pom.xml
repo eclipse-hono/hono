@@ -85,6 +85,11 @@
      <artifactId>log4j-over-slf4j</artifactId>
      <scope>runtime</scope>
     </dependency>
+    <dependency>
+     <groupId>org.apache.qpid</groupId>
+     <artifactId>qpid-jms-client</artifactId>
+     <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
