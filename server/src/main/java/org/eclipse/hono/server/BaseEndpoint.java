@@ -39,7 +39,7 @@ public abstract class BaseEndpoint implements Endpoint{
 
     protected final boolean    singleTenant;
     protected final Vertx      vertx;
-    protected final int        id;
+    protected final int        instanceNo;
 
     /**
      * 
@@ -50,19 +50,26 @@ public abstract class BaseEndpoint implements Endpoint{
         this(vertx, false, 0);
     }
 
-    protected BaseEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceId)
+    protected BaseEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceNo)
     {
         this.vertx = Objects.requireNonNull(vertx);
         this.singleTenant = singleTenant;
-        this.id = instanceId;
+        this.instanceNo = instanceNo;
     }
 
-    protected final String getAddressWithId(final String baseAddress) {
-        StringBuilder b = new StringBuilder(baseAddress);
-        if (id > 0) {
-            b.append(".").append(id);
+    /**
+     * Appends this endpoint's instance number to a given base address.
+     * 
+     * @param baseAddress the base address.
+     * @return the base address appended with a period and the instance number if the
+     *          instance number i &gt; 0 or else the given base address.
+     */
+    protected final String getAddressForInstanceNo(final String baseAddress) {
+        if (instanceNo == 0) {
+            return baseAddress;
+        } else {
+            return String.format("%s.%d", baseAddress, instanceNo);
         }
-        return b.toString();
     }
 
     /**
@@ -83,7 +90,7 @@ public abstract class BaseEndpoint implements Endpoint{
 
     @Override
     public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
-        LOGGER.info("Endpoint {} is not capable to send messages, closing link.", getName());
+        LOGGER.info("Endpoint [{}] does not support data retrieval, closing link.", getName());
         sender.close();
     }
 

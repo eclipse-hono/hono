@@ -69,14 +69,14 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         super(Objects.requireNonNull(vertx), singleTenant, instanceId);
         registerFlowControlConsumer();
 
-        linkControlAddress = getAddressWithId(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL);
+        linkControlAddress = getAddressForInstanceNo(EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL);
         LOG.info("publishing downstream link control messages on event bus [address: {}]", linkControlAddress);
-        dataAddress = getAddressWithId(EVENT_BUS_ADDRESS_TELEMETRY_IN);
+        dataAddress = getAddressForInstanceNo(EVENT_BUS_ADDRESS_TELEMETRY_IN);
         LOG.info("publishing downstream telemetry messages on event bus [address: {}]", dataAddress);
     }
 
     private void registerFlowControlConsumer() {
-        flowControlAddress = getAddressWithId(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
+        flowControlAddress = getAddressForInstanceNo(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
         flowControlConsumer = this.vertx.eventBus().consumer(flowControlAddress, this::handleFlowControlMsg);
         LOG.info("listening on event bus [address: {}] for downstream flow control messages",
                 flowControlAddress);
