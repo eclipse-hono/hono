@@ -73,8 +73,6 @@ public class HonoServerTest {
         // GIVEN a server with a telemetry endpoint
         final String targetAddress = TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + Constants.DEFAULT_TENANT;
         final EventBus eventBus = mock(EventBus.class);
-        final JsonObject authMsg = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetAddress, Permission.WRITE.toString());
-        TestSupport.expectReplyForMessage(eventBus, AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN, authMsg, AuthorizationConstants.ALLOWED);
         final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
         final CountDownLatch linkEstablished = new CountDownLatch(1);
@@ -92,6 +90,8 @@ public class HonoServerTest {
         };
         HonoServer server = createServer(telemetryEndpoint);
         server.init(vertx, mock(Context.class));
+        final JsonObject authMsg = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetAddress, Permission.WRITE.toString());
+        TestSupport.expectReplyForMessage(eventBus, server.getAuthServiceAddress(), authMsg, AuthorizationConstants.ALLOWED);
 
         // WHEN a client connects to the server using a telemetry address
         final Target target = getTarget(targetAddress);
@@ -109,8 +109,6 @@ public class HonoServerTest {
         // GIVEN a server with a telemetry endpoint
         final String restrictedTargetAddress = TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX + "RESTRICTED_TENANT";
         final EventBus eventBus = mock(EventBus.class);
-        final JsonObject authMsg = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, restrictedTargetAddress, Permission.WRITE.toString());
-        TestSupport.expectReplyForMessage(eventBus, AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN, authMsg, AuthorizationConstants.DENIED);
         final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
 
@@ -118,6 +116,8 @@ public class HonoServerTest {
         when(telemetryEndpoint.getName()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
         HonoServer server = createServer(telemetryEndpoint);
         server.init(vertx, mock(Context.class));
+        final JsonObject authMsg = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, restrictedTargetAddress, Permission.WRITE.toString());
+        TestSupport.expectReplyForMessage(eventBus, server.getAuthServiceAddress(), authMsg, AuthorizationConstants.DENIED);
 
         // WHEN a client connects to the server using a telemetry address for a tenant it is not authorized to write to
         final CountDownLatch linkClosed = new CountDownLatch(1);

@@ -46,10 +46,11 @@ import io.vertx.proton.ProtonServerOptions;
 public final class HonoServer extends AbstractVerticle {
 
     private static final Logger   LOG = LoggerFactory.getLogger(HonoServer.class);
+    private final String          authServiceAddress;
     private String                bindAddress;
     private int                   port;
     private boolean               singleTenant;
-    private final int             id;
+    private final int             instanceNo;
     private ProtonServer          server;
     private Map<String, Endpoint> endpoints = new HashMap<>();
 
@@ -57,11 +58,12 @@ public final class HonoServer extends AbstractVerticle {
         this(bindAddress, port, singleTenant, 0);
     }
 
-    HonoServer(final String bindAddress, final int port, final boolean singleTenant, final int id) {
+    HonoServer(final String bindAddress, final int port, final boolean singleTenant, final int instanceNo) {
         this.bindAddress = Objects.requireNonNull(bindAddress);
         this.port = port;
         this.singleTenant = singleTenant;
-        this.id = id;
+        this.instanceNo = instanceNo;
+        this.authServiceAddress = String.format("%s.%d", EVENT_BUS_ADDRESS_AUTHORIZATION_IN, instanceNo);
     }
 
     @Override
@@ -165,7 +167,7 @@ public final class HonoServer extends AbstractVerticle {
     }
 
     void helloProcessConnection(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-%s:%d-%d", this.bindAddress, server.actualPort(), id));
+        connection.setContainer(String.format("Hono-%s:%d-%d", this.bindAddress, server.actualPort(), instanceNo));
         connection.sessionOpenHandler(session -> session.open());
         connection.receiverOpenHandler(openedReceiver -> handleReceiverOpen(connection, openedReceiver));
         connection.senderOpenHandler(openedSender -> handleSenderOpen(connection, openedSender));
@@ -260,10 +262,11 @@ public final class HonoServer extends AbstractVerticle {
 
     private void checkAuthorizationToAttach(final ResourceIdentifier targetResource, final Permission permission,
        final Handler<Boolean> authResultHandler) {
+
         final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetResource.toString(),
            permission.toString());
         vertx.eventBus().send(
-           EVENT_BUS_ADDRESS_AUTHORIZATION_IN,
+           authServiceAddress,
            authRequest,
            res -> authResultHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
@@ -274,5 +277,14 @@ public final class HonoServer extends AbstractVerticle {
         } else {
             return ResourceIdentifier.fromString(address);
         }
+    }
+
+    /**
+     * Gets the event bus address this Hono server uses for authorizing client requests.
+     * 
+     * @return the address.
+     */
+    String getAuthServiceAddress() {
+        return authServiceAddress;
     }
 }

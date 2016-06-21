@@ -26,10 +26,10 @@ import java.util.Map;
 import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
 import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.AbstractInstanceNumberAwareVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -60,10 +60,8 @@ import io.vertx.core.json.JsonObject;
  * {@link TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message, String, io.vertx.core.Handler)}.
  * </p>
  */
-public abstract class BaseTelemetryAdapter extends AbstractVerticle implements TelemetryAdapter {
+public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVerticle implements TelemetryAdapter {
 
-    protected final int                 instanceNo;
-    protected final int                 totalNoOfInstances;
     private static final Logger         LOG                        = LoggerFactory.getLogger(BaseTelemetryAdapter.class);
     private final Map<String, String>   flowControlAddressRegistry = new HashMap<>();
     private MessageConsumer<JsonObject> telemetryDataConsumer;
@@ -75,8 +73,7 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
     }
 
     protected BaseTelemetryAdapter(final int instanceNo, final int totalNoOfInstances) {
-        this.instanceNo = instanceNo;
-        this.totalNoOfInstances = totalNoOfInstances;
+        super(instanceNo, totalNoOfInstances);
     }
 
     /**
@@ -119,14 +116,6 @@ public abstract class BaseTelemetryAdapter extends AbstractVerticle implements T
         linkControlConsumer = vertx.eventBus().consumer(address);
         linkControlConsumer.handler(this::processLinkControlMessage);
         LOG.info("listening on event bus [address: {}] for downstream link control messages", address);
-    }
-
-    private String getAddressWithId(final String baseAddress) {
-        StringBuilder b = new StringBuilder(baseAddress);
-        if (instanceNo > 0) {
-            b.append(".").append(instanceNo);
-        }
-        return b.toString();
     }
 
     /**

@@ -13,6 +13,7 @@ package org.eclipse.hono.tests;
 
 import org.eclipse.hono.Application;
 import org.eclipse.hono.client.TelemetryClient;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import java.net.InetAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -31,36 +33,50 @@ import static junit.framework.TestCase.assertTrue;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
-@TestPropertySource(locations="classpath:application.properties")
+@TestPropertySource(locations = "classpath:application.properties")
 @ActiveProfiles("activemq")
 public class HonoTestSupport {
-   private static final Logger LOGGER = LoggerFactory.getLogger(HonoTestSupport.class);
 
-   public static final int MSG_COUNT = 10;
+    private static final String TENANT_ID = "tenant";
+    private static final Logger LOGGER    = LoggerFactory.getLogger(HonoTestSupport.class);
 
-   private TelemetryClient sender;
-   private TelemetryClient receiver;
+    public static final int     MSG_COUNT = 30;
 
-   @Value(value = "${hono.telemetry.pathSeparator:/}")
-   private String pathSeparator;
+    private TelemetryClient     sender;
+    private TelemetryClient     receiver;
 
-   @Test
-   public void testTelemetry() throws Exception {
-      sender = new TelemetryClient("localhost", 5672, "tenant");
-      sender.createSender().setHandler(r -> {});
-      Thread.sleep(1000);
-      receiver = new TelemetryClient("localhost", 5671, "tenant");
+    @Value(value = "${hono.telemetry.pathSeparator:/}")
+    private String              pathSeparator;
+    @Value(value = "${hono.server.port}")
+    private int                 honoServerPort;
+    @Value(value = "${hono.telemetry.downstream.host}")
+    private String              downstreamHostName;
+    @Value(value = "${hono.telemetry.downstream.port}")
+    private int                 downstreamPort;
 
-      final CountDownLatch received = new CountDownLatch(MSG_COUNT);
-      receiver.createReceiver(message -> {
-          LOGGER.info("Received " + message);
-          received.countDown();
-      }, "telemetry" + pathSeparator + "%s");
+    @Test
+    public void testTelemetry() throws Exception {
+        final CountDownLatch received = new CountDownLatch(MSG_COUNT);
+        receiver = new TelemetryClient(downstreamHostName, downstreamPort, TENANT_ID);
 
-      IntStream.range(0, MSG_COUNT).forEach(i -> sender.send("device" + i, "payload" + i));
+        receiver.createReceiver(message -> {
+            LOGGER.info("Received " + message);
+            received.countDown();
+        }, "telemetry" + pathSeparator + "%s").setHandler(r -> createSender());
 
-      boolean done = received.await(5, TimeUnit.SECONDS);
-      assertTrue("Messages not received", done);
-   }
+        assertTrue("Could not receive all messages sent", received.await(5, TimeUnit.SECONDS));
+    }
 
+    private void createSender() {
+        try {
+            sender = new TelemetryClient(InetAddress.getLoopbackAddress().getHostAddress(), honoServerPort, TENANT_ID);
+            sender.createSender().setHandler(r -> sendTelemetryData());
+        } catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+    }
+
+    private void sendTelemetryData() {
+        IntStream.range(0, MSG_COUNT).forEach(i -> sender.send("device" + i, "payload" + i));
+    }
 }

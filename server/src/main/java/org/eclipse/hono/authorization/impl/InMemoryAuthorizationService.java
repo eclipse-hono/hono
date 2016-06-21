@@ -58,7 +58,14 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
      * 
      */
     public InMemoryAuthorizationService(final boolean singleTenant, final String permissionsPath) {
-        super(singleTenant);
+        this(0, 1, singleTenant, permissionsPath);
+    }
+
+    /**
+     * 
+     */
+    public InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final String permissionsPath) {
+        super(instanceId, totalNoOfInstances, singleTenant);
         this.permissionsPath = permissionsPath;
     }
 

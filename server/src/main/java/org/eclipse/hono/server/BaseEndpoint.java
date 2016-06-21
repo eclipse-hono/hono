@@ -35,11 +35,12 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class BaseEndpoint implements Endpoint{
 
-    private static final       Logger LOGGER = LoggerFactory.getLogger(BaseEndpoint.class);
-
-    protected final boolean    singleTenant;
-    protected final Vertx      vertx;
-    protected final int        instanceNo;
+    protected final boolean      singleTenant;
+    protected final Vertx        vertx;
+    protected final int          instanceNo;
+    protected int                authServiceInstanceCount = Runtime.getRuntime().availableProcessors();
+    private static final Logger  LOGGER = LoggerFactory.getLogger(BaseEndpoint.class);
+    private final String         authServiceAddress;
 
     /**
      * 
@@ -55,6 +56,7 @@ public abstract class BaseEndpoint implements Endpoint{
         this.vertx = Objects.requireNonNull(vertx);
         this.singleTenant = singleTenant;
         this.instanceNo = instanceNo;
+        this.authServiceAddress = getAddressForInstanceNo(EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
     }
 
     /**
@@ -87,15 +89,10 @@ public abstract class BaseEndpoint implements Endpoint{
      * Appends this endpoint's instance number to a given base address.
      * 
      * @param baseAddress the base address.
-     * @return the base address appended with a period and the instance number if the
-     *          instance number i &gt; 0 or else the given base address.
+     * @return the base address appended with a period and the instance number.
      */
     protected final String getAddressForInstanceNo(final String baseAddress) {
-        if (instanceNo == 0) {
-            return baseAddress;
-        } else {
-            return String.format("%s.%d", baseAddress, instanceNo);
-        }
+        return String.format("%s.%d", baseAddress, instanceNo);
     }
 
     /**
@@ -128,15 +125,16 @@ public abstract class BaseEndpoint implements Endpoint{
         }
     }
 
-    protected final void checkPermission(final ResourceIdentifier messageAddress, final Handler<Boolean> permissionCheckHandler)
+    protected final void checkPermission(final ResourceIdentifier resource, final Handler<Boolean> permissionCheckHandler)
     {
         final JsonObject authMsg = new JsonObject();
         // TODO how to obtain subject information?
         authMsg.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        authMsg.put(RESOURCE_FIELD, messageAddress.toString());
+        authMsg.put(RESOURCE_FIELD, resource.toString());
         authMsg.put(PERMISSION_FIELD, Permission.WRITE.toString());
 
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHORIZATION_IN, authMsg,
+        LOGGER.trace("sending auth message to authorization service [address: {}]", authServiceAddress);
+        vertx.eventBus().send(authServiceAddress, authMsg,
            res -> permissionCheckHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 }
