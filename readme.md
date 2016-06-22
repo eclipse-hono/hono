@@ -26,9 +26,9 @@ Please take a look at the [example clients](client) which illustrate how client 
 
 Clients can interact with Hono by means of AMQP 1.0 based message exchanges. Please refer to the corresponding Wiki pages for details:
 
-* [Device Registration API](/eclipse/hono/wiki/Device-Registration-API) for registering new devices so that they can connect to Hono.
-* [Telemetry API](/eclipse/hono/wiki/Telemetry-API) for sending and receiving downstream telemetry data.
-* [Command & Control API](/eclipse/hono/wiki/Command-And-Control-API) for sending commands to devices and receiving replies.
+* [Device Registration API](https://github.com/eclipse/hono/wiki/Device-Registration-API) for registering new devices so that they can connect to Hono.
+* [Telemetry API](https://github.com/eclipse/hono/wiki/Telemetry-API) for sending and receiving downstream telemetry data.
+* [Command & Control API](https://github.com/eclipse/hono/wiki/Command-And-Control-API) for sending commands to devices and receiving replies.
 
 ### Modules
 
