@@ -96,8 +96,8 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         final JsonObject body = message.body();
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String action = body.getString(RegistrationConstants.FIELD_NAME_ACTION);
-        final String msgId = body.getString(RegistrationConstants.FIELD_NAME_MESSAGE_ID);
+        final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
+        final String msgId = body.getString(RegistrationConstants.APP_PROPERTY_MESSAGE_ID);
         processRegistrationMessage(tenantId, deviceId, action, msgId);
     }
 
@@ -106,8 +106,8 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        jsonObject.put(RegistrationConstants.FIELD_NAME_STATUS, Integer.toString(status));
-        jsonObject.put(RegistrationConstants.FIELD_NAME_MESSAGE_ID, messageId);
+        jsonObject.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
+        jsonObject.put(RegistrationConstants.APP_PROPERTY_MESSAGE_ID, messageId);
 
         LOG.debug("Publishing to event bus at {}: {}", EVENT_BUS_ADDRESS_REGISTRATION_REPLY, jsonObject);
 

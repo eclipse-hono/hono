@@ -20,7 +20,6 @@ import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.DeliveryMode;
 import javax.jms.Destination;
-import javax.jms.ExceptionListener;
 import javax.jms.JMSException;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
@@ -35,6 +34,7 @@ import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -103,14 +103,8 @@ public class HonoServerIntegrationTest {
         ConnectionFactory factory = (ConnectionFactory) context.lookup(NAME_HONO_CONNECTION_FACTORY);
         Destination telemetryAddress = (Destination) context.lookup(TelemetryConstants.TELEMETRY_ENDPOINT);
 
-        connection = factory.createConnection();
-        connection.setExceptionListener(new ExceptionListener() {
-
-            @Override
-            public void onException(JMSException exception) {
-                LOG.error(exception.getMessage(), exception);
-            }
-        });
+        Connection connection = factory.createConnection();
+        connection.setExceptionListener(exception -> LOG.error(exception.getMessage(), exception));
         connection.start();
 
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -158,7 +152,7 @@ public class HonoServerIntegrationTest {
         String body = String.format("{\"temp\": %d}", msgNo % 35);
         message.writeBytes(body.getBytes(StandardCharsets.UTF_8));
         message.setJMSMessageID(String.valueOf(msgNo));
-//        message.setStringProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, "myDevice");
+        message.setStringProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, "myDevice");
         return message;
     }
 }

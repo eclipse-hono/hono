@@ -12,6 +12,8 @@
 package org.eclipse.hono.client;
 
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -19,6 +21,7 @@ import java.util.function.Consumer;
 import javax.annotation.PreDestroy;
 
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
@@ -191,8 +194,10 @@ public class TelemetryClient {
             final ByteBuffer b = ByteBuffer.allocate(8);
             b.putLong(messageTagCounter.getAndIncrement());
             b.flip();
-            final String address = String.format(SENDER_TO_PROPERTY, tenantId, deviceId);
-            final Message msg = ProtonHelper.message(address, body);
+            final Message msg = ProtonHelper.message(body);
+            final Map<String, String> properties = new HashMap<>();
+            properties.put("device_id", deviceId);
+            msg.setApplicationProperties(new ApplicationProperties(properties));
             honoSender.send(b.array(), msg);
             b.clear();
         }

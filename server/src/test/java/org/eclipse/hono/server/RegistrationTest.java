@@ -17,7 +17,7 @@ import static java.util.Optional.ofNullable;
 import static org.eclipse.hono.registration.RegistrationConstants.ACTION_DEREGISTER;
 import static org.eclipse.hono.registration.RegistrationConstants.ACTION_GET;
 import static org.eclipse.hono.registration.RegistrationConstants.ACTION_REGISTER;
-import static org.eclipse.hono.registration.RegistrationConstants.FIELD_NAME_STATUS;
+import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_STATUS;
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 import static org.eclipse.hono.util.MessageHelper.getLinkName;
 
@@ -196,7 +196,7 @@ public class RegistrationTest {
         final Async async = ctx.async();
         handlers.put(correlationId, m -> {
             ctx.assertNotNull(m.getApplicationProperties());
-            ctx.assertEquals(m.getApplicationProperties().getValue().get(FIELD_NAME_STATUS), Integer.toString(expectedStatusCode));
+            ctx.assertEquals(m.getApplicationProperties().getValue().get(APP_PROPERTY_STATUS), Integer.toString(expectedStatusCode));
             async.complete();
         });
     }

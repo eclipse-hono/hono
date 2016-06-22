@@ -33,12 +33,16 @@ public final class MessageHelper {
      * The name of the AMQP 1.0 message application property containing the id of the device that has reported the data
      * belongs to.
      */
-    public static final String APP_PROPERTY_DEVICE_ID          = "device-id";
+    public static final String APP_PROPERTY_DEVICE_ID          = "device_id";
     /**
      * The name of the AMQP 1.0 message application property containing the id of the tenant the device that has
      * reported the data belongs to.
      */
-    public static final String APP_PROPERTY_TENANT_ID          = "tenant-id";
+    public static final String APP_PROPERTY_TENANT_ID          = "tenant_id";
+    /**
+     * The name of the AMQP 1.0 message application property containing the id of the resource a message is addressed at.
+     */
+    public static final String APP_PROPERTY_RESOURCE_ID          = "resource_id";
 
     private MessageHelper() {
     }
@@ -63,11 +67,34 @@ public final class MessageHelper {
 
     @SuppressWarnings("unchecked")
     public static void addTenantId(final Message msg, final String tenantId) {
+        addProperty(msg, APP_PROPERTY_TENANT_ID, tenantId);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void addDeviceId(final Message msg, final String deviceId) {
+        addProperty(msg, APP_PROPERTY_DEVICE_ID, deviceId);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void addProperty(final Message msg, final String key, final String value) {
         ApplicationProperties props = msg.getApplicationProperties();
         if (props == null) {
             props = new ApplicationProperties(new HashMap<String, Object>());
+            msg.setApplicationProperties(props);
         }
-        props.getValue().put(APP_PROPERTY_TENANT_ID, tenantId);
+        props.getValue().put(key, value);
+    }
+
+    /**
+     * Adds several AMQP 1.0 message <em>annotations</em> to the given message that are used to process/route the message.
+     *
+     * @param msg the message to add the message annotations to.
+     * @param resourceIdentifier the resource identifier that will be added as annotation.
+     */
+    public static void annotate(final Message msg, final ResourceIdentifier resourceIdentifier) {
+        MessageHelper.addAnnotation(msg, APP_PROPERTY_TENANT_ID, resourceIdentifier.getTenantId());
+        MessageHelper.addAnnotation(msg, APP_PROPERTY_DEVICE_ID, resourceIdentifier.getDeviceId());
+        MessageHelper.addAnnotation(msg, APP_PROPERTY_RESOURCE_ID, resourceIdentifier.toString());
     }
 
     /**
@@ -84,6 +111,21 @@ public final class MessageHelper {
             msg.setMessageAnnotations(annotations);
         }
         annotations.getValue().put(Symbol.getSymbol(key), value);
+    }
+
+    /**
+     * Returns the value to which the specified key is mapped in the message annotations,
+     * or {@code null} if the message annotations contain no mapping for the key.
+     *
+     * @param msg the message that contains the annotations.
+     * @param key the name of the symbol to return a value for.
+     */
+    public static String getAnnotation(final Message msg, final String key) {
+        MessageAnnotations annotations = msg.getMessageAnnotations();
+        if (annotations == null) {
+            return null;
+        }
+        return (String) annotations.getValue().get(Symbol.getSymbol(key));
     }
 
     public static String getLinkName(final ProtonLink<?> link)

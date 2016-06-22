@@ -35,38 +35,31 @@ public final class TelemetryMessageFilter {
      * <em>annotations</em>:
      * </p>
      * <ul>
-     * <li><em>device-id</em> - the ID of the device that reported the data.</li>
-     * <li><em>tenant-id</em> - the ID of the tenant the device belongs to.</li>
+     * <li><em>device_id</em> - the ID of the device that reported the data.</li>
+     * <li><em>tenant_id</em> - the ID of the tenant the device belongs to.</li>
      * </ul>
      * 
      * @param linkTarget the link target address to match the telemetry message's address against.
-     * @param messageAddress the resource identifier representing the message's address as taken from its
-     *                       <em>to</em> property.
      * @param msg the message to verify.
      * @return {@code true} if the given message complies with the <em>Telemetry</em> API specification, {@code false}
      *         otherwise.
      */
-     public static boolean verify(final ResourceIdentifier linkTarget, final ResourceIdentifier messageAddress, final Message msg) {
-        if (messageAddress == null
-                || !TelemetryConstants.TELEMETRY_ENDPOINT.equals(messageAddress.getEndpoint())) {
-            LOG.trace("message [id: {}] has no telemetry endpoint address [to: {}]", msg.getMessageId(),
-                    messageAddress);
-            return false;
-        } else {
-            return hasValidAddress(linkTarget, messageAddress, msg);
-        }
-    }
+     public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
+         final String deviceIdProperty = MessageHelper.getDeviceId(msg);
+         final String tenantIdProperty = MessageHelper.getTenantId(msg);
 
-    private static boolean hasValidAddress(final ResourceIdentifier linkTarget, final ResourceIdentifier messageAddress,
-            final Message msg) {
-        if (linkTarget.getTenantId().equals(messageAddress.getTenantId())) {
-            MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_TENANT_ID, messageAddress.getTenantId());
-            MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_DEVICE_ID, messageAddress.getDeviceId());
-            return true;
-        } else {
-            LOG.trace("message address contains invalid tenant ID [expected: {}, but was: {}]", linkTarget.getTenantId(),
-                    messageAddress.getTenantId());
-            return false;
-        }
+         if (tenantIdProperty != null && !linkTarget.getTenantId().equals(tenantIdProperty)) {
+             LOG.trace("message property contains invalid tenant ID [expected: {}, but was: {}]",
+                     linkTarget.getTenantId(), tenantIdProperty);
+             return false;
+         } else if (deviceIdProperty == null) {
+             LOG.trace("message [{}] contains no valid device ID", msg.getMessageId());
+             return false;
+         } else {
+             final ResourceIdentifier targetResource = ResourceIdentifier
+                     .from(linkTarget.getEndpoint(), linkTarget.getTenantId(), deviceIdProperty);
+             MessageHelper.annotate(msg, targetResource);
+             return true;
+         }
     }
 }

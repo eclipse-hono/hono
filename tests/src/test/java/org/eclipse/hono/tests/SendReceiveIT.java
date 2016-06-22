@@ -127,6 +127,7 @@ public class SendReceiveIT {
         IntStream.range(0, COUNT).forEach(i -> {
             try {
                 final TextMessage message = senderSession.createTextMessage("Text!");
+                message.setStringProperty(org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID, "device" + i);
                 message.setJMSTimestamp(System.currentTimeMillis());
                 messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 

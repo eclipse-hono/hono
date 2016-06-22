@@ -37,9 +37,9 @@ public final class RegistrationConstants {
     public static final String ACTION_DEREGISTER = "deregister";
 
     /* message fields */
-    public static final String FIELD_NAME_MESSAGE_ID = "message-id";
-    public static final String FIELD_NAME_ACTION = "action";
-    public static final String FIELD_NAME_STATUS = "status";
+    public static final String APP_PROPERTY_MESSAGE_ID = "message-id";
+    public static final String APP_PROPERTY_ACTION     = "action";
+    public static final String APP_PROPERTY_STATUS     = "status";
 
     public static final String REGISTRATION_ENDPOINT = "registration";
     public static final String PATH_SEPARATOR = "/";
@@ -67,8 +67,8 @@ public final class RegistrationConstants {
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        jsonObject.put(RegistrationConstants.FIELD_NAME_STATUS, Integer.toString(status));
-        jsonObject.put(RegistrationConstants.FIELD_NAME_MESSAGE_ID, messageId);
+        jsonObject.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
+        jsonObject.put(RegistrationConstants.APP_PROPERTY_MESSAGE_ID, messageId);
         return jsonObject;
     }
 
@@ -77,7 +77,7 @@ public final class RegistrationConstants {
         final HashMap<String, String> map = new HashMap<>();
         map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(FIELD_NAME_STATUS, status);
+        map.put(APP_PROPERTY_STATUS, status);
         final ApplicationProperties applicationProperties = new ApplicationProperties(map);
 
         final ResourceIdentifier address = ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId);
@@ -92,8 +92,8 @@ public final class RegistrationConstants {
 
     private static JsonObject getRegistrationJson(final String action, final String messageId, final String tenantId, final String deviceId) {
         final JsonObject msg = new JsonObject();
-        msg.put(FIELD_NAME_ACTION, action);
-        msg.put(FIELD_NAME_MESSAGE_ID, messageId);
+        msg.put(APP_PROPERTY_ACTION, action);
+        msg.put(APP_PROPERTY_MESSAGE_ID, messageId);
         msg.put(APP_PROPERTY_DEVICE_ID, deviceId);
         msg.put(APP_PROPERTY_TENANT_ID, tenantId);
         return msg;
@@ -101,7 +101,7 @@ public final class RegistrationConstants {
 
     private static String getAction(final Message msg) {
         Objects.requireNonNull(msg);
-        return (String) getApplicationProperty(msg.getApplicationProperties(), FIELD_NAME_ACTION);
+        return (String) getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_ACTION);
     }
 
     private RegistrationConstants() {

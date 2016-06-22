@@ -23,18 +23,15 @@ import java.util.concurrent.TimeUnit;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.telemetry.SenderFactory;
 import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
 
@@ -49,7 +46,7 @@ public class ForwardingTelemetryAdapterTest {
      */
     private static final String TELEMETRY_MSG_CONTENT = "hello";
     private static final String CLIENT_ID = "protocol_adapter";
-    private static final String TELEMETRY_MSG_ADDRESS = "telemetry/myTenant/myDevice";
+    private static final String DEVICE_ID = "myDevice";
 
     @Test
     public void testProcessTelemetryDataForwardsMessageToSender() throws InterruptedException {
@@ -58,18 +55,16 @@ public class ForwardingTelemetryAdapterTest {
         final CountDownLatch latch = new CountDownLatch(1);
         ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(sender.send(any(byte[].class), any(Message.class))).then(new Answer<ProtonDelivery>() {
-            @Override
-            public ProtonDelivery answer(InvocationOnMock invocation) throws Throwable {
-                latch.countDown();
-                return null;
-            }
+        when(sender.send(any(byte[].class), any(Message.class))).then(invocation -> {
+            latch.countDown();
+            return null;
         });
         ForwardingTelemetryAdapter adapter = new ForwardingTelemetryAdapter(newMockSenderFactory(sender));
         adapter.addSender(CLIENT_ID, sender);
 
         // WHEN processing a telemetry message
-        Message msg = ProtonHelper.message(TELEMETRY_MSG_ADDRESS, TELEMETRY_MSG_CONTENT);
+        Message msg = ProtonHelper.message(TELEMETRY_MSG_CONTENT);
+        MessageHelper.addDeviceId(msg, DEVICE_ID);
         adapter.processTelemetryData(msg, CLIENT_ID);
 
         // THEN the message has been delivered to the downstream container
@@ -83,12 +78,9 @@ public class ForwardingTelemetryAdapterTest {
         when(eventBus.send(
                 TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL,
                 TelemetryConstants.getFlowControlMsg(CLIENT_ID, false)))
-            .then(new Answer<EventBus>() {
-                @Override
-                public EventBus answer(InvocationOnMock invocation) throws Throwable {
-                    errorMessageSent.countDown();
-                    return eventBus;
-                }
+            .then(invocation -> {
+                errorMessageSent.countDown();
+                return eventBus;
             });
         final Vertx vertx = mock(Vertx.class);
         final Context ctx = mock(Context.class);
@@ -141,12 +133,6 @@ public class ForwardingTelemetryAdapterTest {
     }
 
     private SenderFactory newMockSenderFactory(final ProtonSender senderToCreate) {
-        return new SenderFactory() {
-
-            @Override
-            public void createSender(final ProtonConnection connection, final String address, final Future<ProtonSender> resultHandler) {
-                resultHandler.complete(senderToCreate);
-            }
-        };
+        return (connection, address, resultHandler) -> resultHandler.complete(senderToCreate);
     }
 }

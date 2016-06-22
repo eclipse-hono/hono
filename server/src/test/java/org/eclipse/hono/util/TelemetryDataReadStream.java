@@ -36,15 +36,13 @@ public class TelemetryDataReadStream implements ReadStream<Message> {
     private Handler<Message>    handler;
     private boolean             paused;
     private Vertx               vertx;
-    private String              tenantId;
 
     /**
      * @param count the number of messages to produce.
      */
-    public TelemetryDataReadStream(final Vertx vertx, final int count, final String tenantId) {
+    public TelemetryDataReadStream(final Vertx vertx, final int count) {
         this.vertx = Objects.requireNonNull(vertx);
         messagesToSend = count;
-        this.tenantId = tenantId;
     }
 
     /*
@@ -84,7 +82,7 @@ public class TelemetryDataReadStream implements ReadStream<Message> {
             if (sendMore()) {
                 int messageId = counter++;
                 LOG.trace("producing new telemetry message [id: {}]", messageId);
-                handler.handle(TestSupport.newTelemetryData(String.valueOf(messageId), tenantId, DEVICE_BUMLUX_TEMP_4711, messageId % 35));
+                handler.handle(TestSupport.newTelemetryData(String.valueOf(messageId), DEVICE_BUMLUX_TEMP_4711, messageId % 35));
             }
             if (isFinished()) {
                 vertx.cancelTimer(id);

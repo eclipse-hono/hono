@@ -23,6 +23,7 @@ import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkAttachedMsg;
 import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkDetachedMsg;
 import static org.eclipse.hono.telemetry.TelemetryConstants.isErrorMessage;
 import static org.eclipse.hono.telemetry.TelemetryConstants.isFlowControlMessage;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +36,7 @@ import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.server.BaseEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -151,9 +153,9 @@ public final class TelemetryEndpoint extends BaseEndpoint {
             // client has closed link -> inform TelemetryAdapter about client detach
             onLinkDetach(link);
         }).handler((delivery, message) -> {
-            final ResourceIdentifier messageAddress = getResourceIdentifier(message.getAddress());
-            if (TelemetryMessageFilter.verify(targetAddress, messageAddress, message)) {
-                sendTelemetryData(link, delivery, message, messageAddress);
+
+            if (TelemetryMessageFilter.verify(targetAddress, message)) {
+                sendTelemetryData(link, delivery, message);
             } else {
                 onLinkDetach(link);
             }
@@ -174,10 +176,11 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         vertx.eventBus().send(linkControlAddress, msg);
     }
 
-    private void sendTelemetryData(final LinkWrapper link, final ProtonDelivery delivery, final Message msg, final ResourceIdentifier messageAddress) {
+    private void sendTelemetryData(final LinkWrapper link, final ProtonDelivery delivery, final Message msg) {
         if (!delivery.remotelySettled()) {
             LOG.trace("received un-settled telemetry message on link [{}]", link.getLinkId());
         }
+        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(MessageHelper.getAnnotation(msg, APP_PROPERTY_RESOURCE_ID));
         checkPermission(messageAddress, permissionGranted -> {
             if (permissionGranted) {
                 vertx.runOnContext(run -> {

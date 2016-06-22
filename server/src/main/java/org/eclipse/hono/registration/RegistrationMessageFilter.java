@@ -11,6 +11,8 @@
  */
 package org.eclipse.hono.registration;
 
+import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_ACTION;
+
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -31,34 +33,32 @@ public final class RegistrationMessageFilter {
     /**
      * Checks whether a given registration message contains all required properties.
      */
-     public static boolean verify(final ResourceIdentifier linkTarget, final ResourceIdentifier messageAddress, final Message msg) {
-        if (messageAddress == null
-                || !RegistrationConstants.REGISTRATION_ENDPOINT.equals(messageAddress.getEndpoint())) {
-            LOG.trace("message [id: {}] has no registration endpoint address [to: {}]", msg.getMessageId(),
-                    messageAddress);
-            return false;
-        } else {
-            return hasValidAddress(linkTarget, messageAddress, msg) && hasValidProperties(msg);
-        }
+     public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
+         final String deviceIdProperty = MessageHelper.getDeviceId(msg);
+         final String tenantIdProperty = MessageHelper.getTenantId(msg);
+         final String actionProperty = (String) MessageHelper.getApplicationProperty(msg.getApplicationProperties(),
+                 APP_PROPERTY_ACTION);
+
+         if (tenantIdProperty != null && !linkTarget.getTenantId().equals(tenantIdProperty)) {
+             LOG.trace("message property contains invalid tenant ID [expected: {}, but was: {}]",
+                     linkTarget.getTenantId(), tenantIdProperty);
+             return false;
+         } else if (deviceIdProperty == null) {
+             LOG.trace("message [{}] contains no valid device ID", msg.getMessageId());
+             return false;
+         } else if (actionProperty == null) {
+             LOG.trace("message [{}] contains no valid action.", msg.getMessageId());
+             return false;
+         } else if (msg.getMessageId() == null) {
+             LOG.trace("message [{}] contains no valid message id.", msg.getMessageId());
+             return false;
+         } else {
+             final ResourceIdentifier targetResource = ResourceIdentifier
+                     .from(linkTarget.getEndpoint(), linkTarget.getTenantId(), deviceIdProperty);
+             MessageHelper.annotate(msg, targetResource);
+             return true;
+         }
     }
 
-    private static boolean hasValidProperties(final Message msg) {
-        return msg.getApplicationProperties() != null
-                && msg.getApplicationProperties().getValue().containsKey(MessageHelper.APP_PROPERTY_TENANT_ID)
-                && msg.getApplicationProperties().getValue().containsKey(MessageHelper.APP_PROPERTY_DEVICE_ID);
-    }
-
-    private static boolean hasValidAddress(final ResourceIdentifier linkTarget, final ResourceIdentifier messageAddress,
-            final Message msg) {
-        if (linkTarget.getTenantId().equals(messageAddress.getTenantId())) {
-            MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_TENANT_ID, messageAddress.getTenantId());
-            MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_DEVICE_ID, messageAddress.getDeviceId());
-            return true;
-        } else {
-            LOG.trace("message address contains invalid tenant ID [expected: {}, but was: {}]", linkTarget.getTenantId(),
-                    messageAddress.getTenantId());
-            return false;
-        }
-    }
 
 }

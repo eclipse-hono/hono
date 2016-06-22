@@ -13,6 +13,7 @@ package org.eclipse.hono.registration.impl;
 
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 import static org.eclipse.hono.registration.RegistrationConstants.getAmqpReply;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
 import static org.eclipse.hono.util.MessageHelper.getLinkName;
 
 import java.util.Objects;
@@ -69,9 +70,8 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                     LOG.debug("incoming message [{}]: {}", receiverImpl.getName(), message);
                     LOG.debug("app properties: {}", message.getApplicationProperties());
 
-                    final ResourceIdentifier messageAddress = getResourceIdentifier(message.getAddress());
-                    if (RegistrationMessageFilter.verify(targetAddress, messageAddress, message)) {
-                        sendRegistrationData(delivery, message, messageAddress);
+                    if (RegistrationMessageFilter.verify(targetAddress, message)) {
+                        sendRegistrationData(delivery, message);
                     } else {
                         onLinkDetach(receiver);
                     }
@@ -94,8 +94,8 @@ public final class RegistrationEndpoint extends BaseEndpoint {
         client.close();
     }
 
-    private void sendRegistrationData(final ProtonDelivery delivery, final Message msg,
-            final ResourceIdentifier messageAddress) {
+    private void sendRegistrationData(final ProtonDelivery delivery, final Message msg) {
+        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(MessageHelper.getAnnotation(msg, APP_PROPERTY_RESOURCE_ID));
         checkPermission(messageAddress, permissionGranted -> {
             if (permissionGranted) {
                 vertx.runOnContext(run -> {
@@ -116,8 +116,8 @@ public final class RegistrationEndpoint extends BaseEndpoint {
             final JsonObject body = message.body();
             final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
             final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-            final String status = body.getString(RegistrationConstants.FIELD_NAME_STATUS);
-            final String msgId = body.getString(RegistrationConstants.FIELD_NAME_MESSAGE_ID);
+            final String status = body.getString(RegistrationConstants.APP_PROPERTY_STATUS);
+            final String msgId = body.getString(RegistrationConstants.APP_PROPERTY_MESSAGE_ID);
             final Message replyMsg = getAmqpReply(status, msgId, tenantId, deviceId);
             LOG.debug("Sending reply on link [{}]: {}", getLinkName(reply), replyMsg);
             reply.send(replyMsg);

@@ -11,9 +11,13 @@
  */
 package org.eclipse.hono.telemetry;
 
-import static org.junit.Assert.*;
-
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
@@ -32,45 +36,53 @@ public class TelemetryMessageFilterTest {
     private static final String MY_DEVICE = "myDevice";
 
     @Test
-    public void testVerifyDetectsWrongPrefix() {
-        // GIVEN a telemetry message with an address not starting with the "telemetry" prefix
-        ResourceIdentifier messageAddress = getResourceIdentifier("wrongPrefix", MY_TENANT, MY_DEVICE);
-        Message msg = givenAMessageHavingRecipient(messageAddress);
+    public void testVerifyDetectsTenantIdMismatch() {
+        // GIVEN a valid telemetry message with tenant not matching the link target
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, "otherTenant");
 
-        // WHEN receiving the message via a link with target address telemetry/myTenant
-        ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+        // WHEN receiving the message via a link with mismatching tenant
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
-        assertFalse(TelemetryMessageFilter.verify(linkTarget, messageAddress, msg));
+        assertFalse(TelemetryMessageFilter.verify(linkTarget, msg));
     }
 
     @Test
-    public void testVerifyDetectsTenantIdMismatch() {
-        // GIVEN a telemetry message
-        ResourceIdentifier messageAddress = getResourceIdentifier("anotherTenant", MY_DEVICE);
-        Message msg = givenAMessageHavingRecipient(messageAddress);
+    public void testVerifyDetectsMissingDeviceId() {
+        // GIVEN a valid telemetry message without device id
+        final Message msg = givenAMessageHavingProperties(null);
 
-        // WHEN receiving the message via a link with target address telemetry/myTenant
-        ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+        // WHEN receiving the message via a link with mismatching tenant
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
-        assertFalse(TelemetryMessageFilter.verify(linkTarget, messageAddress, msg));
+        assertFalse(TelemetryMessageFilter.verify(linkTarget, msg));
+    }
+
+    @Test
+    public void testVerifySucceedsWhenTenantIsOmitted() {
+        // GIVEN a telemetry message for myDevice
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE);
+
+        // WHEN receiving the message via a link with matching target address
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+
+        // THEN message validation succeeds
+        assertTrue(TelemetryMessageFilter.verify(linkTarget, msg));
+        assertMessageAnnotationsContainTenantAndDeviceId(msg, MY_TENANT, MY_DEVICE);
     }
 
     @Test
     public void testVerifySucceedsForMatchingTenant() {
         // GIVEN a telemetry message for myDevice
-        String myTenant = MY_TENANT;
-        String myDevice = MY_DEVICE;
-        ResourceIdentifier messageAddress = getResourceIdentifier(myTenant, myDevice);
-        Message msg = givenAMessageHavingRecipient(messageAddress);
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, MY_TENANT);
 
         // WHEN receiving the message via a link with matching target address
-        ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation succeeds
-        assertTrue(TelemetryMessageFilter.verify(linkTarget, messageAddress, msg));
-        assertMessageAnnotationsContainTenantAndDeviceId(msg, myTenant, myDevice);
+        assertTrue(TelemetryMessageFilter.verify(linkTarget, msg));
+        assertMessageAnnotationsContainTenantAndDeviceId(msg, MY_TENANT, MY_DEVICE);
     }
 
     private void assertMessageAnnotationsContainTenantAndDeviceId(final Message msg, final String tenantId,
@@ -78,8 +90,11 @@ public class TelemetryMessageFilterTest {
         assertNotNull(msg.getMessageAnnotations());
         assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(MessageHelper.APP_PROPERTY_TENANT_ID)),
                 is(tenantId));
-        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(MessageHelper.APP_PROPERTY_DEVICE_ID)),
+        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_DEVICE_ID)),
                 is(deviceId));
+        final ResourceIdentifier expectedResourceIdentifier = getResourceIdentifier(MY_TENANT, MY_DEVICE);
+        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_RESOURCE_ID)),
+                is(expectedResourceIdentifier.toString()));
     }
 
     private ResourceIdentifier getResourceIdentifier(final String tenant) {
@@ -91,15 +106,23 @@ public class TelemetryMessageFilterTest {
     }
 
     private ResourceIdentifier getResourceIdentifier(final String endpoint, final String tenant, final String device) {
-        StringBuilder resourcePath = new StringBuilder(endpoint).append("/").append(tenant);
+        final StringBuilder resourcePath = new StringBuilder(endpoint).append("/").append(tenant);
         if (device != null) {
             resourcePath.append("/").append(device);
         } 
         return ResourceIdentifier.fromString(resourcePath.toString());
     }
 
-    private Message givenAMessageHavingRecipient(final ResourceIdentifier address) {
-        Message msg = ProtonHelper.message(address.toString(), "Hello");
+    private Message givenAMessageHavingProperties(final String deviceId) {
+        return givenAMessageHavingProperties(deviceId, null);
+    }
+
+    private Message givenAMessageHavingProperties(final String deviceId, final String tenantId) {
+        final Message msg = ProtonHelper.message("Hello");
+        MessageHelper.addDeviceId(msg, deviceId);
+        if (tenantId != null) {
+            MessageHelper.addTenantId(msg, tenantId);
+        }
         return msg;
     }
 }

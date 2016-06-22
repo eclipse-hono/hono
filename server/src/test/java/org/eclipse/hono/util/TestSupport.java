@@ -24,9 +24,6 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.registration.RegistrationConstants;
-import org.eclipse.hono.telemetry.TelemetryConstants;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -79,17 +76,14 @@ public final class TestSupport {
     @SuppressWarnings("unchecked")
     public static <T> void expectReplyForMessage(final EventBus bus, final String address, final Object msg, final T reply) {
         when(bus.send(eq(address), eq(msg), any(Handler.class)))
-            .then(new Answer<EventBus>() {
-                @Override
-                public EventBus answer(InvocationOnMock invocation) throws Throwable {
-                    io.vertx.core.eventbus.Message<T> response = mock(io.vertx.core.eventbus.Message.class);
-                    when(response.body()).thenReturn(reply);
-                    Future<io.vertx.core.eventbus.Message<T>> future = Future.succeededFuture(response);
-                    Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>> handler = 
-                            (Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>>) invocation.getArguments()[2];
-                    handler.handle(future);
-                    return bus;
-                }
+            .then(invocation -> {
+                io.vertx.core.eventbus.Message<T> response = mock(io.vertx.core.eventbus.Message.class);
+                when(response.body()).thenReturn(reply);
+                Future<io.vertx.core.eventbus.Message<T>> future = Future.succeededFuture(response);
+                Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>> handler =
+                        (Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>>) invocation.getArguments()[2];
+                handler.handle(future);
+                return bus;
             });
     }
 
@@ -97,17 +91,15 @@ public final class TestSupport {
      * Creates a new <em>Proton</em> message containing a JSON encoded temperature reading.
      * 
      * @param messageId the value to set as the message ID.
-     * @param tenantId the ID of the tenant the device belongs to.
      * @param deviceId the ID of the device that produced the reading.
      * @param temperature the temperature in degrees centigrade.
      * @return the message containing the reading as a binary payload.
      */
-    public static Message newTelemetryData(final String messageId, final String tenantId, final String deviceId, final int temperature) {
-        Message message = ProtonHelper.message();
+    public static Message newTelemetryData(final String messageId, final String deviceId, final int temperature) {
+        final Message message = ProtonHelper.message();
         message.setMessageId(messageId);
         message.setContentType("application/json");
-        ResourceIdentifier address = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, deviceId);
-        message.setAddress(address.toString());
+        MessageHelper.addDeviceId(message, deviceId);
         message.setBody(new Data(new Binary(String.format("{\"temp\" : %d}", temperature).getBytes())));
         return message;
     }
@@ -126,11 +118,9 @@ public final class TestSupport {
         final HashMap<String, String> map = new HashMap<>();
         map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(RegistrationConstants.FIELD_NAME_ACTION, action);
+        map.put(RegistrationConstants.APP_PROPERTY_ACTION, action);
         final ApplicationProperties applicationProperties = new ApplicationProperties(map);
         message.setApplicationProperties(applicationProperties);
-        ResourceIdentifier address = ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId);
-        message.setAddress(address.toString());
         return message;
     }
 
