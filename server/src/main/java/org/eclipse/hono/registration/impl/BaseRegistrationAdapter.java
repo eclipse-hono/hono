@@ -12,7 +12,6 @@
 package org.eclipse.hono.registration.impl;
 
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
-import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_REPLY;
 
 import org.eclipse.hono.registration.RegistrationAdapter;
 import org.eclipse.hono.registration.RegistrationConstants;
@@ -62,7 +61,7 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
 
     private void registerTelemetryDataConsumer() {
         registrationConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_REGISTRATION_IN);
-        registrationConsumer.handler(this::processMessage);
+        registrationConsumer.handler(this::processRegistrationMessage);
         LOG.info("listening on event bus [address: {}] for incoming registration messages",
                 EVENT_BUS_ADDRESS_REGISTRATION_IN);
     }
@@ -92,25 +91,21 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         stopFuture.complete();
     }
 
-    private void processMessage(final Message<JsonObject> message) {
-        final JsonObject body = message.body();
+    protected void reply(final Message<JsonObject> msg, final int status)
+    {
+        final JsonObject body = msg.body();
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
         final String msgId = body.getString(RegistrationConstants.APP_PROPERTY_MESSAGE_ID);
-        processRegistrationMessage(tenantId, deviceId, action, msgId);
+
+        final JsonObject replyMsg = new JsonObject();
+        replyMsg.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        replyMsg.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        replyMsg.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
+        replyMsg.put(RegistrationConstants.APP_PROPERTY_MESSAGE_ID, msgId);
+
+        LOG.debug("Publishing reply to event bus: {}", replyMsg);
+        msg.reply(replyMsg);
     }
 
-    protected void reply(final int status, final String deviceId, final String tenantId, final String messageId)
-    {
-        final JsonObject jsonObject = new JsonObject();
-        jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        jsonObject.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
-        jsonObject.put(RegistrationConstants.APP_PROPERTY_MESSAGE_ID, messageId);
-
-        LOG.debug("Publishing to event bus at {}: {}", EVENT_BUS_ADDRESS_REGISTRATION_REPLY, jsonObject);
-
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_REPLY, jsonObject);
-    }
 }

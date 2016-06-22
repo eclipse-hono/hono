@@ -50,19 +50,14 @@ public final class RegistrationConstants {
      */
     public static final String EVENT_BUS_ADDRESS_REGISTRATION_IN = "registration.in";
 
-    /**
-     * The vert.x event bus address to which outbound registration reply messages are published.
-     */
-    public static final String EVENT_BUS_ADDRESS_REGISTRATION_REPLY = "registration.reply";
-
     public static JsonObject getRegistrationMsg(final Message message) {
-        final String deviceId = MessageHelper.getDeviceId(message);
-        final String tenantId = MessageHelper.getTenantId(message);
+        final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
+        final String tenantId = MessageHelper.getTenantIdAnnotation(message);
         final String action = getAction(message);
         return getRegistrationJson(action, (String) message.getMessageId(), tenantId, deviceId);
     }
 
-    public static JsonObject getReply(final int status, final String messageId, final String tenantId, final String deviceId)
+    public static JsonObject getReply(final int status, final String messageId, final String tenantId, final String deviceId, final String replyTo)
     {
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
@@ -70,6 +65,14 @@ public final class RegistrationConstants {
         jsonObject.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
         jsonObject.put(RegistrationConstants.APP_PROPERTY_MESSAGE_ID, messageId);
         return jsonObject;
+    }
+
+    public static Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
+        final String tenantId = message.body().getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final String deviceId = message.body().getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+        final String status = message.body().getString(RegistrationConstants.APP_PROPERTY_STATUS);
+        final String messageId = message.body().getString(RegistrationConstants.APP_PROPERTY_MESSAGE_ID);
+        return getAmqpReply(status, messageId, tenantId, deviceId);
     }
 
     public static Message getAmqpReply(final String status, final String messageId, final String tenantId, final String deviceId) {
@@ -90,7 +93,8 @@ public final class RegistrationConstants {
         return message;
     }
 
-    private static JsonObject getRegistrationJson(final String action, final String messageId, final String tenantId, final String deviceId) {
+    public static JsonObject getRegistrationJson(final String action, final String messageId, final String tenantId,
+            final String deviceId) {
         final JsonObject msg = new JsonObject();
         msg.put(APP_PROPERTY_ACTION, action);
         msg.put(APP_PROPERTY_MESSAGE_ID, messageId);

@@ -112,9 +112,10 @@ public final class TestSupport {
      * @param deviceId the ID of the device that produced the reading.
      * @return the message containing the reading as a binary payload.
      */
-    public static Message newRegistrationMessage(final String messageId, final String action, final String tenantId, final String deviceId) {
-        Message message = ProtonHelper.message();
+    public static Message newRegistrationMessage(final String messageId, final String action, final String tenantId, final String deviceId, final String replyTo) {
+        final Message message = ProtonHelper.message();
         message.setMessageId(messageId);
+        message.setReplyTo(replyTo);
         final HashMap<String, String> map = new HashMap<>();
         map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);

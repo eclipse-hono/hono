@@ -111,7 +111,7 @@ public class RegistrationTest {
         final Async senderOpen = ctx.async();
         final AtomicLong start = new AtomicLong();
 
-        final Endpoint registrationEndpoint = new RegistrationEndpoint(vertx);
+        final Endpoint registrationEndpoint = new RegistrationEndpoint(vertx, false);
         final Endpoint telemetryEndpoint = new TelemetryEndpoint(vertx, false);
         final HonoServer server = createServer(telemetryEndpoint, registrationEndpoint);
 
@@ -127,12 +127,12 @@ public class RegistrationTest {
 
         connectToServer(ctx, server);
 
-        final String receiverAddress = RegistrationConstants.NODE_ADDRESS_REGISTRATION_PREFIX + DEFAULT_TENANT;
+        final String receiverAddress =  RegistrationConstants.NODE_ADDRESS_REGISTRATION_PREFIX + DEFAULT_TENANT + "/reply-1234";
         protonReceiver = connection.createReceiver(receiverAddress);
         protonReceiver.openHandler(opened -> {
-            LOG.debug("inbound link created [{}] at {}", getLinkName(opened.result()), opened.result().getSource().getAddress());
-            receiverOpen.complete();
-        })
+                LOG.debug("inbound link created [{}] at {}", getLinkName(opened.result()), opened.result().getSource().getAddress());
+                receiverOpen.complete();
+            })
            .closeHandler(closed -> LOG.debug("receiver closed {}...", ((ProtonReceiverImpl) closed).getName()))
            .handler((delivery, message) -> {
                LOG.info("Received reply {}", message);
@@ -176,20 +176,23 @@ public class RegistrationTest {
 
     private void registerDevice(final TestContext ctx, final String deviceId, final int expectedStatusCode) {
         final String messageId = nextMessageId();
+        final String replyTo = protonReceiver.getSource().getAddress();
         registerReplyHandler(ctx, messageId, expectedStatusCode);
-        protonSender.send(TestSupport.newRegistrationMessage(messageId, ACTION_REGISTER, DEFAULT_TENANT, deviceId));
+        protonSender.send(TestSupport.newRegistrationMessage(messageId, ACTION_REGISTER, DEFAULT_TENANT, deviceId, replyTo));
     }
 
     private void deregisterDevice(final TestContext ctx, final String deviceId, final int expectedStatusCode) {
         final String messageId = nextMessageId();
+        final String replyTo = protonReceiver.getSource().getAddress();
         registerReplyHandler(ctx, messageId, expectedStatusCode);
-        protonSender.send(TestSupport.newRegistrationMessage(messageId, ACTION_DEREGISTER, DEFAULT_TENANT, deviceId));
+        protonSender.send(TestSupport.newRegistrationMessage(messageId, ACTION_DEREGISTER, DEFAULT_TENANT, deviceId, replyTo));
     }
 
     private void getDevice(final TestContext ctx, final String deviceId, final int expectedStatusCode) {
         final String messageId = nextMessageId();
+        final String replyTo = protonReceiver.getSource().getAddress();
         registerReplyHandler(ctx, messageId, expectedStatusCode);
-        protonSender.send(TestSupport.newRegistrationMessage(messageId, ACTION_GET, DEFAULT_TENANT, deviceId));
+        protonSender.send(TestSupport.newRegistrationMessage(messageId, ACTION_GET, DEFAULT_TENANT, deviceId, replyTo));
     }
 
     private void registerReplyHandler(final TestContext ctx, final String correlationId, final int expectedStatusCode) {

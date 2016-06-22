@@ -23,12 +23,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.eclipse.hono.registration.RegistrationConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.impl.ConcurrentHashSet;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Simple "in memory" device registration.
@@ -43,54 +47,57 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
     private final Map<String, Set<String>> deviceMap = new ConcurrentHashMap<>();
 
     @Override
-    public void processRegistrationMessage(final String tenantId, final String deviceId, final String action, final String msgId) {
+    public void processRegistrationMessage(final Message<JsonObject> regMsg) {
+
+        final JsonObject body = regMsg.body();
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+        final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
 
         switch (action) {
         case ACTION_GET:
-            getDevice(tenantId, deviceId, msgId);
             LOGGER.debug("Retrieve device {} for tenant {}.", deviceId, tenantId);
+            reply(regMsg, getDevice(tenantId, deviceId));
             break;
         case ACTION_REGISTER:
-            addDevice(tenantId, deviceId, msgId);
             LOGGER.debug("Register device {} for tenant {}.", deviceId, tenantId);
+            reply(regMsg, addDevice(tenantId, deviceId));
             break;
         case ACTION_DEREGISTER:
             LOGGER.debug("Deregister device {} for tenant {}.", deviceId, tenantId);
-            removeDevice(tenantId, deviceId, msgId);
+            reply(regMsg, removeDevice(tenantId, deviceId));
             break;
         default:
-            reply(HTTP_BAD_REQUEST, deviceId, tenantId, msgId);
+            reply(regMsg, HTTP_BAD_REQUEST);
             LOGGER.info("Action {} not supported.", action);
         }
 
-        LOGGER.debug("Registered devices for {}: {}", tenantId, deviceMap.get(tenantId) != null ? deviceMap.get(tenantId).toArray() : "<empty>");
+        LOGGER.debug("Registered devices for {}: {}", tenantId,
+                deviceMap.get(tenantId) != null ? deviceMap.get(tenantId).toArray() : "<empty>");
     }
 
-    private void getDevice(final String tenantId, final String deviceId, final String msgId) {
+    private int getDevice(final String tenantId, final String deviceId) {
         final Set<String> devices = deviceMap.get(tenantId);
         if (devices != null && devices.contains(deviceId)) {
-            reply(HTTP_OK, deviceId, tenantId, msgId);
-        }
-        else {
-            reply(HTTP_NOT_FOUND, deviceId, tenantId, msgId);
+            return HTTP_OK;
+        } else {
+            return HTTP_NOT_FOUND;
         }
     }
 
-    private void removeDevice(final String tenantId, final String deviceId, final String msgId) {
+    private int removeDevice(final String tenantId, final String deviceId) {
         if (getDevicesForTenant(tenantId).remove(deviceId)) {
-            reply(HTTP_OK, deviceId, tenantId, msgId);
-        }
-        else {
-            reply(HTTP_NOT_FOUND, deviceId, tenantId, msgId);
+            return HTTP_OK;
+        } else {
+            return HTTP_NOT_FOUND;
         }
     }
 
-    private void addDevice(final String tenantId, final String deviceId, final String msgId) {
+    private int addDevice(final String tenantId, final String deviceId) {
         if (getDevicesForTenant(tenantId).add(deviceId)) {
-            reply(HTTP_OK, deviceId, tenantId, msgId);
-        }
-        else {
-            reply(HTTP_CONFLICT, deviceId, tenantId, msgId);
+            return HTTP_OK;
+        } else {
+            return HTTP_CONFLICT;
         }
     }
 

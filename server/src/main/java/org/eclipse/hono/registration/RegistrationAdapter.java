@@ -11,11 +11,14 @@
  */
 package org.eclipse.hono.registration;
 
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
+
 /**
  * Strategy for processing registration messages.
  */
 public interface RegistrationAdapter {
 
-    void processRegistrationMessage(String tenantId, String deviceId, String action, String msgId);
+    void processRegistrationMessage(Message<JsonObject> regMsg);
 
 }

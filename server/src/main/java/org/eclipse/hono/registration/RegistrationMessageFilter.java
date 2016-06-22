@@ -52,6 +52,9 @@ public final class RegistrationMessageFilter {
          } else if (msg.getMessageId() == null) {
              LOG.trace("message [{}] contains no valid message id.", msg.getMessageId());
              return false;
+         } else if (msg.getReplyTo() == null) {
+             LOG.trace("message [{}] contains no valid reply-to address.", msg.getMessageId());
+             return false;
          } else {
              final ResourceIdentifier targetResource = ResourceIdentifier
                      .from(linkTarget.getEndpoint(), linkTarget.getTenantId(), deviceIdProperty);

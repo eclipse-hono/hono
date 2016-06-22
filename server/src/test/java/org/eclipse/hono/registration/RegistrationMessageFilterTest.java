@@ -134,6 +134,7 @@ public class RegistrationMessageFilterTest {
     private Message givenAMessageHavingProperties(final String deviceId, final String action, final String tenantId) {
         final Message msg = ProtonHelper.message("Hello");
         msg.setMessageId("msg");
+        msg.setReplyTo("reply");
         MessageHelper.addDeviceId(msg, deviceId);
         MessageHelper.addProperty(msg, APP_PROPERTY_ACTION, action);
         if (tenantId != null) {
