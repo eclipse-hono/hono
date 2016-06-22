@@ -56,9 +56,17 @@ public class HonoServerIntegrationTest {
     private static final String NAME_HONO_CONNECTION_FACTORY = "hono";
     private static final Logger LOG          = LoggerFactory.getLogger(HonoServerIntegrationTest.class);
     private static final String BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
+    private Connection connection;
+    private Vertx vertx;
 
     @After
-    public void disconnect(final TestContext ctx) {
+    public void disconnect(final TestContext ctx) throws JMSException {
+        if (connection != null) {
+            connection.close();
+        }
+        if (vertx != null) {
+            vertx.close(ctx.asyncAssertSuccess());
+        }
     }
 
     private static HonoServer createServer(final Endpoint telemetryEndpoint) {
@@ -72,14 +80,18 @@ public class HonoServerIntegrationTest {
     @Test
     public void testTelemetryUpload(final TestContext ctx) throws Exception {
 
-        Vertx vertx = Vertx.vertx();
+        vertx = Vertx.vertx();
         LOG.debug("starting telemetry upload test");
         int count = 110;
+        final Async messagesReceived = ctx.async(count);
         final Async deployed = ctx.async();
 
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx, false);
         HonoServer server = createServer(telemetryEndpoint);
-        vertx.deployVerticle(new MessageDiscardingTelemetryAdapter());
+        vertx.deployVerticle(new MessageDiscardingTelemetryAdapter(msg -> {
+            messagesReceived.countDown();
+            LOG.debug("Received message [id: {}]", msg.getMessageId());
+        }));
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName());
         vertx.deployVerticle(server, res -> {
             ctx.assertTrue(res.succeeded());
@@ -91,7 +103,7 @@ public class HonoServerIntegrationTest {
         ConnectionFactory factory = (ConnectionFactory) context.lookup(NAME_HONO_CONNECTION_FACTORY);
         Destination telemetryAddress = (Destination) context.lookup(TelemetryConstants.TELEMETRY_ENDPOINT);
 
-        Connection connection = factory.createConnection();
+        connection = factory.createConnection();
         connection.setExceptionListener(new ExceptionListener() {
 
             @Override
@@ -105,7 +117,6 @@ public class HonoServerIntegrationTest {
         MessageProducer messageProducer = session.createProducer(telemetryAddress);
         messageProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 
-        long start = System.currentTimeMillis();
         for (int i = 1; i <= count; i++) {
             BytesMessage message = createTelemetryMessage(session, i);
             messageProducer.send(message);
@@ -114,12 +125,7 @@ public class HonoServerIntegrationTest {
                 LOG.debug("Sent message {}", i);
             }
         }
-
-        long finish = System.currentTimeMillis();
-        long taken = finish - start;
-        LOG.info("Sent {} messages in {}ms", count, taken);
-
-        connection.close();
+        messagesReceived.awaitSuccess(2000);
     }
 
     private static Context createInitialContext(final HonoServer server) throws NamingException {

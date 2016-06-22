@@ -119,7 +119,10 @@ public final class HonoServer extends AbstractVerticle {
     @Override
     public void stop(Future<Void> shutdownHandler) {
         if (server != null) {
-            server.close(done -> shutdownHandler.complete());
+            server.close(done -> {
+                LOG.info("HonoServer has been shut down");
+                shutdownHandler.complete();
+            });
         }
     }
 

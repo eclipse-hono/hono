@@ -13,6 +13,7 @@ package org.eclipse.hono.telemetry.impl;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
@@ -34,9 +35,18 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
     private final long pauseThreshold;
     private final long pausePeriod;
     private Map<String, LinkStatus> statusMap = new HashMap<>();
+    private Consumer<Message> messageConsumer;
 
     public MessageDiscardingTelemetryAdapter() {
-        this(0, 0);
+        this(0, 0, null);
+    }
+
+    /**
+     * 
+     * @param consumer a consumer that is invoked for every message received.
+     */
+    public MessageDiscardingTelemetryAdapter(final Consumer<Message> consumer) {
+        this(0, 0, consumer);
     }
 
     /**
@@ -44,10 +54,11 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
      *                       never be paused.
      * @param pausePeriod the number of milliseconds after which the sender is resumed.
      */
-    public MessageDiscardingTelemetryAdapter(final long pauseThreshold, final long pausePeriod) {
+    public MessageDiscardingTelemetryAdapter(final long pauseThreshold, final long pausePeriod, final Consumer<Message> consumer) {
         super(0, 1);
         this.pauseThreshold = pauseThreshold;
         this.pausePeriod = pausePeriod;
+        this.messageConsumer = consumer;
     }
 
     @Override
@@ -60,6 +71,9 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
         }
         LOG.debug("processing telemetry data [id: {}, to: {}, content-type: {}]", data.getMessageId(), data.getAddress(),
                 data.getContentType());
+        if (messageConsumer != null) {
+            messageConsumer.accept(data);
+        }
         status.onMsgReceived();
     }
 

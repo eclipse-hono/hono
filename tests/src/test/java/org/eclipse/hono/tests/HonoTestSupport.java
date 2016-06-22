@@ -13,6 +13,7 @@ package org.eclipse.hono.tests;
 
 import org.eclipse.hono.Application;
 import org.eclipse.hono.client.TelemetryClient;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,13 +55,23 @@ public class HonoTestSupport {
     @Value(value = "${hono.telemetry.downstream.port}")
     private int                 downstreamPort;
 
+    @After
+    public void closeClients() {
+        if (receiver != null) {
+            receiver.shutdown();
+        }
+        if (sender != null) {
+            sender.shutdown();
+        }
+    }
+
     @Test
     public void testTelemetry() throws Exception {
         final CountDownLatch received = new CountDownLatch(MSG_COUNT);
         receiver = new TelemetryClient(downstreamHostName, downstreamPort, TENANT_ID);
 
         receiver.createReceiver(message -> {
-            LOGGER.info("Received " + message);
+            LOGGER.debug("Received message: {}", message);
             received.countDown();
         }, "telemetry" + pathSeparator + "%s").setHandler(r -> createSender());
 
