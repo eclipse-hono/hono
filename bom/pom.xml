@@ -26,7 +26,7 @@
   <packaging>pom</packaging>
 
   <properties>
-    <activemq.version>5.13.0</activemq.version>
+    <activemq.version>5.13.3</activemq.version>
     <assertj-core.version>3.2.0</assertj-core.version>
     <camel.version>2.16.1</camel.version>
     <commons-lang3.version>3.4</commons-lang3.version>
@@ -40,6 +40,7 @@
     <qpid-jms.version>0.9.0</qpid-jms.version>
     <rabbitmq.version>3.6.1</rabbitmq.version>
     <slf4j.version>1.7.2</slf4j.version>
+    <spring.version>4.1.8.RELEASE</spring.version>
     <spring-boot.version>1.2.7.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.2.1</vertx.version>

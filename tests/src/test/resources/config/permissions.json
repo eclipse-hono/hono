@@ -5,4 +5,5 @@
   "registration/tenant": {
     "SUBJECT": [ "READ", "WRITE" ]
   }
+
 }

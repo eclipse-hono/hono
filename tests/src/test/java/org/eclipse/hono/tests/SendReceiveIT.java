@@ -11,8 +11,7 @@
  */
 package org.eclipse.hono.tests;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Hashtable;
 import java.util.LongSummaryStatistics;
@@ -23,7 +22,6 @@ import java.util.stream.IntStream;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.DeliveryMode;
-import javax.jms.ExceptionListener;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
@@ -78,12 +76,12 @@ public class SendReceiveIT {
         final ConnectionFactory receiverFactory = (ConnectionFactory) context.lookup("qdr");
 
         receiver = receiverFactory.createConnection();
-        receiver.setExceptionListener(new MyExceptionListener());
+        receiver.setExceptionListener(e -> LOG.error("Connection ExceptionListener fired.", e));
         receiver.setClientID("telemetry-receiver");
         receiver.start();
 
         sender = senderFactory.createConnection();
-        sender.setExceptionListener(new MyExceptionListener());
+        sender.setExceptionListener(e -> LOG.error("Connection ExceptionListener fired.", e));
         sender.setClientID("telemetry-sender");
         sender.start();
     }
@@ -114,7 +112,7 @@ public class SendReceiveIT {
             final long count = latch.getCount();
             gatherStatistics(stats, message);
             if (count % 100 == 0) {
-                LOG.info("Received {} messages.", COUNT - count);
+                LOG.debug("Received {} messages.", COUNT - count);
             }
         });
 
@@ -131,24 +129,17 @@ public class SendReceiveIT {
                 messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
                 if (i % 100 == 0) {
-                    LOG.info("Sent message {}", i);
+                    LOG.debug("Sent message {}", i);
                 }
             }
-            catch (final Exception e) {
+            catch (final JMSException e) {
                 LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
             }
         });
 
         // wait for messages to arrive
-        assertThat("Did not receive " + COUNT + " messages within timeout.", latch.await(10, TimeUnit.SECONDS), is(true));
+        assertTrue("Did not receive " + COUNT + " messages within timeout.", latch.await(10, TimeUnit.SECONDS));
         LOG.info("Delivery statistics: {}", stats);
-    }
-
-    private static class MyExceptionListener implements ExceptionListener {
-        @Override
-        public void onException(final JMSException exception) {
-            LOG.error("Connection ExceptionListener fired.", exception);
-        }
     }
 
     private void gatherStatistics(final LongSummaryStatistics stats, final Message message) {

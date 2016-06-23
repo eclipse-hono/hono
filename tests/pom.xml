@@ -26,9 +26,6 @@
    <properties>
       <qpid-dispatch.version>0.6.0-rc4</qpid-dispatch.version>
       <hono-server.version>${project.version}</hono-server.version>
-      <hono-client.version>${project.version}</hono-client.version>
-      <activemq.version>5.13.3</activemq.version>
-      <spring.version>4.2.6.RELEASE</spring.version>
    </properties>
 
    <dependencies>
@@ -39,7 +36,6 @@
       <dependency>
          <groupId>org.eclipse.hono</groupId>
          <artifactId>hono-client</artifactId>
-         <version>${hono-client.version}</version>
       </dependency>
      <dependency>
         <groupId>org.eclipse.hono</groupId>
@@ -66,7 +62,6 @@
       <dependency>
          <groupId>org.apache.qpid</groupId>
          <artifactId>qpid-jms-client</artifactId>
-         <version>0.9.0</version>
       </dependency>
      <dependency>
        <groupId>org.springframework</groupId>
@@ -95,19 +90,14 @@
                <plugin>
                   <groupId>io.fabric8</groupId>
                   <artifactId>docker-maven-plugin</artifactId>
-                  <version>0.15.0</version>
                   <configuration>
                      <verbose>true</verbose>
                      <images>
                         <!-- ##### volume container with hono server configuration ##### -->
                         <image>
                            <alias>test-config</alias>
-                           <name>hono/test-config:${project.version}</name>
                            <build>
                               <from>tianon/true</from>
-                              <tags>
-                                 <tag>${project.version}</tag>
-                              </tags>
                               <volumes>
                                  <volume>/config</volume>
                               </volumes>
@@ -128,8 +118,6 @@
                                  </inline>
                               </assembly>
                            </build>
-                           <run>
-                           </run>
                         </image>
                         <!-- ##### Qpid Dispatch Router ##### -->
                         <image>
@@ -178,6 +166,12 @@
                   </configuration>
                   <executions>
                      <execution>
+                        <phase>package</phase>
+                        <goals>
+                           <goal>build</goal>
+                        </goals>
+                     </execution>
+                     <execution>
                         <id>start-docker</id>
                         <phase>pre-integration-test</phase>
                         <goals>
@@ -215,7 +209,7 @@
                         <qpid.amqp.port>${qpid.amqp.port}</qpid.amqp.port>
                      </systemProperties>
                      <includes>
-                        <include>**/IT*.java</include>
+                        <!-- include>**/IT*.java</include-->
                         <include>**/*IT.java</include>
                      </includes>
                   </configuration>

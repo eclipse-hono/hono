@@ -75,12 +75,10 @@ public final class MessageHelper {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void addTenantId(final Message msg, final String tenantId) {
         addProperty(msg, APP_PROPERTY_TENANT_ID, tenantId);
     }
 
-    @SuppressWarnings("unchecked")
     public static void addDeviceId(final Message msg, final String deviceId) {
         addProperty(msg, APP_PROPERTY_DEVICE_ID, deviceId);
     }

@@ -28,7 +28,6 @@ import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.DeliveryMode;
 import javax.jms.Destination;
-import javax.jms.ExceptionListener;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
@@ -72,7 +71,7 @@ public class DeviceRegistrationIT
     @Before
     public void init() throws Exception {
         hono = createConnection();
-        hono.setExceptionListener(new MyExceptionListener());
+        hono.setExceptionListener(e -> LOG.error("Connection ExceptionListener fired.", e));
         hono.setClientID("registration");
         hono.start();
     }
@@ -117,13 +116,6 @@ public class DeviceRegistrationIT
         assertThat("Did not receive " + COUNT + " messages within timeout.", latch.await(10, TimeUnit.SECONDS), is(true));
     }
 
-    private static class MyExceptionListener implements ExceptionListener {
-        @Override
-        public void onException(final JMSException exception) {
-            LOG.error("Connection ExceptionListener fired.", exception);
-        }
-    }
-
     public static Message newRegistrationMessage(final Session session, final String action, final String deviceId)
        throws JMSException
     {
@@ -148,6 +140,7 @@ public class DeviceRegistrationIT
         return senderFactory.createConnection();
     }
 
+    @SuppressWarnings("unchecked")
     private void logMessage(final Message message) {
         try
         {
