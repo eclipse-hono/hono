@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.registration.impl;
 
+import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_MESSAGE_ID;
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
 import static org.eclipse.hono.util.MessageHelper.getLinkName;
@@ -103,7 +104,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
 
         final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(source.getAddress(), message -> {
             // TODO check for correct session here...?
-            LOG.debug("Forwarding reply to client: {}", message);
+            LOG.trace("Forwarding reply to client: {}", message);
             final Message amqpReply = RegistrationConstants.getAmqpReply(message);
             sender.send(amqpReply);
         });
@@ -128,13 +129,14 @@ public final class RegistrationEndpoint extends BaseEndpoint {
             if (permissionGranted) {
                 vertx.runOnContext(run -> {
                     final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
-                    LOG.debug("Publishing to eventBus {}", registrationMsg);
                     vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
                             result -> {
                                 // TODO check for correct session here...?
                                 final String replyTo = msg.getReplyTo();
                                 if (replyTo != null) {
-                                    vertx.eventBus().send(replyTo, result.result().body());
+                                    final JsonObject message = (JsonObject) result.result().body();
+                                    message.put(APP_PROPERTY_MESSAGE_ID, msg.getMessageId());
+                                    vertx.eventBus().send(replyTo, message);
                                 } else {
                                     LOG.debug("No reply-to address provided, cannot send reply to client.");
                                 }

@@ -11,6 +11,8 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL;
 import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN;
 import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL;
@@ -33,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.AmqpMessage;
+import org.eclipse.hono.registration.RegistrationConstants;
 import org.eclipse.hono.server.BaseEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
@@ -41,6 +44,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -183,15 +187,39 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(MessageHelper.getAnnotation(msg, APP_PROPERTY_RESOURCE_ID));
         checkPermission(messageAddress, permissionGranted -> {
             if (permissionGranted) {
-                vertx.runOnContext(run -> {
-                    final String messageId = UUID.randomUUID().toString();
-                    final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
-                    vertx.sharedData().getLocalMap(dataAddress).put(messageId, amqpMessage);
-                    sendAtMostOnce(link, messageId, delivery);
+                checkDeviceExists(messageAddress, deviceExists -> {
+                    if (deviceExists) {
+                        vertx.runOnContext(run -> {
+                            final String messageId = UUID.randomUUID().toString();
+                            final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
+                            vertx.sharedData().getLocalMap(dataAddress).put(messageId, amqpMessage);
+                            sendAtMostOnce(link, messageId, delivery);
+                        });
+                    } else {
+                        LOG.debug("Device {}/{} does not exist, dropping message.",
+                                messageAddress.getTenantId(), messageAddress.getDeviceId());
+                    }
                 });
             } else {
                 LOG.debug("client is not authorized to upload telemetry data for address [{}], closing link ...", messageAddress);
                 onLinkDetach(link); // inform downstream adapter about client detach
+            }
+        });
+    }
+
+    private void checkDeviceExists(final ResourceIdentifier resource, final Handler<Boolean> resultHandler) {
+        final JsonObject registrationJson = RegistrationConstants
+                .getRegistrationJson(RegistrationConstants.ACTION_GET, resource.getTenantId(), resource.getDeviceId());
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationJson, async -> {
+            if (async.succeeded()) {
+                final io.vertx.core.eventbus.Message<Object> message = async.result();
+                final JsonObject body = (JsonObject) message.body();
+                final String status = body.getString(RegistrationConstants.APP_PROPERTY_STATUS);
+                resultHandler.handle(String.valueOf(HTTP_OK).equals(status));
+            } else {
+                LOG.debug("Failed to retrieve information about device {}/{}: {}",
+                        resource.getTenantId(), resource.getDeviceId(), async.cause().getMessage());
+                resultHandler.handle(false);
             }
         });
     }

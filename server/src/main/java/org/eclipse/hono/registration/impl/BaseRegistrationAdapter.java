@@ -96,15 +96,12 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         final JsonObject body = msg.body();
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String msgId = body.getString(RegistrationConstants.APP_PROPERTY_MESSAGE_ID);
 
         final JsonObject replyMsg = new JsonObject();
         replyMsg.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         replyMsg.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         replyMsg.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
-        replyMsg.put(RegistrationConstants.APP_PROPERTY_MESSAGE_ID, msgId);
 
-        LOG.debug("Publishing reply to event bus: {}", replyMsg);
         msg.reply(replyMsg);
     }
 

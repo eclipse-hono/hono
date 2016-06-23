@@ -17,6 +17,7 @@ import static org.eclipse.hono.util.MessageHelper.getApplicationProperty;
 
 import java.util.HashMap;
 import java.util.Objects;
+import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
@@ -54,16 +55,15 @@ public final class RegistrationConstants {
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
         final String action = getAction(message);
-        return getRegistrationJson(action, (String) message.getMessageId(), tenantId, deviceId);
+        return getRegistrationJson(action, tenantId, deviceId);
     }
 
-    public static JsonObject getReply(final int status, final String messageId, final String tenantId, final String deviceId, final String replyTo)
+    public static JsonObject getReply(final int status, final String tenantId, final String deviceId)
     {
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         jsonObject.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
-        jsonObject.put(RegistrationConstants.APP_PROPERTY_MESSAGE_ID, messageId);
         return jsonObject;
     }
 
@@ -86,18 +86,16 @@ public final class RegistrationConstants {
         final ResourceIdentifier address = ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId);
 
         final Message message = ProtonHelper.message();
-        message.setMessageId(messageId + "-reply");
+        message.setMessageId(UUID.randomUUID().toString());
         message.setCorrelationId(messageId);
         message.setApplicationProperties(applicationProperties);
         message.setAddress(address.toString());
         return message;
     }
 
-    public static JsonObject getRegistrationJson(final String action, final String messageId, final String tenantId,
-            final String deviceId) {
+    public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId) {
         final JsonObject msg = new JsonObject();
         msg.put(APP_PROPERTY_ACTION, action);
-        msg.put(APP_PROPERTY_MESSAGE_ID, messageId);
         msg.put(APP_PROPERTY_DEVICE_ID, deviceId);
         msg.put(APP_PROPERTY_TENANT_ID, tenantId);
         return msg;

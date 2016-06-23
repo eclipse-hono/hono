@@ -30,6 +30,8 @@ import javax.naming.NamingException;
 import org.apache.qpid.jms.message.JmsBytesMessage;
 import org.apache.qpid.jms.provider.amqp.message.AmqpJmsMessageFacade;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
+import org.eclipse.hono.registration.MockRegistrationAdapter;
+import org.eclipse.hono.registration.impl.RegistrationEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
@@ -56,8 +58,8 @@ public class HonoServerIntegrationTest {
     private static final String NAME_HONO_CONNECTION_FACTORY = "hono";
     private static final Logger LOG          = LoggerFactory.getLogger(HonoServerIntegrationTest.class);
     private static final String BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
-    private Connection connection;
     private Vertx vertx;
+    private Connection connection;
 
     @After
     public void disconnect(final TestContext ctx) throws JMSException {
@@ -69,10 +71,12 @@ public class HonoServerIntegrationTest {
         }
     }
 
-    private static HonoServer createServer(final Endpoint telemetryEndpoint) {
-        HonoServer result = new HonoServer(BIND_ADDRESS, 0, false);
-        if (telemetryEndpoint != null) {
-            result.addEndpoint(telemetryEndpoint);
+    private static HonoServer createServer(final Endpoint... endpoints) {
+        final HonoServer result = new HonoServer(BIND_ADDRESS, 0, false);
+        for (Endpoint endpoint : endpoints) {
+            if (endpoint != null) {
+                result.addEndpoint(endpoint);
+            }
         }
         return result;
     }
@@ -86,12 +90,14 @@ public class HonoServerIntegrationTest {
         final Async messagesReceived = ctx.async(count);
         final Async deployed = ctx.async();
 
-        TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx, false);
-        HonoServer server = createServer(telemetryEndpoint);
+        Endpoint telemetryEndpoint = new TelemetryEndpoint(vertx, false);
+        Endpoint registrationEndpoint = new RegistrationEndpoint(vertx, false);
+        HonoServer server = createServer(telemetryEndpoint, registrationEndpoint);
         vertx.deployVerticle(new MessageDiscardingTelemetryAdapter(msg -> {
             messagesReceived.countDown();
             LOG.debug("Received message [id: {}]", msg.getMessageId());
         }));
+        vertx.deployVerticle(MockRegistrationAdapter.class.getName());
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName());
         vertx.deployVerticle(server, res -> {
             ctx.assertTrue(res.succeeded());
@@ -103,7 +109,7 @@ public class HonoServerIntegrationTest {
         ConnectionFactory factory = (ConnectionFactory) context.lookup(NAME_HONO_CONNECTION_FACTORY);
         Destination telemetryAddress = (Destination) context.lookup(TelemetryConstants.TELEMETRY_ENDPOINT);
 
-        Connection connection = factory.createConnection();
+        connection = factory.createConnection();
         connection.setExceptionListener(exception -> LOG.error(exception.getMessage(), exception));
         connection.start();
 
