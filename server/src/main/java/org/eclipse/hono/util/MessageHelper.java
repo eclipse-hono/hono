@@ -57,6 +57,16 @@ public final class MessageHelper {
         return (String) getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID);
     }
 
+    public static String getDeviceIdAnnotation(final Message msg) {
+        Objects.requireNonNull(msg);
+        return getAnnotation(msg, APP_PROPERTY_DEVICE_ID);
+    }
+
+    public static String getTenantIdAnnotation(final Message msg) {
+        Objects.requireNonNull(msg);
+        return getAnnotation(msg, APP_PROPERTY_TENANT_ID);
+    }
+
     public static Object getApplicationProperty(final ApplicationProperties props, final String name) {
         if (props == null) {
             return null;
