@@ -11,24 +11,22 @@
  */
 package org.eclipse.hono.client;
 
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import javax.annotation.PreDestroy;
 
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.Data;
-import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -46,14 +44,17 @@ public class TelemetryClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(TelemetryClient.class);
     public static final String SENDER_TARGET_ADDRESS = "telemetry/%s";
+    public static final String REGISTRATION_TARGET_ADDRESS = "registration/%s";
+    public static final String REGISTRATION_REPLY_ADDRESS = "registration/%s/"+ UUID.randomUUID().toString();
     public static final String RECEIVER_SOURCE_ADDRESS = "telemetry/%s";
-    public static final String SENDER_TO_PROPERTY = "telemetry/%s/%s";
     public static final int DEFAULT_RECEIVER_CREDITS = 20;
 
     private final Vertx                               vertx;
     private final CompletableFuture<ProtonConnection> connection;
-    private volatile ProtonSender                        honoSender;
-    private final AtomicLong messageTagCounter = new AtomicLong();
+    private final Future<ProtonSender> telemetrySender    = Future.future();
+    private final Future<ProtonSender> registrationSender = Future.future();
+    private final Map<String, Future<Integer>> replyMap = new HashMap<>();
+    private final AtomicLong           messageTagCounter  = new AtomicLong();
     private final String host;
     private final int    port;
     private final String tenantId;
@@ -117,37 +118,57 @@ public class TelemetryClient {
                 connection.completeExceptionally(conAttempt.cause());
             }
         });
+
+        connection.thenAccept(connection -> {
+            LOG.info("Registering handler for registration responses.");
+            createReceiver(message -> {
+                final Future<Integer> future = replyMap.remove(message.getCorrelationId());
+                if (future != null) {
+                    final String status = (String) message.getApplicationProperties().getValue().get("status");
+                    future.complete(Integer.valueOf(status));
+                } else {
+                    LOG.info("No handler registered for {}", message.getCorrelationId());
+                }
+            }, REGISTRATION_REPLY_ADDRESS);
+        });
     }
 
-    public Future<Void> createSender() throws Exception {
+    public Future<CompositeFuture> createSender() {
         return createSender(null);
     }
 
-    public Future<Void> createSender(final Handler<AsyncResult<?>> closeHandler) throws Exception {
-        final Future<Void> future = Future.future();
+    public Future<CompositeFuture> createSender(final Handler<AsyncResult<?>> closeHandler) {
         connection.thenAccept(connection ->
         {
             final String address = String.format(SENDER_TARGET_ADDRESS, tenantId);
-            final ProtonSender sender = connection.createSender(address);
-            sender.setQoS(ProtonQoS.AT_MOST_ONCE);
-            sender.openHandler(senderOpen -> {
-                if (senderOpen.succeeded()) {
-                    honoSender = senderOpen.result();
-                    LOG.info("sender open to [{}]", honoSender.getRemoteTarget());
-                    future.complete();
-                } else {
-                    future.fail(new IllegalStateException("cannot open sender for telemetry data", senderOpen.cause()));
-                }
-            }).closeHandler(loggingHandler("sender closed", closeHandler)).open();
+            getProtonSender(closeHandler, telemetrySender, connection, address);
+
+            final String registrationAdress = String.format(REGISTRATION_TARGET_ADDRESS, tenantId);
+            getProtonSender(closeHandler, registrationSender, connection, registrationAdress);
         });
-        return future;
+        return CompositeFuture.all(telemetrySender, registrationSender);
     }
 
-    public Future<Void> createReceiver(final Consumer<String> consumer) throws Exception {
+    private ProtonSender getProtonSender(final Handler<AsyncResult<?>> closeHandler, final Future<ProtonSender> future,
+            final ProtonConnection connection, final String address) {
+        final ProtonSender sender = connection.createSender(address);
+        sender.setQoS(ProtonQoS.AT_MOST_ONCE);
+        sender.openHandler(senderOpen -> {
+            if (senderOpen.succeeded()) {
+                LOG.info("sender open to [{}]", senderOpen.result().getRemoteTarget());
+                future.complete(senderOpen.result());
+            } else {
+                future.fail(new IllegalStateException("cannot open sender for telemetry data", senderOpen.cause()));
+            }
+        }).closeHandler(loggingHandler("sender closed", closeHandler)).open();
+        return sender;
+    }
+
+    public Future<Void> createReceiver(final Consumer<Message> consumer) {
         return createReceiver(consumer, RECEIVER_SOURCE_ADDRESS);
     }
 
-    public Future<Void> createReceiver(final Consumer<String> consumer, final String receiverAddress) throws Exception {
+    public Future<Void> createReceiver(final Consumer<Message> consumer, final String receiverAddress) {
         final Future<Void> future = Future.future();
         connection.thenAccept(connection ->
         {
@@ -165,17 +186,7 @@ public class TelemetryClient {
                     })
                     .closeHandler(loggingHandler("receiver closed"))
                     .handler((delivery, msg) -> {
-                        final Section section = msg.getBody();
-                        String content = null;
-                        if (section == null) {
-                            content = "empty";
-                        } else if (section instanceof Data) {
-                            content = ((Data) section).toString();
-                        } else if (section instanceof AmqpValue) {
-                            final AmqpValue amqpValue = (AmqpValue) section;
-                            content = String.valueOf (amqpValue.getValue());
-                        }
-                        consumer.accept(content);
+                        consumer.accept(msg);
                         ProtonHelper.accepted(delivery, true);
                     }).setPrefetch(DEFAULT_RECEIVER_CREDITS).open();
         });
@@ -183,23 +194,34 @@ public class TelemetryClient {
     }
 
     public void send(final String deviceId, final String body) {
-        if (honoSender != null) {
-            if (!honoSender.isOpen()) {
-                throw new IllegalStateException("Sender is not open, failed to send message.");
-            }
-            final ByteBuffer b = ByteBuffer.allocate(8);
-            b.putLong(messageTagCounter.getAndIncrement());
-            b.flip();
-            final Message msg = ProtonHelper.message(body);
-            final Map<String, String> properties = new HashMap<>();
-            properties.put("device_id", deviceId);
-            msg.setApplicationProperties(new ApplicationProperties(properties));
-            honoSender.send(b.array(), msg);
-            b.clear();
+        if (telemetrySender.failed() || !telemetrySender.isComplete()) {
+            throw new IllegalStateException("Sender is not open, failed to send message.");
         }
-        else {
-            LOG.info("Create sender first..");
+
+
+        final Message msg = ProtonHelper.message(body);
+        final Map<String, String> properties = new HashMap<>();
+        properties.put("device_id", deviceId);
+        msg.setApplicationProperties(new ApplicationProperties(properties));
+        telemetrySender.result().send(msg);
+    }
+
+    public Future<Integer> register(final String deviceId) {
+        if (registrationSender.failed() || !registrationSender.isComplete()) {
+            throw new IllegalStateException("Sender is not open, failed to send message.");
         }
+        final String messageId = "msg-" + messageTagCounter.getAndIncrement();
+        final Message msg = ProtonHelper.message();
+        final Map<String, String> properties = new HashMap<>();
+        properties.put("device_id", deviceId);
+        properties.put("action", "register");
+        msg.setApplicationProperties(new ApplicationProperties(properties));
+        msg.setReplyTo(String.format(REGISTRATION_REPLY_ADDRESS, tenantId));
+        msg.setMessageId(messageId);
+        final Future<Integer> response = Future.future();
+        replyMap.put(messageId, response);
+        registrationSender.result().send(msg);
+        return response;
     }
 
     @PreDestroy

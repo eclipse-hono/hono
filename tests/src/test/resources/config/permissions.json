@@ -1,7 +1,8 @@
 {
   "telemetry/tenant": {
-    "SUBJECT": [
-      "WRITE"
-    ]
+    "SUBJECT": [ "WRITE" ]
+  },
+  "registration/tenant": {
+    "SUBJECT": [ "READ", "WRITE" ]
   }
 }

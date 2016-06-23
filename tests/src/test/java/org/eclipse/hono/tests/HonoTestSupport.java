@@ -11,10 +11,17 @@
  */
 package org.eclipse.hono.tests;
 
+import static junit.framework.TestCase.assertTrue;
+
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
+
 import org.eclipse.hono.Application;
 import org.eclipse.hono.client.TelemetryClient;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -25,12 +32,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import java.net.InetAddress;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
-
-import static junit.framework.TestCase.assertTrue;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
@@ -79,12 +82,25 @@ public class HonoTestSupport {
     }
 
     private void createSender() {
-        try {
-            sender = new TelemetryClient(InetAddress.getLoopbackAddress().getHostAddress(), honoServerPort, TENANT_ID);
-            sender.createSender().setHandler(r -> sendTelemetryData());
-        } catch (Exception e) {
-            Assert.fail(e.getMessage());
-        }
+        sender = new TelemetryClient(InetAddress.getLoopbackAddress().getHostAddress(), honoServerPort, TENANT_ID);
+        sender.createSender().setHandler(r -> {
+            registerDevices();
+            sendTelemetryData();
+        });
+    }
+
+    private void registerDevices() {
+        IntStream.range(0, MSG_COUNT).forEach(i -> sender.register("device" + i).setHandler(replyHandler("device" + i)));
+    }
+
+    private Handler<AsyncResult<Integer>> replyHandler(final String device) {
+        return result -> {
+            if (result.succeeded() && result.result() == HttpURLConnection.HTTP_OK) {
+                LOGGER.debug("Device {} registered successfully.", device);
+            } else {
+                LOGGER.debug("Failed to register device {}: {}", device, result.succeeded() ? result.result() : result.cause().getMessage());
+            }
+        };
     }
 
     private void sendTelemetryData() {

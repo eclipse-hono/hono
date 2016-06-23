@@ -1,5 +1,8 @@
 {
   "telemetry/myTenant": {
     "SUBJECT": ["WRITE"]
+  },
+  "registration/myTenant": {
+    "SUBJECT": ["READ", "WRITE"]
   }
 }

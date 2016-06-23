@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.eclipse.hono.client.TelemetryClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,9 +61,12 @@ public class TelemetryClientExample {
         client = new TelemetryClient(host, port, tenantId);
         if (ROLE_SENDER.equalsIgnoreCase(role)) {
             client.createSender()
-                    .setHandler(r -> executor.execute(this::readMessagesFromStdin));
+                    .setHandler(r -> {
+                        client.register(deviceId);
+                        executor.execute(this::readMessagesFromStdin);
+                    });
         } else if (ROLE_RECEIVER.equalsIgnoreCase(role)) {
-            client.createReceiver(content -> LOG.info("received telemetry message: {}", content), "telemetry" + pathSeparator + "%s")
+            client.createReceiver(content -> LOG.info("received telemetry message: {}", ((AmqpValue)content.getBody()).getValue()), "telemetry" + pathSeparator + "%s")
                     .setHandler(v -> executor.execute(this::waitForInput));
         } else {
             throw new IllegalArgumentException("role parameter must be either " + ROLE_SENDER + " or " + ROLE_RECEIVER);

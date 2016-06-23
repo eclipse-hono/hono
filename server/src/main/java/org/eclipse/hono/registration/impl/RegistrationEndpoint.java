@@ -104,7 +104,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
 
         final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(source.getAddress(), message -> {
             // TODO check for correct session here...?
-            LOG.trace("Forwarding reply to client: {}", message);
+            LOG.trace("Forwarding reply to client: {}", message.body());
             final Message amqpReply = RegistrationConstants.getAmqpReply(message);
             sender.send(amqpReply);
         });
