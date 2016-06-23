@@ -41,16 +41,14 @@ import io.vertx.proton.ProtonHelper;
  */
 public final class TestSupport {
 
-    public static ProtonConnection openConnection(final TestContext ctx, final Vertx vertx, final String host, final int port)
-    {
+    public static ProtonConnection openConnection(final TestContext ctx, final Vertx vertx, final String host, final int port) {
         final Async connected = ctx.async();
         final AtomicReference<ProtonConnection> protonConnection = new AtomicReference<>();
 
         final ProtonClient client = ProtonClient.create(vertx);
 
         client.connect(host, port, ar -> {
-            if (ar.succeeded())
-            {
+            if (ar.succeeded()) {
                 protonConnection.set(ar.result());
                 protonConnection.get().open();
                 connected.complete();

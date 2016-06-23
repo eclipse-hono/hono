@@ -78,20 +78,17 @@ public class RegistrationTest {
     private final AtomicInteger counter = new AtomicInteger(0);
 
     @Before
-    public void init()
-    {
+    public void init() {
         vertx = Vertx.vertx();
     }
 
     @After
     public void disconnect(final TestContext ctx) {
 
-        if (protonSender != null)
-        {
+        if (protonSender != null) {
             protonSender.close();
         }
-        if (protonReceiver != null)
-        {
+        if (protonReceiver != null) {
             protonReceiver.close();
         }
         if (connection != null) {

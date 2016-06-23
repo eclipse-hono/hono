@@ -113,8 +113,7 @@ public class SendReceiveIT {
             latch.countDown();
             final long count = latch.getCount();
             gatherStatistics(stats, message);
-            if (count % 100 == 0)
-            {
+            if (count % 100 == 0) {
                 LOG.info("Received {} messages.", COUNT - count);
             }
         });

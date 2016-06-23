@@ -148,8 +148,7 @@ public class DeviceRegistrationIT
         return senderFactory.createConnection();
     }
 
-    private void logMessage(final Message message)
-    {
+    private void logMessage(final Message message) {
         try
         {
             LOG.info("Message Type: {}", message.getClass().getSimpleName());
@@ -160,16 +159,14 @@ public class DeviceRegistrationIT
                 {
                     sb.append(name).append(": ").append(message.getObjectProperty(name)).append(",");
                 }
-                catch (final JMSException e)
-                {
+                catch (final JMSException e) {
                     e.printStackTrace();
                 }
             });
             sb.append("}");
             LOG.info(sb.toString());
         }
-        catch (final JMSException e)
-        {
+        catch (final JMSException e) {
             e.printStackTrace();
         }
     }

@@ -25,37 +25,31 @@ public class AclEntry
     private final String authSubject;
     private final Set<Permission> permissions;
 
-    public AclEntry(final String authSubject, final Permission... permissions)
-    {
+    public AclEntry(final String authSubject, final Permission... permissions) {
         this.authSubject = requireNonNull(authSubject);
         this.permissions = EnumSet.copyOf(Arrays.asList(permissions));
     }
 
-    public AclEntry(final String authSubject, final Set<Permission> permissions)
-    {
+    public AclEntry(final String authSubject, final Set<Permission> permissions) {
         this.authSubject = requireNonNull(authSubject);
         this.permissions = EnumSet.copyOf(permissions);
     }
 
-    public String getAuthSubject()
-    {
+    public String getAuthSubject() {
         return authSubject;
     }
 
-    public Set<Permission> getPermissions()
-    {
+    public Set<Permission> getPermissions() {
         return permissions;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "AclEntry{" + "authSubject='" + authSubject + '\'' + ", permissions=" + permissions + '}';
     }
 
     @Override
-    public boolean equals(final Object o)
-    {
+    public boolean equals(final Object o) {
         if (this == o)
             return true;
         if (o == null || getClass() != o.getClass())
@@ -70,8 +64,7 @@ public class AclEntry
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         int result = authSubject.hashCode();
         result = 31 * result + permissions.hashCode();
         return result;

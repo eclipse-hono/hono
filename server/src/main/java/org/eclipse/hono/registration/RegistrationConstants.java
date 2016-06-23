@@ -58,8 +58,7 @@ public final class RegistrationConstants {
         return getRegistrationJson(action, tenantId, deviceId);
     }
 
-    public static JsonObject getReply(final int status, final String tenantId, final String deviceId)
-    {
+    public static JsonObject getReply(final int status, final String tenantId, final String deviceId) {
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);

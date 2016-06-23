@@ -72,8 +72,7 @@ public class TelemetryClient {
         vertx = Vertx.vertx();
         connection = new CompletableFuture<>();
         connection.whenComplete((o,t) -> {
-            if (t != null)
-            {
+            if (t != null) {
                 LOG.info("Connection to Hono ({}:{}) failed.", host, port, t);
             }
         });
@@ -95,8 +94,7 @@ public class TelemetryClient {
         vertx = Vertx.vertx();
         connection = new CompletableFuture<>();
         connection.whenComplete((o,t) -> {
-            if (t != null)
-            {
+            if (t != null) {
                 LOG.info("Connection to Hono ({}:{}) failed.", host, port, t);
             }
         });
@@ -184,11 +182,9 @@ public class TelemetryClient {
         return future;
     }
 
-    public void send(final String deviceId, final String body)
-    {
+    public void send(final String deviceId, final String body) {
         if (honoSender != null) {
-            if (!honoSender.isOpen())
-            {
+            if (!honoSender.isOpen()) {
                 throw new IllegalStateException("Sender is not open, failed to send message.");
             }
             final ByteBuffer b = ByteBuffer.allocate(8);
@@ -217,13 +213,11 @@ public class TelemetryClient {
         vertx.close(completionHandler);
     }
 
-    private <T> Handler<AsyncResult<T>> loggingHandler(final String label)
-    {
+    private <T> Handler<AsyncResult<T>> loggingHandler(final String label) {
         return loggingHandler(label, null);
     }
 
-    private <T> Handler<AsyncResult<T>> loggingHandler(final String label, final Handler<AsyncResult<?>> delegate)
-    {
+    private <T> Handler<AsyncResult<T>> loggingHandler(final String label, final Handler<AsyncResult<?>> delegate) {
         return result -> {
             if (result.succeeded()) {
                 LOG.info("{} [{}]", label, tenantId);

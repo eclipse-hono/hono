@@ -46,13 +46,11 @@ public abstract class BaseEndpoint implements Endpoint{
      * 
      * @param vertx the Vertx instance to use for accessing the event bus.
      */
-    protected BaseEndpoint(final Vertx vertx)
-    {
+    protected BaseEndpoint(final Vertx vertx) {
         this(vertx, false, 0);
     }
 
-    protected BaseEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceNo)
-    {
+    protected BaseEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceNo) {
         this.vertx = Objects.requireNonNull(vertx);
         this.singleTenant = singleTenant;
         this.instanceNo = instanceNo;
@@ -125,8 +123,7 @@ public abstract class BaseEndpoint implements Endpoint{
         }
     }
 
-    protected final void checkPermission(final ResourceIdentifier resource, final Handler<Boolean> permissionCheckHandler)
-    {
+    protected final void checkPermission(final ResourceIdentifier resource, final Handler<Boolean> permissionCheckHandler) {
         final JsonObject authMsg = new JsonObject();
         // TODO how to obtain subject information?
         authMsg.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);

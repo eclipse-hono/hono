@@ -91,8 +91,7 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         stopFuture.complete();
     }
 
-    protected void reply(final Message<JsonObject> msg, final int status)
-    {
+    protected void reply(final Message<JsonObject> msg, final int status) {
         final JsonObject body = msg.body();
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);

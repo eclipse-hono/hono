@@ -23,36 +23,30 @@ public class AccessControlList
 {
     private final Map<String, AclEntry> entries = new HashMap<>();
 
-    public AccessControlList(final AclEntry... aclEntries)
-    {
+    public AccessControlList(final AclEntry... aclEntries) {
         Stream.of(aclEntries).forEach(e -> entries.put(e.getAuthSubject(), e));
     }
 
-    public AclEntry getAclEntry(final String subject)
-    {
+    public AclEntry getAclEntry(final String subject) {
         return entries.get(subject);
     }
 
-    public boolean hasPermission(final String subject, final Permission permission)
-    {
+    public boolean hasPermission(final String subject, final Permission permission) {
         return Optional.ofNullable(entries.get(subject)).map(entry -> entry.getPermissions().contains(permission))
                 .orElse(false);
     }
 
-    public void setAclEntry(final AclEntry aclEntry)
-    {
+    public void setAclEntry(final AclEntry aclEntry) {
         entries.put(aclEntry.getAuthSubject(), aclEntry);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "AccessControlList{" + "entries=" + entries + '}';
     }
 
     @Override
-    public boolean equals(final Object o)
-    {
+    public boolean equals(final Object o) {
         if (this == o)
             return true;
         if (o == null || getClass() != o.getClass())
@@ -65,8 +59,7 @@ public class AccessControlList
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return entries.hashCode();
     }
 }
