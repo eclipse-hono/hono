@@ -16,6 +16,7 @@ import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_TENANT_ID;
 import static org.eclipse.hono.util.MessageHelper.getApplicationProperty;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -38,18 +39,23 @@ public final class RegistrationConstants {
     public static final String ACTION_DEREGISTER = "deregister";
 
     /* message fields */
-    public static final String APP_PROPERTY_MESSAGE_ID = "message-id";
-    public static final String APP_PROPERTY_ACTION     = "action";
-    public static final String APP_PROPERTY_STATUS     = "status";
+    public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
+    public static final String APP_PROPERTY_ACTION               = "action";
+    public static final String APP_PROPERTY_STATUS               = "status";
 
-    public static final String REGISTRATION_ENDPOINT = "registration";
-    public static final String PATH_SEPARATOR = "/";
+    public static final String REGISTRATION_ENDPOINT             = "registration";
+    public static final String PATH_SEPARATOR                    = "/";
     public static final String NODE_ADDRESS_REGISTRATION_PREFIX  = REGISTRATION_ENDPOINT + PATH_SEPARATOR;
 
     /**
      * The vert.x event bus address to which inbound registration messages are published.
      */
     public static final String EVENT_BUS_ADDRESS_REGISTRATION_IN = "registration.in";
+
+
+    private RegistrationConstants() {
+        // prevent instantiation
+    }
 
     public static JsonObject getRegistrationMsg(final Message message) {
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
@@ -70,13 +76,13 @@ public final class RegistrationConstants {
         final String tenantId = message.body().getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = message.body().getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
         final String status = message.body().getString(RegistrationConstants.APP_PROPERTY_STATUS);
-        final String messageId = message.body().getString(RegistrationConstants.APP_PROPERTY_MESSAGE_ID);
-        return getAmqpReply(status, messageId, tenantId, deviceId);
+        final String correlationId = message.body().getString(RegistrationConstants.APP_PROPERTY_CORRELATION_ID);
+        return getAmqpReply(status, correlationId, tenantId, deviceId);
     }
 
-    public static Message getAmqpReply(final String status, final String messageId, final String tenantId, final String deviceId) {
+    public static Message getAmqpReply(final String status, final String correlationId, final String tenantId, final String deviceId) {
 
-        final HashMap<String, String> map = new HashMap<>();
+        final Map<String, String> map = new HashMap<>();
         map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         map.put(APP_PROPERTY_STATUS, status);
@@ -86,7 +92,7 @@ public final class RegistrationConstants {
 
         final Message message = ProtonHelper.message();
         message.setMessageId(UUID.randomUUID().toString());
-        message.setCorrelationId(messageId);
+        message.setCorrelationId(correlationId);
         message.setApplicationProperties(applicationProperties);
         message.setAddress(address.toString());
         return message;
@@ -103,8 +109,5 @@ public final class RegistrationConstants {
     private static String getAction(final Message msg) {
         Objects.requireNonNull(msg);
         return (String) getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_ACTION);
-    }
-
-    private RegistrationConstants() {
     }
 }

@@ -11,13 +11,11 @@
  */
 package org.eclipse.hono.registration.impl;
 
-import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_MESSAGE_ID;
+import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_CORRELATION_ID;
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
 import static org.eclipse.hono.util.MessageHelper.getLinkName;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -45,8 +43,6 @@ import io.vertx.proton.impl.ProtonReceiverImpl;
 public final class RegistrationEndpoint extends BaseEndpoint {
 
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationEndpoint.class);
-
-    private Map<String, ProtonSender> replySenderMap = new HashMap<>();
 
     public RegistrationEndpoint(final Vertx vertx, final boolean singleTenant) {
         super(Objects.requireNonNull(vertx), singleTenant, 0);
@@ -136,7 +132,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                                 final String replyTo = msg.getReplyTo();
                                 if (replyTo != null) {
                                     final JsonObject message = (JsonObject) result.result().body();
-                                    message.put(APP_PROPERTY_MESSAGE_ID, msg.getMessageId());
+                                    message.put(APP_PROPERTY_CORRELATION_ID, createCorrelationId(msg));
                                     vertx.eventBus().send(replyTo, message);
                                 } else {
                                     LOG.debug("No reply-to address provided, cannot send reply to client.");
@@ -148,5 +144,20 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                 LOG.debug("client is not authorized to register devices at [{}]", messageAddress);
             }
         });
+    }
+
+    private Object createCorrelationId(final Message request) {
+        Object correlationId = null;
+        if (request.getMessageId() instanceof String) {
+            String id = (String) request.getMessageId();
+            if (id.startsWith("ID:")) {
+                correlationId = id.substring(3);
+            } else {
+                correlationId = id;
+            }
+        } else {
+            correlationId = request.getMessageId();
+        }
+        return correlationId;
     }
 }
