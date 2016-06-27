@@ -71,9 +71,6 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
             reply(regMsg, HTTP_BAD_REQUEST);
             LOGGER.info("Action {} not supported.", action);
         }
-
-        LOGGER.debug("Registered devices for {}: {}", tenantId,
-                deviceMap.get(tenantId) != null ? deviceMap.get(tenantId).toArray() : "<empty>");
     }
 
     private int getDevice(final String tenantId, final String deviceId) {

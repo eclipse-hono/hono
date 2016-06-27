@@ -111,6 +111,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
 
         sender.closeHandler(closed -> {
             replyConsumer.unregister();
+            closed.result().close();
             LOG.debug("Receiver closed link {}, removing associated event bus consumer {}", linkName, replyConsumer.address());
         });
 
