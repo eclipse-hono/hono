@@ -42,22 +42,24 @@ import io.vertx.proton.ProtonSender;
  */
 public class TelemetryClient {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TelemetryClient.class);
     public static final String SENDER_TARGET_ADDRESS = "telemetry/%s";
     public static final String REGISTRATION_TARGET_ADDRESS = "registration/%s";
     public static final String REGISTRATION_REPLY_ADDRESS = "registration/%s/"+ UUID.randomUUID().toString();
     public static final String RECEIVER_SOURCE_ADDRESS = "telemetry/%s";
     public static final int DEFAULT_RECEIVER_CREDITS = 20;
 
+    private static final String PROPERTY_NAME_DEVICE_ID = "device_id";
+    private static final Logger LOG = LoggerFactory.getLogger(TelemetryClient.class);
+
     private final Vertx                               vertx;
     private final CompletableFuture<ProtonConnection> connection;
-    private final Future<ProtonSender> telemetrySender    = Future.future();
-    private final Future<ProtonSender> registrationSender = Future.future();
-    private final Map<String, Future<Integer>> replyMap = new HashMap<>();
-    private final AtomicLong           messageTagCounter  = new AtomicLong();
-    private final String host;
-    private final int    port;
-    private final String tenantId;
+    private final Future<ProtonSender>                telemetrySender    = Future.future();
+    private final Future<ProtonSender>                registrationSender = Future.future();
+    private final Map<String, Future<Integer>>        replyMap = new HashMap<>();
+    private final AtomicLong                          messageTagCounter  = new AtomicLong();
+    private final String                              host;
+    private final int                                 port;
+    private final String                              tenantId;
 
     /**
      * Instantiates a new TelemetryClient.
@@ -170,8 +172,7 @@ public class TelemetryClient {
 
     public Future<Void> createReceiver(final Consumer<Message> consumer, final String receiverAddress) {
         final Future<Void> future = Future.future();
-        connection.thenAccept(connection ->
-        {
+        connection.thenAccept(connection -> {
             final String address = String.format(receiverAddress, tenantId);
             LOG.info("creating receiver at [{}]", address);
             connection.createReceiver(address)
@@ -201,7 +202,7 @@ public class TelemetryClient {
 
         final Message msg = ProtonHelper.message(body);
         final Map<String, String> properties = new HashMap<>();
-        properties.put("device_id", deviceId);
+        properties.put(PROPERTY_NAME_DEVICE_ID, deviceId);
         msg.setApplicationProperties(new ApplicationProperties(properties));
         telemetrySender.result().send(msg);
     }
@@ -213,7 +214,7 @@ public class TelemetryClient {
         final String messageId = "msg-" + messageTagCounter.getAndIncrement();
         final Message msg = ProtonHelper.message();
         final Map<String, String> properties = new HashMap<>();
-        properties.put("device_id", deviceId);
+        properties.put(PROPERTY_NAME_DEVICE_ID, deviceId);
         properties.put("action", "register");
         msg.setApplicationProperties(new ApplicationProperties(properties));
         msg.setReplyTo(String.format(REGISTRATION_REPLY_ADDRESS, tenantId));
