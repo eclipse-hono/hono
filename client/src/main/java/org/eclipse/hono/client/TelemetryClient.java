@@ -42,12 +42,13 @@ import io.vertx.proton.ProtonSender;
  */
 public class TelemetryClient {
 
-    public static final String SENDER_TARGET_ADDRESS = "telemetry/%s";
+    public static final String SENDER_TARGET_ADDRESS       = "telemetry/%s";
     public static final String REGISTRATION_TARGET_ADDRESS = "registration/%s";
-    public static final String REGISTRATION_REPLY_ADDRESS = "registration/%s/"+ UUID.randomUUID().toString();
-    public static final String RECEIVER_SOURCE_ADDRESS = "telemetry/%s";
-    public static final int DEFAULT_RECEIVER_CREDITS = 20;
+    public static final String REGISTRATION_REPLY_ADDRESS  = "registration/%s/"+ UUID.randomUUID().toString();
+    public static final String RECEIVER_SOURCE_ADDRESS     = "telemetry/%s";
+    public static final int    DEFAULT_RECEIVER_CREDITS    = 20;
 
+    private static final String PROPERTY_NAME_ACTION    = "action";
     private static final String PROPERTY_NAME_DEVICE_ID = "device_id";
     private static final Logger LOG = LoggerFactory.getLogger(TelemetryClient.class);
 
@@ -215,7 +216,7 @@ public class TelemetryClient {
         final Message msg = ProtonHelper.message();
         final Map<String, String> properties = new HashMap<>();
         properties.put(PROPERTY_NAME_DEVICE_ID, deviceId);
-        properties.put("action", "register");
+        properties.put(PROPERTY_NAME_ACTION, "register");
         msg.setApplicationProperties(new ApplicationProperties(properties));
         msg.setReplyTo(String.format(REGISTRATION_REPLY_ADDRESS, tenantId));
         msg.setMessageId(messageId);

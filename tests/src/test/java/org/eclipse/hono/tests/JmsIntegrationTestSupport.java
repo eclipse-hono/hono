@@ -52,8 +52,7 @@ public class JmsIntegrationTestSupport {
     public static final String         TEST_TENANT_ID = "tenant";
 
     /* test constants */
-    private static final String        URI_HONO = "amqp://" + HONO_HOST + ":" + HONO_PORT;
-    private static final String        URI_QDR = "amqp://" + QPID_HOST + ":" + QPID_PORT;
+    private static final String        AMQP_URI_PATTERN = "amqp://%s:%d?jms.connectionIDPrefix=CON%s";
     private static final Logger        LOG = LoggerFactory.getLogger(JmsIntegrationTestSupport.class);
 
     public static final String         REGISTRATION_ADDRESS = "registration/" + TEST_TENANT_ID; // + ";{reliability:at-least-once}";
@@ -123,7 +122,7 @@ public class JmsIntegrationTestSupport {
         MessageConsumer registrationConsumer = session.createConsumer(REGISTRATION_REPLY_DESTINATION);
         registrationConsumer.setMessageListener(resp -> {
             try {
-                LOG.debug("received registration response: {}", getLogMessage(resp));
+                LOG.debug("received registration response from Hono: {}", getLogMessage(resp));
                 String correlationId = resp.getJMSCorrelationID();
                 if (messageId.get().equals(correlationId)) {
                     if (responseListener != null) {
@@ -164,9 +163,8 @@ public class JmsIntegrationTestSupport {
     private void createContext() throws NamingException {
         final Hashtable<Object, Object> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
-        env.put("connectionfactory.hono", URI_HONO);
-        env.put("connectionfactory.qdr", URI_QDR);
-        env.put("jms.prefetchPolicy.queuePrefetch", 10);
+        env.put("connectionfactory.hono", String.format(AMQP_URI_PATTERN, HONO_HOST, HONO_PORT, ""));
+        env.put("connectionfactory.qdr", String.format(AMQP_URI_PATTERN, QPID_HOST, QPID_PORT, "&jms.prefetchPolicy.queuePrefetch=10"));
 
         ctx = new InitialContext(env);
     }
@@ -180,7 +178,6 @@ public class JmsIntegrationTestSupport {
 
     Message newRegistrationMessage(final String action, final String deviceId) throws JMSException {
          final BytesMessage message = session.createBytesMessage();
-//         message.setJMSMessageID(UUID.randomUUID().toString());
          message.setStringProperty(APP_PROPERTY_DEVICE_ID, deviceId);
          message.setStringProperty(APP_PROPERTY_ACTION, action);
          message.setJMSReplyTo(JmsIntegrationTestSupport.REGISTRATION_REPLY_DESTINATION);

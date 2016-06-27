@@ -25,7 +25,6 @@
 
    <properties>
       <qpid-dispatch.version>0.6.0-rc4</qpid-dispatch.version>
-      <hono-server.version>${project.version}</hono-server.version>
    </properties>
 
    <dependencies>
@@ -40,7 +39,7 @@
      <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-server</artifactId>
-        <version>${hono-server.version}</version>
+        <version>${project.version}</version>
      </dependency>
      <dependency>
        <groupId>io.vertx</groupId>
@@ -136,7 +135,7 @@
                         <!-- ##### Hono server ##### -->
                         <image>
                            <alias>hono-server</alias>
-                           <name>eclipsehono/server:${hono-server.version}</name>
+                           <name>eclipsehono/server:${project.version}</name>
                            <run>
                               <ports>
                                  <port>+hono.ip:hono.amqp.port:5672</port>

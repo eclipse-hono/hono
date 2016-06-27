@@ -146,17 +146,12 @@ public final class RegistrationEndpoint extends BaseEndpoint {
         });
     }
 
-    private Object createCorrelationId(final Message request) {
-        Object correlationId = null;
+    private String createCorrelationId(final Message request) {
+        String correlationId = null;
         if (request.getMessageId() instanceof String) {
-            String id = (String) request.getMessageId();
-            if (id.startsWith("ID:")) {
-                correlationId = id.substring(3);
-            } else {
-                correlationId = id;
-            }
+           correlationId = (String) request.getMessageId();
         } else {
-            correlationId = request.getMessageId();
+            correlationId = request.getMessageId().toString();
         }
         return correlationId;
     }
