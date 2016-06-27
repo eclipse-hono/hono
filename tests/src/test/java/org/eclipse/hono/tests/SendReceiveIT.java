@@ -13,25 +13,17 @@ package org.eclipse.hono.tests;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.Hashtable;
 import java.util.LongSummaryStatistics;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
 import javax.jms.DeliveryMode;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
-import javax.jms.Session;
-import javax.jms.TextMessage;
-import javax.naming.Context;
-import javax.naming.InitialContext;
 
-import org.apache.qpid.jms.JmsQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,45 +37,18 @@ public class SendReceiveIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(SendReceiveIT.class);
 
-    /* connection parameters */
-    public static final String HONO_HOST = System.getProperty("hono.host", "localhost");
-    public static final int HONO_PORT = Integer.getInteger("hono.amqp.port", 5672);
-    public static final String QPID_HOST = System.getProperty("qpid.host", "localhost");
-    public static final int QPID_PORT = Integer.getInteger("qpid.amqp.port", 15672);
-    private final String receiverURI = "amqp://" + QPID_HOST + ":" + QPID_PORT;
-    private final String senderURI = "amqp://" + HONO_HOST + ":" + HONO_PORT;
-
     /* test constants */
     private static final int COUNT = Integer.getInteger("messages.count", 1000);
-    private static final String TEST_TENANT_ID = "tenant";
     private static final int DELIVERY_MODE = DeliveryMode.NON_PERSISTENT;
-    private static final JmsQueue DESTINATION = new JmsQueue("telemetry/" + TEST_TENANT_ID);
-
-    private Connection receiver;
-    private Connection sender;
+    private static final String DEVICE_ID = "4711";
+    private JmsIntegrationTestSupport receiver;
+    private JmsIntegrationTestSupport sender;
 
     @Before
     public void init() throws Exception {
 
-        final Hashtable<Object, Object> env = new Hashtable<>();
-        env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
-        env.put("connectionfactory.hono", senderURI);
-        env.put("connectionfactory.qdr", receiverURI);
-        env.put("jms.prefetchPolicy.queuePrefetch", 10);
-
-        final Context context = new InitialContext(env);
-        final ConnectionFactory senderFactory = (ConnectionFactory) context.lookup("hono");
-        final ConnectionFactory receiverFactory = (ConnectionFactory) context.lookup("qdr");
-
-        receiver = receiverFactory.createConnection();
-        receiver.setExceptionListener(e -> LOG.error("Connection ExceptionListener fired.", e));
-        receiver.setClientID("telemetry-receiver");
-        receiver.start();
-
-        sender = senderFactory.createConnection();
-        sender.setExceptionListener(e -> LOG.error("Connection ExceptionListener fired.", e));
-        sender.setClientID("telemetry-sender");
-        sender.start();
+        sender = JmsIntegrationTestSupport.newClient("hono");
+        receiver = JmsIntegrationTestSupport.newClient("qdr");
     }
 
     @After
@@ -98,48 +63,48 @@ public class SendReceiveIT {
     }
 
     @Test
-    public void testTelemetryUpload() throws Exception
-    {
+    public void testTelemetryUpload() throws Exception {
+
         final CountDownLatch latch = new CountDownLatch(COUNT);
         final LongSummaryStatistics stats = new LongSummaryStatistics();
 
         // prepare consumer
-        final Session receiverSession = receiver.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        final MessageConsumer messageConsumer = receiverSession.createConsumer(DESTINATION);
+        final MessageConsumer messageConsumer = receiver.getTelemetryConsumer();
 
         messageConsumer.setMessageListener(message -> {
             latch.countDown();
             final long count = latch.getCount();
             gatherStatistics(stats, message);
             if (count % 100 == 0) {
-                LOG.debug("Received {} messages.", COUNT - count);
+                LOG.trace("Received {} messages.", COUNT - count);
             }
         });
 
-        // prepare sender
-        final Session senderSession = sender.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        final MessageProducer messageProducer = senderSession.createProducer(DESTINATION);
+        final MessageProducer messageProducer = sender.getTelemetryProducer();
 
-        // and send messages
-        IntStream.range(0, COUNT).forEach(i -> {
-            try {
-                final TextMessage message = senderSession.createTextMessage("Text!");
-                message.setStringProperty(org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID, "device" + i);
-                message.setJMSTimestamp(System.currentTimeMillis());
-                messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
+        sender.registerDevice(DEVICE_ID, resp -> {
 
-                if (i % 100 == 0) {
-                    LOG.debug("Sent message {}", i);
-                }
-            }
-            catch (final JMSException e) {
-                LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
+            if (JmsIntegrationTestSupport.hasStatus(resp, 200)) {
+                // and send messages
+                IntStream.range(0, COUNT).forEach(i -> {
+                    try {
+                        final Message message = sender.newTextMessage("msg " + i, DEVICE_ID);
+                        message.setJMSTimestamp(System.currentTimeMillis());
+                        messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
+        
+                        if (i % 100 == 0) {
+                            LOG.trace("Sent message {}", i);
+                        }
+                    }
+                    catch (final JMSException e) {
+                        LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
+                    }
+                });
             }
         });
-
         // wait for messages to arrive
         assertTrue("Did not receive " + COUNT + " messages within timeout.", latch.await(10, TimeUnit.SECONDS));
-        LOG.info("Delivery statistics: {}", stats);
+        LOG.debug("Delivery statistics: {}", stats);
     }
 
     private void gatherStatistics(final LongSummaryStatistics stats, final Message message) {
@@ -147,7 +112,7 @@ public class SendReceiveIT {
             final long duration = System.currentTimeMillis() - message.getJMSTimestamp();
             stats.accept(duration);
         } catch (final JMSException e) {
-            LOG.info("Failed to get timestamp from message: {}", e.getMessage());
+            LOG.error("Failed to get timestamp from message: {}", e.getMessage());
         }
     }
 }

@@ -44,6 +44,7 @@ public class TelemetryClientIT {
     /* test constants */
     public static final int MSG_COUNT = 10;
     public static final String TEST_TENANT_ID = "tenant";
+    public static final String DEVICE_ID = "device-0";
 
     private TelemetryClient sender;
     private TelemetryClient receiver;
@@ -69,11 +70,15 @@ public class TelemetryClientIT {
     public void testSendingMessages(final TestContext ctx) throws Exception {
 
         final Async received = ctx.async(MSG_COUNT);
-        receiver.createReceiver(message -> {
-            LOGGER.debug("Received " + message);
-            received.countDown();
-        }).setHandler(r -> {
-            IntStream.range(0, MSG_COUNT).forEach(i -> sender.send("device" + i, "payload" + i));
+
+        sender.register(DEVICE_ID).setHandler(registration -> {
+            ctx.assertTrue(registration.succeeded());
+            receiver.createReceiver(message -> {
+                LOGGER.info("Received " + message);
+                received.countDown();
+            }).setHandler(ok -> {
+                IntStream.range(0, MSG_COUNT).forEach(i -> sender.send(DEVICE_ID, "payload" + i));
+            });
         });
 
         received.awaitSuccess(5000);
