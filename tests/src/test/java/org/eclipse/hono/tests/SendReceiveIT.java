@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.tests;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertTrue;
 
 import java.util.LongSummaryStatistics;
@@ -43,17 +44,22 @@ public class SendReceiveIT {
     private static final String DEVICE_ID = "4711";
     private JmsIntegrationTestSupport receiver;
     private JmsIntegrationTestSupport sender;
+    private RegistrationTestSupport registration;
 
     @Before
     public void init() throws Exception {
 
         sender = JmsIntegrationTestSupport.newClient("hono");
         receiver = JmsIntegrationTestSupport.newClient("qdr");
+        registration = sender.getRegistrationTestSupport();
     }
 
     @After
     public void after() throws Exception {
         LOG.info("closing JMS connections...");
+        if (registration != null) {
+            registration.close();
+        }
         if (receiver != null) {
             receiver.close();
         }
@@ -82,25 +88,22 @@ public class SendReceiveIT {
 
         final MessageProducer messageProducer = sender.getTelemetryProducer();
 
-        sender.registerDevice(DEVICE_ID, resp -> {
+        registration.register(DEVICE_ID, HTTP_OK).thenRun(() -> {
+            // and send messages
+            IntStream.range(0, COUNT).forEach(i -> {
+                try {
+                    final Message message = sender.newTextMessage("msg " + i, DEVICE_ID);
+                    message.setJMSTimestamp(System.currentTimeMillis());
+                    messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
-            if (JmsIntegrationTestSupport.hasStatus(resp, 200)) {
-                // and send messages
-                IntStream.range(0, COUNT).forEach(i -> {
-                    try {
-                        final Message message = sender.newTextMessage("msg " + i, DEVICE_ID);
-                        message.setJMSTimestamp(System.currentTimeMillis());
-                        messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
-        
-                        if (i % 100 == 0) {
-                            LOG.trace("Sent message {}", i);
-                        }
+                    if (i % 100 == 0) {
+                        LOG.trace("Sent message {}", i);
                     }
-                    catch (final JMSException e) {
-                        LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
-                    }
-                });
-            }
+                }
+                catch (final JMSException e) {
+                    LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
+                }
+            });
         });
         // wait for messages to arrive
         assertTrue("Did not receive " + COUNT + " messages within timeout.", latch.await(10, TimeUnit.SECONDS));
