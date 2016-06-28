@@ -44,7 +44,6 @@ public class TelemetryClient {
 
     public static final String SENDER_TARGET_ADDRESS       = "telemetry/%s";
     public static final String REGISTRATION_TARGET_ADDRESS = "registration/%s";
-    public static final String REGISTRATION_REPLY_ADDRESS  = "registration/%s/"+ UUID.randomUUID().toString();
     public static final String RECEIVER_SOURCE_ADDRESS     = "telemetry/%s";
     public static final int    DEFAULT_RECEIVER_CREDITS    = 20;
 
@@ -61,6 +60,7 @@ public class TelemetryClient {
     private final String                              host;
     private final int                                 port;
     private final String                              tenantId;
+    private final String                              registrationReplyAddress;
 
     /**
      * Instantiates a new TelemetryClient.
@@ -70,17 +70,18 @@ public class TelemetryClient {
      * @param tenantId the ID of the tenant for which this client instance sends/receives messages
      */
     public TelemetryClient(final String host, final int port, final String tenantId) {
-        this.host = host;
-        this.port = port;
-        this.tenantId = tenantId;
-        vertx = Vertx.vertx();
-        connection = new CompletableFuture<>();
-        connection.whenComplete((o,t) -> {
-            if (t != null) {
-                LOG.info("Connection to Hono ({}:{}) failed.", host, port, t);
-            }
-        });
-        connectToHono(new ProtonClientOptions());
+        this(host, port, tenantId, new ProtonClientOptions());
+//        this.host = host;
+//        this.port = port;
+//        this.tenantId = tenantId;
+//        vertx = Vertx.vertx();
+//        connection = new CompletableFuture<>();
+//        connection.whenComplete((o,t) -> {
+//            if (t != null) {
+//                LOG.info("Connection to Hono ({}:{}) failed.", host, port, t);
+//            }
+//        });
+//        connectToHono(new ProtonClientOptions());
     }
 
     /**
@@ -95,6 +96,7 @@ public class TelemetryClient {
         this.host = host;
         this.port = port;
         this.tenantId = tenantId;
+        registrationReplyAddress = REGISTRATION_TARGET_ADDRESS + "/" + UUID.randomUUID().toString();
         vertx = Vertx.vertx();
         connection = new CompletableFuture<>();
         connection.whenComplete((o,t) -> {
@@ -132,7 +134,7 @@ public class TelemetryClient {
                 } else {
                     LOG.info("No handler registered for {}", message.getCorrelationId());
                 }
-            }, REGISTRATION_REPLY_ADDRESS);
+            }, registrationReplyAddress);
         });
     }
 
@@ -218,7 +220,7 @@ public class TelemetryClient {
         properties.put(PROPERTY_NAME_DEVICE_ID, deviceId);
         properties.put(PROPERTY_NAME_ACTION, "register");
         msg.setApplicationProperties(new ApplicationProperties(properties));
-        msg.setReplyTo(String.format(REGISTRATION_REPLY_ADDRESS, tenantId));
+        msg.setReplyTo(String.format(registrationReplyAddress, tenantId));
         msg.setMessageId(messageId);
         final Future<Integer> response = Future.future();
         replyMap.put(messageId, response);
