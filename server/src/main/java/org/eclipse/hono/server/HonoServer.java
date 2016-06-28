@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
@@ -33,10 +34,12 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
+import io.vertx.proton.ProtonSession;
 
 /**
  * The Hono server is an AMQP 1.0 container that provides endpoints for the <em>Telemetry</em>,
@@ -171,7 +174,7 @@ public final class HonoServer extends AbstractVerticle {
 
     void helloProcessConnection(final ProtonConnection connection) {
         connection.setContainer(String.format("Hono-%s:%d-%d", this.bindAddress, server.actualPort(), instanceNo));
-        connection.sessionOpenHandler(session -> session.open());
+        connection.sessionOpenHandler(session -> handleSessionOpen(session));
         connection.receiverOpenHandler(openedReceiver -> handleReceiverOpen(connection, openedReceiver));
         connection.senderOpenHandler(openedSender -> handleSenderOpen(connection, openedSender));
         connection.disconnectHandler(HonoServer::handleDisconnected);
@@ -180,6 +183,14 @@ public final class HonoServer extends AbstractVerticle {
             LOG.debug("Client [{}:{}] connected", connection.getRemoteHostname(), connection.getRemoteContainer());
         });
         connection.open();
+    }
+
+    private void handleSessionOpen(final ProtonSession session) {
+        session.closeHandler(sessionResult -> {
+            if (sessionResult.succeeded()) {
+                sessionResult.result().close();
+            }
+        }).open();
     }
 
     private static void handleConnectionClosed(AsyncResult<ProtonConnection> res) {
@@ -215,11 +226,12 @@ public final class HonoServer extends AbstractVerticle {
                         endpoint.onLinkAttach(receiver, targetResource);
                     } else {
                         LOG.debug("client is not authorized to attach to endpoint [{}], closing link", targetResource);
-                        receiver.close();
+                        receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "client is not authorized to attach to endpoint " + targetResource))
+                                .close();
                     }
                 });
             }
-        } catch (IllegalArgumentException e) {
+        } catch (final IllegalArgumentException e) {
             LOG.debug("client has provided invalid resource identifier as target address", e);
             receiver.close();
         }
@@ -249,7 +261,9 @@ public final class HonoServer extends AbstractVerticle {
                         endpoint.onLinkAttach(sender, targetResource);
                     } else {
                         LOG.debug("client is not authorized to attach to endpoint [{}], closing link", targetResource);
-                        sender.close();
+                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(),
+                                "client is not authorized to attach to endpoint " + targetResource))
+                                .close();
                     }
                 });
             }
