@@ -24,6 +24,7 @@ import org.eclipse.hono.telemetry.TelemetryAdapter;
 import org.eclipse.hono.util.ComponentFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
@@ -32,14 +33,21 @@ import org.springframework.context.annotation.Configuration;
 import io.vertx.core.Vertx;
 
 /**
- * The Spring Boot main application class.
- *
+ * The Hono server main application class.
+ * <p>
+ * This class uses Spring Boot for configuring and wiring up Hono's components (Verticles).
+ * By default there will be as many instances of each verticle created as there are CPU cores
+ * available. The {@code hono.maxinstances} config property can be used to set the maximum number
+ * of instances to create. This may be useful for executing tests etc.
+ * </p>
  */
 @ComponentScan
 @Configuration
 @EnableAutoConfiguration
 public class Application {
 
+    @Value(value = "${hono.maxinstances}")
+    private int                                    maxInstances;
     @Autowired
     private Vertx                                  vertx;
     @Autowired
@@ -59,6 +67,9 @@ public class Application {
             throw new IllegalStateException("no Vert.x instance has been configured");
         }
         int instanceCount = Runtime.getRuntime().availableProcessors();
+        if (maxInstances > 0 && maxInstances < instanceCount) {
+            instanceCount = maxInstances;
+        }
         deployTelemetryAdapter(instanceCount);
         deployAuthorizationService(instanceCount);
         deployServer(instanceCount);
