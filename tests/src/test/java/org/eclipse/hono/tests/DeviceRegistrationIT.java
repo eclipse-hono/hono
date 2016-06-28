@@ -12,32 +12,32 @@
 package org.eclipse.hono.tests;
 
 import static org.junit.Assert.assertTrue;
+import static org.eclipse.hono.tests.JmsIntegrationTestSupport.*;
 
+import java.net.HttpURLConnection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Register some devices, send some messages.
+ * Verifies that a device can be registered with Hono using a JMS based client.
  */
 public class DeviceRegistrationIT
 {
-    private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistrationIT.class);
+    private static final String DEVICE_ID = "device12345";
 
-    JmsIntegrationTestSupport client;
+    private static JmsIntegrationTestSupport client;
 
-    @Before
-    public void init() throws Exception {
-        client = JmsIntegrationTestSupport.newClient("hono");
+    @BeforeClass
+    public static void init() throws Exception {
+        client = newClient(HONO);
     }
 
-    @After
-    public void after() throws Exception {
+    @AfterClass
+    public static void after() throws Exception {
         if (client != null) {
             client.close();
         }
@@ -48,11 +48,11 @@ public class DeviceRegistrationIT
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        client.registerDevice("device12345", message -> {
-            if (JmsIntegrationTestSupport.hasStatus(message, 200)) {
+        client.registerDevice(DEVICE_ID, result -> {
+            if (hasStatus(result, HttpURLConnection.HTTP_OK)) {
                 latch.countDown();
             }
         });
-        assertTrue("Registration request timed out", latch.await(2, TimeUnit.SECONDS));
+        assertTrue("Registration request timed out", latch.await(5, TimeUnit.SECONDS));
     }
 }

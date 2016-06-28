@@ -18,6 +18,7 @@ import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.jms.BytesMessage;
@@ -50,6 +51,8 @@ public class JmsIntegrationTestSupport {
     public static final String         QPID_HOST = System.getProperty("qpid.host", "localhost");
     public static final int            QPID_PORT = Integer.getInteger("qpid.amqp.port", 15672);
     public static final String         TEST_TENANT_ID = "tenant";
+    public static final String         HONO = "hono";
+    public static final String         DISPATCH_ROUTER = "qdr";
 
     /* test constants */
     private static final String        AMQP_URI_PATTERN = "amqp://%s:%d?jms.connectionIDPrefix=CON%s";
@@ -66,14 +69,17 @@ public class JmsIntegrationTestSupport {
     private Connection connection;
     private Session session;
     private MessageProducer registrationProducer;
+    private String name;
 
     private JmsIntegrationTestSupport() throws NamingException {
         createContext();
     }
 
     static JmsIntegrationTestSupport newClient(final String name) throws JMSException, NamingException {
+        Objects.requireNonNull(name);
         JmsIntegrationTestSupport result = new JmsIntegrationTestSupport();
         result.createSession(name);
+        result.name = name;
         return result;
     }
 
@@ -142,8 +148,8 @@ public class JmsIntegrationTestSupport {
             }
         });
         registrationProducer.send(request);
-        LOG.debug("sent registration message to Hono: {}", getLogMessage(request));
         messageId.set(request.getJMSMessageID());
+        LOG.debug("sent registration message to Hono: {}", getLogMessage(request));
         return this;
     }
 
@@ -151,7 +157,7 @@ public class JmsIntegrationTestSupport {
         try {
             int status = registrationResponse.getIntProperty(RegistrationConstants.APP_PROPERTY_STATUS);
             if (expectedStatus != status) {
-                LOG.info("unexpected registration reponse status [expected {} but got {}]", expectedStatus, status);
+                LOG.error("unexpected registration reponse status [expected {} but got {}]", expectedStatus, status);
             }
             return expectedStatus == status;
         } catch (JMSException e) {
@@ -163,15 +169,17 @@ public class JmsIntegrationTestSupport {
     private void createContext() throws NamingException {
         final Hashtable<Object, Object> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
-        env.put("connectionfactory.hono", String.format(AMQP_URI_PATTERN, HONO_HOST, HONO_PORT, ""));
-        env.put("connectionfactory.qdr", String.format(AMQP_URI_PATTERN, QPID_HOST, QPID_PORT, "&jms.prefetchPolicy.queuePrefetch=10"));
+        env.put("connectionfactory." + HONO,
+                String.format(AMQP_URI_PATTERN, HONO_HOST, HONO_PORT, ""));
+        env.put("connectionfactory." + DISPATCH_ROUTER,
+                String.format(AMQP_URI_PATTERN, QPID_HOST, QPID_PORT, "&jms.prefetchPolicy.queuePrefetch=10"));
 
         ctx = new InitialContext(env);
     }
 
     void close() throws JMSException {
         if (connection != null) {
-            LOG.info("closing JMS connections...");
+            LOG.info("closing JMS connection to {}...", name);
             connection.close();
         }
     }

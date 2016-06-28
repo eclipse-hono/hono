@@ -42,7 +42,7 @@ public class TelemetryClientIT {
     public static final int QPID_PORT = Integer.getInteger("qpid.amqp.port", 15672);
 
     /* test constants */
-    public static final int MSG_COUNT = 10;
+    public static final int MSG_COUNT = 100;
     public static final String TEST_TENANT_ID = "tenant";
     public static final String DEVICE_ID = "device-0";
 
@@ -73,8 +73,9 @@ public class TelemetryClientIT {
 
         sender.register(DEVICE_ID).setHandler(registration -> {
             ctx.assertTrue(registration.succeeded());
+            ctx.assertEquals(200, registration.result());
             receiver.createReceiver(message -> {
-                LOGGER.info("Received " + message);
+                LOGGER.debug("Received " + message);
                 received.countDown();
             }).setHandler(ok -> {
                 IntStream.range(0, MSG_COUNT).forEach(i -> sender.send(DEVICE_ID, "payload" + i));

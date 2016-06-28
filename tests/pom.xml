@@ -157,7 +157,7 @@
                                  </from>
                               </volumes>
                               <wait>
-                                 <time>5000</time>
+                                 <log>^.*(connection to downstream container).*(open)$</log>
                               </wait>
                            </run>
                         </image>
