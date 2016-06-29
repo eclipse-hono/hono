@@ -11,6 +11,8 @@
  */
 package org.eclipse.hono.registration.impl;
 
+import static io.vertx.proton.ProtonHelper.condition;
+import static org.apache.qpid.proton.amqp.transport.AmqpError.UNAUTHORIZED_ACCESS;
 import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_CORRELATION_ID;
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
@@ -18,6 +20,7 @@ import static org.eclipse.hono.util.MessageHelper.getLinkName;
 
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.registration.RegistrationConstants;
 import org.eclipse.hono.registration.RegistrationMessageFilter;
@@ -35,7 +38,6 @@ import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
-import io.vertx.proton.impl.ProtonReceiverImpl;
 
 /**
  * A Hono {@code Endpoint} for managing devices.
@@ -59,59 +61,52 @@ public final class RegistrationEndpoint extends BaseEndpoint {
 
     @Override
     public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
-        if (ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
-            LOG.debug("client wants to use AT LEAST ONCE delivery mode, ignoring ...");
+        if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
+            LOG.debug("client wants to use AT MOST ONCE delivery mode for registration endpoint, this is not supported.");
+            receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(),
+                    "AT MOST ONCE is not supported by this endpoint."));
+            receiver.close();
         }
-        final ProtonReceiverImpl receiverImpl = (ProtonReceiverImpl) receiver;
 
-        receiver.closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
-                .handler((delivery, message) -> {
-
-                    LOG.debug("incoming message [{}]: {}", receiverImpl.getName(), message);
-                    LOG.debug("app properties: {}", message.getApplicationProperties());
-
+        receiver.handler((delivery, message) -> {
                     if (RegistrationMessageFilter.verify(targetAddress, message)) {
                         sendRegistrationData(delivery, message);
                     } else {
                         onLinkDetach(receiver);
                     }
-                }).open();
+                })
+                .closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
+                .open();
 
-        LOG.debug("registering new link for client [{}]", receiverImpl.getName());
+        LOG.debug("registering new link for client [{}]", MessageHelper.getLinkName(receiver));
     }
 
     @Override
     public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
 
-        final org.apache.qpid.proton.amqp.messaging.Source source = (org.apache.qpid.proton.amqp.messaging.Source) sender.getSource();
 
+        /* note: we "misuse" deviceId part of the resource as reply address here */
         if (targetResource.getDeviceId() == null) {
             LOG.debug("Client must provide a reply address e.g. registration/<tenant>/1234-abc");
-            sender.setCondition(ProtonHelper.condition("amqp:invalid-field", "link target must have the following format registration/<tenant>/<reply-address>"));
+            sender.setCondition(condition("amqp:invalid-field", "link target must have the following format registration/<tenant>/<reply-address>"));
             sender.close();
+        } else {
+            final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(targetResource.toString(), message -> {
+                // TODO check for correct session here...?
+                LOG.trace("Forwarding reply to client: {}", message.body());
+                final Message amqpReply = RegistrationConstants.getAmqpReply(message);
+                sender.send(amqpReply);
+            });
+
+            sender.closeHandler(senderClosed -> {
+                replyConsumer.unregister();
+                senderClosed.result().close();
+                final String linkName = MessageHelper.getLinkName(sender);
+                LOG.debug("Receiver closed link {}, removing associated event bus consumer {}", linkName, replyConsumer.address());
+            });
+
+            sender.open();
         }
-
-        final String linkName = MessageHelper.getLinkName(sender);
-        LOG.info("link: {}", linkName);
-        LOG.info("source: {}", sender.getSource());
-        LOG.info("remote source: {}", sender.getRemoteSource());
-        LOG.info("target: {}", sender.getTarget());
-        LOG.info("remote target: {}", sender.getRemoteTarget());
-
-        final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(source.getAddress(), message -> {
-            // TODO check for correct session here...?
-            LOG.trace("Forwarding reply to client: {}", message.body());
-            final Message amqpReply = RegistrationConstants.getAmqpReply(message);
-            sender.send(amqpReply);
-        });
-
-        sender.closeHandler(closed -> {
-            replyConsumer.unregister();
-            closed.result().close();
-            LOG.debug("Receiver closed link {}, removing associated event bus consumer {}", linkName, replyConsumer.address());
-        });
-
-        sender.open();
     }
 
     private void onLinkDetach(final ProtonReceiver client) {
@@ -142,6 +137,8 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                 });
             } else {
                 LOG.debug("client is not authorized to register devices at [{}]", messageAddress);
+                MessageHelper.rejected(delivery, UNAUTHORIZED_ACCESS.toString(),
+                        "client is not authorized to register devices at " + messageAddress);
             }
         });
     }

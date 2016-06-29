@@ -17,8 +17,12 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 
+import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.impl.ProtonReceiverImpl;
 import io.vertx.proton.impl.ProtonSenderImpl;
@@ -91,6 +95,13 @@ public final class MessageHelper {
             msg.setApplicationProperties(props);
         }
         props.getValue().put(key, value);
+    }
+
+    public static void rejected(final ProtonDelivery delivery, final String error, final String description) {
+        final ErrorCondition errorCondition = ProtonHelper.condition(error, description);
+        final Rejected rejected = new Rejected();
+        rejected.setError(errorCondition);
+        delivery.disposition(rejected, true);
     }
 
     /**

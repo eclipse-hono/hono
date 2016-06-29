@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import javax.jms.BytesMessage;
+import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
@@ -69,7 +70,11 @@ public class RegistrationTestSupport {
     }
 
     public void createConsumer() throws JMSException {
-        consumer = session.createConsumer(reply);
+        createConsumer(reply);
+    }
+
+    public void createConsumer(final Destination consumerDestination) throws JMSException {
+        consumer = session.createConsumer(consumerDestination);
         consumer.setMessageListener(message -> {
             final String correlationID = getCorrelationID(message);
             if (correlationID == null) {

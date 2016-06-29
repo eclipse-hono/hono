@@ -143,7 +143,7 @@ public class RegistrationTest {
 
         protonSender = connection.createSender(RegistrationConstants.NODE_ADDRESS_REGISTRATION_PREFIX + DEFAULT_TENANT);
         protonSender
-           .setQoS(ProtonQoS.AT_MOST_ONCE)
+           .setQoS(ProtonQoS.AT_LEAST_ONCE)
            .closeHandler(closed -> LOG.debug("Closed link {}...", getLinkName(closed.result())))
            .openHandler(senderOpened -> {
                ctx.assertTrue(senderOpened.succeeded());

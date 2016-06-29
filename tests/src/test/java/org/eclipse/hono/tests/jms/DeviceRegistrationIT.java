@@ -16,18 +16,22 @@ package org.eclipse.hono.tests.jms;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.TEST_TENANT_ID;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import javax.jms.Destination;
 import javax.jms.JMSSecurityException;
 
+import org.apache.qpid.jms.JmsQueue;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jms.JmsException;
 
 /**
  * Register some devices, send some messages.
@@ -93,6 +97,17 @@ public class DeviceRegistrationIT  {
             Assert.fail("Expected exception, but it worked...");
         } catch (final JMSSecurityException e) {
             LOG.info("Caught expected exception.", e);
+        }
+    }
+
+    @Test
+    public void testOpenReceiverWithInvalidReplyAddress() throws Exception {
+        final Destination invalid = new JmsQueue("registration/" + TEST_TENANT_ID);
+        try {
+            registration.createConsumer(invalid);
+            Assert.fail("Expected exception, but it worked...");
+        } catch (final JmsException e) {
+            LOG.info("Expected exception occurred.", e);
         }
     }
 }
