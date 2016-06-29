@@ -46,7 +46,7 @@ import io.vertx.core.Vertx;
 @EnableAutoConfiguration
 public class Application {
 
-    @Value(value = "${hono.maxinstances:2}")
+    @Value(value = "${hono.maxinstances:0}")
     private int                                    maxInstances;
     @Autowired
     private Vertx                                  vertx;
