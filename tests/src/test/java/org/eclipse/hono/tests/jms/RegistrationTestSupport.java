@@ -11,7 +11,7 @@
  *
  */
 
-package org.eclipse.hono.tests;
+package org.eclipse.hono.tests.jms;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;

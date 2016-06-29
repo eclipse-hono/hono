@@ -8,9 +8,10 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *
  */
 
-package org.eclipse.hono.tests;
+package org.eclipse.hono.tests.jms;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 

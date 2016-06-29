@@ -8,8 +8,9 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *
  */
-package org.eclipse.hono.tests;
+package org.eclipse.hono.tests.client;
 
 import java.util.stream.IntStream;
 

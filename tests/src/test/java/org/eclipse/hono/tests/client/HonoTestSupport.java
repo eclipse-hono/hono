@@ -9,7 +9,7 @@
  * Contributors:
  *    Red Hat
  */
-package org.eclipse.hono.tests;
+package org.eclipse.hono.tests.client;
 
 import static junit.framework.TestCase.assertTrue;
 

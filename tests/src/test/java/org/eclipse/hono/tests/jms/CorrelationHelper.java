@@ -11,7 +11,7 @@
  *
  */
 
-package org.eclipse.hono.tests;
+package org.eclipse.hono.tests.jms;
 
 import java.util.HashMap;
 import java.util.Map;
