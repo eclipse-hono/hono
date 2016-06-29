@@ -146,18 +146,18 @@ public class TelemetryClient {
         connection.thenAccept(connection ->
         {
             final String address = String.format(SENDER_TARGET_ADDRESS, tenantId);
-            getProtonSender(closeHandler, telemetrySender, connection, address);
+            getProtonSender(closeHandler, telemetrySender, connection, address, ProtonQoS.AT_MOST_ONCE);
 
             final String registrationAdress = String.format(REGISTRATION_TARGET_ADDRESS, tenantId);
-            getProtonSender(closeHandler, registrationSender, connection, registrationAdress);
+            getProtonSender(closeHandler, registrationSender, connection, registrationAdress, ProtonQoS.AT_LEAST_ONCE);
         });
         return CompositeFuture.all(telemetrySender, registrationSender);
     }
 
     private ProtonSender getProtonSender(final Handler<AsyncResult<?>> closeHandler, final Future<ProtonSender> future,
-            final ProtonConnection connection, final String address) {
+            final ProtonConnection connection, final String address, final ProtonQoS qos) {
         final ProtonSender sender = connection.createSender(address);
-        sender.setQoS(ProtonQoS.AT_MOST_ONCE);
+        sender.setQoS(qos);
         sender.openHandler(senderOpen -> {
             if (senderOpen.succeeded()) {
                 LOG.info("sender open to [{}]", senderOpen.result().getRemoteTarget());

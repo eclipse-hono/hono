@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import javax.jms.Destination;
+import javax.jms.JMSException;
 import javax.jms.JMSSecurityException;
 
 import org.apache.qpid.jms.JmsQueue;
@@ -31,7 +32,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jms.JmsException;
 
 /**
  * Register some devices, send some messages.
@@ -106,8 +106,12 @@ public class DeviceRegistrationIT  {
         try {
             registration.createConsumer(invalid);
             Assert.fail("Expected exception, but it worked...");
-        } catch (final JmsException e) {
-            LOG.info("Expected exception occurred.", e);
+        } catch (final Exception e) {
+            if (e.getCause() instanceof JMSException) {
+                LOG.info("Expected exception occurred.", e);
+            } else {
+                throw e;
+            }
         }
     }
 }
