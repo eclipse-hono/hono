@@ -130,7 +130,7 @@ public class RegistrationTest {
                 LOG.debug("inbound link created [{}] at {}", getLinkName(opened.result()), opened.result().getSource().getAddress());
                 receiverOpen.complete();
             })
-           .closeHandler(closed -> LOG.debug("receiver closed {}...", ((ProtonReceiverImpl) closed).getName()))
+           .closeHandler(closed -> LOG.debug("receiver closed {}...", ((ProtonReceiverImpl) closed.result()).getName()))
            .handler((delivery, message) -> {
                LOG.info("Received reply {}", message);
                final String correlationId = (String) message.getCorrelationId();

@@ -12,6 +12,7 @@
 package org.eclipse.hono.server;
 
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,8 +28,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TestSupport;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -124,12 +123,10 @@ public class HonoServerTest {
         final Target target = getTarget(restrictedTargetAddress);
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteTarget()).thenReturn(target);
-        when(receiver.close()).thenAnswer(new Answer<ProtonReceiver>() {
-            @Override
-            public ProtonReceiver answer(final InvocationOnMock invocation) throws Throwable {
-                linkClosed.countDown();
-                return receiver;
-            }
+        when(receiver.setCondition(any())).thenReturn(receiver);
+        when(receiver.close()).thenAnswer(invocation -> {
+            linkClosed.countDown();
+            return receiver;
         });
         server.handleReceiverOpen(mock(ProtonConnection.class), receiver);
 
