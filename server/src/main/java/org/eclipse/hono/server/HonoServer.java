@@ -11,6 +11,8 @@
  */
 package org.eclipse.hono.server;
 
+import static io.vertx.proton.ProtonHelper.condition;
+import static org.apache.qpid.proton.amqp.transport.AmqpError.UNAUTHORIZED_ACCESS;
 import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
 
 import java.util.HashMap;
@@ -34,7 +36,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonServer;
@@ -218,22 +219,40 @@ public final class HonoServer extends AbstractVerticle {
             final Endpoint endpoint = getEndpoint(targetResource);
             if (endpoint == null) {
                 LOG.info("no matching endpoint registered for address [{}]", receiver.getRemoteTarget().getAddress());
+                receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(),
+                        "No matching endpoint registered for address " + receiver.getRemoteTarget().getAddress()));
                 receiver.close();
             } else {
-                checkAuthorizationToAttach(targetResource, Permission.WRITE, isAuthorized -> {
+                final String user = getUserFromConnection(con);
+                checkAuthorizationToAttach(user, targetResource, Permission.WRITE, isAuthorized -> {
                     if (isAuthorized) {
                         receiver.setTarget(receiver.getRemoteTarget());
                         endpoint.onLinkAttach(receiver, targetResource);
                     } else {
-                        LOG.debug("client is not authorized to attach to endpoint [{}], closing link", targetResource);
-                        receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "client is not authorized to attach to endpoint " + targetResource))
-                                .close();
+                        final String message = String.format("[%s] is not authorized to attach to [%s]", user, targetResource);
+                        LOG.debug(message);
+                        receiver.setCondition(condition(UNAUTHORIZED_ACCESS.toString(), message)).close();
                     }
                 });
             }
         } catch (final IllegalArgumentException e) {
             LOG.debug("client has provided invalid resource identifier as target address", e);
             receiver.close();
+        }
+    }
+
+    /**
+     * Note: This is only temporary solution, we treat the container name as the user because we do not yet authenticate clients.
+     *
+     * @param con the connection to read the user from
+     * @return the user associated with the connection or {@link Constants#DEFAULT_SUBJECT} if it cannot be determined.
+     */
+    private String getUserFromConnection(final ProtonConnection con) {
+
+        if (con.getRemoteContainer() == null) {
+            return Constants.DEFAULT_SUBJECT;
+        } else {
+            return con.getRemoteContainer();
         }
     }
 
@@ -254,16 +273,16 @@ public final class HonoServer extends AbstractVerticle {
                 LOG.info("no matching endpoint registered for address [{}]", source);
                 sender.close();
             } else {
-                checkAuthorizationToAttach(targetResource, Permission.READ, isAuthorized -> {
+                final String user = getUserFromConnection(con);
+                checkAuthorizationToAttach(user, targetResource, Permission.READ, isAuthorized -> {
                     if (isAuthorized) {
-                        LOG.debug("client is authorized to attach to endpoint [{}]", targetResource);
+                        LOG.debug("client is authorized to attach to [{}]", targetResource);
                         sender.setSource(sender.getRemoteSource());
                         endpoint.onLinkAttach(sender, targetResource);
                     } else {
-                        LOG.debug("client is not authorized to attach to endpoint [{}], closing link", targetResource);
-                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(),
-                                "client is not authorized to attach to endpoint " + targetResource))
-                                .close();
+                        final String message = String.format("[%s] is not authorized to attach to [%s]", user, targetResource);
+                        LOG.debug(message);
+                        sender.setCondition(condition(UNAUTHORIZED_ACCESS.toString(), message)).close();
                     }
                 });
             }
@@ -277,10 +296,10 @@ public final class HonoServer extends AbstractVerticle {
         return endpoints.get(targetAddress.getEndpoint());
     }
 
-    private void checkAuthorizationToAttach(final ResourceIdentifier targetResource, final Permission permission,
+    private void checkAuthorizationToAttach(final String user, final ResourceIdentifier targetResource, final Permission permission,
        final Handler<Boolean> authResultHandler) {
 
-        final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetResource.toString(),
+        final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(user, targetResource.toString(),
            permission.toString());
         vertx.eventBus().send(
            authServiceAddress,

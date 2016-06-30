@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.tests.jms;
 
-import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_ACTION;
 import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_STATUS;
@@ -86,15 +85,15 @@ public class RegistrationTestSupport {
     }
 
     public CompletableFuture<Long> register(final String deviceId) {
-        return send(deviceId, "register", HTTP_OK);
+        return send(deviceId, "register", null);
     }
 
     public CompletableFuture<Long> deregister(final String deviceId) {
-        return send(deviceId, "deregister", HTTP_OK);
+        return send(deviceId, "deregister", null);
     }
 
     public CompletableFuture<Long> retrieve(final String deviceId) {
-        return send(deviceId, "get", HTTP_OK);
+        return send(deviceId, "get", null);
     }
 
     public CompletableFuture<Long> register(final String deviceId, final int expectedStatus) {
@@ -130,7 +129,7 @@ public class RegistrationTestSupport {
         }
     }
 
-    private CompletableFuture<Long> send(final String deviceId, final String action, final int expectedStatus) {
+    private CompletableFuture<Long> send(final String deviceId, final String action, final Integer expectedStatus) {
 
         try {
             final BytesMessage message = session.createBytesMessage();
@@ -151,7 +150,7 @@ public class RegistrationTestSupport {
                             "Response to " + getMessageID(in) + " contained no valid status: " + status);
                 }
 
-                if (expectedStatus != httpStatus) {
+                if (expectedStatus != null && expectedStatus != httpStatus) {
                     throw new IllegalStateException("returned status " + httpStatus);
                 }
 

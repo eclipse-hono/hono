@@ -110,6 +110,7 @@ public class HonoServerIntegrationTest {
         Destination telemetryAddress = (Destination) context.lookup(TelemetryConstants.TELEMETRY_ENDPOINT);
 
         connection = factory.createConnection();
+        connection.setClientID(Constants.DEFAULT_SUBJECT);
         connection.setExceptionListener(exception -> LOG.error(exception.getMessage(), exception));
         connection.start();
 

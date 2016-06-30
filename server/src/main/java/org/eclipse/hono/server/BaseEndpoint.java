@@ -11,23 +11,16 @@
  */
 package org.eclipse.hono.server;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
 import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
 
 import java.util.Objects;
 
-import org.eclipse.hono.authorization.AuthorizationConstants;
-import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -113,25 +106,5 @@ public abstract class BaseEndpoint implements Endpoint{
     public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
         LOGGER.info("Endpoint [{}] does not support data retrieval, closing link.", getName());
         sender.close();
-    }
-
-    protected final ResourceIdentifier getResourceIdentifier(final String address) {
-        if (isSingleTenant()) {
-            return ResourceIdentifier.fromStringAssumingDefaultTenant(address);
-        } else {
-            return ResourceIdentifier.fromString(address);
-        }
-    }
-
-    protected final void checkPermission(final ResourceIdentifier resource, final Handler<Boolean> permissionCheckHandler) {
-        final JsonObject authMsg = new JsonObject();
-        // TODO how to obtain subject information?
-        authMsg.put(AUTH_SUBJECT_FIELD, Constants.DEFAULT_SUBJECT);
-        authMsg.put(RESOURCE_FIELD, resource.toString());
-        authMsg.put(PERMISSION_FIELD, Permission.WRITE.toString());
-
-        LOGGER.trace("sending auth message to authorization service [address: {}]", authServiceAddress);
-        vertx.eventBus().send(authServiceAddress, authMsg,
-           res -> permissionCheckHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 }

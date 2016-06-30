@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
+import static io.vertx.proton.ProtonHelper.condition;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL;
@@ -33,6 +34,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.registration.RegistrationConstants;
@@ -157,11 +160,11 @@ public final class TelemetryEndpoint extends BaseEndpoint {
             // client has closed link -> inform TelemetryAdapter about client detach
             onLinkDetach(link);
         }).handler((delivery, message) -> {
-
             if (TelemetryMessageFilter.verify(targetAddress, message)) {
                 sendTelemetryData(link, delivery, message);
             } else {
-                onLinkDetach(link);
+                MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "message did not make it through the filter...");
+                onLinkDetach(link, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
             }
         }).open();
 
@@ -173,8 +176,12 @@ public final class TelemetryEndpoint extends BaseEndpoint {
     }
 
     private void onLinkDetach(final LinkWrapper client) {
+        onLinkDetach(client, null);
+    }
+
+    private void onLinkDetach(final LinkWrapper client, final ErrorCondition error) {
         LOG.debug("closing receiver for client [{}]", client.getLinkId());
-        client.close();
+        client.close(error);
         activeClients.remove(client.getLinkId());
         JsonObject msg = getLinkDetachedMsg(client.getLinkId());
         vertx.eventBus().send(linkControlAddress, msg);
@@ -185,24 +192,18 @@ public final class TelemetryEndpoint extends BaseEndpoint {
             LOG.trace("received un-settled telemetry message on link [{}]", link.getLinkId());
         }
         final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(MessageHelper.getAnnotation(msg, APP_PROPERTY_RESOURCE_ID));
-        checkPermission(messageAddress, permissionGranted -> {
-            if (permissionGranted) {
-                checkDeviceExists(messageAddress, deviceExists -> {
-                    if (deviceExists) {
-                        vertx.runOnContext(run -> {
-                            final String messageId = UUID.randomUUID().toString();
-                            final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
-                            vertx.sharedData().getLocalMap(dataAddress).put(messageId, amqpMessage);
-                            sendAtMostOnce(link, messageId, delivery);
-                        });
-                    } else {
-                        LOG.debug("Device {}/{} does not exist, dropping message.",
-                                messageAddress.getTenantId(), messageAddress.getDeviceId());
-                    }
+        checkDeviceExists(messageAddress, deviceExists -> {
+            if (deviceExists) {
+                vertx.runOnContext(run -> {
+                    final String messageId = UUID.randomUUID().toString();
+                    final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
+                    vertx.sharedData().getLocalMap(dataAddress).put(messageId, amqpMessage);
+                    sendAtMostOnce(link, messageId, delivery);
                 });
             } else {
-                LOG.debug("client is not authorized to upload telemetry data for address [{}], closing link ...", messageAddress);
-                onLinkDetach(link); // inform downstream adapter about client detach
+                LOG.debug("Device {}/{} does not exist, rejecting message.",
+                        messageAddress.getTenantId(), messageAddress.getDeviceId());
+                ProtonHelper.rejected(delivery, true);
             }
         });
     }
@@ -286,7 +287,10 @@ public final class TelemetryEndpoint extends BaseEndpoint {
             return credit.get();
         }
 
-        public void close() {
+        public void close(final ErrorCondition error) {
+            if (error != null) {
+                link.setCondition(error);
+            }
             link.close();
         }
 

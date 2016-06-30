@@ -55,7 +55,11 @@ public final class TelemetryMessageFilter {
          } else if (deviceIdProperty == null) {
              LOG.trace("message [{}] contains no valid device ID", msg.getMessageId());
              return false;
-         } else {
+         } else if (linkTarget.getDeviceId() != null && !deviceIdProperty.equals(linkTarget.getDeviceId())) {
+             LOG.trace("message property contains invalid device ID [expected: {}, but was: {}]",
+                     linkTarget.getDeviceId(), deviceIdProperty);
+             return false;
+         }else {
              final ResourceIdentifier targetResource = ResourceIdentifier
                      .from(linkTarget.getEndpoint(), linkTarget.getTenantId(), deviceIdProperty);
              MessageHelper.annotate(msg, targetResource);

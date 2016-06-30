@@ -46,6 +46,10 @@ public final class RegistrationMessageFilter {
          } else if (deviceIdProperty == null) {
              LOG.trace("message [{}] contains no valid device ID", msg.getMessageId());
              return false;
+         } else if (linkTarget.getDeviceId() != null && !deviceIdProperty.equals(linkTarget.getDeviceId())) {
+             LOG.trace("message property contains invalid device ID [expected: {}, but was: {}]",
+                     linkTarget.getDeviceId(), deviceIdProperty);
+             return false;
          } else if (actionProperty == null) {
              LOG.trace("message [{}] contains no valid action.", msg.getMessageId());
              return false;

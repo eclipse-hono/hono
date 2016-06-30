@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.registration.RegistrationMessageFilter;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
@@ -45,6 +46,18 @@ public class TelemetryMessageFilterTest {
 
         // THEN message validation fails
         assertFalse(TelemetryMessageFilter.verify(linkTarget, msg));
+    }
+
+    @Test
+    public void testVerifyDetectsDeviceIdMismatch() {
+        // GIVEN a valid telemetry message with device id not matching the link target
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE + "_1", MY_TENANT);
+
+        // WHEN receiving the message via a link with mismatching tenant
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
+
+        // THEN message validation fails
+        assertFalse(RegistrationMessageFilter.verify(linkTarget, msg));
     }
 
     @Test
@@ -79,6 +92,19 @@ public class TelemetryMessageFilterTest {
 
         // WHEN receiving the message via a link with matching target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+
+        // THEN message validation succeeds
+        assertTrue(TelemetryMessageFilter.verify(linkTarget, msg));
+        assertMessageAnnotationsContainTenantAndDeviceId(msg, MY_TENANT, MY_DEVICE);
+    }
+
+    @Test
+    public void testVerifySucceedsForMatchingDevice() {
+        // GIVEN a telemetry message for myDevice
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, MY_TENANT);
+
+        // WHEN receiving the message via a link with matching target address
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
 
         // THEN message validation succeeds
         assertTrue(TelemetryMessageFilter.verify(linkTarget, msg));

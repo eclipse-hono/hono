@@ -51,6 +51,18 @@ public class RegistrationMessageFilterTest {
     }
 
     @Test
+    public void testVerifyDetectsDeviceIdMismatch() {
+        // GIVEN a valid telemetry message with device id not matching the link target
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE + "_1", ACTION_GET, MY_TENANT);
+
+        // WHEN receiving the message via a link with mismatching tenant
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
+
+        // THEN message validation fails
+        assertFalse(RegistrationMessageFilter.verify(linkTarget, msg));
+    }
+
+    @Test
     public void testVerifyDetectsMissingDeviceId() {
         // GIVEN a valid telemetry message without device id
         final Message msg = givenAMessageHavingProperties(null, ACTION_GET);
@@ -93,6 +105,19 @@ public class RegistrationMessageFilterTest {
 
         // WHEN receiving the message via a link with matching target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+
+        // THEN message validation succeeds
+        assertTrue(RegistrationMessageFilter.verify(linkTarget, msg));
+        assertMessageAnnotationsContainTenantAndDeviceId(msg, MY_TENANT, MY_DEVICE);
+    }
+
+    @Test
+    public void testVerifySucceedsForMatchingDevice() {
+        // GIVEN a telemetry message for myDevice
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET, MY_TENANT);
+
+        // WHEN receiving the message via a link with matching target address
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
 
         // THEN message validation succeeds
         assertTrue(RegistrationMessageFilter.verify(linkTarget, msg));

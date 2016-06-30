@@ -67,36 +67,49 @@ public class JmsIntegrationTestSupport {
     }
 
     static JmsIntegrationTestSupport newClient(final String name) throws JMSException, NamingException {
+        return newClient(name, name + "-client");
+    }
+
+    static JmsIntegrationTestSupport newClient(final String name, final String clientId) throws JMSException, NamingException {
         Objects.requireNonNull(name);
         JmsIntegrationTestSupport result = new JmsIntegrationTestSupport();
-        result.createSession(name);
+        result.createSession(name, clientId);
         result.name = name;
         return result;
     }
 
-    JmsIntegrationTestSupport createSession(final String name) throws NamingException, JMSException {
+    JmsIntegrationTestSupport createSession(final String name, final String clientId) throws NamingException, JMSException {
         final ConnectionFactory cf = (ConnectionFactory) ctx.lookup(name);
         connection = cf.createConnection();
         connection.setExceptionListener(new MyExceptionListener());
-        connection.setClientID(name + "-client");
+        connection.setClientID(clientId);
         connection.start();
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
         return this;
     }
 
     MessageProducer getTelemetryProducer() throws JMSException {
+        return getTelemetryProducer(TELEMETRY_DESTINATION);
+    }
+
+    MessageProducer getTelemetryProducer(final Destination telemetryDestination) throws JMSException {
         if (session == null) {
             throw new IllegalStateException("No JMS session");
         } else {
-            return session.createProducer(TELEMETRY_DESTINATION);
+            return session.createProducer(telemetryDestination);
         }
     }
 
     MessageConsumer getTelemetryConsumer() throws JMSException {
+        return getTelemetryConsumer(TELEMETRY_DESTINATION);
+    }
+
+    MessageConsumer getTelemetryConsumer(final Destination telemetryDestination) throws JMSException {
         if (session == null) {
             throw new IllegalStateException("No JMS session");
         } else {
-            return session.createConsumer(TELEMETRY_DESTINATION);
+            return session.createConsumer(telemetryDestination);
         }
     }
 

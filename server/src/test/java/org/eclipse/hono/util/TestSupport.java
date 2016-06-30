@@ -50,7 +50,7 @@ public final class TestSupport {
         client.connect(host, port, ar -> {
             if (ar.succeeded()) {
                 protonConnection.set(ar.result());
-                protonConnection.get().open();
+                protonConnection.get().setContainer(Constants.DEFAULT_SUBJECT).open();
                 connected.complete();
             }
             else

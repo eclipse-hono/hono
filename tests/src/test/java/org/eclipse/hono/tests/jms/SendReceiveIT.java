@@ -12,9 +12,12 @@
  */
 package org.eclipse.hono.tests.jms;
 
-import static java.net.HttpURLConnection.HTTP_OK;
+import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.TELEMETRY_ADDRESS;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.time.Duration;
 import java.util.LongSummaryStatistics;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +29,7 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
 
+import org.apache.qpid.jms.JmsQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,13 +50,20 @@ public class SendReceiveIT {
     private JmsIntegrationTestSupport receiver;
     private JmsIntegrationTestSupport sender;
     private RegistrationTestSupport registration;
+    private JmsIntegrationTestSupport connector;
+    public static final String SPECIAL_DEVICE = "fluxcapacitor";
+    public static final JmsQueue SPECIAL_DEVICE_QUEUE = new JmsQueue(TELEMETRY_ADDRESS + "/" + SPECIAL_DEVICE);
 
     @Before
     public void init() throws Exception {
 
         sender = JmsIntegrationTestSupport.newClient("hono");
+        connector = JmsIntegrationTestSupport.newClient("hono", "connector-client");
         receiver = JmsIntegrationTestSupport.newClient("qdr");
         registration = sender.getRegistrationTestSupport();
+
+        registration.register(DEVICE_ID, Duration.ofSeconds(1));
+        registration.register(SPECIAL_DEVICE, Duration.ofSeconds(1));
     }
 
     @After
@@ -89,26 +100,52 @@ public class SendReceiveIT {
 
         final MessageProducer messageProducer = sender.getTelemetryProducer();
 
-        registration.register(DEVICE_ID, HTTP_OK).thenRun(() -> {
-            // and send messages
-            IntStream.range(0, COUNT).forEach(i -> {
-                try {
-                    final Message message = sender.newTextMessage("msg " + i, DEVICE_ID);
-                    message.setJMSTimestamp(System.currentTimeMillis());
-                    messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
+        IntStream.range(0, COUNT).forEach(i -> {
+            try {
+                final Message message = sender.newTextMessage("msg " + i, DEVICE_ID);
+                message.setJMSTimestamp(System.currentTimeMillis());
+                messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
-                    if (i % 100 == 0) {
-                        LOG.trace("Sent message {}", i);
-                    }
+                if (i % 100 == 0) {
+                    LOG.trace("Sent message {}", i);
                 }
-                catch (final JMSException e) {
-                    LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
-                }
-            });
+            }
+            catch (final JMSException e) {
+                LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
+            }
         });
+
         // wait for messages to arrive
         assertTrue("Did not receive " + COUNT + " messages within timeout.", latch.await(10, TimeUnit.SECONDS));
         LOG.debug("Delivery statistics: {}", stats);
+    }
+
+    @Test
+    public void testSendReceiveForSpecificDeviceOnly() throws Exception {
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final MessageProducer telemetryProducer = connector.getTelemetryProducer(SPECIAL_DEVICE_QUEUE);
+        final MessageConsumer messageConsumer = receiver.getTelemetryConsumer(SPECIAL_DEVICE_QUEUE);
+        messageConsumer.setMessageListener(message -> {
+            final String deviceId = getDeviceId(message);
+            LOG.info("------> Received message for {}", deviceId);
+            assertEquals(SPECIAL_DEVICE, deviceId);
+            latch.countDown();
+        });
+
+        final Message message = sender.newTextMessage("update", SPECIAL_DEVICE);
+        telemetryProducer.send(message,DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
+
+        assertTrue("Did not receive message within timeout.", latch.await(10, TimeUnit.SECONDS));
+    }
+
+    public String getDeviceId(final Message message) {
+        try {
+            return message.getStringProperty(APP_PROPERTY_DEVICE_ID);
+        } catch (final JMSException e) {
+            return null;
+        }
     }
 
     private void gatherStatistics(final LongSummaryStatistics stats, final Message message) {

@@ -115,6 +115,7 @@ public class TelemetryClient {
                 LOG.debug("connected to Hono server [{}:{}]", host, port);
                 final ProtonConnection protonConnection = conAttempt.result();
                 protonConnection
+                   .setContainer("SUBJECT")
                    .openHandler(loggingHandler("connection opened"))
                    .closeHandler(loggingHandler("connection closed"))
                    .open();

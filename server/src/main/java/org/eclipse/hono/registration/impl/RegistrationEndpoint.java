@@ -12,10 +12,8 @@
 package org.eclipse.hono.registration.impl;
 
 import static io.vertx.proton.ProtonHelper.condition;
-import static org.apache.qpid.proton.amqp.transport.AmqpError.UNAUTHORIZED_ACCESS;
 import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_CORRELATION_ID;
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
 import static org.eclipse.hono.util.MessageHelper.getLinkName;
 
 import java.util.Objects;
@@ -83,8 +81,6 @@ public final class RegistrationEndpoint extends BaseEndpoint {
 
     @Override
     public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
-
-
         /* note: we "misuse" deviceId part of the resource as reply address here */
         if (targetResource.getDeviceId() == null) {
             LOG.debug("Client must provide a reply address e.g. registration/<tenant>/1234-abc");
@@ -115,31 +111,21 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     }
 
     private void sendRegistrationData(final ProtonDelivery delivery, final Message msg) {
-        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(
-                MessageHelper.getAnnotation(msg, APP_PROPERTY_RESOURCE_ID));
-        checkPermission(messageAddress, permissionGranted -> {
-            if (permissionGranted) {
-                vertx.runOnContext(run -> {
-                    final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
-                    vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
-                            result -> {
-                                // TODO check for correct session here...?
-                                final String replyTo = msg.getReplyTo();
-                                if (replyTo != null) {
-                                    final JsonObject message = (JsonObject) result.result().body();
-                                    message.put(APP_PROPERTY_CORRELATION_ID, createCorrelationId(msg));
-                                    vertx.eventBus().send(replyTo, message);
-                                } else {
-                                    LOG.debug("No reply-to address provided, cannot send reply to client.");
-                                }
-                            });
-                    ProtonHelper.accepted(delivery, true);
-                });
-            } else {
-                LOG.debug("client is not authorized to register devices at [{}]", messageAddress);
-                MessageHelper.rejected(delivery, UNAUTHORIZED_ACCESS.toString(),
-                        "client is not authorized to register devices at " + messageAddress);
-            }
+        vertx.runOnContext(run -> {
+            final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
+            vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
+                    result -> {
+                        // TODO check for correct session here...?
+                        final String replyTo = msg.getReplyTo();
+                        if (replyTo != null) {
+                            final JsonObject message = (JsonObject) result.result().body();
+                            message.put(APP_PROPERTY_CORRELATION_ID, createCorrelationId(msg));
+                            vertx.eventBus().send(replyTo, message);
+                        } else {
+                            LOG.debug("No reply-to address provided, cannot send reply to client.");
+                        }
+                    });
+            ProtonHelper.accepted(delivery, true);
         });
     }
 
