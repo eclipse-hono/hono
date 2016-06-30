@@ -108,6 +108,6 @@ public final class RegistrationConstants {
 
     private static String getAction(final Message msg) {
         Objects.requireNonNull(msg);
-        return (String) getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_ACTION);
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_ACTION, String.class);
     }
 }

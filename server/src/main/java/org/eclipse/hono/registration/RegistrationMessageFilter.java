@@ -36,8 +36,8 @@ public final class RegistrationMessageFilter {
      public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
          final String deviceIdProperty = MessageHelper.getDeviceId(msg);
          final String tenantIdProperty = MessageHelper.getTenantId(msg);
-         final String actionProperty = (String) MessageHelper.getApplicationProperty(msg.getApplicationProperties(),
-                 APP_PROPERTY_ACTION);
+         final String actionProperty = MessageHelper.getApplicationProperty(msg.getApplicationProperties(),
+                 APP_PROPERTY_ACTION, String.class);
 
          if (tenantIdProperty != null && !linkTarget.getTenantId().equals(tenantIdProperty)) {
              LOG.trace("message property contains invalid tenant ID [expected: {}, but was: {}]",

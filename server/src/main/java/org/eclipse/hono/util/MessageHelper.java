@@ -53,12 +53,12 @@ public final class MessageHelper {
 
     public static String getDeviceId(final Message msg) {
         Objects.requireNonNull(msg);
-        return (String) getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_ID);
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_ID, String.class);
     }
 
     public static String getTenantId(final Message msg) {
         Objects.requireNonNull(msg);
-        return (String) getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID);
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID, String.class);
     }
 
     public static String getDeviceIdAnnotation(final Message msg) {
@@ -71,11 +71,17 @@ public final class MessageHelper {
         return getAnnotation(msg, APP_PROPERTY_TENANT_ID);
     }
 
-    public static Object getApplicationProperty(final ApplicationProperties props, final String name) {
+    @SuppressWarnings("unchecked")
+    public static <T> T getApplicationProperty(final ApplicationProperties props, final String name, final Class<T> type) {
         if (props == null) {
             return null;
         } else {
-            return props.getValue().get(name);
+            Object value = props.getValue().get(name);
+            if (type.isInstance(value)) {
+                return (T) value;
+            } else {
+                return null;
+            }
         }
     }
 
