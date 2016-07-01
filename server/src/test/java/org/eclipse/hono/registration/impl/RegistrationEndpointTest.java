@@ -84,5 +84,4 @@ public class RegistrationEndpointTest {
         verify(sender).setCondition(any());
         verify(sender).close();
     }
-
 }

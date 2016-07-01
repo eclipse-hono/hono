@@ -204,6 +204,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
                 LOG.debug("Device {}/{} does not exist, rejecting message.",
                         messageAddress.getTenantId(), messageAddress.getDeviceId());
                 ProtonHelper.rejected(delivery, true);
+                onLinkDetach(link);
             }
         });
     }
