@@ -14,6 +14,7 @@ package org.eclipse.hono.registration.impl;
 import static io.vertx.proton.ProtonHelper.condition;
 import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_CORRELATION_ID;
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
+import static org.eclipse.hono.util.MessageHelper.encodeIdToJson;
 import static org.eclipse.hono.util.MessageHelper.getLinkName;
 
 import java.util.Objects;
@@ -119,22 +120,30 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                         final String replyTo = msg.getReplyTo();
                         if (replyTo != null) {
                             final JsonObject message = (JsonObject) result.result().body();
-                            message.put(APP_PROPERTY_CORRELATION_ID, createCorrelationId(msg));
+                            final JsonObject correlationIdJson = encodeIdToJson(getCorrelationId(msg));
+                            message.put(APP_PROPERTY_CORRELATION_ID, correlationIdJson);
                             vertx.eventBus().send(replyTo, message);
                         } else {
                             LOG.debug("No reply-to address provided, cannot send reply to client.");
                         }
+                        ProtonHelper.accepted(delivery, true);
                     });
-            ProtonHelper.accepted(delivery, true);
         });
     }
 
-    private String createCorrelationId(final Message request) {
-        String correlationId = null;
-        if (request.getMessageId() instanceof String) {
-           correlationId = (String) request.getMessageId();
+    /**
+    * @param request the request message from which to extract the correlationId
+    * @return The ID used to correlate the given request message. This can either be the provided correlationId
+    * (Correlation ID Pattern) or the messageId of the request (Message ID Pattern, if no correlationId is provided).
+    */
+    private Object getCorrelationId(final Message request) {
+        final Object correlationId;
+        /* if a correlationId is provided, we use it to correlate the response -> Correlation ID Pattern */
+        if (request.getCorrelationId() != null) {
+            correlationId = request.getCorrelationId();
         } else {
-            correlationId = request.getMessageId().toString();
+           /* otherwise we use the message id -> Message ID Pattern */
+            correlationId = request.getMessageId();
         }
         return correlationId;
     }

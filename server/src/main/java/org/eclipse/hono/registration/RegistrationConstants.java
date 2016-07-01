@@ -13,6 +13,7 @@ package org.eclipse.hono.registration;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_TENANT_ID;
+import static org.eclipse.hono.util.MessageHelper.decodeIdFromJson;
 import static org.eclipse.hono.util.MessageHelper.getApplicationProperty;
 
 import java.util.HashMap;
@@ -76,11 +77,12 @@ public final class RegistrationConstants {
         final String tenantId = message.body().getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = message.body().getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
         final String status = message.body().getString(RegistrationConstants.APP_PROPERTY_STATUS);
-        final String correlationId = message.body().getString(RegistrationConstants.APP_PROPERTY_CORRELATION_ID);
+        final JsonObject correlationIdJson = message.body().getJsonObject(RegistrationConstants.APP_PROPERTY_CORRELATION_ID);
+        final Object correlationId = decodeIdFromJson(correlationIdJson);
         return getAmqpReply(status, correlationId, tenantId, deviceId);
     }
 
-    public static Message getAmqpReply(final String status, final String correlationId, final String tenantId, final String deviceId) {
+    public static Message getAmqpReply(final String status, final Object correlationId, final String tenantId, final String deviceId) {
 
         final Map<String, String> map = new HashMap<>();
         map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
