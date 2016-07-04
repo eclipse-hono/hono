@@ -14,6 +14,7 @@ package org.eclipse.hono.example;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -62,7 +63,14 @@ public class TelemetryClientExample {
         if (ROLE_SENDER.equalsIgnoreCase(role)) {
             client.createSender()
                     .setHandler(r -> {
-                        client.register(deviceId);
+                        client.register(deviceId).setHandler(result -> {
+                           if (result.succeeded() && result.result() == HttpURLConnection.HTTP_OK) {
+                               LOG.debug("Device registered successfully.");
+                           } else {
+                               LOG.debug("Failed to register device: {}", result.succeeded() ? result.result().toString() : result.cause().getMessage());
+                           }
+                        });
+
                         executor.execute(this::readMessagesFromStdin);
                     });
         } else if (ROLE_RECEIVER.equalsIgnoreCase(role)) {

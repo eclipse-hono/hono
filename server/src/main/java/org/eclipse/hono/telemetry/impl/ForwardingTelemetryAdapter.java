@@ -107,6 +107,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                                 downstreamConnection.getRemoteContainer());
                         startFuture.complete();
                     } else {
+                        LOG.warn("Can't connect to downstream {}: {}", downstreamContainerHost + ":" + downstreamContainerPort, result.cause().getMessage());
                         startFuture.fail(result.cause());
                     }
                 }).open();
@@ -139,6 +140,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                         sendFlowControlMessage(linkId, false);
                     }
                 } else {
+                    LOG.warn("Can't create sender for link {}: {}", linkId, created.cause().getMessage());
                     sendErrorMessage(linkId, true);
                 }
             });
