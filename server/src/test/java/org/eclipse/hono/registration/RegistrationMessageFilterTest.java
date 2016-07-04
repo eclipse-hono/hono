@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
@@ -37,18 +36,6 @@ public class RegistrationMessageFilterTest {
 
     private static final String MY_TENANT = "myTenant";
     private static final String MY_DEVICE = "myDevice";
-
-    @Test
-    public void testVerifyDetectsTenantIdMismatch() {
-        // GIVEN a valid telemetry message with tenant not matching the link target
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET, "otherTenant");
-
-        // WHEN receiving the message via a link with mismatching tenant
-        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
-
-        // THEN message validation fails
-        assertFalse(RegistrationMessageFilter.verify(linkTarget, msg));
-    }
 
     @Test
     public void testVerifyDetectsDeviceIdMismatch() {
@@ -86,7 +73,7 @@ public class RegistrationMessageFilterTest {
     }
 
     @Test
-    public void testVerifySucceedsWhenTenantIsOmitted() {
+    public void testVerifySucceedsForTenantOnlyLinkTarget() {
         // GIVEN a telemetry message for myDevice
         final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET);
 
@@ -95,36 +82,23 @@ public class RegistrationMessageFilterTest {
 
         // THEN message validation succeeds
         assertTrue(RegistrationMessageFilter.verify(linkTarget, msg));
-        assertMessageAnnotationsContainTenantAndDeviceId(msg, MY_TENANT, MY_DEVICE);
-    }
-
-    @Test
-    public void testVerifySucceedsForMatchingTenant() {
-        // GIVEN a telemetry message for myDevice
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET, MY_TENANT);
-
-        // WHEN receiving the message via a link with matching target address
-        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
-
-        // THEN message validation succeeds
-        assertTrue(RegistrationMessageFilter.verify(linkTarget, msg));
-        assertMessageAnnotationsContainTenantAndDeviceId(msg, MY_TENANT, MY_DEVICE);
+        assertMessageAnnotationsContainProperties(msg, MY_TENANT, MY_DEVICE);
     }
 
     @Test
     public void testVerifySucceedsForMatchingDevice() {
         // GIVEN a telemetry message for myDevice
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET, MY_TENANT);
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET);
 
         // WHEN receiving the message via a link with matching target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
 
         // THEN message validation succeeds
         assertTrue(RegistrationMessageFilter.verify(linkTarget, msg));
-        assertMessageAnnotationsContainTenantAndDeviceId(msg, MY_TENANT, MY_DEVICE);
+        assertMessageAnnotationsContainProperties(msg, MY_TENANT, MY_DEVICE);
     }
 
-    private void assertMessageAnnotationsContainTenantAndDeviceId(final Message msg, final String tenantId,
+    private void assertMessageAnnotationsContainProperties(final Message msg, final String tenantId,
             final String deviceId) {
         assertNotNull(msg.getMessageAnnotations());
         assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(MessageHelper.APP_PROPERTY_TENANT_ID)),
@@ -141,15 +115,7 @@ public class RegistrationMessageFilterTest {
     }
 
     private ResourceIdentifier getResourceIdentifier(final String tenant, final String device) {
-        return getResourceIdentifier(TelemetryConstants.TELEMETRY_ENDPOINT, tenant, device);
-    }
-
-    private ResourceIdentifier getResourceIdentifier(final String endpoint, final String tenant, final String device) {
-        final StringBuilder resourcePath = new StringBuilder(endpoint).append("/").append(tenant);
-        if (device != null) {
-            resourcePath.append("/").append(device);
-        }
-        return ResourceIdentifier.fromString(resourcePath.toString());
+        return ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, tenant, device);
     }
 
     private Message givenAMessageHavingProperties(final String deviceId, final String action) {

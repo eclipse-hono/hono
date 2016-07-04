@@ -11,25 +11,35 @@
  */
 package org.eclipse.hono.util;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
- * A unique identifier of a resource within Hono.
+ * A unique identifier for a resource within Hono.
  * <p>
- * Each resource identifier consists of up to three parts:
+ * Each resource identifier consists of an arbitrary number of path segments.
+ * The first segment always contains the name of the <em>endpoint</em> that the
+ * resource belongs to.
+ * </p>
+ * <p>
+ * Within the <em>telemetry</em> and <em>registration</em> endpoints the first three
+ * segments have the following semantics:
  * <ol>
- * <li>an <em>endpoint</em></li>
- * <li>a <em>tenant ID</em></li>
+ * <li>the <em>endpoint</em> name</li>
+ * <li>the <em>tenant ID</em></li>
  * <li>an (optional) <em>device ID</em></li>
  * </ol>
  * </p>
  */
 public final class ResourceIdentifier {
 
+    private static final int IDX_ENDPOINT = 0;
+    private static final int IDX_TENANT_ID = 1;
+    private static final int IDX_DEVICE_ID = 2;
+    private String[] resourcePath;
     private String resourceId;
-    private String endpoint;
-    private String tenantId;
-    private String deviceId;
 
     private ResourceIdentifier(final String resourceId, final boolean assumeDefaultTenant) {
         String[] path = resourceId.split("\\/");
@@ -39,7 +49,7 @@ public final class ResourceIdentifier {
             } else if (path.length > 2) {
                 throw new IllegalArgumentException("resource identifer must not contain more than 2 segments");
             } else {
-                setFields(path[0], Constants.DEFAULT_TENANT, path.length == 2 ? path[1] : null);
+                setResourcePath(new String[]{path[0], Constants.DEFAULT_TENANT, path.length == 2 ? path[1] : null});
             }
         } else {
             if (path.length < 2) {
@@ -48,25 +58,53 @@ public final class ResourceIdentifier {
             } else if (path.length > 3) {
                 throw new IllegalArgumentException("resource identifer must not contain more than 3 segments");
             } else {
-                setFields(path[0], path[1], path.length == 3 ? path[2] : null);
+                setResourcePath(new String[]{path[0], path[1], path.length == 3 ? path[2] : null});
             }
         }
     }
 
     private ResourceIdentifier(final String endpoint, final String tenantId, final String deviceId) {
-       setFields(endpoint, tenantId, deviceId);
+        setResourcePath(new String[]{endpoint, tenantId, deviceId});
     }
 
-    private void setFields(final String endpoint, final String tenantId, final String deviceId) {
-        if (deviceId != null) {
-            this.resourceId = String.format("%s/%s/%s", endpoint, tenantId, deviceId);
+    private ResourceIdentifier(final String[] path) {
+        setResourcePath(path);
+    }
+
+    private void setResourcePath(final String[] path) {
+        List<String> pathSegments = new ArrayList<>();
+        boolean pathContainsNullSegment = false;
+        for (String segment : path) {
+            if (segment == null) {
+                pathContainsNullSegment = true;
+            } else if (pathContainsNullSegment) {
+                throw new IllegalArgumentException("path may contain trailing null segments only");
+            } else {
+                pathSegments.add(segment);
+            }
         }
-        else {
-            this.resourceId = String.format("%s/%s", endpoint, tenantId);
+        this.resourcePath = pathSegments.toArray(new String[0]);
+        createStringRepresentation();
+    }
+
+    /**
+     * Gets this resource identifier as path segments.
+     * 
+     * @return the segments.
+     */
+    public String[] toPath() {
+        return Arrays.copyOf(resourcePath, resourcePath.length);
+    }
+
+    private void createStringRepresentation() {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < resourcePath.length; i++) {
+            b.append(resourcePath[i]);
+            if (i < resourcePath.length - 1) {
+                b.append("/");
+            }
         }
-        this.endpoint = endpoint;
-        this.tenantId = tenantId;
-        this.deviceId = deviceId;
+        resourceId = b.toString();
     }
 
     /**
@@ -121,32 +159,76 @@ public final class ResourceIdentifier {
     }
 
     /**
+     * Creates a resource identifier from path segments.
+     * <p>
+     * The given path will be stripped of any trailing {@code null}
+     * segments.
+     * </p>
+     * 
+     * @param path the segments of the resource path.
+     * @return the resource identifier.
+     * @throws NullPointerException if path is {@code null}.
+     * @throws IllegalArgumentException if the path contains no segments or contains non-trailing
+     *                                  {@code null} segments.
+     */
+    public static ResourceIdentifier fromPath(final String[] path) {
+        Objects.requireNonNull(path);
+        if (path.length == 0) {
+            throw new IllegalArgumentException("path must have at least one segment");
+        } else {
+            return new ResourceIdentifier(path);
+        }
+    }
+
+    /**
      * @return the endpoint
      */
     public String getEndpoint() {
-        return endpoint;
+        return resourcePath[IDX_ENDPOINT];
     }
 
     /**
      * @return the tenantId
      */
     public String getTenantId() {
-        return tenantId;
+        return resourcePath[IDX_TENANT_ID];
     }
 
     /**
      * @return the deviceId
      */
     public String getDeviceId() {
-        return deviceId;
+        if (resourcePath.length > IDX_DEVICE_ID) {
+            return resourcePath[IDX_DEVICE_ID];
+        } else {
+            return null;
+        }
+    }
+
+    public boolean matches(final String... pattern) {
+        if (resourcePath.length != pattern.length) {
+            return false;
+        } else {
+            boolean result = true;
+            for (int i = 0; i < resourcePath.length; i++) {
+                if ("*".equals(pattern[i])) {
+                    continue;
+                } else {
+                    result &= resourcePath[i].equals(pattern[i]);
+                }
+            }
+            return result;
+        }
     }
 
     /**
-     * Creates a string representation of this resource identifier.
+     * Gets a string representation of this resource identifier.
      * <p>
-     * The string representation consists of the endpoint, the tenant and (optionally) the device ID all separated by a
-     * forward slash.
+     * The string representation consists of all path segments separated by a
+     * forward slash ("/").
      * </p>
+     * 
+     * @return the resource id.
      */
     @Override
     public String toString() {
@@ -161,19 +243,11 @@ public final class ResourceIdentifier {
             return false;
 
         final ResourceIdentifier that = (ResourceIdentifier) o;
-
-        if (endpoint != null ? !endpoint.equals(that.endpoint) : that.endpoint != null)
-            return false;
-        if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null)
-            return false;
-        return deviceId != null ? deviceId.equals(that.deviceId) : that.deviceId == null;
+        return resourcePath != null ? Arrays.equals(resourcePath, that.resourcePath) : that.resourcePath == null;
     }
 
     @Override
     public int hashCode() {
-        int result = endpoint != null ? endpoint.hashCode() : 0;
-        result = 31 * result + (tenantId != null ? tenantId.hashCode() : 0);
-        result = 31 * result + (deviceId != null ? deviceId.hashCode() : 0);
-        return result;
+        return Arrays.hashCode(resourcePath);
     }
 }

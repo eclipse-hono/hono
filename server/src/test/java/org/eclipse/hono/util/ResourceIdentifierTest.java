@@ -58,4 +58,44 @@ public class ResourceIdentifierTest {
         assertNull(resourceId.getDeviceId());
         assertThat(resourceId.toString(), is("telemetry/myTenant"));
     }
+
+    @Test
+    public void testEqualsReturnsTrueForSameEndpointAndTenant() {
+        ResourceIdentifier one = ResourceIdentifier.from("ep", "tenant", null);
+        ResourceIdentifier two = ResourceIdentifier.from("ep", "tenant", null);
+        assertTrue(one.equals(two));
+
+        one = ResourceIdentifier.fromString("ep/tenant");
+        two = ResourceIdentifier.fromString("ep/tenant");
+        assertTrue(one.equals(two));
+    }
+
+    @Test
+    public void testHashCodeReturnsSameValueForSameEndpointAndTenant() {
+        ResourceIdentifier one = ResourceIdentifier.from("ep", "tenant", null);
+        ResourceIdentifier two = ResourceIdentifier.from("ep", "tenant", null);
+        assertThat(one.hashCode(), is(two.hashCode()));
+
+        one = ResourceIdentifier.fromString("ep/tenant");
+        two = ResourceIdentifier.fromString("ep/tenant");
+        assertThat(one.hashCode(), is(two.hashCode()));
+    }
+
+    @Test
+    public void testToPathStripsTrailingNulls() {
+        ResourceIdentifier id = ResourceIdentifier.fromPath(new String[]{"first", "second", null, null});
+        assertThat(id.toPath().length, is(2));
+        assertThat(id.toPath()[0], is("first"));
+        assertThat(id.toPath()[1], is("second"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testToPathFailsForNonTrailingNulls() {
+        ResourceIdentifier.fromPath(new String[]{"first", "second", null, "last"});
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testToPathFailsForPathStartingWithNullSegment() {
+        ResourceIdentifier.fromPath(new String[]{null, "second", "last"});
+    }
 }

@@ -12,17 +12,13 @@
 package org.eclipse.hono.telemetry;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.BaseMessageFilter;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A filter for verifying the format of <em>Telemetry</em> messages.
  */
-public final class TelemetryMessageFilter {
-
-    private static final Logger LOG = LoggerFactory.getLogger(TelemetryMessageFilter.class);
+public final class TelemetryMessageFilter extends BaseMessageFilter {
 
     private TelemetryMessageFilter() {
         // prevent instantiation
@@ -31,39 +27,24 @@ public final class TelemetryMessageFilter {
     /**
      * Checks whether a given telemetry message contains all required properties.
      * <p>
-     * If verification is successful, the following two properties are added to the message's
-     * <em>annotations</em>:
+     * For successful verification, the message must contain a <em>device_id</em> in its set
+     * of <em>application</em> properties. If the link target contains a <em>deviceId</em> segment
+     * then its value must match that of the property as well.
      * </p>
+     * <p>
+     * After successful verification the following properties are added to the message's <em>annotations</em>:
      * <ul>
      * <li><em>device_id</em> - the ID of the device that reported the data.</li>
-     * <li><em>tenant_id</em> - the ID of the tenant the device belongs to.</li>
+     * <li><em>tenant_id</em> - the ID of the tenant as indicated by the link target's second segment.</li>
+     * <li><em>resource_id</em> - the full resource path including the endpoint, the tenant and the device ID.</li>
      * </ul>
      * 
-     * @param linkTarget the link target address to match the telemetry message's address against.
+     * @param linkTarget the link target address to match the telemetry message's properties against.
      * @param msg the message to verify.
      * @return {@code true} if the given message complies with the <em>Telemetry</em> API specification, {@code false}
      *         otherwise.
      */
      public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
-         final String deviceIdProperty = MessageHelper.getDeviceId(msg);
-         final String tenantIdProperty = MessageHelper.getTenantId(msg);
-
-         if (tenantIdProperty != null && !linkTarget.getTenantId().equals(tenantIdProperty)) {
-             LOG.trace("message property contains invalid tenant ID [expected: {}, but was: {}]",
-                     linkTarget.getTenantId(), tenantIdProperty);
-             return false;
-         } else if (deviceIdProperty == null) {
-             LOG.trace("message [{}] contains no valid device ID", msg.getMessageId());
-             return false;
-         } else if (linkTarget.getDeviceId() != null && !deviceIdProperty.equals(linkTarget.getDeviceId())) {
-             LOG.trace("message property contains invalid device ID [expected: {}, but was: {}]",
-                     linkTarget.getDeviceId(), deviceIdProperty);
-             return false;
-         }else {
-             final ResourceIdentifier targetResource = ResourceIdentifier
-                     .from(linkTarget.getEndpoint(), linkTarget.getTenantId(), deviceIdProperty);
-             MessageHelper.annotate(msg, targetResource);
-             return true;
-         }
+         return verifyStandardProperties(linkTarget, msg);
     }
 }
