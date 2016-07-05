@@ -37,7 +37,6 @@
     <mockito.version>1.9.5</mockito.version>
     <proton.version>0.12.1</proton.version>
     <qpid-jms.version>0.9.0</qpid-jms.version>
-    <rabbitmq.version>3.6.1</rabbitmq.version>
     <slf4j.version>1.7.2</slf4j.version>
     <spring.version>4.1.8.RELEASE</spring.version>
     <spring-boot.version>1.2.7.RELEASE</spring-boot.version>
@@ -52,6 +51,7 @@
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-classic</artifactId>
         <version>${logback.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
@@ -69,11 +69,6 @@
         <version>${truth.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.rabbitmq</groupId>
-        <artifactId>amqp-client</artifactId>
-        <version>${rabbitmq.version}</version>
-      </dependency>
-      <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
@@ -89,11 +84,13 @@
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-amqp</artifactId>
         <version>${activemq.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-broker</artifactId>
         <version>${activemq.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.camel</groupId>
@@ -152,6 +149,7 @@
         <groupId>org.apache.qpid</groupId>
         <artifactId>qpid-jms-client</artifactId>
         <version>${qpid-jms.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -178,7 +176,6 @@
        <groupId>org.slf4j</groupId>
        <artifactId>jul-to-slf4j</artifactId>
        <version>${slf4j.version}</version>
-       <scope>runtime</scope>
       </dependency>
       <dependency>
        <groupId>org.slf4j</groupId>
