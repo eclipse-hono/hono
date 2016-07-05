@@ -88,4 +88,13 @@ public class ForwardingTelemetryAdapterFactory implements ComponentFactory<Telem
         result.setPathSeparator(pathSeparator);
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "ForwardingTelemetryAdapterFactory{" +
+              "pathSeparator='" + pathSeparator + '\'' +
+              ", downstreamContainerPort=" + downstreamContainerPort +
+              ", downstreamContainerHost='" + downstreamContainerHost + '\'' +
+              '}';
+    }
 }

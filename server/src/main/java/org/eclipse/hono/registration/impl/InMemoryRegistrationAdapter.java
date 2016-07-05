@@ -101,4 +101,9 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
     private Set<String> getDevicesForTenant(final String tenantId) {
         return deviceMap.computeIfAbsent(tenantId, id -> new ConcurrentHashSet<>());
     }
+
+    @Override
+    public String toString() {
+        return "InMemoryRegistrationAdapter{}";
+    }
 }

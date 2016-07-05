@@ -11,10 +11,18 @@
  */
 package org.eclipse.hono;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import javax.annotation.PostConstruct;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Verticle;
+import io.vertx.core.spi.FutureFactory;
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
 import org.eclipse.hono.server.Endpoint;
@@ -22,6 +30,8 @@ import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerFactory;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
 import org.eclipse.hono.util.ComponentFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,57 +55,88 @@ import io.vertx.core.Vertx;
 @Configuration
 @EnableAutoConfiguration
 public class Application {
+    private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
     @Value(value = "${hono.maxinstances:0}")
-    private int                                    maxInstances;
+    private int maxInstances;
     @Autowired
-    private Vertx                                  vertx;
+    private Vertx vertx;
     @Autowired
-    private ComponentFactory<TelemetryAdapter>     adapterFactory;
+    private ComponentFactory<TelemetryAdapter> adapterFactory;
     @Autowired
-    private BaseRegistrationAdapter                registration;
+    private BaseRegistrationAdapter registration;
     @Autowired
     private ComponentFactory<AuthorizationService> authServiceFactory;
     @Autowired
-    private HonoServerFactory                      serverFactory;
+    private HonoServerFactory serverFactory;
     @Autowired
-    private List<ComponentFactory<Endpoint>>       endpointFactories;
+    private List<ComponentFactory<Endpoint>> endpointFactories;
 
     @PostConstruct
-    public void registerVerticles() {
+    public void registerVerticles() throws Exception {
         if (vertx == null) {
             throw new IllegalStateException("no Vert.x instance has been configured");
         }
-        int instanceCount = Runtime.getRuntime().availableProcessors();
-        if (maxInstances > 0 && maxInstances < instanceCount) {
+        final int instanceCount;
+        if (maxInstances > 0 && maxInstances < Runtime.getRuntime().availableProcessors()) {
             instanceCount = maxInstances;
+        } else {
+            instanceCount = Runtime.getRuntime().availableProcessors();
         }
-        deployTelemetryAdapter(instanceCount);
-        deployAuthorizationService(instanceCount);
-        deployServer(instanceCount);
-        vertx.deployVerticle(registration);
+
+        Future<Void> started = Future.future();
+        started.setHandler(ar -> {
+            if (ar.failed()) {
+                vertx.close();
+            }
+        });
+        CompositeFuture.all(deployComponent(adapterFactory, instanceCount),
+                deployComponent(authServiceFactory, instanceCount),
+                deployRegistrationService()).setHandler(ar -> {
+            if (ar.succeeded()) {
+                deployServer(instanceCount, started);
+            } else {
+                LOG.error("Cannot start up HonoServer", ar.cause());
+                started.fail(ar.cause());
+            }
+        });
+
     }
 
-    private void deployAuthorizationService(final int instanceCount) {
+    private Future deployComponent(ComponentFactory factory, int instanceCount) throws Exception {
+        LOG.info("Staring component {}", factory);
+        List<Future> results = new ArrayList<>();
         for (int i = 1; i <= instanceCount; i++) {
-            vertx.deployVerticle(authServiceFactory.newInstance(i, instanceCount));
+            Future result = Future.future();
+            vertx.deployVerticle((Verticle) factory.newInstance(i, instanceCount), result.completer());
+            results.add(result);
         }
+        return CompositeFuture.all(results);
     }
 
-    private void deployTelemetryAdapter(final int instanceCount) {
-        for (int i = 1; i <= instanceCount; i++) {
-            vertx.deployVerticle(adapterFactory.newInstance(i, instanceCount));
-        }
+    private Future deployRegistrationService() {
+        LOG.info("Starting registration service {}", registration);
+        Future result = Future.future();
+        vertx.deployVerticle(registration, result.completer());
+        return result;
     }
 
-    private void deployServer(final int instanceCount) {
+    private void deployServer(final int instanceCount, Future startFuture) {
+        List<Future> results = new ArrayList<>();
         for (int i = 1; i <= instanceCount; i++) {
             HonoServer server = serverFactory.newInstance(i, instanceCount);
             for (ComponentFactory<Endpoint> ef : endpointFactories) {
                 server.addEndpoint(ef.newInstance(i, instanceCount));
             }
-            vertx.deployVerticle(server);
+            Future result = Future.future();
+            vertx.deployVerticle(server, result.completer());
+            results.add(result);
         }
+        CompositeFuture.all(results).setHandler(ar -> {
+            if (ar.failed()) {
+                startFuture.fail(ar.cause());
+            }
+        });
     }
 
     public static void main(final String[] args) {

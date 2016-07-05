@@ -39,4 +39,12 @@ public class InMemoryAuthorizationServiceFactory implements ComponentFactory<Aut
     public AuthorizationService newInstance(int instanceId, int totalNoOfInstances) {
         return new InMemoryAuthorizationService(instanceId, totalNoOfInstances, singleTenant, permissionsPath);
     }
+
+    @Override
+    public String toString() {
+        return "InMemoryAuthorizationServiceFactory{" +
+                "permissionsPath='" + permissionsPath + '\'' +
+                ", singleTenant=" + singleTenant +
+                '}';
+    }
 }

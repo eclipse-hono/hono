@@ -112,6 +112,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                     }
                 }).open();
             } else {
+                LOG.warn("Can't connect to downstream {}: {}", downstreamContainerHost + ":" + downstreamContainerPort, conAttempt.cause().getMessage());
                 startFuture.fail(conAttempt.cause());
             }
         });
