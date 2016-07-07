@@ -12,8 +12,7 @@
 
 package org.eclipse.hono.telemetry.impl;
 
-import org.eclipse.hono.server.Endpoint;
-import org.eclipse.hono.util.ComponentFactory;
+import org.eclipse.hono.util.EndpointFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -24,7 +23,7 @@ import io.vertx.core.Vertx;
  *
  */
 @Component
-public class TelemetryEndpointFactory implements ComponentFactory<Endpoint> {
+public class TelemetryEndpointFactory implements EndpointFactory<TelemetryEndpoint> {
 
     @Autowired
     private Vertx   vertx;
@@ -32,13 +31,12 @@ public class TelemetryEndpointFactory implements ComponentFactory<Endpoint> {
     private boolean singleTenant;
 
     @Override
-    public Endpoint newInstance() {
+    public TelemetryEndpoint newInstance() {
         return newInstance(0, 1);
     }
 
     @Override
-    public Endpoint newInstance(final int instanceId, final int totalNoOfInstances) {
-        TelemetryEndpoint ep = new TelemetryEndpoint(vertx, singleTenant, instanceId);
-        return ep;
+    public TelemetryEndpoint newInstance(final int instanceId, final int totalNoOfInstances) {
+        return new TelemetryEndpoint(vertx, singleTenant, instanceId);
     }
 }

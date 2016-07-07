@@ -18,7 +18,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.telemetry.SenderFactory;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
-import org.eclipse.hono.util.ComponentFactory;
+import org.eclipse.hono.util.VerticleFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile({"forwarding-telemetry", "activemq"})
-public class ForwardingTelemetryAdapterFactory implements ComponentFactory<TelemetryAdapter> {
+public class ForwardingTelemetryAdapterFactory implements VerticleFactory<TelemetryAdapter> {
 
     private static final int MAX_PORT_NO = 65535;
 

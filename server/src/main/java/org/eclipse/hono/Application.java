@@ -13,23 +13,15 @@ package org.eclipse.hono;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 import javax.annotation.PostConstruct;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
-import io.vertx.core.spi.FutureFactory;
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
-import org.eclipse.hono.server.Endpoint;
 import org.eclipse.hono.server.HonoServer;
-import org.eclipse.hono.server.HonoServerFactory;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
-import org.eclipse.hono.util.ComponentFactory;
+import org.eclipse.hono.util.EndpointFactory;
+import org.eclipse.hono.util.VerticleFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -40,6 +32,9 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 
 /**
@@ -62,15 +57,15 @@ public class Application {
     @Autowired
     private Vertx vertx;
     @Autowired
-    private ComponentFactory<TelemetryAdapter> adapterFactory;
+    private VerticleFactory<TelemetryAdapter> adapterFactory;
     @Autowired
     private BaseRegistrationAdapter registration;
     @Autowired
-    private ComponentFactory<AuthorizationService> authServiceFactory;
+    private VerticleFactory<AuthorizationService> authServiceFactory;
     @Autowired
-    private HonoServerFactory serverFactory;
+    private VerticleFactory<HonoServer> serverFactory;
     @Autowired
-    private List<ComponentFactory<Endpoint>> endpointFactories;
+    private List<EndpointFactory<?>> endpointFactories;
 
     @PostConstruct
     public void registerVerticles() throws Exception {
@@ -90,8 +85,8 @@ public class Application {
                 vertx.close();
             }
         });
-        CompositeFuture.all(deployComponent(adapterFactory, instanceCount),
-                deployComponent(authServiceFactory, instanceCount),
+        CompositeFuture.all(deployVerticle(adapterFactory, instanceCount),
+                deployVerticle(authServiceFactory, instanceCount),
                 deployRegistrationService()).setHandler(ar -> {
             if (ar.succeeded()) {
                 deployServer(instanceCount, started);
@@ -103,32 +98,34 @@ public class Application {
 
     }
 
-    private Future deployComponent(ComponentFactory factory, int instanceCount) throws Exception {
-        LOG.info("Staring component {}", factory);
+    private <T extends Verticle> Future<?> deployVerticle(VerticleFactory<T> factory, int instanceCount) throws Exception {
+        LOG.info("Starting component {}", factory);
+        @SuppressWarnings("rawtypes")
         List<Future> results = new ArrayList<>();
         for (int i = 1; i <= instanceCount; i++) {
-            Future result = Future.future();
-            vertx.deployVerticle((Verticle) factory.newInstance(i, instanceCount), result.completer());
+            Future<String> result = Future.future();
+            vertx.deployVerticle(factory.newInstance(i, instanceCount), result.completer());
             results.add(result);
         }
         return CompositeFuture.all(results);
     }
 
-    private Future deployRegistrationService() {
+    private Future<String> deployRegistrationService() {
         LOG.info("Starting registration service {}", registration);
-        Future result = Future.future();
+        Future<String> result = Future.future();
         vertx.deployVerticle(registration, result.completer());
         return result;
     }
 
-    private void deployServer(final int instanceCount, Future startFuture) {
+    private void deployServer(final int instanceCount, Future<Void> startFuture) {
+        @SuppressWarnings("rawtypes")
         List<Future> results = new ArrayList<>();
         for (int i = 1; i <= instanceCount; i++) {
             HonoServer server = serverFactory.newInstance(i, instanceCount);
-            for (ComponentFactory<Endpoint> ef : endpointFactories) {
+            for (EndpointFactory<?> ef : endpointFactories) {
                 server.addEndpoint(ef.newInstance(i, instanceCount));
             }
-            Future result = Future.future();
+            Future<String> result = Future.future();
             vertx.deployVerticle(server, result.completer());
             results.add(result);
         }

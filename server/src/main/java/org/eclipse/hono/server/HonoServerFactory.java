@@ -14,7 +14,7 @@ package org.eclipse.hono.server;
 
 import java.util.Objects;
 
-import org.eclipse.hono.util.ComponentFactory;
+import org.eclipse.hono.util.VerticleFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
  * A factory for creating {@code HonoServer} instances configured via Spring Boot.
  */
 @Component
-public class HonoServerFactory implements ComponentFactory<HonoServer> {
+public class HonoServerFactory implements VerticleFactory<HonoServer> {
 
     private String                bindAddress;
     private int                   port;

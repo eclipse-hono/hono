@@ -9,12 +9,17 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
+
 package org.eclipse.hono.util;
 
+import io.vertx.core.Verticle;
+
 /**
- * A factory for creating instances of parameter type {@code T}.
+ * A factory for creating {@code Verticle} instances.
+ * 
+ * @param T the type of verticle this factory creates instances of.
  */
-public interface ComponentFactory<T> {
+public interface VerticleFactory<T extends Verticle> {
 
     /**
      * Creates a new instance based on this factory's configuration.

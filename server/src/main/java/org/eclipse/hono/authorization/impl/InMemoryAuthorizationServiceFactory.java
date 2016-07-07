@@ -12,7 +12,7 @@
 package org.eclipse.hono.authorization.impl;
 
 import org.eclipse.hono.authorization.AuthorizationService;
-import org.eclipse.hono.util.ComponentFactory;
+import org.eclipse.hono.util.VerticleFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
  *
  */
 @Component
-public class InMemoryAuthorizationServiceFactory implements ComponentFactory<AuthorizationService> {
+public class InMemoryAuthorizationServiceFactory implements VerticleFactory<AuthorizationService> {
 
     @Value(value = "${hono.singletenant:false}")
     private boolean singleTenant;

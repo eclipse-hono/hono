@@ -11,8 +11,7 @@
  */
 package org.eclipse.hono.registration.impl;
 
-import org.eclipse.hono.server.Endpoint;
-import org.eclipse.hono.util.ComponentFactory;
+import org.eclipse.hono.util.EndpointFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -23,7 +22,7 @@ import io.vertx.core.Vertx;
  * Factory to create {@link RegistrationEndpoint}s.
  */
 @Component
-public class RegistrationEndpointFactory implements ComponentFactory<Endpoint> {
+public class RegistrationEndpointFactory implements EndpointFactory<RegistrationEndpoint> {
 
     @Autowired
     private Vertx   vertx;
@@ -31,13 +30,12 @@ public class RegistrationEndpointFactory implements ComponentFactory<Endpoint> {
     private boolean singleTenant;
 
     @Override
-    public Endpoint newInstance() {
+    public RegistrationEndpoint newInstance() {
         return newInstance(0, 1);
     }
 
     @Override
-    public Endpoint newInstance(final int instanceId, final int totalNoOfInstances) {
-        RegistrationEndpoint ep = new RegistrationEndpoint(vertx, singleTenant, instanceId);
-        return ep;
+    public RegistrationEndpoint newInstance(final int instanceId, final int totalNoOfInstances) {
+        return new RegistrationEndpoint(vertx, singleTenant, instanceId);
     }
 }
