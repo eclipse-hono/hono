@@ -19,8 +19,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.telemetry.SenderFactory;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,6 +107,15 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                         downstreamConnection = result.result();
                         LOG.info("connection to downstream container [{}] open",
                                 downstreamConnection.getRemoteContainer());
+                        downstreamConnection.disconnectHandler(connection -> {
+                            LOG.warn("Disconnected from the downstream container: {}", downstreamConnection.getRemoteContainer());
+                            downstreamConnection.disconnect();
+                            vertx.eventBus().send(Constants.APPLICATION_ENDPOINT, Constants.getRestartJson());
+                        }).closeHandler(connection -> {
+                           LOG.warn("Downstream container [{}] closed connection", downstreamConnection.getRemoteContainer());
+                           downstreamConnection.close();
+                           downstreamConnection.disconnect();
+                        });
                         startFuture.complete();
                     } else {
                         LOG.warn("Can't connect to downstream {}: {}", downstreamContainerHost + ":" + downstreamContainerPort, result.cause().getMessage());
@@ -187,20 +198,15 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     @Override
     protected void doStop(final Future<Void> stopFuture) {
-        if (downstreamConnection != null) {
+        if (downstreamConnection != null && !downstreamConnection.isDisconnected()) {
             final String container = downstreamConnection.getRemoteContainer();
             LOG.info("closing connection to downstream container [{}]", container);
-            downstreamConnection.closeHandler(closeAttempt -> {
-                if (closeAttempt.succeeded()) {
-                    LOG.info("connection to downstream container [{}] closed", container);
-                    stopFuture.complete();
-                } else {
-                    stopFuture.fail(closeAttempt.cause());
-                }
-            }).close();
+            downstreamConnection.close();
+            downstreamConnection.disconnect();
         } else {
-            stopFuture.complete();
+            LOG.debug("downstream connection already closed");
         }
+        stopFuture.complete();
     }
 
     private ProtonClientOptions createClientOptions() {

@@ -16,12 +16,18 @@ import java.util.List;
 
 import javax.annotation.PostConstruct;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Verticle;
+import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
 import org.eclipse.hono.util.EndpointFactory;
 import org.eclipse.hono.util.VerticleFactory;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -68,7 +74,7 @@ public class Application {
     private List<EndpointFactory<?>> endpointFactories;
 
     @PostConstruct
-    public void registerVerticles() throws Exception {
+    public void registerVerticles() {
         if (vertx == null) {
             throw new IllegalStateException("no Vert.x instance has been configured");
         }
@@ -96,9 +102,31 @@ public class Application {
             }
         });
 
+        MessageConsumer consumer = vertx.eventBus().consumer(Constants.APPLICATION_ENDPOINT).handler(message -> {
+            JsonObject json = (JsonObject)message.body();
+            String action = json.getString(Constants.APP_PROPERTY_ACTION);
+            if (action.equals(Constants.ACTION_RESTART)) {
+                LOG.info("Restarting Hono!");
+                vertx.eventBus().close(closeHandler -> {
+                    List<Future> results = new ArrayList<>();
+                    vertx.deploymentIDs().forEach(id -> {
+                        Future result = Future.future();
+                        vertx.undeploy(id, result.completer());
+                        results.add(result);
+                    });
+
+                    CompositeFuture.all(results).setHandler(ar -> {
+                        registerVerticles();
+                    });
+                });
+            } else {
+                LOG.warn("Unknown application action {}", action);
+            }
+        });
+
     }
 
-    private <T extends Verticle> Future<?> deployVerticle(VerticleFactory<T> factory, int instanceCount) throws Exception {
+    private <T extends Verticle> Future<?> deployVerticle(VerticleFactory<T> factory, int instanceCount) {
         LOG.info("Starting component {}", factory);
         @SuppressWarnings("rawtypes")
         List<Future> results = new ArrayList<>();
@@ -130,9 +158,9 @@ public class Application {
             results.add(result);
         }
         CompositeFuture.all(results).setHandler(ar -> {
-            if (ar.failed()) {
-                startFuture.fail(ar.cause());
-            }
+           if (ar.failed()) {
+              startFuture.fail(ar.cause());
+           }
         });
     }
 

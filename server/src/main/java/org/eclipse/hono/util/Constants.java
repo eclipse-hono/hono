@@ -11,6 +11,8 @@
  */
 package org.eclipse.hono.util;
 
+import io.vertx.core.json.JsonObject;
+
 /**
  * Constants used throughout Hono.
  *
@@ -20,10 +22,20 @@ public final class Constants {
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
     public static final String DEFAULT_SUBJECT = "SUBJECT";
 
+    public static final String APPLICATION_ENDPOINT = "application";
+    public static final String APP_PROPERTY_ACTION = "action";
+    public static final String ACTION_RESTART = "restart";
+
     private Constants() {
     }
 
     public static boolean isDefaultTenant(final String tenantId) {
         return DEFAULT_TENANT.equals(tenantId);
+    }
+
+    public static JsonObject getRestartJson() {
+        final JsonObject msg = new JsonObject();
+        msg.put(APP_PROPERTY_ACTION, ACTION_RESTART);
+        return msg;
     }
 }

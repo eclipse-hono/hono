@@ -127,6 +127,9 @@ public final class HonoServer extends AbstractVerticle {
                 LOG.info("HonoServer has been shut down");
                 shutdownHandler.complete();
             });
+        } else {
+           LOG.info("HonoServer has been already shut down");
+           shutdownHandler.complete();
         }
     }
 
