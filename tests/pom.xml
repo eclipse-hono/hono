@@ -35,23 +35,28 @@
       <dependency>
          <groupId>org.eclipse.hono</groupId>
          <artifactId>hono-client</artifactId>
+         <scope>test</scope>
       </dependency>
      <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-server</artifactId>
         <version>${project.version}</version>
+        <scope>test</scope>
      </dependency>
      <dependency>
        <groupId>io.vertx</groupId>
        <artifactId>vertx-core</artifactId>
+       <scope>test</scope>
      </dependency>
       <dependency>
          <groupId>io.vertx</groupId>
          <artifactId>vertx-proton</artifactId>
+         <scope>test</scope>
       </dependency>
       <dependency>
          <groupId>ch.qos.logback</groupId>
          <artifactId>logback-classic</artifactId>
+         <scope>test</scope>
       </dependency>
       <dependency>
          <groupId>io.vertx</groupId>
@@ -77,6 +82,7 @@
        <groupId>org.apache.activemq</groupId>
        <artifactId>activemq-all</artifactId>
        <version>${activemq.version}</version>
+       <scope>test</scope>
      </dependency>
    </dependencies>
 
@@ -129,6 +135,9 @@
                                  <prefix>QPID</prefix>
                                  <color>blue</color>
                               </log>
+                              <wait>
+                              	<log>^.*Operational.*$</log>
+                              </wait>
                            </run>
                         </image>
                         <!-- ##### Hono server ##### -->
@@ -156,7 +165,7 @@
                                  </from>
                               </volumes>
                               <wait>
-                                 <log>^.*(connection to downstream container).*(open)$</log>
+                                 <log>^.*(HonoServer running at).*$</log>
                               </wait>
                            </run>
                         </image>

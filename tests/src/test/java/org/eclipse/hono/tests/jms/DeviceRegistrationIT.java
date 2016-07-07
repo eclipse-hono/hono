@@ -84,7 +84,7 @@ public class DeviceRegistrationIT  {
             registrationForOtherTenant.createConsumer();
             Assert.fail("Expected exception, but it worked...");
         } catch (final JMSSecurityException e) {
-            LOG.info("Caught expected exception.", e);
+            LOG.debug("Caught expected exception.", e);
         }
     }
 
@@ -96,7 +96,7 @@ public class DeviceRegistrationIT  {
             registrationForOtherTenant.createProducer();
             Assert.fail("Expected exception, but it worked...");
         } catch (final JMSSecurityException e) {
-            LOG.info("Caught expected exception.", e);
+            LOG.debug("Caught expected exception.", e);
         }
     }
 
@@ -108,7 +108,7 @@ public class DeviceRegistrationIT  {
             Assert.fail("Expected exception, but it worked...");
         } catch (final Exception e) {
             if (e.getCause() instanceof JMSException) {
-                LOG.info("Expected exception occurred.", e);
+                LOG.debug("Expected exception occurred.", e);
             } else {
                 throw e;
             }
