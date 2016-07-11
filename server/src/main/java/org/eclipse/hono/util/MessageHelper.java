@@ -52,6 +52,7 @@ public final class MessageHelper {
      * The name of the AMQP 1.0 message application property containing the id of the resource a message is addressed at.
      */
     public static final String APP_PROPERTY_RESOURCE_ID          = "resource_id";
+    public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID          = "x-opt-app-correlation-id";
 
     private MessageHelper() {
     }
@@ -68,12 +69,25 @@ public final class MessageHelper {
 
     public static String getDeviceIdAnnotation(final Message msg) {
         Objects.requireNonNull(msg);
-        return getAnnotation(msg, APP_PROPERTY_DEVICE_ID);
+        return getAnnotation(msg, APP_PROPERTY_DEVICE_ID, String.class);
     }
 
     public static String getTenantIdAnnotation(final Message msg) {
         Objects.requireNonNull(msg);
-        return getAnnotation(msg, APP_PROPERTY_TENANT_ID);
+        return getAnnotation(msg, APP_PROPERTY_TENANT_ID, String.class);
+    }
+
+    /**
+     * Gets the value of the {@code x-opt-appl-correlation-id} annotation from a message.
+     * 
+     * @param msg the message to get the annotation from.
+     * @return the value of the annotation (if present) or {@code false} if the message
+     *         does not contain the annotation.
+     */
+    public static boolean getXOptAppCorrelationId(final Message msg) {
+        Objects.requireNonNull(msg);
+        Boolean value = getAnnotation(msg, ANNOTATION_X_OPT_APP_CORRELATION_ID, Boolean.class);
+        return value == null ? false : value;
     }
 
     @SuppressWarnings("unchecked")
@@ -99,7 +113,7 @@ public final class MessageHelper {
     }
 
     @SuppressWarnings("unchecked")
-    public static void addProperty(final Message msg, final String key, final String value) {
+    public static void addProperty(final Message msg, final String key, final Object value) {
         ApplicationProperties props = msg.getApplicationProperties();
         if (props == null) {
             props = new ApplicationProperties(new HashMap<String, Object>());
@@ -134,7 +148,7 @@ public final class MessageHelper {
      * @param key the name of the symbol to add a value for.
      * @param value the value to add.
      */
-    public static void addAnnotation(final Message msg, final String key, final String value) {
+    public static void addAnnotation(final Message msg, final String key, final Object value) {
         MessageAnnotations annotations = msg.getMessageAnnotations();
         if (annotations == null) {
             annotations = new MessageAnnotations(new HashMap<>());
@@ -149,13 +163,23 @@ public final class MessageHelper {
      *
      * @param msg the message that contains the annotations.
      * @param key the name of the symbol to return a value for.
+     * @param type the expected type of the value.
+     * @returns the annotation's value or {@code null} if no such annotation exists or its value
+     *          is not of the expected type.
      */
-    public static String getAnnotation(final Message msg, final String key) {
+    @SuppressWarnings("unchecked")
+    public static <T> T getAnnotation(final Message msg, final String key, final Class<T> type) {
         MessageAnnotations annotations = msg.getMessageAnnotations();
         if (annotations == null) {
             return null;
+        } else {
+            Object value = annotations.getValue().get(Symbol.getSymbol(key));
+            if (type.isInstance(value)) {
+                return (T) value;
+            } else {
+                return null;
+            }
         }
-        return (String) annotations.getValue().get(Symbol.getSymbol(key));
     }
 
     public static String getLinkName(final ProtonLink<?> link) {

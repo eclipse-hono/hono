@@ -26,7 +26,7 @@ import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkAttachedMsg;
 import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkDetachedMsg;
 import static org.eclipse.hono.telemetry.TelemetryConstants.isErrorMessage;
 import static org.eclipse.hono.telemetry.TelemetryConstants.isFlowControlMessage;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
+import static org.eclipse.hono.util.MessageHelper.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -168,7 +168,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
             }
         }).open();
 
-        LOG.debug("registering new link for client [{}]", linkId);
+        LOG.debug("registering new link for telemetry client [{}]", linkId);
         activeClients.put(linkId, link);
         JsonObject msg = getLinkAttachedMsg(linkId, targetAddress);
         DeliveryOptions headers = TelemetryConstants.addReplyToHeader(new DeliveryOptions(), flowControlAddress);
@@ -191,7 +191,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         if (!delivery.remotelySettled()) {
             LOG.trace("received un-settled telemetry message on link [{}]", link.getLinkId());
         }
-        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(MessageHelper.getAnnotation(msg, APP_PROPERTY_RESOURCE_ID));
+        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, APP_PROPERTY_RESOURCE_ID, String.class));
         checkDeviceExists(messageAddress, deviceExists -> {
             if (deviceExists) {
                 vertx.runOnContext(run -> {
@@ -201,9 +201,9 @@ public final class TelemetryEndpoint extends BaseEndpoint {
                     sendAtMostOnce(link, messageId, delivery);
                 });
             } else {
-                LOG.debug("Device {}/{} does not exist, rejecting message.",
+                LOG.debug("device {}/{} does not exist, closing link",
                         messageAddress.getTenantId(), messageAddress.getDeviceId());
-                ProtonHelper.rejected(delivery, true);
+                MessageHelper.rejected(delivery, AmqpError.PRECONDITION_FAILED.toString(), "device does not exist");
                 onLinkDetach(link);
             }
         });
@@ -212,15 +212,13 @@ public final class TelemetryEndpoint extends BaseEndpoint {
     private void checkDeviceExists(final ResourceIdentifier resource, final Handler<Boolean> resultHandler) {
         final JsonObject registrationJson = RegistrationConstants
                 .getRegistrationJson(RegistrationConstants.ACTION_GET, resource.getTenantId(), resource.getDeviceId());
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationJson, async -> {
-            if (async.succeeded()) {
-                final io.vertx.core.eventbus.Message<Object> message = async.result();
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationJson, response -> {
+            if (response.succeeded()) {
+                final io.vertx.core.eventbus.Message<Object> message = response.result();
                 final JsonObject body = (JsonObject) message.body();
                 final String status = body.getString(RegistrationConstants.APP_PROPERTY_STATUS);
                 resultHandler.handle(String.valueOf(HTTP_OK).equals(status));
             } else {
-                LOG.debug("Failed to retrieve information about device {}/{}: {}",
-                        resource.getTenantId(), resource.getDeviceId(), async.cause().getMessage());
                 resultHandler.handle(false);
             }
         });

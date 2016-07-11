@@ -47,11 +47,6 @@ public class MessageHelperTest {
     @Test
     public void testEncodeToJson() throws Exception {
 
-        System.out.println(jsonString.encodePrettily());
-        System.out.println(jsonUUID.encodePrettily());
-        System.out.println(jsonULong.encodePrettily());
-        System.out.println(jsonBinary.encodePrettily());
-
         assertThat(jsonString.getString("type"), is("string"));
         assertThat(jsonString.getString("id"), is(messageIdString));
 
@@ -70,22 +65,18 @@ public class MessageHelperTest {
         final Object string = MessageHelper.decodeIdFromJson(jsonString);
         assertThat(string, CoreMatchers.instanceOf(String.class));
         assertThat(string, CoreMatchers.is(messageIdString));
-        System.out.println(string);
 
 
         final Object uuid = MessageHelper.decodeIdFromJson(jsonUUID);
         assertThat(uuid, CoreMatchers.instanceOf(UUID.class));
         assertThat(uuid, CoreMatchers.is(messageIdUUID));
-        System.out.println(uuid);
 
         final Object ulong = MessageHelper.decodeIdFromJson(jsonULong);
         assertThat(ulong, CoreMatchers.instanceOf(UnsignedLong.class));
         assertThat(ulong, CoreMatchers.is(messageIdULong));
-        System.out.println(ulong);
 
         final Object binary = MessageHelper.decodeIdFromJson(jsonBinary);
         assertThat(binary, CoreMatchers.instanceOf(Binary.class));
         assertThat(binary, CoreMatchers.is(messageIdBinary));
-        System.out.println(binary);
     }
 }

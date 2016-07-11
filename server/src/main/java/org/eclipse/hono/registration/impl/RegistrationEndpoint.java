@@ -14,9 +14,11 @@ package org.eclipse.hono.registration.impl;
 import static io.vertx.proton.ProtonHelper.condition;
 import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_CORRELATION_ID;
 import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
+import static org.eclipse.hono.util.MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID;
 import static org.eclipse.hono.util.MessageHelper.encodeIdToJson;
 import static org.eclipse.hono.util.MessageHelper.getLinkName;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
@@ -32,8 +34,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -46,7 +46,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationEndpoint.class);
 
     public RegistrationEndpoint(final Vertx vertx, final boolean singleTenant) {
-        super(Objects.requireNonNull(vertx), singleTenant, 0);
+        this(vertx, singleTenant, 0);
     }
 
     public RegistrationEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceId) {
@@ -63,19 +63,23 @@ public final class RegistrationEndpoint extends BaseEndpoint {
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             LOG.debug("client wants to use AT MOST ONCE delivery mode for registration endpoint, this is not supported.");
             receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(),
-                    "AT MOST ONCE is not supported by this endpoint."));
+                    "QoS AT MOST ONCE is not supported by this endpoint."));
             receiver.close();
         }
 
-        receiver.handler((delivery, message) -> {
-                    if (RegistrationMessageFilter.verify(targetAddress, message)) {
-                        sendRegistrationData(delivery, message);
-                    } else {
-                        onLinkDetach(receiver);
-                    }
-                })
-                .closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
-                .open();
+        receiver
+            .setQoS(ProtonQoS.AT_LEAST_ONCE)
+            .setAutoAccept(true) // settle received messages if the handler succeeds
+            .setPrefetch(20)
+            .handler((delivery, message) -> {
+                if (RegistrationMessageFilter.verify(targetAddress, message)) {
+                    processRequest(message);
+                } else {
+                    // we close the link if the client sends a message that does not comply with the API spec
+                    onLinkDetach(receiver);
+                }
+            }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
+            .open();
 
         LOG.debug("registering new link for client [{}]", MessageHelper.getLinkName(receiver));
     }
@@ -84,13 +88,15 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
         /* note: we "misuse" deviceId part of the resource as reply address here */
         if (targetResource.getDeviceId() == null) {
-            LOG.debug("Client must provide a reply address e.g. registration/<tenant>/1234-abc");
-            sender.setCondition(condition("amqp:invalid-field", "link target must have the following format registration/<tenant>/<reply-address>"));
+            LOG.debug("link target provided in client's link ATTACH does not match pattern \"registration/<tenant>/<reply-address>\"");
+            sender.setCondition(condition(
+                    AmqpError.INVALID_FIELD.toString(),
+                    "link target must have the following format registration/<tenant>/<reply-address>"));
             sender.close();
         } else {
             final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(targetResource.toString(), message -> {
                 // TODO check for correct session here...?
-                LOG.trace("Forwarding reply to client: {}", message.body());
+                LOG.trace("forwarding reply to client: {}", message.body());
                 final Message amqpReply = RegistrationConstants.getAmqpReply(message);
                 sender.send(amqpReply);
             });
@@ -99,10 +105,10 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                 replyConsumer.unregister();
                 senderClosed.result().close();
                 final String linkName = MessageHelper.getLinkName(sender);
-                LOG.debug("Receiver closed link {}, removing associated event bus consumer {}", linkName, replyConsumer.address());
+                LOG.debug("receiver closed link [{}], removing associated event bus consumer [{}]", linkName, replyConsumer.address());
             });
 
-            sender.open();
+            sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
         }
     }
 
@@ -111,24 +117,35 @@ public final class RegistrationEndpoint extends BaseEndpoint {
         client.close();
     }
 
-    private void sendRegistrationData(final ProtonDelivery delivery, final Message msg) {
-        vertx.runOnContext(run -> {
-            final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
-            vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
-                    result -> {
+    private void processRequest(final Message msg) {
+        final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
+                result -> {
+                    JsonObject response = null;
+                    if (result.succeeded()) {
                         // TODO check for correct session here...?
-                        final String replyTo = msg.getReplyTo();
-                        if (replyTo != null) {
-                            final JsonObject message = (JsonObject) result.result().body();
-                            final JsonObject correlationIdJson = encodeIdToJson(getCorrelationId(msg));
-                            message.put(APP_PROPERTY_CORRELATION_ID, correlationIdJson);
-                            vertx.eventBus().send(replyTo, message);
-                        } else {
-                            LOG.debug("No reply-to address provided, cannot send reply to client.");
-                        }
-                        ProtonHelper.accepted(delivery, true);
-                    });
-        });
+                        response = (JsonObject) result.result().body();
+                    } else {
+                        LOG.debug("failed to process request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
+                        // we need to inform client about failure
+                        response = RegistrationConstants.getReply(
+                                HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                MessageHelper.getTenantIdAnnotation(msg),
+                                MessageHelper.getDeviceIdAnnotation(msg));
+                    }
+                    addHeadersToResponse(msg, response);
+                    vertx.eventBus().send(msg.getReplyTo(), response);
+                });
+    }
+
+    private void addHeadersToResponse(final Message request, final JsonObject message) {
+        boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
+        LOG.debug("registration request [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
+        if (isApplicationCorrelationId) {
+            message.put(ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
+        }
+        final JsonObject correlationIdJson = encodeIdToJson(getCorrelationId(request));
+        message.put(APP_PROPERTY_CORRELATION_ID, correlationIdJson);
     }
 
     /**
@@ -137,14 +154,12 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     * (Correlation ID Pattern) or the messageId of the request (Message ID Pattern, if no correlationId is provided).
     */
     private Object getCorrelationId(final Message request) {
-        final Object correlationId;
         /* if a correlationId is provided, we use it to correlate the response -> Correlation ID Pattern */
         if (request.getCorrelationId() != null) {
-            correlationId = request.getCorrelationId();
+            return request.getCorrelationId();
         } else {
            /* otherwise we use the message id -> Message ID Pattern */
-            correlationId = request.getMessageId();
+            return request.getMessageId();
         }
-        return correlationId;
     }
 }

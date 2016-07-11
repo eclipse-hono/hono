@@ -21,7 +21,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -79,24 +81,31 @@ public final class RegistrationConstants {
         final String status = message.body().getString(RegistrationConstants.APP_PROPERTY_STATUS);
         final JsonObject correlationIdJson = message.body().getJsonObject(RegistrationConstants.APP_PROPERTY_CORRELATION_ID);
         final Object correlationId = decodeIdFromJson(correlationIdJson);
-        return getAmqpReply(status, correlationId, tenantId, deviceId);
+        final boolean isApplCorrelationId = message.body().getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
+        return getAmqpReply(status, correlationId, tenantId, deviceId, isApplCorrelationId);
     }
 
-    public static Message getAmqpReply(final String status, final Object correlationId, final String tenantId, final String deviceId) {
-
-        final Map<String, String> map = new HashMap<>();
-        map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(APP_PROPERTY_STATUS, status);
-        final ApplicationProperties applicationProperties = new ApplicationProperties(map);
+    public static Message getAmqpReply(final String status, final Object correlationId, final String tenantId,
+            final String deviceId, final boolean isApplCorrelationId) {
 
         final ResourceIdentifier address = ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId);
-
         final Message message = ProtonHelper.message();
         message.setMessageId(UUID.randomUUID().toString());
         message.setCorrelationId(correlationId);
-        message.setApplicationProperties(applicationProperties);
         message.setAddress(address.toString());
+
+        final Map<String, Object> map = new HashMap<>();
+        map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        map.put(APP_PROPERTY_STATUS, status);
+        message.setApplicationProperties(new ApplicationProperties(map));
+
+        if (isApplCorrelationId) {
+            Map<Symbol, Object> annotations = new HashMap<>();
+            annotations.put(Symbol.valueOf(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID), isApplCorrelationId);
+            message.setMessageAnnotations(new MessageAnnotations(annotations));
+        }
+
         return message;
     }
 
