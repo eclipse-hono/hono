@@ -56,6 +56,12 @@ public class RegistrationEndpointTest {
     public void setUp() throws Exception {
         when(vertx.eventBus()).thenReturn(eventBus);
         receiver = mock(ProtonReceiver.class);
+        when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
+        when(receiver.handler(any())).thenReturn(receiver);
+        when(receiver.closeHandler(any())).thenReturn(receiver);
+        when(receiver.setAutoAccept(any(Boolean.class))).thenReturn(receiver);
+        when(receiver.setPrefetch(any(Integer.class))).thenReturn(receiver);
+        when(receiver.setQoS(any(ProtonQoS.class))).thenReturn(receiver);
         sender = mock(ProtonSender.class);
         endpoint = new RegistrationEndpoint(vertx, false);
     }
@@ -67,9 +73,6 @@ public class RegistrationEndpointTest {
 
     @Test
     public void testExpectAtLeastOnceQoS() {
-        when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
-        when(receiver.handler(any())).thenReturn(receiver);
-        when(receiver.closeHandler(any())).thenReturn(receiver);
 
         endpoint.onLinkAttach(receiver, resource);
 
