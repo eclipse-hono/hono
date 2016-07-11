@@ -43,6 +43,8 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -93,16 +95,20 @@ public class HonoServerIntegrationTest {
         Endpoint telemetryEndpoint = new TelemetryEndpoint(vertx, false);
         Endpoint registrationEndpoint = new RegistrationEndpoint(vertx, false);
         HonoServer server = createServer(telemetryEndpoint, registrationEndpoint);
+        Future<String> registrationDeployed = Future.future();
+        Future<String> authDeployed = Future.future();
+        Future<String> telemetryDeployed = Future.future();
+        CompositeFuture allDeployed = CompositeFuture.all(registrationDeployed, authDeployed, telemetryDeployed);
+        allDeployed.setHandler(done -> {
+            vertx.deployVerticle(server, serverDeployed -> {deployed.complete();});
+        });
+        vertx.deployVerticle(MockRegistrationAdapter.class.getName(), registrationDeployed.completer());
+        vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authDeployed.completer());
         vertx.deployVerticle(new MessageDiscardingTelemetryAdapter(msg -> {
             messagesReceived.countDown();
             LOG.debug("Received message [id: {}]", msg.getMessageId());
-        }));
-        vertx.deployVerticle(MockRegistrationAdapter.class.getName());
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName());
-        vertx.deployVerticle(server, res -> {
-            ctx.assertTrue(res.succeeded());
-            deployed.complete();
-        });
+        }), telemetryDeployed.completer());
+
         deployed.await(1000);
 
         Context context = createInitialContext(server);
