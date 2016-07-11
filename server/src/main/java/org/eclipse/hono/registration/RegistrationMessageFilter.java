@@ -41,8 +41,8 @@ public final class RegistrationMessageFilter extends BaseMessageFilter {
 
          if (!verifyStandardProperties(linkTarget, msg)) {
              return false;
-         } else if (msg.getMessageId() == null) {
-             LOG.trace("message has no message-id");
+         } else if (msg.getMessageId() == null && msg.getCorrelationId() == null) {
+             LOG.trace("message has neither a message-id nor correlation-id");
              return false;
          } else if (actionProperty == null) {
              LOG.trace("message [{}] contains no action property", msg.getMessageId());
