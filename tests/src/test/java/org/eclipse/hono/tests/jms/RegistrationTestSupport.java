@@ -76,6 +76,7 @@ public class RegistrationTestSupport {
         consumer = session.createConsumer(consumerDestination);
         consumer.setMessageListener(message -> {
             final String correlationID = getCorrelationID(message);
+            LOGGER.debug("received message from {} with correlation ID {}", consumerDestination, correlationID);
             if (correlationID == null) {
                 LOGGER.debug("No correlationId set for message, cannot correlate...");
                 return;
@@ -132,31 +133,30 @@ public class RegistrationTestSupport {
     private CompletableFuture<Long> send(final String deviceId, final String action, final Integer expectedStatus) {
 
         try {
+            final String correlationId = UUID.randomUUID().toString();
             final BytesMessage message = session.createBytesMessage();
             message.setStringProperty(APP_PROPERTY_DEVICE_ID, deviceId);
             message.setStringProperty(APP_PROPERTY_ACTION, action);
             message.setJMSReplyTo(reply);
+            message.setJMSCorrelationID(correlationId);
 
-            producer.send(message);
-
-            final String jmsMessageID = message.getJMSMessageID();
-
-            LOGGER.info("Add pending request for {}", message.getJMSMessageID());
-            return c.add(jmsMessageID, in -> {
-                final String status = getStringProperty(in, APP_PROPERTY_STATUS);
+            LOGGER.debug("adding response handler for request [correlation ID: {}]", correlationId);
+            CompletableFuture<Long> result = c.add(correlationId, response -> {
+                final String status = getStringProperty(response, APP_PROPERTY_STATUS);
+                LOGGER.debug("received response [status: {}] for request [correlation ID: {}]", status, correlationId);
                 final long httpStatus = toLong(status, 0);
                 if (status == null || status.isEmpty() || httpStatus <= 0) {
                     throw new IllegalStateException(
-                            "Response to " + getMessageID(in) + " contained no valid status: " + status);
+                            "Response to " + getMessageID(response) + " contained no valid status: " + status);
                 }
 
                 if (expectedStatus != null && expectedStatus != httpStatus) {
                     throw new IllegalStateException("returned status " + httpStatus);
                 }
-
                 return httpStatus;
             });
-
+            producer.send(message);
+            return result;
         } catch (final JMSException jmsException) {
             throw new IllegalStateException("Failed to send message.", jmsException);
         }
@@ -192,5 +192,9 @@ public class RegistrationTestSupport {
         } catch (final JMSException e) {
             return null;
         }
+    }
+
+    public int getCorrelationHelperSize() {
+        return c.size();
     }
 }

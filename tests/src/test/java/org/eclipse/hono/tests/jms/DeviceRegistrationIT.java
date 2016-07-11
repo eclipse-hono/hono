@@ -16,6 +16,8 @@ package org.eclipse.hono.tests.jms;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.TEST_TENANT_ID;
 
 import java.util.UUID;
@@ -65,15 +67,14 @@ public class DeviceRegistrationIT  {
 
     @Test
     public void testRegisterDevice() throws Exception {
-        registration
-                .retrieve(TEST_DEVICE_ID, HTTP_NOT_FOUND)
-                .thenRun(() -> registration.register(TEST_DEVICE_ID, HTTP_OK))
-                .thenRun(() -> registration.register(TEST_DEVICE_ID, HTTP_CONFLICT))
-                .thenRun(() -> registration.retrieve(TEST_DEVICE_ID, HTTP_OK))
-                .thenRun(() -> registration.deregister(TEST_DEVICE_ID, HTTP_OK))
-                .thenRun(() -> registration.retrieve(TEST_DEVICE_ID, HTTP_NOT_FOUND))
-                .thenRun(() -> registration.deregister(TEST_DEVICE_ID, HTTP_NOT_FOUND))
-                .get(5, TimeUnit.SECONDS);
+        registration.retrieve(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
+        registration.register(TEST_DEVICE_ID, HTTP_OK).get(2, TimeUnit.SECONDS);
+        registration.register(TEST_DEVICE_ID, HTTP_CONFLICT).get(2, TimeUnit.SECONDS);
+        registration.retrieve(TEST_DEVICE_ID, HTTP_OK).get(2, TimeUnit.SECONDS);
+        registration.deregister(TEST_DEVICE_ID, HTTP_OK).get(2, TimeUnit.SECONDS);
+        registration.retrieve(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
+        registration.deregister(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
+        assertThat("CorrelationHelper still contains mappings", registration.getCorrelationHelperSize(), is(0));
     }
 
     @Test
