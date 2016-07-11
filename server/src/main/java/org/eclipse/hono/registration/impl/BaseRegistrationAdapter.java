@@ -41,7 +41,7 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
      */
     @Override
     public final void start(final Future<Void> startFuture) throws Exception {
-        registerTelemetryDataConsumer();
+        registerConsumer();
         doStart(startFuture);
     }
 
@@ -59,7 +59,7 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         startFuture.complete();
     }
 
-    private void registerTelemetryDataConsumer() {
+    private void registerConsumer() {
         registrationConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_REGISTRATION_IN);
         registrationConsumer.handler(this::processRegistrationMessage);
         LOG.info("listening on event bus [address: {}] for incoming registration messages",
@@ -91,17 +91,11 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         stopFuture.complete();
     }
 
-    protected void reply(final Message<JsonObject> msg, final int status) {
-        final JsonObject body = msg.body();
+    protected final void reply(final Message<JsonObject> request, final int status) {
+        final JsonObject body = request.body();
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
 
-        final JsonObject replyMsg = new JsonObject();
-        replyMsg.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        replyMsg.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        replyMsg.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
-
-        msg.reply(replyMsg);
+        request.reply(RegistrationConstants.getReply(status, tenantId, deviceId));
     }
-
 }
