@@ -13,9 +13,9 @@
 
 package org.eclipse.hono.tests.jms;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -23,13 +23,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
+ * @param T the type of response this helper keeps consumers for
+ * @param R the type of result the consumers held by this helper provide
  */
 public class CorrelationHelper<T, R> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CorrelationHelper.class);
 
-    private final Map<String, Consumer<T>>  handlers = new HashMap<>();
+    private final Map<String, Consumer<T>>  handlers = new ConcurrentHashMap<>();
 
     public CompletableFuture<R> add(final String correlationId, final Function<T, R> consumer) {
 
@@ -55,5 +56,9 @@ public class CorrelationHelper<T, R> {
         } else {
             LOGGER.debug("No pending request found for {}.", correlationId);
         }
+    }
+
+    public int size() {
+        return handlers.size();
     }
 }
