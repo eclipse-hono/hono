@@ -132,7 +132,7 @@ public class RegistrationTest {
             })
            .closeHandler(closed -> LOG.debug("receiver closed {}...", ((ProtonReceiverImpl) closed.result()).getName()))
            .handler((delivery, message) -> {
-               LOG.info("Received reply {}", message);
+               LOG.debug("Received reply {}", message);
                final String correlationId = (String) message.getCorrelationId();
                ofNullable(handlers.remove(correlationId)).ifPresent(h -> h.handle(message));
            }).setPrefetch(10).open();
