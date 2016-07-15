@@ -72,20 +72,23 @@ public class HonoTestSupport {
     public void testTelemetry() throws Exception {
         final CountDownLatch received = new CountDownLatch(MSG_COUNT);
         receiver = new TelemetryClient(downstreamHostName, downstreamPort, TENANT_ID);
-
-        receiver.createReceiver(message -> {
-            LOGGER.debug("Received message: {}", message);
-            received.countDown();
-        }, "telemetry" + pathSeparator + "%s").setHandler(r -> createSender());
+        receiver.connectHandler(result -> {
+            receiver.createReceiver(message -> {
+                LOGGER.debug("Received message: {}", message);
+                received.countDown();
+            }, "telemetry" + pathSeparator + "%s").setHandler(r -> createSender());
+        });
 
         assertTrue("Could not receive all messages sent", received.await(5, TimeUnit.SECONDS));
     }
 
     private void createSender() {
         sender = new TelemetryClient(InetAddress.getLoopbackAddress().getHostAddress(), honoServerPort, TENANT_ID);
-        sender.createSender().setHandler(r -> {
-            registerDevices();
-            sendTelemetryData();
+        sender.connectHandler(result -> {
+            sender.createSender().setHandler(r -> {
+                registerDevices();
+                sendTelemetryData();
+            });
         });
     }
 

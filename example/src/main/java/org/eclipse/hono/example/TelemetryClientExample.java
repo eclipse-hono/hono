@@ -61,21 +61,25 @@ public class TelemetryClientExample {
         LOG.info("Starting TelemetryClient in role {}", role);
         client = new TelemetryClient(host, port, tenantId);
         if (ROLE_SENDER.equalsIgnoreCase(role)) {
-            client.createSender()
-                    .setHandler(r -> {
-                        client.register(deviceId).setHandler(result -> {
-                           if (result.succeeded() && result.result() == HttpURLConnection.HTTP_OK) {
-                               LOG.debug("Device registered successfully.");
-                           } else {
-                               LOG.debug("Failed to register device: {}", result.succeeded() ? result.result().toString() : result.cause().getMessage());
-                           }
-                        });
+            client.connectHandler(res -> {
+                client.createSender()
+                        .setHandler(r -> {
+                            client.register(deviceId).setHandler(result -> {
+                                if (result.succeeded() && result.result() == HttpURLConnection.HTTP_OK) {
+                                    LOG.debug("Device registered successfully.");
+                                } else {
+                                    LOG.debug("Failed to register device: {}", result.succeeded() ? result.result().toString() : result.cause().getMessage());
+                                }
+                            });
 
-                        executor.execute(this::readMessagesFromStdin);
-                    });
+                            executor.execute(this::readMessagesFromStdin);
+                        });
+            });
         } else if (ROLE_RECEIVER.equalsIgnoreCase(role)) {
-            client.createReceiver(content -> LOG.info("received telemetry message: {}", ((AmqpValue)content.getBody()).getValue()), "telemetry" + pathSeparator + "%s")
-                    .setHandler(v -> executor.execute(this::waitForInput));
+            client.connectHandler(res -> {
+                client.createReceiver(content -> LOG.info("received telemetry message: {}", ((AmqpValue) content.getBody()).getValue()), "telemetry" + pathSeparator + "%s")
+                        .setHandler(v -> executor.execute(this::waitForInput));
+            });
         } else {
             throw new IllegalArgumentException("role parameter must be either " + ROLE_SENDER + " or " + ROLE_RECEIVER);
         }

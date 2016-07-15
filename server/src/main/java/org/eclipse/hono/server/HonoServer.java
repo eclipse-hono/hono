@@ -116,7 +116,6 @@ public final class HonoServer extends AbstractVerticle {
         options.setIdleTimeout(0);
         options.setReceiveBufferSize(32 * 1024); // 32kb
         options.setSendBufferSize(32 * 1024); // 32kb
-        options.setReuseAddress(false);
         return options;
     }
 

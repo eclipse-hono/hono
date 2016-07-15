@@ -51,16 +51,16 @@ public class TelemetryClient {
     private static final String PROPERTY_NAME_DEVICE_ID = "device_id";
     private static final Logger LOG = LoggerFactory.getLogger(TelemetryClient.class);
 
-    private final Vertx                               vertx;
-    private final CompletableFuture<ProtonConnection> connection;
-    private final Future<ProtonSender>                telemetrySender    = Future.future();
-    private final Future<ProtonSender>                registrationSender = Future.future();
-    private final Map<String, Future<Integer>>        replyMap = new HashMap<>();
-    private final AtomicLong                          messageTagCounter  = new AtomicLong();
-    private final String                              host;
-    private final int                                 port;
-    private final String                              tenantId;
-    private final String                              registrationReplyAddress;
+    private final Vertx vertx;
+    private CompletableFuture<ProtonConnection> connection;
+    private Future<ProtonSender> telemetrySender = Future.future();
+    private Future<ProtonSender> registrationSender = Future.future();
+    private final Map<String, Future<Integer>> replyMap = new HashMap<>();
+    private final AtomicLong messageTagCounter = new AtomicLong();
+    private final String host;
+    private final int port;
+    private final String tenantId;
+    private final String registrationReplyAddress;
 
     /**
      * Instantiates a new TelemetryClient.
@@ -70,18 +70,7 @@ public class TelemetryClient {
      * @param tenantId the ID of the tenant for which this client instance sends/receives messages
      */
     public TelemetryClient(final String host, final int port, final String tenantId) {
-        this(host, port, tenantId, new ProtonClientOptions());
-//        this.host = host;
-//        this.port = port;
-//        this.tenantId = tenantId;
-//        vertx = Vertx.vertx();
-//        connection = new CompletableFuture<>();
-//        connection.whenComplete((o,t) -> {
-//            if (t != null) {
-//                LOG.info("Connection to Hono ({}:{}) failed.", host, port, t);
-//            }
-//        });
-//        connectToHono(new ProtonClientOptions());
+        this(host, port, tenantId, createClientOptions());
     }
 
     /**
@@ -97,17 +86,27 @@ public class TelemetryClient {
         this.port = port;
         this.tenantId = tenantId;
         registrationReplyAddress = REGISTRATION_TARGET_ADDRESS + "/" + UUID.randomUUID().toString();
+
         vertx = Vertx.vertx();
+
+        connectToHono(clientOptions);
+    }
+
+    static private ProtonClientOptions createClientOptions() {
+        ProtonClientOptions options = new ProtonClientOptions();
+        options.setReconnectAttempts(10)
+                .setReconnectInterval(5 * 1000); // every 5 secs
+        return options;
+    }
+
+    private void connectToHono(final ProtonClientOptions options) {
         connection = new CompletableFuture<>();
         connection.whenComplete((o,t) -> {
             if (t != null) {
                 LOG.info("Connection to Hono ({}:{}) failed.", host, port, t);
             }
         });
-        connectToHono(clientOptions);
-    }
 
-    private void connectToHono(final ProtonClientOptions options) {
         final ProtonClient client = ProtonClient.create(vertx);
 
         client.connect(options, host, port, conAttempt -> {
@@ -118,10 +117,19 @@ public class TelemetryClient {
                    .setContainer("SUBJECT")
                    .openHandler(loggingHandler("connection opened"))
                    .closeHandler(loggingHandler("connection closed"))
+                   .disconnectHandler(conn -> {
+                       LOG.info("Disconnected");
+                       connection.thenAccept(ProtonConnection::close);
+                       telemetrySender = Future.future();
+                       registrationSender = Future.future();
+                       connectToHono(createClientOptions());
+                   })
                    .open();
                 this.connection.complete(protonConnection);
+                connectHandler.handle(Future.future());
             } else {
                 connection.completeExceptionally(conAttempt.cause());
+                disconnectHandler.handle(Future.future());
             }
         });
 
@@ -238,6 +246,24 @@ public class TelemetryClient {
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         connection.thenAccept(ProtonConnection::close);
         vertx.close(completionHandler);
+    }
+
+    private Handler<AsyncResult<Void>> connectHandler = (result) -> {
+      LOG.trace("Client Connected");
+    };
+
+    private Handler<AsyncResult<Void>> disconnectHandler = (result) -> {
+      LOG.trace("Client Disconnected");
+    };
+
+    public TelemetryClient connectHandler(Handler<AsyncResult<Void>> connectHandler) {
+       this.connectHandler = connectHandler;
+       return this;
+    }
+
+    public TelemetryClient disconnectHandler(Handler<AsyncResult<Void>> disconnectHandler) {
+       this.disconnectHandler = disconnectHandler;
+       return this;
     }
 
     private <T> Handler<AsyncResult<T>> loggingHandler(final String label) {

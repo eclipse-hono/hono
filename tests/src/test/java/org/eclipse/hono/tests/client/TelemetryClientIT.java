@@ -56,8 +56,9 @@ public class TelemetryClientIT {
         options.setReconnectAttempts(10);
 
         sender = new TelemetryClient(HONO_HOST, HONO_PORT, TEST_TENANT_ID, options);
-        sender.createSender().setHandler(ctx.asyncAssertSuccess());
-
+        sender.connectHandler(result -> {
+            sender.createSender().setHandler(ctx.asyncAssertSuccess());
+        });
         receiver = new TelemetryClient(QPID_HOST, QPID_PORT, TEST_TENANT_ID, options);
     }
 
