@@ -12,7 +12,9 @@
  */
 package org.eclipse.hono.tests.jms;
 
-import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.TELEMETRY_ADDRESS;
+import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.TELEMETRY_SENDER_ADDRESS;
+import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.TELEMETRY_RECEIVER_ADDRESS;
+import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.PATH_SEPARATOR;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -52,7 +54,8 @@ public class SendReceiveIT {
     private RegistrationTestSupport registration;
     private JmsIntegrationTestSupport connector;
     public static final String SPECIAL_DEVICE = "fluxcapacitor";
-    public static final JmsQueue SPECIAL_DEVICE_QUEUE = new JmsQueue(TELEMETRY_ADDRESS + "/" + SPECIAL_DEVICE);
+    public static final JmsQueue SPECIAL_DEVICE_SENDER_DEST = new JmsQueue(TELEMETRY_SENDER_ADDRESS + "/" + SPECIAL_DEVICE);
+    public static final JmsQueue SPECIAL_DEVICE_RECV_DEST = new JmsQueue(TELEMETRY_RECEIVER_ADDRESS + PATH_SEPARATOR + SPECIAL_DEVICE);
 
     @Before
     public void init() throws Exception {
@@ -125,8 +128,8 @@ public class SendReceiveIT {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        final MessageProducer telemetryProducer = connector.getTelemetryProducer(SPECIAL_DEVICE_QUEUE);
-        final MessageConsumer messageConsumer = receiver.getTelemetryConsumer(SPECIAL_DEVICE_QUEUE);
+        final MessageProducer telemetryProducer = connector.getTelemetryProducer(SPECIAL_DEVICE_SENDER_DEST);
+        final MessageConsumer messageConsumer = receiver.getTelemetryConsumer(SPECIAL_DEVICE_RECV_DEST);
         messageConsumer.setMessageListener(message -> {
             final String deviceId = getDeviceId(message);
             LOG.info("------> Received message for {}", deviceId);

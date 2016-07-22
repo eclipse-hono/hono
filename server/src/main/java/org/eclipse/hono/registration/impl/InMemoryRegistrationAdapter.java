@@ -46,6 +46,14 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
     /* map tenant -> set of devices */
     private final Map<String, Set<String>> deviceMap = new ConcurrentHashMap<>();
 
+    /**
+     * Removes all devices from this (in-memory) registry.
+     */
+    public void clear() {
+        LOGGER.debug("clearing registration store");
+        deviceMap.clear();
+    }
+
     @Override
     public void processRegistrationMessage(final Message<JsonObject> regMsg) {
 
@@ -73,7 +81,7 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
         }
     }
 
-    private int getDevice(final String tenantId, final String deviceId) {
+    public int getDevice(final String tenantId, final String deviceId) {
         final Set<String> devices = deviceMap.get(tenantId);
         if (devices != null && devices.contains(deviceId)) {
             return HTTP_OK;
@@ -82,7 +90,7 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
         }
     }
 
-    private int removeDevice(final String tenantId, final String deviceId) {
+    public int removeDevice(final String tenantId, final String deviceId) {
         if (getDevicesForTenant(tenantId).remove(deviceId)) {
             return HTTP_OK;
         } else {
@@ -90,7 +98,7 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
         }
     }
 
-    private int addDevice(final String tenantId, final String deviceId) {
+    public int addDevice(final String tenantId, final String deviceId) {
         if (getDevicesForTenant(tenantId).add(deviceId)) {
             return HTTP_OK;
         } else {
@@ -104,6 +112,6 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
 
     @Override
     public String toString() {
-        return "InMemoryRegistrationAdapter{}";
+        return String.format("InMemoryRegistrationAdapter{registeredDevices: %d}", deviceMap.size());
     }
 }

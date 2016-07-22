@@ -21,13 +21,18 @@ import java.util.concurrent.Executors;
 import javax.annotation.PostConstruct;
 
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
-import org.eclipse.hono.client.TelemetryClient;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.TelemetrySender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 /**
  * An example of using TelemetryClient for uploading and retrieving telemetry data to/from Hono.
@@ -41,7 +46,9 @@ public class TelemetryClientExample {
     private static final String   ROLE_RECEIVER     = "receiver";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private TelemetryClient       client;
+    private Vertx                 vertx;
+    private HonoClient            client;
+    private TelemetrySender       telemetryClient;
 
     @Value(value = "${hono.server.host}")
     private String                host;
@@ -58,27 +65,43 @@ public class TelemetryClientExample {
 
     @PostConstruct
     private void start() throws Exception {
-        LOG.info("Starting TelemetryClient in role {}", role);
-        client = new TelemetryClient(host, port, tenantId);
-        if (ROLE_SENDER.equalsIgnoreCase(role)) {
-            client.connectHandler(res -> {
-                client.createSender()
-                        .setHandler(r -> {
-                            client.register(deviceId).setHandler(result -> {
-                                if (result.succeeded() && result.result() == HttpURLConnection.HTTP_OK) {
-                                    LOG.debug("Device registered successfully.");
-                                } else {
-                                    LOG.debug("Failed to register device: {}", result.succeeded() ? result.result().toString() : result.cause().getMessage());
-                                }
-                            });
 
-                            executor.execute(this::readMessagesFromStdin);
-                        });
+        LOG.info("Starting TelemetryClient in role {}", role);
+        vertx = Vertx.vertx();
+        client = HonoClient.newInstance(vertx, host, port);
+        if (ROLE_SENDER.equalsIgnoreCase(role)) {
+            Future<TelemetrySender> setupTracker = Future.future();
+            setupTracker.setHandler(sender -> {
+                telemetryClient = sender.result();
+                executor.execute(this::readMessagesFromStdin);
             });
+
+            Future<RegistrationClient> regClientTracker = Future.future();
+            vertx.runOnContext(go -> {
+                client.createRegistrationClient(tenantId, regClientTracker.completer());
+                regClientTracker.compose(regClient -> {
+                    Future<Integer> regResultTracker = Future.future();
+                    regClient.register(deviceId, registration -> {
+                        if (registration.succeeded() && registration.result() == HttpURLConnection.HTTP_OK) {
+                            LOG.debug("Device registered successfully.");
+                            regResultTracker.complete(registration.result());
+                        } else {
+                            regResultTracker.fail(String.format("Failed to register device: %s", registration.succeeded() ? registration.result() : registration.cause().getMessage()));
+                        }
+                     });
+                    return regResultTracker;
+                }).compose(regResult -> {
+                    client.createTelemetrySender(tenantId, setupTracker.completer());
+                }, setupTracker);
+            });
+
         } else if (ROLE_RECEIVER.equalsIgnoreCase(role)) {
-            client.connectHandler(res -> {
-                client.createReceiver(content -> LOG.info("received telemetry message: {}", ((AmqpValue) content.getBody()).getValue()), "telemetry" + pathSeparator + "%s")
-                        .setHandler(v -> executor.execute(this::waitForInput));
+            vertx.runOnContext(go -> {
+                client.createTelemetryConsumer(tenantId, msg -> {
+                    LOG.info("received telemetry message: {}", ((AmqpValue) msg.getBody()).getValue());
+                }, created -> {
+                    executor.execute(this::waitForInput);
+                });
             });
         } else {
             throw new IllegalArgumentException("role parameter must be either " + ROLE_SENDER + " or " + ROLE_RECEIVER);
@@ -92,12 +115,14 @@ public class TelemetryClientExample {
             do {
                 LOG.info("Enter some message to send (empty message to quit): ");
                 input = reader.readLine();
-                client.send(deviceId, input);
+                telemetryClient.send(deviceId, input, "plain/text");
             } while (input != null && !input.isEmpty());
         } catch (final IOException e) {
             LOG.error("problem reading message from STDIN", e);
         } finally {
-            client.shutdown();
+            vertx.runOnContext(go -> {
+                client.shutdown();
+            });
             executor.shutdown();
         }
     }
@@ -109,7 +134,9 @@ public class TelemetryClientExample {
         } catch (final IOException e) {
             LOG.error("problem reading message from STDIN", e);
         } finally {
-            client.shutdown();
+            vertx.runOnContext(go -> {
+                client.shutdown();
+            });
             executor.shutdown();
         }
     }

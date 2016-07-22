@@ -23,8 +23,12 @@
 
    <artifactId>hono-tests</artifactId>
 
+   <name>Hono Integration Tests</name>
+   <description>Integration tests verifying Hono's APIs.
+Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch Router | ActiveMQ broker).</description>
+
    <properties>
-      <qpid-dispatch.version>0.6.0-rc4</qpid-dispatch.version>
+     <image.target>hono-test-config</image.target>
    </properties>
 
    <dependencies>
@@ -40,7 +44,6 @@
      <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-server</artifactId>
-        <version>${project.version}</version>
         <scope>test</scope>
      </dependency>
      <dependency>
@@ -66,24 +69,6 @@
          <groupId>org.apache.qpid</groupId>
          <artifactId>qpid-jms-client</artifactId>
       </dependency>
-     <dependency>
-       <groupId>org.springframework</groupId>
-       <artifactId>spring-test</artifactId>
-       <version>${spring.version}</version>
-       <scope>test</scope>
-     </dependency>
-     <dependency>
-       <groupId>org.springframework</groupId>
-       <artifactId>spring-messaging</artifactId>
-       <version>${spring.version}</version>
-       <scope>test</scope>
-     </dependency>
-     <dependency>
-       <groupId>org.apache.activemq</groupId>
-       <artifactId>activemq-all</artifactId>
-       <version>${activemq.version}</version>
-       <scope>test</scope>
-     </dependency>
    </dependencies>
 
    <profiles>
@@ -99,23 +84,23 @@
                      <images>
                         <!-- ##### volume container with hono server configuration ##### -->
                         <image>
-                           <alias>test-config</alias>
+                           <alias>config</alias>
                            <build>
                               <from>tianon/true</from>
                               <volumes>
-                                 <volume>/config</volume>
+                                 <volume>/etc/hono</volume>
                               </volumes>
                               <assembly>
                                  <mode>dir</mode>
-                                 <basedir>/config</basedir>
+                                 <basedir>/etc/hono</basedir>
                                  <inline>
                                     <id>config</id>
                                     <fileSets>
                                        <fileSet>
-                                          <directory>${project.basedir}/src/test/resources/config</directory>
-                                          <outputDirectory>/</outputDirectory>
+                                          <directory>${project.basedir}/src/test/resources</directory>
+                                          <outputDirectory>.</outputDirectory>
                                           <includes>
-                                             <include>**/*</include>
+                                             <include>*.json</include>
                                           </includes>
                                        </fileSet>
                                     </fileSets>
@@ -129,7 +114,7 @@
                            <name>gordons/qpid-dispatch:${qpid-dispatch.version}</name>
                            <run>
                               <ports>
-                                 <port>qpid.amqp.port:5672</port>
+                                 <port>+qpid.ip:qpid.amqp.port:5672</port>
                               </ports>
                               <log>
                                  <prefix>QPID</prefix>
@@ -142,8 +127,8 @@
                         </image>
                         <!-- ##### Hono server ##### -->
                         <image>
-                           <alias>hono-server</alias>
-                           <name>eclipsehono/server:${project.version}</name>
+                           <alias>server</alias>
+                           <name>eclipsehono/hono-server:${project.version}</name>
                            <run>
                               <ports>
                                  <port>+hono.ip:hono.amqp.port:5672</port>
@@ -151,6 +136,12 @@
                               <links>
                                  <link>qdrouter</link>
                               </links>
+                              <env>
+                                 <HONO_MAXINSTANCES>2</HONO_MAXINSTANCES>
+                                 <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
+                                 <HONO_TELEMETRY_DOWNSTREAM_HOST>qdrouter</HONO_TELEMETRY_DOWNSTREAM_HOST>
+                                 <SPRING_CONFIG_LOCATION>file:/etc/hono</SPRING_CONFIG_LOCATION>
+                              </env>
                               <log>
                                  <prefix>HONO</prefix>
                                  <color>green</color>
@@ -161,7 +152,7 @@
                                  <!--<volume>${project.basedir}/src/test/resources/config:/config</volume>-->
                                  <!--</bind>-->
                                  <from>
-                                    <image>test-config</image>
+                                    <image>config</image>
                                  </from>
                               </volumes>
                               <wait>
@@ -212,11 +203,164 @@
                      <systemProperties>
                         <hono.host>${hono.ip}</hono.host>
                         <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
-                        <qpid.host>${hono.ip}</qpid.host>
-                        <qpid.amqp.port>${qpid.amqp.port}</qpid.amqp.port>
+                        <downstream.host>${qpid.ip}</downstream.host>
+                        <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
                      </systemProperties>
                      <includes>
-                        <!-- include>**/IT*.java</include-->
+                        <include>**/*IT.java</include>
+                     </includes>
+                  </configuration>
+                  <executions>
+                     <execution>
+                        <id>run-integration-tests</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                           <goal>integration-test</goal>
+                        </goals>
+                     </execution>
+                  </executions>
+               </plugin>
+            </plugins>
+         </build>
+      </profile>
+
+      <profile>
+         <id>run-activemq-tests</id>
+         <build>
+            <plugins>
+               <plugin>
+                  <groupId>io.fabric8</groupId>
+                  <artifactId>docker-maven-plugin</artifactId>
+                  <configuration>
+                     <verbose>true</verbose>
+                     <images>
+                        <!-- ##### volume container with hono server configuration ##### -->
+                        <image>
+                           <alias>config</alias>
+                           <build>
+                              <from>tianon/true</from>
+                              <volumes>
+                                 <volume>/etc/hono</volume>
+                              </volumes>
+                              <assembly>
+                                 <mode>dir</mode>
+                                 <basedir>/etc/hono</basedir>
+                                 <inline>
+                                    <id>config</id>
+                                    <fileSets>
+                                       <fileSet>
+                                          <directory>${project.basedir}/src/test/resources</directory>
+                                          <outputDirectory>.</outputDirectory>
+                                          <includes>
+                                             <include>*.json</include>
+                                          </includes>
+                                       </fileSet>
+                                    </fileSets>
+                                 </inline>
+                              </assembly>
+                           </build>
+                        </image>
+                        <!-- ##### ActiveMQ Broker ##### -->
+                        <image>
+                           <alias>activemq</alias>
+                           <name>rmohr/activemq:${activemq.version}</name>
+                           <run>
+                              <ports>
+                                 <port>+broker.ip:broker.amqp.port:5672</port>
+                              </ports>
+                              <log>
+                                 <prefix>ACTIVEMQ</prefix>
+                                 <color>blue</color>
+                              </log>
+                              <wait>
+                              	<log>^.*Connector amqp started.*$</log>
+                              </wait>
+                           </run>
+                        </image>
+                        <!-- ##### Hono server ##### -->
+                        <image>
+                           <alias>server</alias>
+                           <name>eclipsehono/hono-server:${project.version}</name>
+                           <run>
+                              <ports>
+                                 <port>+hono.ip:hono.amqp.port:5672</port>
+                              </ports>
+                              <links>
+                                 <link>activemq</link>
+                              </links>
+                              <env>
+                                 <HONO_MAXINSTANCES>2</HONO_MAXINSTANCES>
+                                 <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
+                                 <HONO_TELEMETRY_DOWNSTREAM_HOST>activemq</HONO_TELEMETRY_DOWNSTREAM_HOST>
+                                 <HONO_TELEMETRY_PATHSEPARATOR>.</HONO_TELEMETRY_PATHSEPARATOR>
+                                 <SPRING_CONFIG_LOCATION>file:/etc/hono</SPRING_CONFIG_LOCATION>
+                              </env>
+                              <log>
+                                 <prefix>HONO</prefix>
+                                 <color>green</color>
+                              </log>
+                              <volumes>
+                                 <!--<bind>-->
+                                 <!-- this is not working on windows machine... have to use volume container -->
+                                 <!--<volume>${project.basedir}/src/test/resources/config:/config</volume>-->
+                                 <!--</bind>-->
+                                 <from>
+                                    <image>config</image>
+                                 </from>
+                              </volumes>
+                              <wait>
+                                 <log>^.*(HonoServer running at).*$</log>
+                              </wait>
+                           </run>
+                        </image>
+                     </images>
+                  </configuration>
+                  <executions>
+                     <execution>
+                        <phase>package</phase>
+                        <goals>
+                           <goal>build</goal>
+                        </goals>
+                     </execution>
+                     <execution>
+                        <id>start-docker</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                           <goal>start</goal>
+                        </goals>
+                     </execution>
+                     <execution>
+                        <id>stop-docker</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                           <goal>stop</goal>
+                           <goal>remove</goal>
+                        </goals>
+                        <configuration>
+                           <removeVolumes>true</removeVolumes>
+                        </configuration>
+                     </execution>
+                  </executions>
+               </plugin>
+               <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-surefire-plugin</artifactId>
+                  <configuration>
+                     <skip>true</skip>
+                  </configuration>
+               </plugin>
+               <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-failsafe-plugin</artifactId>
+                  <configuration>
+                     <systemProperties>
+                        <hono.host>${hono.ip}</hono.host>
+                        <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
+                        <hono.telemetry.pathSeparator>.</hono.telemetry.pathSeparator>
+                        <downstream.host>${broker.ip}</downstream.host>
+                        <downstream.amqp.port>${broker.amqp.port}</downstream.amqp.port>
+                     </systemProperties>
+                     <includes>
                         <include>**/*IT.java</include>
                      </includes>
                   </configuration>
@@ -234,5 +378,4 @@
          </build>
       </profile>
    </profiles>
-
 </project>

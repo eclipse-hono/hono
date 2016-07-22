@@ -25,10 +25,6 @@
 
   <artifactId>hono-example</artifactId>
 
-  <properties>
-    <image.target>example-config</image.target>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -86,59 +82,4 @@
     </plugins>
   </build>
 
-  <profiles>
-    <profile>
-      <id>build-docker-image</id>
-      <activation>
-        <property>
-          <name>docker.host</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
-            <configuration>
-              <images>
-                <image>
-                  <alias>hono-example-config</alias>
-                  <build>
-                    <from>tianon/true</from>
-                    <volumes>
-                      <volume>/config</volume>
-                    </volumes>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/config</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/config</directory>
-                            <outputDirectory>/</outputDirectory>
-                            <includes>
-                              <include>**/*</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-              </images>
-            </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>

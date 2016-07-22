@@ -1,26 +1,27 @@
-# Hono Tests
+# Hono Integration Tests
 
-This module contains integration tests against Hono run in a docker based environment.
+This module contains integration tests for Hono. The tests are executed against Docker images of *Hono Server* and either one of *Apache Qpid Dispatch Router* or *Apache ActiveMQ*.
 
 ## Prerequisites
 
-In order to run the tests you will need the following (see [Hono Example](../example/readme.md) on how to build the required images).
+In order to run the tests you will need the following:
 
-* *Docker*
-* The *Hono* docker image
-* An *Apache Qpid Dispatch Router* docker image
-* The *test-config* docker image (contains configuration for the Hono server, build with command `mvn docker:build` from `tests` directory)
+* a working *Docker Engine* installation (either local or on a separate host)
+* the *Hono Server* Docker image (see [Hono Example](../example/readme.md) on how to build the image)
+* access to Docker Hub for pulling in required third party images (*Apache Qpid Dispatch Router* and/or *ActiveMQ*)
 
 ## Running the Tests
 
-After these prerequisites are met you can run the tests by executing the following command from the `tests` directory (you may add `-Ddocker.host=tcp://${host}:${port}` if required)
+Run the tests by executing the following command from the `tests` directory (add `-Ddocker.host=tcp://${host}:${port}` if Docker is not installed locally)
 
     $ mvn verify -Prun-tests
 
-The test starts the following containers
+This starts the following Docker containers and runs the test cases against them
 
 * hono-server
 * Qpid Dispatch Router
-* test-config (volume image, contains configuration for hono server)
+* test-config (a volume image that contains configuration files for the Hono server)
 
-and executes all existing `*IT` tests against this environment.
+In order to run the test cases using an *ActiveMQ* broker instead of the *Qpid Dispatch Router* run the following command instead:
+
+    $ mvn verify -Prun-activemq-tests

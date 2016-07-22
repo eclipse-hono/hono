@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
-import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.telemetry.SenderFactory;
 import org.eclipse.hono.util.Constants;
@@ -97,34 +96,38 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         } else if (downstreamContainerPort == 0) {
             throw new IllegalStateException("downstream container port is not set");
         }
+        LOG.info("connecting to downstream container [{}:{}]...", downstreamContainerHost, downstreamContainerPort);
+
         ProtonClient client = ProtonClient.create(vertx);
         client.connect(createClientOptions(), downstreamContainerHost, downstreamContainerPort, conAttempt -> {
-            if (conAttempt.succeeded()) {
-                LOG.info("connected to downstream AMQP 1.0 container [{}:{}]", downstreamContainerHost,
-                        downstreamContainerPort);
-                conAttempt.result().openHandler(result -> {
-                    if (result.succeeded()) {
-                        downstreamConnection = result.result();
-                        LOG.info("connection to downstream container [{}] open",
-                                downstreamConnection.getRemoteContainer());
-                        downstreamConnection.disconnectHandler(connection -> {
-                            LOG.warn("Disconnected from the downstream container: {}", downstreamConnection.getRemoteContainer());
-                            downstreamConnection.disconnect();
-                            vertx.eventBus().send(Constants.APPLICATION_ENDPOINT, Constants.getRestartJson());
-                        }).closeHandler(connection -> {
-                           LOG.warn("Downstream container [{}] closed connection", downstreamConnection.getRemoteContainer());
-                           downstreamConnection.close();
-                           downstreamConnection.disconnect();
-                        });
-                        startFuture.complete();
-                    } else {
-                        LOG.warn("Can't connect to downstream {}: {}", downstreamContainerHost + ":" + downstreamContainerPort, result.cause().getMessage());
-                        startFuture.fail(result.cause());
-                    }
-                }).open();
-            } else {
-                LOG.warn("Can't connect to downstream {}: {}", downstreamContainerHost + ":" + downstreamContainerPort, conAttempt.cause().getMessage());
+            if (conAttempt.failed()) {
+                LOG.warn("can't connect to downstream AMQP 1.0 container [{}:{}]: {}", downstreamContainerHost, downstreamContainerPort, conAttempt.cause().getMessage());
                 startFuture.fail(conAttempt.cause());
+            } else {
+                LOG.info("connected to downstream AMQP 1.0 container [{}:{}], opening connection ...",
+                        downstreamContainerHost, downstreamContainerPort);
+                conAttempt.result()
+                    .setContainer("Hono-TelemetryAdapter-" + instanceNo)
+                    .openHandler(openCon -> {
+                        if (openCon.succeeded()) {
+                            downstreamConnection = openCon.result();
+                            LOG.info("connection to downstream container [{}] open",
+                                    downstreamConnection.getRemoteContainer());
+                            downstreamConnection.disconnectHandler(disconnected -> {
+                                LOG.warn("disconnected from downstream container [{}], triggering restart ...", downstreamConnection.getRemoteContainer());
+                                vertx.eventBus().send(Constants.APPLICATION_ENDPOINT, Constants.getRestartJson());
+                            });
+                            downstreamConnection.closeHandler(closedConnection -> {
+                                LOG.warn("connection to downstream container [{}] is closed", downstreamConnection.getRemoteContainer());
+                                downstreamConnection.close();
+                            });
+                            startFuture.complete();
+                        } else {
+                            LOG.warn("can't open connection to downstream container [{}]",
+                                    downstreamConnection.getRemoteContainer(), openCon.cause());
+                            startFuture.fail(openCon.cause());
+                        }
+                    }).open();
             }
         });
     }
@@ -201,8 +204,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         if (downstreamConnection != null && !downstreamConnection.isDisconnected()) {
             final String container = downstreamConnection.getRemoteContainer();
             LOG.info("closing connection to downstream container [{}]", container);
-            downstreamConnection.close();
-            downstreamConnection.disconnect();
+            downstreamConnection.closeHandler(null).disconnectHandler(null).close();
         } else {
             LOG.debug("downstream connection already closed");
         }

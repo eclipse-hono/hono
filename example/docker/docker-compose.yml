@@ -1,16 +1,19 @@
 qdrouter:
-  image: gordons/qpid-dispatch:0.6.0-rc4
+  image: gordons/qpid-dispatch:0.6.0
   ports:
     - "15672:5672"
 config:
-  image: eclipsehono/example-config:0.1-SNAPSHOT
+  image: eclipsehono/hono-default-config:0.1-SNAPSHOT
 hono:
-  image: eclipsehono/server:0.1-SNAPSHOT
+  image: eclipsehono/hono-server:0.1-SNAPSHOT
   ports:
     - "5672:5672"
   links:
     - qdrouter
   environment:
+    - SPRING_CONFIG_LOCATION=file:/etc/hono/
+    - HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json
     - HONO_TELEMETRY_DOWNSTREAM_HOST=qdrouter
+    - HONO_MAXINSTANCES=2
   volumes_from:
     - config

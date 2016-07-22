@@ -17,8 +17,11 @@
   <logger name="org.apache.activemq.transport.amqp" level="INFO"/>
 
   <logger name="org.eclipse.hono" level="INFO"/>
-  <logger name="org.eclipse.hono.HonoServerTest" level="INFO"/>
-  <logger name="org.eclipse.hono.impl" level="INFO"/>
+  <logger name="org.eclipse.hono.authorization" level="INFO"/>
+  <logger name="org.eclipse.hono.client" level="INFO"/>
+  <logger name="org.eclipse.hono.registration" level="INFO"/>
+  <logger name="org.eclipse.hono.registration.impl" level="INFO"/>
+  <logger name="org.eclipse.hono.server" level="INFO"/>
   <logger name="org.eclipse.hono.telemetry" level="INFO"/>
   <logger name="org.eclipse.hono.telemetry.impl" level="INFO"/>
   <logger name="org.eclipse.hono.util" level="INFO"/>

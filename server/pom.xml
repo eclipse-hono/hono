@@ -12,10 +12,6 @@
   <name>hono-server</name>
   <url>http://maven.apache.org</url>
 
-  <properties>
-    <image.target>server</image.target>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -79,9 +75,13 @@
      <artifactId>log4j-over-slf4j</artifactId>
     </dependency>
     <dependency>
-     <groupId>org.apache.qpid</groupId>
-     <artifactId>qpid-jms-client</artifactId>
+     <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-client</artifactId>
      <scope>test</scope>
+    </dependency>
+    <dependency>
+     <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-config</artifactId>
     </dependency>
   </dependencies>
 
@@ -136,7 +136,6 @@
               <verbose>true</verbose>
               <images>
                 <image>
-                  <alias>hono</alias>
                   <build>
                     <from>anapsix/alpine-java:jre8</from>
                     <ports>
@@ -147,12 +146,12 @@
                         <arg>java</arg>
                         <arg>-jar</arg>
                         <arg>
-                          /hono/${project.artifactId}-${project.version}.jar
+                          /opt/hono/${project.artifactId}-${project.version}.jar
                         </arg>
                       </exec>
                     </cmd>
                     <assembly>
-                      <basedir>/hono</basedir>
+                      <basedir>/opt/hono</basedir>
                       <descriptorRef>artifact</descriptorRef>
                     </assembly>
                   </build>

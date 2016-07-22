@@ -61,6 +61,15 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
         this.messageConsumer = consumer;
     }
 
+    /**
+     * Sets the consumer for telemetry messages received from upstream.
+     * 
+     * @param consumer a consumer that is invoked for every message received.
+     */
+    public void setMessageConsumer(final Consumer<Message> consumer) {
+        this.messageConsumer = consumer;
+    }
+
     @Override
     public void processTelemetryData(final Message data, final String linkId) {
         LinkStatus status = statusMap.get(linkId);

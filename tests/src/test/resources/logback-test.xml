@@ -14,6 +14,8 @@
   </root>
 
   <logger name="org.eclipse.hono" level="INFO"/>
+  <logger name="org.eclipse.hono.client" level="INFO"/>
+  <logger name="org.eclipse.hono.client.impl" level="INFO"/>
   <logger name="org.eclipse.hono.impl" level="INFO"/>
   <logger name="org.eclipse.hono.authorization" level="INFO"/>
   <logger name="org.eclipse.hono.authorization.impl" level="INFO"/>

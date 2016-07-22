@@ -44,14 +44,18 @@ import io.vertx.core.json.JsonObject;
  */
 public final class InMemoryAuthorizationService extends BaseAuthorizationService {
 
-    static final String PERMISSIONS_FILE_PATH = "/config/permissions.json";
+    static final String PERMISSIONS_FILE_PATH = "/permissions.json";
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
     // holds mapping resource -> acl
     private static final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
     private final String permissionsPath;
 
     public InMemoryAuthorizationService() {
-        this(false, PERMISSIONS_FILE_PATH);
+        this(false);
+    }
+
+    public InMemoryAuthorizationService(final boolean singleTenant) {
+        this(singleTenant, PERMISSIONS_FILE_PATH);
     }
 
     /**
@@ -62,11 +66,17 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     /**
-     * 
+     * @throws IllegalArgumentException if the given path is not a valid URI.
      */
-    public InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final String permissionsPath) {
+    private InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final String permissionsPath) {
         super(instanceId, totalNoOfInstances, singleTenant);
         this.permissionsPath = permissionsPath;
+    }
+
+    public InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final JsonObject permissions) {
+        super(instanceId, totalNoOfInstances, singleTenant);
+        this.permissionsPath = null;
+        parsePermissions(permissions);
     }
 
     @Override
@@ -134,26 +144,30 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
     private void loadPermissionsFromFile() throws IOException {
 
+        if (permissionsPath != null) {
             final Path pathToPermissions = resolvePathToPermissions();
-            LOGGER.debug("Loading permissions from: {}", pathToPermissions.toAbsolutePath());
+            LOGGER.info("loading permissions from: {}", pathToPermissions.toAbsolutePath());
             final String permissionsJson = new String(Files.readAllBytes(pathToPermissions), UTF_8);
-            final JsonObject permissionsObject = new JsonObject(permissionsJson);
-
-            permissionsObject
-                    .stream().filter(resources -> resources.getValue() instanceof JsonObject)
-                    .forEach(resources -> {
-                        final ResourceIdentifier resourceIdentifier = getResourceIdentifier(resources);
-                        final JsonObject subjects = (JsonObject) resources.getValue();
-                        subjects
-                                .stream().filter(subject -> subject.getValue() instanceof JsonArray)
-                                .forEach(subject -> {
-                                    final JsonArray permissions = (JsonArray) subject.getValue();
-                                    addPermission(subject.getKey(), resourceIdentifier, toSet(permissions));
-                                });
-                    });
+            parsePermissions(new JsonObject(permissionsJson));
+        }
     }
 
-    private Path resolvePathToPermissions() {
+    private void parsePermissions(final JsonObject permissionsObject) {
+        permissionsObject
+        .stream().filter(resources -> resources.getValue() instanceof JsonObject)
+        .forEach(resources -> {
+            final ResourceIdentifier resourceIdentifier = getResourceIdentifier(resources);
+            final JsonObject subjects = (JsonObject) resources.getValue();
+            subjects
+                    .stream().filter(subject -> subject.getValue() instanceof JsonArray)
+                    .forEach(subject -> {
+                        final JsonArray permissions = (JsonArray) subject.getValue();
+                        addPermission(subject.getKey(), resourceIdentifier, toSet(permissions));
+                    });
+        });
+    }
+    private Path resolvePathToPermissions() throws IOException {
+
         // first try to load from configured path
         final Path pathToPermissions = Paths.get(permissionsPath);
         if (pathToPermissions != null && pathToPermissions.toFile().exists() && pathToPermissions.toFile().canRead()) {
@@ -161,7 +175,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         }
 
         // then try to load default from classpath
-        final URL resource = InMemoryAuthorizationService.class.getResource(permissionsPath);
+        final URL resource = getClass().getResource(permissionsPath);
         return Paths.get(URI.create(resource.toString()));
     }
 

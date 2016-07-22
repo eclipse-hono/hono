@@ -67,6 +67,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
             receiver.close();
         }
 
+        LOG.debug("establishing receiver link with client [{}]", MessageHelper.getLinkName(receiver));
         receiver
             .setQoS(ProtonQoS.AT_LEAST_ONCE)
             .setAutoAccept(true) // settle received messages if the handler succeeds
@@ -81,7 +82,6 @@ public final class RegistrationEndpoint extends BaseEndpoint {
             }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
             .open();
 
-        LOG.debug("registering new link for client [{}]", MessageHelper.getLinkName(receiver));
     }
 
     @Override
@@ -94,6 +94,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                     "link target must have the following format registration/<tenant>/<reply-address>"));
             sender.close();
         } else {
+            LOG.debug("establishing sender link with client [{}]", MessageHelper.getLinkName(sender));
             final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(targetResource.toString(), message -> {
                 // TODO check for correct session here...?
                 LOG.trace("forwarding reply to client: {}", message.body());

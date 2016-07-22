@@ -16,9 +16,9 @@ package org.eclipse.hono.tests.jms;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
 import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.TEST_TENANT_ID;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +29,6 @@ import javax.jms.JMSSecurityException;
 
 import org.apache.qpid.jms.JmsQueue;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -38,7 +37,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Register some devices, send some messages.
  */
-public class DeviceRegistrationIT  {
+public class DeviceRegistrationIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistrationIT.class);
     private static final String TEST_DEVICE_ID = "testDevice-" + UUID.randomUUID().toString();
@@ -74,45 +73,26 @@ public class DeviceRegistrationIT  {
         registration.deregister(TEST_DEVICE_ID, HTTP_OK).get(2, TimeUnit.SECONDS);
         registration.retrieve(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
         registration.deregister(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
-        assertThat("CorrelationHelper still contains mappings", registration.getCorrelationHelperSize(), is(0));
+        assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
     }
 
-    @Test
+    @Test(expected = JMSSecurityException.class)
     public void testOpenReceiverNotAllowedForOtherTenant() throws Exception {
 
         final RegistrationTestSupport registrationForOtherTenant = client.getRegistrationTestSupport("someOtherTenant", false);
-        try {
-            registrationForOtherTenant.createConsumer();
-            Assert.fail("Expected exception, but it worked...");
-        } catch (final JMSSecurityException e) {
-            LOG.debug("Caught expected exception.", e);
-        }
+        registrationForOtherTenant.createConsumer();
     }
 
-    @Test
+    @Test(expected = JMSSecurityException.class)
     public void testOpenSenderNotAllowedForOtherTenant() throws Exception {
 
         final RegistrationTestSupport registrationForOtherTenant = client.getRegistrationTestSupport("someOtherTenant", false);
-        try {
-            registrationForOtherTenant.createProducer();
-            Assert.fail("Expected exception, but it worked...");
-        } catch (final JMSSecurityException e) {
-            LOG.debug("Caught expected exception.", e);
-        }
+        registrationForOtherTenant.createProducer();
     }
 
-    @Test
+    @Test(expected = JMSException.class)
     public void testOpenReceiverWithInvalidReplyAddress() throws Exception {
         final Destination invalid = new JmsQueue("registration/" + TEST_TENANT_ID);
-        try {
-            registration.createConsumer(invalid);
-            Assert.fail("Expected exception, but it worked...");
-        } catch (final Exception e) {
-            if (e.getCause() instanceof JMSException) {
-                LOG.debug("Expected exception occurred.", e);
-            } else {
-                throw e;
-            }
-        }
+        registration.createConsumer(invalid);
     }
 }

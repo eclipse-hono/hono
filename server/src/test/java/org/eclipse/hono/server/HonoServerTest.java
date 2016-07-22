@@ -30,7 +30,6 @@ import org.eclipse.hono.util.TestSupport;
 import org.junit.Test;
 
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
@@ -51,19 +50,6 @@ public class HonoServerTest {
             result.addEndpoint(telemetryEndpoint);
         }
         return result;
-    }
-
-    @Test
-    public void testStartFailsIfTelemetryEndpointIsNotConfigured() {
-
-        // GIVEN a Hono server without a telemetry endpoint configured
-        HonoServer server = createServer(null);
-        server.init(mock(Vertx.class), mock(Context.class));
-
-        // WHEN starting the server
-        Future<Void> startupFuture = Future.future();
-        server.start(startupFuture);
-        assertTrue(startupFuture.failed());
     }
 
     @Test

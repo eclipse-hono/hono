@@ -104,7 +104,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
     }
 
     private void handleFlowControlMsg(final io.vertx.core.eventbus.Message<JsonObject> msg) {
-        vertx.runOnContext(run -> {
+//        vertx.runOnContext(run -> {
             if (msg.body() == null) {
                 LOG.warn("received empty message from telemetry adapter, is this a bug?");
             } else if (isFlowControlMessage(msg.body())) {
@@ -115,7 +115,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
                 // discard message
                 LOG.debug("received unsupported message from telemetry adapter: {}", msg.body().encode());
             }
-        });
+//        });
     }
 
     private void handleFlowControlMsg(final JsonObject msg) {
@@ -194,17 +194,15 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, APP_PROPERTY_RESOURCE_ID, String.class));
         checkDeviceExists(messageAddress, deviceExists -> {
             if (deviceExists) {
-                vertx.runOnContext(run -> {
-                    final String messageId = UUID.randomUUID().toString();
-                    final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
-                    vertx.sharedData().getLocalMap(dataAddress).put(messageId, amqpMessage);
-                    sendAtMostOnce(link, messageId, delivery);
-                });
+                final String messageId = UUID.randomUUID().toString();
+                final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
+                vertx.sharedData().getLocalMap(dataAddress).put(messageId, amqpMessage);
+                sendAtMostOnce(link, messageId, delivery);
             } else {
                 LOG.debug("device {}/{} does not exist, closing link",
                         messageAddress.getTenantId(), messageAddress.getDeviceId());
                 MessageHelper.rejected(delivery, AmqpError.PRECONDITION_FAILED.toString(), "device does not exist");
-                onLinkDetach(link);
+                onLinkDetach(link, condition(AmqpError.PRECONDITION_FAILED.toString(), "device does not exist"));
             }
         });
     }

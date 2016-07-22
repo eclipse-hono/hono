@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.tests.jms;
 
+import static org.eclipse.hono.tests.IntegrationTestSupport.*;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 
 import java.util.Hashtable;
@@ -42,20 +43,23 @@ import org.slf4j.LoggerFactory;
  */
 public class JmsIntegrationTestSupport {
 
-    public static final String         HONO_HOST = System.getProperty("hono.host", "localhost");
-    public static final int            HONO_PORT = Integer.getInteger("hono.amqp.port", 5672);
-    public static final String         QPID_HOST = System.getProperty("qpid.host", "localhost");
-    public static final int            QPID_PORT = Integer.getInteger("qpid.amqp.port", 15672);
+    public static final String         HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, "localhost");
+    public static final int            HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
+    public static final String         DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, "localhost");
+    public static final int            DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
+    public static final String         TEST_TENANT_ID = "tenant";
+    public static final String         PATH_SEPARATOR = System.getProperty("hono.telemetry.pathSeparator", "/");
+    public static final String         TELEMETRY_SENDER_ADDRESS = "telemetry/" + TEST_TENANT_ID;
+    public static final String         TELEMETRY_RECEIVER_ADDRESS = "telemetry" + PATH_SEPARATOR + TEST_TENANT_ID;
     public static final String         HONO = "hono";
     public static final String         DISPATCH_ROUTER = "qdr";
 
     /* test constants */
     private static final String        AMQP_URI_PATTERN = "amqp://%s:%d?jms.connectionIDPrefix=CON%s";
     private static final Logger        LOG = LoggerFactory.getLogger(JmsIntegrationTestSupport.class);
-    public static final String TEST_TENANT_ID = "tenant";
 
-    public static final String         TELEMETRY_ADDRESS = "telemetry/" + TEST_TENANT_ID;
-    static final Destination           TELEMETRY_DESTINATION = new JmsQueue(TELEMETRY_ADDRESS);
+    static final Destination   TELEMETRY_SENDER_DESTINATION = new JmsQueue(TELEMETRY_SENDER_ADDRESS);
+    static final Destination   TELEMETRY_RECV_DESTINATION = new JmsQueue(TELEMETRY_RECEIVER_ADDRESS);
 
     private Context ctx;
     private Connection connection;
@@ -90,7 +94,7 @@ public class JmsIntegrationTestSupport {
     }
 
     MessageProducer getTelemetryProducer() throws JMSException {
-        return getTelemetryProducer(TELEMETRY_DESTINATION);
+        return getTelemetryProducer(TELEMETRY_SENDER_DESTINATION);
     }
 
     MessageProducer getTelemetryProducer(final Destination telemetryDestination) throws JMSException {
@@ -102,7 +106,7 @@ public class JmsIntegrationTestSupport {
     }
 
     MessageConsumer getTelemetryConsumer() throws JMSException {
-        return getTelemetryConsumer(TELEMETRY_DESTINATION);
+        return getTelemetryConsumer(TELEMETRY_RECV_DESTINATION);
     }
 
     MessageConsumer getTelemetryConsumer(final Destination telemetryDestination) throws JMSException {
@@ -138,7 +142,7 @@ public class JmsIntegrationTestSupport {
         env.put("connectionfactory." + HONO,
                 String.format(AMQP_URI_PATTERN, HONO_HOST, HONO_PORT, ""));
         env.put("connectionfactory." + DISPATCH_ROUTER,
-                String.format(AMQP_URI_PATTERN, QPID_HOST, QPID_PORT, "&jms.prefetchPolicy.queuePrefetch=10"));
+                String.format(AMQP_URI_PATTERN, DOWNSTREAM_HOST, DOWNSTREAM_PORT, "&jms.prefetchPolicy.queuePrefetch=10"));
 
         ctx = new InitialContext(env);
     }

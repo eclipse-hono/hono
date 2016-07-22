@@ -24,6 +24,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.registration.RegistrationConstants;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -72,11 +73,11 @@ public final class HonoServer extends AbstractVerticle {
 
     @Override
     public void start(final Future<Void> startupHandler) {
-        if (!isTelemetryEndpointConfigured()) {
-            LOG.warn("No Telemetry endpoint has been configured, aborting start up ...");
-            startupHandler.fail("Telemetry endpoint must be configured");
-        } else if (!startEndpoints()) {
-            startupHandler.fail("Some registered endpoints failed to start");
+
+        checkStandardEndpointsAreRegistered();
+
+        if (!startEndpoints()) {
+            startupHandler.fail("one or more of the registered endpoints failed to start, aborting ...");
         } else {
             final ProtonServerOptions options = createServerOptions();
             server = ProtonServer.create(vertx, options)
@@ -87,15 +88,28 @@ public final class HonoServer extends AbstractVerticle {
                             LOG.info("HonoServer running at [{}:{}]", bindAddress, this.port);
                             startupHandler.complete();
                         } else {
-                            LOG.error("Cannot start up HonoServer", bindAttempt.cause());
+                            LOG.error("cannot start up HonoServer", bindAttempt.cause());
                             startupHandler.fail(bindAttempt.cause());
                         }
                     });
         }
     }
 
+    private void checkStandardEndpointsAreRegistered() {
+        if (!isTelemetryEndpointConfigured()) {
+            LOG.warn("no Telemetry endpoint has been configured, Hono server will not support Telemetry API");
+        }
+        if (!isRegistrationEndpointConfigured()) {
+            LOG.warn("no Registration endpoint has been configured, Hono server will not support Registration API");
+        }
+    }
+
     private boolean isTelemetryEndpointConfigured() {
         return endpoints.containsKey(TelemetryConstants.TELEMETRY_ENDPOINT);
+    }
+
+    private boolean isRegistrationEndpointConfigured() {
+        return endpoints.containsKey(RegistrationConstants.REGISTRATION_ENDPOINT);
     }
 
     private boolean startEndpoints() {
@@ -177,18 +191,19 @@ public final class HonoServer extends AbstractVerticle {
 
     void helloProcessConnection(final ProtonConnection connection) {
         connection.setContainer(String.format("Hono-%s:%d-%d", this.bindAddress, server.actualPort(), instanceNo));
-        connection.sessionOpenHandler(session -> handleSessionOpen(session));
+        connection.sessionOpenHandler(session -> handleSessionOpen(connection, session));
         connection.receiverOpenHandler(openedReceiver -> handleReceiverOpen(connection, openedReceiver));
         connection.senderOpenHandler(openedSender -> handleSenderOpen(connection, openedSender));
         connection.disconnectHandler(HonoServer::handleDisconnected);
         connection.closeHandler(HonoServer::handleConnectionClosed);
         connection.openHandler(result -> {
             LOG.debug("Client [{}:{}] connected", connection.getRemoteHostname(), connection.getRemoteContainer());
+            result.result().open();
         });
-        connection.open();
     }
 
-    private void handleSessionOpen(final ProtonSession session) {
+    private void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
+        LOG.debug("opening new session with client [{}]", con.getRemoteContainer());
         session.closeHandler(sessionResult -> {
             if (sessionResult.succeeded()) {
                 sessionResult.result().close();
@@ -199,13 +214,16 @@ public final class HonoServer extends AbstractVerticle {
     private static void handleConnectionClosed(AsyncResult<ProtonConnection> res) {
         if (res.succeeded()) {
             ProtonConnection con = res.result();
-            LOG.debug("Client [{}:{}] closed connection", con.getRemoteHostname(), con.getRemoteContainer());
+            LOG.debug("client [{}:{}] closed connection", con.getRemoteHostname(), con.getRemoteContainer());
             con.close();
+        } else {
+            LOG.warn("processing of close frame from client failed", res.cause());
         }
     }
 
     private static void handleDisconnected(ProtonConnection connection) {
-        LOG.debug("Client [{}:{}] disconnected", connection.getRemoteHostname(), connection.getRemoteContainer());
+        LOG.debug("client [{}:{}] disconnected", connection.getRemoteHostname(), connection.getRemoteContainer());
+        connection.disconnect();
     }
 
     /**
