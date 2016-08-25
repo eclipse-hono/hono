@@ -36,7 +36,7 @@
       <id>build-docker-image</id>
       <activation>
         <property>
-          <name>docker.host</name>
+          <name>DOCKER_HOST</name>
         </property>
       </activation>
       <build>
