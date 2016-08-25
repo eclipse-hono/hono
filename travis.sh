@@ -20,14 +20,11 @@ error_handler() {
 # If an error occurs, run our error handler to output a tail of the build
 trap 'error_handler' ERR
 
-# print env vars
-env
-
 # Set up a repeating loop to send some output to Travis.
 bash -c "while true; do echo \$(date) - building ...; sleep $PING_SLEEP; done" &
 PING_LOOP_PID=$!
 
-mvn install >> $BUILD_OUTPUT 2>&1
+mvn install -Pbuild-docker-image >> $BUILD_OUTPUT 2>&1
 
 # The build finished without returning an error so dump a tail of the output
 dump_output
