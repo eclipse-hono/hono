@@ -22,6 +22,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.registration.RegistrationConstants;
 import org.eclipse.hono.registration.RegistrationMessageFilter;
@@ -76,12 +77,12 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                 if (RegistrationMessageFilter.verify(targetAddress, message)) {
                     processRequest(message);
                 } else {
+                    MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "message did not make it through the filter...");
                     // we close the link if the client sends a message that does not comply with the API spec
-                    onLinkDetach(receiver);
+                    onLinkDetach(receiver, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
                 }
             }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
             .open();
-
     }
 
     @Override
@@ -89,8 +90,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
         /* note: we "misuse" deviceId part of the resource as reply address here */
         if (targetResource.getDeviceId() == null) {
             LOG.debug("link target provided in client's link ATTACH does not match pattern \"registration/<tenant>/<reply-address>\"");
-            sender.setCondition(condition(
-                    AmqpError.INVALID_FIELD.toString(),
+            sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),
                     "link target must have the following format registration/<tenant>/<reply-address>"));
             sender.close();
         } else {
@@ -114,6 +114,10 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     }
 
     private void onLinkDetach(final ProtonReceiver client) {
+        onLinkDetach(client, null);
+    }
+
+    private void onLinkDetach(final ProtonReceiver client, final ErrorCondition condition) {
         LOG.debug("closing receiver for client [{}]", getLinkName(client));
         client.close();
     }
@@ -140,7 +144,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     }
 
     private void addHeadersToResponse(final Message request, final JsonObject message) {
-        boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
+        final boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
         LOG.debug("registration request [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
         if (isApplicationCorrelationId) {
             message.put(ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
