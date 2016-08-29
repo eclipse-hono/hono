@@ -15,6 +15,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -51,7 +52,13 @@ public class Application {
 
     @Bean
     public HonoClient client() {
-        return HonoClient.newInstance(vertx(), config.host(), config.port());
+        return HonoClientBuilder.newClient()
+                .vertx(vertx())
+                .host(config.host())
+                .port(config.port())
+                .user(config.user())
+                .password(config.password())
+                .pathSeparator(config.pathSeparator()).build();
     }
 
     @Bean

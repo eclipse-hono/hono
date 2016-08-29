@@ -1,0 +1,69 @@
+[
+  ["policyRuleset",
+    {
+      "applicationName": "hono",
+      "maxConnections": 100,
+      "maxConnPerUser": 20,
+      "maxConnPerHost": 10,
+      "userGroups": {
+        "myTenant": "user1@HONO",
+        "anotherTenant": "user2@HONO",
+        "anonymous" : "anonymous"
+      },
+      "ingressHostGroups": {
+        "any": "*"
+      },
+      "ingressPolicies": {
+        "myTenant": "any",
+        "anotherTenant": "any"
+      },
+      "connectionAllowDefault": false,
+      "settings": {
+        "myTenant": {
+          "allowDynamicSrc": false,
+          "allowAnonymousSender": false,
+          "sources": "telemetry/myTenant, telemetry/myTenant/*, telemetry/tenant, telemetry/tenant/*",
+          "targets": "telemetry/myTenant"
+        },
+        "anotherTenant": {
+          "allowDynamicSrc": false,
+          "allowAnonymousSender": false,
+          "sources": "telemetry/anotherTenant",
+          "targets": "telemetry/anotherTenant"
+        },
+        "anonymous": {
+          "allowDynamicSrc": false,
+          "allowAnonymousSender": false,
+          "sources": "telemetry/*",
+          "targets": "telemetry/*"
+        }
+      }
+    }
+  ],
+  ["policyRuleset",
+    {
+      "applicationName": "hono-internal",
+      "maxConnections": 10,
+      "maxConnPerUser": 10,
+      "maxConnPerHost": 10,
+      "userGroups": {
+        "anonymous" : "anonymous"
+      },
+      "ingressHostGroups": {
+        "any": "*"
+      },
+      "ingressPolicies": {
+        "anonymous": "any"
+      },
+      "connectionAllowDefault": false,
+      "settings": {
+        "anonymous": {
+          "allowDynamicSrc": false,
+          "allowAnonymousSender": false,
+          "sources": "telemetry/*",
+          "targets": "telemetry/*"
+        }
+      }
+    }
+  ]
+]

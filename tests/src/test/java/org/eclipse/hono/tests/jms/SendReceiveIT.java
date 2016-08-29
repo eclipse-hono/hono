@@ -62,7 +62,7 @@ public class SendReceiveIT {
 
         sender = JmsIntegrationTestSupport.newClient("hono");
         connector = JmsIntegrationTestSupport.newClient("hono", "connector-client");
-        receiver = JmsIntegrationTestSupport.newClient("qdr");
+        receiver = JmsIntegrationTestSupport.newClient("qdr", "user1@HONO", "pw");
         registration = sender.getRegistrationTestSupport();
 
         registration.register(DEVICE_ID, Duration.ofSeconds(1));

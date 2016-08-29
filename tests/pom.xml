@@ -84,7 +84,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                      <images>
                         <!-- ##### volume container with hono server configuration ##### -->
                         <image>
-                           <alias>config</alias>
+                           <name>hono-test-config</name>
+                           <alias>hono-config</alias>
                            <build>
                               <from>tianon/true</from>
                               <volumes>
@@ -108,6 +109,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               </assembly>
                            </build>
                         </image>
+                        <!-- ##### Qpid configuration ##### -->
+                        <image>
+                           <alias>qpid-config</alias>
+                           <name>eclipsehono/qpid-default-config:${project.version}</name>
+                        </image>
+                        <!-- ##### Qpid sasldb ##### -->
+                        <image>
+                           <alias>qpid-sasldb</alias>
+                           <name>eclipsehono/qpid-sasldb:${project.version}</name>
+                        </image>
                         <!-- ##### Qpid Dispatch Router ##### -->
                         <image>
                            <alias>qdrouter</alias>
@@ -115,6 +126,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                            <run>
                               <ports>
                                  <port>+qpid.ip:qpid.amqp.port:5672</port>
+                                 <port>qpid.amqp.internal.port:5673</port>
                               </ports>
                               <log>
                                  <prefix>QPID</prefix>
@@ -123,6 +135,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <wait>
                               	<log>^.*Operational.*$</log>
                               </wait>
+                              <volumes>
+                                 <from>
+                                    <image>qpid-sasldb</image>
+                                    <image>qpid-config</image>
+                                 </from>
+                              </volumes>
                            </run>
                         </image>
                         <!-- ##### Hono server ##### -->
@@ -140,6 +158,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <HONO_MAXINSTANCES>2</HONO_MAXINSTANCES>
                                  <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
                                  <HONO_TELEMETRY_DOWNSTREAM_HOST>qdrouter</HONO_TELEMETRY_DOWNSTREAM_HOST>
+                                 <HONO_TELEMETRY_DOWNSTREAM_PORT>5673</HONO_TELEMETRY_DOWNSTREAM_PORT>
                                  <SPRING_CONFIG_LOCATION>file:/etc/hono</SPRING_CONFIG_LOCATION>
                               </env>
                               <log>
@@ -152,7 +171,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <!--<volume>${project.basedir}/src/test/resources/config:/config</volume>-->
                                  <!--</bind>-->
                                  <from>
-                                    <image>config</image>
+                                    <image>hono-config</image>
                                  </from>
                               </volumes>
                               <wait>

@@ -108,6 +108,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                         downstreamContainerHost, downstreamContainerPort);
                 conAttempt.result()
                     .setContainer("Hono-TelemetryAdapter-" + instanceNo)
+                    .setHostname("hono-internal")
                     .openHandler(openCon -> {
                         if (openCon.succeeded()) {
                             downstreamConnection = openCon.result();

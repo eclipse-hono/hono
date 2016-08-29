@@ -20,6 +20,7 @@ import java.util.stream.IntStream;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetryConsumer;
 import org.eclipse.hono.client.TelemetrySender;
@@ -92,13 +93,20 @@ public class TelemetryClientIT {
 
         context.runOnContext(go -> {
 
-            downstreamClient = HonoClient.newInstance(vertx, DOWNSTREAM_HOST, DOWNSTREAM_PORT, PATH_SEPARATOR);
+            downstreamClient = HonoClientBuilder.newClient()
+                    .vertx(vertx)
+                    .host(DOWNSTREAM_HOST)
+                    .port(DOWNSTREAM_PORT)
+                    .pathSeparator(PATH_SEPARATOR)
+                    .user("user1@HONO")
+                    .password("pw")
+                    .build();
             downstreamClient.connect(createOptions(), downstreamTracker.completer());
 
             // step 1
             // connect to Hono server
             Future<HonoClient> honoTracker = Future.future();
-            honoClient = HonoClient.newInstance(vertx, HONO_HOST, HONO_PORT);
+            honoClient = HonoClientBuilder.newClient().vertx(vertx).host(HONO_HOST).port(HONO_PORT).build();
             honoClient.connect(new ProtonClientOptions(), honoTracker.completer());
             honoTracker.compose(hono -> {
                 // step 2
@@ -232,6 +240,15 @@ public class TelemetryClientIT {
         getContext(ctx).runOnContext(go -> {
             /* create sender for tenant that has no permission */
             honoClient.createTelemetrySender("non-authorized", ctx.asyncAssertFailure());
+        });
+    }
+
+    @Test(timeout = 2000l)
+    public void testCreateReceiverFailsForTenantWithoutAuthorization(final TestContext ctx) {
+
+        getContext(ctx).runOnContext(go -> {
+            /* create sender for tenant that has no permission */
+            downstreamClient.createTelemetryConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure());
         });
     }
 

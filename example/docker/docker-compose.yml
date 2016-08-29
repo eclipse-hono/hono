@@ -1,9 +1,16 @@
+qpid-config:
+  image: eclipsehono/qpid-default-config:0.1-SNAPSHOT
+qpid-sasldb:
+  image: eclipsehono/qpid-sasldb:0.1-SNAPSHOT
+hono-config:
+  image: eclipsehono/hono-default-config:0.1-SNAPSHOT
 qdrouter:
   image: gordons/qpid-dispatch:0.6.0
   ports:
     - "15672:5672"
-config:
-  image: eclipsehono/hono-default-config:0.1-SNAPSHOT
+  volumes_from:
+    - qpid-config
+    - qpid-sasldb
 hono:
   image: eclipsehono/hono-server:0.1-SNAPSHOT
   ports:
@@ -16,4 +23,4 @@ hono:
     - HONO_TELEMETRY_DOWNSTREAM_HOST=qdrouter
     - HONO_MAXINSTANCES=2
   volumes_from:
-    - config
+    - hono-config

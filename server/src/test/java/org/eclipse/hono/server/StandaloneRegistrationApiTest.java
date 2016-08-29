@@ -20,6 +20,7 @@ import java.util.stream.IntStream;
 
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.registration.impl.InMemoryRegistrationAdapter;
 import org.eclipse.hono.registration.impl.RegistrationEndpoint;
@@ -92,7 +93,7 @@ public class StandaloneRegistrationApiTest {
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
         }).compose(s -> {
-            client = HonoClient.newInstance(vertx, server.getBindAddress(), server.getPort());
+            client = HonoClientBuilder.newClient().vertx(vertx).host(server.getBindAddress()).port(server.getPort()).build();
 
             Future<HonoClient> clientTracker = Future.future();
             client.connect(new ProtonClientOptions(), clientTracker.completer());

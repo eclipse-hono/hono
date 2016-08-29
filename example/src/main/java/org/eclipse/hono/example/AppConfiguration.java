@@ -30,6 +30,10 @@ public class AppConfiguration {
     private String                tenantId;
     @Value(value = "${device.id}")
     private String                deviceId;
+    @Value(value = "${user}")
+    private String                user;
+    @Value(value = "${password}")
+    private String                password;
     @Value(value = "${role}")
     private String                role;
     @Value(value = "${hono.server.pathSeparator:/}")
@@ -53,6 +57,14 @@ public class AppConfiguration {
 
     public String role() {
         return role;
+    }
+
+    public String user() {
+        return user;
+    }
+
+    public String password() {
+        return password;
     }
 
     public String tenantId() {

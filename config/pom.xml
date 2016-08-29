@@ -70,6 +70,64 @@
                     </assembly>
                   </build>
                 </image>
+                <image>
+                  <alias>qpid-default-config</alias>
+                  <name>eclipsehono/qpid-default-config:${project.version}</name>
+                  <build>
+                    <from>tianon/true</from>
+                    <tags>
+                      <tag>${project.version}</tag>
+                    </tags>
+                    <volumes>
+                      <volume>/etc/qpid-dispatch</volume>
+                    </volumes>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/qpid-dispatch</basedir>
+                      <inline>
+                        <id>qpid-dispatch</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/qpid</directory>
+                            <outputDirectory>/</outputDirectory>
+                            <includes>
+                              <include>**/*</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+                <image>
+                  <alias>qpid-sasldb</alias>
+                  <name>eclipsehono/qpid-sasldb:${project.version}</name>
+                  <build>
+                    <from>tianon/true</from>
+                    <tags>
+                      <tag>${project.version}</tag>
+                    </tags>
+                    <volumes>
+                      <volume>/var/lib/qdrouterd</volume>
+                    </volumes>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/var/lib/qdrouterd</basedir>
+                      <inline>
+                        <id>qpid-sasldb</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/sasl</directory>
+                            <outputDirectory>/</outputDirectory>
+                            <includes>
+                              <include>**/*</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
               </images>
             </configuration>
             <executions>

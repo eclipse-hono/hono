@@ -19,6 +19,7 @@ import java.util.stream.IntStream;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.TelemetrySender;
 import org.eclipse.hono.registration.impl.InMemoryRegistrationAdapter;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
@@ -93,7 +94,7 @@ public class StandaloneTelemetryApiTest {
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
         }).compose(s -> {
-            client = HonoClient.newInstance(vertx, server.getBindAddress(), server.getPort());
+            client = HonoClientBuilder.newClient().vertx(vertx).host(server.getBindAddress()).port(server.getPort()).build();
             client.connect(new ProtonClientOptions(), setupTracker.completer());
         }, setupTracker);
     }
