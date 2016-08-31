@@ -124,7 +124,7 @@
       <id>build-docker-image</id>
       <activation>
         <property>
-          <name>env.DOCKER_HOST</name>
+          <name>docker.host</name>
         </property>
       </activation>
       <build>
