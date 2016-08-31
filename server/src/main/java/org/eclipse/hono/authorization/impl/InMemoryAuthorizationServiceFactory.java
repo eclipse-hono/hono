@@ -27,10 +27,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class InMemoryAuthorizationServiceFactory implements VerticleFactory<AuthorizationService> {
 
-    @Value(value = "${hono.singletenant:false}")
+    @Value("${hono.singletenant:false}")
     private boolean singleTenant;
 
-    @Value(value = "${hono.permissions.path:/permissions.json}")
+    @Value("${hono.permissions.path:classpath:/permissions.json}")
     private Resource permissionsResource;
 
     @Override

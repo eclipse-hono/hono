@@ -17,6 +17,7 @@ import java.net.InetAddress;
 import java.util.stream.IntStream;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.authentication.impl.AcceptAllPlainAuthenticationService;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
@@ -50,11 +51,13 @@ import io.vertx.proton.ProtonHelper;
 @RunWith(VertxUnitRunner.class)
 public class StandaloneTelemetryApiTest {
 
-    private static final String KEY_CONTEXT = "Context";
-    private static final Logger LOG          = LoggerFactory.getLogger(StandaloneTelemetryApiTest.class);
-    private static final String BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
-    private static final String DEVICE = "device";
-    private static final String DEVICE_1 = DEVICE + "1";
+    private static final Logger                LOG = LoggerFactory.getLogger(StandaloneTelemetryApiTest.class);
+    private static final String                KEY_CONTEXT = "Context";
+    private static final String                BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
+    private static final String                DEVICE_PREFIX = "device";
+    private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
+    private static final String                USER = "hono-client";
+    private static final String                PWD = "secret";
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
@@ -74,18 +77,21 @@ public class StandaloneTelemetryApiTest {
         server.addEndpoint(new TelemetryEndpoint(vertx, false));
         registrationAdapter = new InMemoryRegistrationAdapter();
         telemetryAdapter = new MessageDiscardingTelemetryAdapter();
-        ctx.put(KEY_CONTEXT, vertx.getOrCreateContext());
+        Context context = vertx.getOrCreateContext();
+        ctx.put(KEY_CONTEXT, context);
 
-        Future<HonoClient> setupTracker = Future.future();
+        final Future<HonoClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess());
 
         Future<String> registrationTracker = Future.future();
+        Future<String> authenticationTracker = Future.future();
         Future<String> authTracker = Future.future();
         Future<String> telemetryTracker = Future.future();
 
-        getContext(ctx).runOnContext(run -> {
+        context.runOnContext(run -> {
             vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
             vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
+            vertx.deployVerticle(AcceptAllPlainAuthenticationService.class.getName(), authenticationTracker.completer());
             vertx.deployVerticle(telemetryAdapter, telemetryTracker.completer());
 
             CompositeFuture.all(registrationTracker, authTracker, telemetryTracker)
@@ -94,8 +100,16 @@ public class StandaloneTelemetryApiTest {
                 vertx.deployVerticle(server, serverTracker.completer());
                 return serverTracker;
             }).compose(s -> {
-                client = HonoClientBuilder.newClient().vertx(vertx).host(server.getBindAddress()).port(server.getPort()).build();
-                client.connect(new ProtonClientOptions(), setupTracker.completer());
+                client = HonoClientBuilder.newClient()
+                        .vertx(vertx)
+                        .host(server.getBindAddress())
+                        .port(server.getPort())
+                        .user(USER)
+                        .password(PWD)
+                        .build();
+                context.runOnContext(go -> {
+                    client.connect(new ProtonClientOptions(), setupTracker.completer());
+                });
             }, setupTracker);
         });
     }

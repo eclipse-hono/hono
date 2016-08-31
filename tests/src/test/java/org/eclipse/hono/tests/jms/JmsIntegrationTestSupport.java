@@ -17,7 +17,6 @@ import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_
 import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
 import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
 import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 
 import java.util.Hashtable;
 import java.util.Objects;
@@ -37,7 +36,6 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import org.apache.qpid.jms.JmsQueue;
-import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,9 +47,11 @@ public class JmsIntegrationTestSupport {
 
     public static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, "localhost");
     public static final int    HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
+    public static final String HONO_USER = "hono-client";
+    public static final String HONO_PASSWORD = "secret";
     public static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, "localhost");
     public static final int    DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
-    public static final String TEST_TENANT_ID = Constants.DEFAULT_TENANT;
+    public static final String TEST_TENANT_ID = "DEFAULT_TENANT";
     public static final String PATH_SEPARATOR = System.getProperty("hono.telemetry.pathSeparator", "/");
     public static final String TELEMETRY_SENDER_ADDRESS = "telemetry/" + TEST_TENANT_ID;
     public static final String TELEMETRY_RECEIVER_ADDRESS = "telemetry" + PATH_SEPARATOR + TEST_TENANT_ID;
@@ -96,8 +96,8 @@ public class JmsIntegrationTestSupport {
         return result;
     }
 
-    JmsIntegrationTestSupport createSession(final String name, final String clientId) throws NamingException, JMSException {
-        final ConnectionFactory cf = (ConnectionFactory) ctx.lookup(name);
+    JmsIntegrationTestSupport createSession(final String server, final String clientId) throws NamingException, JMSException {
+        final ConnectionFactory cf = (ConnectionFactory) ctx.lookup(server);
         connection = cf.createConnection();
         connection.setExceptionListener(new MyExceptionListener());
         connection.setClientID(clientId);
@@ -178,7 +178,7 @@ public class JmsIntegrationTestSupport {
 
     Message newTextMessage(final String body, final String deviceId) throws JMSException {
         final BytesMessage message = session.createBytesMessage();
-        message.setStringProperty(APP_PROPERTY_DEVICE_ID, deviceId);
+        message.setStringProperty("device_id", deviceId);
         message.writeUTF(body);
         return message;
     }

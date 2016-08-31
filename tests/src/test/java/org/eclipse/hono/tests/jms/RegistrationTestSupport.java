@@ -15,8 +15,7 @@ package org.eclipse.hono.tests.jms;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
-import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_ACTION;
-import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_STATUS;
+import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -86,27 +85,27 @@ public class RegistrationTestSupport {
     }
 
     public CompletableFuture<Long> register(final String deviceId) {
-        return send(deviceId, "register", null);
+        return register(deviceId, (Integer) null);
     }
 
     public CompletableFuture<Long> deregister(final String deviceId) {
-        return send(deviceId, "deregister", null);
+        return deregister(deviceId, (Integer) null);
     }
 
     public CompletableFuture<Long> retrieve(final String deviceId) {
-        return send(deviceId, "get", null);
+        return retrieve(deviceId, (Integer) null);
     }
 
-    public CompletableFuture<Long> register(final String deviceId, final int expectedStatus) {
-        return send(deviceId, "register", expectedStatus);
+    public CompletableFuture<Long> register(final String deviceId, final Integer expectedStatus) {
+        return send(deviceId, ACTION_REGISTER, expectedStatus);
     }
 
-    public CompletableFuture<Long> deregister(final String deviceId, final int expectedStatus) {
-        return send(deviceId, "deregister", expectedStatus);
+    public CompletableFuture<Long> deregister(final String deviceId, final Integer expectedStatus) {
+        return send(deviceId, ACTION_DEREGISTER, expectedStatus);
     }
 
-    public CompletableFuture<Long> retrieve(final String deviceId, final int expectedStatus) {
-        return send(deviceId, "get", expectedStatus);
+    public CompletableFuture<Long> retrieve(final String deviceId, final Integer expectedStatus) {
+        return send(deviceId, ACTION_GET, expectedStatus);
     }
 
     public long register(final String deviceId, final Duration timeout) throws Exception {

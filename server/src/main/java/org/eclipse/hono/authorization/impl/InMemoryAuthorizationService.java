@@ -44,7 +44,7 @@ import io.vertx.core.json.JsonObject;
  */
 public final class InMemoryAuthorizationService extends BaseAuthorizationService {
 
-    static final Resource PERMISSIONS_FILE_PATH = new ClassPathResource("/permissions.json");
+    static final Resource DEFAULT_PERMISSIONS_RESOURCE = new ClassPathResource("/permissions.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
     // holds mapping resource -> acl
     private static final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
@@ -55,7 +55,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     public InMemoryAuthorizationService(final boolean singleTenant) {
-        this(singleTenant, PERMISSIONS_FILE_PATH);
+        this(singleTenant, DEFAULT_PERMISSIONS_RESOURCE);
     }
 
     /**
@@ -64,14 +64,6 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     public InMemoryAuthorizationService(final boolean singleTenant, final Resource permissionsResource) {
         this(0, 1, singleTenant, permissionsResource);
     }
-
-//    /**
-//     * @throws IllegalArgumentException if the given path is not a valid URI.
-//     */
-//    private InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final String permissionsPath) {
-//        super(instanceId, totalNoOfInstances, singleTenant);
-//        this.permissionsPath = permissionsPath;
-//    }
 
     public InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final Resource permissionsResource) {
         super(instanceId, totalNoOfInstances, singleTenant);
@@ -124,7 +116,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         requireNonNull(resource, "resource is required");
         requireNonNull(permissions, "permission is required");
 
-        LOGGER.debug("Add permission {} for subject {} on resource {}.", permissions, subject, resource);
+        LOGGER.trace("adding permission {} for subject {} on resource {}.", permissions, subject, resource);
         resources.computeIfAbsent(resource, key -> new AccessControlList())
                 .setAclEntry(new AclEntry(subject, permissions));
     }
@@ -137,7 +129,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         requireNonNull(first, "permission is required");
 
         final EnumSet<Permission> permissions = EnumSet.of(first, rest);
-        LOGGER.debug("Delete permission {} for subject {} on resource {}.", first, subject, resource);
+        LOGGER.trace("removing permission {} for subject {} on resource {}.", first, subject, resource);
         resources.computeIfPresent(resource, (key, value) -> {
             ofNullable(value.getAclEntry(subject))
                     .map(AclEntry::getPermissions)

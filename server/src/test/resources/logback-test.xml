@@ -13,11 +13,9 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.apache.activemq" level="INFO"/>
-  <logger name="org.apache.activemq.transport.amqp" level="INFO"/>
-
   <logger name="org.eclipse.hono" level="INFO"/>
-  <logger name="org.eclipse.hono.authorization" level="INFO"/>
+  <logger name="org.eclipse.hono.authentication.impl" level="INFO"/>
+  <logger name="org.eclipse.hono.authorization.impl" level="INFO"/>
   <logger name="org.eclipse.hono.client" level="INFO"/>
   <logger name="org.eclipse.hono.registration" level="INFO"/>
   <logger name="org.eclipse.hono.registration.impl" level="INFO"/>
@@ -27,5 +25,6 @@
   <logger name="org.eclipse.hono.util" level="INFO"/>
 
   <logger name="io.vertx.proton.impl" level="INFO"/>
+  <logger name="io.vertx.proton.sasl.impl" level="INFO"/>
 
 </configuration>

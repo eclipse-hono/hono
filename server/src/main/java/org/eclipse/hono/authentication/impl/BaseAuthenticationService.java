@@ -9,19 +9,16 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.authorization.impl;
+package org.eclipse.hono.authentication.impl;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.ALLOWED;
-import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.DENIED;
-import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
+import static org.eclipse.hono.authentication.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
+import static org.eclipse.hono.authentication.AuthenticationConstants.FIELD_AUTHORIZATION_ID;
+import static org.eclipse.hono.authentication.AuthenticationConstants.FIELD_ERROR;
+import static org.eclipse.hono.authentication.AuthenticationConstants.FIELD_MECHANISM;
+import static org.eclipse.hono.authentication.AuthenticationConstants.FIELD_RESPONSE;
 
-import org.eclipse.hono.authorization.AuthorizationService;
-import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.authentication.AuthenticationService;
 import org.eclipse.hono.util.AbstractInstanceNumberAwareVerticle;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,26 +33,26 @@ import io.vertx.core.json.JsonObject;
  * Provides support for processing authorization requests via Vert.x event bus.
  * </p>
  */
-public abstract class BaseAuthorizationService extends AbstractInstanceNumberAwareVerticle implements AuthorizationService
+public abstract class BaseAuthenticationService extends AbstractInstanceNumberAwareVerticle implements AuthenticationService
 {
-    private static final Logger LOG = LoggerFactory.getLogger(BaseAuthorizationService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BaseAuthenticationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;
     protected boolean singleTenant;
 
     /**
      * 
      */
-    protected BaseAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant) {
+    protected BaseAuthenticationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant) {
         super(instanceId, totalNoOfInstances);
         this.singleTenant = singleTenant;
     }
 
     @Override
     public final void start(final Future<Void> startFuture) throws Exception {
-        String listenAddress = getAddressWithId(EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
+        String listenAddress = EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
         authRequestConsumer = vertx.eventBus().consumer(listenAddress);
         authRequestConsumer.handler(this::processMessage);
-        LOG.info("listening on event bus [address: {}] for incoming auth messages", listenAddress);
+        LOG.info("listening on event bus [address: {}] for incoming authentication messages", listenAddress);
         doStart(startFuture);
     }
 
@@ -79,13 +76,16 @@ public abstract class BaseAuthorizationService extends AbstractInstanceNumberAwa
 
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
-        final String authSubject = body.getString(AUTH_SUBJECT_FIELD);
-        final Permission permission = Permission.valueOf(body.getString(PERMISSION_FIELD));
-        final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(RESOURCE_FIELD));
+        LOG.debug("received authentication request: {}", body);
+        final String mechanism = body.getString(FIELD_MECHANISM, "PLAIN");
+        final byte[] response = body.getBinary(FIELD_RESPONSE);
 
-        boolean hasPermission = hasPermission(authSubject, resource, permission);
-        message.reply(hasPermission ? ALLOWED : DENIED);
-        LOG.debug("subject [{}] is {}allowed to {} on resource [{}]", authSubject,
-                hasPermission ? "" : "not ", permission, resource);
+        validateResponse(mechanism, response, validation -> {
+            if (validation.succeeded()) {
+                message.reply(new JsonObject().put(FIELD_AUTHORIZATION_ID, validation.result()));
+            } else {
+                message.reply(new JsonObject().put(FIELD_ERROR, validation.cause().getMessage()));
+            }
+        });
     }
 }

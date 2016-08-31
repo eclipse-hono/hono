@@ -27,4 +27,7 @@ public final class IntegrationTestSupport {
         // prevent instantiation
     }
 
+    public static void doNothing() {
+        
+    }
 }

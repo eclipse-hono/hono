@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
+import org.eclipse.hono.authentication.AuthenticationService;
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
 import org.eclipse.hono.server.EndpointFactory;
@@ -69,6 +70,8 @@ public class Application {
     @Autowired
     private BaseRegistrationAdapter registration;
     @Autowired
+    private VerticleFactory<AuthenticationService> authenticationServiceFactory;
+    @Autowired
     private VerticleFactory<AuthorizationService> authServiceFactory;
     @Autowired
     private VerticleFactory<HonoServer> serverFactory;
@@ -101,8 +104,10 @@ public class Application {
             }
         });
 
-        CompositeFuture.all(deployVerticle(adapterFactory, instanceCount),
+        CompositeFuture.all(
+                deployVerticle(adapterFactory, instanceCount),
                 deployVerticle(authServiceFactory, instanceCount),
+                deployVerticle(authenticationServiceFactory, instanceCount),
                 deployRegistrationService()).setHandler(ar -> {
             if (ar.succeeded()) {
                 deployServer(instanceCount, started);

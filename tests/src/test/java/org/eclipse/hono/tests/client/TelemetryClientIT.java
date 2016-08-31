@@ -12,7 +12,10 @@
  */
 package org.eclipse.hono.tests.client;
 
-import static org.eclipse.hono.tests.IntegrationTestSupport.*;
+import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_HOST;
+import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
+import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
+import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
 
 import java.net.InetAddress;
 import java.util.function.Consumer;
@@ -24,7 +27,6 @@ import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetryConsumer;
 import org.eclipse.hono.client.TelemetrySender;
-import org.eclipse.hono.util.Constants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -62,7 +64,7 @@ public class TelemetryClientIT {
     private static final String PATH_SEPARATOR = System.getProperty("hono.telemetry.pathSeparator", "/");
     /* test constants */
     private static final int MSG_COUNT = 50;
-    private static final String TEST_TENANT_ID = Constants.DEFAULT_TENANT;
+    private static final String TEST_TENANT_ID = "DEFAULT_TENANT";
     private static final String DEVICE_ID = "device-0";
 
     private static Vertx vertx = Vertx.vertx();
@@ -91,7 +93,6 @@ public class TelemetryClientIT {
             }
         });
 
-
         context.runOnContext(go -> {
 
             downstreamClient = HonoClientBuilder.newClient()
@@ -102,12 +103,18 @@ public class TelemetryClientIT {
                     .user("user1@HONO")
                     .password("pw")
                     .build();
-            downstreamClient.connect(createOptions(), downstreamTracker.completer());
+            downstreamClient.connect(new ProtonClientOptions(), downstreamTracker.completer());
 
             // step 1
             // connect to Hono server
             Future<HonoClient> honoTracker = Future.future();
-            honoClient = HonoClientBuilder.newClient().vertx(vertx).host(HONO_HOST).port(HONO_PORT).build();
+            honoClient = HonoClientBuilder.newClient()
+                    .vertx(vertx)
+                    .host(HONO_HOST)
+                    .port(HONO_PORT)
+                    .user("hono-client")
+                    .password("secret")
+                    .build();
             honoClient.connect(new ProtonClientOptions(), honoTracker.completer());
             honoTracker.compose(hono -> {
                 // step 2
@@ -124,12 +131,6 @@ public class TelemetryClientIT {
         });
 
         done.await(5000);
-    }
-
-    private static ProtonClientOptions createOptions() {
-        ProtonClientOptions options = new ProtonClientOptions();
-        options.setReconnectAttempts(3).setReconnectInterval(500);
-        return options;
     }
 
     private static Context getContext(final TestContext ctx) {

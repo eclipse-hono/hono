@@ -16,7 +16,7 @@ package org.eclipse.hono.tests.jms;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.TEST_TENANT_ID;
+import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -41,13 +41,12 @@ public class DeviceRegistrationIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistrationIT.class);
     private static final String TEST_DEVICE_ID = "testDevice-" + UUID.randomUUID().toString();
-
     private RegistrationTestSupport registration;
     private JmsIntegrationTestSupport client;
 
     @Before
     public void init() throws Exception {
-        client = JmsIntegrationTestSupport.newClient("hono");
+        client = JmsIntegrationTestSupport.newClient("hono", HONO_USER, HONO_PASSWORD);
         registration = client.getRegistrationTestSupport();
         registration.createConsumer();
         registration.createProducer();

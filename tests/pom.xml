@@ -84,7 +84,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                      <images>
                         <!-- ##### volume container with hono server configuration ##### -->
                         <image>
-                           <name>hono-test-config</name>
+                           <name>eclipsehono/hono-test-config</name>
                            <alias>hono-config</alias>
                            <build>
                               <from>tianon/true</from>
@@ -98,10 +98,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                     <id>config</id>
                                     <fileSets>
                                        <fileSet>
-                                          <directory>${project.basedir}/src/test/resources</directory>
+                                          <directory>${project.basedir}/src/test/resources/server</directory>
                                           <outputDirectory>.</outputDirectory>
                                           <includes>
-                                             <include>*.json</include>
+                                             <include>*</include>
                                           </includes>
                                        </fileSet>
                                     </fileSets>
@@ -156,10 +156,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               </links>
                               <env>
                                  <HONO_MAXINSTANCES>2</HONO_MAXINSTANCES>
-                                 <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
+                                 <HONO_PERMISSIONS_PATH>file:///etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
                                  <HONO_TELEMETRY_DOWNSTREAM_HOST>qdrouter</HONO_TELEMETRY_DOWNSTREAM_HOST>
                                  <HONO_TELEMETRY_DOWNSTREAM_PORT>5673</HONO_TELEMETRY_DOWNSTREAM_PORT>
-                                 <SPRING_CONFIG_LOCATION>file:/etc/hono</SPRING_CONFIG_LOCATION>
+                                 <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                                 <SPRING_CONFIG_LOCATION>file:///etc/hono</SPRING_CONFIG_LOCATION>
                               </env>
                               <log>
                                  <prefix>HONO</prefix>
