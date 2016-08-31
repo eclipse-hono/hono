@@ -89,7 +89,7 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.basedir}/qpid</directory>
-                            <outputDirectory>/</outputDirectory>
+                            <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>**/*</include>
                             </includes>
@@ -118,7 +118,7 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.basedir}/sasl</directory>
-                            <outputDirectory>/</outputDirectory>
+                            <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>**/*</include>
                             </includes>
