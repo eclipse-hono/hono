@@ -74,33 +74,36 @@ public class StandaloneRegistrationApiTest {
         server = new HonoServer(BIND_ADDRESS, 0, false);
         server.addEndpoint(new RegistrationEndpoint(vertx, false));
         registrationAdapter = new InMemoryRegistrationAdapter();
+        ctx.put(KEY_CONTEXT, vertx.getOrCreateContext());
 
         Future<RegistrationClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {
             registrationClient = r;
-            ctx.put(KEY_CONTEXT, vertx.getOrCreateContext());
         }));
 
         Future<String> registrationTracker = Future.future();
         Future<String> authTracker = Future.future();
 
-        vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
+        getContext(ctx).runOnContext(run -> {
+            vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
+            vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
 
-        CompositeFuture.all(registrationTracker, authTracker)
-        .compose(r -> {
-            Future<String> serverTracker = Future.future();
-            vertx.deployVerticle(server, serverTracker.completer());
-            return serverTracker;
-        }).compose(s -> {
-            client = HonoClientBuilder.newClient().vertx(vertx).host(server.getBindAddress()).port(server.getPort()).build();
+            CompositeFuture.all(registrationTracker, authTracker)
+            .compose(r -> {
+                Future<String> serverTracker = Future.future();
+                vertx.deployVerticle(server, serverTracker.completer());
+                return serverTracker;
+            }).compose(s -> {
+                client = HonoClientBuilder.newClient().vertx(vertx).host(server.getBindAddress()).port(server.getPort()).build();
 
-            Future<HonoClient> clientTracker = Future.future();
-            client.connect(new ProtonClientOptions(), clientTracker.completer());
-            return clientTracker;
-        }).compose(c -> {
-            c.createRegistrationClient(DEFAULT_TENANT, setupTracker.completer());
-        }, setupTracker);
+                Future<HonoClient> clientTracker = Future.future();
+                client.connect(new ProtonClientOptions(), clientTracker.completer());
+                return clientTracker;
+            }).compose(c -> {
+                c.createRegistrationClient(DEFAULT_TENANT, setupTracker.completer());
+            }, setupTracker);
+        });
+
     }
 
     @After
@@ -115,13 +118,15 @@ public class StandaloneRegistrationApiTest {
         Future<Void> done = Future.future();
         done.setHandler(ctx.asyncAssertSuccess());
 
-        getContext(ctx).runOnContext(go -> {
-            Future<Void> closeTracker = Future.future();
-            registrationClient.close(closeTracker.completer());
-            closeTracker.compose(c -> {
-                client.shutdown(done.completer());
-            }, done);
-        });
+        if (client != null) {
+            getContext(ctx).runOnContext(go -> {
+                Future<Void> closeTracker = Future.future();
+                registrationClient.close(closeTracker.completer());
+                closeTracker.compose(c -> {
+                    client.shutdown(done.completer());
+                }, done);
+            });
+        }
     }
 
     @Test(timeout = TIMEOUT)

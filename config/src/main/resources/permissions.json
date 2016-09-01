@@ -1,11 +1,8 @@
 {
-  "telemetry/myTenant": {
-      "SUBJECT": [ "WRITE" ],
+  "telemetry/DEFAULT_TENANT": {
       "hono-client": [ "WRITE" ]
   },
-  "registration/myTenant": {
-      "SUBJECT": [ "READ", "WRITE" ],
-      "hono-client": [ "READ", "WRITE" ],
-      "provisioner-client": [ "READ" ]
+  "registration/DEFAULT_TENANT": {
+      "hono-client": [ "READ", "WRITE" ]
   }
 }

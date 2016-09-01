@@ -20,7 +20,7 @@ import io.vertx.core.json.JsonObject;
 public final class Constants {
 
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
-    public static final String DEFAULT_SUBJECT = "SUBJECT";
+    public static final String DEFAULT_SUBJECT = "hono-client";
 
     public static final String APPLICATION_ENDPOINT = "application";
     public static final String APP_PROPERTY_ACTION = "action";

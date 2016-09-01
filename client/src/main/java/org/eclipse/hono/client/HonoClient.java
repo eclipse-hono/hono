@@ -35,7 +35,7 @@ import io.vertx.proton.ProtonConnection;
 public class HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClient.class);
-
+    private static final String LOCAL_CONTAINER_NAME = "hono-client";
     private final Vertx vertx;
     private final String host;
     private final int port;
@@ -72,7 +72,7 @@ public class HonoClient {
                     LOG.info("connected to server [{}:{}]", host, port);
                     conAttempt.result()
                         .setHostname("hono")
-                        .setContainer("SUBJECT")
+                        .setContainer(LOCAL_CONTAINER_NAME)
                         .openHandler(opened -> {
                             if (opened.succeeded()) {
                                 LOG.info("connection to [{}] open", opened.result().getRemoteContainer());

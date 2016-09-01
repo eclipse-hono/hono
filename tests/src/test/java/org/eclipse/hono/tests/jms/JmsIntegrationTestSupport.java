@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.tests.jms;
 
-import static org.eclipse.hono.tests.IntegrationTestSupport.*;
+import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_HOST;
+import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
+import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
+import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 
 import java.util.Hashtable;
@@ -33,8 +36,8 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
-import org.apache.qpid.jms.JmsConnection;
 import org.apache.qpid.jms.JmsQueue;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +51,7 @@ public class JmsIntegrationTestSupport {
     public static final int    HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
     public static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, "localhost");
     public static final int    DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
-    public static final String TEST_TENANT_ID = "tenant";
+    public static final String TEST_TENANT_ID = Constants.DEFAULT_TENANT;
     public static final String PATH_SEPARATOR = System.getProperty("hono.telemetry.pathSeparator", "/");
     public static final String TELEMETRY_SENDER_ADDRESS = "telemetry/" + TEST_TENANT_ID;
     public static final String TELEMETRY_RECEIVER_ADDRESS = "telemetry" + PATH_SEPARATOR + TEST_TENANT_ID;

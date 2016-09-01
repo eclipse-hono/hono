@@ -15,12 +15,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +32,8 @@ import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -44,11 +44,11 @@ import io.vertx.core.json.JsonObject;
  */
 public final class InMemoryAuthorizationService extends BaseAuthorizationService {
 
-    static final String PERMISSIONS_FILE_PATH = "/permissions.json";
+    static final Resource PERMISSIONS_FILE_PATH = new ClassPathResource("/permissions.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
     // holds mapping resource -> acl
     private static final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
-    private final String permissionsPath;
+    private final Resource permissionsResource;
 
     public InMemoryAuthorizationService() {
         this(false);
@@ -61,28 +61,32 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     /**
      * 
      */
-    public InMemoryAuthorizationService(final boolean singleTenant, final String permissionsPath) {
-        this(0, 1, singleTenant, permissionsPath);
+    public InMemoryAuthorizationService(final boolean singleTenant, final Resource permissionsResource) {
+        this(0, 1, singleTenant, permissionsResource);
     }
 
-    /**
-     * @throws IllegalArgumentException if the given path is not a valid URI.
-     */
-    private InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final String permissionsPath) {
-        super(instanceId, totalNoOfInstances, singleTenant);
-        this.permissionsPath = permissionsPath;
-    }
+//    /**
+//     * @throws IllegalArgumentException if the given path is not a valid URI.
+//     */
+//    private InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final String permissionsPath) {
+//        super(instanceId, totalNoOfInstances, singleTenant);
+//        this.permissionsPath = permissionsPath;
+//    }
 
-    public InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final JsonObject permissions) {
+    public InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final Resource permissionsResource) {
         super(instanceId, totalNoOfInstances, singleTenant);
-        this.permissionsPath = null;
-        parsePermissions(permissions);
+        this.permissionsResource = permissionsResource;
     }
 
     @Override
-    protected void doStart(final Future<Void> startFuture) throws Exception {
-        loadPermissionsFromFile();
-        startFuture.complete();
+    protected void doStart(final Future<Void> startFuture) {
+        try {
+            loadPermissions();
+            startFuture.complete();
+        } catch (IOException e) {
+            LOGGER.error("cannot load permissions from resource {}", permissionsResource, e);
+            startFuture.fail(e);
+        }
     }
 
     @Override
@@ -142,13 +146,28 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         });
     }
 
-    private void loadPermissionsFromFile() throws IOException {
+    private void loadPermissions() throws IOException {
+        if (permissionsResource == null) {
+            throw new IllegalStateException("permissions resource is not set");
+        }
+        if (permissionsResource.isReadable()) {
+            LOGGER.info("loading permissions from resource {}", permissionsResource.getURI().toString());
+            StringBuilder json = new StringBuilder();
+            load(permissionsResource, json);
+            parsePermissions(new JsonObject(json.toString()));
+        } else {
+            throw new FileNotFoundException("permissions resource does not exist");
+        }
+    }
 
-        if (permissionsPath != null) {
-            final Path pathToPermissions = resolvePathToPermissions();
-            LOGGER.info("loading permissions from: {}", pathToPermissions.toAbsolutePath());
-            final String permissionsJson = new String(Files.readAllBytes(pathToPermissions), UTF_8);
-            parsePermissions(new JsonObject(permissionsJson));
+    private void load(final Resource source, final StringBuilder target) throws IOException {
+
+        char[] buffer = new char[4096];
+        int bytesRead = 0;
+        try (Reader reader = new InputStreamReader(source.getInputStream(), UTF_8)) {
+            while ((bytesRead = reader.read(buffer)) > 0) {
+                target.append(buffer, 0, bytesRead);
+            }
         }
     }
 
@@ -165,18 +184,6 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
                         addPermission(subject.getKey(), resourceIdentifier, toSet(permissions));
                     });
         });
-    }
-    private Path resolvePathToPermissions() throws IOException {
-
-        // first try to load from configured path
-        final Path pathToPermissions = Paths.get(permissionsPath);
-        if (pathToPermissions != null && pathToPermissions.toFile().exists() && pathToPermissions.toFile().canRead()) {
-            return pathToPermissions;
-        }
-
-        // then try to load default from classpath
-        final URL resource = getClass().getResource(permissionsPath);
-        return Paths.get(URI.create(resource.toString()));
     }
 
     private ResourceIdentifier getResourceIdentifier(final Map.Entry<String, Object> resources) {

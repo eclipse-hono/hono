@@ -1,17 +1,15 @@
 {
-  "telemetry/tenant": {
-    "SUBJECT": [ "WRITE" ],
+  "telemetry/DEFAULT_TENANT": {
     "hono-client": [ "WRITE" ]
   },
-  "telemetry/tenant/fluxcapacitor": {
+  "telemetry/DEFAULT_TENANT/fluxcapacitor": {
     "connector-client": [ "WRITE" ]
   },
-  "registration/tenant": {
-    "SUBJECT": [ "READ", "WRITE" ],
+  "registration/DEFAULT_TENANT": {
     "hono-client": [ "READ", "WRITE" ],
     "provisioner-client": [ "READ" ]
   },
-  "registration/tenant/fluxcapacitor": {
+  "registration/DEFAULT_TENANT/fluxcapacitor": {
     "provisioner-client": [ "WRITE" ]
   }
 }

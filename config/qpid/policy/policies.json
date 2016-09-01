@@ -6,7 +6,7 @@
       "maxConnPerUser": 20,
       "maxConnPerHost": 10,
       "userGroups": {
-        "myTenant": "user1@HONO",
+        "DEFAULT_TENANT": "user1@HONO",
         "anotherTenant": "user2@HONO",
         "anonymous" : "anonymous"
       },
@@ -14,16 +14,16 @@
         "any": "*"
       },
       "ingressPolicies": {
-        "myTenant": "any",
+        "DEFAULT_TENANT": "any",
         "anotherTenant": "any"
       },
       "connectionAllowDefault": false,
       "settings": {
-        "myTenant": {
+        "DEFAULT_TENANT": {
           "allowDynamicSrc": false,
           "allowAnonymousSender": false,
-          "sources": "telemetry/myTenant, telemetry/myTenant/*, telemetry/tenant, telemetry/tenant/*",
-          "targets": "telemetry/myTenant"
+          "sources": "telemetry/DEFAULT_TENANT, telemetry/DEFAULT_TENANT/*",
+          "targets": "telemetry/DEFAULT_TENANT"
         },
         "anotherTenant": {
           "allowDynamicSrc": false,

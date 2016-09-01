@@ -24,6 +24,7 @@ import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetryConsumer;
 import org.eclipse.hono.client.TelemetrySender;
+import org.eclipse.hono.util.Constants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -61,7 +62,7 @@ public class TelemetryClientIT {
     private static final String PATH_SEPARATOR = System.getProperty("hono.telemetry.pathSeparator", "/");
     /* test constants */
     private static final int MSG_COUNT = 50;
-    private static final String TEST_TENANT_ID = "tenant";
+    private static final String TEST_TENANT_ID = Constants.DEFAULT_TENANT;
     private static final String DEVICE_ID = "device-0";
 
     private static Vertx vertx = Vertx.vertx();

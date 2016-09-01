@@ -74,29 +74,30 @@ public class StandaloneTelemetryApiTest {
         server.addEndpoint(new TelemetryEndpoint(vertx, false));
         registrationAdapter = new InMemoryRegistrationAdapter();
         telemetryAdapter = new MessageDiscardingTelemetryAdapter();
+        ctx.put(KEY_CONTEXT, vertx.getOrCreateContext());
 
         Future<HonoClient> setupTracker = Future.future();
-        setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {
-            ctx.put(KEY_CONTEXT, vertx.getOrCreateContext());
-        }));
+        setupTracker.setHandler(ctx.asyncAssertSuccess());
 
         Future<String> registrationTracker = Future.future();
         Future<String> authTracker = Future.future();
         Future<String> telemetryTracker = Future.future();
 
-        vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
-        vertx.deployVerticle(telemetryAdapter, telemetryTracker.completer());
+        getContext(ctx).runOnContext(run -> {
+            vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
+            vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
+            vertx.deployVerticle(telemetryAdapter, telemetryTracker.completer());
 
-        CompositeFuture.all(registrationTracker, authTracker, telemetryTracker)
-        .compose(r -> {
-            Future<String> serverTracker = Future.future();
-            vertx.deployVerticle(server, serverTracker.completer());
-            return serverTracker;
-        }).compose(s -> {
-            client = HonoClientBuilder.newClient().vertx(vertx).host(server.getBindAddress()).port(server.getPort()).build();
-            client.connect(new ProtonClientOptions(), setupTracker.completer());
-        }, setupTracker);
+            CompositeFuture.all(registrationTracker, authTracker, telemetryTracker)
+            .compose(r -> {
+                Future<String> serverTracker = Future.future();
+                vertx.deployVerticle(server, serverTracker.completer());
+                return serverTracker;
+            }).compose(s -> {
+                client = HonoClientBuilder.newClient().vertx(vertx).host(server.getBindAddress()).port(server.getPort()).build();
+                client.connect(new ProtonClientOptions(), setupTracker.completer());
+            }, setupTracker);
+        });
     }
 
     @Before
@@ -130,14 +131,16 @@ public class StandaloneTelemetryApiTest {
     @AfterClass
     public static void shutdown(final TestContext ctx) {
 
-        final Async clientShutdown = ctx.async();
-        getContext(ctx).runOnContext(go -> {
-            client.shutdown(r -> {
-                if (r.succeeded()) {
-                    clientShutdown.complete();
-                }
+        if (client != null) {
+            final Async clientShutdown = ctx.async();
+            getContext(ctx).runOnContext(go -> {
+                client.shutdown(r -> {
+                    if (r.succeeded()) {
+                        clientShutdown.complete();
+                    }
+                });
             });
-        });
+        }
     }
 
     @Test(timeout = 10000l)
