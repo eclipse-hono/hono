@@ -17,9 +17,9 @@ The easiest way to run the example is by using [Docker Compose](https://docs.doc
   * [install Docker](https://docs.docker.com/engine/installation/) and
   * **optionally** [install Docker Compose](https://docs.docker.com/compose/install/)
 1. In order to build the *Hono Server* Docker image run the following from the `server` folder
-    `$ mvn install -Ddocker.host=tcp://${host}:${port}`
+    `$ mvn install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image`
 1. In order to build the *Configuration* Docker image run the following command in the `config` folder
-    `$ mvn install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image` (repeat this step whenever you want to change your example configuration)
+    `$ mvn install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image` (repeat this step whenever you have changed the example configuration)
 
 with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. If you are running on Linux and Docker is installed locally, you can omit the `docker.host` property.
  
@@ -29,7 +29,12 @@ The easiest way to start the server components is by using *Docker Compose*. Sim
 
     $ docker-compose up -d
 
-This will start up both a *Dispatch Router* instance as well as the *Hono Server* wired up with each other automatically. Additionally a volume container for the *Example Configuration* is started containing a `permissions.json` file that defines permissions required to run the example. You can edit these permissions in the file `example/config/permissions.json`. Don't forget to rebuild and restart the Docker image to make the changes take effect.
+This will start up the following components:
+
+* a *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
+* a *Hono Server* instance wired up with the dispatch router.
+* a Docker *volume* container for the *Example Configuration* which contains a `permissions.json` file that defines permissions required to run the example. You can edit these permissions in the file `example/config/permissions.json`. Don't forget to rebuild and restart the Docker image to make the changes take effect.
+* a *Hono REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
 
 Use the following to stop the server components
 
@@ -49,7 +54,7 @@ you can also use plain *Docker* to run and wire up the images manually from the 
 In order to start a broker using [Gordon Sim's Qpid Dispatch Router image](https://hub.docker.com/r/gordons/qpid-dispatch/) run the following from the
 command line
 
-    $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter gordons/qpid-dispatch:0.6.0-rc4
+    $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter gordons/qpid-dispatch:0.6.0
 
 ##### Example Configuration
 
@@ -92,3 +97,12 @@ You may want to start the *Hono Server* from within your IDE or from the command
     $ mvn spring-boot:run -Dhono.telemetry.downstream.host=localhost -Dhono.telemetry.downstream.port=15672 -Dhono.permissions.path=../example/config/permissions.json
 
   **NOTE**: Replace `localhost` with the name or IP address of the host that the *Dispatch Router* is running on.
+
+### Registering a device using the REST adapter
+
+    $ curl -X POST -H 'device-id: 4711' http://127.0.0.1:8080/registration/DEFAULT_TENANT
+
+### Uploading Telemetry Data using the REST adapter
+
+    $ curl -X PUT -H 'device-id: 4711' -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
+    $ http://127.0.0.1:8080/telemetry/DEFAULT_TENANT

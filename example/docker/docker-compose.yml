@@ -24,3 +24,16 @@ hono:
     - HONO_MAXINSTANCES=2
   volumes_from:
     - hono-config
+
+rest-adapter:
+  image: eclipsehono/hono-adapter-rest-vertx:0.1-SNAPSHOT
+  ports:
+    - "8080:8080"
+  links:
+    - hono
+  environment:
+    - HONO_HTTP_BINDADDRESS=0.0.0.0
+    - HONO_MAXINSTANCES=2
+    - HONO_SERVER_HOST=hono
+    - HONO_USER=hono-client
+    - HONO_PASSWORD=secret

@@ -28,6 +28,7 @@
 
   <modules>
     <module>rest</module>
+    <module>rest-vertx</module>
   </modules>
 
 </project>
