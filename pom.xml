@@ -90,7 +90,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- Plugins versions -->
-    <docker-maven-plugin.version>0.15.9</docker-maven-plugin.version>
+    <docker-maven-plugin.version>0.15.16</docker-maven-plugin.version>
 
     <!-- Docker configuration -->
     <image.target>${project.artifactId}</image.target>
