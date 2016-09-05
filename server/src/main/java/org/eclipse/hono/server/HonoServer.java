@@ -233,31 +233,37 @@ public final class HonoServer extends AbstractVerticle {
      * @param receiver the receiver created for the link.
      */
     void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
-        LOG.debug("client wants to open a link for sending messages [address: {}]", receiver.getRemoteTarget());
-        try {
-            final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
-            final Endpoint endpoint = getEndpoint(targetResource);
-            if (endpoint == null) {
-                LOG.info("no matching endpoint registered for address [{}]", receiver.getRemoteTarget().getAddress());
-                receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(),
-                        "No matching endpoint registered for address " + receiver.getRemoteTarget().getAddress()));
+        if (receiver.getRemoteTarget().getAddress() == null) {
+            LOG.debug("client [{}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link",
+                    con.getRemoteContainer());
+            receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(), "client needs to provide target address")).close();
+        } else {
+            LOG.debug("client [{}] wants to open a link for sending messages [address: {}]",
+                    con.getRemoteContainer(), receiver.getRemoteTarget());
+            try {
+                final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
+                final Endpoint endpoint = getEndpoint(targetResource);
+                if (endpoint == null) {
+                    LOG.info("no matching endpoint registered for address [{}]", receiver.getRemoteTarget().getAddress());
+                    receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(),
+                            "No matching endpoint registered for address " + receiver.getRemoteTarget().getAddress()));
+                    receiver.close();
+                } else {
+                    final String user = getUserFromConnection(con);
+                    checkAuthorizationToAttach(user, targetResource, Permission.WRITE, isAuthorized -> {
+                        if (isAuthorized) {
+                            receiver.setTarget(receiver.getRemoteTarget());
+                            endpoint.onLinkAttach(receiver, targetResource);
+                        } else {
+                            final String message = String.format("subject [%s] is not authorized to WRITE to [%s]", user, targetResource);
+                            receiver.setCondition(condition(UNAUTHORIZED_ACCESS.toString(), message)).close();
+                        }
+                    });
+                }
+            } catch (final IllegalArgumentException e) {
+                LOG.debug("client has provided invalid resource identifier as target address", e);
                 receiver.close();
-            } else {
-                final String user = getUserFromConnection(con);
-                checkAuthorizationToAttach(user, targetResource, Permission.WRITE, isAuthorized -> {
-                    if (isAuthorized) {
-                        receiver.setTarget(receiver.getRemoteTarget());
-                        endpoint.onLinkAttach(receiver, targetResource);
-                    } else {
-                        final String message = String.format("[%s] is not authorized to attach to [%s]", user, targetResource);
-                        LOG.debug(message);
-                        receiver.setCondition(condition(UNAUTHORIZED_ACCESS.toString(), message)).close();
-                    }
-                });
             }
-        } catch (final IllegalArgumentException e) {
-            LOG.debug("client has provided invalid resource identifier as target address", e);
-            receiver.close();
         }
     }
 
