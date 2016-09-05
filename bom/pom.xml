@@ -33,7 +33,6 @@
     <assertj-core.version>3.2.0</assertj-core.version>
     <camel.version>2.16.1</camel.version>
     <commons-lang3.version>3.4</commons-lang3.version>
-    <docker.host>${env.DOCKER_HOST}</docker.host>
     <geronimo-jms-spec-version>1.1.1</geronimo-jms-spec-version>
     <jackson.version>2.7.3</jackson.version>
     <junit.version>4.12</junit.version>
