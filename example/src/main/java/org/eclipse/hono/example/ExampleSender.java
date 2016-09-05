@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
@@ -50,10 +51,24 @@ public class ExampleSender {
 
     @Autowired
     private Vertx vertx;
+    private Context ctx;
 
     @PostConstruct
     private void start() {
-        vertx.runOnContext(go -> {
+        ctx = vertx.getOrCreateContext();
+        Future<TelemetrySender> startupTracker = Future.future();
+        startupTracker.setHandler(done -> {
+            if (done.succeeded()) {
+                vertx.executeBlocking(f -> readMessagesFromStdin(done.result(), f), false, exit -> {
+                    vertx.close();
+                });
+            } else {
+                LOG.error("Error occurred during initialization: {}", done.cause().getMessage());
+                vertx.close();
+            }
+        });
+
+        ctx.runOnContext(go -> {
            /* step 1: connect Hono client */
             final Future<HonoClient> connectionTracker = Future.future();
             client.connect(new ProtonClientOptions(), connectionTracker.completer());
@@ -72,25 +87,18 @@ public class ExampleSender {
                 Future<Void> resultCodeTracker = Future.future();
                 if (regResult == HttpURLConnection.HTTP_OK) {
                     LOG.info("Device registered successfully.");
-                    resultCodeTracker.complete(null);
+                    resultCodeTracker.complete();
+                } else if (regResult == HttpURLConnection.HTTP_CONFLICT) {
+                    LOG.info("Device already registered.");
+                    resultCodeTracker.complete();
                 } else {
                     resultCodeTracker.fail(String.format("Failed to register device [%s]: %s", config.deviceId(), regResult));
                 }
                 return resultCodeTracker;
             }).compose(v -> {
             /* step 5: create telemetry sender client */
-                Future<TelemetrySender> telemetrySenderTracker = Future.future();
-                client.createTelemetrySender(config.tenantId(), telemetrySenderTracker.completer());
-                return telemetrySenderTracker;
-            }).setHandler(sender -> {
-            /* step 6: accept input from command line */
-                if (sender.succeeded()) {
-                    vertx.executeBlocking(f -> readMessagesFromStdin(sender.result(), f), false, null);
-                } else {
-                    LOG.error("Error occurred during initialization: {}", sender.cause().getMessage());
-                    vertx.close();
-                }
-            });
+                client.createTelemetrySender(config.tenantId(), startupTracker.completer());
+            }, startupTracker);
         });
     }
 
@@ -101,15 +109,16 @@ public class ExampleSender {
             do {
                 LOG.info("Enter some message to send (empty message to quit): ");
                 input = reader.readLine();
-                telemetryClient.send(config.deviceId(), input, "plain/text");
-            } while (input != null && !input.isEmpty());
+                if (!input.isEmpty()) {
+                    telemetryClient.send(config.deviceId(), input, "text/plain");
+                }
+            } while (!input.isEmpty());
             f.complete();
         } catch (final IOException e) {
             LOG.error("problem reading message from STDIN", e);
             f.fail(e);
         } finally {
-            vertx.close();
+            client.shutdown();
         }
     }
-
 }

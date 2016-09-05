@@ -12,6 +12,8 @@
 package org.eclipse.hono.client;
 
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -132,8 +134,27 @@ public class HonoClient {
         return this;
     }
 
+    /**
+     * Closes this client's connection to the Hono server.
+     * <p>
+     * This method waits for at most 5 seconds for the connection to be closed properly.
+     */
     public void shutdown() {
-        shutdown(null);
+        CountDownLatch latch = new CountDownLatch(1);
+        shutdown(done -> {
+            if (done.succeeded()) {
+                latch.countDown();
+            } else {
+                LOG.error("could not close connection to server", done.cause());
+            }
+        });
+        try {
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                LOG.error("shutdown of client timed out");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {

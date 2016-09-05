@@ -30,9 +30,9 @@ public class AppConfiguration {
     private String                tenantId;
     @Value(value = "${device.id}")
     private String                deviceId;
-    @Value(value = "${user}")
+    @Value(value = "${hono.user}")
     private String                user;
-    @Value(value = "${password}")
+    @Value(value = "${hono.password}")
     private String                password;
     @Value(value = "${role}")
     private String                role;

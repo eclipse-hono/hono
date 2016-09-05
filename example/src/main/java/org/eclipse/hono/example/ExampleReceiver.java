@@ -17,6 +17,9 @@ import java.io.IOException;
 import javax.annotation.PostConstruct;
 
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.Section;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.TelemetryConsumer;
 import org.slf4j.Logger;
@@ -25,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
@@ -40,39 +44,42 @@ public class ExampleReceiver {
     private static final Logger LOG = LoggerFactory.getLogger(ExampleReceiver.class);
 
     @Autowired
-    private AppConfiguration configuration;
+    private AppConfiguration config;
 
     @Autowired
     private HonoClient client;
 
     @Autowired
     private Vertx vertx;
+    private Context ctx;
 
     @PostConstruct
     private void start() {
-        vertx.runOnContext(go -> {
+
+        Future<TelemetryConsumer> startupTracker = Future.future();
+        startupTracker.setHandler(done -> {
+            if (done.succeeded()) {
+                LOG.info("Telemetry receiver created successfully.");
+                vertx.executeBlocking(this::waitForInput, false, finish -> {
+                    vertx.close();
+                });
+            } else {
+                LOG.error("Error occurred during initialization of telemetry receiver: {}", done.cause().getMessage());
+                vertx.close();
+            }
+        });
+
+        ctx = vertx.getOrCreateContext();
+        ctx.runOnContext(go -> {
             /* step 1: connect hono client */
             final Future<HonoClient> connectionTracker = Future.future();
             client.connect(new ProtonClientOptions(), connectionTracker.completer());
             connectionTracker.compose(honoClient -> {
                 /* step 2: create telemetry consumer */
-                Future<TelemetryConsumer> telemetryClientTracker = Future.future();
-                client.createTelemetryConsumer(configuration.tenantId(),
-                        msg -> LOG.info("received telemetry message: {}", ((AmqpValue) msg.getBody()).getValue()),
-                        telemetryClientTracker.completer());
-                return telemetryClientTracker;
-            }).compose(created -> {
-                /* step 3: wait for user input */
-                vertx.executeBlocking(this::waitForInput, false, null);
-                return Future.succeededFuture(created);
-            }).setHandler(receiver -> {
-                if (receiver.succeeded()) {
-                    LOG.info("Telemetry receiver created successfully.");
-                } else {
-                    LOG.error("Error occurred during initialization of telemetry receiver: {}", receiver.cause().getMessage());
-                    vertx.close();
-                }
-            });
+                client.createTelemetryConsumer(config.tenantId(),
+                        this::handleMessage,
+                        startupTracker.completer());
+            }, startupTracker);
         });
     }
 
@@ -85,7 +92,18 @@ public class ExampleReceiver {
             LOG.error("problem reading message from STDIN", e);
             f.fail(e);
         } finally {
-            vertx.close();
+            client.shutdown();
         }
+    }
+
+    private void handleMessage(final Message msg) {
+        Section body = msg.getBody();
+        String content = null;
+        if (body instanceof Data) {
+            content = ((Data) msg.getBody()).getValue().toString();
+        } else if (body instanceof AmqpValue) {
+            content = ((AmqpValue) msg.getBody()).getValue().toString();
+        }
+        LOG.info("received telemetry message [content-type: {}]: {}", msg.getContentType(), content);
     }
 }

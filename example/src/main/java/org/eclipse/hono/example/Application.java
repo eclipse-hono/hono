@@ -12,13 +12,11 @@
 package org.eclipse.hono.example;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -44,13 +42,7 @@ public class Application {
         LOG.info("Starting TelemetryClient in role {}", config.role());
     }
 
-    @PreDestroy
-    private void stop() {
-        LOG.info("Stopping TelemetryClient [{}]", config.role());
-        vertx.runOnContext(go -> client().shutdown());
-    }
-
-    @Bean
+    @Bean(destroyMethod="")
     public HonoClient client() {
         return HonoClientBuilder.newClient()
                 .vertx(vertx())
@@ -67,8 +59,6 @@ public class Application {
     }
 
     public static void main(final String[] args) {
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
         SpringApplication.run(Application.class, args);
     }
 }
