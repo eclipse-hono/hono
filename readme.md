@@ -10,9 +10,9 @@
 
 If you do not already have a working Maven installation on your system please follow the [installation instructions on the Maven home page](https://maven.apache.org/). Then simply run the following from the command line.
 
-    $ mvn clean install
+    $ mvn clean install -Pbuild-docker-image
 
-This will build all libraries and example code.
+This will build all libraries, docker images and example code. 
 
 ##### Run the Demo Application
 

@@ -9,6 +9,10 @@ In order to run the example you will need the following
 * The compiled *Hono* artifacts
 * An *Apache Qpid Dispatch Router* instance
 
+You can build all required artifacts and docker images by running the following command in the project's root folder:
+
+    $ mvn clean install -Pbuild-docker-image
+
 ##### Prerequisites
 
 The easiest way to run the example is by using [Docker Compose](https://docs.docker.com/compose) to start up *Dispatch Router* and *Hono Server* *Docker* images. However, it is also possible to run these images individually using plain *Docker* (see next section).
@@ -16,12 +20,10 @@ The easiest way to run the example is by using [Docker Compose](https://docs.doc
 1. If you do not already have *Docker* and *Docker Compose* installed on your system follow these instructions to
   * [install Docker](https://docs.docker.com/engine/installation/) and
   * **optionally** [install Docker Compose](https://docs.docker.com/compose/install/)
-1. In order to build the *Hono Server* Docker image run the following from the `server` folder
-    `$ mvn install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image`
-1. In order to build the *Configuration* Docker image run the following command in the `config` folder
-    `$ mvn install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image` (repeat this step whenever you have changed the example configuration)
+1. In order to build all required Docker images run the following from the project's root folder
+    `$ mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image`
 
-with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. If you are running on Linux and Docker is installed locally, you can omit the `docker.host` property.
+with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. If you are running on Linux and Docker is installed locally or you specified the `DOCKER_HOST` environment variable, you can omit the `docker.host` property.
  
 ### Start Server Components using Docker Compose
 
@@ -34,6 +36,7 @@ This will start up the following components:
 * a *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
 * a *Hono Server* instance wired up with the dispatch router.
 * a Docker *volume* container for the *Example Configuration* which contains a `permissions.json` file that defines permissions required to run the example. You can edit these permissions in the file `example/config/permissions.json`. Don't forget to rebuild and restart the Docker image to make the changes take effect.
+* a Docker *volume* containing the *Dispatch Router* configuration
 * a *Hono REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
 
 Use the following to stop the server components
@@ -51,11 +54,13 @@ you can also use plain *Docker* to run and wire up the images manually from the 
 
 ##### Start Dispatch Router
 
-In order to start a broker using [Gordon Sim's Qpid Dispatch Router image](https://hub.docker.com/r/gordons/qpid-dispatch/) run the following from the
+In order to start a broker using [Gordon Sim's Qpid Dispatch Router image](https://hub.docker.com/r/gordons/qpid-dispatch/) with the required configuration run the following from the
 command line
 
-    $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter gordons/qpid-dispatch:0.6.0
-
+    $ docker run -d --name qdrouter-config eclipsehono/qpid-default-config:0.1-SNAPSHOT
+    $ docker run -d --name qdrouter-sasldb eclipsehono/qpid-qpid-sasldb:0.1-SNAPSHOT
+    $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter --volumes-from="qdrouter-config" --volumes-from="qdrouter-sasldb" gordons/qpid-dispatch:0.6.0
+ 
 ##### Example Configuration
 
 Start volume container to provide required configuration
@@ -66,7 +71,7 @@ Start volume container to provide required configuration
 
 Once the *Dispatch Router* Docker image has been started using the command above the *Hono Server* image can be run as follows
 
-    $ docker run -d --name hono --link qdrouter -p 5672:5672 --volumes-from="example-config" eclipsehono/server:0.1-SNAPSHOT
+    $ docker run -d --name hono --link qdrouter -p 5672:5672 --volumes-from="example-config" eclipsehono/hono-server:0.1-SNAPSHOT
 
 ### Run Client
 
