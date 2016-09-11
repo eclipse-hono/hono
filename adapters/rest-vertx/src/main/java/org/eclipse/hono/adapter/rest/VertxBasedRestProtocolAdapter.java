@@ -20,6 +20,8 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetrySender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -44,18 +46,26 @@ import io.vertx.proton.ProtonClientOptions;
 @Scope("prototype")
 public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
+    private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);
+
     @Value("${hono.http.bindaddress:127.0.0.1}")
     private String bindAddress;
+
     @Value("${hono.http.listenport:8080}")
     private int listenPort;
+
     @Value("${hono.server.host:127.0.0.1}")
     private String honoServerHost;
+
     @Value("${hono.server.port:5672}")
     private int honoServerPort;
+
     @Value("${hono.user}")
     private String honoUser;
+
     @Value("${hono.password}")
     private String honoPassword;
+
     private HttpServer server;
     private HonoClient hono;
     private Map<String, TelemetrySender> telemetrySenders = new HashMap<>();
@@ -82,8 +92,10 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         Future<HonoClient> honoTracker = Future.future();
         CompositeFuture.all(serverTracker, honoTracker).setHandler(done -> {
             if (done.succeeded()) {
+                LOG.info("Hono REST adapter running on {}:{}", bindAddress, server.actualPort());
                 startFuture.complete();
             } else {
+                LOG.error("error while starting up Hono REST adapter", done.cause());
                 startFuture.fail(done.cause());
             }
         });
@@ -94,18 +106,31 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     @Override
     public void stop(Future<Void> stopFuture) throws Exception {
-        if (hono != null) {
-            hono.shutdown();
-        }
+
+        Future<Void> shutdownTracker = Future.future();
+        shutdownTracker.setHandler(done -> {
+            if (done.succeeded()) {
+                LOG.info("REST adapter has been shut down successfully");
+                stopFuture.complete();
+            } else {
+                LOG.info("error while shutting down REST adapter", done.cause());
+                stopFuture.fail(done.cause());
+            }
+        });
+
+        Future<Void> serverTracker = Future.future();
         if (server != null) {
-            server.close(done -> {
-                if (done.succeeded()) {
-                    stopFuture.succeeded();
-                } else {
-                    stopFuture.fail(done.cause());
-                }
-            });
+            server.close(serverTracker.completer());
+        } else {
+            serverTracker.complete();
         }
+        serverTracker.compose(d -> {
+            if (hono != null) {
+                hono.shutdown(shutdownTracker.completer());
+            } else {
+                shutdownTracker.complete();
+            }
+        }, shutdownTracker);
     }
 
     private void doGet(final RoutingContext ctx) {
