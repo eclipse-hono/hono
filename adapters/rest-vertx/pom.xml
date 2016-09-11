@@ -31,8 +31,9 @@
   		<artifactId>slf4j-api</artifactId>
   	</dependency>
   	<dependency>
-  		<groupId>ch.qos.logback</groupId>
-  		<artifactId>logback-classic</artifactId>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-logging</artifactId>
+  		<version>${spring-boot.version}</version>
   		<scope>runtime</scope>
   	</dependency>
   </dependencies>
@@ -81,10 +82,15 @@
               <images>
                 <image>
                   <build>
-                    <from>anapsix/alpine-java:jre8</from>
+                    <from>anapsix/alpine-java:8</from>
                     <ports>
                       <port>8080</port>
                     </ports>
+                    <runCmds>
+                      <runCmd>adduser -S -D hono nogroup</runCmd>
+                    </runCmds>
+                    <user>hono</user>
+                    <workdir>/home/hono</workdir>
                     <cmd>
                       <exec>
                         <arg>java</arg>

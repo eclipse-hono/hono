@@ -19,10 +19,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
@@ -59,20 +55,8 @@
      <artifactId>jackson-core</artifactId>
     </dependency>
     <dependency>
-     <groupId>org.slf4j</groupId>
-     <artifactId>jcl-over-slf4j</artifactId>
-    </dependency>
-    <dependency>
      <groupId>org.assertj</groupId>
      <artifactId>assertj-core</artifactId>
-    </dependency>
-    <dependency>
-     <groupId>org.slf4j</groupId>
-     <artifactId>jul-to-slf4j</artifactId>
-    </dependency>
-    <dependency>
-     <groupId>org.slf4j</groupId>
-     <artifactId>log4j-over-slf4j</artifactId>
     </dependency>
     <dependency>
      <groupId>org.eclipse.hono</groupId>
@@ -82,6 +66,12 @@
     <dependency>
      <groupId>org.eclipse.hono</groupId>
      <artifactId>hono-config</artifactId>
+    </dependency>
+    <dependency>
+    	<groupId>org.springframework.boot</groupId>
+    	<artifactId>spring-boot-starter-logging</artifactId>
+    	<version>${spring-boot.version}</version>
+    	<scope>runtime</scope>
     </dependency>
   </dependencies>
 
@@ -137,10 +127,15 @@
               <images>
                 <image>
                   <build>
-                    <from>anapsix/alpine-java:jre8</from>
+                    <from>anapsix/alpine-java:8</from>
                     <ports>
                       <port>5672</port>
                     </ports>
+                    <runCmds>
+                      <runCmd>adduser -S -D hono nogroup</runCmd>
+                    </runCmds>
+                    <user>hono</user>
+                    <workdir>/home/hono</workdir>
                     <cmd>
                       <exec>
                         <arg>java</arg>
