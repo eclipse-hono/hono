@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -23,10 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
@@ -51,70 +50,89 @@ public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    private final Vertx vertx = Vertx.vertx();
+    @Autowired
+    private Vertx vertx;
     @Value(value = "${hono.maxinstances:0}")
     private int maxInstances;
     @Value(value = "${hono.startuptimeout:20}")
     private int startupTimeout;
     @Autowired
     private RestAdapterFactory factory;
-
-    @Bean
-    public ServiceLocatorFactoryBean serviceLocator() {
-        ServiceLocatorFactoryBean bean = new ServiceLocatorFactoryBean();
-        bean.setServiceLocatorInterface(RestAdapterFactory.class);
-        return bean;
-    }
+    private AtomicBoolean running = new AtomicBoolean();
 
     @PostConstruct
     public void registerVerticles() {
 
-        final CountDownLatch startupLatch = new CountDownLatch(1);
-        final int instanceCount;
-        if (maxInstances > 0 && maxInstances < Runtime.getRuntime().availableProcessors()) {
-            instanceCount = maxInstances;
-        } else {
-            instanceCount = Runtime.getRuntime().availableProcessors();
-        }
-
-        deployVerticle(instanceCount).setHandler(done -> {
-            if (done.succeeded()) {
-                startupLatch.countDown();
+        if (running.compareAndSet(false, true)) {
+            final int instanceCount;
+            if (maxInstances > 0 && maxInstances < Runtime.getRuntime().availableProcessors()) {
+                instanceCount = maxInstances;
             } else {
-                LOG.error("could not start REST adapter", done.cause());
+                instanceCount = Runtime.getRuntime().availableProcessors();
             }
-        });
 
-        try {
-            if (startupLatch.await(startupTimeout, TimeUnit.SECONDS)) {
-                LOG.info("REST adapter startup completed successfully");
-            } else {
-                LOG.error("startup timed out after {} seconds, shutting down ...", startupTimeout);
+            try {
+                final CountDownLatch latch = new CountDownLatch(1);
+                final Future<Void> startFuture = Future.future();
+                startFuture.setHandler(done -> {
+                    if (done.succeeded()) {
+                        latch.countDown();
+                    } else {
+                      LOG.error("could not start REST adapter", done.cause());
+                    }
+                });
+
+                deployVerticle(instanceCount, startFuture);
+
+                if (latch.await(startupTimeout, TimeUnit.SECONDS)) {
+                    LOG.info("REST adapter startup completed successfully");
+                } else {
+                    LOG.error("startup timed out after {} seconds, shutting down ...", startupTimeout);
+                    shutdown();
+                }
+            } catch (InterruptedException e) {
+                LOG.error("startup process has been interrupted, shutting down ...");
+                Thread.currentThread().interrupt();
                 shutdown();
             }
-        } catch (InterruptedException e) {
-            LOG.error("startup process has been interrupted, shutting down ...");
-            Thread.currentThread().interrupt();
-            shutdown();
         }
     }
 
-    private Future<?> deployVerticle(int instanceCount) {
+    private void deployVerticle(int instanceCount, Future<Void> resultHandler) {
+
+        LOG.debug("starting up {} instances of REST adapter verticle", instanceCount);
         @SuppressWarnings("rawtypes")
         List<Future> results = new ArrayList<>();
         for (int i = 1; i <= instanceCount; i++) {
-            Future<String> result = Future.future();
-            vertx.deployVerticle(factory.getRestAdapter(), result.completer());
+            final int instanceId = i;
+            final Future<String> result = Future.future();
             results.add(result);
+            vertx.deployVerticle(factory.getRestAdapter(), d -> {
+                if (d.succeeded()) {
+                    LOG.debug("verticle instance {} deployed", instanceId);
+                    result.complete();
+                } else {
+                    LOG.debug("failed to deploy verticle instance {}", instanceId, d.cause());
+                    result.fail(d.cause());
+                }
+            });
         }
-        return CompositeFuture.all(results);
+        CompositeFuture.all(results).setHandler(done -> {
+            if (done.succeeded()) {
+                resultHandler.complete();
+            } else {
+                resultHandler.fail(done.cause());
+            }
+        });
     }
 
     @PreDestroy
     public void shutdown() {
-        this.shutdown(startupTimeout, succeeded -> {
-            // do nothing
-        });
+        if (running.compareAndSet(true, false)) {
+            this.shutdown(startupTimeout, succeeded -> {
+                // do nothing
+            });
+        }
     }
 
     public void shutdown(final long maxWaitTime, final Handler<Boolean> shutdownHandler) {
@@ -130,7 +148,7 @@ public class Application {
                 });
             }
             if (latch.await(maxWaitTime, TimeUnit.SECONDS)) {
-                LOG.info("REST adapter has been shut down successfully");
+                LOG.info("REST adapter shut down completed");
                 shutdownHandler.handle(Boolean.TRUE);
             } else {
                 LOG.error("shut down of REST adapter timed out, aborting...");

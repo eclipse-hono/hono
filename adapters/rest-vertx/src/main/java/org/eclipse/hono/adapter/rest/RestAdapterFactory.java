@@ -13,7 +13,7 @@
 package org.eclipse.hono.adapter.rest;
 
 /**
- * @author hak8fe
+ * A factory for creating {@link VertxBasedRestProtocolAdapter} instances.
  *
  */
 public interface RestAdapterFactory {
