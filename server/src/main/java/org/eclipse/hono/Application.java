@@ -28,7 +28,6 @@ import org.eclipse.hono.util.EndpointFactory;
 import org.eclipse.hono.util.VerticleFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -226,8 +225,6 @@ public class Application {
     }
 
     public static void main(final String[] args) {
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
         SpringApplication.run(Application.class, args);
     }
 }
