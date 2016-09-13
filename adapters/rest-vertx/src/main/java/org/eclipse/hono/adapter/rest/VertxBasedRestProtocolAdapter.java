@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.rest;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
@@ -28,7 +29,6 @@ import org.springframework.stereotype.Component;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
@@ -70,6 +70,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private HonoClient hono;
     private Map<String, TelemetrySender> telemetrySenders = new HashMap<>();
     private Map<String, RegistrationClient> registrationClients = new HashMap<>();
+    private AtomicBoolean connecting = new AtomicBoolean();
 
     /**
      * Creates a new REST adapter instance.
@@ -84,13 +85,11 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         options.setPort(listenPort);
         server = vertx.createHttpServer(options);
         Router router = Router.router(vertx);
-        router.get().handler(this::doGet);
+        router.route(HttpMethod.GET, "/status").handler(this::doGetStatus);
         router.route(HttpMethod.POST, "/registration/:tenant").handler(this::doRegisterDevice);
         router.route(HttpMethod.PUT, "/telemetry/:tenant").handler(this::doUploadTelemetryData);
 
-        Future<HttpServer> serverTracker = Future.future();
-        Future<HonoClient> honoTracker = Future.future();
-        CompositeFuture.all(serverTracker, honoTracker).setHandler(done -> {
+        server.requestHandler(router::accept).listen(done -> {
             if (done.succeeded()) {
                 LOG.info("Hono REST adapter running on {}:{}", bindAddress, server.actualPort());
                 startFuture.complete();
@@ -99,9 +98,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
                 startFuture.fail(done.cause());
             }
         });
-
-        server.requestHandler(router::accept).listen(serverTracker.completer());
-        connectToHono(honoTracker.completer());
+        connectToHono(null);
     }
 
     @Override
@@ -133,8 +130,8 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         }, shutdownTracker);
     }
 
-    private void doGet(final RoutingContext ctx) {
-        ctx.response().end("thanks");
+    private void doGetStatus(final RoutingContext ctx) {
+        ctx.response().end("This is the Hono REST adapter\r\n");
     }
 
     private void doRegisterDevice(final RoutingContext ctx) {
@@ -150,7 +147,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
                     }
                 });
             } else {
-                ctx.response().setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR).end();
+                ctx.response().setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR).end("no connection to Hono server");
             }
         });
     }
@@ -164,63 +161,89 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
                     done.result().send(deviceId, payload.getBytes(), ctx.request().getHeader(HttpHeaders.CONTENT_TYPE));
                     ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
                 } else {
-                    ctx.response().setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR).end();
+                    ctx.response().setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR).end("no connection to Hono server");
                 }
             });
         });
     }
 
     private void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
-        hono = HonoClientBuilder.newClient()
-                .vertx(vertx)
-                .host(honoServerHost)
-                .port(honoServerPort)
-                .user(honoUser)
-                .password(honoPassword)
-                .build();
-        hono.connect(new ProtonClientOptions().setReconnectAttempts(10).setReconnectInterval(1000), connectHandler);
+        if (connecting.compareAndSet(false, true)) {
+            telemetrySenders.clear();
+            registrationClients.clear();
+            hono = HonoClientBuilder.newClient()
+                    .vertx(vertx)
+                    .host(honoServerHost)
+                    .port(honoServerPort)
+                    .user(honoUser)
+                    .password(honoPassword)
+                    .build();
+            ProtonClientOptions options = new ProtonClientOptions();
+            options.setReconnectAttempts(10).setReconnectInterval(500);
+            hono.connect(options, connectAttempt -> {
+                connecting.set(false);
+                if (connectHandler != null) {
+                    connectHandler.handle(connectAttempt);
+                }
+            });
+        } else {
+            LOG.debug("already trying to connect to Hono server...");
+        }
+    }
+
+    private boolean isConnected() {
+        return hono != null && hono.isConnected();
     }
 
     private void getOrCreateTelemetrySender(final String tenant, final Handler<AsyncResult<TelemetrySender>> resultHandler) {
-        TelemetrySender sender = telemetrySenders.get(tenant);
-        if (sender !=  null) {
-            resultHandler.handle(Future.succeededFuture(sender));
+        if (!isConnected()) {
+            vertx.runOnContext(connect -> connectToHono(null));
+            resultHandler.handle(Future.failedFuture("connection to Hono lost"));
         } else {
-            hono.createTelemetrySender(tenant, done -> {
-                if (done.succeeded()) {
-                    TelemetrySender existingSender = telemetrySenders.putIfAbsent(tenant, done.result());
-                    if (existingSender != null) {
-                        
-                        done.result().close(closed -> {});
-                        resultHandler.handle(Future.succeededFuture(existingSender));
+            TelemetrySender sender = telemetrySenders.get(tenant);
+            if (sender !=  null) {
+                resultHandler.handle(Future.succeededFuture(sender));
+            } else {
+                hono.createTelemetrySender(tenant, done -> {
+                    if (done.succeeded()) {
+                        TelemetrySender existingSender = telemetrySenders.putIfAbsent(tenant, done.result());
+                        if (existingSender != null) {
+                            done.result().close(closed -> {});
+                            resultHandler.handle(Future.succeededFuture(existingSender));
+                        } else {
+                            resultHandler.handle(Future.succeededFuture(done.result()));
+                        }
                     } else {
-                        resultHandler.handle(Future.succeededFuture(done.result()));
+                        resultHandler.handle(Future.failedFuture(done.cause()));
                     }
-                } else {
-                    resultHandler.handle(Future.failedFuture(done.cause()));
-                }
-            });
+                });
+            }
         }
     }
 
     private void getOrCreateRegistrationClient(final String tenant, final Handler<AsyncResult<RegistrationClient>> resultHandler) {
-        RegistrationClient client = registrationClients.get(tenant);
-        if (client !=  null) {
-            resultHandler.handle(Future.succeededFuture(client));
+        if (!isConnected()) {
+            vertx.runOnContext(connect -> connectToHono(null));
+            resultHandler.handle(Future.failedFuture("connection to Hono lost"));
         } else {
-            hono.createRegistrationClient(tenant, done -> {
-                if (done.succeeded()) {
-                    RegistrationClient existingClient = registrationClients.putIfAbsent(tenant, done.result());
-                    if (existingClient != null) {
-                        done.result().close(closed -> {});
-                        resultHandler.handle(Future.succeededFuture(existingClient));
+            RegistrationClient client = registrationClients.get(tenant);
+            if (client !=  null) {
+                resultHandler.handle(Future.succeededFuture(client));
+            } else {
+                hono.createRegistrationClient(tenant, done -> {
+                    if (done.succeeded()) {
+                        RegistrationClient existingClient = registrationClients.putIfAbsent(tenant, done.result());
+                        if (existingClient != null) {
+                            done.result().close(closed -> {});
+                            resultHandler.handle(Future.succeededFuture(existingClient));
+                        } else {
+                            resultHandler.handle(Future.succeededFuture(done.result()));
+                        }
                     } else {
-                        resultHandler.handle(Future.succeededFuture(done.result()));
+                        resultHandler.handle(Future.failedFuture(done.cause()));
                     }
-                } else {
-                    resultHandler.handle(Future.failedFuture(done.cause()));
-                }
-            });
+                });
+            }
         }
     }
 }
