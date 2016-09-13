@@ -59,9 +59,27 @@ public class HonoClient {
         this.pathSeparator = builder.pathSeparator == null ? "/" : builder.pathSeparator;
     }
 
-    public HonoClient connect(final ProtonClientOptions options, final Handler<AsyncResult<HonoClient>> connectionHandler) {
+    /**
+     * Checks whether this client is connected to the Hono server.
+     * 
+     * @return {@code true} if this client is connected.
+     */
+    public boolean isConnected() {
+        return connection != null && !connection.isDisconnected();
+    }
 
-        if (connection != null && !connection.isDisconnected()) {
+    public HonoClient connect(final ProtonClientOptions options, final Handler<AsyncResult<HonoClient>> connectionHandler) {
+        return connect(options, connectionHandler, dis -> {
+            LOG.debug("client got disconnected from server [{}:{}]", host, port);
+        });
+    }
+
+    public HonoClient connect(
+            final ProtonClientOptions options,
+            final Handler<AsyncResult<HonoClient>> connectionHandler,
+            final Handler<ProtonConnection> disconnectHandler) {
+
+        if (isConnected()) {
             LOG.debug("already connected to server [{}:{}]", host, port);
             connectionHandler.handle(Future.succeededFuture(this));
         } else {
@@ -75,6 +93,7 @@ public class HonoClient {
                     conAttempt.result()
                         .setHostname("hono")
                         .setContainer(LOCAL_CONTAINER_NAME)
+                        .disconnectHandler(disconnectHandler)
                         .openHandler(opened -> {
                             if (opened.succeeded()) {
                                 LOG.info("connection to [{}] open", opened.result().getRemoteContainer());
@@ -163,6 +182,7 @@ public class HonoClient {
             completionHandler.handle(Future.succeededFuture());
         } else {
             LOG.info("closing connection to server [{}:{}]...", host, port);
+            connection.disconnectHandler(null); // make sure we are not trying to re-connect
             connection.closeHandler(closedCon -> {
                 if (closedCon.succeeded()) {
                     LOG.info("closed connection to server [{}:{}]", host, port);
