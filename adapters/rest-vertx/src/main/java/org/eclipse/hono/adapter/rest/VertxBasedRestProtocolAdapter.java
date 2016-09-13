@@ -153,7 +153,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
                 .user(honoUser)
                 .password(honoPassword)
                 .build();
-        hono.connect(new ProtonClientOptions(), connectHandler);
+        hono.connect(new ProtonClientOptions().setReconnectAttempts(10).setReconnectInterval(1000), connectHandler);
     }
 
     private void getOrCreateTelemetrySender(final String tenant, final Handler<AsyncResult<TelemetrySender>> resultHandler) {
