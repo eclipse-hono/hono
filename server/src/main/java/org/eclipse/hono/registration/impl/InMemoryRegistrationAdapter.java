@@ -15,16 +15,16 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.registration.RegistrationConstants.ACTION_DEREGISTER;
-import static org.eclipse.hono.registration.RegistrationConstants.ACTION_GET;
-import static org.eclipse.hono.registration.RegistrationConstants.ACTION_REGISTER;
+import static org.eclipse.hono.util.RegistrationConstants.ACTION_DEREGISTER;
+import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
+import static org.eclipse.hono.util.RegistrationConstants.ACTION_REGISTER;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.eclipse.hono.registration.RegistrationConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;

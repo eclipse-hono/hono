@@ -10,7 +10,7 @@
   </parent>
   <artifactId>hono-server</artifactId>
   <name>hono-server</name>
-  <url>http://maven.apache.org</url>
+  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>
@@ -72,6 +72,10 @@
     	<artifactId>spring-boot-starter-logging</artifactId>
     	<version>${spring-boot.version}</version>
     	<scope>runtime</scope>
+    </dependency>
+    <dependency>
+    	<groupId>org.eclipse.hono</groupId>
+    	<artifactId>hono-core</artifactId>
     </dependency>
   </dependencies>
 
@@ -167,4 +171,8 @@
     </profile>
   </profiles>
 
+  <description>The server component of Hono provides the following APIs:
+- Telemetry
+- Registration</description>
+  <inceptionYear>2016</inceptionYear>
 </project>

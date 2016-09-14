@@ -37,7 +37,6 @@ public abstract class AbstractHonoClient {
 
     protected static final Logger     LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
     protected static final int        DEFAULT_RECEIVER_CREDITS    = 20;
-    protected static final String     PROPERTY_NAME_DEVICE_ID = "device_id";
 
     protected ProtonSender            sender;
     protected ProtonReceiver          receiver;

@@ -23,7 +23,6 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.registration.RegistrationConstants;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;

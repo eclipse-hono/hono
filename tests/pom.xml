@@ -43,7 +43,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </dependency>
      <dependency>
         <groupId>org.eclipse.hono</groupId>
-        <artifactId>hono-server</artifactId>
+        <artifactId>hono-core</artifactId>
         <scope>test</scope>
      </dependency>
      <dependency>

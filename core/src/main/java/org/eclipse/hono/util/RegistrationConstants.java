@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.registration;
+package org.eclipse.hono.util;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_TENANT_ID;
@@ -25,8 +25,6 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;

@@ -9,9 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.util;
-
-import org.eclipse.hono.server.Endpoint;
+package org.eclipse.hono.server;
 
 /**
  * A factory for creating {@code Endpoint} instances.

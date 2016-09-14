@@ -14,9 +14,9 @@
 package org.eclipse.hono.tests.jms;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_ACTION;
-import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_STATUS;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
+import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_ACTION;
+import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_STATUS;
 
 import java.time.Duration;
 import java.util.UUID;

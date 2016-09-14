@@ -12,13 +12,12 @@
 
 package org.eclipse.hono.client.impl;
 
-import java.util.HashMap;
-import java.util.Map;
+import static org.eclipse.hono.util.MessageHelper.*;
+
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.TelemetrySender;
@@ -125,9 +124,7 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
 
     private void addPropertiesAndSend(final String deviceId, final Message msg) {
         msg.setMessageId(String.format("TelemetryClientImpl-%d", messageCounter.getAndIncrement()));
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put(PROPERTY_NAME_DEVICE_ID, deviceId);
-        msg.setApplicationProperties(new ApplicationProperties(properties));
+        addDeviceId(msg, deviceId);
         send(msg);
     }
 }

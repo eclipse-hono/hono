@@ -21,10 +21,10 @@ import javax.annotation.PreDestroy;
 
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
+import org.eclipse.hono.server.EndpointFactory;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EndpointFactory;
 import org.eclipse.hono.util.VerticleFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

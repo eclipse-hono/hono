@@ -11,11 +11,11 @@
  */
 package org.eclipse.hono.registration.impl;
 
-import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
+import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 
 import org.eclipse.hono.registration.RegistrationAdapter;
-import org.eclipse.hono.registration.RegistrationConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -39,6 +39,10 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+    	<groupId>org.eclipse.hono</groupId>
+    	<artifactId>hono-core</artifactId>
+    </dependency>
   </dependencies>
 
 </project>

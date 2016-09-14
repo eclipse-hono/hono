@@ -11,10 +11,10 @@
  */
 package org.eclipse.hono.registration;
 
-import static org.eclipse.hono.registration.RegistrationConstants.ACTION_GET;
-import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_ACTION;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
+import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
+import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_ACTION;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
 

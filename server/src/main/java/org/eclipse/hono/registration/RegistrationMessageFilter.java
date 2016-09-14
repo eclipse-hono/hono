@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.registration;
 
-import static org.eclipse.hono.registration.RegistrationConstants.APP_PROPERTY_ACTION;
+import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_ACTION;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.BaseMessageFilter;

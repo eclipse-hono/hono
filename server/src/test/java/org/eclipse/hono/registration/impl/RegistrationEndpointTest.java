@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.registration.impl;
 
-import static org.eclipse.hono.registration.RegistrationConstants.REGISTRATION_ENDPOINT;
+import static org.eclipse.hono.util.RegistrationConstants.REGISTRATION_ENDPOINT;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;

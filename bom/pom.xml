@@ -204,6 +204,11 @@
       	<version>${objenesis.version}</version>
       	<scope>test</scope>
       </dependency>
+      <dependency>
+      	<groupId>org.eclipse.hono</groupId>
+      	<artifactId>hono-core</artifactId>
+      	<version>${project.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 </project>

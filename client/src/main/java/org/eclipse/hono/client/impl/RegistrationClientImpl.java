@@ -12,6 +12,9 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.util.MessageHelper.*;
+import static org.eclipse.hono.util.RegistrationConstants.*;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -40,16 +43,10 @@ import io.vertx.proton.ProtonSender;
  */
 public class RegistrationClientImpl extends AbstractHonoClient implements RegistrationClient {
 
+    private static final Logger                  LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
     private static final String                  REGISTRATION_ADDRESS_TEMPLATE = "registration/%s";
     private static final String                  REGISTRATION_REPLY_TO_ADDRESS_TEMPLATE = "registration/%s/%s";
 
-    /* registration actions */
-    private static final String                  ACTION_REGISTER   = "register";
-    private static final String                  ACTION_GET        = "get";
-    private static final String                  ACTION_DEREGISTER = "deregister";
-
-    private static final String                  PROPERTY_NAME_ACTION    = "action";
-    private static final Logger                  LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
     private final AtomicLong                     messageCounter  = new AtomicLong();
     private final Map<String, Handler<AsyncResult<Integer>> > replyMap = new ConcurrentHashMap<>();
     private final String                         registrationReplyToAddress;
@@ -141,8 +138,8 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
         final Message request = ProtonHelper.message();
         final Map<String, Object> properties = new HashMap<>();
         final String messageId = createMessageId();
-        properties.put(PROPERTY_NAME_DEVICE_ID, deviceId);
-        properties.put(PROPERTY_NAME_ACTION, action);
+        properties.put(APP_PROPERTY_DEVICE_ID, deviceId);
+        properties.put(APP_PROPERTY_ACTION, action);
         request.setApplicationProperties(new ApplicationProperties(properties));
         request.setReplyTo(registrationReplyToAddress);
         request.setMessageId(messageId);

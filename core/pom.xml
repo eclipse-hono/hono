@@ -1,0 +1,28 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.eclipse.hono</groupId>
+    <artifactId>hono-bom</artifactId>
+    <version>0.1-SNAPSHOT</version>
+    <relativePath>../bom</relativePath>
+  </parent>
+  <artifactId>hono-core</artifactId>
+  <name>Hono Core</name>
+  <description>Basic classes used by all other modules.</description>
+  <inceptionYear>2016</inceptionYear>
+
+  <dependencies>
+  	<dependency>
+  		<groupId>io.vertx</groupId>
+  		<artifactId>vertx-core</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>io.vertx</groupId>
+  		<artifactId>vertx-proton</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.slf4j</groupId>
+  		<artifactId>slf4j-api</artifactId>
+  	</dependency>
+  </dependencies>
+</project>

@@ -13,7 +13,6 @@ package org.eclipse.hono.telemetry.impl;
 
 import static io.vertx.proton.ProtonHelper.condition;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.registration.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL;
 import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN;
 import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL;
@@ -27,6 +26,7 @@ import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkDetachedMsg;
 import static org.eclipse.hono.telemetry.TelemetryConstants.isErrorMessage;
 import static org.eclipse.hono.telemetry.TelemetryConstants.isFlowControlMessage;
 import static org.eclipse.hono.util.MessageHelper.*;
+import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,11 +38,11 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.AmqpMessage;
-import org.eclipse.hono.registration.RegistrationConstants;
 import org.eclipse.hono.server.BaseEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

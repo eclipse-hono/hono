@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.registration.impl;
 
-import org.eclipse.hono.util.EndpointFactory;
+import org.eclipse.hono.server.EndpointFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
