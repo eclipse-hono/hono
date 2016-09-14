@@ -21,6 +21,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetrySender;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.proton.ProtonClientOptions;
@@ -47,6 +49,7 @@ import io.vertx.proton.ProtonClientOptions;
 public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);
+    private static final String PARAM_TENANT = "tenant";
 
     @Value("${hono.http.bindaddress:127.0.0.1}")
     private String bindAddress;
@@ -86,8 +89,8 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         server = vertx.createHttpServer(options);
         Router router = Router.router(vertx);
         router.route(HttpMethod.GET, "/status").handler(this::doGetStatus);
-        router.route(HttpMethod.POST, "/registration/:tenant").handler(this::doRegisterDevice);
-        router.route(HttpMethod.PUT, "/telemetry/:tenant").handler(this::doUploadTelemetryData);
+        router.route(HttpMethod.POST, String.format("/registration/:%s", PARAM_TENANT)).handler(this::doRegisterDevice);
+        router.route(HttpMethod.PUT, String.format("/telemetry/:%s", PARAM_TENANT)).handler(this::doUploadTelemetryData);
 
         server.requestHandler(router::accept).listen(done -> {
             if (done.succeeded()) {
@@ -130,41 +133,69 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         }, shutdownTracker);
     }
 
+    private static String getTenant(final RoutingContext ctx) {
+        return ctx.request().getParam(PARAM_TENANT);
+    }
+
+    private static String getDeviceId(final RoutingContext ctx) {
+        return ctx.request().getHeader(MessageHelper.APP_PROPERTY_DEVICE_ID);
+    }
+
     private void doGetStatus(final RoutingContext ctx) {
-        ctx.response().end("This is the Hono REST adapter\r\n");
+        JsonObject result = new JsonObject()
+                .put("name", "Hono REST Adapter")
+                .put("connected", isConnected())
+                .put("telemetry senders", telemetrySenders.size())
+                .put("registration clients", registrationClients.size());
+
+        ctx
+        .response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+        .end(result.encodePrettily());
     }
 
     private void doRegisterDevice(final RoutingContext ctx) {
-        final String tenant = ctx.request().getParam("tenant");
-        final String deviceId = ctx.request().getHeader("device-id");
-        getOrCreateRegistrationClient(tenant, done -> {
-            if (done.succeeded()) {
-                done.result().register(deviceId, registration -> {
-                    if (registration.succeeded()) {
-                        ctx.response().setStatusCode(registration.result()).end();
-                    } else {
-                        ctx.response().setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR).end();
-                    }
-                });
-            } else {
-                ctx.response().setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR).end("no connection to Hono server");
-            }
-        });
-    }
-
-    private void doUploadTelemetryData(final RoutingContext ctx) {
-        final String tenant = ctx.request().getParam("tenant");
-        final String deviceId = ctx.request().getHeader("device-id");
-        ctx.request().bodyHandler(payload -> {
-            getOrCreateTelemetrySender(tenant, done -> {
+        final String tenant = getTenant(ctx);
+        final String deviceId = getDeviceId(ctx);
+        if (deviceId == null) {
+            badRequest(ctx, MessageHelper.APP_PROPERTY_DEVICE_ID);
+        } else {
+            getOrCreateRegistrationClient(tenant, done -> {
                 if (done.succeeded()) {
-                    done.result().send(deviceId, payload.getBytes(), ctx.request().getHeader(HttpHeaders.CONTENT_TYPE));
-                    ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
+                    done.result().register(deviceId, registration -> {
+                        ctx.response().setStatusCode(registration.result()).end();
+                    });
                 } else {
                     ctx.response().setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR).end("no connection to Hono server");
                 }
             });
-        });
+        }
+    }
+
+    private void doUploadTelemetryData(final RoutingContext ctx) {
+        final String tenant = getTenant(ctx);
+        final String deviceId = getDeviceId(ctx);
+        final String contentType = ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);
+        if (deviceId == null) {
+            badRequest(ctx, MessageHelper.APP_PROPERTY_DEVICE_ID);
+        } else if (contentType == null) {
+            badRequest(ctx, HttpHeaders.CONTENT_TYPE.toString());
+        } else {
+            ctx.request().bodyHandler(payload -> {
+                getOrCreateTelemetrySender(tenant, done -> {
+                    if (done.succeeded()) {
+                        done.result().send(deviceId, payload.getBytes(), contentType);
+                        ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
+                    } else {
+                        ctx.response().setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR).end("no connection to Hono server");
+                    }
+                });
+            });
+        }
+    }
+
+    private void badRequest(final RoutingContext ctx, final String missingHeader) {
+        ctx.response().setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST).end(missingHeader + " header is missing");
     }
 
     private void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
