@@ -33,7 +33,7 @@ rest-adapter:
     - hono
   environment:
     - HONO_HTTP_BINDADDRESS=0.0.0.0
-    - HONO_MAXINSTANCES=2
+    - HONO_MAXINSTANCES=1
     - HONO_SERVER_HOST=hono
     - HONO_USER=hono-client
     - HONO_PASSWORD=secret
