@@ -43,11 +43,11 @@
     <qpid-dispatch.version>0.6.0</qpid-dispatch.version>
     <qpid-jms.version>0.10.0</qpid-jms.version>
     <slf4j.version>1.7.2</slf4j.version>
-    <spring.version>4.1.8.RELEASE</spring.version>
-    <spring-boot.version>1.2.7.RELEASE</spring-boot.version>
+    <spring.version>4.3.2.RELEASE</spring.version>
+    <spring-boot.version>1.4.0.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
-    <vertx.version>3.3.2</vertx.version>
-    <vertx-proton.version>3.3.0</vertx-proton.version>
+    <vertx.version>3.3.3</vertx.version>
+    <vertx-proton.version>3.3.3</vertx-proton.version>
   </properties>
 
   <dependencyManagement>
