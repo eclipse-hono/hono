@@ -37,3 +37,4 @@ rest-adapter:
     - HONO_SERVER_HOST=hono
     - HONO_USER=hono-client
     - HONO_PASSWORD=secret
+    - SPRING_PROFILES_ACTIVE=dev
