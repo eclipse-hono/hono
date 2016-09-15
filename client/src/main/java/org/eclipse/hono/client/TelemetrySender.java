@@ -27,8 +27,11 @@ public interface TelemetrySender {
      * Sends an AMQP 1.0 message to the telemetry endpoint configured for this client.
      * 
      * @param rawMessage the message to send.
+     * @return {@code false} if the AMQP link this client uses does not have any credit left
+     *        and thus cannot send the message to the Hono server's telemetry endpoint. The
+     *        message will simply be discarded.
      */
-    void send(Message rawMessage);
+    boolean send(Message rawMessage);
 
     /**
      * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
@@ -45,8 +48,11 @@ public interface TelemetrySender {
      * <p>
      * This parameter will be used as the value for the message's <em>content-type</em> property.
      * </p>
+     * @return {@code false} if the AMQP link this client uses does not have any credit left
+     *        and thus cannot send the data to the Hono server's telemetry endpoint. The data will
+     *        simply be discarded.
      */
-    void send(String deviceId, String payload, String contentType);
+    boolean send(String deviceId, String payload, String contentType);
 
     /**
      * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
@@ -63,8 +69,11 @@ public interface TelemetrySender {
      * <p>
      * This parameter will be used as the value for the message's <em>content-type</em> property.
      * </p>
+     * @return {@code false} if the AMQP link this client uses does not have any credit left
+     *        and thus cannot send the data to the Hono server's telemetry endpoint. The data will
+     *        simply be discarded.
      */
-    void send(String deviceId, byte[] payload, String contentType);
+    boolean send(String deviceId, byte[] payload, String contentType);
 
     /**
      * Sets a callback for handling errors that occur while interacting with the server.

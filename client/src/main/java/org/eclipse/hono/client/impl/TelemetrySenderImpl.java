@@ -103,28 +103,33 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     }
 
     @Override
-    public void send(final Message rawMessage) {
-        sender.send(Objects.requireNonNull(rawMessage));
+    public boolean send(final Message rawMessage) {
+        if (sender.getCredit() <= 0) {
+            return false;
+        } else {
+            sender.send(Objects.requireNonNull(rawMessage));
+            return true;
+        }
     }
 
     @Override
-    public void send(final String deviceId, final byte[] payload, final String contentType) {
+    public boolean send(final String deviceId, final byte[] payload, final String contentType) {
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(payload)));
         msg.setContentType(contentType);
-        addPropertiesAndSend(deviceId, msg);
+        return addPropertiesAndSend(deviceId, msg);
     }
 
     @Override
-    public void send(final String deviceId, final String payload, final String contentType) {
+    public boolean send(final String deviceId, final String payload, final String contentType) {
         final Message msg = ProtonHelper.message(payload);
         msg.setContentType(contentType);
-        addPropertiesAndSend(deviceId, msg);
+        return addPropertiesAndSend(deviceId, msg);
     }
 
-    private void addPropertiesAndSend(final String deviceId, final Message msg) {
+    private boolean addPropertiesAndSend(final String deviceId, final Message msg) {
         msg.setMessageId(String.format("TelemetryClientImpl-%d", messageCounter.getAndIncrement()));
         addDeviceId(msg, deviceId);
-        send(msg);
+        return send(msg);
     }
 }
