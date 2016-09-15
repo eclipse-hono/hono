@@ -11,7 +11,9 @@
  */
 package org.eclipse.hono.server;
 
+import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 
@@ -155,7 +157,7 @@ public class StandaloneRegistrationApiTest {
             Future<Integer> regTracker = Future.future();
             registrationClient.register(DEVICE_1, regTracker.completer());
             regTracker.compose(s -> {
-                ctx.assertEquals(HTTP_OK, s);
+                ctx.assertEquals(HTTP_CREATED, s);
                 registrationClient.get(DEVICE_1, getTracker.completer());
             }, getTracker);
         });
@@ -228,7 +230,7 @@ public class StandaloneRegistrationApiTest {
             String deviceId = DEVICE_PREFIX + i;
             getContext(ctx).runOnContext(go -> {
                 registrationClient.register(deviceId, s -> {
-                    resultAggregator.handle(s.succeeded() && HTTP_OK == s.result());
+                    resultAggregator.handle(s.succeeded() && HTTP_CREATED == s.result());
                 });
             });
         });
@@ -242,11 +244,9 @@ public class StandaloneRegistrationApiTest {
         //deregister devices
         IntStream.range(0, NO_OF_DEVICES).forEach(i -> {
             String deviceId = DEVICE_PREFIX + i;
-            getContext(ctx).runOnContext(go -> {
-                registrationClient.deregister(deviceId, s -> {
-                    resultAggregator.handle(s.succeeded() && HTTP_OK == s.result());
-                });
-            });
+            getContext(ctx).runOnContext(go ->
+                    registrationClient.deregister(deviceId, s ->
+                            resultAggregator.handle(s.succeeded() && HTTP_NO_CONTENT == s.result())));
         });
     }
 }

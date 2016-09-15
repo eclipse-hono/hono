@@ -13,7 +13,9 @@ package org.eclipse.hono.registration.impl;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.util.RegistrationConstants.ACTION_DEREGISTER;
 import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
@@ -59,13 +61,13 @@ public class InMemoryRegistrationAdapterTest
       processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_NOT_FOUND, TENANT, DEVICE));
       processMessageAndExpectResponse(mockMsg("bumlux"), getReply(HTTP_BAD_REQUEST, TENANT, DEVICE));
       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getReply(HTTP_NOT_FOUND, TENANT, DEVICE));
-      processMessageAndExpectResponse(mockMsg(ACTION_REGISTER),getReply(HTTP_OK, TENANT, DEVICE));
+      processMessageAndExpectResponse(mockMsg(ACTION_REGISTER),getReply(HTTP_CREATED, TENANT, DEVICE));
       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getReply(HTTP_CONFLICT, TENANT, DEVICE));
       processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_OK, TENANT, DEVICE));
-      processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getReply(HTTP_OK, TENANT, DEVICE));
+      processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getReply(HTTP_NO_CONTENT, TENANT, DEVICE));
       processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_NOT_FOUND, TENANT, DEVICE));
-      processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getReply(HTTP_OK, TENANT, DEVICE));
-      processMessageAndExpectResponse(mockMsg(ACTION_REGISTER, TENANT_2), getReply(HTTP_OK, TENANT_2, DEVICE));
+      processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getReply(HTTP_CREATED, TENANT, DEVICE));
+      processMessageAndExpectResponse(mockMsg(ACTION_REGISTER, TENANT_2), getReply(HTTP_CREATED, TENANT_2, DEVICE));
       processMessageAndExpectResponse(mockMsg(ACTION_GET, TENANT_2), getReply(HTTP_OK, TENANT_2, DEVICE));
    }
 

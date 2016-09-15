@@ -12,11 +12,13 @@
  */
 package org.eclipse.hono.tests.client;
 
+import static java.net.HttpURLConnection.HTTP_CREATED;
 import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_HOST;
 import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
 import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
 import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
 
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -216,7 +218,7 @@ public class TelemetryClientIT {
         regTracker.compose(r -> {
             Future<TelemetryConsumer> receiverTracker = Future.future();
             context.runOnContext(go -> {
-                if (r == 200) {
+                if (r == HTTP_CREATED) {
                     LOGGER.debug("registration succeeded");
                     downstreamClient.createTelemetryConsumer(TEST_TENANT_ID, consumer, receiverTracker.completer());
                 } else {

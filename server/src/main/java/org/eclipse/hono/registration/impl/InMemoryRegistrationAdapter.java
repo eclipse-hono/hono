@@ -13,7 +13,9 @@ package org.eclipse.hono.registration.impl;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.util.RegistrationConstants.ACTION_DEREGISTER;
 import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
@@ -92,7 +94,7 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
 
     public int removeDevice(final String tenantId, final String deviceId) {
         if (getDevicesForTenant(tenantId).remove(deviceId)) {
-            return HTTP_OK;
+            return HTTP_NO_CONTENT;
         } else {
             return HTTP_NOT_FOUND;
         }
@@ -100,7 +102,7 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
 
     public int addDevice(final String tenantId, final String deviceId) {
         if (getDevicesForTenant(tenantId).add(deviceId)) {
-            return HTTP_OK;
+            return HTTP_CREATED;
         } else {
             return HTTP_CONFLICT;
         }

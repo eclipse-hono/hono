@@ -23,8 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @param T the type of response this helper keeps consumers for
- * @param R the type of result the consumers held by this helper provide
+ * @param <T> the type of response this helper keeps consumers for
+ * @param <R> the type of result the consumers held by this helper provide
  */
 public class CorrelationHelper<T, R> {
 
