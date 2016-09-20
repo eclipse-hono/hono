@@ -15,6 +15,68 @@
   	<dependency>
   		<groupId>io.vertx</groupId>
   		<artifactId>vertx-core</artifactId>
+  		<exclusions>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-handler</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-resolver-dns</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-codec-http2</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-resolver</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>com.fasterxml.jackson.core</groupId>
+  				<artifactId>jackson-annotations</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-buffer</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-common</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>com.fasterxml.jackson.core</groupId>
+  				<artifactId>jackson-core</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-codec-http</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-codec</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-handler-proxy</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-codec-dns</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-transport</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>io.netty</groupId>
+  				<artifactId>netty-codec-socks</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>com.fasterxml.jackson.core</groupId>
+  				<artifactId>jackson-databind</artifactId>
+  			</exclusion>
+  		</exclusions>
   	</dependency>
   	<dependency>
   		<groupId>io.vertx</groupId>
@@ -25,4 +87,20 @@
   		<artifactId>slf4j-api</artifactId>
   	</dependency>
   </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>legal</directory>
+        <filtering>true</filtering>
+      </resource>
+      <resource>
+        <directory>${project.basedir}/src/main/resources</directory>
+        <includes>
+          <include>**/*</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+  </build>
 </project>
