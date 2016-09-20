@@ -45,6 +45,10 @@
   <build>
     <resources>
       <resource>
+        <directory>legal</directory>
+        <filtering>true</filtering>
+      </resource>
+      <resource>
         <directory>${project.basedir}/src/main/resources</directory>
         <includes>
           <include>**/*</include>
