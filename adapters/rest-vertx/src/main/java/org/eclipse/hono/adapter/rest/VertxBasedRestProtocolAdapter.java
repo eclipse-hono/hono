@@ -235,7 +235,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
                     response.setStatusCode(result.result());
                     switch(result.result()) {
                     case HTTP_OK:
-                        String msg = new JsonObject().put("device-id", deviceId).encodePrettily();
+                        String msg = new JsonObject().put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId).encodePrettily();
                         response
                             .putHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=utf-8")
                             .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
