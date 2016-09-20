@@ -19,11 +19,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
+import io.vertx.proton.ProtonSession;
 
 /**
  * A default {@code SenderFactory} for creating {@code ProtonSender} from a given connection.
@@ -44,7 +46,31 @@ public class SenderFactoryImpl implements SenderFactory {
         Objects.requireNonNull(address);
         Objects.requireNonNull(result);
 
-        ProtonSender sender = connection.createSender(address);
+        if (connection.isDisconnected()) {
+            result.fail("no connection to downstream container");
+        } else {
+            newSession(connection, remoteOpen -> {
+                if (remoteOpen.succeeded()) {
+                    newSender(connection, remoteOpen.result(), address, sendQueueDrainHandler, result);
+                } else {
+                    result.fail(remoteOpen.cause());
+                }
+            });
+        }
+    }
+
+    private void newSession(final ProtonConnection con, final Handler<AsyncResult<ProtonSession>> sessionOpenHandler) {
+        con.createSession().openHandler(sessionOpenHandler).open();
+    }
+
+    private void newSender(
+            final ProtonConnection downstreamConnection,
+            final ProtonSession session,
+            final String address,
+            final Handler<ProtonSender> sendQueueDrainHandler,
+            final Future<ProtonSender> result) {
+
+        ProtonSender sender = session.createSender(address);
         sender.setQoS(ProtonQoS.AT_MOST_ONCE);
         sender.sendQueueDrainHandler(sendQueueDrainHandler);
         sender.openHandler(openAttempt -> {
@@ -52,11 +78,11 @@ public class SenderFactoryImpl implements SenderFactory {
                 LOG.debug(
                         "sender [{}] for downstream container [{}] open",
                         address,
-                        connection.getRemoteContainer());
+                        downstreamConnection.getRemoteContainer());
                 result.complete(openAttempt.result());
             } else {
-                LOG.warn("could not open sender for downstream container [{}]",
-                        connection.getRemoteContainer());
+                LOG.debug("could not open sender for downstream container [{}]",
+                        downstreamConnection.getRemoteContainer(), openAttempt.cause());
                 result.fail(openAttempt.cause());
             }
         });
@@ -65,10 +91,9 @@ public class SenderFactoryImpl implements SenderFactory {
                 LOG.debug(
                         "sender [{}] for downstream container [{}] closed",
                         address,
-                        connection.getRemoteContainer());
+                        downstreamConnection.getRemoteContainer());
             }
         });
         sender.open();
     }
-
 }
