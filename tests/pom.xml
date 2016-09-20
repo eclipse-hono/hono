@@ -313,6 +313,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
                                  <HONO_TELEMETRY_DOWNSTREAM_HOST>activemq</HONO_TELEMETRY_DOWNSTREAM_HOST>
                                  <HONO_TELEMETRY_PATHSEPARATOR>.</HONO_TELEMETRY_PATHSEPARATOR>
+                                 <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                                  <SPRING_CONFIG_LOCATION>file:/etc/hono</SPRING_CONFIG_LOCATION>
                               </env>
                               <log>

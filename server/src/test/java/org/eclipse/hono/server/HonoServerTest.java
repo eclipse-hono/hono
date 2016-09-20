@@ -84,6 +84,7 @@ public class HonoServerTest {
         final Target target = getTarget(targetAddress);
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteTarget()).thenReturn(target);
+        when(receiver.attachments()).thenReturn(mock(Record.class));
         server.handleReceiverOpen(newAuthenticatedConnection(Constants.DEFAULT_SUBJECT), receiver);
 
         // THEN the server delegates link establishment to the telemetry endpoint 

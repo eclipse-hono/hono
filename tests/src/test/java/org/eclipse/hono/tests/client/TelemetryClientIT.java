@@ -12,18 +12,13 @@
  */
 package org.eclipse.hono.tests.client;
 
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_CREATED;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
+import static org.eclipse.hono.tests.IntegrationTestSupport.*;
 
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
-import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
@@ -57,14 +52,14 @@ public class TelemetryClientIT {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TelemetryClientIT.class);
 
-    /* connection parameters */
+    // connection parameters
     private static final String DEFAULT_HOST = InetAddress.getLoopbackAddress().getHostAddress();
     private static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, DEFAULT_HOST);
     private static final int HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
     private static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, DEFAULT_HOST);
     private static final int DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
     private static final String PATH_SEPARATOR = System.getProperty("hono.telemetry.pathSeparator", "/");
-    /* test constants */
+    // test constants
     private static final int MSG_COUNT = 50;
     private static final String TEST_TENANT_ID = "DEFAULT_TENANT";
     private static final String DEVICE_ID = "device-0";
@@ -75,20 +70,20 @@ public class TelemetryClientIT {
     private static HonoClient downstreamClient;
     private static RegistrationClient registrationClient;
     private static TelemetrySender sender;
-    private static TelemetryConsumer receiver;
+    private static TelemetryConsumer consumer;
 
     @BeforeClass
     public static void connect(final TestContext ctx) throws Exception {
 
         final Async done = ctx.async();
         Context context = vertx.getOrCreateContext();
+        ctx.put(NAME_CONTEXT, context);
 
         Future<TelemetrySender> setupTracker = Future.future();
         Future<HonoClient> downstreamTracker = Future.future();
         CompositeFuture.all(setupTracker, downstreamTracker).setHandler(r -> {
             if (r.succeeded()) {
                 sender = setupTracker.result();
-                ctx.put(NAME_CONTEXT, context);
                 done.complete();
             } else {
                 LOGGER.error("cannot connect to Hono", r.cause());
@@ -159,12 +154,12 @@ public class TelemetryClientIT {
     @AfterClass
     public static void disconnect(final TestContext ctx) throws InterruptedException {
 
-        final Async done = ctx.async();
+        final Async shutdown = ctx.async();
         final Future<Void> honoTracker = Future.future();
         final Future<Void> qpidTracker = Future.future();
         CompositeFuture.all(honoTracker, qpidTracker).setHandler(r -> {
             if (r.succeeded()) {
-                done.complete();
+                shutdown.complete();
             }
         });
 
@@ -184,8 +179,8 @@ public class TelemetryClientIT {
             }
 
             Future<Void> receiverTracker = Future.future();
-            if (receiver != null) {
-                receiver.close(receiverTracker.completer());
+            if (consumer != null) {
+                consumer.close(receiverTracker.completer());
             } else {
                 receiverTracker.complete();
             }
@@ -194,55 +189,64 @@ public class TelemetryClientIT {
             }, qpidTracker);
         });
 
-        done.await(5000);
+        shutdown.await(2000);
     }
 
-    @Test(timeout = 5000l)
+    @Test
     public void testSendingMessages(final TestContext ctx) throws Exception {
 
         final Async received = ctx.async(MSG_COUNT);
         final Context context = getContext(ctx);
+        final Async setup = ctx.async();
 
-        Consumer<Message> consumer = msg -> {
-            LOGGER.debug("received " + msg);
-            received.countDown();
-        };
-
-        final Future<Void> setupTracker = Future.future();
-        setupTracker.setHandler(ctx.asyncAssertSuccess());
+        final Future<TelemetryConsumer> setupTracker = Future.future();
+        setupTracker.setHandler(ctx.asyncAssertSuccess(ok -> {
+            consumer = setupTracker.result();
+            setup.complete();
+        }));
 
         Future<Integer> regTracker = Future.future();
         context.runOnContext(go -> {
             registrationClient.register(DEVICE_ID, regTracker.completer());
-        });
-        regTracker.compose(r -> {
-            Future<TelemetryConsumer> receiverTracker = Future.future();
-            context.runOnContext(go -> {
-                if (r == HTTP_CREATED) {
+            regTracker.compose(r -> {
+                if (r == HTTP_CREATED || r == HTTP_CONFLICT) {
+                    // test can also commence if device already exists
                     LOGGER.debug("registration succeeded");
-                    downstreamClient.createTelemetryConsumer(TEST_TENANT_ID, consumer, receiverTracker.completer());
+                    downstreamClient.createTelemetryConsumer(
+                            TEST_TENANT_ID,
+                            msg -> {
+                                LOGGER.trace("received {}", msg);
+                                received.countDown();
+                            },
+                            setupTracker.completer());
                 } else {
                     LOGGER.debug("device registration failed with status [{}]", r);
-                    receiverTracker.fail("failed to register device");
+                    setupTracker.fail("failed to register device");
                 }
-            });
-            return receiverTracker;
-        }).compose(telemetryReceiver -> {
-            receiver = telemetryReceiver;
-            IntStream.range(0, MSG_COUNT).forEach(i -> {
-                context.runOnContext(go -> {
-                    sender.send(DEVICE_ID, "payload" + i, "text/plain");
+            }, setupTracker);
+        });
+
+        setup.await(1000);
+
+        IntStream.range(0, MSG_COUNT).forEach(i -> {
+            Async latch = ctx.async();
+            context.runOnContext(go -> {
+                sender.send(DEVICE_ID, "payload" + i, "text/plain", capacityAvailable -> {
+                    latch.complete();
                 });
+                LOGGER.trace("sent message {}", i);
             });
-            setupTracker.complete();
-        }, setupTracker);
+            latch.await();
+        });
+
+        received.await(5000);
     }
 
     @Test(timeout = 2000l)
     public void testCreateSenderFailsForTenantWithoutAuthorization(final TestContext ctx) {
 
         getContext(ctx).runOnContext(go -> {
-            /* create sender for tenant that has no permission */
+            // create sender for tenant that has no permission
             honoClient.createTelemetrySender("non-authorized", ctx.asyncAssertFailure());
         });
     }
@@ -251,7 +255,7 @@ public class TelemetryClientIT {
     public void testCreateReceiverFailsForTenantWithoutAuthorization(final TestContext ctx) {
 
         getContext(ctx).runOnContext(go -> {
-            /* create sender for tenant that has no permission */
+            // create sender for tenant that has no permission
             downstreamClient.createTelemetryConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure());
         });
     }

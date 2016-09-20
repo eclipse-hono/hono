@@ -11,14 +11,7 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
-import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_ATTACHED;
-import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL;
-import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_DETACHED;
-import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_EVENT;
-import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_LINK_ID;
-import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_TARGET_ADDRESS;
-import static org.eclipse.hono.telemetry.TelemetryConstants.getErrorMessage;
-import static org.eclipse.hono.telemetry.TelemetryConstants.getFlowControlMsg;
+import static org.eclipse.hono.telemetry.TelemetryConstants.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +20,7 @@ import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.AbstractInstanceNumberAwareVerticle;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,34 +32,36 @@ import io.vertx.core.json.JsonObject;
 /**
  * Base class for implementing {@code TelemetryAdapter}s.
  * <p>
- * {@code BaseTelemetryAdapter} can be notified about {@code ProtonMessage}s containing telemetry data to be processed by means of
- * sending events via the vert.x event bus using address {@link TelemetryConstants#EVENT_BUS_ADDRESS_TELEMETRY_IN}. 
+ * {@code BaseTelemetryAdapter} can be notified about {@code ProtonMessage}s containing telemetry data
+ * to be processed by means of sending events via the Vert.x event bus using address
+ * {@link TelemetryConstants#EVENT_BUS_ADDRESS_TELEMETRY_IN}.
+ * <p> 
  * A separate event is expected for each telemetry message to process. The events must be JSON formatted strings containing
  * the following information:
- * </p>
  * <pre>
  *   { "client-id": ${clientId},
  *     "uuid"     : ${msgId}
  *   }
  * </pre>
  * <p>
- * The events do not contain the AMQP messages but instead only contain a unique ID (string) in the uuid field which is used to look up the
- * {@code ProtonMessage} from a Vert.x shared map with name {@link TelemetryConstants#EVENT_BUS_ADDRESS_TELEMETRY_IN}. The sender of
- * the event is thus required to put the message to that map before sending the event.
- * The <em>clientId</em> is the unique ID (string) of the sender of the message and is used to associate the message(s) with a particular
- * AMQP link.
- * </p>
+ * The events do not contain the AMQP messages but instead only contain a unique ID (string) in the uuid field which is used
+ * to look up the {@code ProtonMessage} from a Vert.x shared map with name {@link TelemetryConstants#EVENT_BUS_ADDRESS_TELEMETRY_IN}.
+ * The sender of the event is thus required to put the message to that map before sending the event.
  * <p>
- * For each event {@code BaseTelemetryAdapter} retrieves the corresponding telemetry message from the shared map and then invokes
- * {@link TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message, String, io.vertx.core.Handler)}.
- * </p>
+ * The <em>clientId</em> is the unique ID (string) of the sender of the message and is used to associate the message(s)
+ * with a particular AMQP link.
+ * <p>
+ * For each event {@code BaseTelemetryAdapter} retrieves (and removes) the corresponding telemetry message from the shared map and
+ * then invokes {@link TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message, String, io.vertx.core.Handler)}.
  */
 public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVerticle implements TelemetryAdapter {
 
+    protected static final int          DEFAULT_CREDIT             = 10;
     private static final Logger         LOG                        = LoggerFactory.getLogger(BaseTelemetryAdapter.class);
     private final Map<String, String>   flowControlAddressRegistry = new HashMap<>();
     private MessageConsumer<JsonObject> telemetryDataConsumer;
     private MessageConsumer<JsonObject> linkControlConsumer;
+    private MessageConsumer<String>     connectionClosedListener;
     private String                      dataAddress;
 
     protected BaseTelemetryAdapter() {
@@ -86,6 +82,7 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
     public final void start(final Future<Void> startFuture) throws Exception {
         registerLinkControlConsumer();
         registerTelemetryDataConsumer();
+        registerConnectionClosedListener();
         doStart(startFuture);
     }
 
@@ -118,8 +115,14 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
         LOG.info("listening on event bus [address: {}] for downstream link control messages", address);
     }
 
+    private void registerConnectionClosedListener() {
+        connectionClosedListener = vertx.eventBus().consumer(
+                Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
+                this::processConnectionClosedEvent);
+    }
+
     /**
-     * Unregisters the telemetry data consumer from the Vert.x event bus and then invokes {@link #doStop(Future)}.
+     * Unregisters the consumers from the Vert.x event bus and then invokes {@link #doStop(Future)}.
      * 
      * @param the handler to invoke once shutdown is complete.
      */
@@ -129,6 +132,8 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
         LOG.info("unregistered telemetry data consumer from event bus");
         linkControlConsumer.unregister();
         LOG.info("unregistered link control consumer from event bus");
+        connectionClosedListener.unregister();
+        LOG.info("unregistered connection close listener from event bus");
         doStop(stopFuture);
     }
 
@@ -145,28 +150,45 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
         stopFuture.complete();
     }
 
+    private void processConnectionClosedEvent(final Message<String> msg) {
+        onConnectionClosed(msg.body());
+    }
+
+    /**
+     * Invoked when an upstream client closes its connection with Hono.
+     * <p>
+     * Subclasses should override this method to release any resources created/acquired
+     * in context of the connection.
+     * 
+     * @param connectionId The connection ID.
+     */
+    protected void onConnectionClosed(final String connectionId) {
+        // do nothing
+    }
+
     private void processLinkControlMessage(final Message<JsonObject> msg) {
         JsonObject body = msg.body();
         String event = body.getString(FIELD_NAME_EVENT);
         String linkId = body.getString(FIELD_NAME_LINK_ID);
-        LOG.trace("received link [{}] control msg: {}", linkId, body.encode());
+        LOG.trace("received link control msg: {}", body.encodePrettily());
         if (EVENT_ATTACHED.equalsIgnoreCase(event)) {
             processLinkAttachedMessage(
+                    body.getString(FIELD_NAME_CONNECTION_ID),
                     linkId,
                     body.getString(FIELD_NAME_TARGET_ADDRESS),
                     msg.headers().get(TelemetryConstants.HEADER_NAME_REPLY_TO));
         } else if (EVENT_DETACHED.equalsIgnoreCase(event)) {
-            linkDetached(linkId);
+            onLinkDetached(linkId);
             unregisterReplyToAddress(linkId);
         } else {
             LOG.warn("discarding unsupported link control command [{}]", event);
         }
     }
 
-    final void processLinkAttachedMessage(final String linkId, final String targetAddress, final String replyToAddress) {
+    final void processLinkAttachedMessage(final String connectionId, final String linkId, final String targetAddress, final String replyToAddress) {
         if (replyToAddress != null) {
             flowControlAddressRegistry.put(linkId, replyToAddress);
-            linkAttached(linkId, targetAddress);
+            onLinkAttached(connectionId, linkId, targetAddress);
         } else {
             LOG.warn("discarding link [{}] control message lacking required header [{}]", linkId, TelemetryConstants.HEADER_NAME_REPLY_TO);
         }
@@ -182,16 +204,17 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
      * <p>
      * Subclasses should override this method in order to allocate any resources necessary
      * for processing telemetry messages sent later by the client. In order to signal
-     * the client to start sending telemetry messages the sendFlowControl method must be
-     * invoked which is what this method does by default.
+     * the client to start sending telemetry messages the <em>replenishUpstreamSender</em> method
+     * must be invoked which is what this method does by default.
      * </p>
      * 
-     * @param linkId the unique ID of the link used by the client for uploading data.
-     * @param targetAddress the target address to upload data to.
+     * @param connectionId The unique ID of the AMQP 1.0 connection with the client.
+     * @param linkId The unique ID of the link used by the client for uploading data.
+     * @param targetAddress The target address to upload data to.
      */
-    protected void linkAttached(final String linkId, final String targetAddress) {
+    protected void onLinkAttached(final String connectionId, final String linkId, final String targetAddress) {
         // by default resume link so that the client can start to send messages
-        sendFlowControlMessage(linkId, false);
+        replenishUpstreamSender(linkId, DEFAULT_CREDIT);
     }
 
     /**
@@ -206,7 +229,7 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
      * 
      * @param linkId the unique ID of the link to be closed.
      */
-    protected void linkDetached(final String linkId) {
+    protected void onLinkDetached(final String linkId) {
         // do nothing
     }
 
@@ -224,10 +247,23 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
         }
     }
 
-    protected final void sendFlowControlMessage(final String linkId, final boolean suspend) {
-        sendMessage(linkId, getFlowControlMsg(linkId, suspend));
+    /**
+     * Replenishes an upstream client uploading telemetry data with credit.
+     * 
+     * @param linkId the ID of the link to resume.
+     * @param credit the number o credits to replenish the client with.
+     */
+    protected final void replenishUpstreamSender(final String linkId, final int credit) {
+        sendMessage(linkId, getCreditReplenishmentMsg(linkId, credit));
     }
 
+    /**
+     * Sends an error message upstream.
+     * 
+     * @param linkId the ID of the link the error affects.
+     * @param closeLink {@code true} if the error is unrecoverable and the receiver of the message
+     *        should therefore close the link with the client.
+     */
     protected final void sendErrorMessage(final String linkId, final boolean closeLink) {
         sendMessage(linkId, getErrorMessage(linkId, closeLink));
     }
@@ -235,10 +271,10 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
     private void sendMessage(final String linkId, final JsonObject msg) {
         String address = flowControlAddressRegistry.get(linkId);
         if (address != null) {
-            LOG.trace("sending flow control message for link [{}] to address [{}]: {}", linkId, address, msg.encodePrettily());
+            LOG.trace("sending upstream message for link [{}] to address [{}]: {}", linkId, address, msg.encodePrettily());
             vertx.eventBus().send(address, msg);
         } else {
-            LOG.warn("cannot send flow control message upstream for link [{}], no event bus address registered", linkId);
+            LOG.warn("cannot send upstream message for link [{}], no event bus address registered", linkId);
         }
     }
 }

@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
@@ -33,22 +34,41 @@ public class SenderFactoryImpl implements SenderFactory {
     private static final Logger LOG = LoggerFactory.getLogger(SenderFactoryImpl.class);
 
     @Override
-    public void createSender(final ProtonConnection connection, final String address, final Future<ProtonSender> result) {
+    public void createSender(
+            final ProtonConnection connection,
+            final String address,
+            final Handler<ProtonSender> sendQueueDrainHandler,
+            final Future<ProtonSender> result) {
+
         Objects.requireNonNull(connection);
         Objects.requireNonNull(address);
         Objects.requireNonNull(result);
+
         ProtonSender sender = connection.createSender(address);
         sender.setQoS(ProtonQoS.AT_MOST_ONCE);
+        sender.sendQueueDrainHandler(sendQueueDrainHandler);
         sender.openHandler(openAttempt -> {
             if (openAttempt.succeeded()) {
-                LOG.info("sender for downstream container [{}] open", connection.getRemoteContainer());
+                LOG.debug(
+                        "sender [{}] for downstream container [{}] open",
+                        address,
+                        connection.getRemoteContainer());
                 result.complete(openAttempt.result());
             } else {
                 LOG.warn("could not open sender for downstream container [{}]",
                         connection.getRemoteContainer());
                 result.fail(openAttempt.cause());
             }
-        }).open();
+        });
+        sender.closeHandler(closed -> {
+            if (closed.succeeded()) {
+                LOG.debug(
+                        "sender [{}] for downstream container [{}] closed",
+                        address,
+                        connection.getRemoteContainer());
+            }
+        });
+        sender.open();
     }
 
 }

@@ -79,6 +79,9 @@ public class SendReceiveIT {
         if (sender != null) {
             sender.close();
         }
+        if (connector != null) {
+            connector.close();
+        }
     }
 
     @Test
@@ -92,10 +95,12 @@ public class SendReceiveIT {
 
         messageConsumer.setMessageListener(message -> {
             latch.countDown();
-            final long count = latch.getCount();
             gatherStatistics(stats, message);
-            if (count % 100 == 0) {
-                LOG.trace("Received {} messages.", COUNT - count);
+            if (LOG.isTraceEnabled()) {
+                final long messagesReceived = COUNT - latch.getCount();
+                if (messagesReceived % 100 == 0) {
+                    LOG.trace("Received {} messages.", messagesReceived);
+                }
             }
         });
 
@@ -107,18 +112,17 @@ public class SendReceiveIT {
                 message.setJMSTimestamp(System.currentTimeMillis());
                 messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
-                if (i % 100 == 0) {
+                if (LOG.isTraceEnabled() && i > 0 && i % 100 == 0) {
                     LOG.trace("Sent message {}", i);
                 }
-            }
-            catch (final JMSException e) {
+            } catch (final JMSException e) {
                 LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
             }
         });
 
         // wait for messages to arrive
         assertTrue("Did not receive " + COUNT + " messages within timeout.", latch.await(10, TimeUnit.SECONDS));
-        LOG.debug("Delivery statistics: {}", stats);
+        LOG.info("Delivery statistics: {}", stats);
     }
 
     @Test
@@ -130,13 +134,13 @@ public class SendReceiveIT {
         final MessageConsumer messageConsumer = receiver.getTelemetryConsumer(SPECIAL_DEVICE_RECV_DEST);
         messageConsumer.setMessageListener(message -> {
             final String deviceId = getDeviceId(message);
-            LOG.info("------> Received message for {}", deviceId);
+            LOG.debug("------> Received message for {}", deviceId);
             assertEquals(SPECIAL_DEVICE, deviceId);
             latch.countDown();
         });
 
         final Message message = sender.newTextMessage("update", SPECIAL_DEVICE);
-        telemetryProducer.send(message,DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
+        telemetryProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
         assertTrue("Did not receive message within timeout.", latch.await(10, TimeUnit.SECONDS));
     }

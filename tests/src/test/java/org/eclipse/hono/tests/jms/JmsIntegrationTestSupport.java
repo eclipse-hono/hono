@@ -153,7 +153,12 @@ public class JmsIntegrationTestSupport {
     private void createContext(final String username, final String password) throws NamingException {
 
         final StringBuilder honoURI = new StringBuilder(String.format(AMQP_URI_PATTERN, HONO_HOST, HONO_PORT, AMQP_VHOST, ""));
-        final StringBuilder qdrURI = new StringBuilder(String.format(AMQP_URI_PATTERN, DOWNSTREAM_HOST, DOWNSTREAM_PORT, AMQP_VHOST, "&jms.prefetchPolicy.queuePrefetch=10"));
+        final StringBuilder qdrURI = new StringBuilder(
+                String.format(
+                        AMQP_URI_PATTERN,
+                        DOWNSTREAM_HOST, DOWNSTREAM_PORT,
+                        AMQP_VHOST,
+                        "&jms.prefetchPolicy.queuePrefetch=20&jms.presettlePolicy.presettleConsumers=true"));
 
         if (username != null && password != null) {
             final String usernamePasswordProperty = String.format(USERNAME_PASSWORD_PATTERN, username, password);

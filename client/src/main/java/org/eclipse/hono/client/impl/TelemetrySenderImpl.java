@@ -12,7 +12,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.util.MessageHelper.*;
+import static org.eclipse.hono.util.MessageHelper.addDeviceId;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
@@ -40,6 +40,7 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     private static final String     TELEMETRY_ADDRESS_TEMPLATE  = "telemetry/%s";
     private static final Logger     LOG = LoggerFactory.getLogger(TelemetrySenderImpl.class);
     private static final AtomicLong messageCounter = new AtomicLong();
+    private Handler<Void> drainHandler;
 
     private TelemetrySenderImpl(final ProtonSender sender) {
         this.sender = sender;
@@ -84,6 +85,28 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     }
 
     @Override
+    public boolean sendQueueFull() {
+        return sender.sendQueueFull();
+    }
+
+    @Override
+    public void sendQueueDrainHandler(final Handler<Void> handler) {
+        if (this.drainHandler != null) {
+            throw new IllegalStateException("already waiting for replenishment with credit");
+        } else {
+            this.drainHandler = Objects.requireNonNull(handler);
+            sender.sendQueueDrainHandler(replenishedSender -> {
+                LOG.trace("telemetry sender has been replenished with {} credits", replenishedSender.getCredit());
+                Handler<Void> currentHandler = this.drainHandler;
+                this.drainHandler = null;
+                if (currentHandler != null) {
+                    currentHandler.handle(null);
+                }
+            });
+        }
+    }
+
+    @Override
     public void close(final Handler<AsyncResult<Void>> closeHandler) {
         closeLinks(closeHandler);
     }
@@ -92,19 +115,38 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     public void setErrorHandler(Handler<AsyncResult<Void>> errorHandler) {
         sender.closeHandler(s -> {
             if (s.failed()) {
-                LOG.debug("server closed link: {}", s.cause().getMessage());
+                LOG.debug("server closed link with error condition: {}", s.cause().getMessage());
                 sender.close();
                 errorHandler.handle(Future.failedFuture(s.cause()));
             } else {
-                LOG.debug("server wants to close telemetry sender");
+                LOG.debug("server closed link");
                 sender.close();
             }
         });
     }
 
     @Override
+    public void send(final Message rawMessage, final Handler<Void> capacityAvailableHandler) {
+        Objects.requireNonNull(rawMessage);
+        if (capacityAvailableHandler == null) {
+            sender.send(rawMessage);
+        } else if (this.drainHandler != null) {
+            throw new IllegalStateException("cannot send message while waiting for replenishment with credit");
+        } else if (sender.isOpen()) {
+            sender.send(rawMessage);
+            if (sender.sendQueueFull()) {
+                sendQueueDrainHandler(capacityAvailableHandler);
+            } else {
+                capacityAvailableHandler.handle(null);
+            }
+        } else {
+            throw new IllegalStateException("sender is not open");
+        }
+    }
+
+    @Override
     public boolean send(final Message rawMessage) {
-        if (sender.getCredit() <= 0) {
+        if (sender.sendQueueFull()) {
             return false;
         } else {
             sender.send(Objects.requireNonNull(rawMessage));
@@ -116,20 +158,35 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     public boolean send(final String deviceId, final byte[] payload, final String contentType) {
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(payload)));
-        msg.setContentType(contentType);
-        return addPropertiesAndSend(deviceId, msg);
+        addPropterties(msg, deviceId, contentType);
+        return send(msg);
+    }
+
+    @Override
+    public void send(final String deviceId, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+        final Message msg = ProtonHelper.message();
+        msg.setBody(new Data(new Binary(payload)));
+        addPropterties(msg, deviceId, contentType);
+        send(msg, capacityAvailableHandler);
     }
 
     @Override
     public boolean send(final String deviceId, final String payload, final String contentType) {
         final Message msg = ProtonHelper.message(payload);
-        msg.setContentType(contentType);
-        return addPropertiesAndSend(deviceId, msg);
+        addPropterties(msg, deviceId, contentType);
+        return send(msg);
     }
 
-    private boolean addPropertiesAndSend(final String deviceId, final Message msg) {
+    @Override
+    public void send(final String deviceId, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+        final Message msg = ProtonHelper.message(payload);
+        addPropterties(msg, deviceId, contentType);
+        send(msg, capacityAvailableHandler);
+    }
+
+    private void addPropterties(final Message msg, final String deviceId, final String contentType) {
         msg.setMessageId(String.format("TelemetryClientImpl-%d", messageCounter.getAndIncrement()));
+        msg.setContentType(contentType);
         addDeviceId(msg, deviceId);
-        return send(msg);
     }
 }

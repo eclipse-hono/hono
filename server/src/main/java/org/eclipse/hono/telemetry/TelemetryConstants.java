@@ -27,6 +27,7 @@ public final class TelemetryConstants {
     public static final String EVENT_ATTACHED = "attached";
     public static final String FIELD_NAME_LINK_ID = "link-id";
     public static final String FIELD_NAME_CLOSE_LINK = "close-link";
+    public static final String FIELD_NAME_CONNECTION_ID = "connection-id";
     public static final String FIELD_NAME_CREDIT = "credit";
     public static final String FIELD_NAME_ENDPOINT = "endpoint";
     public static final String FIELD_NAME_EVENT = "event";
@@ -56,18 +57,19 @@ public final class TelemetryConstants {
     private TelemetryConstants() {
     }
 
-    public static JsonObject getLinkAttachedMsg(final String linkId, final ResourceIdentifier targetAddress) {
+    public static JsonObject getLinkAttachedMsg(final String connectionId, final String linkId, final ResourceIdentifier targetAddress) {
         JsonObject msg = new JsonObject();
         msg.put(FIELD_NAME_EVENT, EVENT_ATTACHED);
-        msg.put(FIELD_NAME_LINK_ID, linkId);
-        msg.put(FIELD_NAME_TARGET_ADDRESS, targetAddress.toString());
+        msg.put(FIELD_NAME_CONNECTION_ID, Objects.requireNonNull(connectionId));
+        msg.put(FIELD_NAME_LINK_ID, Objects.requireNonNull(linkId));
+        msg.put(FIELD_NAME_TARGET_ADDRESS, Objects.requireNonNull(targetAddress).toString());
         return msg;
     }
 
     public static JsonObject getLinkDetachedMsg(final String linkId) {
         JsonObject msg = new JsonObject();
         msg.put(FIELD_NAME_EVENT, EVENT_DETACHED);
-        msg.put(FIELD_NAME_LINK_ID, linkId);
+        msg.put(FIELD_NAME_LINK_ID, Objects.requireNonNull(linkId));
         return msg;
     }
 
@@ -78,22 +80,17 @@ public final class TelemetryConstants {
         return msg;
     }
 
-    public static JsonObject getFlowControlMsg(final String linkId, final boolean suspend) {
-        return new JsonObject().put(MSG_TYPE_FLOW_CONTROL, new JsonObject()
-                .put(FIELD_NAME_LINK_ID, linkId)
-                .put(FIELD_NAME_SUSPEND, suspend));
-    }
-
     public static boolean isFlowControlMessage(final JsonObject msg) {
         Objects.requireNonNull(msg);
         return msg.containsKey(MSG_TYPE_FLOW_CONTROL);
     }
 
     public static JsonObject getCreditReplenishmentMsg(final String linkId, final int credit) {
-        JsonObject msg = new JsonObject();
-        msg.put(FIELD_NAME_LINK_ID, linkId);
-        msg.put(FIELD_NAME_CREDIT, credit);
-        return msg;
+        return new JsonObject().put(
+                MSG_TYPE_FLOW_CONTROL,
+                new JsonObject()
+                    .put(FIELD_NAME_LINK_ID, linkId)
+                    .put(FIELD_NAME_CREDIT, credit));
     }
 
     public static JsonObject getErrorMessage(final String linkId, final boolean closeLink) {

@@ -20,9 +20,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
+import org.apache.qpid.proton.engine.Record;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.telemetry.TelemetryConstants;
@@ -38,6 +40,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonServer;
@@ -193,19 +196,21 @@ public final class HonoServer extends AbstractVerticle {
 
     void helloProcessConnection(final ProtonConnection connection) {
         connection.setContainer(String.format("Hono-%s:%d-%d", this.bindAddress, server.actualPort(), instanceNo));
-        connection.sessionOpenHandler(session -> handleSessionOpen(connection, session));
-        connection.receiverOpenHandler(openedReceiver -> handleReceiverOpen(connection, openedReceiver));
-        connection.senderOpenHandler(openedSender -> handleSenderOpen(connection, openedSender));
-        connection.disconnectHandler(HonoServer::handleDisconnected);
-        connection.closeHandler(HonoServer::handleConnectionClosed);
-        connection.openHandler(result -> {
-            LOG.debug("client [container: {}, user: {}] connected", connection.getRemoteContainer(), getUserFromConnection(connection));
-            result.result().open();
+        connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
+        connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
+        connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
+        connection.disconnectHandler(this::handleRemoteDisconnect);
+        connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
+        connection.openHandler(remoteOpen -> {
+            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), getUserFromConnection(connection));
+            connection.open();
+            // attach an ID so that we can later inform downstream verticles when connection is closed
+            connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
         });
     }
 
     private void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.debug("opening new session with client [{}]", con.getRemoteContainer());
+        LOG.info("opening new session with client [{}]", con.getRemoteContainer());
         session.closeHandler(sessionResult -> {
             if (sessionResult.succeeded()) {
                 sessionResult.result().close();
@@ -213,19 +218,25 @@ public final class HonoServer extends AbstractVerticle {
         }).open();
     }
 
-    private static void handleConnectionClosed(AsyncResult<ProtonConnection> res) {
+    /**
+     * Invoked when a client closes the connection with this server.
+     * 
+     * @param con The connection to close.
+     * @param res The client's close frame.
+     */
+    private static void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
         if (res.succeeded()) {
-            ProtonConnection con = res.result();
-            LOG.debug("client [{}] closed connection", con.getRemoteContainer());
-            con.close();
+            LOG.info("client [{}] closed connection", con.getRemoteContainer());
         } else {
-            LOG.warn("processing of close frame from client failed", res.cause());
+            LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
+        con.close();
     }
 
-    private static void handleDisconnected(ProtonConnection connection) {
-        LOG.debug("client [{}] disconnected", connection.getRemoteContainer());
+    private void handleRemoteDisconnect(final ProtonConnection connection) {
+        LOG.info("client [{}] disconnected", connection.getRemoteContainer());
         connection.disconnect();
+        publishConnectionClosedEvent(connection);
     }
 
     /**
@@ -238,7 +249,7 @@ public final class HonoServer extends AbstractVerticle {
         if (receiver.getRemoteTarget().getAddress() == null) {
             LOG.debug("client [{}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link",
                     con.getRemoteContainer());
-            receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(), "client needs to provide target address")).close();
+            receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
         } else {
             LOG.debug("client [{}] wants to open a link for sending messages [address: {}]",
                     con.getRemoteContainer(), receiver.getRemoteTarget());
@@ -246,14 +257,12 @@ public final class HonoServer extends AbstractVerticle {
                 final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
                 final Endpoint endpoint = getEndpoint(targetResource);
                 if (endpoint == null) {
-                    LOG.info("no matching endpoint registered for address [{}]", receiver.getRemoteTarget().getAddress());
-                    receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(),
-                            "No matching endpoint registered for address " + receiver.getRemoteTarget().getAddress()));
-                    receiver.close();
+                    handleUnknownEndpoint(con, receiver, targetResource);
                 } else {
                     final String user = getUserFromConnection(con);
                     checkAuthorizationToAttach(user, targetResource, Permission.WRITE, isAuthorized -> {
                         if (isAuthorized) {
+                            copyConnectionId(con.attachments(), receiver.attachments());
                             receiver.setTarget(receiver.getRemoteTarget());
                             endpoint.onLinkAttach(receiver, targetResource);
                         } else {
@@ -269,17 +278,31 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
+    private void publishConnectionClosedEvent(final ProtonConnection con) {
+
+        String conId = con.attachments().get(Constants.KEY_CONNECTION_ID, String.class);
+        if (conId != null) {
+            vertx.eventBus().publish(
+                    Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
+                    conId);
+        }
+    }
+
+    private static void copyConnectionId(final Record source, final Record target) {
+        target.set(Constants.KEY_CONNECTION_ID, String.class, source.get(Constants.KEY_CONNECTION_ID, String.class));
+    }
+
     /**
      * Gets the authenticated client principal name for an AMQP connection.
      * 
      * @param con the connection to read the user from
      * @return the user associated with the connection or {@link Constants#DEFAULT_SUBJECT} if it cannot be determined.
      */
-    private String getUserFromConnection(final ProtonConnection con) {
+    private static String getUserFromConnection(final ProtonConnection con) {
 
         Principal clientId = Constants.getClientPrincipal(con);
         if (clientId == null) {
-            LOG.warn("connection from {} is not authenticated properly using SASL, falling back to default subject ({}",
+            LOG.warn("connection from client [{}] is not authenticated properly using SASL, falling back to default subject [{}]",
                     con.getRemoteContainer(), Constants.DEFAULT_SUBJECT);
             return Constants.DEFAULT_SUBJECT;
         } else {
@@ -298,16 +321,15 @@ public final class HonoServer extends AbstractVerticle {
         LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
                 con.getRemoteContainer(), remoteSource);
         try {
-            final String source = remoteSource.getAddress();
-            final ResourceIdentifier targetResource = getResourceIdentifier(source);
+            final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
             final Endpoint endpoint = getEndpoint(targetResource);
             if (endpoint == null) {
-                LOG.info("no matching endpoint registered for address [{}]", source);
-                sender.close();
+                handleUnknownEndpoint(con, sender, targetResource);
             } else {
                 final String user = getUserFromConnection(con);
                 checkAuthorizationToAttach(user, targetResource, Permission.READ, isAuthorized -> {
                     if (isAuthorized) {
+                        copyConnectionId(con.attachments(), sender.attachments());
                         sender.setSource(sender.getRemoteSource());
                         endpoint.onLinkAttach(sender, targetResource);
                     } else {
@@ -320,6 +342,15 @@ public final class HonoServer extends AbstractVerticle {
             LOG.debug("client has provided invalid resource identifier as target address", e);
             sender.close();
         }
+    }
+
+    private static void handleUnknownEndpoint(final ProtonConnection con, final ProtonLink<?> link, final ResourceIdentifier address) {
+        LOG.info("client [{}] wants to establish link for unknown endpoint [address: {}]",
+                con.getRemoteContainer(), address);
+        link.setCondition(
+                condition(AmqpError.NOT_FOUND.toString(),
+                String.format("no endpoint registered for address %s", address)));
+        link.close();
     }
 
     private Endpoint getEndpoint(final ResourceIdentifier targetAddress) {

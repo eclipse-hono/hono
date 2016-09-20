@@ -170,9 +170,13 @@ public class StandaloneTelemetryApiTest {
         });
 
         IntStream.range(0, count).forEach(i -> {
+            Async waitForCredit = ctx.async();
             getContext(ctx).runOnContext(go -> {
-                telemetrySender.send(DEVICE_1, "payload" + i, "text/plain");
+                LOG.trace("sending message {}", i);
+                telemetrySender.send(DEVICE_1, "payload" + i, "text/plain; charset=utf-8", done -> waitForCredit.complete());
+                LOG.trace("sender's send queue full: {}", telemetrySender.sendQueueFull());
             });
+            waitForCredit.await();
         });
     }
 
@@ -184,7 +188,7 @@ public class StandaloneTelemetryApiTest {
             LOG.debug(s.getMessage());
         }));
         getContext(ctx).runOnContext(go -> {
-            telemetrySender.send("UNKNOWN", "payload", "text/plain");
+            telemetrySender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
         });
     }
 
@@ -200,7 +204,7 @@ public class StandaloneTelemetryApiTest {
         }));
 
         getContext(ctx).runOnContext(go -> {
-            telemetrySender.send(msg);
+            telemetrySender.send(msg, capacityAvailable -> {});
         });
     }
 

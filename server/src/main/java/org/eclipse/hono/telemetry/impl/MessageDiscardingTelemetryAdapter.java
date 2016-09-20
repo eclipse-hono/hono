@@ -32,7 +32,7 @@ import org.springframework.stereotype.Service;
 public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageDiscardingTelemetryAdapter.class);
-    private final long pauseThreshold;
+    private final int pauseThreshold;
     private final long pausePeriod;
     private Map<String, LinkStatus> statusMap = new HashMap<>();
     private Consumer<Message> messageConsumer;
@@ -54,7 +54,7 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
      *                       never be paused.
      * @param pausePeriod the number of milliseconds after which the sender is resumed.
      */
-    public MessageDiscardingTelemetryAdapter(final long pauseThreshold, final long pausePeriod, final Consumer<Message> consumer) {
+    public MessageDiscardingTelemetryAdapter(final int pauseThreshold, final long pausePeriod, final Consumer<Message> consumer) {
         super(0, 1);
         this.pauseThreshold = pauseThreshold;
         this.pausePeriod = pausePeriod;
@@ -97,15 +97,20 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
 
         public void onMsgReceived() {
             msgCount++;
-            if (pauseThreshold > 0 && msgCount % pauseThreshold == 0) {
-                pause();
+            if (pauseThreshold > 0) {
+                // we need to pause every n messages
+                if (msgCount % pauseThreshold == 0) {
+                    pause();
+                }
+            } else if (msgCount % DEFAULT_CREDIT == 0) {
+                // we need to replenish client every DEFAULT_CREDIT messages
+                replenishUpstreamSender(linkId, DEFAULT_CREDIT);
             }
         }
 
         public void pause() {
             LOG.debug("pausing link [{}]", linkId);
             this.suspended = true;
-            sendFlowControlMessage(linkId, true);
             vertx.setTimer(pausePeriod, fired -> {
                 vertx.runOnContext(run -> resume());
             });
@@ -114,7 +119,11 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
         private void resume() {
             if (suspended) {
                 LOG.debug("resuming link [{}]", linkId);
-                sendFlowControlMessage(linkId, false);
+                int credit = DEFAULT_CREDIT;
+                if (pauseThreshold > 0) {
+                    credit = pauseThreshold;
+                }
+                replenishUpstreamSender(linkId, credit);
                 this.suspended = false;
             }
         }

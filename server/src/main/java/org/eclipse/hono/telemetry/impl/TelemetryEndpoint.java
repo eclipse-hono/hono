@@ -13,26 +13,15 @@ package org.eclipse.hono.telemetry.impl;
 
 import static io.vertx.proton.ProtonHelper.condition;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL;
-import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_IN;
-import static org.eclipse.hono.telemetry.TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL;
-import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_CLOSE_LINK;
-import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_LINK_ID;
-import static org.eclipse.hono.telemetry.TelemetryConstants.FIELD_NAME_SUSPEND;
-import static org.eclipse.hono.telemetry.TelemetryConstants.MSG_TYPE_ERROR;
-import static org.eclipse.hono.telemetry.TelemetryConstants.MSG_TYPE_FLOW_CONTROL;
-import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkAttachedMsg;
-import static org.eclipse.hono.telemetry.TelemetryConstants.getLinkDetachedMsg;
-import static org.eclipse.hono.telemetry.TelemetryConstants.isErrorMessage;
-import static org.eclipse.hono.telemetry.TelemetryConstants.isFlowControlMessage;
-import static org.eclipse.hono.util.MessageHelper.*;
+import static org.eclipse.hono.telemetry.TelemetryConstants.*;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
+import static org.eclipse.hono.util.MessageHelper.getAnnotation;
 import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -41,6 +30,7 @@ import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.server.BaseEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -104,18 +94,16 @@ public final class TelemetryEndpoint extends BaseEndpoint {
     }
 
     private void handleFlowControlMsg(final io.vertx.core.eventbus.Message<JsonObject> msg) {
-//        vertx.runOnContext(run -> {
-            if (msg.body() == null) {
-                LOG.warn("received empty message from telemetry adapter, is this a bug?");
-            } else if (isFlowControlMessage(msg.body())) {
-                handleFlowControlMsg(msg.body().getJsonObject(MSG_TYPE_FLOW_CONTROL));
-            } else if (isErrorMessage(msg.body())) {
-                handleErrorMessage(msg.body().getJsonObject(MSG_TYPE_ERROR));
-            } else {
-                // discard message
-                LOG.debug("received unsupported message from telemetry adapter: {}", msg.body().encode());
-            }
-//        });
+        if (msg.body() == null) {
+            LOG.warn("received empty message from telemetry adapter, is this a bug?");
+        } else if (isFlowControlMessage(msg.body())) {
+            handleFlowControlMsg(msg.body().getJsonObject(MSG_TYPE_FLOW_CONTROL));
+        } else if (isErrorMessage(msg.body())) {
+            handleErrorMessage(msg.body().getJsonObject(MSG_TYPE_ERROR));
+        } else {
+            // discard message
+            LOG.info("received unsupported message {}", msg.body().encodePrettily());
+        }
     }
 
     private void handleFlowControlMsg(final JsonObject msg) {
@@ -125,7 +113,10 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         String linkId = msg.getString(FIELD_NAME_LINK_ID);
         LinkWrapper client = activeClients.get(linkId);
         if (client != null) {
-            client.setSuspended(msg.getBoolean(FIELD_NAME_SUSPEND, false));
+            int credits = msg.getInteger(FIELD_NAME_CREDIT, 0);
+            client.replenish(credits);
+        } else {
+            LOG.warn("discarding flow control message for non-existing link {}", linkId);
         }
     }
 
@@ -170,7 +161,11 @@ public final class TelemetryEndpoint extends BaseEndpoint {
 
         LOG.debug("registering new link for telemetry client [{}]", linkId);
         activeClients.put(linkId, link);
-        JsonObject msg = getLinkAttachedMsg(linkId, targetAddress);
+        sendLinkAttachMessage(link, targetAddress);
+    }
+
+    private void sendLinkAttachMessage(final LinkWrapper link, final ResourceIdentifier targetAddress) {
+        JsonObject msg = getLinkAttachedMsg( link.getConnectionId(), link.getLinkId(), targetAddress);
         DeliveryOptions headers = TelemetryConstants.addReplyToHeader(new DeliveryOptions(), flowControlAddress);
         vertx.eventBus().send(linkControlAddress, msg, headers);
     }
@@ -181,10 +176,15 @@ public final class TelemetryEndpoint extends BaseEndpoint {
 
     private void onLinkDetach(final LinkWrapper client, final ErrorCondition error) {
         LOG.debug("closing receiver for client [{}]", client.getLinkId());
-        client.close(error);
         activeClients.remove(client.getLinkId());
-        JsonObject msg = getLinkDetachedMsg(client.getLinkId());
-        vertx.eventBus().send(linkControlAddress, msg);
+        sendLinkDetachMessage(client);
+        client.close(error);
+    }
+
+    private void sendLinkDetachMessage(final LinkWrapper link) {
+        JsonObject msg = getLinkDetachedMsg(link.getLinkId());
+        DeliveryOptions headers = TelemetryConstants.addReplyToHeader(new DeliveryOptions(), flowControlAddress);
+        vertx.eventBus().send(linkControlAddress, msg, headers);
     }
 
     private void sendTelemetryData(final LinkWrapper link, final ProtonDelivery delivery, final Message msg) {
@@ -225,17 +225,15 @@ public final class TelemetryEndpoint extends BaseEndpoint {
     private void sendAtMostOnce(final LinkWrapper link, final String messageId, final ProtonDelivery delivery) {
         vertx.eventBus().send(dataAddress, TelemetryConstants.getTelemetryMsg(messageId, link.getLinkId()));
         ProtonHelper.accepted(delivery, true);
-        int creditLeft = link.decrementAndGetRemainingCredit();
+        int creditLeft = link.getCredit();
         LOG.trace("publishing telemetry msg received via Link[id: {}, credit left: {}] to {}",
                 link.getLinkId(), creditLeft, dataAddress);
     }
 
     public static class LinkWrapper {
-        private static final int INITIAL_CREDIT = 50;
+
         private ProtonReceiver link;
         private String id;
-        private boolean suspended;
-        private AtomicInteger credit = new AtomicInteger(INITIAL_CREDIT);
 
         /**
          * @param receiver
@@ -244,44 +242,15 @@ public final class TelemetryEndpoint extends BaseEndpoint {
             this.id = Objects.requireNonNull(linkId);
             link = Objects.requireNonNull(receiver);
             link.setAutoAccept(false).setQoS(ProtonQoS.AT_MOST_ONCE).setPrefetch(0); // use manual flow control
-            suspend();
         }
 
-        /**
-         * @return the creditAvailable
-         */
-        public boolean isSuspended() {
-            return suspended;
+        public void replenish(final int replenishedCredits) {
+            LOG.debug("replenishing client [{}] with {} credits", id, replenishedCredits);
+            link.flow(replenishedCredits);
         }
 
-        public void suspend() {
-            LOG.debug("suspending client [{}]", id);
-            suspended = true;
-        }
-
-        public void resume() {
-            credit.set(INITIAL_CREDIT);
-            LOG.debug("replenishing client [{}] with {} credits", id, credit.get());
-            link.flow(credit.get());
-            suspended = false;
-        }
-
-        public void setSuspended(final boolean suspend) {
-            if (suspend) {
-                suspend();
-            } else {
-                resume();
-            }
-        }
-
-        public int decrementAndGetRemainingCredit() {
-            if (credit.decrementAndGet() == 0) {
-                if (!suspended) {
-                    // automatically replenish client with new credit
-                    resume();
-                }
-            }
-            return credit.get();
+        public int getCredit() {
+            return link.getCredit() - link.getQueued();
         }
 
         public void close(final ErrorCondition error) {
@@ -303,6 +272,15 @@ public final class TelemetryEndpoint extends BaseEndpoint {
          */
         public String getLinkId() {
             return id;
+        }
+
+        /**
+         * Gets the ID of the connection this link is running on.
+         * 
+         * @return The ID.
+         */
+        public String getConnectionId() {
+            return Constants.getConnectionId(link);
         }
     }
 }

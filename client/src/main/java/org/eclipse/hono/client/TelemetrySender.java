@@ -24,12 +24,57 @@ import io.vertx.core.Handler;
 public interface TelemetrySender {
 
     /**
+     * Checks if this sender can send or buffer (and send later) a telemetry message.
+     * 
+     * @return {@code false} if a message can be sent or buffered.
+     */
+    boolean sendQueueFull();
+
+    /**
+     * Sets a handler to be notified once this sender has capacity available to send or
+     * buffer a telemetry message.
+     * <p>
+     * The handler registered using this method will be invoked <em>exactly once</em> when
+     * this sender is replenished with more credit from the server. For subsequent notifications
+     * to be received, a new handler must be registered.
+     * <p>
+     * Client code should register a handler after it has checked this sender's capacity to send
+     * messages using the <em>sendQueueFull</em> method, e.g.
+     * <pre>
+     * TelemetrySender sender;
+     * ...
+     * sender.send(msg);
+     * if (sender.sendQueueFull()) {
+     *     sender.sendQueueDrainHandler(replenished -> {
+     *         // send more messages
+     *     });
+     * }
+     * </pre>
+     * 
+     * @param handler
+     */
+    void sendQueueDrainHandler(Handler<Void> handler);
+
+    /**
+     * Sends an AMQP 1.0 message to the telemetry endpoint configured for this client.
+     * <p>
+     * The message will be sent immediately if this client has enough credit available on its
+     * link to the Hono server or it will be sent later after this client has been replenished
+     * with more credit. In both cases the handler will be notified <em>once only</em> when this
+     * sender has capacity available for accepting and sending the next message.
+     * 
+     * @param rawMessage The message to send.
+     * @param capacityAvailableHandler The handler to notify when this sender can accept and send
+     *                                 another message.
+     */
+    void send(Message rawMessage, Handler<Void> capacityAvailableHandler);
+
+    /**
      * Sends an AMQP 1.0 message to the telemetry endpoint configured for this client.
      * 
      * @param rawMessage the message to send.
-     * @return {@code false} if the AMQP link this client uses does not have any credit left
-     *        and thus cannot send the message to the Hono server's telemetry endpoint. The
-     *        message will simply be discarded.
+     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
+     *         the message is discarded and {@code false} is returned.
      */
     boolean send(Message rawMessage);
 
@@ -37,68 +82,95 @@ public interface TelemetrySender {
      * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
      * 
      * @param deviceId The id of the device.
-     * <p>
-     * This parameter will be used as the value for the message's application property <em>device_id</em>.
-     * </p>
+     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param payload The data to send.
-     * <p>
-     * The payload's UTF-8 byte representation will be contained in the message as an AMQP 1.0 <em>Data</em> section.
-     * </p>
+     *                The payload's UTF-8 byte representation will be contained in the message as an AMQP 1.0
+     *                <em>Data</em> section.
      * @param contentType The content type of the payload.
-     * <p>
-     * This parameter will be used as the value for the message's <em>content-type</em> property.
-     * </p>
-     * @return {@code false} if the AMQP link this client uses does not have any credit left
-     *        and thus cannot send the data to the Hono server's telemetry endpoint. The data will
-     *        simply be discarded.
+     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
+     *         the message is discarded and {@code false} is returned.
      */
     boolean send(String deviceId, String payload, String contentType);
 
     /**
      * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * <p>
+     * The message will be sent immediately if this client has enough credit available on its
+     * link to the Hono server or it will be sent later after this client has been replenished
+     * with more credit. In both cases the handler will be notified <em>once only</em> when this
+     * sender has capacity available for accepting and sending the next message.
      * 
      * @param deviceId The id of the device.
-     * <p>
-     * This parameter will be used as the value for the message's application property <em>device_id</em>.
-     * </p>
+     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param payload The data to send.
-     * <p>
-     * The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
-     * </p>
+     *                The payload's UTF-8 byte representation will be contained in the message as an AMQP 1.0
+     *                <em>Data</em> section.
      * @param contentType The content type of the payload.
-     * <p>
-     * This parameter will be used as the value for the message's <em>content-type</em> property.
-     * </p>
-     * @return {@code false} if the AMQP link this client uses does not have any credit left
-     *        and thus cannot send the data to the Hono server's telemetry endpoint. The data will
-     *        simply be discarded.
+     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param capacityAvailableHandler The handler to notify when this sender can accept and send
+     *                                 another message.
+     */
+    void send(String deviceId, String payload, String contentType, Handler<Void> capacityAvailableHandler);
+
+    /**
+     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * 
+     * @param deviceId The id of the device.
+     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
+     * @param payload The data to send.
+     *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
+     * @param contentType The content type of the payload.
+     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
+     *         the message is discarded and {@code false} is returned.
      */
     boolean send(String deviceId, byte[] payload, String contentType);
 
     /**
-     * Sets a callback for handling errors that occur while interacting with the server.
+     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
      * <p>
-     * When this handler is called back it will most likely mean that this client's link to the
-     * Hono server's telemetry endpoint has been closed. This may occur if a message sent
-     * does not comply with the Hono Telemetry API or if the client is not authorized to upload
-     * data for the tenant this client has been configured for.
+     * The message will be sent immediately if this client has enough credit available on its
+     * link to the Hono server or it will be sent later after this client has been replenished
+     * with more credit. In both cases the handler will be notified <em>once only</em> when this
+     * sender has capacity available for accepting and sending the next message.
      * 
+     * @param deviceId The id of the device.
+     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
+     * @param payload The data to send.
+     *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
+     * @param contentType The content type of the payload.
+     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param capacityAvailableHandler The handler to notify when this sender can accept and send
+     *                                 another message.
+     */
+    void send(String deviceId, byte[] payload, String contentType, Handler<Void> capacityAvailableHandler);
+
+    /**
+     * Sets a callback for handling the closing of this sender due to an error condition indicated by
+     * the server.
+     * <p>
+     * When this handler is called back, this client's link to the Hono server's telemetry endpoint has been
+     * closed due to an error condition. Possible reasons include:
+     * <ul>
+     * <li>A sent message does not comply with the Hono Telemetry API.</li>
+     * <li>This client is not authorized to upload data for the tenant it has been configured for.</li>
+     * </ul>
      * The former problem usually indicates an implementation error in the client whereas the
-     * latter problem indicates that the client's authorizations have been changed on the server
+     * latter problem indicates that the client's authorizations might have changed on the server
      * side after it has connected to the server.
-     * </p>
      * 
-     * @param errorHandler The callback for handling errors.
+     * @param errorHandler The callback for handling the error condition. The error handler's <em>cause</em>
+     *                     property will contain the cause for the closing of the link.
      */
     void setErrorHandler(Handler<AsyncResult<Void>> errorHandler);
 
     /**
-     * Closes the AMQP link(s) with the Hono server this client is configured to use.
+     * Closes the AMQP link with the Hono server this sender is using.
      * <p>
      * The underlying AMQP connection to the server is not affected by this operation.
-     * </p>
      * 
-     * @param closeHandler A handler that is called back with the result of the attempt to close the links.
+     * @param closeHandler A handler that is called back with the outcome of the attempt to close the link.
      */
     void close(Handler<AsyncResult<Void>> closeHandler);
 }
