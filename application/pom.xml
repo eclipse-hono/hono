@@ -2,42 +2,27 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-adapters</artifactId>
+    <artifactId>hono-bom</artifactId>
     <version>0.1-SNAPSHOT</version>
+    <relativePath>../bom</relativePath>
   </parent>
-  <artifactId>hono-adapter-rest-vertx</artifactId>
-  <name>Hono REST Adapter</name>
+  <artifactId>hono-app</artifactId>
+  <name>Hono Application</name>
+  <description>A Spring Boot application for running a Hono server</description>
+
+  <properties>
+    <!-- name of Docker image -->
+    <image.target>hono-server</image.target>
+  </properties>
 
   <dependencies>
   	<dependency>
-  		<groupId>io.vertx</groupId>
-  		<artifactId>vertx-web</artifactId>
-  		<version>${vertx.version}</version>
-  	</dependency>
-  	<dependency>
   		<groupId>org.eclipse.hono</groupId>
-  		<artifactId>hono-client</artifactId>
+  		<artifactId>hono-server</artifactId>
   	</dependency>
   	<dependency>
-  		<groupId>org.springframework.boot</groupId>
-  		<artifactId>spring-boot</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.springframework.boot</groupId>
-  		<artifactId>spring-boot-autoconfigure</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.slf4j</groupId>
-  		<artifactId>slf4j-api</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.springframework.boot</groupId>
-  		<artifactId>spring-boot-starter-logging</artifactId>
-  		<scope>runtime</scope>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.eclipse.hono</groupId>
-  		<artifactId>hono-core</artifactId>
+  		<groupId>org.yaml</groupId>
+  		<artifactId>snakeyaml</artifactId>
   	</dependency>
   </dependencies>
 
@@ -56,6 +41,15 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
@@ -91,7 +85,7 @@
                   <build>
                     <from>anapsix/alpine-java:8</from>
                     <ports>
-                      <port>8080</port>
+                      <port>5672</port>
                     </ports>
                     <runCmds>
                       <runCmd>adduser -S -D hono nogroup</runCmd>

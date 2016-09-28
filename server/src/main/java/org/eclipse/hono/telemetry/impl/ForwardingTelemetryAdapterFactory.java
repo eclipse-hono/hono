@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
  *
  */
 @Component
-@Profile({"forwarding-telemetry", "activemq"})
+@Profile({"!standalone"})
 public class ForwardingTelemetryAdapterFactory implements VerticleFactory<TelemetryAdapter> {
 
     private static final int MAX_PORT_NO = 65535;

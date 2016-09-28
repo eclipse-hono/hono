@@ -1,0 +1,24 @@
+spring:
+  profiles:
+    active: default
+---
+
+spring:
+  profiles: default
+hono:
+  maxinstances: 1
+  singletenant: false
+  server:
+    bindaddress: 127.0.0.1
+    port: 5672
+
+---
+
+spring:
+  profiles: activemq
+hono:
+  telemetry:
+    pathseparator: .
+    downstream:
+      host: localhost
+      port: 5671

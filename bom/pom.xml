@@ -44,6 +44,7 @@
     <qpid-dispatch.version>0.6.0</qpid-dispatch.version>
     <qpid-jms.version>0.10.0</qpid-jms.version>
     <slf4j.version>1.7.2</slf4j.version>
+    <snakeyaml.version>1.14</snakeyaml.version>
     <spring.version>4.3.2.RELEASE</spring.version>
     <spring-boot.version>1.4.0.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
@@ -58,35 +59,6 @@
         <artifactId>logback-classic</artifactId>
         <version>${logback.version}</version>
         <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.truth</groupId>
-        <artifactId>truth</artifactId>
-        <version>${truth.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>${junit.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.assertj</groupId>
-        <artifactId>assertj-core</artifactId>
-        <version>${assertj-core.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.activemq</groupId>
-        <artifactId>activemq-amqp</artifactId>
-        <version>${activemq.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.activemq</groupId>
-        <artifactId>activemq-broker</artifactId>
-        <version>${activemq.version}</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.camel</groupId>
@@ -125,27 +97,9 @@
        <version>${vertx-proton.version}</version>
       </dependency>
       <dependency>
-       <groupId>io.vertx</groupId>
-       <artifactId>vertx-unit</artifactId>
-       <version>${vertx.version}</version>
-       <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <version>${mockito.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.apache.qpid</groupId>
         <artifactId>proton-j</artifactId>
         <version>${proton.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.qpid</groupId>
-        <artifactId>qpid-jms-client</artifactId>
-        <version>${qpid-jms.version}</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -156,6 +110,12 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-autoconfigure</artifactId>
         <version>${spring-boot.version}</version>
+      </dependency>
+      <dependency>
+      	<groupId>org.springframework.boot</groupId>
+      	<artifactId>spring-boot-starter-logging</artifactId>
+      	<version>${spring-boot.version}</version>
+      	<scope>runtime</scope>
       </dependency>
       <dependency>
        <groupId>org.slf4j</groupId>
@@ -190,15 +150,70 @@
       	<version>${project.version}</version>
       </dependency>
       <dependency>
+      	<groupId>org.eclipse.hono</groupId>
+      	<artifactId>hono-core</artifactId>
+      	<version>${project.version}</version>
+      </dependency>
+      <dependency>
+      	<groupId>org.yaml</groupId>
+      	<artifactId>snakeyaml</artifactId>
+      	<version>${snakeyaml.version}</version>
+      	<scope>runtime</scope>
+      </dependency>
+
+      <dependency>
       	<groupId>org.objenesis</groupId>
       	<artifactId>objenesis</artifactId>
       	<version>${objenesis.version}</version>
       	<scope>test</scope>
       </dependency>
       <dependency>
-      	<groupId>org.eclipse.hono</groupId>
-      	<artifactId>hono-core</artifactId>
-      	<version>${project.version}</version>
+        <groupId>org.apache.qpid</groupId>
+        <artifactId>qpid-jms-client</artifactId>
+        <version>${qpid-jms.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+       <groupId>io.vertx</groupId>
+       <artifactId>vertx-unit</artifactId>
+       <version>${vertx.version}</version>
+       <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>${mockito.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>${assertj-core.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-broker</artifactId>
+        <version>${activemq.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-amqp</artifactId>
+        <version>${activemq.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.google.truth</groupId>
+        <artifactId>truth</artifactId>
+        <version>${truth.version}</version>
+        <scope>test</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>

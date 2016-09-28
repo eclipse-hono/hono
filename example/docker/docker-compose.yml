@@ -18,11 +18,11 @@ hono:
   links:
     - qdrouter
   environment:
-    - SPRING_CONFIG_LOCATION=file:/etc/hono/
     - HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json
-    - HONO_TELEMETRY_DOWNSTREAM_HOST=qdrouter
-    - HONO_MAXINSTANCES=2
+    - HONO_MAXINSTANCES=1
     - LOGGING_CONFIG=file:///etc/hono/logback-spring.xml
+    - SPRING_CONFIG_LOCATION=file:/etc/hono/
+    - SPRING_PROFILES_ACTIVE=default,dev
   volumes_from:
     - hono-config
 

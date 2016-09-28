@@ -18,11 +18,11 @@ import org.springframework.context.annotation.Configuration;
 import io.vertx.core.Vertx;
 
 /**
- * A simple factory for providing a singleton {@code Vertx} instance to be used with
+ * Definition of a singleton {@code Vert.x} instance to be used with
  * Spring dependency injection.
  */
 @Configuration
-public class VertxFactory {
+public class VertxConfig {
 
     private static final Vertx vertx = Vertx.vertx();
 

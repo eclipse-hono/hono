@@ -11,15 +11,8 @@
  */
 package org.eclipse.hono.registration.impl;
 
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.util.RegistrationConstants.ACTION_DEREGISTER;
-import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
-import static org.eclipse.hono.util.RegistrationConstants.ACTION_REGISTER;
+import static java.net.HttpURLConnection.*;
+import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +22,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.eventbus.Message;
@@ -40,7 +32,6 @@ import io.vertx.core.json.JsonObject;
  * Simple "in memory" device registration.
  */
 @Service
-@Profile({"forwarding-telemetry", "activemq"})
 public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryRegistrationAdapter.class);

@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
  * to see if the sender implements flow control correctly.
  */
 @Service
-@Profile("testing")
+@Profile("standalone")
 public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageDiscardingTelemetryAdapter.class);

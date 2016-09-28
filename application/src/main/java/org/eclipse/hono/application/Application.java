@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono;
+package org.eclipse.hono.application;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +53,7 @@ import io.vertx.core.json.JsonObject;
  * of instances to create. This may be useful for executing tests etc.
  * </p>
  */
-@ComponentScan
+@ComponentScan(basePackages = "org.eclipse.hono")
 @Configuration
 @EnableAutoConfiguration
 public class Application {
@@ -105,9 +105,9 @@ public class Application {
         });
 
         CompositeFuture.all(
+                deployAuthenticationService(), // we only need 1 authentication service
+                deployVerticle(authServiceFactory, instanceCount), // we only need 1 authorization service
                 deployVerticle(adapterFactory, instanceCount),
-                deployVerticle(authServiceFactory, instanceCount),
-                deployVerticle(authenticationServiceFactory, instanceCount),
                 deployRegistrationService()).setHandler(ar -> {
             if (ar.succeeded()) {
                 deployServer(instanceCount, started);
@@ -168,6 +168,14 @@ public class Application {
         LOG.info("Starting registration service {}", registration);
         Future<String> result = Future.future();
         vertx.deployVerticle(registration, result.completer());
+        return result;
+    }
+
+    private Future<String> deployAuthenticationService() {
+        AuthenticationService authenticationService = authenticationServiceFactory.newInstance();
+        LOG.info("Starting authentication service {}", authenticationService);
+        Future<String> result = Future.future();
+        vertx.deployVerticle(authenticationService, result.completer());
         return result;
     }
 

@@ -1,0 +1,21 @@
+hono:
+  maxinstances: 1
+  server:
+    bindaddress: 0.0.0.0
+---
+spring:
+  profiles: qpid
+hono:
+  telemetry:
+    downstream:
+      host: qdrouter
+      port: 5673
+---
+spring:
+  profiles: activemq
+hono:
+  telemetry:
+    pathseparator: .
+    downstream:
+      host: activemq
+      port: 5672

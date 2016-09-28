@@ -1,0 +1,27 @@
+spring:
+  profiles:
+    active: default
+
+---
+
+spring:
+  profiles: default
+hono:
+  maxinstances: 0
+  server:
+    bindaddress: 0.0.0.0
+  telemetry:
+    downstream:
+      host: qdrouter
+      port: 5673
+
+---
+
+spring:
+  profiles: activemq
+hono:
+  telemetry:
+    pathseparator: .
+    downstream:
+      host: localhost
+      port: 5671
