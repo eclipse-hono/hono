@@ -51,12 +51,13 @@ public final class PlainSaslAuthenticator implements ProtonSaslAuthenticator {
 
     @Override
     public void init(final NetSocket socket, final ProtonConnection protonConnection, final Transport transport) {
+        LOG.debug("initializing PLAIN SASL authenticator");
         this.protonConnection = protonConnection;
         this.sasl = transport.sasl();
         // TODO determine supported mechanisms dynamically based on registered AuthenticationService implementations
-        sasl.setMechanisms(PLAIN);
         sasl.server();
         sasl.allowSkip(false);
+        sasl.setMechanisms(PLAIN);
     }
 
     @Override
@@ -72,6 +73,7 @@ public final class PlainSaslAuthenticator implements ProtonSaslAuthenticator {
             if (PLAIN.equals(chosenMechanism)) {
                 evaluatePlainResponse(completionHandler);
             } else {
+                sasl.done(SaslOutcome.PN_SASL_AUTH);
                 completionHandler.handle(false);
             }
         } else {
