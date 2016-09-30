@@ -22,6 +22,7 @@ import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.TelemetryConsumer;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,6 +98,7 @@ public class ExampleReceiver {
     }
 
     private void handleMessage(final Message msg) {
+        String deviceId = MessageHelper.getDeviceId(msg);
         Section body = msg.getBody();
         String content = null;
         if (body instanceof Data) {
@@ -104,6 +106,6 @@ public class ExampleReceiver {
         } else if (body instanceof AmqpValue) {
             content = ((AmqpValue) msg.getBody()).getValue().toString();
         }
-        LOG.info("received telemetry message [content-type: {}]: {}", msg.getContentType(), content);
+        LOG.info("received telemetry message [device: {}, content-type: {}]: {}", deviceId, msg.getContentType(), content);
     }
 }
