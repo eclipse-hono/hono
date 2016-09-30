@@ -59,6 +59,7 @@ public final class HonoServer extends AbstractVerticle {
     private String                bindAddress;
     private int                   port;
     private boolean               singleTenant;
+    private boolean               networkDebugLoggingEnabled;
     private final int             instanceNo;
     private ProtonServer          server;
     private Map<String, Endpoint> endpoints = new HashMap<>();
@@ -131,10 +132,12 @@ public final class HonoServer extends AbstractVerticle {
     }
 
     ProtonServerOptions createServerOptions() {
+
         ProtonServerOptions options = new ProtonServerOptions();
         options.setIdleTimeout(0);
         options.setReceiveBufferSize(32 * 1024); // 32kb
         options.setSendBufferSize(32 * 1024); // 32kb
+        options.setLogActivity(networkDebugLoggingEnabled);
         return options;
     }
 
@@ -185,6 +188,10 @@ public final class HonoServer extends AbstractVerticle {
 
     public String getBindAddress() {
         return bindAddress;
+    }
+
+    public void setNetworkDebugLoggingEnabled(final boolean enabled) {
+        this.networkDebugLoggingEnabled = enabled;
     }
 
     /**

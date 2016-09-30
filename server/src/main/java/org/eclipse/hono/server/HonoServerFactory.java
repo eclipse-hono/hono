@@ -20,6 +20,16 @@ import org.springframework.stereotype.Component;
 
 /**
  * A factory for creating {@code HonoServer} instances configured via Spring Boot.
+ * <p>
+ * The following Spring Boot environment properties are evaluated:
+ * <ul>
+ * <li>{@code hono.server.bindaddress} - The IP address to bind the server to. If not specified
+ * the server binds to the loopback device (127.0.0.1).</li>
+ * <li>{@code hono.server.port} - The port to listen on. If not specified the server listens on the
+ * AMQP 1.0 standard port 5672.</li>
+ * <li>{@code hono.networkdebuglogging} - If {@code true} Hono logs TCP traffic. Defaults to {@code false}.</li>
+ * <li>{@code hono.singletenant} - If {@code true} the server supports a single tenant only. Defaults to {@false}.</li>
+ * </ul>
  */
 @Component
 public class HonoServerFactory implements VerticleFactory<HonoServer> {
@@ -27,6 +37,7 @@ public class HonoServerFactory implements VerticleFactory<HonoServer> {
     private String                bindAddress;
     private int                   port;
     private boolean               singleTenant;
+    private boolean               networkDebugLoggingEnabled;
 
     /**
      * Sets the port Hono will listen on for AMQP 1.0 connections.
@@ -68,6 +79,19 @@ public class HonoServerFactory implements VerticleFactory<HonoServer> {
         this.singleTenant = singleTenant;
     }
 
+    /**
+     * Sets whether this instance should log TCP traffic.
+     * <p>
+     * Default is {@code false}.
+     * </p>
+     * 
+     * @param enabled {@code true} if TCP traffic should be logged.
+     */
+    @Value(value = "${hono.networkdebuglogging:false}")
+    public void setNetworkDebugLoggingEnabled(final boolean enabled) {
+        this.networkDebugLoggingEnabled = enabled;
+    }
+
     @Override
     public HonoServer newInstance() {
         return new HonoServer(bindAddress, port, singleTenant);
@@ -75,6 +99,8 @@ public class HonoServerFactory implements VerticleFactory<HonoServer> {
 
     @Override
     public HonoServer newInstance(final int instanceNo, final int totalNoOfInstances) {
-        return new HonoServer(bindAddress, port, singleTenant, instanceNo);
+        HonoServer server = new HonoServer(bindAddress, port, singleTenant, instanceNo);
+        server.setNetworkDebugLoggingEnabled(networkDebugLoggingEnabled);
+        return server;
     }
 }
