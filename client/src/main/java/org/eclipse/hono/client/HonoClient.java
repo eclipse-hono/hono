@@ -11,10 +11,13 @@
  */
 package org.eclipse.hono.client;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -25,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -38,25 +42,41 @@ import io.vertx.proton.ProtonConnection;
 public class HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClient.class);
-    private final Vertx vertx;
     private final String host;
     private final int port;
     private final String pathSeparator;
-    private ProtonConnection connection;
+    private final Map<String, TelemetrySender> activeSenders = new ConcurrentHashMap<>();
     private final String user;
     private final String password;
+    private ProtonClientOptions clientOptions;
+    private ProtonConnection connection;
+    private AtomicBoolean connecting = new AtomicBoolean(false);
+    private Context connectionContext;
+    private ProtonClient protonClient;
+
+    /**
+     * Creates a new client for a set of configuration properties.
+     * 
+     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
+     * @param config The configuration properties.
+     */
+    public HonoClient(final Vertx vertx, final HonoClientConfigProperties config) {
+        this(HonoClientBuilder.newClient(config).vertx(vertx));
+    }
 
     private HonoClient(final HonoClientBuilder builder) {
+
         if (builder.vertx != null) {
-            this.vertx = builder.vertx;
+            this.protonClient = ProtonClient.create(builder.vertx);
         } else {
-            this.vertx = Vertx.vertx();
+            this.protonClient = ProtonClient.create(Vertx.vertx());
         }
         this.host = Objects.requireNonNull(builder.host);
         this.port = builder.port;
         this.user = builder.user;
         this.password = builder.password;
         this.pathSeparator = builder.pathSeparator == null ? "/" : builder.pathSeparator;
+        
     }
 
     /**
@@ -69,9 +89,7 @@ public class HonoClient {
     }
 
     public HonoClient connect(final ProtonClientOptions options, final Handler<AsyncResult<HonoClient>> connectionHandler) {
-        return connect(options, connectionHandler, dis -> {
-            LOG.debug("client got disconnected from server [{}:{}]", host, port);
-        });
+        return connect(options, connectionHandler, null);
     }
 
     public HonoClient connect(
@@ -79,21 +97,38 @@ public class HonoClient {
             final Handler<AsyncResult<HonoClient>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
 
+        Objects.requireNonNull(connectionHandler);
+
         if (isConnected()) {
             LOG.debug("already connected to server [{}:{}]", host, port);
             connectionHandler.handle(Future.succeededFuture(this));
-        } else {
-
+        } else if (connecting.compareAndSet(false, true)) {
+            if (options == null) {
+                clientOptions = new ProtonClientOptions();
+            } else {
+                clientOptions = options;
+            }
             LOG.debug("connecting to server [{}:{}] with user [{}]...", host, port, user);
-            final ProtonClient client = ProtonClient.create(vertx);
 
-            client.connect(options, host, port, user, password, conAttempt -> {
+            protonClient.connect(clientOptions, host, port, user, password, conAttempt -> {
+
+                // capture current context for using it when reconnecting
+                connectionContext = Vertx.currentContext();
+
                 if (conAttempt.succeeded()) {
                     LOG.info("connected to server [{}:{}]", host, port);
+
+                    if (disconnectHandler != null) {
+                        conAttempt.result().disconnectHandler(disconnectHandler);
+                    } else {
+                        conAttempt.result().disconnectHandler(this::handleRemoteDisconnect);
+                    }
+
                     conAttempt.result()
                         .setHostname("hono")
                         .setContainer("Hono-Client-" + UUID.randomUUID().toString())
                         .openHandler(opened -> {
+                            connecting.compareAndSet(true, false);
                             if (opened.succeeded()) {
                                 LOG.info("connection to [{}] open", opened.result().getRemoteContainer());
                                 connection = opened.result();
@@ -109,6 +144,35 @@ public class HonoClient {
                 }
             });
 
+        } else {
+            LOG.debug("already trying to connect to Hono server ...");
+        }
+        return this;
+    }
+
+    private void handleRemoteDisconnect(final ProtonConnection con) {
+        LOG.info("connection to Hono has been interrupted");
+        activeSenders.clear();
+        if (clientOptions.getReconnectInterval() > 0) {
+            // assume that we want to reconnect
+            clientOptions = new ProtonClientOptions().setReconnectAttempts(clientOptions.getReconnectAttempts()).setReconnectInterval(clientOptions.getReconnectInterval());
+            connectionContext.runOnContext(reconnect -> {
+                con.disconnect();
+                LOG.debug("attempting to re-connect {} time(s) every {} ms", clientOptions.getReconnectAttempts(), clientOptions.getReconnectInterval());
+                connect(clientOptions, done -> {});
+            });
+        }
+    }
+
+    public HonoClient getOrCreateTelemetrySender(
+            final String tenantId,
+            final Handler<AsyncResult<TelemetrySender>> resultHandler) {
+
+        TelemetrySender sender = activeSenders.get(Objects.requireNonNull(tenantId));
+        if (sender != null) {
+            resultHandler.handle(Future.succeededFuture(sender));
+        } else {
+            createTelemetrySender(tenantId, resultHandler);
         }
         return this;
     }
@@ -121,7 +185,14 @@ public class HonoClient {
         if (connection == null || connection.isDisconnected()) {
             creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
         } else {
-            TelemetrySenderImpl.create(connection, tenantId, creationHandler);
+            TelemetrySenderImpl.create(connection, tenantId, creationResult -> {
+                if (creationResult.succeeded()) {
+                    activeSenders.put(tenantId, creationResult.result());
+                    creationHandler.handle(Future.succeededFuture(creationResult.result()));
+                } else {
+                    creationHandler.handle(Future.failedFuture(creationResult.cause()));
+                }
+            });
         }
         return this;
     }
@@ -211,6 +282,17 @@ public class HonoClient {
 
         public static HonoClientBuilder newClient() {
             return new HonoClientBuilder();
+        }
+
+        public static HonoClientBuilder newClient(final HonoClientConfigProperties config) {
+            HonoClientBuilder builder = new HonoClientBuilder();
+            builder
+                .host(config.getHost())
+                .port(config.getPort())
+                .user(config.getUsername())
+                .password(config.getPassword())
+                .pathSeparator(config.getPathSeparator());
+            return builder;
         }
 
         /**
