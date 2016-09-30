@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<LWM2M xsi:noNamespaceSchemaLocation="http://openmobilealliance.org/tech/profiles/LWM2M.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Object ObjectType="MODefinition">
+        <Name>LWM2MAccessControl</Name>
+        <Description1>Access Control Object is used to check whether the LWM2M Server has access right for performing a operation.</Description1>
+        <ObjectID>2</ObjectID>
+        <ObjectURN>TBD</ObjectURN>
+        <MultipleInstances>Multiple</MultipleInstances>
+        <Mandatory>Optional</Mandatory>
+        <Resources>
+            <Item ID="0">
+                <Name>objectId</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration>1-65534</RangeEnumeration>
+                <Units></Units>
+                <Description>The Object ID and The Object Instance ID are applied for.</Description>
+            </Item>
+            <Item ID="1">
+                <Name>objectInstanceId</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration>0-65535</RangeEnumeration>
+                <Units></Units>
+                <Description>See Table 14: LWM2M Identifiers.</Description>
+            </Item>
+            <Item ID="2">
+                <Name>acl</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Multiple</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Resource Instance ID MUST be the Short Server ID of a certain LWM2M Server which has an access right. Resource Instance ID 0 is for default Short Server ID. The Value of the Resource Instance contains the access rights. Setting each bit means the LWM2M Server has the access right for that operation. The bit order is specified as below. 1st lsb: R(Read, Observe, Discover, Write Attributes) 2nd lsb: W(Write) 3rd lsb: E(Execute) 4th lsb: D(Delete) 5th lsb: C(Create) Other bits are reserved for future use</Description>
+            </Item>
+            <Item ID="3">
+                <Name>accessControlOwner</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration>0-65535</RangeEnumeration>
+                <Units></Units>
+                <Description>Short Server ID of a certain LWM2M Server. Only this LWM2M Server can manage these Resources of the Object Instance. Value MAX_ID=65535 is reserved for the Access Control Object Instances created during Bootstrap procedure.</Description>
+            </Item>
+        </Resources>
+        <Description2>"==E.3.1 Object Instance Configurations== If a new LWM2M Server Account is added when LWM2M Client has only one LWM2M Server Account, Client MUST ensure that Access Control Object Instances for every Object Instance except Security Object Instance exist. The LWM2M Client MUST create the missing Access Control Object Instances as follows: - Access Control Owner MUST be the previously existing LWM2M Server - Previously existing LWM2M Server MUST have full access right."</Description2>
+    </Object>
+</LWM2M>

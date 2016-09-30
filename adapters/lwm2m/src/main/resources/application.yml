@@ -1,0 +1,32 @@
+spring:
+  profiles:
+    active: step2,dev
+
+---
+spring:
+  profiles: standalone,step1,step2
+
+leshan:
+  server:
+    coapBindAddress: 0.0.0.0
+    coapPort: 5683
+    coapsBindAddress: 0.0.0.0
+    coapsPort: 5684
+    httpPort: 8090
+    objectdir:
+
+---
+
+spring:
+  profiles: step1,step2
+
+hono:
+  client:
+    name: LWM2M Adapter
+    host: 127.0.0.1
+    port: 5672
+    username: hono-client
+    password: secret
+  lwm2m:
+    adapter:
+      tenant: DEFAULT_TENANT

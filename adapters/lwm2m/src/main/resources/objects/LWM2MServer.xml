@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<LWM2M xsi:noNamespaceSchemaLocation="http://openmobilealliance.org/tech/profiles/LWM2M.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Object ObjectType="MODefinition">
+        <Name>LWM2MServer</Name>
+        <Description1>This LWM2M Objects provides the data related to a LWM2M Server. A Bootstrap Server has no such an Object Instance associated to it.</Description1>
+        <ObjectID>1</ObjectID>
+        <ObjectURN>"TBD"</ObjectURN>
+        <MultipleInstances>Multiple</MultipleInstances>
+        <Mandatory>Mandatory</Mandatory>
+        <Resources>
+            <Item ID="0">
+                <Name>shortServerId</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration>1-65535</RangeEnumeration>
+                <Units></Units>
+                <Description>Used as link to associate server Object Instance.</Description>
+            </Item>
+            <Item ID="1">
+                <Name>lifetime</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>s</Units>
+                <Description>Specify the lifetime of the registration in seconds.</Description>
+            </Item>
+            <Item ID="2">
+                <Name>defaultMinimumPeriod</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>s</Units>
+                <Description>The default value the LWM2M Client should use for the Minimum Period of an Observation in the absence of this parameter being included in an Observation. If this Resource doesn not exist, the default value is 1.</Description>
+            </Item>
+            <Item ID="3">
+                <Name>defaultMaximumPeriod</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>s</Units>
+                <Description>The default value the LWM2M Client should use for the Maximum Period of an Observation in the absence of this parameter being included in an Observation.</Description>
+            </Item>
+            <Item ID="4">
+                <Name>disable</Name>
+                <Operations>E</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type></Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>If this Resource is executed, this LWM2M Server Object is disabled for a certain period defined in the Disabled Timeout Resource. After receiving "Execute" operation, LWM2M Client MUST send
+ 				   response of the operation and perform de-registration process, and underlying network connection between the Client and Server MUST be disconnected to disable the LWM2M Server account.
+				   After the above process, the LWM2M Client MUST NOT send any message to the Server and ignore all the messages from the LWM2M Server for the period.</Description>
+            </Item>
+            <Item ID="5">
+                <Name>disableTimeout</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>s</Units>
+                <Description>A period to disable the Server. After this period, the LWM2M Client MUST perform registration process to the Server. If this Resource is not set, a default timeout value is 86400 (1 day).</Description>
+            </Item>
+            <Item ID="6">
+                <Name>notificationStoringWhenDisabledOrOffline</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Boolean</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>If true, the LWM2M Client stores 'Notify' operations to the LWM2M Server while the LWM2M Server account is disabled or the LWM2M Client is offline. After the LWM2M Server account is enabled or the LWM2M Client is online, the LWM2M Client reports the stored Notify operations to the Server. If false, the LWM2M Client discards all the Notify operationsor temporally disables the Observe function while the LWM2M Server is disabled or the LWM2M Client is offline. The default value is true. The maximum number of storing Notification per the Server is up to the implementation.</Description>
+            </Item>
+            <Item ID="7">
+                <Name>binding</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>This Resource defines the transport binding configured for the LWM2M Client. If the LWM2M Client supports the binding specified in this Resource, the LWM2M Client MUST use that for Current Binding and Mode.</Description>
+            </Item>
+            <Item ID="8">
+                <Name>registrationUpdateTrigger</Name>
+                <Operations>E</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type></Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>If this Resource is executed the LWM2M Client MUST perform an "Update" operation with this LWM2M Server using the Current Transport Binding and Mode.</Description>
+            </Item>
+        </Resources>
+        <Description2>""</Description2>
+    </Object>
+</LWM2M>
