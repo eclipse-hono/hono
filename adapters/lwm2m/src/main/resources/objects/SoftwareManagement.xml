@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<LWM2M xsi:noNamespaceSchemaLocation="http://openmobilealliance.org/tech/profiles/LWM2M.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Object ObjectType="MODefinition">
+        <Name>SoftwareManagement</Name>
+        <Description1>This LWM2M objects provides the resources needed to perform software management on the device. Each software component is managed via a dedicated Software Management Object instance.</Description1>
+        <ObjectID>9</ObjectID>
+        <ObjectURN>"urn:oma:lwm2m:oma:9"</ObjectURN>
+        <MultipleInstances>Multiple</MultipleInstances>
+        <Mandatory>Optional</Mandatory>
+        <Resources>
+            <Item ID="0">
+                <Name>swPkgName</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration>0-255 bytes</RangeEnumeration>
+                <Units></Units>
+                <Description>Name of the software package</Description>
+            </Item>
+            <Item ID="1">
+                <Name>swPkgVersion</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration>0-255 bytes</RangeEnumeration>
+                <Units></Units>
+                <Description>Version of the software package</Description>
+            </Item>
+            <Item ID="2">
+                <Name>swPackage</Name>
+                <Operations>W</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Opaque</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Software package</Description>
+            </Item>
+            <Item ID="3">
+                <Name>swPackageUri</Name>
+                <Operations>W</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration>0-255 bytes</RangeEnumeration>
+                <Units></Units>
+                <Description>URI from where the device can download the software package by an alternative mechanism. As soon the device has received the Package URI it performs the download at the next practical opportunity.</Description>
+            </Item>
+            <Item ID="4">
+                <Name>swInstallUpdate</Name>
+                <Operations>E</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type></Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Instals/updates software by using the software package stored in Package, or, by using the software downloaded from the Package URI. This Resource is only executable when the value of the State Resource is Downloaded.</Description>
+            </Item>
+            <Item ID="5">
+                <Name>swInstallationOptions</Name>
+                <Operations>W</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Indication of installation options such as the target system, ...</Description>
+            </Item>
+            <Item ID="6">
+                <Name>swUninstall</Name>
+                <Operations>E</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type></Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Uninstalls the software package and Update state is set back to IDLE</Description>
+            </Item>
+            <Item ID="7">
+                <Name>swUpdateState</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration>1-3</RangeEnumeration>
+                <Units></Units>
+                <Description>Indicates current state with respect to this software update. This value is set by the LWM2M Client. 1: IDLE (before downloading or after updating) 2: DOWNLOADING (The data sequence is on the way) 3: DOWNLOADED If writing the software package to Package Resource is done, or, if the device has downloaded the software package from the Package URI the state changes to DOWNLOADED. If writing an empty string to Package Resource is done or writing an empty string to Package URI is done, the state changes to IDLE. If performing the Update Resource failed, the state remains at DOWNLOADED. If performing the Update Resource was successful, the state changes from Downloaded to IDLE.</Description>
+            </Item>
+            <Item ID="8">
+                <Name>swUpdateSupportedObjects</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Boolean</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>If this value is true, the LWM2M Client MUST inform the registered LWM2M Servers of Objects and Object Instances parameter by sending an Update or Registration message after the software update operation at the next practical opportunity if supported Objects in the LWM2M Client have changed, in order for the LWM2M Servers to promptly manage newly installed Objects. If false, Objects and Object Instances parameter MUST be reported at the next periodic Update message. The default value is false.</Description>
+            </Item>
+            <Item ID="9">
+                <Name>swUpdateResult</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration>0-8</RangeEnumeration>
+                <Units></Units>
+                <Description>Contains the result of downloading or installing/uninstalling the software 0: Default value. Once the installing/uninstalling process is initiated, this Resource SHOULD be reset to default value. 1: Software updated successfully, 2: Not enough storage for the new software package. 3. Out of memory during downloading process. 4: Connection lost during downloading process. 5: CRC check failure for new downloaded package. 6: Unsupported package type. 7: Invalid URI 8: Software uninstalled successfully This Resource MAY be reported by sending Observe operation.</Description>
+            </Item>
+            <Item ID="10">
+                <Name>swActivate</Name>
+                <Operations>E</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type></Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>This action activates software previously successfully installed. </Description>
+            </Item>
+            <Item ID="11">
+                <Name>swDeactivate</Name>
+                <Operations>E</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type></Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>This action deactivates software</Description>
+            </Item>
+            <Item ID="12">
+                <Name>swActivationResult</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Boolean</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Indicates current activation state of this software: 0: DISABLED 1: ENABLED On "Activation Result"-change, "Update state" is set back to IDLE state.</Description>
+            </Item>
+        </Resources>
+        <Description2>""</Description2>
+    </Object>
+</LWM2M>

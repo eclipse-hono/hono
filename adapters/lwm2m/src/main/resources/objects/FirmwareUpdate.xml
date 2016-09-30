@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<LWM2M xsi:noNamespaceSchemaLocation="http://openmobilealliance.org/tech/profiles/LWM2M.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Object ObjectType="MODefinition">
+        <Name>FirmwareUpdate</Name>
+        <Description1>This LWM2M Object enables management of firmware which is to be updated. This Object includes installing firmware package, updating firmware, and performing actions after updating firmware.</Description1>
+        <ObjectID>5</ObjectID>
+        <ObjectURN>"urn:oma:lwm2m:oma:5"</ObjectURN>
+        <MultipleInstances>Single</MultipleInstances>
+        <Mandatory>Optional</Mandatory>
+        <Resources>
+            <Item ID="0">
+                <Name>package</Name>
+                <Operations>W</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Opaque</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Firmware package.</Description>
+            </Item>
+            <Item ID="1">
+                <Name>packageUri</Name>
+                <Operations>W</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration>0-255 bytes</RangeEnumeration>
+                <Units></Units>
+                <Description>URI from where the device can download the firmware package by an alternative mechanism. As soon the device has received the Package URI it performs the download at the next practical opportunity.</Description>
+            </Item>
+            <Item ID="2">
+                <Name>update</Name>
+                <Operations>E</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type></Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Updates firmware by using the firmware package stored in Package, or, by using the firmware downloaded from the Package URI. This Resource is only executable when the value of the State Resource is Downloaded.</Description>
+            </Item>
+            <Item ID="3">
+                <Name>state</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration>1-3</RangeEnumeration>
+                <Units></Units>
+                <Description>Indicates current state with respect to this firmware update. This value is set by the LWM2M Client.1: Idle (before downloading or after updating)2: Downloading (The data sequence is on the way)3: DownloadedIf writing the firmware package to Package Resource is done, or, if the device has downloaded the firmware package from the Package URI the state changes to Downloaded. If writing an empty string to Package Resource is done or writing an empty string to Package URI is done, the state changes to Idle. If performing the Update Resource failed, the state remains at Downloaded. If performing the Update Resource was successful, the state changes from Downloaded to Idle.</Description>
+            </Item>
+            <Item ID="4">
+                <Name>updateSupportedObjects</Name>
+                <Operations>RW</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Boolean</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>If this value is true, the LWM2M Client MUST inform the registered LWM2M Servers of Objects and Object Instances parameter by sending an Update or Registration message after the firmware update operation at the next practical opportunity if supported Objects in the LWM2M Client have changed, in order for the LWM2M Servers to promptly manage newly installed Objects. If false, Objects and Object Instances parameter MUST be reported at the next periodic Update message. The default value is false.</Description>
+            </Item>
+            <Item ID="5">
+                <Name>updateResult</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration>0-6</RangeEnumeration>
+                <Units></Units>
+                <Description>Contains the result of downloading or updating the firmware 0: Default value. Once the updating process is initiated, this Resource SHOULD be reset to default value. 1: Firmware updated successfully, 2: Not enough storage for the new firmware package.  3. Out of memory during downloading process. 4: Connection lost during downloading process. 5: CRC check failure for new downloaded package. 6: Unsupported package type. 7: Invalid URI This Resource MAY be reported by sending Observe operation.</Description>
+            </Item>
+            <Item ID="6">
+                <Name>pkgName</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration>0-255 bytes</RangeEnumeration>
+                <Units></Units>
+                <Description>Name of the Firmware Package</Description>
+            </Item>
+            <Item ID="7">
+                <Name>pkgVersion</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration>0-255 bytes</RangeEnumeration>
+                <Units></Units>
+                <Description>Version of the Firmware package</Description>
+            </Item>
+        </Resources>
+        <Description2>"==E.6.1 Firmware Update Consideration== If some Objects are not supported after firmware update, the LWM2M Client MUST delete all the Object Instances of the Objects that are not supported."</Description2>
+    </Object>
+</LWM2M>
