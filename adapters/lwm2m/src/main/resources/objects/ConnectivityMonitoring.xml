@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<LWM2M xsi:noNamespaceSchemaLocation="http://openmobilealliance.org/tech/profiles/LWM2M.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Object ObjectType="MODefinition">
+        <Name>ConnectivityMonitoring</Name>
+        <Description1>Function block model for LwM2M ConnectivityMonitoring Object. Object ID 4.</Description1>
+        <ObjectID>4</ObjectID>
+        <ObjectURN>TBD</ObjectURN>
+        <MultipleInstances>Single</MultipleInstances>
+        <Mandatory>Optional</Mandatory>
+        <Resources>
+            <Item ID="0">
+                <Name>networkBearer</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Indicates the network bearer used for the current LWM2M communication session from the below network bearer list.
+0-20 are Cellular Bearers
+0: GSM cellular network
+1: TD-SCDMA cellular network
+2: WCDMA cellular network
+3: CDMA2000 cellular network
+4: WiMAX cellular network
+5: LTE-TDD cellular network
+6: LTE-FDD cellular network
+7-20: Reserved for other type cellular network
+21-40 are Wireless Bearers
+21: WLAN network
+22: Bluetooth network
+23: IEEE 802.15.4 network
+24-40: Reserved for other type local wireless network
+41-50 are Wireline Bearers
+41: Ethernet
+42: DSL
+43: PLC
+44-50: reserved for others type wireline networks.</Description>
+            </Item>
+            <Item ID="1">
+                <Name>availableNetworkBearer</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Multiple</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Indicates list of current available network bearer. Each Resource Instance has a value from the network bearer list.</Description>
+            </Item>
+            <Item ID="2">
+                <Name>radioSignalStrength</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>dBm</Units>
+                <Description>This node contains the average value of the received signal strength indication used in the current network bearer in case Network Bearer Resource indicates a Cellular Network (RXLEV range 0..64) 0 is lower than 110dBm, 64 is more 48 dBm). Refer to [3GPP 44.018] for more details on Network Measurement Report encoding and [3GPP 45.008] or for Wireless Networks refer to the appropriate wireless standard.</Description>
+            </Item>
+            <Item ID="3">
+                <Name>linkQuality</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>This contains received link quality e.g., LQI for IEEE 802.15.4, (Range (0..255)), RxQual Downlink (for GSM range is 0..7). Refer to [3GPP 44.018] for more details on Network Measurement Report encoding.</Description>
+            </Item>
+            <Item ID="4">
+                <Name>ipAddresses</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Multiple</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>The IP addresses assigned to the connectivity interface. (e.g. IPv4, IPv6, etc.)</Description>
+            </Item>
+            <Item ID="5">
+                <Name>routerIpAddresse</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Multiple</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>The IP address of the next-hop IP router. Note: This IP Address does not indicate the Server IP address.</Description>
+            </Item>
+            <Item ID="6">
+                <Name>linkUtilization</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>%</Units>
+                <Description>The average utilization of the link to the next-hop IP router in %.</Description>
+            </Item>
+            <Item ID="7">
+                <Name>apn</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Multiple</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>String</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Access Point Name in case Network Bearer Resource is a Cellular Network.</Description>
+            </Item>
+            <Item ID="8">
+                <Name>cellId</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Serving Cell ID in case Network Bearer Resource is a Cellular Network. As specified in TS [3GPP 23.003] and in [3GPP. 24.008]. Range (0..65535) in GSM/EDGE UTRAN Cell ID has a length of 28 bits. Cell Identity in WCDMA/TD-SCDMA. Range: (0..268435455). LTE Cell ID has a length of 28 bits. Parameter definitions in [3GPP 25.331].</Description>
+            </Item>
+            <Item ID="9">
+                <Name>smnc</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Serving Mobile Network Code. In case Network Bearer Resource has 0(cellular network). Range (0..999). As specified in TS [3GPP 23.003].</Description>
+            </Item>
+            <Item ID="10">
+                <Name>smcc</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Serving Mobile Country Code. In case Network Bearer Resource has 0 (cellular network). Range (0..999). As specified in TS [3GPP 23.003].</Description>
+            </Item>
+        </Resources>
+        <Description2>"This LWM2M Object enables monitoring of parameters related to network connectivity.
+In this general connectivity Object, the Resources are limited to the most general cases common to most network bearers. It is recommended to read the description, which refers to relevant standard development organizations (e.g. 3GPP, IEEE).
+The goal of the Connectivity Monitoring Object is to carry information reflecting the more up to date values of the current connection for monitoring purposes. Resources such as Link Quality, Radio Signal Strenght, Cell ID are retrieved during connected mode at least for cellular networks."</Description2>
+    </Object>
+</LWM2M>

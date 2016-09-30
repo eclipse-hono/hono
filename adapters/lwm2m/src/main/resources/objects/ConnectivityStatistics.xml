@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<LWM2M xsi:noNamespaceSchemaLocation="http://openmobilealliance.org/tech/profiles/LWM2M.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Object ObjectType="MODefinition">
+        <Name>ConnectivityStatistics</Name>
+        <Description1>This LWM2M Objects enables client to collect statistical information and enables the LWM2M Server to retrieve these information, set the collection duration and reset the statistical parameters.</Description1>
+        <ObjectID>7</ObjectID>
+        <ObjectURN>TBD</ObjectURN>
+        <MultipleInstances>Single</MultipleInstances>
+        <Mandatory>Optional</Mandatory>
+        <Resources>
+            <Item ID="0">
+                <Name>smsTxCounter</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Indicate the total number of SMS successfully transmitted during the collection period.</Description>
+            </Item>
+            <Item ID="1">
+                <Name>smsRxCounter</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units></Units>
+                <Description>Indicate the total number of SMS successfully received during the collection period.</Description>
+            </Item>
+            <Item ID="2">
+                <Name>txData</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>Kilo-Bytes</Units>
+                <Description>Indicate the total amount of data transmitted during the collection period.</Description>
+            </Item>
+            <Item ID="3">
+                <Name>rxData</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>Kilo-Bytes</Units>
+                <Description>Indicate the total amount of data received during the collection period.</Description>
+            </Item>
+            <Item ID="4">
+                <Name>maxMessageSize</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>Byte</Units>
+                <Description>The maximum message size that is used during the collection period.</Description>
+            </Item>
+            <Item ID="5">
+                <Name>averageMessageSize</Name>
+                <Operations>R</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Optional</Mandatory>
+                <Type>Integer</Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>Byte</Units>
+                <Description>The average message size that is used during the collection period.</Description>
+            </Item>
+            <Item ID="6">
+                <Name>startOrReset</Name>
+                <Operations>E</Operations>
+                <MultipleInstances>Single</MultipleInstances>
+                <Mandatory>Mandatory</Mandatory>
+                <Type></Type>
+                <RangeEnumeration></RangeEnumeration>
+                <Units>Byte</Units>
+                <Description>Start to collect information or reset all other Resources to zeros in this Object. For example, the first time this Resource is executed, the client starts to collect information. The second time this Resource is executed, the values of Resource 0~5 are reset to 0.</Description>
+            </Item>
+        </Resources>
+        <Description2>""</Description2>
+    </Object>
+</LWM2M>
