@@ -17,6 +17,7 @@ package org.eclipse.hono.client;
  */
 public class HonoClientConfigProperties {
 
+    private String name;
     private String host;
     private int port;
     private String username;
@@ -91,5 +92,19 @@ public class HonoClientConfigProperties {
      */
     public void setPathSeparator(String pathSeparator) {
         this.pathSeparator = pathSeparator;
+    }
+
+    /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @param name the name to set
+     */
+    public void setName(String name) {
+        this.name = name;
     }
 }

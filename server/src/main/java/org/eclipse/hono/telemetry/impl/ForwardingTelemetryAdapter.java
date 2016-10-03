@@ -112,7 +112,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         } else if (downstreamContainerPort == 0) {
             throw new IllegalStateException("downstream container port is not set");
         } else {
-            connectToDownstream(startFuture);
+            connectToDownstream(createClientOptions(), startFuture.completer());
         }
     }
 
@@ -130,20 +130,19 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     private ProtonClientOptions createClientOptions() {
         ProtonClientOptions options = new ProtonClientOptions();
-        options.setReconnectAttempts(10)
-                .setReconnectInterval(5 * 1000); // every 5 secs
+        options.setReconnectAttempts(-1).setReconnectInterval(200); // reconnect forever, every 200 millisecs
         return options;
     }
 
-    private void connectToDownstream(final Future<Void> connectHandler) {
+    private void connectToDownstream(final ProtonClientOptions options, final Handler<AsyncResult<Void>> connectHandler) {
 
         LOG.info("connecting to downstream container [{}:{}]...", downstreamContainerHost, downstreamContainerPort);
 
         ProtonClient client = ProtonClient.create(vertx);
-        client.connect(createClientOptions(), downstreamContainerHost, downstreamContainerPort, conAttempt -> {
+        client.connect(options, downstreamContainerHost, downstreamContainerPort, conAttempt -> {
             if (conAttempt.failed()) {
                 LOG.warn("can't connect to downstream AMQP 1.0 container [{}:{}]: {}", downstreamContainerHost, downstreamContainerPort, conAttempt.cause().getMessage());
-                connectHandler.fail(conAttempt.cause());
+                connectHandler.handle(Future.failedFuture(conAttempt.cause()));
             } else {
                 LOG.info("connected to downstream AMQP 1.0 container [{}:{}], opening connection ...",
                         downstreamContainerHost, downstreamContainerPort);
@@ -157,14 +156,14 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
                                     downstreamConnection.getRemoteContainer());
                             downstreamConnection.disconnectHandler(this::onDisconnectFromDownstreamContainer);
                             downstreamConnection.closeHandler(closedConnection -> {
-                                LOG.warn("connection to downstream container [{}] is closed", downstreamConnection.getRemoteContainer());
+                                LOG.info("connection to downstream container [{}] is closed", downstreamConnection.getRemoteContainer());
                                 downstreamConnection.close();
                             });
-                            connectHandler.complete();
+                            connectHandler.handle(Future.succeededFuture());
                         } else {
                             LOG.warn("can't open connection to downstream container [{}]",
                                     downstreamConnection.getRemoteContainer(), openCon.cause());
-                            connectHandler.fail(openCon.cause());
+                            connectHandler.handle(Future.failedFuture(openCon.cause()));
                         }
                     }).open();
             }
@@ -178,9 +177,17 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
      */
     private void onDisconnectFromDownstreamContainer(final ProtonConnection con) {
         // all links to downstream host will now be stale and unusable
+        LOG.warn("lost connection to downstream container [{}]", downstreamContainerHost);
         activeSenders.clear();
-        LOG.warn("disconnected from downstream container [{}], triggering restart ...", con.getRemoteContainer());
-        vertx.eventBus().send(Constants.APPLICATION_ENDPOINT, Constants.getRestartJson());
+        con.disconnectHandler(null);
+        con.disconnect();
+        ProtonClientOptions clientOptions = createClientOptions();
+        if (clientOptions.getReconnectAttempts() != 0) {
+            vertx.setTimer(300, reconnect -> {
+                LOG.info("attempting to re-connect to downstream container [{}]", downstreamContainerHost);
+                connectToDownstream(clientOptions, done -> {});
+            });
+        }
     }
 
     void setDownstreamConnection(final ProtonConnection con) {
@@ -292,8 +299,8 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
     }
 
     private void forwardMessage(final ProtonSender sender, final Message msg) {
-        LOG.debug("forwarding telemetry message [id: {}, to: {}, content-type: {}] to downstream container",
-                msg.getMessageId(), msg.getAddress(), msg.getContentType());
+        LOG.debug("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}:{}]",
+                msg.getMessageId(), msg.getAddress(), msg.getContentType(), downstreamContainerHost, downstreamContainerPort);
         sender.send(msg);
     }
 }

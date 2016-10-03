@@ -14,7 +14,6 @@ package org.eclipse.hono.adapter.rest;
 
 import static java.net.HttpURLConnection.*;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.HonoClient;
@@ -68,7 +67,6 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private HttpServer server;
     private HonoClient hono;
-    private AtomicBoolean connecting = new AtomicBoolean();
 
     /**
      * Creates a new REST adapter instance.
@@ -276,25 +274,21 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
 
         // make sure that we are not trying to connect multiple times in parallel
-        if (connecting.compareAndSet(false, true)) {
-            hono = HonoClientBuilder.newClient()
-                    .vertx(vertx)
-                    .host(honoClientConfig.getHost())
-                    .port(honoClientConfig.getPort())
-                    .user(honoClientConfig.getUsername())
-                    .password(honoClientConfig.getPassword())
-                    .build();
-            ProtonClientOptions options = new ProtonClientOptions();
-            options.setReconnectAttempts(-1).setReconnectInterval(500);
-            hono.connect(options, connectAttempt -> {
-                connecting.set(false);
-                if (connectHandler != null) {
-                    connectHandler.handle(connectAttempt);
-                }
-            });
-        } else {
-            LOG.debug("already trying to connect to Hono server...");
-        }
+        hono = HonoClientBuilder.newClient()
+                .vertx(vertx)
+                .host(honoClientConfig.getHost())
+                .port(honoClientConfig.getPort())
+                .user(honoClientConfig.getUsername())
+                .password(honoClientConfig.getPassword())
+                .build();
+        ProtonClientOptions options = new ProtonClientOptions()
+                .setReconnectAttempts(-1)
+                .setReconnectInterval(200); // try to re-connect every 200 ms
+        hono.connect(options, connectAttempt -> {
+            if (connectHandler != null) {
+                connectHandler.handle(connectAttempt);
+            }
+        });
     }
 
     private boolean isConnected() {
