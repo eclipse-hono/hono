@@ -13,16 +13,11 @@ package org.eclipse.hono.example;
 
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
-
-import io.vertx.core.Vertx;
 
 /**
  * An example of using TelemetryClient for uploading and retrieving telemetry data to/from Hono.
@@ -32,30 +27,12 @@ public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    private final Vertx vertx = Vertx.vertx();
-
-    @Autowired
-    private AppConfiguration config;
+    @Value(value = "${spring.profiles.active}")
+    private String                profiles;
 
     @PostConstruct
     private void start() throws Exception {
-        LOG.info("Starting TelemetryClient in role {}", config.role());
-    }
-
-    @Bean(destroyMethod="")
-    public HonoClient client() {
-        return HonoClientBuilder.newClient()
-                .vertx(vertx())
-                .host(config.host())
-                .port(config.port())
-                .user(config.user())
-                .password(config.password())
-                .pathSeparator(config.pathSeparator()).build();
-    }
-
-    @Bean
-    public Vertx vertx() {
-        return vertx;
+        LOG.info("Starting TelemetryClient in role {}", profiles);
     }
 
     public static void main(final String[] args) {

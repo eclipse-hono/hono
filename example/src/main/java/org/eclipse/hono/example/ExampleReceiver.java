@@ -21,11 +21,14 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
+import org.eclipse.hono.client.HonoClientConfigProperties;
 import org.eclipse.hono.client.TelemetryConsumer;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -44,19 +47,21 @@ public class ExampleReceiver {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExampleReceiver.class);
 
-    @Autowired
-    private AppConfiguration config;
+    @Value(value = "${tenant.id}")
+    private String                tenantId;
 
     @Autowired
-    private HonoClient client;
+    private HonoClientConfigProperties clientConfig;
 
     @Autowired
     private Vertx vertx;
     private Context ctx;
+    private HonoClient client;
 
     @PostConstruct
     private void start() {
 
+        client = HonoClientBuilder.newClient(clientConfig).vertx(vertx).build();
         Future<TelemetryConsumer> startupTracker = Future.future();
         startupTracker.setHandler(done -> {
             if (done.succeeded()) {
@@ -77,7 +82,7 @@ public class ExampleReceiver {
             client.connect(new ProtonClientOptions(), connectionTracker.completer());
             connectionTracker.compose(honoClient -> {
                 /* step 2: create telemetry consumer */
-                client.createTelemetryConsumer(config.tenantId(),
+                client.createTelemetryConsumer(tenantId,
                         this::handleMessage,
                         startupTracker.completer());
             }, startupTracker);

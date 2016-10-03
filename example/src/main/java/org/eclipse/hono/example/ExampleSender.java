@@ -20,11 +20,14 @@ import java.net.HttpURLConnection;
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoClientConfigProperties;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetrySender;
+import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -43,18 +46,23 @@ public class ExampleSender {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExampleSender.class);
 
-    @Autowired
-    private AppConfiguration config;
+    @Value(value = "${tenant.id}")
+    private String                tenantId;
+    @Value(value = "${device.id}")
+    private String                deviceId;
 
     @Autowired
-    private HonoClient client;
+    private HonoClientConfigProperties clientConfig;
 
     @Autowired
     private Vertx vertx;
     private Context ctx;
+    private HonoClient client;
 
     @PostConstruct
     private void start() {
+
+        client = HonoClientBuilder.newClient(clientConfig).vertx(vertx).build();
         ctx = vertx.getOrCreateContext();
         Future<TelemetrySender> startupTracker = Future.future();
         startupTracker.setHandler(done -> {
@@ -75,12 +83,12 @@ public class ExampleSender {
             connectionTracker.compose(v -> {
             /* step 2: create a registration client */
                 Future<RegistrationClient> regClientTracker = Future.future();
-                client.createRegistrationClient(config.tenantId(), regClientTracker.completer());
+                client.createRegistrationClient(tenantId, regClientTracker.completer());
                 return regClientTracker;
             }).compose(regClient -> {
             /* step 3: register a device */
                 Future<Integer> regResultTracker = Future.future();
-                regClient.register(config.deviceId(), regResultTracker.completer());
+                regClient.register(deviceId, regResultTracker.completer());
                 return regResultTracker;
             }).compose(regResult -> {
             /* step 4: handle result of registration */
@@ -92,12 +100,12 @@ public class ExampleSender {
                     LOG.info("Device already registered.");
                     resultCodeTracker.complete();
                 } else {
-                    resultCodeTracker.fail(String.format("Failed to register device [%s]: %s", config.deviceId(), regResult));
+                    resultCodeTracker.fail(String.format("Failed to register device [%s]: %s", deviceId, regResult));
                 }
                 return resultCodeTracker;
             }).compose(v -> {
             /* step 5: create telemetry sender client */
-                client.createTelemetrySender(config.tenantId(), startupTracker.completer());
+                client.createTelemetrySender(tenantId, startupTracker.completer());
             }, startupTracker);
         });
     }
@@ -110,7 +118,7 @@ public class ExampleSender {
                 LOG.info("Enter some message to send (empty message to quit): ");
                 input = reader.readLine();
                 if (!input.isEmpty()) {
-                    telemetryClient.send(config.deviceId(), input, "text/plain");
+                    telemetryClient.send(deviceId, input, "text/plain");
                 }
             } while (!input.isEmpty());
             f.complete();
