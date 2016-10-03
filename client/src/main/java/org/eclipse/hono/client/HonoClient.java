@@ -46,6 +46,7 @@ public class HonoClient {
     private final int port;
     private final String pathSeparator;
     private final Map<String, TelemetrySender> activeSenders = new ConcurrentHashMap<>();
+    private final Map<String, RegistrationClient> activeRegClients = new ConcurrentHashMap<>();
     private final String user;
     private final String password;
     private ProtonClientOptions clientOptions;
@@ -159,7 +160,13 @@ public class HonoClient {
             connectionContext.runOnContext(reconnect -> {
                 con.disconnect();
                 LOG.debug("attempting to re-connect {} time(s) every {} ms", clientOptions.getReconnectAttempts(), clientOptions.getReconnectInterval());
-                connect(clientOptions, done -> {});
+                connect(clientOptions, done -> {
+                    if (done.succeeded()) {
+                        LOG.info("successfully re-connected to Hono server");
+                    } else {
+                        LOG.info("failed to re-connect to Hono server");
+                    }
+                });
             });
         }
     }
@@ -211,6 +218,19 @@ public class HonoClient {
         return this;
     }
 
+    public HonoClient getOrCreateRegistrationClient(
+            final String tenantId,
+            final Handler<AsyncResult<RegistrationClient>> resultHandler) {
+
+        RegistrationClient regClient = activeRegClients.get(Objects.requireNonNull(tenantId));
+        if (regClient != null) {
+            resultHandler.handle(Future.succeededFuture(regClient));
+        } else {
+            createRegistrationClient(tenantId, resultHandler);
+        }
+        return this;
+    }
+
     public HonoClient createRegistrationClient(
             final String tenantId,
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
@@ -219,7 +239,14 @@ public class HonoClient {
         if (connection == null || connection.isDisconnected()) {
             creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
         } else {
-            RegistrationClientImpl.create(connection, tenantId, creationHandler);
+            RegistrationClientImpl.create(connection, tenantId, creationAttempt -> {
+                if (creationAttempt.succeeded()) {
+                    activeRegClients.put(tenantId, creationAttempt.result());
+                    creationHandler.handle(Future.succeededFuture(creationAttempt.result()));
+                } else {
+                    creationHandler.handle(Future.failedFuture(creationAttempt.cause()));
+                }
+            });
         }
         return this;
     }

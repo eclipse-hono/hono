@@ -14,18 +14,17 @@ package org.eclipse.hono.adapter.rest;
 
 import static java.net.HttpURLConnection.*;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
+import org.eclipse.hono.client.HonoClientConfigProperties;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.TelemetrySender;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -61,25 +60,14 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     @Value("${hono.http.listenport:8080}")
     private int listenPort;
 
-    @Value("${hono.server.host:127.0.0.1}")
-    private String honoServerHost;
-
-    @Value("${hono.server.port:5672}")
-    private int honoServerPort;
-
-    @Value("${hono.user}")
-    private String honoUser;
-
-    @Value("${hono.password}")
-    private String honoPassword;
+    @Autowired
+    private HonoClientConfigProperties honoClientConfig;
 
     @Value("${spring.profiles.active:prod}")
     private String activeProfiles;
 
     private HttpServer server;
     private HonoClient hono;
-    private Map<String, TelemetrySender> telemetrySenders = new HashMap<>();
-    private Map<String, RegistrationClient> registrationClients = new HashMap<>();
     private AtomicBoolean connecting = new AtomicBoolean();
 
     /**
@@ -176,8 +164,6 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         JsonObject result = new JsonObject()
                 .put("name", "Hono REST Adapter")
                 .put("connected", isConnected())
-                .put("telemetry senders", telemetrySenders.size())
-                .put("registration clients", registrationClients.size())
                 .put("active profiles", activeProfiles);
 
         ctx
@@ -251,7 +237,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private void doRegistrationAction(final RoutingContext ctx, final BiConsumer<RegistrationClient, HttpServerResponse> action) {
         final String tenant = getTenantParam(ctx);
         final HttpServerResponse resp = ctx.response();
-        getOrCreateRegistrationClient(tenant, done -> {
+        hono.getOrCreateRegistrationClient(tenant, done -> {
             if (done.succeeded()) {
                 action.accept(done.result(), resp);
             } else {
@@ -269,7 +255,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
             badRequest(ctx, HttpHeaders.CONTENT_TYPE.toString());
         } else {
             ctx.request().bodyHandler(payload -> {
-                getOrCreateTelemetrySender(tenant, createAttempt -> {
+                hono.getOrCreateTelemetrySender(tenant, createAttempt -> {
                     if (createAttempt.succeeded()) {
                         boolean accepted = createAttempt.result().send(deviceId, payload.getBytes(), contentType);
                         if (accepted) {
@@ -291,17 +277,15 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
         // make sure that we are not trying to connect multiple times in parallel
         if (connecting.compareAndSet(false, true)) {
-            telemetrySenders.clear();
-            registrationClients.clear();
             hono = HonoClientBuilder.newClient()
                     .vertx(vertx)
-                    .host(honoServerHost)
-                    .port(honoServerPort)
-                    .user(honoUser)
-                    .password(honoPassword)
+                    .host(honoClientConfig.getHost())
+                    .port(honoClientConfig.getPort())
+                    .user(honoClientConfig.getUsername())
+                    .password(honoClientConfig.getPassword())
                     .build();
             ProtonClientOptions options = new ProtonClientOptions();
-            options.setReconnectAttempts(10).setReconnectInterval(500);
+            options.setReconnectAttempts(-1).setReconnectInterval(500);
             hono.connect(options, connectAttempt -> {
                 connecting.set(false);
                 if (connectHandler != null) {
@@ -315,62 +299,5 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private boolean isConnected() {
         return hono != null && hono.isConnected();
-    }
-
-    private void getOrCreateTelemetrySender(final String tenant, final Handler<AsyncResult<TelemetrySender>> resultHandler) {
-        if (!isConnected()) {
-            vertx.runOnContext(connect -> connectToHono(null));
-            resultHandler.handle(Future.failedFuture("connection to Hono lost"));
-        } else {
-            TelemetrySender sender = telemetrySenders.get(tenant);
-            if (sender !=  null) {
-                resultHandler.handle(Future.succeededFuture(sender));
-            } else {
-                hono.createTelemetrySender(tenant, done -> {
-                    if (done.succeeded()) {
-                        final TelemetrySender newSender = done.result();
-                        TelemetrySender existingSender = telemetrySenders.putIfAbsent(tenant, newSender);
-                        if (existingSender != null) {
-                            newSender.close(closed -> {});
-                            resultHandler.handle(Future.succeededFuture(existingSender));
-                        } else {
-                            newSender.setErrorHandler(error -> {
-                                // remove sender if link has been closed
-                                telemetrySenders.remove(tenant);
-                            });
-                            resultHandler.handle(Future.succeededFuture(newSender));
-                        }
-                    } else {
-                        resultHandler.handle(Future.failedFuture(done.cause()));
-                    }
-                });
-            }
-        }
-    }
-
-    private void getOrCreateRegistrationClient(final String tenant, final Handler<AsyncResult<RegistrationClient>> resultHandler) {
-        if (!isConnected()) {
-            vertx.runOnContext(connect -> connectToHono(null));
-            resultHandler.handle(Future.failedFuture("connection to Hono lost"));
-        } else {
-            RegistrationClient client = registrationClients.get(tenant);
-            if (client !=  null) {
-                resultHandler.handle(Future.succeededFuture(client));
-            } else {
-                hono.createRegistrationClient(tenant, done -> {
-                    if (done.succeeded()) {
-                        RegistrationClient existingClient = registrationClients.putIfAbsent(tenant, done.result());
-                        if (existingClient != null) {
-                            done.result().close(closed -> {});
-                            resultHandler.handle(Future.succeededFuture(existingClient));
-                        } else {
-                            resultHandler.handle(Future.succeededFuture(done.result()));
-                        }
-                    } else {
-                        resultHandler.handle(Future.failedFuture(done.cause()));
-                    }
-                });
-            }
-        }
     }
 }

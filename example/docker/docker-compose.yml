@@ -33,9 +33,10 @@ rest-adapter:
   links:
     - hono
   environment:
+    - HONO_CLIENT_HOST=hono
+    - HONO_CLIENT_PORT=5672
+    - HONO_CLIENT_USERNAME=hono-client
+    - HONO_CLIENT_PASSWORD=secret
     - HONO_HTTP_BINDADDRESS=0.0.0.0
     - HONO_MAXINSTANCES=1
-    - HONO_SERVER_HOST=hono
-    - HONO_USER=hono-client
-    - HONO_PASSWORD=secret
     - SPRING_PROFILES_ACTIVE=dev
