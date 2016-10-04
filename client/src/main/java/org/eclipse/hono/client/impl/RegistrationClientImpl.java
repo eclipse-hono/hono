@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
@@ -51,9 +52,10 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     private final Map<String, Handler<AsyncResult<Integer>> > replyMap = new ConcurrentHashMap<>();
     private final String                         registrationReplyToAddress;
 
-    private RegistrationClientImpl(final ProtonConnection con, final String tenantId,
+    private RegistrationClientImpl(final Context context, final ProtonConnection con, final String tenantId,
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
 
+        super(context);
         this.registrationReplyToAddress = String.format(
                 REGISTRATION_REPLY_TO_ADDRESS_TEMPLATE,
                 Objects.requireNonNull(tenantId),
@@ -71,38 +73,41 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
         });
 
         final Future<ProtonReceiver> receiverTracker = Future.future();
-        final ProtonReceiver receiver = con.createReceiver(registrationReplyToAddress);
-        receiver
-            .setAutoAccept(true)
-            .setPrefetch(DEFAULT_RECEIVER_CREDITS)
-            .handler((delivery, message) -> {
-                final Handler<AsyncResult<Integer>> handler = replyMap.remove(message.getCorrelationId());
-                if (handler != null) {
-                    final String status = (String) message.getApplicationProperties().getValue().get("status");
-                    LOG.debug("received response [correlation ID: {}, status: {}]",
-                            message.getCorrelationId(), status);
-                    handler.handle(Future.succeededFuture(Integer.valueOf(status)));
-                } else {
-                    LOG.debug("discarding unexpected response [correlation ID: {}]",
-                            message.getCorrelationId());
-                }
-            }).openHandler(receiverTracker.completer())
-            .open();
-
-        receiverTracker.compose(openReceiver -> {
-            this.receiver = openReceiver;
-            ProtonSender sender = con.createSender(String.format(REGISTRATION_ADDRESS_TEMPLATE, tenantId));
-            sender
-                .setQoS(ProtonQoS.AT_LEAST_ONCE)
-                .openHandler(senderTracker.completer())
+        context.runOnContext(create -> {
+            final ProtonReceiver receiver = con.createReceiver(registrationReplyToAddress);
+            receiver
+                .setAutoAccept(true)
+                .setPrefetch(DEFAULT_RECEIVER_CREDITS)
+                .handler((delivery, message) -> {
+                    final Handler<AsyncResult<Integer>> handler = replyMap.remove(message.getCorrelationId());
+                    if (handler != null) {
+                        final String status = (String) message.getApplicationProperties().getValue().get("status");
+                        LOG.debug("received response [correlation ID: {}, status: {}]",
+                                message.getCorrelationId(), status);
+                        handler.handle(Future.succeededFuture(Integer.valueOf(status)));
+                    } else {
+                        LOG.debug("discarding unexpected response [correlation ID: {}]",
+                                message.getCorrelationId());
+                    }
+                }).openHandler(receiverTracker.completer())
                 .open();
-        }, senderTracker);
+
+            receiverTracker.compose(openReceiver -> {
+                this.receiver = openReceiver;
+                ProtonSender sender = con.createSender(String.format(REGISTRATION_ADDRESS_TEMPLATE, tenantId));
+                sender
+                    .setQoS(ProtonQoS.AT_LEAST_ONCE)
+                    .openHandler(senderTracker.completer())
+                    .open();
+            }, senderTracker);
+        });
     }
 
-    public static void create(final ProtonConnection con, final String tenantId,
+    public static void create(final Context context, final ProtonConnection con, final String tenantId,
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
 
         new RegistrationClientImpl(
+                Objects.requireNonNull(context),
                 Objects.requireNonNull(con),
                 Objects.requireNonNull(tenantId),
                 Objects.requireNonNull(creationHandler));
@@ -124,27 +129,31 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
             }
         });
 
-        final Future<ProtonSender> senderCloseTracker = Future.future();
-        sender.closeHandler(senderCloseTracker.completer()).close();
-        senderCloseTracker.compose(s -> {
-            this.sender = null;
-            receiver.closeHandler(closeTracker.completer()).close();
-        }, closeTracker);
+        context.runOnContext(close -> {
+            final Future<ProtonSender> senderCloseTracker = Future.future();
+            sender.closeHandler(senderCloseTracker.completer()).close();
+            senderCloseTracker.compose(s -> {
+                this.sender = null;
+                receiver.closeHandler(closeTracker.completer()).close();
+            }, closeTracker);
+        });
     }
 
     private void createAndSendRequest(final String action, final String deviceId,
             final Handler<AsyncResult<Integer>> resultHandler) {
 
-        final Message request = ProtonHelper.message();
-        final Map<String, Object> properties = new HashMap<>();
-        final String messageId = createMessageId();
-        properties.put(APP_PROPERTY_DEVICE_ID, deviceId);
-        properties.put(APP_PROPERTY_ACTION, action);
-        request.setApplicationProperties(new ApplicationProperties(properties));
-        request.setReplyTo(registrationReplyToAddress);
-        request.setMessageId(messageId);
-        replyMap.put(messageId, resultHandler);
-        sender.send(request);
+        context.runOnContext(req -> {
+            final Message request = ProtonHelper.message();
+            final Map<String, Object> properties = new HashMap<>();
+            final String messageId = createMessageId();
+            properties.put(APP_PROPERTY_DEVICE_ID, deviceId);
+            properties.put(APP_PROPERTY_ACTION, action);
+            request.setApplicationProperties(new ApplicationProperties(properties));
+            request.setReplyTo(registrationReplyToAddress);
+            request.setMessageId(messageId);
+            replyMap.put(messageId, resultHandler);
+            sender.send(request);
+        });
     }
 
     private String createMessageId() {

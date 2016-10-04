@@ -21,24 +21,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
 
 /**
- * A Vertx-Proton based client for consuming telemttry data from a Hono server.
+ * A Vertx-Proton based client for consuming telemetry data from a Hono server.
  */
 public class TelemetryConsumerImpl extends AbstractHonoClient implements TelemetryConsumer {
 
     private static final String     TELEMETRY_ADDRESS_TEMPLATE  = "telemetry%s%s";
     private static final Logger     LOG = LoggerFactory.getLogger(TelemetryConsumerImpl.class);
 
-    private TelemetryConsumerImpl(final ProtonReceiver receiver) {
+    private TelemetryConsumerImpl(final Context context, final ProtonReceiver receiver) {
+        super(context);
         this.receiver = receiver;
     }
 
     public static void create(
+            final Context context,
             final ProtonConnection con,
             final String tenantId,
             final String pathSeparator,
@@ -48,10 +51,10 @@ public class TelemetryConsumerImpl extends AbstractHonoClient implements Telemet
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(pathSeparator);
-        createConsumer(con, tenantId, pathSeparator, telemetryConsumer).setHandler(created -> {
+        createConsumer(context, con, tenantId, pathSeparator, telemetryConsumer).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new TelemetryConsumerImpl(created.result())));
+                        new TelemetryConsumerImpl(context, created.result())));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }
@@ -59,6 +62,7 @@ public class TelemetryConsumerImpl extends AbstractHonoClient implements Telemet
     }
 
     private static Future<ProtonReceiver> createConsumer(
+            final Context context,
             final ProtonConnection con,
             final String tenantId,
             final String pathSeparator,
@@ -67,22 +71,24 @@ public class TelemetryConsumerImpl extends AbstractHonoClient implements Telemet
         Future<ProtonReceiver> result = Future.future();
         final String targetAddress = String.format(TELEMETRY_ADDRESS_TEMPLATE, pathSeparator, tenantId);
 
-        final ProtonReceiver receiver = con.createReceiver(targetAddress);
-        receiver.setAutoAccept(true).setPrefetch(DEFAULT_RECEIVER_CREDITS);
-        receiver.openHandler(receiverOpen -> {
-            if (receiverOpen.succeeded()) {
-                LOG.debug("telemetry receiver for [{}] open", receiverOpen.result().getRemoteSource());
-                result.complete(receiverOpen.result());
-            } else {
-                result.fail(receiverOpen.cause());
-            }
+        context.runOnContext(open -> {
+            final ProtonReceiver receiver = con.createReceiver(targetAddress);
+            receiver.setAutoAccept(true).setPrefetch(DEFAULT_RECEIVER_CREDITS);
+            receiver.openHandler(receiverOpen -> {
+                if (receiverOpen.succeeded()) {
+                    LOG.debug("telemetry receiver for [{}] open", receiverOpen.result().getRemoteSource());
+                    result.complete(receiverOpen.result());
+                } else {
+                    result.fail(receiverOpen.cause());
+                }
+            });
+            receiver.handler((delivery, message) -> {
+                if (consumer != null) {
+                    consumer.accept(message);
+                }
+            });
+            receiver.open();
         });
-        receiver.handler((delivery, message) -> {
-            if (consumer != null) {
-                consumer.accept(message);
-            }
-        });
-        receiver.open();
         return result;
     }
 

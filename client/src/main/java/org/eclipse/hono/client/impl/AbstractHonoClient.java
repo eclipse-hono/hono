@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonReceiver;
@@ -40,6 +41,11 @@ public abstract class AbstractHonoClient {
 
     protected ProtonSender            sender;
     protected ProtonReceiver          receiver;
+    protected Context                 context;
+
+    protected AbstractHonoClient(final Context context) {
+        this.context = Objects.requireNonNull(context);
+    }
 
     /**
      * Closes this client's sender and receiver links to Hono.
@@ -52,33 +58,35 @@ public abstract class AbstractHonoClient {
         Objects.requireNonNull(closeHandler);
         @SuppressWarnings("rawtypes")
         final List<Future> closeHandlers = new ArrayList<>();
-        if (sender != null && sender.isOpen()) {
-            Future<ProtonSender> senderCloseHandler = Future.future();
-            closeHandlers.add(senderCloseHandler);
-            sender.closeHandler(r -> {
-                if (r.succeeded()) {
-                    LOG.debug("telemetry sender for [{}] closed", r.result().getRemoteTarget());
-                    senderCloseHandler.complete();
-                } else {
-                    LOG.debug("could not close telemetry sender for [{}]", sender.getRemoteTarget(), r.cause());
-                    senderCloseHandler.fail(r.cause());
-                }
-            }).close();
-        }
+        context.runOnContext(close -> {
+            if (sender != null && sender.isOpen()) {
+                Future<ProtonSender> senderCloseHandler = Future.future();
+                closeHandlers.add(senderCloseHandler);
+                sender.closeHandler(r -> {
+                    if (r.succeeded()) {
+                        LOG.debug("telemetry sender for [{}] closed", r.result().getRemoteTarget());
+                        senderCloseHandler.complete();
+                    } else {
+                        LOG.debug("could not close telemetry sender for [{}]", sender.getRemoteTarget(), r.cause());
+                        senderCloseHandler.fail(r.cause());
+                    }
+                }).close();
+            }
 
-        if (receiver != null && receiver.isOpen()) {
-            Future<ProtonReceiver> receiverCloseHandler = Future.future();
-            closeHandlers.add(receiverCloseHandler);
-            receiver.closeHandler(r -> {
-                if (r.succeeded()) {
-                    LOG.debug("telemetry receiver for [{}] closed", r.result().getRemoteSource());
-                    receiverCloseHandler.complete();
-                } else {
-                    LOG.debug("could not close telemetry receiver for [{}]", receiver.getRemoteSource(), r.cause());
-                    receiverCloseHandler.fail(r.cause());
-                }
-            }).close();
-        }
+            if (receiver != null && receiver.isOpen()) {
+                Future<ProtonReceiver> receiverCloseHandler = Future.future();
+                closeHandlers.add(receiverCloseHandler);
+                receiver.closeHandler(r -> {
+                    if (r.succeeded()) {
+                        LOG.debug("telemetry receiver for [{}] closed", r.result().getRemoteSource());
+                        receiverCloseHandler.complete();
+                    } else {
+                        LOG.debug("could not close telemetry receiver for [{}]", receiver.getRemoteSource(), r.cause());
+                        receiverCloseHandler.fail(r.cause());
+                    }
+                }).close();
+            }
+        });
 
         CompositeFuture.all(closeHandlers).setHandler(r -> {
             if (r.succeeded()) {

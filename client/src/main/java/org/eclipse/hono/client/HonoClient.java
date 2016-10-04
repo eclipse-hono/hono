@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -53,6 +54,7 @@ public class HonoClient {
     private ProtonConnection connection;
     private AtomicBoolean connecting = new AtomicBoolean(false);
     private Vertx vertx;
+    private Context context;
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -131,6 +133,7 @@ public class HonoClient {
                             if (opened.succeeded()) {
                                 LOG.info("connection to [{}] open", opened.result().getRemoteContainer());
                                 connection = opened.result();
+                                context = Vertx.currentContext();
                                 if (disconnectHandler != null) {
                                     connection.disconnectHandler(disconnectHandler);
                                 } else {
@@ -192,7 +195,7 @@ public class HonoClient {
         if (connection == null || connection.isDisconnected()) {
             creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
         } else {
-            TelemetrySenderImpl.create(connection, tenantId, creationResult -> {
+            TelemetrySenderImpl.create(context, connection, tenantId, creationResult -> {
                 if (creationResult.succeeded()) {
                     activeSenders.put(tenantId, creationResult.result());
                     creationHandler.handle(Future.succeededFuture(creationResult.result()));
@@ -213,7 +216,7 @@ public class HonoClient {
         if (connection == null || connection.isDisconnected()) {
             creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
         } else {
-            TelemetryConsumerImpl.create(connection, tenantId, pathSeparator, telemetryConsumer, creationHandler);
+            TelemetryConsumerImpl.create(context, connection, tenantId, pathSeparator, telemetryConsumer, creationHandler);
         }
         return this;
     }
@@ -239,7 +242,7 @@ public class HonoClient {
         if (connection == null || connection.isDisconnected()) {
             creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
         } else {
-            RegistrationClientImpl.create(connection, tenantId, creationAttempt -> {
+            RegistrationClientImpl.create(context, connection, tenantId, creationAttempt -> {
                 if (creationAttempt.succeeded()) {
                     activeRegClients.put(tenantId, creationAttempt.result());
                     creationHandler.handle(Future.succeededFuture(creationAttempt.result()));

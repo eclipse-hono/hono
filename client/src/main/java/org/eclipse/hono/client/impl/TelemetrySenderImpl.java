@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
@@ -42,21 +43,24 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     private static final AtomicLong messageCounter = new AtomicLong();
     private Handler<Void> drainHandler;
 
-    private TelemetrySenderImpl(final ProtonSender sender) {
+    private TelemetrySenderImpl(final Context context, final ProtonSender sender) {
+        super(context);
         this.sender = sender;
     }
 
     public static void create(
+            final Context context,
             final ProtonConnection con,
             final String tenantId,
             final Handler<AsyncResult<TelemetrySender>> creationHandler) {
 
+        Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
         createSender(con, tenantId).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new TelemetrySenderImpl(created.result())));
+                        new TelemetrySenderImpl(context, created.result())));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }
@@ -129,16 +133,20 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     public void send(final Message rawMessage, final Handler<Void> capacityAvailableHandler) {
         Objects.requireNonNull(rawMessage);
         if (capacityAvailableHandler == null) {
-            sender.send(rawMessage);
+            context.runOnContext(send -> {
+                sender.send(rawMessage);
+            });
         } else if (this.drainHandler != null) {
             throw new IllegalStateException("cannot send message while waiting for replenishment with credit");
         } else if (sender.isOpen()) {
-            sender.send(rawMessage);
-            if (sender.sendQueueFull()) {
-                sendQueueDrainHandler(capacityAvailableHandler);
-            } else {
-                capacityAvailableHandler.handle(null);
-            }
+            context.runOnContext(send -> {
+                sender.send(rawMessage);
+                if (sender.sendQueueFull()) {
+                    sendQueueDrainHandler(capacityAvailableHandler);
+                } else {
+                    capacityAvailableHandler.handle(null);
+                }
+            });
         } else {
             throw new IllegalStateException("sender is not open");
         }
@@ -149,7 +157,9 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
         if (sender.sendQueueFull()) {
             return false;
         } else {
-            sender.send(Objects.requireNonNull(rawMessage));
+            context.runOnContext(send -> {
+                sender.send(Objects.requireNonNull(rawMessage));
+            });
             return true;
         }
     }
