@@ -58,7 +58,7 @@ In order to start a broker using [Gordon Sim's Qpid Dispatch Router image](https
 command line
 
     $ docker run -d --name qdrouter-config eclipsehono/qpid-default-config:0.1-SNAPSHOT
-    $ docker run -d --name qdrouter-sasldb eclipsehono/qpid-qpid-sasldb:0.1-SNAPSHOT
+    $ docker run -d --name qdrouter-sasldb eclipsehono/qpid-sasldb:0.1-SNAPSHOT
     $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter --volumes-from="qdrouter-config" --volumes-from="qdrouter-sasldb" gordons/qpid-dispatch:0.6.0
  
 ##### Example Configuration
