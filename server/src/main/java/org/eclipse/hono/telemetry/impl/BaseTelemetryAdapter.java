@@ -52,7 +52,7 @@ import io.vertx.core.json.JsonObject;
  * with a particular AMQP link.
  * <p>
  * For each event {@code BaseTelemetryAdapter} retrieves (and removes) the corresponding telemetry message from the shared map and
- * then invokes {@link TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message, String, io.vertx.core.Handler)}.
+ * then invokes {@link TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message, String)}.
  */
 public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVerticle implements TelemetryAdapter {
 
@@ -76,7 +76,7 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
      * Registers a Vert.x event consumer for address {@link TelemetryConstants#EVENT_BUS_ADDRESS_TELEMETRY_IN}
      * and then invokes {@link #doStart(Future)}.
      * 
-     * @param the handler to invoke once start up is complete.
+     * @param startFuture   the handler to invoke once start up is complete.
      */
     @Override
     public final void start(final Future<Void> startFuture) throws Exception {
@@ -92,7 +92,7 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
      * This method is invoked by {@link #start()} as part of the verticle deployment process.
      * </p>
      * 
-     * @param the handler to invoke once start up is complete.
+     * @param startFuture   the handler to invoke once start up is complete.
      * @throws Exception if start-up fails
      */
     protected void doStart(final Future<Void> startFuture) throws Exception {
@@ -124,7 +124,7 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
     /**
      * Unregisters the consumers from the Vert.x event bus and then invokes {@link #doStop(Future)}.
      * 
-     * @param the handler to invoke once shutdown is complete.
+     * @param stopFuture    the handler to invoke once shutdown is complete.
      */
     @Override
     public final void stop(final Future<Void> stopFuture) {
@@ -143,7 +143,7 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
      * This method is invoked by {@link #stop()} as part of the verticle deployment process.
      * </p>
      * 
-     * @param the handler to invoke once shutdown is complete.
+     * @param stopFuture    the handler to invoke once shutdown is complete.
      */
     protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
