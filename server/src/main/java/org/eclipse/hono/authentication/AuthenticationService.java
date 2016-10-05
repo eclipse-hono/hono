@@ -25,7 +25,7 @@ public interface AuthenticationService extends Verticle {
     /**
      * Validates the SASL response provided by the client.
      * 
-     * @param the SASL mechanism used to authenticate the client.
+     * @param mechanism the SASL mechanism used to authenticate the client.
      * @param response the raw bytes provided by the client.
      * @param resultHandler the handler to invoke with the issued authorization ID.
      */
