@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 import static org.eclipse.hono.util.MessageHelper.*;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -22,9 +23,14 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +38,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
@@ -49,7 +56,7 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     private static final String                  REGISTRATION_REPLY_TO_ADDRESS_TEMPLATE = "registration/%s/%s";
 
     private final AtomicLong                     messageCounter  = new AtomicLong();
-    private final Map<String, Handler<AsyncResult<Integer>> > replyMap = new ConcurrentHashMap<>();
+    private final Map<String, Handler<AsyncResult<RegistrationResult>>> replyMap = new ConcurrentHashMap<>();
     private final String                         registrationReplyToAddress;
 
     private RegistrationClientImpl(final Context context, final ProtonConnection con, final String tenantId,
@@ -79,12 +86,12 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
                 .setAutoAccept(true)
                 .setPrefetch(DEFAULT_RECEIVER_CREDITS)
                 .handler((delivery, message) -> {
-                    final Handler<AsyncResult<Integer>> handler = replyMap.remove(message.getCorrelationId());
+                    final Handler<AsyncResult<RegistrationResult>> handler = replyMap.remove(message.getCorrelationId());
                     if (handler != null) {
-                        final String status = (String) message.getApplicationProperties().getValue().get("status");
+                        RegistrationResult result = getRegistrationResult(message);
                         LOG.debug("received response [correlation ID: {}, status: {}]",
-                                message.getCorrelationId(), status);
-                        handler.handle(Future.succeededFuture(Integer.valueOf(status)));
+                                message.getCorrelationId(), result.getStatus());
+                        handler.handle(Future.succeededFuture(result));
                     } else {
                         LOG.debug("discarding unexpected response [correlation ID: {}]",
                                 message.getCorrelationId());
@@ -101,6 +108,15 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
                     .open();
             }, senderTracker);
         });
+    }
+
+    private static RegistrationResult getRegistrationResult(final Message message) {
+        final String status = MessageHelper.getApplicationProperty(
+                                                message.getApplicationProperties(),
+                                                RegistrationConstants.APP_PROPERTY_STATUS,
+                                                String.class);
+        final JsonObject payload = MessageHelper.getJsonPayload(message);
+        return RegistrationResult.from(Integer.valueOf(status), payload);
     }
 
     public static void create(final Context context, final ProtonConnection con, final String tenantId,
@@ -139,8 +155,8 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
         });
     }
 
-    private void createAndSendRequest(final String action, final String deviceId,
-            final Handler<AsyncResult<Integer>> resultHandler) {
+    private void createAndSendRequest(final String action, final String deviceId, final JsonObject payload,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         context.runOnContext(req -> {
             final Message request = ProtonHelper.message();
@@ -151,6 +167,10 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
             request.setApplicationProperties(new ApplicationProperties(properties));
             request.setReplyTo(registrationReplyToAddress);
             request.setMessageId(messageId);
+            if (payload != null) {
+                request.setContentType("application/json; charset=utf-8");
+                request.setBody(new Data(new Binary(payload.encode().getBytes(StandardCharsets.UTF_8))));
+            }
             replyMap.put(messageId, resultHandler);
             sender.send(request);
         });
@@ -161,20 +181,26 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     }
 
     @Override
-    public void register(final String deviceId, final Handler<AsyncResult<Integer>> resultHandler) {
+    public void register(final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
-        createAndSendRequest(ACTION_REGISTER, deviceId, resultHandler);
+        createAndSendRequest(ACTION_REGISTER, deviceId, data, resultHandler);
     }
 
     @Override
-    public void deregister(final String deviceId, final Handler<AsyncResult<Integer>> resultHandler) {
+    public void update(final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
-        createAndSendRequest(ACTION_DEREGISTER, deviceId, resultHandler);
+        createAndSendRequest(ACTION_UPDATE, deviceId, data, resultHandler);
     }
 
     @Override
-    public void get(final String deviceId, final Handler<AsyncResult<Integer>> resultHandler) {
+    public void deregister(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
-        createAndSendRequest(ACTION_GET, deviceId, resultHandler);
+        createAndSendRequest(ACTION_DEREGISTER, deviceId, null, resultHandler);
+    }
+
+    @Override
+    public void get(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        createAndSendRequest(ACTION_GET, deviceId, null, resultHandler);
     }
 }

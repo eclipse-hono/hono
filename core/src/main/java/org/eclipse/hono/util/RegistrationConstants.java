@@ -21,8 +21,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 
@@ -38,11 +40,14 @@ public final class RegistrationConstants {
     public static final String ACTION_REGISTER   = "register";
     public static final String ACTION_GET        = "get";
     public static final String ACTION_DEREGISTER = "deregister";
+    public static final String ACTION_UPDATE     = "update";
+
 
     /* message fields */
     public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
     public static final String APP_PROPERTY_ACTION               = "action";
     public static final String APP_PROPERTY_STATUS               = "status";
+    public static final String FIELD_PAYLOAD                     = "payload";
 
     public static final String REGISTRATION_ENDPOINT             = "registration";
     public static final String PATH_SEPARATOR                    = "/";
@@ -62,14 +67,26 @@ public final class RegistrationConstants {
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
         final String action = getAction(message);
-        return getRegistrationJson(action, tenantId, deviceId);
+        final JsonObject payload = MessageHelper.getJsonPayload(message);
+        return getRegistrationJson(action, tenantId, deviceId, payload);
     }
 
     public static JsonObject getReply(final int status, final String tenantId, final String deviceId) {
+        return getReply(status, tenantId, deviceId, null);
+    }
+
+    public static JsonObject getReply(final String tenantId, final String deviceId, final RegistrationResult result) {
+        return getReply(result.getStatus(), tenantId, deviceId, result.getPayload());
+    }
+
+    public static JsonObject getReply(final int status, final String tenantId, final String deviceId, final JsonObject payload) {
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        jsonObject.put(RegistrationConstants.APP_PROPERTY_STATUS, Integer.toString(status));
+        jsonObject.put(APP_PROPERTY_STATUS, Integer.toString(status));
+        if (payload != null) {
+            jsonObject.put(FIELD_PAYLOAD, payload);
+        }
         return jsonObject;
     }
 
@@ -80,11 +97,11 @@ public final class RegistrationConstants {
         final JsonObject correlationIdJson = message.body().getJsonObject(RegistrationConstants.APP_PROPERTY_CORRELATION_ID);
         final Object correlationId = decodeIdFromJson(correlationIdJson);
         final boolean isApplCorrelationId = message.body().getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
-        return getAmqpReply(status, correlationId, tenantId, deviceId, isApplCorrelationId);
+        return getAmqpReply(status, correlationId, tenantId, deviceId, isApplCorrelationId, message.body().getJsonObject(FIELD_PAYLOAD));
     }
 
     public static Message getAmqpReply(final String status, final Object correlationId, final String tenantId,
-            final String deviceId, final boolean isApplCorrelationId) {
+            final String deviceId, final boolean isApplCorrelationId, final JsonObject payload) {
 
         final ResourceIdentifier address = ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId);
         final Message message = ProtonHelper.message();
@@ -104,14 +121,25 @@ public final class RegistrationConstants {
             message.setMessageAnnotations(new MessageAnnotations(annotations));
         }
 
+        if (payload != null) {
+            message.setContentType("application/json; charset=utf-8");
+            message.setBody(new Data(new Binary(payload.encode().getBytes())));
+        }
         return message;
     }
 
     public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId) {
+        return getRegistrationJson(action, tenantId, deviceId, null);
+    }
+
+    public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId, final JsonObject payload) {
         final JsonObject msg = new JsonObject();
         msg.put(APP_PROPERTY_ACTION, action);
         msg.put(APP_PROPERTY_DEVICE_ID, deviceId);
         msg.put(APP_PROPERTY_TENANT_ID, tenantId);
+        if (payload != null) {
+            msg.put(FIELD_PAYLOAD, payload);
+        }
         return msg;
     }
 

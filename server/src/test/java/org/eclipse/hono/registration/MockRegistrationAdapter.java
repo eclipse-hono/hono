@@ -14,6 +14,7 @@ package org.eclipse.hono.registration;
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
+import org.eclipse.hono.util.RegistrationResult;
 
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
@@ -24,6 +25,6 @@ import io.vertx.core.json.JsonObject;
 public class MockRegistrationAdapter extends BaseRegistrationAdapter {
     @Override
     public void processRegistrationMessage(final Message<JsonObject> regMsg) {
-        reply(regMsg, HttpURLConnection.HTTP_OK);
+        reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_OK));
     }
 }

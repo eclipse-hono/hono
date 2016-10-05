@@ -21,6 +21,7 @@ import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.HonoClientConfigProperties;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
@@ -78,9 +80,11 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     public void start(Future<Void> startFuture) throws Exception {
 
         Router router = Router.router(vertx);
+        router.route().handler(BodyHandler.create().setBodyLimit(2048));
         router.route(HttpMethod.GET, "/status").handler(this::doGetStatus);
         router.route(HttpMethod.GET, String.format("/registration/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID)).handler(this::doGetDevice);
         router.route(HttpMethod.POST, String.format("/registration/:%s", PARAM_TENANT)).handler(this::doRegisterDevice);
+        router.route(HttpMethod.PUT, String.format("/registration/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID)).handler(this::doUpdateRegistration);
         router.route(HttpMethod.DELETE, String.format("/registration/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID)).handler(this::doUnregisterDevice);
         router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID)).handler(this::doUploadTelemetryData);
 
@@ -175,13 +179,16 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         if (deviceId == null) {
             badRequest(ctx, MessageHelper.APP_PROPERTY_DEVICE_ID);
         } else {
+            JsonObject payload = ctx.getBodyAsJson();
+            LOG.debug("registering data for device: {}", payload);
             doRegistrationAction(ctx, (client, response) -> {
-                client.register(deviceId, result -> {
+                client.register(deviceId, payload, result -> {
                     if (result.failed()) {
                         internalServerError(response, "could not register device");
                     } else {
-                        response.setStatusCode(result.result());
-                        switch(result.result()) {
+                        RegistrationResult registerResult = result.result();
+                        response.setStatusCode(registerResult.getStatus());
+                        switch(registerResult.getStatus()) {
                         case HTTP_CREATED:
                             response
                                 .putHeader(
@@ -196,14 +203,51 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         }
     }
 
+    private void doUpdateRegistration(final RoutingContext ctx) {
+
+        String deviceId = getDeviceIdParam(ctx);
+        JsonObject payload = ctx.getBodyAsJson();
+        doRegistrationAction(ctx, (client, response) -> {
+            client.update(deviceId, payload, uupdateRequest -> {
+                if (uupdateRequest.failed()) {
+                    internalServerError(response, "could not update device registration");
+                } else {
+                    RegistrationResult updateResult = uupdateRequest.result();
+                    response.setStatusCode(updateResult.getStatus());
+                    switch(updateResult.getStatus()) {
+                    case HTTP_OK:
+                        String msg = updateResult.getPayload().encodePrettily();
+                        response
+                            .putHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=utf-8")
+                            .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
+                            .write(msg);
+                    default:
+                        response.end();
+                    }
+                };
+            });
+        });
+    }
+
     private void doUnregisterDevice(final RoutingContext ctx) {
         String deviceId = getDeviceIdParam(ctx);
         doRegistrationAction(ctx, (client, response) -> {
-            client.deregister(deviceId, result -> {
-                if (result.failed()) {
+            client.deregister(deviceId, deregisterRequest -> {
+                if (deregisterRequest.failed()) {
                     internalServerError(response, "could not unregister device");
                 } else {
-                    response.setStatusCode(result.result()).end();
+                    RegistrationResult deregisterResult = deregisterRequest.result();
+                    response.setStatusCode(deregisterResult.getStatus());
+                    switch(deregisterResult.getStatus()) {
+                    case HTTP_OK:
+                        String msg = deregisterResult.getPayload().encodePrettily();
+                        response
+                            .putHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=utf-8")
+                            .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
+                            .write(msg);
+                    default:
+                        response.end();
+                    }
                 }
             });
         });
@@ -212,14 +256,15 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private void doGetDevice(final RoutingContext ctx) {
         String deviceId = getDeviceIdParam(ctx);
         doRegistrationAction(ctx, (client, response) -> {
-            client.get(deviceId, result -> {
-                if (result.failed()) {
+            client.get(deviceId, getRequest -> {
+                if (getRequest.failed()) {
                     internalServerError(response, "could not get device");
                 } else {
-                    response.setStatusCode(result.result());
-                    switch(result.result()) {
+                    RegistrationResult getResult = getRequest.result();
+                    response.setStatusCode(getResult.getStatus());
+                    switch(getResult.getStatus()) {
                     case HTTP_OK:
-                        String msg = new JsonObject().put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId).encodePrettily();
+                        String msg = getResult.getPayload().encodePrettily();
                         response
                             .putHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=utf-8")
                             .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))

@@ -12,8 +12,11 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.util.RegistrationResult;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A client for accessing Hono's Registration API.
@@ -31,9 +34,9 @@ public interface RegistrationClient {
      * Checks whether a given device is registered.
      * 
      * @param deviceId The id of the device to check.
-     * @param resultHandler The handler to invoke with the result code of the operation.
+     * @param resultHandler The handler to invoke with the result of the operation.
      */
-    void get(String deviceId, Handler<AsyncResult<Integer>> resultHandler);
+    void get(String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Registers a device with Hono.
@@ -43,9 +46,25 @@ public interface RegistrationClient {
      * </p>
      * 
      * @param deviceId The id of the device to register.
-     * @param resultHandler The handler to invoke with the result code of the operation.
+     * @param data The data to register with the device.
+     * @param resultHandler The handler to invoke with the result of the operation.
      */
-    void register(String deviceId, Handler<AsyncResult<Integer>> resultHandler);
+    void register(String deviceId, JsonObject data, Handler<AsyncResult<RegistrationResult>> resultHandler);
+
+    /**
+     * Updates the data a device has been registered with.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * telemetry data for it.
+     * </p>
+     * 
+     * @param deviceId The id of the device to register.
+     * @param data The data to update the registration with (may be {@code null}).
+     *             The original data will be <em>replaced</em> with this data, i.e.
+     *             the data will not be merged with the existing data. 
+     * @param resultHandler The handler to invoke with the result of the operation.
+     */
+    void update(String deviceId, JsonObject data, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Deregisters a device from Hono.
@@ -55,9 +74,9 @@ public interface RegistrationClient {
      * </p>
      * 
      * @param deviceId The id of the device to deregister.
-     * @param resultHandler The handler to invoke with the result code of the operation.
+     * @param resultHandler The handler to invoke with the result of the operation.
      */
-    void deregister(String deviceId, Handler<AsyncResult<Integer>> resultHandler);
+    void deregister(String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Closes the AMQP link(s) with the Hono server this client is configured to use.

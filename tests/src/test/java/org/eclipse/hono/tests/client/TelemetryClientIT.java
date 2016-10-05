@@ -12,9 +12,8 @@
  */
 package org.eclipse.hono.tests.client;
 
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
-import static java.net.HttpURLConnection.HTTP_CREATED;
 import static org.eclipse.hono.tests.IntegrationTestSupport.*;
+import static java.net.HttpURLConnection.*;
 
 import java.net.InetAddress;
 import java.util.stream.IntStream;
@@ -24,6 +23,7 @@ import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetryConsumer;
 import org.eclipse.hono.client.TelemetrySender;
+import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -205,11 +205,11 @@ public class TelemetryClientIT {
             setup.complete();
         }));
 
-        Future<Integer> regTracker = Future.future();
+        Future<RegistrationResult> regTracker = Future.future();
         context.runOnContext(go -> {
-            registrationClient.register(DEVICE_ID, regTracker.completer());
+            registrationClient.register(DEVICE_ID, null, regTracker.completer());
             regTracker.compose(r -> {
-                if (r == HTTP_CREATED || r == HTTP_CONFLICT) {
+                if (r.getStatus() == HTTP_CREATED || r.getStatus() == HTTP_CONFLICT) {
                     // test can also commence if device already exists
                     LOGGER.debug("registration succeeded");
                     downstreamClient.createTelemetryConsumer(

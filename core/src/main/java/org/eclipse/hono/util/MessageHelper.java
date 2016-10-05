@@ -20,6 +20,7 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -101,6 +102,19 @@ public final class MessageHelper {
             } else {
                 return null;
             }
+        }
+    }
+
+    public static JsonObject getJsonPayload(final Message msg) {
+        if (msg.getBody() == null) {
+            return null;
+        } else if (msg.getContentType() == null || !msg.getContentType().startsWith("application/json")) {
+            return null;
+        } else if (msg.getBody() instanceof Data) {
+            Data body = (Data) msg.getBody();
+            return new JsonObject(new String(body.getValue().getArray()));
+        } else {
+            return null;
         }
     }
 

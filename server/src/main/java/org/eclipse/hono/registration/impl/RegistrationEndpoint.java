@@ -12,9 +12,7 @@
 package org.eclipse.hono.registration.impl;
 
 import static io.vertx.proton.ProtonHelper.condition;
-import static org.eclipse.hono.util.MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID;
-import static org.eclipse.hono.util.MessageHelper.encodeIdToJson;
-import static org.eclipse.hono.util.MessageHelper.getLinkName;
+import static org.eclipse.hono.util.MessageHelper.*;
 import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_CORRELATION_ID;
 import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 
@@ -63,26 +61,26 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             LOG.debug("client wants to use AT MOST ONCE delivery mode for registration endpoint, this is not supported.");
-            receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(),
-                    "QoS AT MOST ONCE is not supported by this endpoint."));
+            receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
             receiver.close();
+        } else {
+    
+            LOG.debug("establishing link for receiving registration messages from client [{}]", MessageHelper.getLinkName(receiver));
+            receiver
+                .setQoS(ProtonQoS.AT_LEAST_ONCE)
+                .setAutoAccept(true) // settle received messages if the handler succeeds
+                .setPrefetch(20)
+                .handler((delivery, message) -> {
+                    if (RegistrationMessageFilter.verify(targetAddress, message)) {
+                        processRequest(message);
+                    } else {
+                        MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "message did not make it through the filter...");
+                        // we close the link if the client sends a message that does not comply with the API spec
+                        onLinkDetach(receiver, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
+                    }
+                }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
+                .open();
         }
-
-        LOG.debug("establishing receiver link with client [{}]", MessageHelper.getLinkName(receiver));
-        receiver
-            .setQoS(ProtonQoS.AT_LEAST_ONCE)
-            .setAutoAccept(true) // settle received messages if the handler succeeds
-            .setPrefetch(20)
-            .handler((delivery, message) -> {
-                if (RegistrationMessageFilter.verify(targetAddress, message)) {
-                    processRequest(message);
-                } else {
-                    MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "message did not make it through the filter...");
-                    // we close the link if the client sends a message that does not comply with the API spec
-                    onLinkDetach(receiver, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
-                }
-            }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
-            .open();
     }
 
     @Override
@@ -123,6 +121,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     }
 
     private void processRequest(final Message msg) {
+
         final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
         vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
                 result -> {
@@ -136,7 +135,8 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                         response = RegistrationConstants.getReply(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
                                 MessageHelper.getTenantIdAnnotation(msg),
-                                MessageHelper.getDeviceIdAnnotation(msg));
+                                MessageHelper.getDeviceIdAnnotation(msg),
+                                null);
                     }
                     addHeadersToResponse(msg, response);
                     vertx.eventBus().send(msg.getReplyTo(), response);

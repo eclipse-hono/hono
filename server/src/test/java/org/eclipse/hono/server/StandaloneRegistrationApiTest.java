@@ -11,10 +11,7 @@
  */
 package org.eclipse.hono.server;
 
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
-import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 
 import java.net.InetAddress;
@@ -28,6 +25,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.registration.impl.InMemoryRegistrationAdapter;
 import org.eclipse.hono.registration.impl.RegistrationEndpoint;
 import org.eclipse.hono.util.AggregatingInvocationResultHandler;
+import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -148,16 +146,16 @@ public class StandaloneRegistrationApiTest {
     @Test(timeout = TIMEOUT)
     public void testGetDeviceReturnsRegisteredDevice(final TestContext ctx) {
 
-        Future<Integer> getTracker = Future.future();
+        Future<RegistrationResult> getTracker = Future.future();
         getTracker.setHandler(ctx.asyncAssertSuccess(getResult -> {
-            ctx.assertEquals(HTTP_OK, getResult);
+            ctx.assertEquals(HTTP_OK, getResult.getStatus());
         }));
 
         getContext(ctx).runOnContext(go -> {
-            Future<Integer> regTracker = Future.future();
-            registrationClient.register(DEVICE_1, regTracker.completer());
+            Future<RegistrationResult> regTracker = Future.future();
+            registrationClient.register(DEVICE_1, null, regTracker.completer());
             regTracker.compose(s -> {
-                ctx.assertEquals(HTTP_CREATED, s);
+                ctx.assertEquals(HTTP_CREATED, s.getStatus());
                 registrationClient.get(DEVICE_1, getTracker.completer());
             }, getTracker);
         });
@@ -170,7 +168,7 @@ public class StandaloneRegistrationApiTest {
 
         getContext(ctx).runOnContext(go -> {
             registrationClient.get(DEVICE_1, s -> {
-                if (s.succeeded() && s.result() == HTTP_NOT_FOUND) {
+                if (s.succeeded() && s.result().getStatus() == HTTP_NOT_FOUND) {
                     ok.complete();
                 }
             });
@@ -184,7 +182,7 @@ public class StandaloneRegistrationApiTest {
 
         getContext(ctx).runOnContext(go -> {
             registrationClient.deregister(DEVICE_1, s -> {
-                if (s.succeeded() && s.result() == HTTP_NOT_FOUND) {
+                if (s.succeeded() && s.result().getStatus() == HTTP_NOT_FOUND) {
                     ok.complete();
                 }
             });
@@ -194,9 +192,9 @@ public class StandaloneRegistrationApiTest {
     @Test(timeout = 10000l)
     public void testRegisterDevices(final TestContext ctx) {
 
-        Future<Integer> done = Future.future();
+        Future<RegistrationResult> done = Future.future();
         done.setHandler(ctx.asyncAssertSuccess(s -> {
-            ctx.assertEquals(HTTP_NOT_FOUND, s);
+            ctx.assertEquals(HTTP_NOT_FOUND, s.getStatus());
         }));
 
         getContext(ctx).runOnContext(go -> {
@@ -205,11 +203,11 @@ public class StandaloneRegistrationApiTest {
             registerDevices(ctx, registrationTracker.completer());
             registrationTracker.compose(r -> {
                 // Step 2: assert that "device1" has been registered
-                Future<Integer> getTracker = Future.future();
+                Future<RegistrationResult> getTracker = Future.future();
                 registrationClient.get(DEVICE_1, getTracker.completer());
                 return getTracker;
             }).compose(getResult -> {
-                ctx.assertEquals(HTTP_OK, getResult);
+                ctx.assertEquals(HTTP_OK, getResult.getStatus());
                 // Step 3: deregister all devices
                 Future<Void> deregTracker = Future.future();
                 deregisterDevices(ctx, deregTracker.completer());
@@ -229,8 +227,8 @@ public class StandaloneRegistrationApiTest {
         IntStream.range(0, NO_OF_DEVICES).forEach(i -> {
             String deviceId = DEVICE_PREFIX + i;
             getContext(ctx).runOnContext(go -> {
-                registrationClient.register(deviceId, s -> {
-                    resultAggregator.handle(s.succeeded() && HTTP_CREATED == s.result());
+                registrationClient.register(deviceId, null, s -> {
+                    resultAggregator.handle(s.succeeded() && HTTP_CREATED == s.result().getStatus());
                 });
             });
         });
@@ -246,7 +244,7 @@ public class StandaloneRegistrationApiTest {
             String deviceId = DEVICE_PREFIX + i;
             getContext(ctx).runOnContext(go ->
                     registrationClient.deregister(deviceId, s ->
-                            resultAggregator.handle(s.succeeded() && HTTP_NO_CONTENT == s.result())));
+                            resultAggregator.handle(s.succeeded() && HTTP_NO_CONTENT == s.result().getStatus())));
         });
     }
 }

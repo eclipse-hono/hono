@@ -20,8 +20,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.eventbus.Message;
@@ -32,6 +34,7 @@ import io.vertx.core.json.JsonObject;
  * Simple "in memory" device registration.
  */
 @Service
+@Profile("testing")
 public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryRegistrationAdapter.class);
@@ -69,33 +72,33 @@ public class InMemoryRegistrationAdapter extends BaseRegistrationAdapter {
             reply(regMsg, removeDevice(tenantId, deviceId));
             break;
         default:
-            reply(regMsg, HTTP_BAD_REQUEST);
             LOGGER.info("Action {} not supported.", action);
+            reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
         }
     }
 
-    public int getDevice(final String tenantId, final String deviceId) {
+    public RegistrationResult getDevice(final String tenantId, final String deviceId) {
         final Set<String> devices = deviceMap.get(tenantId);
         if (devices != null && devices.contains(deviceId)) {
-            return HTTP_OK;
+            return RegistrationResult.from(HTTP_OK);
         } else {
-            return HTTP_NOT_FOUND;
+            return RegistrationResult.from(HTTP_NOT_FOUND);
         }
     }
 
-    public int removeDevice(final String tenantId, final String deviceId) {
+    public RegistrationResult removeDevice(final String tenantId, final String deviceId) {
         if (getDevicesForTenant(tenantId).remove(deviceId)) {
-            return HTTP_NO_CONTENT;
+            return RegistrationResult.from(HTTP_NO_CONTENT);
         } else {
-            return HTTP_NOT_FOUND;
+            return RegistrationResult.from(HTTP_NOT_FOUND);
         }
     }
 
-    public int addDevice(final String tenantId, final String deviceId) {
+    public RegistrationResult addDevice(final String tenantId, final String deviceId) {
         if (getDevicesForTenant(tenantId).add(deviceId)) {
-            return HTTP_CREATED;
+            return RegistrationResult.from(HTTP_CREATED);
         } else {
-            return HTTP_CONFLICT;
+            return RegistrationResult.from(HTTP_CONFLICT);
         }
     }
 

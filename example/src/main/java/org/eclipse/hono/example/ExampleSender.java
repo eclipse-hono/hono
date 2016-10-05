@@ -20,10 +20,11 @@ import java.net.HttpURLConnection;
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.HonoClientConfigProperties;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetrySender;
-import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
+import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,16 +88,16 @@ public class ExampleSender {
                 return regClientTracker;
             }).compose(regClient -> {
             /* step 3: register a device */
-                Future<Integer> regResultTracker = Future.future();
-                regClient.register(deviceId, regResultTracker.completer());
+                Future<RegistrationResult> regResultTracker = Future.future();
+                regClient.register(deviceId, null, regResultTracker.completer());
                 return regResultTracker;
             }).compose(regResult -> {
             /* step 4: handle result of registration */
                 Future<Void> resultCodeTracker = Future.future();
-                if (regResult == HttpURLConnection.HTTP_CREATED) {
+                if (regResult.getStatus() == HttpURLConnection.HTTP_CREATED) {
                     LOG.info("Device registered successfully.");
                     resultCodeTracker.complete();
-                } else if (regResult == HttpURLConnection.HTTP_CONFLICT) {
+                } else if (regResult.getStatus() == HttpURLConnection.HTTP_CONFLICT) {
                     LOG.info("Device already registered.");
                     resultCodeTracker.complete();
                 } else {

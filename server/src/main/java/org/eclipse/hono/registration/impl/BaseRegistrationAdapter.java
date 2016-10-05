@@ -16,6 +16,7 @@ import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGI
 import org.eclipse.hono.registration.RegistrationAdapter;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,11 +92,12 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         stopFuture.complete();
     }
 
-    protected final void reply(final Message<JsonObject> request, final int status) {
+    protected final void reply(final Message<JsonObject> request, final RegistrationResult result) {
         final JsonObject body = request.body();
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
 
-        request.reply(RegistrationConstants.getReply(status, tenantId, deviceId));
+        request.reply(RegistrationConstants.getReply(tenantId, deviceId, result));
     }
+
 }
