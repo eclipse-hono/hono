@@ -28,21 +28,38 @@
     <name>Eclipse Foundation</name>
     <url>http://www.eclipse.org/</url>
   </organization>
+
   <licenses>
     <license>
       <name>Eclipse Public License - Version 1.0</name>
       <url>http://www.eclipse.org/org/documents/epl-v10.php</url>
     </license>
   </licenses>
+
   <scm>
     <developerConnection>scm:git:https://github.com/eclipse/hono.git</developerConnection>
     <url>https://github.com/eclipse/hono</url>
     <tag>HEAD</tag>
   </scm>
+
   <issueManagement>
     <system>GitHub Issues</system>
     <url>https://github.com/eclipse/hono/issues</url>
   </issueManagement>
+
+  <distributionManagement>
+    <repository>
+      <id>repo.eclipse.org</id>
+      <name>Eclipse Release Repository</name>
+      <url>https://repo.eclipse.org/content/repositories/releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>repo.eclipse.org</id>
+      <name>Eclipse Snapshot Repository</name>
+      <url>https://repo.eclipse.org/content/repositories/snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <developers>
     <developer>
       <id>hkonsyk</id>
@@ -97,19 +114,6 @@
     <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
     <timestamp>${maven.build.timestamp}</timestamp>
   </properties>
-
-  <distributionManagement>
-    <repository>
-      <id>repo.eclipse.org</id>
-      <name>Hono Releases</name>
-      <url>https://repo.eclipse.org/content/repositories/hono-releases/</url>
-    </repository>
-    <snapshotRepository>
-      <id>repo.eclipse.org</id>
-      <name>Hono Snapshots</name>
-      <url>https://repo.eclipse.org/content/repositories/hono-snapshots/</url>
-    </snapshotRepository>
-  </distributionManagement>
 
   <modules>
     <module>adapters</module>
@@ -194,6 +198,23 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.10.4</version>
+          <configuration>
+            <excludePackageNames>
+              org.eclipse.hono.adapter.*,
+              org.eclipse.hono.application,
+              org.eclipse.hono.example,
+              org.eclipse.hono.tests.*
+            </excludePackageNames>
+          </configuration>
+          <executions>
+            <execution>
+              <id>aggregate_javadoc</id>
+              <goals>
+                <goal>aggregate</goal>
+              </goals>
+              <phase>site</phase>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -227,24 +248,41 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <excludePackageNames>
-            org.eclipse.hono.adapter.*,
-            org.eclipse.hono.application,
-            org.eclipse.hono.example,
-            org.eclipse.hono.tests.*
-          </excludePackageNames>
-        </configuration>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.0.1</version>
         <executions>
           <execution>
-            <id>aggregate_javadoc</id>
+            <id>attach-sources</id>
+            <phase>verify</phase>
             <goals>
-              <goal>aggregate</goal>
+              <goal>jar-no-fork</goal>
             </goals>
-            <phase>site</phase>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <!-- 
+          Use the Nexus Staging plugin as a full replacement for the standard
+          Maven Deploy plugin.
+          See https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin
+          why this makes sense :-)
+          We can control whether we want to deploy to the Eclipse repo or Maven Central
+          by a combination of the version being a SNAPHOT or release version and property
+          skipStaging=true/false.
+          In any case we can take advantage of the plugin's "deferred deploy" feature which
+          makes sure that all artifacts of a multi-module project are deployed as a whole
+          at the end of the build process instead of deploying each module's artifacts
+          individually as part of building the module.
+         -->
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.7</version>
+        <extensions>true</extensions>
+        <configuration>
+          <serverId>ossrh</serverId>
+          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+          <autoReleaseAfterClose>false</autoReleaseAfterClose>
+        </configuration>
       </plugin>
     </plugins>
   </build>

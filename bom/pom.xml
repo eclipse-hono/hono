@@ -25,7 +25,7 @@
   <artifactId>hono-bom</artifactId>
   <packaging>pom</packaging>
 
-  <name>Hono third party dependencies.</name>
+  <name>Hono Dependencies</name>
   <description>A &quot;bill-of-materials&quot; for Hono.</description>
 
   <properties>

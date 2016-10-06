@@ -38,5 +38,8 @@
 
   <properties>
   	<maven.javadoc.skip>true</maven.javadoc.skip>
+  	<maven.source.skip>true</maven.source.skip>
   </properties>
+  <name>Hono Protocol Adapters</name>
+  <description>An arbitrary collection of example protocol adapters for Hono. These adapters are mainly intended to be used for demonstration or PoCs. </description>
 </project>

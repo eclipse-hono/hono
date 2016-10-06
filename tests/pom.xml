@@ -30,6 +30,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
    <properties>
      <image.target>hono-test-config</image.target>
      <maven.javadoc.skip>true</maven.javadoc.skip>
+     <maven.source.skip>true</maven.source.skip>
    </properties>
 
    <dependencies>
