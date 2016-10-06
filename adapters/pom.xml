@@ -36,4 +36,7 @@
     <module>rest-vertx</module>
   </modules>
 
+  <properties>
+  	<maven.javadoc.skip>true</maven.javadoc.skip>
+  </properties>
 </project>

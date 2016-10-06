@@ -13,6 +13,7 @@
   <properties>
     <!-- name of Docker image -->
     <image.target>hono-server</image.target>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 
   <dependencies>
