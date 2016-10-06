@@ -93,7 +93,7 @@ public class ExampleSender {
             }).compose(regResult -> {
             /* step 4: handle result of registration */
                 Future<Void> resultCodeTracker = Future.future();
-                if (regResult == HttpURLConnection.HTTP_OK) {
+                if (regResult == HttpURLConnection.HTTP_CREATED) {
                     LOG.info("Device registered successfully.");
                     resultCodeTracker.complete();
                 } else if (regResult == HttpURLConnection.HTTP_CONFLICT) {
