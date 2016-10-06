@@ -39,9 +39,6 @@ public abstract class BaseAuthenticationService extends AbstractInstanceNumberAw
     private MessageConsumer<JsonObject> authRequestConsumer;
     protected boolean singleTenant;
 
-    /**
-     * 
-     */
     protected BaseAuthenticationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant) {
         super(instanceId, totalNoOfInstances);
         this.singleTenant = singleTenant;

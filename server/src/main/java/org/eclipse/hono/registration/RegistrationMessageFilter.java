@@ -33,6 +33,10 @@ public final class RegistrationMessageFilter extends BaseMessageFilter {
 
     /**
      * Checks whether a given registration message contains all required properties.
+     * 
+     * @param linkTarget The resource path to check the message's properties against for consistency.
+     * @param msg The AMQP 1.0 message to perform the checks on.
+     * @return {@code true} if the message passes all checks.
      */
      public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
 

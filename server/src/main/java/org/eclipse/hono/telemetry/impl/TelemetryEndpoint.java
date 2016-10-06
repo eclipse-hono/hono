@@ -230,14 +230,11 @@ public final class TelemetryEndpoint extends BaseEndpoint {
                 link.getLinkId(), creditLeft, dataAddress);
     }
 
-    public static class LinkWrapper {
+    static class LinkWrapper {
 
         private ProtonReceiver link;
         private String id;
 
-        /**
-         * @param receiver
-         */
         public LinkWrapper(final String linkId, final ProtonReceiver receiver) {
             this.id = Objects.requireNonNull(linkId);
             link = Objects.requireNonNull(receiver);
