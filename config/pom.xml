@@ -11,6 +11,7 @@
 
   <properties>
     <image.target>hono-default-config</image.target>
+    <maven.source.skip>true</maven.source.skip>
   </properties>
 
   <build>
