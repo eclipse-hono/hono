@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
  * <li>{@code hono.server.port} - The port to listen on. If not specified the server listens on the
  * AMQP 1.0 standard port 5672.</li>
  * <li>{@code hono.networkdebuglogging} - If {@code true} Hono logs TCP traffic. Defaults to {@code false}.</li>
- * <li>{@code hono.singletenant} - If {@code true} the server supports a single tenant only. Defaults to {@false}.</li>
+ * <li>{@code hono.singletenant} - If {@code true} the server supports a single tenant only. Defaults to {@code false}.</li>
  * </ul>
  */
 @Component

@@ -45,13 +45,13 @@ public interface TelemetrySender {
      * ...
      * sender.send(msg);
      * if (sender.sendQueueFull()) {
-     *     sender.sendQueueDrainHandler(replenished -> {
+     *     sender.sendQueueDrainHandler(replenished -&gt; {
      *         // send more messages
      *     });
      * }
      * </pre>
      * 
-     * @param handler
+     * @param handler The handler to invoke when this sender has been replenished with credit.
      */
     void sendQueueDrainHandler(Handler<Void> handler);
 

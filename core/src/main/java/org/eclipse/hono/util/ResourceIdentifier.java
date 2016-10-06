@@ -22,7 +22,6 @@ import java.util.Objects;
  * Each resource identifier consists of an arbitrary number of path segments.
  * The first segment always contains the name of the <em>endpoint</em> that the
  * resource belongs to.
- * </p>
  * <p>
  * Within the <em>telemetry</em> and <em>registration</em> endpoints the first three
  * segments have the following semantics:
@@ -31,7 +30,6 @@ import java.util.Objects;
  * <li>the <em>tenant ID</em></li>
  * <li>an (optional) <em>device ID</em></li>
  * </ol>
- * </p>
  */
 public final class ResourceIdentifier {
 

@@ -359,7 +359,7 @@ public class HonoClient {
 
         /**
          * @param port the Hono port
-         * @return
+         * @return the builder instance
          */
         public HonoClientBuilder port(final int port) {
             this.port = port;
