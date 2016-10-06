@@ -23,12 +23,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.engine.Record;
+import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TestSupport;
 import org.junit.Test;
 
 import io.vertx.core.Context;
