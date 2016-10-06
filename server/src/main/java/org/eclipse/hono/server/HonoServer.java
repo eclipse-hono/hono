@@ -87,7 +87,7 @@ public final class HonoServer extends AbstractVerticle {
             final ProtonServerOptions options = createServerOptions();
             server = ProtonServer.create(vertx, options)
                     .saslAuthenticatorFactory(new PlainSaslAuthenticatorFactory(vertx))
-                    .connectHandler(this::helloProcessConnection)
+                    .connectHandler(this::handleRemoteConnectionOpen)
                     .listen(port, bindAddress, bindAttempt -> {
                         if (bindAttempt.succeeded()) {
                             this.port = bindAttempt.result().actualPort();
@@ -201,7 +201,7 @@ public final class HonoServer extends AbstractVerticle {
         return singleTenant;
     }
 
-    void helloProcessConnection(final ProtonConnection connection) {
+    void handleRemoteConnectionOpen(final ProtonConnection connection) {
         connection.setContainer(String.format("Hono-%s:%d-%d", this.bindAddress, server.actualPort(), instanceNo));
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
         connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
