@@ -52,7 +52,7 @@ import io.vertx.core.json.JsonObject;
  * with a particular AMQP link.
  * <p>
  * For each event {@code BaseTelemetryAdapter} retrieves (and removes) the corresponding telemetry message from the shared map and
- * then invokes {@link TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message, String, io.vertx.core.Handler)}.
+ * then invokes {@link TelemetryAdapter#processTelemetryData(org.apache.qpid.proton.message.Message, String)}.
  */
 public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVerticle implements TelemetryAdapter {
 
