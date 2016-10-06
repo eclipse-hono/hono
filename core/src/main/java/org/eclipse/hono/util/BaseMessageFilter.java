@@ -25,6 +25,16 @@ public class BaseMessageFilter {
 
     /**
      * Checks whether a given registration message contains required standard properties.
+     * <p>
+     * In particular, the following conditions need to be met in order for the message to pass:
+     * <ol>
+     * <li>The message contains an application property {@link MessageHelper#APP_PROPERTY_DEVICE_ID}.</li>
+     * <li>If the given link target contains a device id in its path, it must match the id from the property.</li>
+     * </ol>
+     * 
+     * @param linkTarget The resource path to check the message's properties against for consistency.
+     * @param msg The AMQP 1.0 message to perform the checks on.
+     * @return {@code true} if the message passes all checks.
      */
      protected static boolean verifyStandardProperties(final ResourceIdentifier linkTarget, final Message msg) {
 

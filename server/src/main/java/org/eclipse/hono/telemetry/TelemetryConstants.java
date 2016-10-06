@@ -19,7 +19,7 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Constants & utility methods used throughout the Telemetry API.
+ * Constants &amp; utility methods used throughout the Telemetry API.
  */
 public final class TelemetryConstants {
 

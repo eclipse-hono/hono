@@ -30,7 +30,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
 
 /**
- * Constants & utility methods used throughout the Registration API.
+ * Constants &amp; utility methods used throughout the Registration API.
  */
 public final class RegistrationConstants {
 

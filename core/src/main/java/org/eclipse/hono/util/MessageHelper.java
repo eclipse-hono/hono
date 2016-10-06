@@ -161,10 +161,11 @@ public final class MessageHelper {
      * Returns the value to which the specified key is mapped in the message annotations,
      * or {@code null} if the message annotations contain no mapping for the key.
      *
+     * @param <T> the expected type of the property to read.
      * @param msg the message that contains the annotations.
      * @param key the name of the symbol to return a value for.
      * @param type the expected type of the value.
-     * @returns the annotation's value or {@code null} if no such annotation exists or its value
+     * @return the annotation's value or {@code null} if no such annotation exists or its value
      *          is not of the expected type.
      */
     @SuppressWarnings("unchecked")

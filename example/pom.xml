@@ -25,6 +25,10 @@
 
   <artifactId>hono-example</artifactId>
 
+  <properties>
+  	<maven.javadoc.skip>true</maven.javadoc.skip>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -86,5 +90,4 @@
       </plugin>
     </plugins>
   </build>
-
 </project>
