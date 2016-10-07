@@ -22,7 +22,7 @@ import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.TelemetrySender;
-import org.eclipse.hono.registration.impl.InMemoryRegistrationAdapter;
+import org.eclipse.hono.registration.impl.FileBasedRegistrationAdapter;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.junit.After;
@@ -61,7 +61,7 @@ public class StandaloneTelemetryApiTest {
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
-    private static InMemoryRegistrationAdapter registrationAdapter;
+    private static FileBasedRegistrationAdapter registrationAdapter;
     private static MessageDiscardingTelemetryAdapter telemetryAdapter;
     private static HonoClient                  client;
     private static TelemetrySender             telemetrySender;
@@ -75,7 +75,7 @@ public class StandaloneTelemetryApiTest {
 
         server = new HonoServer(BIND_ADDRESS, 0, false);
         server.addEndpoint(new TelemetryEndpoint(vertx, false));
-        registrationAdapter = new InMemoryRegistrationAdapter();
+        registrationAdapter = new FileBasedRegistrationAdapter();
         telemetryAdapter = new MessageDiscardingTelemetryAdapter();
         Context context = vertx.getOrCreateContext();
         ctx.put(KEY_CONTEXT, context);
@@ -102,6 +102,7 @@ public class StandaloneTelemetryApiTest {
             }).compose(s -> {
                 client = HonoClientBuilder.newClient()
                         .vertx(vertx)
+                        .name("test")
                         .host(server.getBindAddress())
                         .port(server.getPort())
                         .user(USER)
@@ -116,6 +117,8 @@ public class StandaloneTelemetryApiTest {
 
     @Before
     public void createSender(final TestContext ctx) {
+
+        registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1, null);
 
         final Async senderCreation = ctx.async();
         getContext(ctx).runOnContext(go -> {
@@ -163,7 +166,6 @@ public class StandaloneTelemetryApiTest {
         LOG.debug("starting telemetry upload test");
         int count = 30;
         final Async messagesReceived = ctx.async(count);
-        registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1);
         telemetryAdapter.setMessageConsumer(msg -> {
             messagesReceived.countDown();
             LOG.debug("received message [id: {}]", msg.getMessageId());
@@ -183,7 +185,6 @@ public class StandaloneTelemetryApiTest {
     @Test(timeout = 1000l)
     public void testLinkGetsClosedWhenUploadingDataForUnknownDevice(final TestContext ctx) throws Exception {
 
-        registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1);
         telemetrySender.setErrorHandler(ctx.asyncAssertFailure(s -> {
             LOG.debug(s.getMessage());
         }));
@@ -195,7 +196,6 @@ public class StandaloneTelemetryApiTest {
     @Test(timeout = 1000l)
     public void testLinkGetsClosedWhenUploadingMalformedTelemetryDataMessage(final TestContext ctx) throws Exception {
 
-        registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1);
         final Message msg = ProtonHelper.message("malformed");
         msg.setMessageId("malformed-message");
 

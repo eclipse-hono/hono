@@ -30,8 +30,8 @@ import io.vertx.core.json.JsonObject;
  */
 public class FileBasedRegistrationAdapterTest
 {
-   public static final String TENANT = "tenant";
-   public static final String DEVICE = "device";
+   private static final String TENANT = "tenant";
+   private static final String DEVICE = "device";
    private static FileBasedRegistrationAdapter registrationAdapter;
 
    @BeforeClass
@@ -74,14 +74,18 @@ public class FileBasedRegistrationAdapterTest
    @Test
    public void testGetSucceedsForRegisteredDevice() {
        processMessageAndExpectResponse(mockMsg(ACTION_REGISTER),getReply(HTTP_CREATED, TENANT, DEVICE));
-       processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_OK, TENANT, DEVICE, new JsonObject()));
+       processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_OK, TENANT, DEVICE, expectedMessage()));
    }
 
    @Test
    public void testGetFailsForDeregisteredDevice() {
        processMessageAndExpectResponse(mockMsg(ACTION_REGISTER),getReply(HTTP_CREATED, TENANT, DEVICE));
-       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getReply(HTTP_OK, TENANT, DEVICE, new JsonObject()));
+       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getReply(HTTP_OK, TENANT, DEVICE, expectedMessage()));
        processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_NOT_FOUND, TENANT, DEVICE));
+   }
+
+   private static JsonObject expectedMessage() {
+       return new JsonObject();
    }
 
    private static Message<JsonObject> mockMsg(final String action) {

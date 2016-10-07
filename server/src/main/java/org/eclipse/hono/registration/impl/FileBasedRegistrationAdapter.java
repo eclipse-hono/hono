@@ -13,7 +13,6 @@
 package org.eclipse.hono.registration.impl;
 
 import static java.net.HttpURLConnection.*;
-import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,17 +20,12 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -45,10 +39,10 @@ import io.vertx.core.json.JsonObject;
 @Service
 public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
 
+    private static final String FIELD_DATA = "data";
+    private static final String FIELD_HONO_ID = "hono-id";
     private static final String ARRAY_DEVICES = "devices";
-    private static final String FIELD_ID = "id";
     private static final String FIELD_TENANT = "tenant";
-    private static final Logger LOG = LoggerFactory.getLogger(FileBasedRegistrationAdapter.class);
 
     private final Map<String, Map<String, JsonObject>> identities = new HashMap<>();
     // the name of the file used to persist the registry content
@@ -58,37 +52,44 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
     @Override
     protected void doStart(Future<Void> startFuture) throws Exception {
 
-        final FileSystem fs = vertx.fileSystem();
-        if (fs.existsBlocking(filename)) {
-            final AtomicInteger deviceCount = new AtomicInteger();
-            fs.readFile(filename, readAttempt -> {
-               if (readAttempt.succeeded()) {
-                   JsonArray allObjects = new JsonArray(new String(readAttempt.result().getBytes()));
-                   for (Object obj : allObjects) {
-                       JsonObject tenant = (JsonObject) obj;
-                       String tenantId = tenant.getString(FIELD_TENANT);
-                       Map<String, JsonObject> deviceMap = new HashMap<>();
-                       for (Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
-                           JsonObject device = (JsonObject) deviceObj;
-                           String deviceId = device.getString(FIELD_ID);
-                           deviceMap.put(deviceId, device);
-                           deviceCount.incrementAndGet();
-                       }
-                       identities.put(tenantId, deviceMap);
-                   }
-                   LOG.info("successfully loaded {} device identities from file [{}]", deviceCount.get(), filename);
-                   startFuture.complete();
-               } else {
-                   LOG.warn("could not load device identities from file [{}]", filename, readAttempt.cause());
-                   startFuture.fail(readAttempt.cause());
-               }
+        if (filename != null) {
+            loadRegistrationData();
+            vertx.setPeriodic(3000, saveIdentities -> {
+                saveToFile(Future.future());
             });
-        } else {
-            startFuture.complete();
         }
-        vertx.setPeriodic(3000, saveIdentities -> {
-            saveToFile(Future.future());
-        });
+        startFuture.complete();
+    }
+
+    private void loadRegistrationData() {
+        if (filename != null) {
+            final FileSystem fs = vertx.fileSystem();
+            LOG.debug("trying to load device registration information from file {}", filename);
+            if (fs.existsBlocking(filename)) {
+                final AtomicInteger deviceCount = new AtomicInteger();
+                fs.readFile(filename, readAttempt -> {
+                   if (readAttempt.succeeded()) {
+                       JsonArray allObjects = new JsonArray(new String(readAttempt.result().getBytes()));
+                       for (Object obj : allObjects) {
+                           JsonObject tenant = (JsonObject) obj;
+                           String tenantId = tenant.getString(FIELD_TENANT);
+                           Map<String, JsonObject> deviceMap = new HashMap<>();
+                           for (Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
+                               JsonObject device = (JsonObject) deviceObj;
+                               deviceMap.put(device.getString(FIELD_HONO_ID), device.getJsonObject(FIELD_DATA));
+                               deviceCount.incrementAndGet();
+                           }
+                           identities.put(tenantId, deviceMap);
+                       }
+                       LOG.info("successfully loaded {} device identities from file [{}]", deviceCount.get(), filename);
+                   } else {
+                       LOG.warn("could not load device identities from file [{}]", filename, readAttempt.cause());
+                   }
+                });
+            } else {
+                LOG.debug("device identity file {} does not exist", filename);
+            }
+        }
     }
 
     @Override
@@ -106,10 +107,16 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
         for (Entry<String, Map<String, JsonObject>> entry : identities.entrySet()) {
             JsonArray devices = new JsonArray();
             for (Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
-                devices.add(deviceEntry.getValue());
+                devices.add(
+                        new JsonObject()
+                            .put(FIELD_HONO_ID, deviceEntry.getKey())
+                            .put(FIELD_DATA, deviceEntry.getValue()));
                 idCount.incrementAndGet();
             }
-            tenants.add(new JsonObject().put(FIELD_TENANT, entry.getKey()).put(ARRAY_DEVICES, devices));
+            tenants.add(
+                    new JsonObject()
+                        .put(FIELD_TENANT, entry.getKey())
+                        .put(ARRAY_DEVICES, devices));
         }
         fs.writeFile(filename, Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
             if (writeAttempt.succeeded()) {
@@ -123,37 +130,6 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
     }
 
     @Override
-    public void processRegistrationMessage(final Message<JsonObject> regMsg) {
-
-        final JsonObject body = regMsg.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
-        final JsonObject payload = body.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
-
-        switch (action) {
-        case ACTION_GET:
-            LOG.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-            reply(regMsg, getDevice(tenantId, deviceId));
-            break;
-        case ACTION_REGISTER:
-            LOG.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
-            reply(regMsg, addDevice(tenantId, deviceId, payload));
-            break;
-        case ACTION_UPDATE:
-            LOG.debug("updating registration for device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
-            reply(regMsg, updateDevice(tenantId, deviceId, payload));
-            break;
-        case ACTION_DEREGISTER:
-            LOG.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
-            reply(regMsg, removeDevice(tenantId, deviceId));
-            break;
-        default:
-            LOG.info("action [{}] not supported", action);
-            reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
-        }
-    }
-
     public RegistrationResult getDevice(final String tenantId, final String deviceId) {
         final Map<String, JsonObject> devices = identities.get(tenantId);
         if (devices != null) {
@@ -165,6 +141,20 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
         return RegistrationResult.from(HTTP_NOT_FOUND);
     }
 
+    @Override
+    public RegistrationResult findDevice(final String tenantId, final String key, final String value) {
+        final Map<String, JsonObject> devices = identities.get(tenantId);
+        if (devices != null) {
+            for (Entry<String, JsonObject> entry : devices.entrySet()) {
+                if (value.equals(entry.getValue().getString(key))) {
+                    return RegistrationResult.from(HTTP_OK, entry.getValue());
+                }
+            }
+        }
+        return RegistrationResult.from(HTTP_NOT_FOUND);
+    }
+
+    @Override
     public RegistrationResult removeDevice(final String tenantId, final String deviceId) {
 
         final Map<String, JsonObject> devices = identities.get(tenantId);
@@ -175,19 +165,24 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
         }
     }
 
+    @Override
     public RegistrationResult addDevice(final String tenantId, final String deviceId, final JsonObject data) {
-        if (getDevicesForTenant(tenantId).putIfAbsent(deviceId, data) == null) {
+
+        JsonObject obj = data != null ? data : new JsonObject();
+        if (getDevicesForTenant(tenantId).putIfAbsent(deviceId, obj) == null) {
             return RegistrationResult.from(HTTP_CREATED);
         } else {
             return RegistrationResult.from(HTTP_CONFLICT);
         }
     }
 
+    @Override
     public RegistrationResult updateDevice(final String tenantId, final String deviceId, final JsonObject data) {
 
+        JsonObject obj = data != null ? data : new JsonObject();
         final Map<String, JsonObject> devices = identities.get(tenantId);
         if (devices != null && devices.containsKey(deviceId)) {
-            return RegistrationResult.from(HTTP_OK, devices.put(deviceId, data));
+            return RegistrationResult.from(HTTP_OK, devices.put(deviceId, obj));
         } else {
             return RegistrationResult.from(HTTP_NOT_FOUND);
         }
@@ -197,7 +192,7 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
     }
 
-    void clear() {
+    public void clear() {
         identities.clear();
     }
 

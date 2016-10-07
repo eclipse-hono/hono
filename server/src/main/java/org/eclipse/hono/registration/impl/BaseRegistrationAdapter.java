@@ -11,7 +11,10 @@
  */
 package org.eclipse.hono.registration.impl;
 
-import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static org.eclipse.hono.util.RegistrationConstants.*;
+
+import java.net.HttpURLConnection;
 
 import org.eclipse.hono.registration.RegistrationAdapter;
 import org.eclipse.hono.util.MessageHelper;
@@ -28,10 +31,14 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * Base class for implementing {@code RegistrationAdapter}s.
+ * <p>
+ * In particular, this base class provides support for parsing incoming AMQP 1.0
+ * messages and route them to specific methods corresponding to the <em>action</em>
+ * indicated in the message.
  */
 public abstract class BaseRegistrationAdapter extends AbstractVerticle implements RegistrationAdapter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(BaseRegistrationAdapter.class);
+    protected final Logger LOG = LoggerFactory.getLogger(getClass());
     private MessageConsumer<JsonObject> registrationConsumer;
 
     /**
@@ -91,6 +98,106 @@ public abstract class BaseRegistrationAdapter extends AbstractVerticle implement
         // to be overridden by subclasses
         stopFuture.complete();
     }
+
+    @Override
+    public final void processRegistrationMessage(final Message<JsonObject> regMsg) {
+
+        final JsonObject body = regMsg.body();
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+        final String key = body.getString(RegistrationConstants.APP_PROPERTY_KEY);
+        final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
+        final JsonObject payload = body.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
+
+        switch (action) {
+        case ACTION_GET:
+            LOG.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
+            reply(regMsg, getDevice(tenantId, deviceId));
+            break;
+        case ACTION_FIND:
+            LOG.debug("looking up device [key: {}, value: {}] of tenant [{}]", key, deviceId, tenantId);
+            reply(regMsg, findDevice(tenantId, key, deviceId));
+            break;
+        case ACTION_REGISTER:
+            LOG.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
+            reply(regMsg, addDevice(tenantId, deviceId, payload));
+            break;
+        case ACTION_UPDATE:
+            LOG.debug("updating registration for device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
+            reply(regMsg, updateDevice(tenantId, deviceId, payload));
+            break;
+        case ACTION_DEREGISTER:
+            LOG.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
+            reply(regMsg, removeDevice(tenantId, deviceId));
+            break;
+        default:
+            LOG.info("action [{}] not supported", action);
+            reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
+        }
+    }
+
+    /**
+     * Gets device registration data by device ID.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to get registration data for.
+     * @return The result of the operation. If a device with the given ID is registered for the tenant,
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will
+     *         contain the keys registered for the device.
+     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     */
+    public abstract RegistrationResult getDevice(final String tenantId, final String deviceId);
+
+    /**
+     * Finds device registration data by a key registered for the device.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param key The name of the key to look up the device registration by.
+     * @param value The value for the key to match on.
+     * @return The result of the operation. If a device with the given key/value is registered for the tenant,
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will
+     *         contain the keys registered for the device.
+     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     */
+    public abstract RegistrationResult findDevice(final String tenantId, final String key, final String value);
+
+    /**
+     * Registers a device.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID the device should be registered under.
+     * @param otherKeys A map containing additional keys and values that the device can be identified by (within the tenant).
+     * @return The result of the operation. If a device with the given ID does not yet exist for the tenant,
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_CREATED}.
+     *         Otherwise the status will be {@link HttpURLConnection#HTTP_CONFLICT}.
+     */
+    public abstract RegistrationResult addDevice(final String tenantId, final String deviceId, final JsonObject otherKeys);
+
+    /**
+     * Updates device registration data.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to update the registration for.
+     * @param otherKeys A map containing additional keys and values that the device can be identified by (within the tenant).
+     *                  The keys provided in this parameter will completely replace the former keys registered for the device.
+     * @return The result of the operation. If a device with the given ID exists for the tenant,
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain the
+     *         keys that had originally been registered for the device.
+     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     */
+    public abstract RegistrationResult updateDevice(final String tenantId, final String deviceId, final JsonObject otherKeys);
+
+    /**
+     * Removes a device.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to remove.
+     * @return The result of the operation. If the device has been removed, the <em>status</em> will
+     *         be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain the keys
+     *         that had been registered for the removed device.
+     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     */
+    public abstract RegistrationResult removeDevice(final String tenantId, final String deviceId);
 
     protected final void reply(final Message<JsonObject> request, final RegistrationResult result) {
         final JsonObject body = request.body();

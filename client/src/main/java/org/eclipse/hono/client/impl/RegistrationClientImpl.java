@@ -158,22 +158,32 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     private void createAndSendRequest(final String action, final String deviceId, final JsonObject payload,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(APP_PROPERTY_DEVICE_ID, deviceId);
+        properties.put(APP_PROPERTY_ACTION, action);
+        final Message request = createMessage(properties);
+        if (payload != null) {
+            request.setContentType("application/json; charset=utf-8");
+            request.setBody(new Data(new Binary(payload.encode().getBytes(StandardCharsets.UTF_8))));
+        }
+        sendMessage(request, resultHandler);
+    }
+
+    private void sendMessage(final Message request, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
         context.runOnContext(req -> {
-            final Message request = ProtonHelper.message();
-            final Map<String, Object> properties = new HashMap<>();
-            final String messageId = createMessageId();
-            properties.put(APP_PROPERTY_DEVICE_ID, deviceId);
-            properties.put(APP_PROPERTY_ACTION, action);
-            request.setApplicationProperties(new ApplicationProperties(properties));
-            request.setReplyTo(registrationReplyToAddress);
-            request.setMessageId(messageId);
-            if (payload != null) {
-                request.setContentType("application/json; charset=utf-8");
-                request.setBody(new Data(new Binary(payload.encode().getBytes(StandardCharsets.UTF_8))));
-            }
-            replyMap.put(messageId, resultHandler);
+            replyMap.put((String) request.getMessageId(), resultHandler);
             sender.send(request);
         });
+    }
+
+    private Message createMessage(final Map<String, Object> appProperties) {
+        final Message msg = ProtonHelper.message();
+        final String messageId = createMessageId();
+        msg.setApplicationProperties(new ApplicationProperties(appProperties));
+        msg.setReplyTo(registrationReplyToAddress);
+        msg.setMessageId(messageId);
+        return msg;
     }
 
     private String createMessageId() {
@@ -202,5 +212,15 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     public void get(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         createAndSendRequest(ACTION_GET, deviceId, null, resultHandler);
+    }
+
+    @Override
+    public void find(final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(APP_PROPERTY_DEVICE_ID, value);
+        properties.put(APP_PROPERTY_ACTION, ACTION_FIND);
+        properties.put(APP_PROPERTY_KEY, key);
+        sendMessage(createMessage(properties), resultHandler);
     }
 }

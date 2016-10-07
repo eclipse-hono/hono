@@ -16,15 +16,35 @@ import java.net.HttpURLConnection;
 import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
 import org.eclipse.hono.util.RegistrationResult;
 
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 
 /**
  * Simple mock implementation of RegistrationAdapter that always returns success.
  */
 public class MockRegistrationAdapter extends BaseRegistrationAdapter {
+
     @Override
-    public void processRegistrationMessage(final Message<JsonObject> regMsg) {
-        reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_OK));
+    public RegistrationResult getDevice(String tenantId, String deviceId) {
+        return RegistrationResult.from(HttpURLConnection.HTTP_OK);
+    }
+
+    @Override
+    public RegistrationResult findDevice(String tenantId, String key, String value) {
+        return RegistrationResult.from(HttpURLConnection.HTTP_OK);
+    }
+
+    @Override
+    public RegistrationResult addDevice(String tenantId, String deviceId, JsonObject data) {
+        return RegistrationResult.from(HttpURLConnection.HTTP_CREATED);
+    }
+
+    @Override
+    public RegistrationResult updateDevice(String tenantId, String deviceId, JsonObject data) {
+        return RegistrationResult.from(HttpURLConnection.HTTP_OK);
+    }
+
+    @Override
+    public RegistrationResult removeDevice(String tenantId, String deviceId) {
+        return RegistrationResult.from(HttpURLConnection.HTTP_OK);
     }
 }
