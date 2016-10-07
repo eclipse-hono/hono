@@ -13,6 +13,7 @@
 package org.eclipse.hono.example;
 
 import java.io.IOException;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
@@ -111,6 +112,12 @@ public class ExampleReceiver {
         } else if (body instanceof AmqpValue) {
             content = ((AmqpValue) msg.getBody()).getValue().toString();
         }
+
         LOG.info("received telemetry message [device: {}, content-type: {}]: {}", deviceId, msg.getContentType(), content);
+
+        if (msg.getApplicationProperties() != null) {
+            Map props = msg.getApplicationProperties().getValue();
+            LOG.info("... with application properties: {}", props);
+        }
     }
 }
