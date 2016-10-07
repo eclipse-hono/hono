@@ -16,6 +16,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
@@ -119,7 +121,11 @@ public class ExampleSender {
                 LOG.info("Enter some message to send (empty message to quit): ");
                 input = reader.readLine();
                 if (!input.isEmpty()) {
-                    telemetryClient.send(deviceId, input, "text/plain");
+
+                    Map<String, Object> properties = new HashMap<>();
+                    properties.put("my_prop_string", "I'm a string");
+                    properties.put("my_prop_int", 10);
+                    telemetryClient.send(deviceId, properties, input, "text/plain");
                 }
             } while (!input.isEmpty());
             f.complete();

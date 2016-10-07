@@ -14,10 +14,12 @@ package org.eclipse.hono.client.impl;
 
 import static org.eclipse.hono.util.MessageHelper.addDeviceId;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.TelemetrySender;
@@ -166,37 +168,68 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
 
     @Override
     public boolean send(final String deviceId, final byte[] payload, final String contentType) {
-        final Message msg = ProtonHelper.message();
-        msg.setBody(new Data(new Binary(payload)));
-        addPropterties(msg, deviceId, contentType);
-        return send(msg);
+        return send(deviceId, null, payload, contentType);
     }
 
     @Override
     public void send(final String deviceId, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
-        final Message msg = ProtonHelper.message();
-        msg.setBody(new Data(new Binary(payload)));
-        addPropterties(msg, deviceId, contentType);
-        send(msg, capacityAvailableHandler);
+        send(deviceId, null, payload, contentType, capacityAvailableHandler);
     }
 
     @Override
     public boolean send(final String deviceId, final String payload, final String contentType) {
-        final Message msg = ProtonHelper.message(payload);
-        addPropterties(msg, deviceId, contentType);
-        return send(msg);
+        return send(deviceId, null, payload, contentType);
     }
 
     @Override
     public void send(final String deviceId, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+        send(deviceId, null, payload, contentType, capacityAvailableHandler);
+    }
+
+    @Override
+    public boolean send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType) {
         final Message msg = ProtonHelper.message(payload);
-        addPropterties(msg, deviceId, contentType);
+        setApplicationProperties(msg, properties);
+        addProperties(msg, deviceId, contentType);
+        return send(msg);
+    }
+
+    @Override
+    public boolean send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
+        final Message msg = ProtonHelper.message();
+        msg.setBody(new Data(new Binary(payload)));
+        setApplicationProperties(msg, properties);
+        addProperties(msg, deviceId, contentType);
+        return send(msg);
+    }
+
+    @Override
+    public void send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+        final Message msg = ProtonHelper.message(payload);
+        setApplicationProperties(msg, properties);
+        addProperties(msg, deviceId, contentType);
         send(msg, capacityAvailableHandler);
     }
 
-    private void addPropterties(final Message msg, final String deviceId, final String contentType) {
+    @Override
+    public void send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+        final Message msg = ProtonHelper.message();
+        msg.setBody(new Data(new Binary(payload)));
+        setApplicationProperties(msg, properties);
+        addProperties(msg, deviceId, contentType);
+        send(msg, capacityAvailableHandler);
+    }
+
+    private void addProperties(final Message msg, final String deviceId, final String contentType) {
         msg.setMessageId(String.format("TelemetryClientImpl-%d", messageCounter.getAndIncrement()));
         msg.setContentType(contentType);
         addDeviceId(msg, deviceId);
+    }
+
+    private void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
+        if (properties != null) {
+            final ApplicationProperties applicationProperties = new ApplicationProperties(properties);
+            msg.setApplicationProperties(applicationProperties);
+        }
     }
 }
