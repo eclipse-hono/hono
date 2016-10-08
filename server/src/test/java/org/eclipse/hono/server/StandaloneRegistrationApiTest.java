@@ -178,6 +178,20 @@ public class StandaloneRegistrationApiTest {
         registrationClient.find("ep", "lwm2m", s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
+            JsonObject keys = s.result().getPayload();
+            ctx.assertNotNull(keys);
+            ctx.assertEquals("lwm2m", keys.getString("ep"));
+            ok.complete();
+        });
+    }
+
+    @Test(timeout = TIMEOUT)
+    public void testFindDeviceFailsForNonMatchingValue(final TestContext ctx) {
+        registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1, new JsonObject().put("ep", "lwm2m"));
+        final Async ok = ctx.async();
+        registrationClient.find("ep", "non-existing", s -> {
+            ctx.assertTrue(s.succeeded());
+            ctx.assertEquals(s.result().getStatus(), HTTP_NOT_FOUND);
             ok.complete();
         });
     }
