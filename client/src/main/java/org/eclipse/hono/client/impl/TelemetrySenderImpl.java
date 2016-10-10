@@ -14,6 +14,7 @@ package org.eclipse.hono.client.impl;
 
 import static org.eclipse.hono.util.MessageHelper.addDeviceId;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
@@ -228,6 +229,18 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
 
     private void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
         if (properties != null) {
+
+            // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
+            for (Map.Entry<String, ?> entry: properties.entrySet()) {
+                if (entry.getValue() instanceof  List) {
+                    throw new IllegalArgumentException(String.format("Application property %s can't be a List", entry.getKey()));
+                } else if (entry.getValue() instanceof Map) {
+                    throw new IllegalArgumentException(String.format("Application property %s can't be a Map", entry.getKey()));
+                } else if (entry.getValue().getClass().isArray()) {
+                    throw new IllegalArgumentException(String.format("Application property %s can't be an Array", entry.getKey()));
+                }
+            }
+
             final ApplicationProperties applicationProperties = new ApplicationProperties(properties);
             msg.setApplicationProperties(applicationProperties);
         }
