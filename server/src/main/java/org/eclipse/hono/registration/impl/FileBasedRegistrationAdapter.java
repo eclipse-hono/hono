@@ -40,7 +40,7 @@ import io.vertx.core.json.JsonObject;
 public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
 
     private static final String FIELD_DATA = "data";
-    private static final String FIELD_HONO_ID = "hono-id";
+    private static final String FIELD_HONO_ID = "id";
     private static final String ARRAY_DEVICES = "devices";
     private static final String FIELD_TENANT = "tenant";
 
@@ -135,7 +135,7 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
         if (devices != null) {
             JsonObject data = devices.get(deviceId);
             if (data != null) {
-                return RegistrationResult.from(HTTP_OK, data);
+                return RegistrationResult.from(HTTP_OK, getResult(deviceId, data));
             }
         }
         return RegistrationResult.from(HTTP_NOT_FOUND);
@@ -147,11 +147,15 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
         if (devices != null) {
             for (Entry<String, JsonObject> entry : devices.entrySet()) {
                 if (value.equals(entry.getValue().getString(key))) {
-                    return RegistrationResult.from(HTTP_OK, entry.getValue());
+                    return RegistrationResult.from(HTTP_OK, getResult(entry.getKey(), entry.getValue()));
                 }
             }
         }
         return RegistrationResult.from(HTTP_NOT_FOUND);
+    }
+
+    private static JsonObject getResult(final String id, final JsonObject data) {
+        return new JsonObject().put(FIELD_HONO_ID, id).put(FIELD_DATA, data);
     }
 
     @Override
@@ -159,7 +163,7 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
 
         final Map<String, JsonObject> devices = identities.get(tenantId);
         if (devices != null) {
-            return RegistrationResult.from(HTTP_OK, devices.remove(deviceId));
+            return RegistrationResult.from(HTTP_OK, getResult(deviceId, devices.remove(deviceId)));
         } else {
             return RegistrationResult.from(HTTP_NOT_FOUND);
         }
@@ -182,7 +186,7 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
         JsonObject obj = data != null ? data : new JsonObject();
         final Map<String, JsonObject> devices = identities.get(tenantId);
         if (devices != null && devices.containsKey(deviceId)) {
-            return RegistrationResult.from(HTTP_OK, devices.put(deviceId, obj));
+            return RegistrationResult.from(HTTP_OK, getResult(deviceId, devices.put(deviceId, obj)));
         } else {
             return RegistrationResult.from(HTTP_NOT_FOUND);
         }

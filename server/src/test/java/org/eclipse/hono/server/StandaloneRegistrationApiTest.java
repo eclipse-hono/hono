@@ -178,9 +178,11 @@ public class StandaloneRegistrationApiTest {
         registrationClient.find("ep", "lwm2m", s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
-            JsonObject keys = s.result().getPayload();
-            ctx.assertNotNull(keys);
-            ctx.assertEquals("lwm2m", keys.getString("ep"));
+            JsonObject payload = s.result().getPayload();
+            ctx.assertNotNull(payload);
+            ctx.assertEquals(DEVICE_1, payload.getString("id"));
+            JsonObject data = payload.getJsonObject("data");
+            ctx.assertEquals("lwm2m", data.getString("ep"));
             ok.complete();
         });
     }
