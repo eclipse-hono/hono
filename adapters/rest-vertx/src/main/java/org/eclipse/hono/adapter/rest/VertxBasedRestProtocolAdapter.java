@@ -21,6 +21,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.HonoClientConfigProperties;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.TelemetrySender;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
@@ -420,21 +422,21 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         if (contentType == null) {
             badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
         } else {
-            ctx.request().bodyHandler(payload -> {
-                hono.getOrCreateTelemetrySender(tenant, createAttempt -> {
-                    if (createAttempt.succeeded()) {
-                        boolean accepted = createAttempt.result().send(deviceId, payload.getBytes(), contentType);
-                        if (accepted) {
-                            ctx.response().setStatusCode(HTTP_ACCEPTED).end();
-                        } else {
-                            // we currently have no credit for uploading data to Hono's Telemetry endpoint
-                            serviceUnavailable(ctx.response(), 2);
-                        }
+            Buffer payload = ctx.getBody();
+            hono.getOrCreateTelemetrySender(tenant, createAttempt -> {
+                if (createAttempt.succeeded()) {
+                    TelemetrySender sender = createAttempt.result();
+                    boolean accepted = sender.send(deviceId, payload.getBytes(), contentType);
+                    if (accepted) {
+                        ctx.response().setStatusCode(HTTP_ACCEPTED).end();
                     } else {
-                        // we don't have a connection to Hono
+                        // we currently have no credit for uploading data to Hono's Telemetry endpoint
                         serviceUnavailable(ctx.response(), 2);
                     }
-                });
+                } else {
+                    // we don't have a connection to Hono
+                    serviceUnavailable(ctx.response(), 5);
+                }
             });
         }
     }
