@@ -151,7 +151,7 @@ public final class MessageHelper {
      */
     public static void annotate(final Message msg, final ResourceIdentifier resourceIdentifier) {
         MessageHelper.addAnnotation(msg, APP_PROPERTY_TENANT_ID, resourceIdentifier.getTenantId());
-        MessageHelper.addAnnotation(msg, APP_PROPERTY_DEVICE_ID, resourceIdentifier.getDeviceId());
+        MessageHelper.addAnnotation(msg, APP_PROPERTY_DEVICE_ID, resourceIdentifier.getResourceId());
         MessageHelper.addAnnotation(msg, APP_PROPERTY_RESOURCE_ID, resourceIdentifier.toString());
     }
 

@@ -86,7 +86,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     @Override
     public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
         /* note: we "misuse" deviceId part of the resource as reply address here */
-        if (targetResource.getDeviceId() == null) {
+        if (targetResource.getResourceId() == null) {
             LOG.debug("link target provided in client's link ATTACH does not match pattern \"registration/<tenant>/<reply-address>\"");
             sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),
                     "link target must have the following format registration/<tenant>/<reply-address>"));
