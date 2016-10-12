@@ -200,7 +200,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
                 sendAtMostOnce(link, messageId, delivery);
             } else {
                 LOG.debug("device {}/{} does not exist, closing link",
-                        messageAddress.getTenantId(), messageAddress.getDeviceId());
+                        messageAddress.getTenantId(), messageAddress.getResourceId());
                 MessageHelper.rejected(delivery, AmqpError.PRECONDITION_FAILED.toString(), "device does not exist");
                 onLinkDetach(link, condition(AmqpError.PRECONDITION_FAILED.toString(), "device does not exist"));
             }
@@ -209,7 +209,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
 
     private void checkDeviceExists(final ResourceIdentifier resource, final Handler<Boolean> resultHandler) {
         final JsonObject registrationJson = RegistrationConstants
-                .getRegistrationJson(RegistrationConstants.ACTION_GET, resource.getTenantId(), resource.getDeviceId());
+                .getRegistrationJson(RegistrationConstants.ACTION_GET, resource.getTenantId(), resource.getResourceId());
         vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationJson, response -> {
             if (response.succeeded()) {
                 final io.vertx.core.eventbus.Message<Object> message = response.result();

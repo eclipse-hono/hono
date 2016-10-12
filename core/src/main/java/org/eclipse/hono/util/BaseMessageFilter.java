@@ -43,9 +43,9 @@ public class BaseMessageFilter {
          if (deviceIdProperty == null) {
              LOG.trace("message [{}] contains no {} application property", msg.getMessageId(), MessageHelper.APP_PROPERTY_DEVICE_ID);
              return false;
-         } else if (linkTarget.getDeviceId() != null && !deviceIdProperty.equals(linkTarget.getDeviceId())) {
+         } else if (linkTarget.getResourceId() != null && !deviceIdProperty.equals(linkTarget.getResourceId())) {
              LOG.trace("message property contains invalid device ID [expected: {}, but was: {}]",
-                     linkTarget.getDeviceId(), deviceIdProperty);
+                     linkTarget.getResourceId(), deviceIdProperty);
              return false;
          } else {
              final ResourceIdentifier targetResource = ResourceIdentifier

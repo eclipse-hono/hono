@@ -35,34 +35,34 @@ public final class ResourceIdentifier {
 
     private static final int IDX_ENDPOINT = 0;
     private static final int IDX_TENANT_ID = 1;
-    private static final int IDX_DEVICE_ID = 2;
+    private static final int IDX_RESOURCE_ID = 2;
     private String[] resourcePath;
-    private String resourceId;
+    private String resource;
 
-    private ResourceIdentifier(final String resourceId, final boolean assumeDefaultTenant) {
-        String[] path = resourceId.split("\\/");
+    private ResourceIdentifier(final String resource, final boolean assumeDefaultTenant) {
+        String[] path = resource.split("\\/");
         if (assumeDefaultTenant) {
             if (path.length == 0) {
-                throw new IllegalArgumentException("resource identifier must at least contain an endpoint");
+                throw new IllegalArgumentException("resource must at least contain an endpoint");
             } else if (path.length > 2) {
-                throw new IllegalArgumentException("resource identifer must not contain more than 2 segments");
+                throw new IllegalArgumentException("resource must not contain more than 2 segments");
             } else {
                 setResourcePath(new String[]{path[0], Constants.DEFAULT_TENANT, path.length == 2 ? path[1] : null});
             }
         } else {
             if (path.length < 2) {
                 throw new IllegalArgumentException(
-                        "resource identifier must at least contain an endpoint and the tenantId");
+                        "resource must at least contain an endpoint and the tenantId");
             } else if (path.length > 3) {
-                throw new IllegalArgumentException("resource identifer must not contain more than 3 segments");
+                throw new IllegalArgumentException("resource must not contain more than 3 segments");
             } else {
                 setResourcePath(new String[]{path[0], path[1], path.length == 3 ? path[2] : null});
             }
         }
     }
 
-    private ResourceIdentifier(final String endpoint, final String tenantId, final String deviceId) {
-        setResourcePath(new String[]{endpoint, tenantId, deviceId});
+    private ResourceIdentifier(final String endpoint, final String tenantId, final String resourceId) {
+        setResourcePath(new String[]{endpoint, tenantId, resourceId});
     }
 
     private ResourceIdentifier(final String[] path) {
@@ -102,7 +102,7 @@ public final class ResourceIdentifier {
                 b.append("/");
             }
         }
-        resourceId = b.toString();
+        resource = b.toString();
     }
 
     /**
@@ -113,14 +113,14 @@ public final class ResourceIdentifier {
      * device ID.
      * </p>
      * 
-     * @param resourceId the resource identifier string to parse.
+     * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
      * @throws IllegalArgumentException if the given string does not represent a valid resource identifier.
      */
-    public static ResourceIdentifier fromString(final String resourceId) {
-        Objects.requireNonNull(resourceId);
-        return new ResourceIdentifier(resourceId, false);
+    public static ResourceIdentifier fromString(final String resource) {
+        Objects.requireNonNull(resource);
+        return new ResourceIdentifier(resource, false);
     }
 
     /**
@@ -131,29 +131,29 @@ public final class ResourceIdentifier {
      * {@link Constants#DEFAULT_TENANT}.
      * </p>
      * 
-     * @param resourceId the resource identifier string to parse.
+     * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
      * @throws IllegalArgumentException if the given string does not represent a valid resource identifier.
      */
-    public static ResourceIdentifier fromStringAssumingDefaultTenant(final String resourceId) {
-        Objects.requireNonNull(resourceId);
-        return new ResourceIdentifier(resourceId, true);
+    public static ResourceIdentifier fromStringAssumingDefaultTenant(final String resource) {
+        Objects.requireNonNull(resource);
+        return new ResourceIdentifier(resource, true);
     }
 
     /**
-     * Creates a resource identifier from endpoint, tenantId and optionally deviceId.
+     * Creates a resource identifier from endpoint, tenantId and optionally resourceId.
      *
      * @param endpoint the endpoint of the resource.
      * @param tenantId the tenant identifier.
-     * @param deviceId the device identifier, may be {@code null}.
+     * @param resourceId the resource identifier, may be {@code null}.
      * @return the resource identifier.
      * @throws NullPointerException if endpoint or tenantId is {@code null}.
      */
-    public static ResourceIdentifier from(final String endpoint, final String tenantId, final String deviceId) {
+    public static ResourceIdentifier from(final String endpoint, final String tenantId, final String resourceId) {
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(tenantId);
-        return new ResourceIdentifier(endpoint, tenantId, deviceId);
+        return new ResourceIdentifier(endpoint, tenantId, resourceId);
     }
 
     /**
@@ -193,11 +193,11 @@ public final class ResourceIdentifier {
     }
 
     /**
-     * @return the deviceId
+     * @return the resourceId
      */
-    public String getDeviceId() {
-        if (resourcePath.length > IDX_DEVICE_ID) {
-            return resourcePath[IDX_DEVICE_ID];
+    public String getResourceId() {
+        if (resourcePath.length > IDX_RESOURCE_ID) {
+            return resourcePath[IDX_RESOURCE_ID];
         } else {
             return null;
         }
@@ -230,7 +230,7 @@ public final class ResourceIdentifier {
      */
     @Override
     public String toString() {
-        return resourceId;
+        return resource;
     }
 
     @Override

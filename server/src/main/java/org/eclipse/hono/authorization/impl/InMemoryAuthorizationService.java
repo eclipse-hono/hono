@@ -91,7 +91,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     private boolean hasPermissionForTenant(final String subject, final ResourceIdentifier resource, final Permission permission) {
-        if (resource.getDeviceId() != null) {
+        if (resource.getResourceId() != null) {
             final ResourceIdentifier tenantResource = ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null);
             return hasPermissionInternal(subject, tenantResource, permission);
         }
