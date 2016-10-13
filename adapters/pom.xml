@@ -27,12 +27,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <!--
-      disabling the Camel based REST adapter for now
-      until we know what we want to do with it.
-
-    <module>rest</module>
-     -->
     <module>rest-vertx</module>
   </modules>
 
