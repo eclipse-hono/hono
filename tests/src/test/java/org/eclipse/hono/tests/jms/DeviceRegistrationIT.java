@@ -24,10 +24,13 @@ import java.util.concurrent.TimeUnit;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.JMSSecurityException;
+import javax.naming.NamingException;
 
 import org.apache.qpid.jms.JmsQueue;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,12 +42,16 @@ public class DeviceRegistrationIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistrationIT.class);
     private static final String TEST_DEVICE_ID = "testDevice-" + UUID.randomUUID().toString();
+    private static JmsIntegrationTestSupport client;
     private RegistrationTestSupport registration;
-    private JmsIntegrationTestSupport client;
+
+    @BeforeClass
+    public static void connectToHono() throws JMSException, NamingException {
+        client = JmsIntegrationTestSupport.newClient("hono", HONO_USER, HONO_PASSWORD);
+    }
 
     @Before
     public void init() throws Exception {
-        client = JmsIntegrationTestSupport.newClient("hono", HONO_USER, HONO_PASSWORD);
         registration = client.getRegistrationTestSupport();
         registration.createConsumer();
         registration.createProducer();
@@ -55,6 +62,10 @@ public class DeviceRegistrationIT {
         if (registration != null) {
             registration.close();
         }
+    }
+
+    @AfterClass
+    public static void disconnect() throws JMSException {
         if (client != null) {
             LOG.debug("closing JMS connection...");
             client.close();
@@ -62,14 +73,40 @@ public class DeviceRegistrationIT {
     }
 
     @Test
-    public void testRegisterDevice() throws Exception {
+    public void testGetFailsForNonExistingDevice() throws Exception {
         registration.retrieve(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
-        registration.register(TEST_DEVICE_ID, HTTP_CREATED).get(2, TimeUnit.SECONDS);
-        registration.register(TEST_DEVICE_ID, HTTP_CONFLICT).get(2, TimeUnit.SECONDS);
-        registration.retrieve(TEST_DEVICE_ID, HTTP_OK).get(2, TimeUnit.SECONDS);
-        registration.deregister(TEST_DEVICE_ID, HTTP_OK).get(2, TimeUnit.SECONDS);
-        registration.retrieve(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
-        registration.deregister(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
+        assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
+    }
+
+    @Test
+    public void testRegisterDeviceSucceeds() throws Exception {
+        String deviceId = UUID.randomUUID().toString();
+        registration.register(deviceId, HTTP_CREATED).get(2, TimeUnit.SECONDS);
+        registration.retrieve(deviceId, HTTP_OK).get(2, TimeUnit.SECONDS);
+        assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
+    }
+
+    @Test
+    public void testDuplicateRegistrationFailsWithConflict() throws Exception {
+        String deviceId = UUID.randomUUID().toString();
+        registration.register(deviceId, HTTP_CREATED).get(2, TimeUnit.SECONDS);
+        registration.register(deviceId, HTTP_CONFLICT).get(2, TimeUnit.SECONDS);
+        assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
+    }
+
+    @Test
+    public void testDeregisterDeviceSucceeds() throws Exception {
+        String deviceId = UUID.randomUUID().toString();
+        registration.register(deviceId, HTTP_CREATED).get(2, TimeUnit.SECONDS);
+        registration.retrieve(deviceId, HTTP_OK).get(2, TimeUnit.SECONDS);
+        registration.deregister(deviceId, HTTP_OK).get(2, TimeUnit.SECONDS);
+        registration.retrieve(deviceId, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
+        assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
+    }
+
+    @Test
+    public void testDeregisterNonExistingDeviceFailsWithNotFound() throws Exception {
+        registration.deregister("NON_EXISTING", HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
         assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
     }
 
