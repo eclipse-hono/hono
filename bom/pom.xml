@@ -61,27 +61,6 @@
         <scope>runtime</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.camel</groupId>
-        <artifactId>camel-amqp</artifactId>
-        <version>${camel.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.camel</groupId>
-        <artifactId>camel-netty4-http</artifactId>
-        <version>${camel.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.camel</groupId>
-        <artifactId>camel-test</artifactId>
-        <version>${camel.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-lang3</artifactId>
-        <version>${commons-lang3.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-client</artifactId>
         <version>${project.version}</version>
@@ -132,6 +111,7 @@
        <groupId>org.slf4j</groupId>
        <artifactId>jul-to-slf4j</artifactId>
        <version>${slf4j.version}</version>
+       <scope>runtime</scope>
       </dependency>
       <dependency>
        <groupId>org.slf4j</groupId>
@@ -207,12 +187,6 @@
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-amqp</artifactId>
         <version>${activemq.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.truth</groupId>
-        <artifactId>truth</artifactId>
-        <version>${truth.version}</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
