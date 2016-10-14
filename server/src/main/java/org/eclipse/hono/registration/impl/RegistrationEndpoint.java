@@ -74,7 +74,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                     if (RegistrationMessageFilter.verify(targetAddress, message)) {
                         processRequest(message);
                     } else {
-                        MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "message did not make it through the filter...");
+                        MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed registration message");
                         // we close the link if the client sends a message that does not comply with the API spec
                         onLinkDetach(receiver, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
                     }

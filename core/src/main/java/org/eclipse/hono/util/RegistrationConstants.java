@@ -11,12 +11,11 @@
  */
 package org.eclipse.hono.util;
 
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_TENANT_ID;
-import static org.eclipse.hono.util.MessageHelper.decodeIdFromJson;
-import static org.eclipse.hono.util.MessageHelper.getApplicationProperty;
+import static org.eclipse.hono.util.MessageHelper.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -43,7 +42,6 @@ public final class RegistrationConstants {
     public static final String ACTION_DEREGISTER = "deregister";
     public static final String ACTION_UPDATE     = "update";
 
-
     /* message fields */
     public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
     public static final String APP_PROPERTY_ACTION               = "action";
@@ -55,6 +53,9 @@ public final class RegistrationConstants {
     public static final String PATH_SEPARATOR                    = "/";
     public static final String NODE_ADDRESS_REGISTRATION_PREFIX  = REGISTRATION_ENDPOINT + PATH_SEPARATOR;
 
+    private static final List<String> ACTIONS     = Arrays.asList(ACTION_REGISTER, ACTION_FIND,
+            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE);
+
     /**
      * The vert.x event bus address to which inbound registration messages are published.
      */
@@ -63,6 +64,20 @@ public final class RegistrationConstants {
 
     private RegistrationConstants() {
         // prevent instantiation
+    }
+
+    /**
+     * Checks if a given string represents a valid action.
+     * 
+     * @param action The string to check.
+     * @return {@code true} if the given string is a supported action.
+     */
+    public static boolean isValidAction(final String action) {
+        if (action == null) {
+            return false;
+        } else {
+            return ACTIONS.contains(action);
+        }
     }
 
     public static JsonObject getRegistrationMsg(final Message message) {
