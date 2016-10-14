@@ -12,10 +12,9 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.util.MessageHelper.*;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -23,9 +22,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.MessageHelper;
@@ -164,7 +162,7 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
         final Message request = createMessage(properties);
         if (payload != null) {
             request.setContentType("application/json; charset=utf-8");
-            request.setBody(new Data(new Binary(payload.encode().getBytes(StandardCharsets.UTF_8))));
+            request.setBody(new AmqpValue(payload.encode()));
         }
         sendMessage(request, resultHandler);
     }

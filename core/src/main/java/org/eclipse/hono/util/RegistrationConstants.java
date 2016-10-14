@@ -20,13 +20,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
 
@@ -80,6 +80,13 @@ public final class RegistrationConstants {
         }
     }
 
+    /**
+     * Creates a JSON object from a Registration API request message.
+     *  
+     * @param message The AMQP 1.0 registration request message.
+     * @return The registration message created from the AMQP message.
+     * @throws DecodeException if the message contains a body that cannot be parsed into a JSON object.
+     */
     public static JsonObject getRegistrationMsg(final Message message) {
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
@@ -141,7 +148,7 @@ public final class RegistrationConstants {
 
         if (payload != null) {
             message.setContentType("application/json; charset=utf-8");
-            message.setBody(new Data(new Binary(payload.encode().getBytes())));
+            message.setBody(new AmqpValue(payload.encode()));
         }
         return message;
     }

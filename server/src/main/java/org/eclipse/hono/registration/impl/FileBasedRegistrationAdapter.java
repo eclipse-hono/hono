@@ -162,7 +162,7 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
     public RegistrationResult removeDevice(final String tenantId, final String deviceId) {
 
         final Map<String, JsonObject> devices = identities.get(tenantId);
-        if (devices != null) {
+        if (devices != null && devices.containsKey(deviceId)) {
             return RegistrationResult.from(HTTP_OK, getResult(deviceId, devices.remove(deviceId)));
         } else {
             return RegistrationResult.from(HTTP_NOT_FOUND);

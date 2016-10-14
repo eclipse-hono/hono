@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.registration;
 
-import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.BaseMessageFilter;
 import org.eclipse.hono.util.MessageHelper;
@@ -55,8 +55,8 @@ public final class RegistrationMessageFilter extends BaseMessageFilter {
              if (msg.getContentType() == null || !msg.getContentType().startsWith("application/json")) {
                  LOG.trace("message [{}] content type is not JSON", msg.getMessageId());
                  return false;
-             } else if (!(msg.getBody() instanceof Data)) {
-                 LOG.trace("message [{}] contains non-Data section payload", msg.getMessageId());
+             } else if (!(msg.getBody() instanceof AmqpValue)) {
+                 LOG.trace("message [{}] contains non-AmqpValue section payload", msg.getMessageId());
                  return false;
              } else {
                  return true;

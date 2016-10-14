@@ -13,11 +13,7 @@
 
 package org.eclipse.hono.tests.jms;
 
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
-import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -71,7 +67,7 @@ public class DeviceRegistrationIT {
         registration.register(TEST_DEVICE_ID, HTTP_CREATED).get(2, TimeUnit.SECONDS);
         registration.register(TEST_DEVICE_ID, HTTP_CONFLICT).get(2, TimeUnit.SECONDS);
         registration.retrieve(TEST_DEVICE_ID, HTTP_OK).get(2, TimeUnit.SECONDS);
-        registration.deregister(TEST_DEVICE_ID, HTTP_NO_CONTENT).get(2, TimeUnit.SECONDS);
+        registration.deregister(TEST_DEVICE_ID, HTTP_OK).get(2, TimeUnit.SECONDS);
         registration.retrieve(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
         registration.deregister(TEST_DEVICE_ID, HTTP_NOT_FOUND).get(2, TimeUnit.SECONDS);
         assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));

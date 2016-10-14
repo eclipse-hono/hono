@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -72,7 +73,11 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                 .setPrefetch(20)
                 .handler((delivery, message) -> {
                     if (RegistrationMessageFilter.verify(targetAddress, message)) {
-                        processRequest(message);
+                        try {
+                            processRequest(message);
+                        } catch (DecodeException e) {
+                            MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed payload");
+                        }
                     } else {
                         MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed registration message");
                         // we close the link if the client sends a message that does not comply with the API spec

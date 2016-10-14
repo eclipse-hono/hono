@@ -21,7 +21,6 @@ import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import javax.jms.BytesMessage;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -133,7 +132,7 @@ public class RegistrationTestSupport {
 
         try {
             final String correlationId = UUID.randomUUID().toString();
-            final BytesMessage message = session.createBytesMessage();
+            final Message message = session.createMessage();
             message.setStringProperty(APP_PROPERTY_DEVICE_ID, deviceId);
             message.setStringProperty(APP_PROPERTY_ACTION, action);
             message.setJMSReplyTo(reply);

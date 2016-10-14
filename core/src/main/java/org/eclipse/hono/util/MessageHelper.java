@@ -19,6 +19,7 @@ import java.util.UUID;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
@@ -26,6 +27,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -105,17 +107,29 @@ public final class MessageHelper {
         }
     }
 
+    /**
+     * Parses a message's body into a JSON object.
+     * 
+     * @param msg The AMQP 1.0 message to parse the body of.
+     * @return The message body parsed into a JSON object or {@code null} if the message does not have a
+     *         <em>Data</em> or <em>AmqpValue</em> section or the message's content type is not
+     *         {@code application/json}.
+     * @throws DecodeException if the body of the message cannot be parsed into a JSON object.
+     */
     public static JsonObject getJsonPayload(final Message msg) {
-        if (msg.getBody() == null) {
-            return null;
-        } else if (msg.getContentType() == null || !msg.getContentType().startsWith("application/json")) {
-            return null;
-        } else if (msg.getBody() instanceof Data) {
-            Data body = (Data) msg.getBody();
-            return new JsonObject(new String(body.getValue().getArray()));
-        } else {
-            return null;
+        JsonObject result = null;
+        if (msg.getBody() != null && msg.getContentType() != null && msg.getContentType().startsWith("application/json")) {
+            if (msg.getBody() instanceof Data) {
+                Data body = (Data) msg.getBody();
+                result = new JsonObject(new String(body.getValue().getArray()));
+            } else if (msg.getBody() instanceof AmqpValue) {
+                AmqpValue body = (AmqpValue) msg.getBody();
+                if (body.getValue() instanceof String) {
+                    result = new JsonObject((String) body.getValue());
+                }
+            }
         }
+        return result;
     }
 
     public static void addTenantId(final Message msg, final String tenantId) {
