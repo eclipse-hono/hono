@@ -14,10 +14,14 @@ package org.eclipse.hono.client.impl;
 
 import static org.eclipse.hono.util.MessageHelper.addDeviceId;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -44,6 +48,8 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     private static final String     TELEMETRY_ADDRESS_TEMPLATE  = "telemetry/%s";
     private static final Logger     LOG = LoggerFactory.getLogger(TelemetrySenderImpl.class);
     private static final AtomicLong messageCounter = new AtomicLong();
+    private static final Pattern    CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
+
     private Handler<Void> drainHandler;
 
     private TelemetrySenderImpl(final Context context, final ProtonSender sender) {
@@ -60,7 +66,7 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
         Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
-        createSender(con, tenantId).setHandler(created -> {
+        createSender(context, con, tenantId).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
                         new TelemetrySenderImpl(context, created.result())));
@@ -71,22 +77,25 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
     }
 
     private static Future<ProtonSender> createSender(
+            final Context ctx,
             final ProtonConnection con,
             final String tenantId) {
 
         Future<ProtonSender> result = Future.future();
         final String targetAddress = String.format(TELEMETRY_ADDRESS_TEMPLATE, tenantId);
 
-        final ProtonSender sender = con.createSender(targetAddress);
-        sender.setQoS(ProtonQoS.AT_MOST_ONCE);
-        sender.openHandler(senderOpen -> {
-            if (senderOpen.succeeded()) {
-                LOG.debug("telemetry sender for [{}] open", senderOpen.result().getRemoteTarget());
-                result.complete(senderOpen.result());
-            } else {
-                result.fail(senderOpen.cause());
-            }
-        }).open();
+        ctx.runOnContext(create -> {
+            final ProtonSender sender = con.createSender(targetAddress);
+            sender.setQoS(ProtonQoS.AT_MOST_ONCE);
+            sender.openHandler(senderOpen -> {
+                if (senderOpen.succeeded()) {
+                    LOG.debug("telemetry sender for [{}] open", senderOpen.result().getRemoteTarget());
+                    result.complete(senderOpen.result());
+                } else {
+                    result.fail(senderOpen.cause());
+                }
+            }).open();
+        });
 
         return result;
     }
@@ -157,11 +166,12 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
 
     @Override
     public boolean send(final Message rawMessage) {
+        Objects.requireNonNull(rawMessage);
         if (sender.sendQueueFull()) {
             return false;
         } else {
             context.runOnContext(send -> {
-                sender.send(Objects.requireNonNull(rawMessage));
+                sender.send(rawMessage);
             });
             return true;
         }
@@ -189,14 +199,16 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
 
     @Override
     public boolean send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType) {
-        final Message msg = ProtonHelper.message(payload);
-        setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId, contentType);
-        return send(msg);
+        Objects.requireNonNull(payload);
+        Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
+        return send(deviceId, properties, payload.getBytes(charset), contentType);
     }
 
     @Override
     public boolean send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(payload);
+        Objects.requireNonNull(contentType);
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
@@ -206,14 +218,16 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
 
     @Override
     public void send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
-        final Message msg = ProtonHelper.message(payload);
-        setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId, contentType);
-        send(msg, capacityAvailableHandler);
+        Objects.requireNonNull(payload);
+        Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
+        send(deviceId, properties, payload.getBytes(charset), contentType, capacityAvailableHandler);
     }
 
     @Override
     public void send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(payload);
+        Objects.requireNonNull(contentType);
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
@@ -243,6 +257,16 @@ public class TelemetrySenderImpl extends AbstractHonoClient implements Telemetry
 
             final ApplicationProperties applicationProperties = new ApplicationProperties(properties);
             msg.setApplicationProperties(applicationProperties);
+        }
+    }
+
+    private Charset getCharsetForContentType(final String contentType) {
+
+        Matcher m = CHARSET_PATTERN.matcher(contentType);
+        if (m.matches()) {
+            return Charset.forName(m.group(1));
+        } else {
+            return StandardCharsets.UTF_8;
         }
     }
 }

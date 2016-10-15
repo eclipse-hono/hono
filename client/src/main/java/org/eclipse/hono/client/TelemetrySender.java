@@ -12,12 +12,12 @@
 
 package org.eclipse.hono.client;
 
+import java.util.Map;
+
 import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-
-import java.util.Map;
 
 /**
  * A client for uploading telemetry data to a Hono server.
@@ -65,20 +65,22 @@ public interface TelemetrySender {
      * with more credit. In both cases the handler will be notified <em>once only</em> when this
      * sender has capacity available for accepting and sending the next message.
      * 
-     * @param rawMessage The message to send.
+     * @param message The message to send.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
+     * @throws NullPointerException if the message is {@code null}.
      */
-    void send(Message rawMessage, Handler<Void> capacityAvailableHandler);
+    void send(Message message, Handler<Void> capacityAvailableHandler);
 
     /**
      * Sends an AMQP 1.0 message to the telemetry endpoint configured for this client.
      * 
-     * @param rawMessage the message to send.
+     * @param message The message to send.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if the message is {@code null}.
      */
-    boolean send(Message rawMessage);
+    boolean send(Message message);
 
     /**
      * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
@@ -86,12 +88,16 @@ public interface TelemetrySender {
      * @param deviceId The id of the device.
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param payload The data to send.
-     *                The payload's UTF-8 byte representation will be contained in the message as an AMQP 1.0
+     *                The payload's byte representation will be contained in the message as an AMQP 1.0
      *                <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     *                    If the content type specifies a particular character set, this character set will be used to
+     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
     boolean send(String deviceId, String payload, String contentType);
 
@@ -106,12 +112,16 @@ public interface TelemetrySender {
      * @param deviceId The id of the device.
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param payload The data to send.
-     *                The payload's UTF-8 byte representation will be contained in the message as an AMQP 1.0
+     *                The payload's byte representation will be contained in the message as an AMQP 1.0
      *                <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     *                    If the content type specifies a particular character set, this character set will be used to
+     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
+     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
     void send(String deviceId, String payload, String contentType, Handler<Void> capacityAvailableHandler);
 
@@ -126,6 +136,7 @@ public interface TelemetrySender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     boolean send(String deviceId, byte[] payload, String contentType);
 
@@ -145,6 +156,7 @@ public interface TelemetrySender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
+     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
      */
     void send(String deviceId, byte[] payload, String contentType, Handler<Void> capacityAvailableHandler);
 
@@ -156,12 +168,16 @@ public interface TelemetrySender {
      * @param properties The application properties.
      *                   AMQP application properties that can be used for carrying data in the message other than the payload
      * @param payload The data to send.
-     *                The payload's UTF-8 byte representation will be contained in the message as an AMQP 1.0
+     *                The payload's byte representation will be contained in the message as an AMQP 1.0
      *                <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     *                    If the content type specifies a particular character set, this character set will be used to
+     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
     boolean send(String deviceId, Map<String, ?> properties, String payload, String contentType);
 
@@ -178,6 +194,7 @@ public interface TelemetrySender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
      */
     boolean send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType);
 
@@ -194,12 +211,16 @@ public interface TelemetrySender {
      * @param properties The application properties.
      *                   AMQP application properties that can be used for carrying data in the message other than the payload
      * @param payload The data to send.
-     *                The payload's UTF-8 byte representation will be contained in the message as an AMQP 1.0
+     *                The payload's byte representation will be contained in the message as an AMQP 1.0
      *                <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     *                    If the content type specifies a particular character set, this character set will be used to
+     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
+     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
     void send(String deviceId, Map<String, ?> properties, String payload, String contentType, Handler<Void> capacityAvailableHandler);
 
@@ -221,6 +242,7 @@ public interface TelemetrySender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
+     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
      */
     void send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, Handler<Void> capacityAvailableHandler);
 
