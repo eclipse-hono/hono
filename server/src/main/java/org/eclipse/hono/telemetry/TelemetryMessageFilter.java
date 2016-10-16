@@ -11,14 +11,19 @@
  */
 package org.eclipse.hono.telemetry;
 
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.BaseMessageFilter;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A filter for verifying the format of <em>Telemetry</em> messages.
  */
 public final class TelemetryMessageFilter extends BaseMessageFilter {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TelemetryMessageFilter.class);
 
     private TelemetryMessageFilter() {
         // prevent instantiation
@@ -27,16 +32,11 @@ public final class TelemetryMessageFilter extends BaseMessageFilter {
     /**
      * Checks whether a given telemetry message contains all required properties.
      * <p>
-     * For successful verification, the message must contain a <em>device_id</em> in its set
-     * of <em>application</em> properties. If the link target contains a <em>deviceId</em> segment
-     * then its value must match that of the property as well.
-     * </p>
-     * <p>
-     * After successful verification the following properties are added to the message's <em>annotations</em>:
+     * For successful verification, the message must meet the following conditions
      * <ul>
-     * <li><em>device_id</em> - the ID of the device that reported the data.</li>
-     * <li><em>tenant_id</em> - the ID of the tenant as indicated by the link target's second segment.</li>
-     * <li><em>resource_id</em> - the full resource path including the endpoint, the tenant and the device ID.</li>
+     * <li>All conditions defined by {@link #verifyStandardProperties(ResourceIdentifier, Message)}</li>
+     * <li>The message must have its {@code content-type} property set.</li>
+     * <li>The message must have an AMQP {@code Data} typed body.</li>
      * </ul>
      * 
      * @param linkTarget the link target address to match the telemetry message's properties against.
@@ -45,6 +45,16 @@ public final class TelemetryMessageFilter extends BaseMessageFilter {
      *         otherwise.
      */
      public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
-         return verifyStandardProperties(linkTarget, msg);
+         if (!verifyStandardProperties(linkTarget, msg)) {
+             return false;
+         } else if (msg.getContentType() == null) {
+             LOG.trace("message [{}] has no content type", msg.getMessageId());
+             return false;
+         } else if (msg.getBody() == null || !(msg.getBody() instanceof Data)) {
+             LOG.trace("message [{}] has no body of type AMQP Data", msg.getMessageId());
+             return false;
+         } else {
+             return true;
+         }
     }
 }

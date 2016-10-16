@@ -12,14 +12,16 @@
 package org.eclipse.hono.telemetry;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.registration.RegistrationMessageFilter;
 import org.eclipse.hono.util.MessageHelper;
@@ -33,6 +35,7 @@ import io.vertx.proton.ProtonHelper;
  */
 public class TelemetryMessageFilterTest {
 
+    private static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
     private static final String MY_TENANT = "myTenant";
     private static final String MY_DEVICE = "myDevice";
 
@@ -54,6 +57,30 @@ public class TelemetryMessageFilterTest {
         final Message msg = givenAMessageHavingProperties(null);
 
         // WHEN receiving the message via a link with mismatching tenant
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+
+        // THEN message validation fails
+        assertFalse(TelemetryMessageFilter.verify(linkTarget, msg));
+    }
+
+    @Test
+    public void testVerifyDetectsMissingContentType() {
+        // GIVEN a valid telemetry message without content type
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, MY_TENANT, null, new byte[]{0x00});
+
+        // WHEN receiving the message via a link with matching tenant
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+
+        // THEN message validation fails
+        assertFalse(TelemetryMessageFilter.verify(linkTarget, msg));
+    }
+
+    @Test
+    public void testVerifyDetectsMissingBody() {
+        // GIVEN a valid telemetry message without body
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, MY_TENANT, CONTENT_TYPE_OCTET_STREAM, null);
+
+        // WHEN receiving the message via a link with matching tenant
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
@@ -94,7 +121,7 @@ public class TelemetryMessageFilterTest {
         assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_DEVICE_ID)),
                 is(deviceId));
         final ResourceIdentifier expectedResourceIdentifier = getResourceIdentifier(MY_TENANT, MY_DEVICE);
-        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_RESOURCE_ID)),
+        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_RESOURCE)),
                 is(expectedResourceIdentifier.toString()));
     }
 
@@ -111,10 +138,20 @@ public class TelemetryMessageFilterTest {
     }
 
     private Message givenAMessageHavingProperties(final String deviceId, final String tenantId) {
+        return givenAMessageHavingProperties(deviceId, tenantId, CONTENT_TYPE_OCTET_STREAM, new byte[]{0x00});
+    }
+
+    private Message givenAMessageHavingProperties(final String deviceId, final String tenantId, final String contentType, final byte[] payload) {
         final Message msg = ProtonHelper.message("Hello");
         MessageHelper.addDeviceId(msg, deviceId);
         if (tenantId != null) {
             MessageHelper.addTenantId(msg, tenantId);
+        }
+        if (contentType != null) {
+            msg.setContentType(contentType);
+        }
+        if (payload != null) {
+            msg.setBody(new Data(new Binary(payload)));
         }
         return msg;
     }
