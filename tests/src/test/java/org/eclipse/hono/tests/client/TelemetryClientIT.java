@@ -19,11 +19,13 @@ import static org.eclipse.hono.tests.IntegrationTestSupport.*;
 import java.net.InetAddress;
 import java.util.stream.IntStream;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetryConsumer;
 import org.eclipse.hono.client.TelemetrySender;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -61,6 +63,7 @@ public class TelemetryClientIT {
     private static final int MSG_COUNT = 50;
     private static final String TEST_TENANT_ID = "DEFAULT_TENANT";
     private static final String DEVICE_ID = "device-0";
+    private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
 
     private static Vertx vertx = Vertx.vertx();
 
@@ -85,7 +88,6 @@ public class TelemetryClientIT {
                 LOGGER.error("cannot connect to Hono", r.cause());
             }
         });
-
 
         downstreamClient = HonoClientBuilder.newClient()
                 .vertx(vertx)
@@ -175,7 +177,7 @@ public class TelemetryClientIT {
             downstreamClient.shutdown(qpidTracker.completer());
         }, qpidTracker);
 
-        shutdown.await(2000);
+        shutdown.await(1000);
     }
 
     @Test
@@ -200,6 +202,7 @@ public class TelemetryClientIT {
                         TEST_TENANT_ID,
                         msg -> {
                             LOGGER.trace("received {}", msg);
+                            assertMessagePropertiesArePresent(ctx, msg);
                             received.countDown();
                         },
                         setupTracker.completer());
@@ -213,7 +216,7 @@ public class TelemetryClientIT {
 
         IntStream.range(0, MSG_COUNT).forEach(i -> {
             Async latch = ctx.async();
-            sender.send(DEVICE_ID, "payload" + i, "text/plain", capacityAvailable -> {
+            sender.send(DEVICE_ID, "payload" + i, CONTENT_TYPE_TEXT_PLAIN, capacityAvailable -> {
                 latch.complete();
             });
             LOGGER.trace("sent message {}", i);
@@ -227,7 +230,9 @@ public class TelemetryClientIT {
     public void testCreateSenderFailsForTenantWithoutAuthorization(final TestContext ctx) {
 
         // create sender for tenant that has no permission
-        honoClient.createTelemetrySender("non-authorized", ctx.asyncAssertFailure());
+        honoClient.createTelemetrySender("non-authorized", ctx.asyncAssertFailure(failed -> {
+            LOGGER.debug("creation of sender failed");
+        }));
     }
 
     @Test(timeout = 2000l)
@@ -237,4 +242,12 @@ public class TelemetryClientIT {
         downstreamClient.createTelemetryConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure());
     }
 
+    private static void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
+        ctx.assertNotNull(MessageHelper.getDeviceId(msg));
+        // Qpid Dispatch Router < 0.7.0 does not forward custom message annotations
+        // see https://issues.apache.org/jira/browse/DISPATCH-160
+        // thus, the following checks are disabled for now
+//        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
+//        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
+    }
 }
