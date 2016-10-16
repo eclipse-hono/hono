@@ -12,7 +12,7 @@
 package org.eclipse.hono.registration;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
 import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_ACTION;
 import static org.hamcrest.CoreMatchers.is;
@@ -107,7 +107,7 @@ public class RegistrationMessageFilterTest {
         assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_DEVICE_ID)),
                 is(deviceId));
         final ResourceIdentifier expectedResourceIdentifier = getResourceIdentifier(MY_TENANT, MY_DEVICE);
-        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_RESOURCE_ID)),
+        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_RESOURCE)),
                 is(expectedResourceIdentifier.toString()));
     }
 

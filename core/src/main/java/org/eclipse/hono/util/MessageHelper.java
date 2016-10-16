@@ -52,9 +52,10 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_TENANT_ID          = "tenant_id";
     /**
-     * The name of the AMQP 1.0 message application property containing the id of the resource a message is addressed at.
+     * The name of the AMQP 1.0 message application property containing the resource a message is addressed at.
      */
-    public static final String APP_PROPERTY_RESOURCE_ID          = "resource_id";
+    public static final String APP_PROPERTY_RESOURCE          = "resource";
+
     public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID          = "x-opt-app-correlation-id";
 
     private MessageHelper() {
@@ -166,7 +167,7 @@ public final class MessageHelper {
     public static void annotate(final Message msg, final ResourceIdentifier resourceIdentifier) {
         MessageHelper.addAnnotation(msg, APP_PROPERTY_TENANT_ID, resourceIdentifier.getTenantId());
         MessageHelper.addAnnotation(msg, APP_PROPERTY_DEVICE_ID, resourceIdentifier.getResourceId());
-        MessageHelper.addAnnotation(msg, APP_PROPERTY_RESOURCE_ID, resourceIdentifier.toString());
+        MessageHelper.addAnnotation(msg, APP_PROPERTY_RESOURCE, resourceIdentifier.toString());
     }
 
     /**

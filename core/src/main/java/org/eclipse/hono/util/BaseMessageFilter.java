@@ -31,6 +31,13 @@ public class BaseMessageFilter {
      * <li>The message contains an application property {@link MessageHelper#APP_PROPERTY_DEVICE_ID}.</li>
      * <li>If the given link target contains a device id in its path, it must match the id from the property.</li>
      * </ol>
+     * <p>
+     * After successful verification the following properties are added to the message's <em>annotations</em>:
+     * <ul>
+     * <li>{@link MessageHelper#APP_PROPERTY_DEVICE_ID} - the ID of the device that reported the data.</li>
+     * <li>{@link MessageHelper#APP_PROPERTY_TENANT_ID} - the ID of the tenant as indicated by the link target's second segment.</li>
+     * <li>{@link MessageHelper#APP_PROPERTY_RESOURCE} - the full resource path including the endpoint, the tenant and the device ID.</li>
+     * </ul>
      * 
      * @param linkTarget The resource path to check the message's properties against for consistency.
      * @param msg The AMQP 1.0 message to perform the checks on.

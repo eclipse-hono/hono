@@ -14,7 +14,7 @@ package org.eclipse.hono.telemetry.impl;
 import static io.vertx.proton.ProtonHelper.condition;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.telemetry.TelemetryConstants.*;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE_ID;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.eclipse.hono.util.MessageHelper.getAnnotation;
 import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 
@@ -154,7 +154,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
             if (TelemetryMessageFilter.verify(targetAddress, message)) {
                 sendTelemetryData(link, delivery, message);
             } else {
-                MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "message did not make it through the filter...");
+                MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed telemetry message");
                 onLinkDetach(link, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
             }
         }).open();
@@ -191,7 +191,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         if (!delivery.remotelySettled()) {
             LOG.trace("received un-settled telemetry message on link [{}]", link.getLinkId());
         }
-        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, APP_PROPERTY_RESOURCE_ID, String.class));
+        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, APP_PROPERTY_RESOURCE, String.class));
         checkDeviceExists(messageAddress, deviceExists -> {
             if (deviceExists) {
                 final String messageId = UUID.randomUUID().toString();
