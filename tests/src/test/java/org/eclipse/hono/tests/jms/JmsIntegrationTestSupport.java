@@ -40,7 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @author hak8fe
+ * A helper for implementing integration tests for Hono using Apache Qpid JMS Client.
  *
  */
 public class JmsIntegrationTestSupport {
