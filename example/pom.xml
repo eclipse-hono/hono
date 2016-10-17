@@ -29,9 +29,6 @@
   <description>A collection of example code for sending and receiving telemetry data using HonoClient.
 Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for starting up all images constituting a Hono instance.</description>
 
-  <properties>
-  	<maven.javadoc.skip>true</maven.javadoc.skip>
-  </properties>
 
   <dependencies>
     <dependency>

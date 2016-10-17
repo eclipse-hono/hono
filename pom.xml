@@ -203,9 +203,6 @@
           <version>2.10.4</version>
           <configuration>
             <excludePackageNames>
-              org.eclipse.hono.adapter.*,
-              org.eclipse.hono.application,
-              org.eclipse.hono.example,
               org.eclipse.hono.tests.*
             </excludePackageNames>
           </configuration>
