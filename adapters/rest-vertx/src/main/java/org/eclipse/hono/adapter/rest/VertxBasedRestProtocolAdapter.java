@@ -61,7 +61,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private static final String PARAM_DEVICE_ID = "device_id";
     private static final String NAME = "Hono REST Adapter";
 
-    @Value("${hono.http.bindaddress:127.0.0.1}")
+    @Value("${hono.http.bindaddress:0.0.0.0}")
     private String bindAddress;
 
     @Value("${hono.http.listenport:8080}")

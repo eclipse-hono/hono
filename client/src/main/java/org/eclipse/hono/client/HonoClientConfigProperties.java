@@ -17,9 +17,9 @@ package org.eclipse.hono.client;
  */
 public class HonoClientConfigProperties {
 
-    private String name;
-    private String host;
-    private int port;
+    private String name = "Hono client";
+    private String host = "localhost";
+    private int port = 5672;
     private String username;
     private String password;
     private String pathSeparator = "/";
