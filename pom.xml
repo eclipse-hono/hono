@@ -131,18 +131,13 @@
     <module>core</module>
     <module>client</module>
     <module>example</module>
+    <module>legal</module>
     <module>server</module>
     <module>tests</module>
   </modules>
 
 
   <build>
-    <resources>
-      <resource>
-        <directory>legal</directory>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -234,8 +229,32 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>2.19.1</version>
         </plugin>
+        <plugin>
+          <!-- 
+            Copy legal documents from "legal" module to "target/classes" folder
+            so that we make sure to include legal docs in all modules.
+           -->
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>2.10</version>
+          <executions>
+            <execution>
+              <id>copy_legal_docs</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>unpack-dependencies</goal>
+              </goals>
+              <configuration>
+                <includeArtifactIds>hono-legal</includeArtifactIds>
+                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                <excludes>META-INF/**</excludes>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
+
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

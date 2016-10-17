@@ -189,6 +189,12 @@
         <version>${activemq.version}</version>
         <scope>test</scope>
       </dependency>
+      <dependency>
+      	<groupId>org.eclipse.hono</groupId>
+      	<artifactId>hono-legal</artifactId>
+      	<version>${project.version}</version>
+      	<scope>provided</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 </project>

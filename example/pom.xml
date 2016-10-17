@@ -63,14 +63,14 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
     </dependency>
+    <dependency>
+    	<groupId>org.eclipse.hono</groupId>
+    	<artifactId>hono-legal</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
     <resources>
-      <resource>
-        <directory>legal</directory>
-        <filtering>true</filtering>
-      </resource>
       <resource>
         <directory>${project.basedir}/docker</directory>
         <filtering>true</filtering>
@@ -85,6 +85,14 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <!-- 
+          Copy legal documents from "legal" module to "target/classes" folder
+          so that we make sure to include legal docs in all modules.
+         -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>

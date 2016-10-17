@@ -74,23 +74,22 @@
     	<groupId>org.eclipse.hono</groupId>
     	<artifactId>hono-core</artifactId>
     </dependency>
+    <dependency>
+    	<groupId>org.eclipse.hono</groupId>
+    	<artifactId>hono-legal</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
-    <resources>
-      <resource>
-        <directory>legal</directory>
-        <filtering>true</filtering>
-      </resource>
-      <resource>
-        <directory>${project.basedir}/src/main/resources</directory>
-        <includes>
-          <include>**/*</include>
-        </includes>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
     <plugins>
+      <plugin>
+        <!-- 
+          Copy legal documents from "legal" module to "target/classes" folder
+          so that we make sure to include legal docs in all modules.
+         -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
