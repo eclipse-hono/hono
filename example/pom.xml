@@ -25,6 +25,10 @@
 
   <artifactId>hono-example</artifactId>
 
+  <name>Hono Examples</name>
+  <description>A collection of example code for sending and receiving telemetry data using HonoClient.
+Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for starting up all images constituting a Hono instance.</description>
+
   <properties>
   	<maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
@@ -68,6 +72,11 @@
         <filtering>true</filtering>
       </resource>
       <resource>
+        <directory>${project.basedir}/docker</directory>
+        <filtering>true</filtering>
+        <targetPath>${project.build.directory}/hono</targetPath>
+      </resource>
+      <resource>
         <directory>${project.basedir}/src/main/resources</directory>
         <includes>
           <include>**/*</include>
@@ -90,7 +99,4 @@
       </plugin>
     </plugins>
   </build>
-  <name>Hono Examples</name>
-  <description>A collection of example code for sending and receiving telemetry data using HonoClient.
-Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for starting up all images constituting a Hono instance.</description>
 </project>

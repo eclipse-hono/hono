@@ -3,16 +3,16 @@ version: '2'
 services:
 
   qpid-config:
-    image: eclipsehono/qpid-default-config:0.5-SNAPSHOT
+    image: eclipsehono/qpid-default-config:${project.version}
 
   qpid-sasldb:
-    image: eclipsehono/qpid-sasldb:0.5-SNAPSHOT
+    image: eclipsehono/qpid-sasldb:${project.version}
 
   hono-config:
-    image: eclipsehono/hono-default-config:0.5-SNAPSHOT
+    image: eclipsehono/hono-default-config:${project.version}
 
   qdrouter:
-    image: gordons/qpid-dispatch:0.6.0
+    image: gordons/qpid-dispatch:${qpid-dispatch.version}
     ports:
       - "15672:5672"
     expose:
@@ -22,7 +22,7 @@ services:
       - qpid-sasldb
 
   hono:
-    image: eclipsehono/hono-server:0.5-SNAPSHOT
+    image: eclipsehono/hono-server:${project.version}
     ports:
       - "5672:5672"
     links:
@@ -37,7 +37,7 @@ services:
       - hono-config
 
   rest-adapter:
-    image: eclipsehono/hono-adapter-rest-vertx:0.5-SNAPSHOT
+    image: eclipsehono/hono-adapter-rest-vertx:${project.version}
     ports:
       - "8080:8080"
     links:
