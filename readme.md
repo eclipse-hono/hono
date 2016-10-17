@@ -32,8 +32,9 @@ Clients can interact with Hono by means of AMQP 1.0 based message exchanges. Ple
 
 ### Modules
 
-* `client`: simple java client(s) based on vertx-proton 
+* `client`: a Java client for accessing Hono based on `vertx-proton`
 * `adapters`: implementation of core protocol adapters 
+** `adapters/rest-vertx`: an HTTP protocol adapter exposing a RESTful API for Hono's Telemetry and Registration API 
 * `example`: simple example that uses the hono-client to send and receive messages via the hono-server
 * `server`: the Hono server component exposing the Hono API via AMQP 1.0
 
