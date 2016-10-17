@@ -41,10 +41,10 @@ you can use as a starting point for your own configuration.
 * URI: `/registration/${tenantId}`
 * Method: `POST`
 * Headers:
-** (required) `Content-Type: application/x-www-url-encoded`
+  * (required) `Content-Type: application/x-www-url-encoded`
 * Parameters (encoded as payload according to the content type):
-** (required) `device_id`: The ID of the device to register.
-** (optional) Arbitrary key/value pairs containing additional data to be registered with the device.
+  * (required) `device_id`: The ID of the device to register.
+  * (optional) Arbitrary key/value pairs containing additional data to be registered with the device.
 
 **Example**
 
@@ -88,9 +88,9 @@ The response will look similar to this:
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Headers:
-** (required) `Content-Type: application/x-www-url-encoded`
+  * (required) `Content-Type: application/x-www-url-encoded`
 * Parameters (encoded as payload according to content type):
-** (optional) Arbitrary key/value pairs containing additional data to be registered with the device. The existing key/valule pairs will be replaced with these key/values.
+  * (optional) Arbitrary key/value pairs containing additional data to be registered with the device. The existing key/valule pairs will be replaced with these key/values.
 
 **Example**
 
@@ -139,9 +139,9 @@ The response will look similar to this:
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Headers:
-** (required) `Content-Type` - the type of payload contained in the body.
+  * (required) `Content-Type` - the type of payload contained in the body.
 * Body:
-** (required) Arbitrary payload encoded according to the given content type.
+  * (required) Arbitrary payload encoded according to the given content type.
 
 **Example**
 
