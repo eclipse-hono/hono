@@ -16,7 +16,7 @@
 
   <groupId>org.eclipse.hono</groupId>
   <artifactId>hono-parent</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.5-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Hono</name>
@@ -111,8 +111,16 @@
 
     <!-- Docker configuration -->
     <image.target>${project.artifactId}</image.target>
+
+    <!-- configure timestamp format to be injected into legal docs -->
     <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
     <timestamp>${maven.build.timestamp}</timestamp>
+
+    <!--
+      during development we allow dependencies on SNAPSHOT versions,
+      when doing a release build, set this property to false.
+     -->
+    <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
   </properties>
 
   <modules>
@@ -245,6 +253,32 @@
           <timestampFormat>MMM dd, yyyy</timestampFormat>
           <timestampPropertyName>build.date</timestampPropertyName>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.4.1</version>
+        <executions>
+          <execution>
+            <!-- Make sure that only non-snapshot versions are used for the dependencies. 
+              Only active when property 'snapshotDependencyAllowed' is false. -->
+            <id>enforce-no-snapshots</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <skip>${snapshotDependencyAllowed}</skip>
+              <rules>
+                <requireReleaseDeps>
+                  <message>No Snapshots Allowed!</message>
+                </requireReleaseDeps>
+                <requireReleaseVersion>
+                  <message>No Snapshots Allowed!</message>
+                </requireReleaseVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
