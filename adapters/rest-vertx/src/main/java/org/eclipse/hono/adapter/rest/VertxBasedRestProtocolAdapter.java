@@ -417,27 +417,47 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private void doUploadTelemetryData(final RoutingContext ctx) {
         final String tenant = getTenantParam(ctx);
-        final String deviceId = getDeviceIdParam(ctx);
         final String contentType = ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);
+
         if (contentType == null) {
             badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
         } else {
-            Buffer payload = ctx.getBody();
+
             hono.getOrCreateTelemetrySender(tenant, createAttempt -> {
                 if (createAttempt.succeeded()) {
                     TelemetrySender sender = createAttempt.result();
-                    boolean accepted = sender.send(deviceId, payload.getBytes(), contentType);
-                    if (accepted) {
-                        ctx.response().setStatusCode(HTTP_ACCEPTED).end();
+
+                    // sending message only when the "flow" is handled and credits are available
+                    // otherwise send will never happen due to no credits
+                    if (!sender.sendQueueFull()) {
+                        this.sendToHono(ctx, sender);
                     } else {
-                        // we currently have no credit for uploading data to Hono's Telemetry endpoint
-                        serviceUnavailable(ctx.response(), 2);
+                        sender.sendQueueDrainHandler(v -> {
+                            this.sendToHono(ctx, sender);
+                        });
                     }
+
                 } else {
                     // we don't have a connection to Hono
                     serviceUnavailable(ctx.response(), 5);
                 }
             });
+        }
+    }
+
+    private void sendToHono(final RoutingContext ctx, TelemetrySender sender) {
+
+        final String deviceId = getDeviceIdParam(ctx);
+        final String contentType = ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);
+
+        Buffer payload = ctx.getBody();
+
+        boolean accepted = sender.send(deviceId, payload.getBytes(), contentType);
+        if (accepted) {
+            ctx.response().setStatusCode(HTTP_ACCEPTED).end();
+        } else {
+            // we currently have no credit for uploading data to Hono's Telemetry endpoint
+            serviceUnavailable(ctx.response(), 2);
         }
     }
 
