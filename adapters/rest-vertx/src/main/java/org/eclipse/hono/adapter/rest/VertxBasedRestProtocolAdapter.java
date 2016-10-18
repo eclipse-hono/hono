@@ -426,13 +426,17 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
             hono.getOrCreateTelemetrySender(tenant, createAttempt -> {
                 if (createAttempt.succeeded()) {
                     TelemetrySender sender = createAttempt.result();
-                    boolean accepted = sender.send(deviceId, payload.getBytes(), contentType);
-                    if (accepted) {
-                        ctx.response().setStatusCode(HTTP_ACCEPTED).end();
-                    } else {
-                        // we currently have no credit for uploading data to Hono's Telemetry endpoint
-                        serviceUnavailable(ctx.response(), 2);
-                    }
+                    // sending message only when the "flow" is handled and credits are available
+                    // otherwise send will never happen due to no credits
+                    sender.sendQueueDrainHandler(v -> {
+                        boolean accepted = sender.send(deviceId, payload.getBytes(), contentType);
+                        if (accepted) {
+                            ctx.response().setStatusCode(HTTP_ACCEPTED).end();
+                        } else {
+                            // we currently have no credit for uploading data to Hono's Telemetry endpoint
+                            serviceUnavailable(ctx.response(), 2);
+                        }
+                    });
                 } else {
                     // we don't have a connection to Hono
                     serviceUnavailable(ctx.response(), 5);
