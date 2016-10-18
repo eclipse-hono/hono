@@ -35,7 +35,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
@@ -52,7 +51,6 @@ import io.vertx.proton.ProtonHelper;
 public class StandaloneTelemetryApiTest {
 
     private static final Logger                LOG = LoggerFactory.getLogger(StandaloneTelemetryApiTest.class);
-    private static final String                KEY_CONTEXT = "Context";
     private static final String                BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
     private static final String                DEVICE_PREFIX = "device";
     private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
@@ -66,10 +64,6 @@ public class StandaloneTelemetryApiTest {
     private static HonoClient                  client;
     private static TelemetrySender             telemetrySender;
 
-    private static Context getContext(final TestContext ctx) {
-        return (Context) ctx.get(KEY_CONTEXT);
-    }
-
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
@@ -77,8 +71,6 @@ public class StandaloneTelemetryApiTest {
         server.addEndpoint(new TelemetryEndpoint(vertx, false));
         registrationAdapter = new FileBasedRegistrationAdapter();
         telemetryAdapter = new MessageDiscardingTelemetryAdapter();
-        Context context = vertx.getOrCreateContext();
-        ctx.put(KEY_CONTEXT, context);
 
         final Future<HonoClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess());
@@ -88,31 +80,27 @@ public class StandaloneTelemetryApiTest {
         Future<String> authTracker = Future.future();
         Future<String> telemetryTracker = Future.future();
 
-        context.runOnContext(run -> {
-            vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
-            vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
-            vertx.deployVerticle(AcceptAllPlainAuthenticationService.class.getName(), authenticationTracker.completer());
-            vertx.deployVerticle(telemetryAdapter, telemetryTracker.completer());
+        vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
+        vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
+        vertx.deployVerticle(AcceptAllPlainAuthenticationService.class.getName(), authenticationTracker.completer());
+        vertx.deployVerticle(telemetryAdapter, telemetryTracker.completer());
 
-            CompositeFuture.all(registrationTracker, authTracker, telemetryTracker)
-            .compose(r -> {
-                Future<String> serverTracker = Future.future();
-                vertx.deployVerticle(server, serverTracker.completer());
-                return serverTracker;
-            }).compose(s -> {
-                client = HonoClientBuilder.newClient()
-                        .vertx(vertx)
-                        .name("test")
-                        .host(server.getBindAddress())
-                        .port(server.getPort())
-                        .user(USER)
-                        .password(PWD)
-                        .build();
-                context.runOnContext(go -> {
-                    client.connect(new ProtonClientOptions(), setupTracker.completer());
-                });
-            }, setupTracker);
-        });
+        CompositeFuture.all(registrationTracker, authTracker, telemetryTracker)
+        .compose(r -> {
+            Future<String> serverTracker = Future.future();
+            vertx.deployVerticle(server, serverTracker.completer());
+            return serverTracker;
+        }).compose(s -> {
+            client = HonoClientBuilder.newClient()
+                    .vertx(vertx)
+                    .name("test")
+                    .host(server.getBindAddress())
+                    .port(server.getPort())
+                    .user(USER)
+                    .password(PWD)
+                    .build();
+            client.connect(new ProtonClientOptions(), setupTracker.completer());
+        }, setupTracker);
     }
 
     @Before
@@ -120,43 +108,23 @@ public class StandaloneTelemetryApiTest {
 
         registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1, null);
 
-        final Async senderCreation = ctx.async();
-        getContext(ctx).runOnContext(go -> {
-            client.createTelemetrySender(DEFAULT_TENANT, r -> {
-                if (r.succeeded()) {
-                    telemetrySender = r.result();
-                    senderCreation.complete();
-                }
-            });
-        });
+        client.createTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(r -> {
+            telemetrySender = r;
+        }));
     }
 
     @After
     public void clearRegistry(final TestContext ctx) throws InterruptedException {
 
-        final Async senderShutdown = ctx.async();
         registrationAdapter.clear();
-        getContext(ctx).runOnContext(go -> {
-            telemetrySender.close(r -> {
-                if (r.succeeded()) {
-                    senderShutdown.complete();
-                }
-            });
-        });
+        telemetrySender.close(ctx.asyncAssertSuccess());
     }
 
     @AfterClass
     public static void shutdown(final TestContext ctx) {
 
         if (client != null) {
-            final Async clientShutdown = ctx.async();
-            getContext(ctx).runOnContext(go -> {
-                client.shutdown(r -> {
-                    if (r.succeeded()) {
-                        clientShutdown.complete();
-                    }
-                });
-            });
+            client.shutdown(ctx.asyncAssertSuccess());
         }
     }
 
@@ -173,11 +141,9 @@ public class StandaloneTelemetryApiTest {
 
         IntStream.range(0, count).forEach(i -> {
             Async waitForCredit = ctx.async();
-            getContext(ctx).runOnContext(go -> {
-                LOG.trace("sending message {}", i);
-                telemetrySender.send(DEVICE_1, "payload" + i, "text/plain; charset=utf-8", done -> waitForCredit.complete());
-                LOG.trace("sender's send queue full: {}", telemetrySender.sendQueueFull());
-            });
+            LOG.trace("sending message {}", i);
+            telemetrySender.send(DEVICE_1, "payload" + i, "text/plain; charset=utf-8", done -> waitForCredit.complete());
+            LOG.trace("sender's send queue full: {}", telemetrySender.sendQueueFull());
             waitForCredit.await();
         });
     }
@@ -188,9 +154,7 @@ public class StandaloneTelemetryApiTest {
         telemetrySender.setErrorHandler(ctx.asyncAssertFailure(s -> {
             LOG.debug(s.getMessage());
         }));
-        getContext(ctx).runOnContext(go -> {
-            telemetrySender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
-        });
+        telemetrySender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
     }
 
     @Test(timeout = 1000l)
@@ -203,9 +167,7 @@ public class StandaloneTelemetryApiTest {
             LOG.debug(s.getMessage());
         }));
 
-        getContext(ctx).runOnContext(go -> {
-            telemetrySender.send(msg, capacityAvailable -> {});
-        });
+        telemetrySender.send(msg, capacityAvailable -> {});
     }
 
 }
