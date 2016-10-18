@@ -28,8 +28,8 @@ Assuming that a Hono server Docker container with name `hono` is already started
 
 ## Run using Docker Compose
 
-In most cases it makes sense to start all of Hono's components in one shot using Docker Compose.
-See the `Examples` module for details. The `Examples` module also contains an example service definition file that
+In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
+See the `example` module for details. The `example` module also contains an example service definition file that
 you can use as a starting point for your own configuration.
 
 # HTTP API
@@ -50,7 +50,7 @@ you can use as a starting point for your own configuration.
 
 The following command registers a device with ID `4711`.
 
-    $ curl -X POST -i -d 'device_id=4711 ep=IMEI4711' http://127.0.0.1:8080/registration/DEFAULT_TENANT
+    $ curl -i -X POST -d device_id=4711 -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:
@@ -94,7 +94,7 @@ The response will look similar to this:
 
 **Example**
 
-    $ curl -X PUT -d 'ep=IMEI4711 psk-id=psk4711' -i http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
+    $ curl -i -X PUT -d ep=IMEI4711 -d psk-id=psk4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
@@ -116,7 +116,7 @@ The response will look similar to this:
 
 **Example**
 
-    $ curl -X DELETE -i http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
+    $ curl -i -X DELETE http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
@@ -147,5 +147,5 @@ The response will look similar to this:
 
 Upload a JSON string for device `4711`:
 
-    $ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
     $ http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
