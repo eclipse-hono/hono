@@ -25,7 +25,7 @@ import io.vertx.core.json.JsonObject;
  * Factory to create JSON message payload for telemetry data received for an observed resource.
  */
 @Component
-@Profile("hono")
+@Profile("step2")
 public class JsonPayloadFactory implements TelemetryPayloadFactory {
 
     private static final String CONTENT_TYPE = "application/json;charset=utf-8";

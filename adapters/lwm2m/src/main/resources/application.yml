@@ -4,7 +4,7 @@ spring:
 
 ---
 spring:
-  profiles: standalone,hono
+  profiles: standalone,step1,step2
 
 leshan:
   server:
@@ -18,7 +18,7 @@ leshan:
 ---
 
 spring:
-  profiles: hono
+  profiles: step1,step2
 
 hono:
   client:

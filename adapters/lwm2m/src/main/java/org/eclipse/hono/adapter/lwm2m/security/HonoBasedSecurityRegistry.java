@@ -36,7 +36,7 @@ import io.vertx.core.json.JsonObject;
  *
  */
 @Component
-@Profile("hono")
+@Profile({"step1", "step2"})
 public class HonoBasedSecurityRegistry extends AbstractHonoBasedSecurityRegistry {
 
     private static final String FIELD_PSK = "psk";
