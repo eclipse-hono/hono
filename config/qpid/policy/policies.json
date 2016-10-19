@@ -58,6 +58,7 @@
       "connectionAllowDefault": false,
       "settings": {
         "anonymous": {
+          "maxSessions": 50,
           "allowDynamicSrc": false,
           "allowAnonymousSender": false,
           "sources": "telemetry/*",
