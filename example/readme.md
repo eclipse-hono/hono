@@ -57,21 +57,21 @@ you can also use plain *Docker* to run and wire up the images manually from the 
 In order to start a broker using [Gordon Sim's Qpid Dispatch Router image](https://hub.docker.com/r/gordons/qpid-dispatch/) with the required configuration run the following from the
 command line
 
-    $ docker run -d --name qdrouter-config eclipsehono/qpid-default-config:0.5-SNAPSHOT
-    $ docker run -d --name qdrouter-sasldb eclipsehono/qpid-sasldb:0.5-SNAPSHOT
+    $ docker run -d --name qdrouter-config eclipsehono/qpid-default-config:latest
+    $ docker run -d --name qdrouter-sasldb eclipsehono/qpid-sasldb:latest
     $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter --volumes-from="qdrouter-config" --volumes-from="qdrouter-sasldb" gordons/qpid-dispatch:0.6.0
  
 ##### Example Configuration
 
 Start volume container to provide required configuration
     
-    $ docker run -d --name example-config eclipsehono/hono-default-config:0.5-SNAPSHOT
+    $ docker run -d --name example-config eclipsehono/hono-default-config:latest
 
 ##### Start Hono Server
 
 Once the *Dispatch Router* Docker image has been started using the command above the *Hono Server* image can be run as follows
 
-    $ docker run -d --name hono --link qdrouter -p 5672:5672 --volumes-from="example-config" eclipsehono/hono-server:0.5-SNAPSHOT
+    $ docker run -d --name hono --link qdrouter -p 5672:5672 --volumes-from="example-config" eclipsehono/hono-server:latest
 
 ### Run Client
 

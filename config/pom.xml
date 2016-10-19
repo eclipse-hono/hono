@@ -78,7 +78,9 @@
                   <build>
                     <from>tianon/true</from>
                     <tags>
+                      <tag>latest</tag>
                       <tag>${project.version}</tag>
+                      <tag>${timestamp}</tag>
                     </tags>
                     <volumes>
                       <volume>/etc/qpid-dispatch</volume>
@@ -107,7 +109,9 @@
                   <build>
                     <from>tianon/true</from>
                     <tags>
+                      <tag>latest</tag>
                       <tag>${project.version}</tag>
+                      <tag>${timestamp}</tag>
                     </tags>
                     <volumes>
                       <volume>/var/lib/qdrouterd</volume>
