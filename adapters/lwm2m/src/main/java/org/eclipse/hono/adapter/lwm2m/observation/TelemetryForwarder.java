@@ -42,7 +42,7 @@ import org.springframework.stereotype.Component;
  * Telemetry API.
  */
 @Component
-@Profile("hono")
+@Profile("step2")
 public class TelemetryForwarder extends AbstractHonoClientSupport implements ObservationRegistryListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(TelemetryForwarder.class);
