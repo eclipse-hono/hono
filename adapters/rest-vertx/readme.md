@@ -83,6 +83,36 @@ The response will look similar to this:
       "id" : "4711"
     }
 
+### Find Registration
+
+This resource can be used to look up registration data by one of the additional keys registered for a device.
+
+* URI: `/registration/${tenantId}/find`
+* Method: `POST`
+* Headers:
+  * (required) `Content-Type: application/x-www-url-encoded`
+* Parameters (encoded as payload according to the content type):
+  * (required) a key/value pair to look up the device by.
+
+**Example**
+
+The following command retrieves registration data for device `4711`:
+
+    $ curl -i -X POST -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT/find 
+
+The response will look similar to this:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/json; charset=utf-8
+    Content-Length: 35
+    
+    {
+      "data" : {
+         "ep": "IMEI4711"
+      },
+      "id" : "4711"
+    }
+
 ### Update Registration
 
 * URI: `/registration/${tenantId}/${deviceId}`
