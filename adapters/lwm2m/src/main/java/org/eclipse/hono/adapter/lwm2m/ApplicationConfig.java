@@ -42,19 +42,19 @@ public class ApplicationConfig {
 
     @ConfigurationProperties(prefix = "hono.client")
     @Bean
-    @Profile("hono")
+    @Profile("!standalone")
     public HonoClientConfigProperties honoClientConfig() {
         return new HonoClientConfigProperties();
     }
 
     @Bean
-    @Profile("hono")
+    @Profile("!standalone")
     public HonoClient honoClient(final HonoClientConfigProperties config) {
         return new HonoClient(vertx, config);
     }
 
     @Bean
-    @Profile("hono")
+    @Profile("!standalone")
     @Qualifier("endpointMap")
     public Map<String, String> endpointToHonoIdMap() {
         return new ConcurrentHashMap<>();
