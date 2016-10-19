@@ -141,7 +141,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
             .handler(this::doUploadTelemetryData);
     }
 
-    private void bindHttpServer(final Router router, Future<Void> startFuture) {
+    private void bindHttpServer(final Router router, final Future<Void> startFuture) {
         HttpServerOptions options = new HttpServerOptions();
         options.setHost(bindAddress).setPort(listenPort).setMaxChunkSize(4096);
         server = vertx.createHttpServer(options);

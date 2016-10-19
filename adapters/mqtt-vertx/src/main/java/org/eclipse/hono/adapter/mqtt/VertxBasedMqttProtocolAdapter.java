@@ -24,7 +24,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Registration API using MQTT.
+ * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
  */
 @Component
 public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
@@ -39,7 +39,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
     private MqttServer server;
 
-    private void bindMqttServer(Future<Void> startFuture) {
+    private void bindMqttServer(final Future<Void> startFuture) {
 
         MqttServerOptions options = new MqttServerOptions();
         options.setHost(this.bindAddress).setPort(this.listenPort);
@@ -74,7 +74,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
         // TODO
     }
 
-    private void handleEndpointConnection(MqttEndpoint endpoint) {
+    private void handleEndpointConnection(final MqttEndpoint endpoint) {
 
         LOG.info("Connection request from client {}", endpoint.clientIdentifier());
 
