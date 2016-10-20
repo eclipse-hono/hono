@@ -98,7 +98,7 @@ public class Application {
         }
     }
 
-    private void deployVerticle(int instanceCount, Future<Void> resultHandler) {
+    private void deployVerticle(final int instanceCount, final Future<Void> resultHandler) {
 
         LOG.debug("starting up {} instances of REST adapter verticle", instanceCount);
         @SuppressWarnings("rawtypes")
