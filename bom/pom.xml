@@ -50,6 +50,7 @@
     <truth.version>0.28</truth.version>
     <vertx.version>3.3.3</vertx.version>
     <vertx-proton.version>3.3.3</vertx-proton.version>
+    <vertx-mqtt.version>3.4.0-SNAPSHOT</vertx-mqtt.version>
   </properties>
 
   <dependencyManagement>
