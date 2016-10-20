@@ -137,9 +137,8 @@
     <module>bom</module>
     <module>core</module>
     <module>client</module>
-    <module>demo-certs</module>
-    <module>dispatchrouter</module>
-    <module>example</module>
+    <module>dweet</module>    <module>demo-certs</module>
+    <module>dispatchrouter</module>    <module>example</module>
     <module>legal</module>
     <module>server</module>
     <module>tests</module>
@@ -315,6 +314,9 @@
               <rules>
                 <requireReleaseDeps>
                   <message>No dependencies on snapshots allowed!</message>
+                  <excludes>
+                    <exclude>io.vertx:vertx-mqtt-server</exclude>
+                  </excludes>
                 </requireReleaseDeps>
                 <requireReleaseVersion>
                   <message>Cannot release snapshot version!</message>
