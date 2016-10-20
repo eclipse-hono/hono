@@ -1,0 +1,29 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.eclipse.hono</groupId>
+    <artifactId>hono-parent</artifactId>
+    <version>0.5-M2-SNAPSHOT</version>
+  </parent>
+  <artifactId>dweet</artifactId>
+  <name>hono-dweet-consumer</name>
+  <description>A consumer that forwards Telemetry data to dweet.io</description>
+
+  <properties>
+    <exec.mainClass>org.eclipse.hono.consumer.dweet.DweetRoute</exec.mainClass>
+    <camel.version>2.18.0</camel.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-http4-starter</artifactId>
+      <version>${camel.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-amqp-starter</artifactId>
+      <version>${camel.version}</version>
+    </dependency>
+  </dependencies>
+</project>

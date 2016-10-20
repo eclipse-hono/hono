@@ -130,6 +130,7 @@
     <module>config</module>
     <module>core</module>
     <module>client</module>
+    <module>dweet</module>
     <module>example</module>
     <module>legal</module>
     <module>server</module>
