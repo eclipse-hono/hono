@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: standalone,dev
+    active: step2,dev
 
 ---
 spring:
