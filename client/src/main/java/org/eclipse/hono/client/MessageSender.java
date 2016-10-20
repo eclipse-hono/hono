@@ -8,22 +8,25 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *
  */
 
 package org.eclipse.hono.client;
 
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * A client for uploading telemetry data to a Hono server.
  *
  */
-public interface TelemetrySender {
+public interface MessageSender {
 
     /**
      * Checks if this sender can send or buffer (and send later) a telemetry message.
@@ -264,6 +267,13 @@ public interface TelemetrySender {
      *                     property will contain the cause for the closing of the link.
      */
     void setErrorHandler(Handler<AsyncResult<Void>> errorHandler);
+
+    /**
+     * Sets a callback for disposition updates for messages sent with this {@link MessageSender}.
+     *
+     * @param dispositionHandler consumer that accepts a message id and updated disposition
+     */
+    void setDispositionHandler(BiConsumer<String, ProtonDelivery> dispositionHandler);
 
     /**
      * Closes the AMQP link with the Hono server this sender is using.

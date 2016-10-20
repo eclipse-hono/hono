@@ -19,3 +19,16 @@ hono:
     downstream:
       host: activemq
       port: 5672
+---
+spring:
+  profiles: artemis
+hono:
+  pathSeparator: .
+  telemetry:
+    downstream:
+      host: qdrouter
+      port: 5673
+  event:
+    downstream:
+      host: qdrouter
+      port: 5673

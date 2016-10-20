@@ -20,7 +20,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * An example of using TelemetryClient for uploading and retrieving telemetry data to/from Hono.
+ * An example of using HonoClient for uploading and retrieving telemetry data and event messages to/from Hono.
  */
 @SpringBootApplication
 public class Application {
@@ -28,11 +28,11 @@ public class Application {
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
     @Value(value = "${spring.profiles.active}")
-    private String                profiles;
+    private String profiles;
 
     @PostConstruct
     private void start() throws Exception {
-        LOG.info("Starting TelemetryClient in role {}", profiles);
+        LOG.info("Starting example client in role {}", profiles);
     }
 
     public static void main(final String[] args) {

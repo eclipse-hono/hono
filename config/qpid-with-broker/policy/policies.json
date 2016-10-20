@@ -22,13 +22,13 @@
         "DEFAULT_TENANT": {
           "allowDynamicSrc": false,
           "allowAnonymousSender": false,
-          "sources": "telemetry/DEFAULT_TENANT, telemetry/DEFAULT_TENANT/*, event/DEFAULT_TENANT",
+          "sources": "telemetry.DEFAULT_TENANT, telemetry.DEFAULT_TENANT.*, event.DEFAULT_TENANT",
           "targets": ""
         },
         "anotherTenant": {
           "allowDynamicSrc": false,
           "allowAnonymousSender": false,
-          "sources": "telemetry/anotherTenant",
+          "sources": "telemetry.anotherTenant",
           "targets": ""
         },
         "anonymous": {
@@ -62,7 +62,7 @@
           "allowDynamicSrc": false,
           "allowAnonymousSender": false,
           "sources": "$management",
-          "targets": "telemetry/*, event/*, $management"
+          "targets": "telemetry.*, event.*, $management"
         }
       }
     }

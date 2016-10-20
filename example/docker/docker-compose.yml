@@ -11,12 +11,28 @@ services:
   hono-config:
     image: eclipsehono/hono-default-config:${project.version}
 
+  artemis-config:
+    image: eclipsehono/artemis-default-config:${project.version}
+
+  # Apache Artemis Broker
+  broker:
+    image: vromero/activemq-artemis:${artemis.version}
+  #  environment:
+  #    - ARTEMIS_USERNAME=artemis
+  #    - ARTEMIS_PASSWORD=artemis
+  #  volumes:
+  #    - /path/to/artemis/etc:/var/lib/artemis/etc
+  #    - /path/to/artemis/data:/var/lib/artemis/data
+  #    - /path/to/artemis/tmp:/var/lib/artemis/tmp
+    volumes_from:
+      - artemis-config
+
   qdrouter:
     image: gordons/qpid-dispatch:${qpid-dispatch.version}
     ports:
       - "15672:5672"
-    expose:
-      - "5673"
+    links:
+      - broker
     volumes_from:
       - qpid-config
       - qpid-sasldb
@@ -29,6 +45,8 @@ services:
       - qdrouter
     environment:
       - HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json
+      - HONO_TELEMETRY_DOWNSTREAM_HOST=qdrouter
+      - HONO_EVENT_DOWNSTREAM_HOST=qdrouter
       - HONO_MAX_INSTANCES=1
       - LOGGING_CONFIG=file:///etc/hono/logback-spring.xml
       - SPRING_CONFIG_LOCATION=file:/etc/hono/

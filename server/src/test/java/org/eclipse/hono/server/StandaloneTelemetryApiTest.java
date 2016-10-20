@@ -21,7 +21,7 @@ import org.eclipse.hono.authentication.impl.AcceptAllPlainAuthenticationService;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
-import org.eclipse.hono.client.TelemetrySender;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
@@ -62,7 +62,7 @@ public class StandaloneTelemetryApiTest {
     private static FileBasedRegistrationService registrationAdapter;
     private static MessageDiscardingTelemetryDownstreamAdapter telemetryAdapter;
     private static HonoClient                  client;
-    private static TelemetrySender             telemetrySender;
+    private static MessageSender               telemetrySender;
 
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {

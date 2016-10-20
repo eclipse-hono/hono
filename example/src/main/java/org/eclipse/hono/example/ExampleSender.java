@@ -16,7 +16,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -24,14 +26,15 @@ import javax.annotation.PostConstruct;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.TelemetrySender;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.Context;
@@ -40,8 +43,8 @@ import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
- * Example of a telemetry sender that connects to the Hono Server, registers a device, waits for input from command line
- * which is then sent as a telemetry message to the server.
+ * Example of a telemetry/event sender that connects to the Hono Server, registers a device, waits for input from command line
+ * which is then sent as a telemetry/event message to the server.
  */
 @Component
 @Profile("sender")
@@ -50,12 +53,15 @@ public class ExampleSender {
     private static final Logger LOG = LoggerFactory.getLogger(ExampleSender.class);
 
     @Value(value = "${tenant.id}")
-    private String                tenantId;
+    private String tenantId;
     @Value(value = "${device.id}")
-    private String                deviceId;
+    private String deviceId;
 
     @Autowired
     private HonoClientConfigProperties clientConfig;
+
+    @Autowired
+    private Environment environment;
 
     @Autowired
     private Vertx vertx;
@@ -65,9 +71,10 @@ public class ExampleSender {
     @PostConstruct
     private void start() {
 
+        final List<String> activeProfiles = Arrays.asList(environment.getActiveProfiles());
         client = HonoClientBuilder.newClient(clientConfig).vertx(vertx).build();
         ctx = vertx.getOrCreateContext();
-        Future<TelemetrySender> startupTracker = Future.future();
+        final Future<MessageSender> startupTracker = Future.future();
         startupTracker.setHandler(done -> {
             if (done.succeeded()) {
                 vertx.executeBlocking(f -> readMessagesFromStdin(done.result(), f), false, exit -> {
@@ -107,13 +114,18 @@ public class ExampleSender {
                 }
                 return resultCodeTracker;
             }).compose(v -> {
-            /* step 5: create telemetry sender client */
-                client.createTelemetrySender(tenantId, startupTracker.completer());
+                /* step 5: create sender client */
+                if (activeProfiles.contains("event")) {
+                    client.createEventSender(tenantId, startupTracker.completer());
+                } else {
+                    // default to telemetry sender
+                    client.createTelemetrySender(tenantId, startupTracker.completer());
+                }
             }, startupTracker);
         });
     }
 
-    private void readMessagesFromStdin(final TelemetrySender telemetryClient, final Future<Object> f) {
+    private void readMessagesFromStdin(final MessageSender messageSender, final Future<Object> f) {
         final BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         String input;
         try {
@@ -122,10 +134,10 @@ public class ExampleSender {
                 input = reader.readLine();
                 if (!input.isEmpty()) {
 
-                    Map<String, Object> properties = new HashMap<>();
+                    final Map<String, Object> properties = new HashMap<>();
                     properties.put("my_prop_string", "I'm a string");
                     properties.put("my_prop_int", 10);
-                    telemetryClient.send(deviceId, properties, input, "text/plain");
+                    messageSender.send(deviceId, properties, input, "text/plain");
                 }
             } while (!input.isEmpty());
             f.complete();

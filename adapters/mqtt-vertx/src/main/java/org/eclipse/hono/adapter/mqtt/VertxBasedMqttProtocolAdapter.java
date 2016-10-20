@@ -25,7 +25,7 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 import io.vertx.proton.ProtonClientOptions;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.HonoClientConfigProperties;
-import org.eclipse.hono.client.TelemetrySender;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,7 +165,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                             if (createAttempt.succeeded()) {
 
-                                TelemetrySender sender = createAttempt.result();
+                                MessageSender sender = createAttempt.result();
 
                                 // sending message only when the "flow" is handled and credits are available
                                 // otherwise send will never happen due to no credits
@@ -198,7 +198,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
         }
     }
 
-    private void sendToHono(final MqttEndpoint endpoint, final TelemetrySender sender, final MqttPublishMessage message) {
+    private void sendToHono(final MqttEndpoint endpoint, final MessageSender sender, final MqttPublishMessage message) {
 
         boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM);
         if (accepted && message.qosLevel() == MqttQoS.AT_LEAST_ONCE) {

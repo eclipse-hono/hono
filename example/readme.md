@@ -8,6 +8,7 @@ In order to run the example you will need the following
 
 * The compiled *Hono* artifacts
 * An *Apache Qpid Dispatch Router* instance
+* An AMQP 1.0 compatible message broker e.g. [*Apache Artemis*](https://activemq.apache.org/artemis/)
 
 You can build all required artifacts and docker images by running the following command in the project's root folder:
 
@@ -34,6 +35,7 @@ The easiest way to start the server components is by using *Docker Compose*. Sim
 This will start up the following components:
 
 * a *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
+* an *Apache Artemis* instance wired up with the Dispatch Router.
 * a *Hono Server* instance wired up with the dispatch router.
 * a Docker *volume* container for the *Example Configuration* which contains a `permissions.json` file that defines permissions required to run the example. You can edit these permissions in the file `example/config/permissions.json`. Don't forget to rebuild and restart the Docker image for the changes to take effect.
 * a Docker *volume* containing the *Dispatch Router* configuration
@@ -54,12 +56,19 @@ you can also use plain *Docker* to run and wire up the images manually from the 
 
 ##### Start Dispatch Router
 
-In order to start a broker using [Gordon Sim's Qpid Dispatch Router image](https://hub.docker.com/r/gordons/qpid-dispatch/) with the required configuration run the following from the
+In order to start a router using [Gordon Sim's Qpid Dispatch Router image](https://hub.docker.com/r/gordons/qpid-dispatch/) with the required configuration run the following from the
 command line
 
     $ docker run -d --name qdrouter-config eclipsehono/qpid-default-config:latest
     $ docker run -d --name qdrouter-sasldb eclipsehono/qpid-sasldb:latest
     $ docker run -d --name qdrouter -p 15672:5672 -h qdrouter --volumes-from="qdrouter-config" --volumes-from="qdrouter-sasldb" gordons/qpid-dispatch:0.6.0
+ 
+##### Start Apache Artemis
+
+In order to start an Apache Artemis instance with the required configuration run the following from the command line
+
+    $ docker run -d --name artemis-config eclipsehono/artemis-default-config:latest
+    $ docker run -d --name broker -h broker --volumes-from="artemis-config" vromero/activemq-artemis:1.4.0
  
 ##### Example Configuration
 
@@ -77,19 +86,27 @@ Once the *Dispatch Router* Docker image has been started using the command above
 
 Now that the required server components have been started you can run the example client.
 
-The example client can be used to send telemetry messages typed on the console to the *Hono Server*. It can also be used to log uploaded telemetry messages to the console.
+The example client can be used to send telemetry messages or event messages typed on the console to the *Hono Server*. It can also be used to log uploaded messages to the console.
 
 In order to receive and log telemetry messages uploaded to Hono, run the client from the `example` folder as follows:
 
-    $ java -jar target/hono-example-0.5-SNAPSHOT.jar --hono.server.host=localhost
+    $ java -jar target/hono-example-0.5-M3-SNAPSHOT.jar --hono.server.host=localhost
+    
+In order to receive and log event messages uploaded to Hono, run the client from the `example` folder as follows:
+
+    $ java -jar target/hono-example-0.5-M3-SNAPSHOT.jar --spring.profiles.active=receiver,event --hono.server.host=localhost
 
  **NOTE**: Replace `localhost` with the name or IP address of the host that the *Dispatch Router* is running on. If the *Dispatch Router* is running on `localhost` you can omit the option.
 
 In order to upload telemetry messages entered on the command line, run the client from the `example` folder as follows:
 
-    $ java -jar target/hono-example-0.5-SNAPSHOT.jar --spring.profiles.active=sender --hono.server.host=localhost
+    $ java -jar target/hono-example-0.5-M3-SNAPSHOT.jar --spring.profiles.active=sender --hono.server.host=localhost
+    
+In order to upload event messages entered on the command line, run the client from the `example` folder as follows:
 
- **NOTE**: Replace `localhost` with the name or IP address of the host that the *Hono Server* is running on. If the *Dispatch Router* is running on `localhost` you can omit the option.
+    $ java -jar target/hono-example-0.5-M3-SNAPSHOT.jar --spring.profiles.active=sender,event --hono.server.host=localhost
+
+ **NOTE**: Replace `localhost` with the name or IP address of the host that the *Hono Server* is running on. If the *Hono Server* is running on `localhost` you can omit the option.
 
 ### Start Hono Server using Maven
 

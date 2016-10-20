@@ -20,8 +20,8 @@ import java.util.function.BiConsumer;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.TelemetrySender;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -425,7 +425,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
             hono.getOrCreateTelemetrySender(tenant, createAttempt -> {
                 if (createAttempt.succeeded()) {
-                    TelemetrySender sender = createAttempt.result();
+                    MessageSender sender = createAttempt.result();
 
                     // sending message only when the "flow" is handled and credits are available
                     // otherwise send will never happen due to no credits
@@ -445,7 +445,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         }
     }
 
-    private void sendToHono(final RoutingContext ctx, final TelemetrySender sender) {
+    private void sendToHono(final RoutingContext ctx, final MessageSender sender) {
 
         final String deviceId = getDeviceIdParam(ctx);
         final String contentType = ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);

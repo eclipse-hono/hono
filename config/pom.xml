@@ -104,6 +104,37 @@
                   </build>
                 </image>
                 <image>
+                  <alias>qpid-broker-config</alias>
+                  <name>eclipsehono/qpid-broker-config:${project.version}</name>
+                  <build>
+                    <from>tianon/true</from>
+                    <tags>
+                      <tag>latest</tag>
+                      <tag>${project.version}</tag>
+                      <tag>${timestamp}</tag>
+                    </tags>
+                    <volumes>
+                      <volume>/etc/qpid-dispatch</volume>
+                    </volumes>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/qpid-dispatch</basedir>
+                      <inline>
+                        <id>qpid-dispatch</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/qpid-with-broker</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>**/*</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+                <image>
                   <alias>qpid-sasldb</alias>
                   <name>eclipsehono/qpid-sasldb:${project.version}</name>
                   <build>
@@ -124,6 +155,37 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.basedir}/sasl</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>**/*</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+                <image>
+                  <alias>artemis-default-config</alias>
+                  <name>eclipsehono/artemis-default-config:${project.version}</name>
+                  <build>
+                    <from>tianon/true</from>
+                    <tags>
+                      <tag>latest</tag>
+                      <tag>${project.version}</tag>
+                      <tag>${timestamp}</tag>
+                    </tags>
+                    <volumes>
+                      <volume>/var/lib/artemis/etc</volume>
+                    </volumes>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/var/lib/artemis/etc</basedir>
+                      <inline>
+                        <id>artemis-broker</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/artemis/etc</directory>
                             <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>**/*</include>
