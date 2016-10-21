@@ -13,7 +13,9 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import io.vertx.core.Vertx;
+import org.eclipse.hono.client.HonoClientConfigProperties;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,6 +29,12 @@ public class Config {
 
     @Bean
     public Vertx getVertx() { return this.vertx; }
+
+    @ConfigurationProperties(prefix = "hono.client")
+    @Bean
+    public HonoClientConfigProperties honoClientConfig() {
+        return new HonoClientConfigProperties();
+    }
 
     @Bean
     public ServiceLocatorFactoryBean serviceLocator() {

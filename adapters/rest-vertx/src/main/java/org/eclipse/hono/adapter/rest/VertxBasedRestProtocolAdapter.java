@@ -445,7 +445,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         }
     }
 
-    private void sendToHono(final RoutingContext ctx, TelemetrySender sender) {
+    private void sendToHono(final RoutingContext ctx, final TelemetrySender sender) {
 
         final String deviceId = getDeviceIdParam(ctx);
         final String contentType = ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);
