@@ -13,7 +13,6 @@
 package org.eclipse.hono.adapter.lwm2m.observation;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -25,8 +24,8 @@ import org.eclipse.leshan.core.model.LwM2mModel;
 import org.eclipse.leshan.core.model.ObjectModel;
 import org.eclipse.leshan.core.node.LwM2mNode;
 import org.eclipse.leshan.core.node.LwM2mPath;
-import org.eclipse.leshan.core.node.TimestampedLwM2mNode;
 import org.eclipse.leshan.core.observation.Observation;
+import org.eclipse.leshan.core.response.ObserveResponse;
 import org.eclipse.leshan.server.client.Client;
 import org.eclipse.leshan.server.client.ClientRegistry;
 import org.eclipse.leshan.server.model.LwM2mModelProvider;
@@ -118,19 +117,17 @@ public class TelemetryForwarder extends AbstractHonoClientSupport implements Obs
     }
 
     @Override
-    public void newValue(final Observation observation, final LwM2mNode mostRecentValue,
-            final List<TimestampedLwM2mNode> timestampedValues) {
+    public void newValue(final Observation observation, final ObserveResponse response) {
 
         Client client = clientRegistry.findByRegistrationId(observation.getRegistrationId());
         if (client == null) {
             LOG.info("discarding notification from unknown device");
         } else {
-            newValue(client, observation, mostRecentValue, timestampedValues);
+            newValue(client, observation, response.getContent());
         }
     }
 
-    private void newValue(final Client client, final Observation observation, final LwM2mNode mostRecentValue,
-            final List<TimestampedLwM2mNode> timestampedValues) {
+    private void newValue(final Client client, final Observation observation, final LwM2mNode mostRecentValue) {
 
         final String deviceId = endpointMap.get(client.getEndpoint());
         if (deviceId == null) {
