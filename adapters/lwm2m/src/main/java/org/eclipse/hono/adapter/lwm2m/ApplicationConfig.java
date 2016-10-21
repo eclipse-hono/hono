@@ -66,7 +66,6 @@ public class ApplicationConfig {
     }
 
     @Bean
-    @Profile("standalone")
     public LwM2mModelProvider defaultModelProvier() {
         return new StandardModelProvider();
     }
