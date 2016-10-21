@@ -84,6 +84,13 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <jvmArguments>
+            -Dvertx.disableDnsResolver=true
+            -Dnetworkaddress.cache.ttl=0
+            -Dnetworkaddress.cache.negative.ttl=0
+          </jvmArguments>
+        </configuration>
       </plugin>
     </plugins>
   </build>
