@@ -149,7 +149,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
             endpoint.publishHandler(message -> {
 
-                LOG.info("Just received message on [" + message.topicName() + "] payload [" + message.payload().toString(Charset.defaultCharset()) + "] with QoS [" + message.qosLevel() + "]");
+                LOG.debug("Just received message on [{}] payload [{}] with QoS [{}]", message.topicName(), message.payload().toString(Charset.defaultCharset()), message.qosLevel());
 
                 ResourceIdentifier resource = ResourceIdentifier.fromString(message.topicName());
 
@@ -168,6 +168,11 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
                                 this.sendToHono(endpoint, sender, message);
                             });
                         }
+
+                    } else {
+
+                        // we don't have a connection to Hono ? MQTT no other way to close connection
+                        endpoint.close();
                     }
 
                 });
