@@ -51,3 +51,19 @@ services:
       - HONO_HTTP_BINDADDRESS=0.0.0.0
       - HONO_MAXINSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
+
+  mqtt-adapter:
+      image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
+      ports:
+        - "1883:1883"
+      links:
+        - hono
+      environment:
+        - HONO_CLIENT_NAME=Hono MQTT Adapter
+        - HONO_CLIENT_HOST=hono
+        - HONO_CLIENT_PORT=5672
+        - HONO_CLIENT_USERNAME=hono-client
+        - HONO_CLIENT_PASSWORD=secret
+        - HONO_HTTP_BINDADDRESS=0.0.0.0
+        - HONO_MAXINSTANCES=1
+        - SPRING_PROFILES_ACTIVE=dev
