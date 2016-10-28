@@ -153,29 +153,44 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                 ResourceIdentifier resource = ResourceIdentifier.fromString(message.topicName());
 
-                this.hono.getOrCreateTelemetrySender(resource.getTenantId(), createAttempt -> {
+                // if MQTT client doesn't specify device_id then closing connection (MQTT has now way for errors)
+                if (resource.getResourceId() == null) {
+                    endpoint.close();
+                } else {
 
-                    if (createAttempt.succeeded()) {
+                    // check that MQTT client tries to publish on topic with device_id same as on connection
+                    if (resource.getResourceId().equals(endpoint.clientIdentifier())) {
 
-                        TelemetrySender sender = createAttempt.result();
+                        this.hono.getOrCreateTelemetrySender(resource.getTenantId(), createAttempt -> {
 
-                        // sending message only when the "flow" is handled and credits are available
-                        // otherwise send will never happen due to no credits
-                        if (!sender.sendQueueFull()) {
-                            this.sendToHono(endpoint, sender, message);
-                        } else {
-                            sender.sendQueueDrainHandler(v -> {
-                                this.sendToHono(endpoint, sender, message);
-                            });
-                        }
+                            if (createAttempt.succeeded()) {
+
+                                TelemetrySender sender = createAttempt.result();
+
+                                // sending message only when the "flow" is handled and credits are available
+                                // otherwise send will never happen due to no credits
+                                if (!sender.sendQueueFull()) {
+                                    this.sendToHono(endpoint, sender, message);
+                                } else {
+                                    sender.sendQueueDrainHandler(v -> {
+                                        this.sendToHono(endpoint, sender, message);
+                                    });
+                                }
+
+                            } else {
+
+                                // we don't have a connection to Hono ? MQTT no other way to close connection
+                                endpoint.close();
+                            }
+
+                        });
 
                     } else {
-
-                        // we don't have a connection to Hono ? MQTT no other way to close connection
+                        // MQTT client is trying to publish on a different device_id used on connection (MQTT has now way for errors)
                         endpoint.close();
                     }
 
-                });
+                }
 
             });
 
