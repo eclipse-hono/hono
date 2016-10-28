@@ -4,7 +4,7 @@ This module contains a protocol adapter that exposes a RESTful API for Hono's Te
 
 The adapter can be run by means of running the corresponding Docker image.
 
-    $ docker run -d --name rest-adapter -p8080:8080 eclipsehono/hono-adapter-rest-vertx:0.5-SNAPSHOT
+    $ docker run -d --name rest-adapter -p8080:8080 eclipsehono/hono-adapter-rest-vertx:latest
 
 The rest adapter requires some configuration in order to connect to a Hono server. Configuration is done by means
 of the following environment variables:
@@ -24,7 +24,7 @@ Assuming that a Hono server Docker container with name `hono` is already started
 
     $ docker run -d --name rest-adapter --link hono -e 'HONO_CLIENT_HOST=hono' \
     $ -e 'HONO_CLIENT_USERNAME=hono-client' -e 'HONO_CLIENT_PASSWORD=secret' -p8080:8080 \
-    $ eclipsehono/hono-adapter-rest-vertx:0.5-SNAPSHOT
+    $ eclipsehono/hono-adapter-rest-vertx:latest
 
 ## Run using Docker Compose
 
