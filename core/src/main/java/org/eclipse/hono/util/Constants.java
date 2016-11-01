@@ -13,7 +13,6 @@ package org.eclipse.hono.util;
 
 import java.security.Principal;
 
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonLink;
 
@@ -41,10 +40,6 @@ public final class Constants {
      */
     public static final String EVENT_BUS_ADDRESS_CONNECTION_CLOSED = "hono.connection.closed";
 
-    public static final String APPLICATION_ENDPOINT = "application";
-    public static final String APP_PROPERTY_ACTION = "action";
-    public static final String ACTION_RESTART = "restart";
-
     private Constants() {
     }
 
@@ -58,15 +53,24 @@ public final class Constants {
         return con.attachments().get(KEY_CLIENT_PRINCIPAL, Principal.class);
     }
 
+    /**
+     * Gets the (surrogate) identifier of the AMQP connection that a link is part of.
+     * 
+     * @param link The link to determine the connection id for.
+     * @return The identifier retrieved from the link's <em>attachment</em> using key {@link #KEY_CONNECTION_ID}
+     *         or {@code null} if the attachments do not contain a value for that a key.
+     */
     public static String getConnectionId(final ProtonLink<?> link) {
         return link.attachments().get(KEY_CONNECTION_ID, String.class);
     }
 
+    /**
+     * Checks if a given tenant identifier is the {@code DEFAULT_TENANT}.
+     * 
+     * @param tenantId The identifier to check.
+     * @return {@code true} if the given identifier is equal to {@link #DEFAULT_TENANT}.
+     */
     public static boolean isDefaultTenant(final String tenantId) {
         return DEFAULT_TENANT.equals(tenantId);
-    }
-
-    public static JsonObject getRestartJson() {
-        return new JsonObject().put(APP_PROPERTY_ACTION, ACTION_RESTART);
     }
 }

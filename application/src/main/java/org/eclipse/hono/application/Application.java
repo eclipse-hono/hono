@@ -25,7 +25,6 @@ import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
 import org.eclipse.hono.server.EndpointFactory;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.telemetry.TelemetryAdapter;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.VerticleFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,8 +40,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.json.JsonObject;
 
 /**
  * The Hono server main application class.
@@ -77,7 +74,6 @@ public class Application {
     private VerticleFactory<HonoServer> serverFactory;
     @Autowired
     private List<EndpointFactory<?>> endpointFactories;
-    private MessageConsumer<Object> restartListener;
 
     @PostConstruct
     public void registerVerticles() {
@@ -113,28 +109,6 @@ public class Application {
                 deployServer(instanceCount, started);
             } else {
                 started.fail(ar.cause());
-            }
-        });
-
-        restartListener = vertx.eventBus().consumer(Constants.APPLICATION_ENDPOINT).handler(message -> {
-            JsonObject json = (JsonObject) message.body();
-            String action = json.getString(Constants.APP_PROPERTY_ACTION);
-            if (Constants.ACTION_RESTART.equals(action)) {
-                LOG.info("restarting Hono...");
-                vertx.eventBus().close(closeHandler -> {
-                    List<Future> results = new ArrayList<>();
-                    vertx.deploymentIDs().forEach(id -> {
-                        Future<Void> result = Future.future();
-                        vertx.undeploy(id, result.completer());
-                        results.add(result);
-                    });
-
-                    CompositeFuture.all(results).setHandler(ar -> {
-                        registerVerticles();
-                    });
-                });
-            } else {
-                LOG.warn("received unknown application action [{}], ignoring...", action);
             }
         });
 
@@ -213,9 +187,6 @@ public class Application {
             final CountDownLatch latch = new CountDownLatch(1);
             if (vertx != null) {
                 LOG.debug("shutting down Hono server...");
-                if (restartListener != null) {
-                    restartListener.unregister();
-                }
                 vertx.close(r -> {
                     if (r.failed()) {
                         LOG.error("could not shut down Hono cleanly", r.cause());

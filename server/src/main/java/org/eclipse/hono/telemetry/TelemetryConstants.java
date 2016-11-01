@@ -15,6 +15,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.vertx.core.MultiMap;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 
@@ -23,21 +24,28 @@ import io.vertx.core.json.JsonObject;
  */
 public final class TelemetryConstants {
 
-    public static final String EVENT_DETACHED = "detached";
     public static final String EVENT_ATTACHED = "attached";
+    public static final String EVENT_DETACHED = "detached";
+
     public static final String FIELD_NAME_LINK_ID = "link-id";
     public static final String FIELD_NAME_CLOSE_LINK = "close-link";
     public static final String FIELD_NAME_CONNECTION_ID = "connection-id";
     public static final String FIELD_NAME_CREDIT = "credit";
+    public static final String FIELD_NAME_DRAIN = "drain";
     public static final String FIELD_NAME_ENDPOINT = "endpoint";
     public static final String FIELD_NAME_EVENT = "event";
     public static final String FIELD_NAME_MSG_UUID = "uuid";
     public static final String FIELD_NAME_SUSPEND = "suspend";
     public static final String FIELD_NAME_TARGET_ADDRESS = "target-address";
+
     public static final String HEADER_NAME_REPLY_TO = "reply-to";
+    public static final String HEADER_NAME_TYPE = "type";
+
     public static final String RESULT_ACCEPTED = "accepted";
+
     public static final String MSG_TYPE_ERROR = "error";
     public static final String MSG_TYPE_FLOW_CONTROL = "flow-control";
+
     public static final String TELEMETRY_ENDPOINT             = "telemetry";
     public static final String PATH_SEPARATOR = "/";
     public static final String NODE_ADDRESS_TELEMETRY_PREFIX  = TELEMETRY_ENDPOINT + PATH_SEPARATOR;
@@ -80,29 +88,32 @@ public final class TelemetryConstants {
         return msg;
     }
 
-    public static boolean isFlowControlMessage(final JsonObject msg) {
-        Objects.requireNonNull(msg);
-        return msg.containsKey(MSG_TYPE_FLOW_CONTROL);
+    public static boolean isFlowControlMessage(final MultiMap headers) {
+        return hasHeader(headers, HEADER_NAME_TYPE, MSG_TYPE_FLOW_CONTROL);
     }
 
-    public static JsonObject getCreditReplenishmentMsg(final String linkId, final int credit) {
-        return new JsonObject().put(
-                MSG_TYPE_FLOW_CONTROL,
-                new JsonObject()
-                    .put(FIELD_NAME_LINK_ID, linkId)
-                    .put(FIELD_NAME_CREDIT, credit));
+    public static JsonObject getFlowControlMsg(final String linkId, final int credit, final boolean drain) {
+        return new JsonObject()
+                .put(FIELD_NAME_LINK_ID, linkId)
+                .put(FIELD_NAME_CREDIT, credit)
+                .put(FIELD_NAME_DRAIN, drain);
     }
 
     public static JsonObject getErrorMessage(final String linkId, final boolean closeLink) {
-        return new JsonObject().put(
-                MSG_TYPE_ERROR,
-                new JsonObject().put(FIELD_NAME_CLOSE_LINK, closeLink)
-                    .put(FIELD_NAME_LINK_ID, linkId));
+        return new JsonObject()
+                .put(FIELD_NAME_LINK_ID, linkId)
+                .put(FIELD_NAME_CLOSE_LINK, closeLink);
     }
 
-    public static boolean isErrorMessage(final JsonObject msg) {
-        Objects.requireNonNull(msg);
-        return msg.containsKey(MSG_TYPE_ERROR);
+    public static boolean isErrorMessage(final MultiMap headers) {
+        return hasHeader(headers, HEADER_NAME_TYPE, MSG_TYPE_ERROR);
+    }
+
+    public static boolean hasHeader(final MultiMap headers, final String name, final String expectedValue) {
+        Objects.requireNonNull(headers);
+        Objects.requireNonNull(expectedValue);
+        Objects.requireNonNull(name);
+        return expectedValue.equals(headers.get(name));
     }
 
     public static DeliveryOptions addReplyToHeader(final DeliveryOptions options, final String address) {

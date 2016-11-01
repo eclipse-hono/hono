@@ -200,20 +200,43 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
         if (activeSenders.containsKey(linkId)) {
             LOG.info("reusing existing downstream sender [con: {}, link: {}]", connectionId, linkId);
         } else {
-            createSender(targetAddress, 
-                    replenishedSender -> {
-                        int credits = getAvailableCredit(replenishedSender);
-                        LOG.trace("downstream sender [con:{}, link: {}] has been replenished with {} credits", connectionId, linkId, credits);
-                        replenishUpstreamSender(linkId, credits);
-                    }, created -> {
-                        if (created.succeeded()) {
+            createSender(
+                    targetAddress,
+                    replenishedSender -> handleFlow(connectionId, linkId, replenishedSender),
+                    creationAttempt -> {
+                        if (creationAttempt.succeeded()) {
                             LOG.info("created downstream sender [con: {}, link: {}]", connectionId, linkId);
-                            addSender(connectionId, linkId, created.result());
+                            addSender(connectionId, linkId, creationAttempt.result());
                         } else {
-                            LOG.warn("can't create downstream sender [con: {}, link: {}]", connectionId, linkId, created.cause());
+                            LOG.warn("can't create downstream sender [con: {}, link: {}]", connectionId, linkId, creationAttempt.cause());
                             sendErrorMessage(linkId, true);
                         }
                     });
+        }
+    }
+
+    void handleFlow(
+            final String connectionId,
+            final String linkId,
+            final ProtonSender replenishedSender) {
+
+        int credits = getAvailableCredit(replenishedSender);
+        LOG.trace("received FLOW from downstream sender [con:{}, link: {}, credits: {}, drain: {}",
+                connectionId, linkId, credits, replenishedSender.getDrain());
+        if (replenishedSender.getDrain()) {
+            // send drain request upstream and act upon result of request to drain upstream client
+            sendFlowControlMessage(linkId, credits, reply -> {
+                if (reply.succeeded()) {
+                    boolean drainSucceeded = reply.result().body();
+                    if (drainSucceeded) {
+                        replenishedSender.drained();
+                    } else {
+                        // link with client will be closed by telemetry endpoint, nothing we need to do
+                    }
+                }
+            });
+        } else {
+            sendFlowControlMessage(linkId, credits, null);
         }
     }
 
@@ -234,6 +257,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
 
     void addSender(final String connectionId, final String linkId, final ProtonSender sender) {
         sender.attachments().set(Constants.KEY_CONNECTION_ID, String.class, connectionId);
+        sender.setAutoDrained(false); // we need to propagate drain requests upstream and wait for the result
         activeSenders.put(linkId, sender);
         List<String> senders = sendersPerConnection.get(connectionId);
         if (senders == null) {
@@ -244,6 +268,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
     }
 
     private static int getAvailableCredit(final ProtonSender sender) {
+        // TODO: is it correct to subtract the queued messages?
         return sender.getCredit() - sender.getQueued();
     }
 

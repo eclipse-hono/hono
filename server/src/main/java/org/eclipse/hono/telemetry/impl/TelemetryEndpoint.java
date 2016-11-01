@@ -28,6 +28,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.server.BaseEndpoint;
+import org.eclipse.hono.server.ErrorConditions;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
 import org.eclipse.hono.util.Constants;
@@ -37,6 +38,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -88,49 +90,64 @@ public final class TelemetryEndpoint extends BaseEndpoint {
 
     private void registerFlowControlConsumer() {
         flowControlAddress = getAddressForInstanceNo(EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
-        flowControlConsumer = this.vertx.eventBus().consumer(flowControlAddress, this::handleFlowControlMsg);
+        flowControlConsumer = this.vertx.eventBus().consumer(flowControlAddress, this::handleUpstreamMsg);
         LOG.info("listening on event bus [address: {}] for downstream flow control messages",
                 flowControlAddress);
     }
 
-    private void handleFlowControlMsg(final io.vertx.core.eventbus.Message<JsonObject> msg) {
+    private void handleUpstreamMsg(final io.vertx.core.eventbus.Message<JsonObject> msg) {
+
         if (msg.body() == null) {
             LOG.warn("received empty message from telemetry adapter, is this a bug?");
-        } else if (isFlowControlMessage(msg.body())) {
-            handleFlowControlMsg(msg.body().getJsonObject(MSG_TYPE_FLOW_CONTROL));
-        } else if (isErrorMessage(msg.body())) {
-            handleErrorMessage(msg.body().getJsonObject(MSG_TYPE_ERROR));
         } else {
-            // discard message
-            LOG.info("received unsupported message {}", msg.body().encodePrettily());
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("received upstream message from telemetry adapter: {}", msg.body().encodePrettily());
+            }
+            if (isFlowControlMessage(msg.headers())) {
+                handleFlowControlMsg(msg.body(), drainResult -> {
+                    msg.reply(drainResult);
+                });
+            } else if (isErrorMessage(msg.headers())) {
+                handleErrorMessage(msg.body());
+            } else if (LOG.isInfoEnabled()) {
+                LOG.info("discarding unsupported upstream message");
+            }
         }
     }
 
-    private void handleFlowControlMsg(final JsonObject msg) {
-        if (LOG.isTraceEnabled()) {
-            LOG.trace("received flow control message from telemetry adapter: {}", msg.encodePrettily());
-        }
+    private void handleFlowControlMsg(final JsonObject msg, final Handler<Boolean> drainResultHandler) {
+
         String linkId = msg.getString(FIELD_NAME_LINK_ID);
         LinkWrapper client = activeClients.get(linkId);
-        if (client != null) {
+
+        if (client == null) {
+            LOG.warn("discarding flow control message for non-existing link {}", linkId);
+        } else if (msg.getBoolean(FIELD_NAME_DRAIN)) {
+            client.drain(10000, drainAttempt -> {
+                if (drainAttempt.failed()) {
+                    LOG.info("request to drain client {} failed", client.getLinkId());
+                    drainResultHandler.handle(false);
+                    onLinkDetach(client, ErrorConditions.ERROR_MISSING_DRAIN_RESPONSE);
+                } else {
+                    LOG.debug("request to drain client {} succeeded", client.getLinkId());
+                    drainResultHandler.handle(true);
+                }
+            });
+        } else {
             int credits = msg.getInteger(FIELD_NAME_CREDIT, 0);
             client.replenish(credits);
-        } else {
-            LOG.warn("discarding flow control message for non-existing link {}", linkId);
         }
     }
 
     private void handleErrorMessage(final JsonObject msg) {
-        if (LOG.isTraceEnabled()) {
-            LOG.trace("received error message from telemetry adapter: {}", msg.encodePrettily());
-        }
+
         String linkId = msg.getString(FIELD_NAME_LINK_ID);
         LinkWrapper client = activeClients.get(linkId);
-        if (client != null) {
-            boolean closeLink = msg.getBoolean(FIELD_NAME_CLOSE_LINK, false);
-            if (closeLink) {
-                onLinkDetach(client);
-            }
+
+        if (client == null) {
+            LOG.warn("discarding flow control message for non-existing link {}", linkId);
+        } else if (msg.getBoolean(FIELD_NAME_CLOSE_LINK, false)) {
+            onLinkDetach(client, ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
         }
     }
 
@@ -141,10 +158,16 @@ public final class TelemetryEndpoint extends BaseEndpoint {
 
     @Override
     public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
+
         if (ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
             LOG.debug("client wants to use AT LEAST ONCE delivery mode, ignoring ...");
         }
         final String linkId = UUID.randomUUID().toString();
+        onLinkAttach(linkId, receiver, targetAddress);
+    }
+
+    void onLinkAttach(final String linkId, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
+
         final LinkWrapper link = new LinkWrapper(linkId, receiver);
 
         receiver.closeHandler(clientDetached -> {
@@ -165,7 +188,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
     }
 
     private void sendLinkAttachMessage(final LinkWrapper link, final ResourceIdentifier targetAddress) {
-        JsonObject msg = getLinkAttachedMsg( link.getConnectionId(), link.getLinkId(), targetAddress);
+        JsonObject msg = getLinkAttachedMsg(link.getConnectionId(), link.getLinkId(), targetAddress);
         DeliveryOptions headers = TelemetryConstants.addReplyToHeader(new DeliveryOptions(), flowControlAddress);
         vertx.eventBus().send(linkControlAddress, msg, headers);
     }
@@ -175,7 +198,11 @@ public final class TelemetryEndpoint extends BaseEndpoint {
     }
 
     private void onLinkDetach(final LinkWrapper client, final ErrorCondition error) {
-        LOG.debug("closing receiver for client [{}]", client.getLinkId());
+        if (error == null) {
+            LOG.debug("closing receiver for client [{}]", client.getLinkId());
+        } else {
+            LOG.debug("closing receiver for client [{}]: {}", client.getLinkId(), error.getDescription());
+        }
         activeClients.remove(client.getLinkId());
         sendLinkDetachMessage(client);
         client.close(error);
@@ -244,6 +271,11 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         public void replenish(final int replenishedCredits) {
             LOG.debug("replenishing client [{}] with {} credits", id, replenishedCredits);
             link.flow(replenishedCredits);
+        }
+
+        public void drain(final long timeoutMillis, final Handler<AsyncResult<Void>> drainCompletionHandler) {
+            LOG.debug("draining client [{}]", id);
+            link.drain(timeoutMillis, drainCompletionHandler);
         }
 
         public int getCredit() {

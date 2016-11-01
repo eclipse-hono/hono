@@ -11,8 +11,8 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +32,7 @@ import org.mockito.ArgumentCaptor;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
@@ -49,11 +50,11 @@ public class ForwardingTelemetryAdapterTest {
     private static final int    DEFAULT_CREDITS = 20;
 
     @Test
-    public void testProcessTelemetryDataForwardsMessageToSender() throws InterruptedException {
+    public void testProcessTelemetryDataForwardsMessageToDownstreamSender() throws InterruptedException {
 
         // GIVEN an adapter with a connection to a downstream container
         final CountDownLatch latch = new CountDownLatch(1);
-        ProtonSender sender = newMockSender();
+        ProtonSender sender = newMockSender(false);
         when(sender.send(any(Message.class))).then(invocation -> {
             latch.countDown();
             return null;
@@ -71,23 +72,26 @@ public class ForwardingTelemetryAdapterTest {
     }
 
     @Test
-    public void testClientAttachedResumesClientOnSuccess() throws InterruptedException {
+    public void testClientAttachedReplenishesClientOnSuccess() throws InterruptedException {
+
         final CountDownLatch flowControlMessageSent = new CountDownLatch(1);
         final EventBus eventBus = mock(EventBus.class);
+        final Vertx vertx = mock(Vertx.class);
+        final Context ctx = mock(Context.class);
+        final ProtonSender sender = newMockSender(false);
+        final ProtonConnection con = mock(ProtonConnection.class);
+        final SenderFactory senderFactory = newMockSenderFactory(sender);
+
         when(eventBus.send(
-                TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL,
-                TelemetryConstants.getCreditReplenishmentMsg(CLIENT_ID, DEFAULT_CREDITS)))
+                startsWith(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL),
+                eq(TelemetryConstants.getFlowControlMsg(CLIENT_ID, DEFAULT_CREDITS, false)),
+                any(DeliveryOptions.class)))
             .then(invocation -> {
                 flowControlMessageSent.countDown();
                 return eventBus;
             });
-        final Vertx vertx = mock(Vertx.class);
-        final Context ctx = mock(Context.class);
         when(vertx.eventBus()).thenReturn(eventBus);
 
-        final ProtonSender sender = newMockSender();
-        final ProtonConnection con = mock(ProtonConnection.class);
-        final SenderFactory senderFactory = newMockSenderFactory(sender);
 
         // GIVEN an adapter with a connection to the downstream container
         ForwardingTelemetryAdapter adapter = new ForwardingTelemetryAdapter(senderFactory);
@@ -99,7 +103,49 @@ public class ForwardingTelemetryAdapterTest {
         adapter.processLinkAttachedMessage("CON_ID", CLIENT_ID, targetAddress.toString(), TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
 
         // THEN assert that the client is given some credit
-        assertTrue(flowControlMessageSent.await(1, TimeUnit.SECONDS));
+        assertTrue(
+                "expected flow control message being sent upstream on client attach",
+                flowControlMessageSent.await(1, TimeUnit.SECONDS));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testHandleFlowForwardsDrainRequestUpstream() throws InterruptedException {
+
+        final CountDownLatch drainMessageSent = new CountDownLatch(1);
+        final EventBus eventBus = mock(EventBus.class);
+        final Vertx vertx = mock(Vertx.class);
+        final Context ctx = mock(Context.class);
+        final ProtonSender sender = newMockSender(false);
+        final ProtonConnection con = mock(ProtonConnection.class);
+        final SenderFactory senderFactory = newMockSenderFactory(sender);
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX, "myTenant", null);
+
+        when(eventBus.send(
+                startsWith(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL),
+                eq(TelemetryConstants.getFlowControlMsg(CLIENT_ID, DEFAULT_CREDITS, true)),
+                any(DeliveryOptions.class),
+                any(Handler.class)))
+            .then(invocation -> {
+                drainMessageSent.countDown();
+                return eventBus;
+            });
+        when(vertx.eventBus()).thenReturn(eventBus);
+
+        // GIVEN an adapter with a connection to the downstream container and a client attached
+        ForwardingTelemetryAdapter adapter = new ForwardingTelemetryAdapter(senderFactory);
+        adapter.init(vertx, ctx);
+        adapter.setDownstreamConnection(con);
+        adapter.processLinkAttachedMessage("CON_ID", CLIENT_ID, targetAddress.toString(), TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
+
+        // WHEN the downstream sender drains the adapter
+        ProtonSender drainingSender = newMockSender(true);
+        adapter.handleFlow("CON_ID", CLIENT_ID, drainingSender);
+
+        // THEN assert that a flow control message is sent upstream with the drain flag set
+        assertTrue(
+                "expected flow control message being sent upstream on drain request",
+                drainMessageSent.await(1, TimeUnit.SECONDS));
     }
 
     @Test
@@ -118,11 +164,14 @@ public class ForwardingTelemetryAdapterTest {
         adapter.processLinkAttachedMessage("CON_ID", CLIENT_ID, targetAddress.toString(), TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL);
 
         // THEN assert that an error message has been sent via event bus
-        verify(eventBus).send(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL, TelemetryConstants.getErrorMessage(CLIENT_ID, true));
+        verify(eventBus).send(
+                startsWith(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL),
+                eq(TelemetryConstants.getErrorMessage(CLIENT_ID, true)),
+                any(DeliveryOptions.class));
     }
 
     @SuppressWarnings("unchecked")
-    private ProtonSender newMockSender() {
+    private ProtonSender newMockSender(final boolean drainFlag) {
         @SuppressWarnings("rawtypes")
         ArgumentCaptor<Handler> drainHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
         Record attachments = mock(Record.class);
@@ -131,6 +180,7 @@ public class ForwardingTelemetryAdapterTest {
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
         when(sender.getCredit()).thenReturn(DEFAULT_CREDITS);
         when(sender.getQueued()).thenReturn(0);
+        when(sender.getDrain()).thenReturn(drainFlag);
         when(sender.open()).then(invocation -> {
             drainHandlerCaptor.getValue().handle(sender);
             return sender;

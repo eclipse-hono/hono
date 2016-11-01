@@ -104,7 +104,7 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
                 }
             } else if (msgCount % DEFAULT_CREDIT == 0) {
                 // we need to replenish client every DEFAULT_CREDIT messages
-                replenishUpstreamSender(linkId, DEFAULT_CREDIT);
+                sendFlowControlMessage(linkId, DEFAULT_CREDIT, null);
             }
         }
 
@@ -123,7 +123,7 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
                 if (pauseThreshold > 0) {
                     credit = pauseThreshold;
                 }
-                replenishUpstreamSender(linkId, credit);
+                sendFlowControlMessage(linkId, credit, null);
                 this.suspended = false;
             }
         }

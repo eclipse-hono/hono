@@ -11,8 +11,6 @@
  */
 package org.eclipse.hono.server;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-
 import java.util.Objects;
 
 import org.eclipse.hono.util.Constants;
@@ -26,14 +24,12 @@ import io.vertx.proton.ProtonSender;
 /**
  * Base class for Hono endpoints.
  */
-public abstract class BaseEndpoint implements Endpoint{
+public abstract class BaseEndpoint implements Endpoint {
 
     protected final boolean      singleTenant;
     protected final Vertx        vertx;
     protected final int          instanceNo;
-    protected int                authServiceInstanceCount = Runtime.getRuntime().availableProcessors();
     private static final Logger  LOGGER = LoggerFactory.getLogger(BaseEndpoint.class);
-    private final String         authServiceAddress;
 
     /**
      * 
@@ -47,7 +43,6 @@ public abstract class BaseEndpoint implements Endpoint{
         this.vertx = Objects.requireNonNull(vertx);
         this.singleTenant = singleTenant;
         this.instanceNo = instanceNo;
-        this.authServiceAddress = getAddressForInstanceNo(EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
     }
 
     /**

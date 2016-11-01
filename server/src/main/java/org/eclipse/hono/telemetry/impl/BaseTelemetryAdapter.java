@@ -24,7 +24,10 @@ import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
@@ -214,7 +217,7 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
      */
     protected void onLinkAttached(final String connectionId, final String linkId, final String targetAddress) {
         // by default resume link so that the client can start to send messages
-        replenishUpstreamSender(linkId, DEFAULT_CREDIT);
+        sendFlowControlMessage(linkId, DEFAULT_CREDIT, null);
     }
 
     /**
@@ -248,13 +251,17 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
     }
 
     /**
-     * Replenishes an upstream client uploading telemetry data with credit.
+     * Sends a flow control message upstream.
      * 
-     * @param linkId the ID of the link to resume.
-     * @param credit the number o credits to replenish the client with.
+     * @param linkId The ID of the link the flow control information applies to.
+     * @param credit The number of credits to replenish the client with.
+     * @param replyHandler If not {@code null} the flow control message will have its <em>drain</em> flag set
+     *                     and this handler will be notified about the result of the request to drain the client.
      */
-    protected final void replenishUpstreamSender(final String linkId, final int credit) {
-        sendMessage(linkId, getCreditReplenishmentMsg(linkId, credit));
+    protected final void sendFlowControlMessage(final String linkId, final int credit, final Handler<AsyncResult<Message<Boolean>>> replyHandler) {
+        DeliveryOptions options = new DeliveryOptions();
+        options.addHeader(HEADER_NAME_TYPE, MSG_TYPE_FLOW_CONTROL);
+        sendMessage(linkId, options, getFlowControlMsg(linkId, credit, replyHandler != null), replyHandler);
     }
 
     /**
@@ -265,14 +272,21 @@ public abstract class BaseTelemetryAdapter extends AbstractInstanceNumberAwareVe
      *        should therefore close the link with the client.
      */
     protected final void sendErrorMessage(final String linkId, final boolean closeLink) {
-        sendMessage(linkId, getErrorMessage(linkId, closeLink));
+        DeliveryOptions options = new DeliveryOptions();
+        options.addHeader(HEADER_NAME_TYPE, MSG_TYPE_ERROR);
+        sendMessage(linkId, options, getErrorMessage(linkId, closeLink), null);
     }
 
-    private void sendMessage(final String linkId, final JsonObject msg) {
+    private <T> void sendMessage(final String linkId, final DeliveryOptions options, final JsonObject msg, final Handler<AsyncResult<Message<T>>> replyHandler) {
+
         String address = flowControlAddressRegistry.get(linkId);
         if (address != null) {
             LOG.trace("sending upstream message for link [{}] to address [{}]: {}", linkId, address, msg.encodePrettily());
-            vertx.eventBus().send(address, msg);
+            if (replyHandler != null) {
+                vertx.eventBus().send(address, msg, options, replyHandler);
+            } else {
+                vertx.eventBus().send(address, msg, options);
+            }
         } else {
             LOG.warn("cannot send upstream message for link [{}], no event bus address registered", linkId);
         }
