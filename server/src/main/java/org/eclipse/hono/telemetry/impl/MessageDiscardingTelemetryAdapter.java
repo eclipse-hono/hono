@@ -61,6 +61,16 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
         this.messageConsumer = consumer;
     }
 
+    @Override
+    protected void onLinkAttached(String connectionId, String linkId, String targetAddress) {
+        sendFlowControlMessage(linkId, DEFAULT_CREDIT, null);
+    }
+
+    @Override
+    protected void onLinkDetached(String linkId) {
+        // nothing to do
+    }
+
     /**
      * Sets the consumer for telemetry messages received from upstream.
      * 

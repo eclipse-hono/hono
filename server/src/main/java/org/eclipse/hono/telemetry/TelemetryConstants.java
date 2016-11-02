@@ -11,40 +11,14 @@
  */
 package org.eclipse.hono.telemetry;
 
-import java.util.Objects;
+import org.eclipse.hono.server.EndpointHelper;
 
-import org.eclipse.hono.util.ResourceIdentifier;
-
-import io.vertx.core.MultiMap;
-import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 
 /**
  * Constants &amp; utility methods used throughout the Telemetry API.
  */
 public final class TelemetryConstants {
-
-    public static final String EVENT_ATTACHED = "attached";
-    public static final String EVENT_DETACHED = "detached";
-
-    public static final String FIELD_NAME_LINK_ID = "link-id";
-    public static final String FIELD_NAME_CLOSE_LINK = "close-link";
-    public static final String FIELD_NAME_CONNECTION_ID = "connection-id";
-    public static final String FIELD_NAME_CREDIT = "credit";
-    public static final String FIELD_NAME_DRAIN = "drain";
-    public static final String FIELD_NAME_ENDPOINT = "endpoint";
-    public static final String FIELD_NAME_EVENT = "event";
-    public static final String FIELD_NAME_MSG_UUID = "uuid";
-    public static final String FIELD_NAME_SUSPEND = "suspend";
-    public static final String FIELD_NAME_TARGET_ADDRESS = "target-address";
-
-    public static final String HEADER_NAME_REPLY_TO = "reply-to";
-    public static final String HEADER_NAME_TYPE = "type";
-
-    public static final String RESULT_ACCEPTED = "accepted";
-
-    public static final String MSG_TYPE_ERROR = "error";
-    public static final String MSG_TYPE_FLOW_CONTROL = "flow-control";
 
     public static final String TELEMETRY_ENDPOINT             = "telemetry";
     public static final String PATH_SEPARATOR = "/";
@@ -56,68 +30,29 @@ public final class TelemetryConstants {
     /**
      * The vert.x event bus address to which link control messages are published.
      */
-    public static final String EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL = "telemetry.link.control";
+    public static final String EVENT_BUS_ADDRESS_TELEMETRY_LINK_CONTROL = TELEMETRY_ENDPOINT + EndpointHelper.EVENT_BUS_ADDRESS_LINK_CONTROL_SUFFIX;
     /**
-     * The vert.x event bus address to which credit replenishment messages are published.
+     * The vert.x event bus address to which flow control messages are published.
      */
-    public static final String EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL = "telemetry.flow.control";
+    public static final String EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL = TELEMETRY_ENDPOINT + EndpointHelper.EVENT_BUS_ADDRESS_FLOW_CONTROL_SUFFIX;
 
     private TelemetryConstants() {
     }
 
-    public static JsonObject getLinkAttachedMsg(final String connectionId, final String linkId, final ResourceIdentifier targetAddress) {
-        JsonObject msg = new JsonObject();
-        msg.put(FIELD_NAME_EVENT, EVENT_ATTACHED);
-        msg.put(FIELD_NAME_CONNECTION_ID, Objects.requireNonNull(connectionId));
-        msg.put(FIELD_NAME_LINK_ID, Objects.requireNonNull(linkId));
-        msg.put(FIELD_NAME_TARGET_ADDRESS, Objects.requireNonNull(targetAddress).toString());
-        return msg;
-    }
-
-    public static JsonObject getLinkDetachedMsg(final String linkId) {
-        JsonObject msg = new JsonObject();
-        msg.put(FIELD_NAME_EVENT, EVENT_DETACHED);
-        msg.put(FIELD_NAME_LINK_ID, Objects.requireNonNull(linkId));
-        return msg;
+    /**
+     * Gets the Vert.x event bus address to use for sending telemetry messages downstream.
+     * 
+     * @param instanceId The instance number of the endpoint. 
+     * @return The address.
+     */
+    public static final String getDownstreamMessageAddress(final int instanceNo) {
+        return String.format("%s.%d", EVENT_BUS_ADDRESS_TELEMETRY_IN, instanceNo);
     }
 
     public static JsonObject getTelemetryMsg(final String messageId, final String linkId) {
-        JsonObject msg = new JsonObject();
-        msg.put(FIELD_NAME_LINK_ID, linkId);
-        msg.put(FIELD_NAME_MSG_UUID, messageId);
-        return msg;
-    }
 
-    public static boolean isFlowControlMessage(final MultiMap headers) {
-        return hasHeader(headers, HEADER_NAME_TYPE, MSG_TYPE_FLOW_CONTROL);
-    }
-
-    public static JsonObject getFlowControlMsg(final String linkId, final int credit, final boolean drain) {
         return new JsonObject()
-                .put(FIELD_NAME_LINK_ID, linkId)
-                .put(FIELD_NAME_CREDIT, credit)
-                .put(FIELD_NAME_DRAIN, drain);
-    }
-
-    public static JsonObject getErrorMessage(final String linkId, final boolean closeLink) {
-        return new JsonObject()
-                .put(FIELD_NAME_LINK_ID, linkId)
-                .put(FIELD_NAME_CLOSE_LINK, closeLink);
-    }
-
-    public static boolean isErrorMessage(final MultiMap headers) {
-        return hasHeader(headers, HEADER_NAME_TYPE, MSG_TYPE_ERROR);
-    }
-
-    public static boolean hasHeader(final MultiMap headers, final String name, final String expectedValue) {
-        Objects.requireNonNull(headers);
-        Objects.requireNonNull(expectedValue);
-        Objects.requireNonNull(name);
-        return expectedValue.equals(headers.get(name));
-    }
-
-    public static DeliveryOptions addReplyToHeader(final DeliveryOptions options, final String address) {
-        Objects.requireNonNull(options);
-        return options.addHeader(HEADER_NAME_REPLY_TO, address);
+                .put(EndpointHelper.FIELD_NAME_LINK_ID, linkId)
+                .put(EndpointHelper.FIELD_NAME_MSG_UUID, messageId);
     }
 }

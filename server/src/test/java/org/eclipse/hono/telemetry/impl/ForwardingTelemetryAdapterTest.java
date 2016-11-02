@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.server.EndpointHelper;
 import org.eclipse.hono.telemetry.SenderFactory;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -84,7 +85,7 @@ public class ForwardingTelemetryAdapterTest {
 
         when(eventBus.send(
                 startsWith(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL),
-                eq(TelemetryConstants.getFlowControlMsg(CLIENT_ID, DEFAULT_CREDITS, false)),
+                eq(EndpointHelper.getFlowControlMsg(CLIENT_ID, DEFAULT_CREDITS, false)),
                 any(DeliveryOptions.class)))
             .then(invocation -> {
                 flowControlMessageSent.countDown();
@@ -123,7 +124,7 @@ public class ForwardingTelemetryAdapterTest {
 
         when(eventBus.send(
                 startsWith(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL),
-                eq(TelemetryConstants.getFlowControlMsg(CLIENT_ID, DEFAULT_CREDITS, true)),
+                eq(EndpointHelper.getFlowControlMsg(CLIENT_ID, DEFAULT_CREDITS, true)),
                 any(DeliveryOptions.class),
                 any(Handler.class)))
             .then(invocation -> {
@@ -166,7 +167,7 @@ public class ForwardingTelemetryAdapterTest {
         // THEN assert that an error message has been sent via event bus
         verify(eventBus).send(
                 startsWith(TelemetryConstants.EVENT_BUS_ADDRESS_TELEMETRY_FLOW_CONTROL),
-                eq(TelemetryConstants.getErrorMessage(CLIENT_ID, true)),
+                eq(EndpointHelper.getErrorMessage(CLIENT_ID, true)),
                 any(DeliveryOptions.class));
     }
 

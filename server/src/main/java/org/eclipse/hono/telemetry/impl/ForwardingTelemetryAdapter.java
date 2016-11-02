@@ -105,7 +105,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
      *                               or the downstream container port is 0.
      */
     @Override
-    public void doStart(final Future<Void> startFuture) throws Exception {
+    protected final void setUpResources(final Future<Void> startFuture) {
 
         if (downstreamContainerHost == null) {
             throw new IllegalStateException("downstream container host is not set");
@@ -117,7 +117,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
     }
 
     @Override
-    protected void doStop(final Future<Void> stopFuture) {
+    protected final void shutDownResources(final Future<Void> stopFuture) {
         if (downstreamConnection != null && !downstreamConnection.isDisconnected()) {
             final String container = downstreamConnection.getRemoteContainer();
             LOG.info("closing connection to downstream container [{}]", container);
@@ -296,7 +296,7 @@ public final class ForwardingTelemetryAdapter extends BaseTelemetryAdapter {
     }
 
     @Override
-    protected void onConnectionClosed(final String connectionId) {
+    protected void onUpstreamConnectionClosed(final String connectionId) {
         List<String> senders = sendersPerConnection.remove(Objects.requireNonNull(connectionId));
         if (senders != null && !senders.isEmpty()) {
             LOG.info("closing {} downstream senders for connection [id: {}]", senders.size(), connectionId);
