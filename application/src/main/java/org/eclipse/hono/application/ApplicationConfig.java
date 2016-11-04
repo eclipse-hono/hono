@@ -10,29 +10,42 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono;
+package org.eclipse.hono.application;
 
+import org.eclipse.hono.server.HonoServerFactory;
+import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import io.vertx.core.Vertx;
 
 /**
- * Definition of a singleton {@code Vert.x} instance to be used with
- * Spring dependency injection.
+ * Spring bean definitions required by the Hono application.
  */
 @Configuration
-public class VertxConfig {
+public class ApplicationConfig {
 
     private static final Vertx vertx = Vertx.vertx();
 
     /**
-     * Gets the singleton instance.
+     * Gets the singleton Vert.x instance to be used by Hono.
      * 
      * @return the instance.
      */
     @Bean
     public static Vertx getInstance() {
         return vertx;
+    }
+
+    /**
+     * Exposes the {@link HonoServerFactory} as a Spring bean.
+     * 
+     * @return A Spring service locator for the factory.
+     */
+    @Bean
+    public ServiceLocatorFactoryBean honoServerFactoryLocator() {
+        ServiceLocatorFactoryBean bean = new ServiceLocatorFactoryBean();
+        bean.setServiceLocatorInterface(HonoServerFactory.class);
+        return bean;
     }
 }

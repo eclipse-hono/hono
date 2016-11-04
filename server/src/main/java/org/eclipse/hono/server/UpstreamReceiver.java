@@ -12,84 +12,91 @@
 
 package org.eclipse.hono.server;
 
-import java.util.Objects;
-
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.eclipse.hono.util.Constants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 /**
- * A wrapper around a {@code ProtonReceiver} that represents a Hono client sending data downstream.
- * <p>
- * The main purpose of this class to <em>attach</em> a (surrogate) identifier to the receiver.
+ * A decorator for a {@code ProtonReceiver} representing a client uploading data to a Hono endpoint.
+ *
  */
-public class UpstreamReceiver {
-
-    private static final Logger LOG = LoggerFactory.getLogger(UpstreamReceiver.class);
-    private ProtonReceiver link;
-    private String id;
+public interface UpstreamReceiver {
 
     /**
      * Creates a new instance for an identifier and a receiver link.
      * <p>
-     * The receiver is configured for manual flow control and disposition handling.
+     * The receiver is configured for manual flow control and disposition handling
+     * and uses <em>AT_MOST_ONCE</em> quality of service.
      * 
      * @param linkId The identifier for the link.
      * @param receiver The link for receiving data from the client.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public UpstreamReceiver(final String linkId, final ProtonReceiver receiver) {
-        this.id = Objects.requireNonNull(linkId);
-        this.link = Objects.requireNonNull(receiver);
-        this.link.setAutoAccept(false).setPrefetch(0);
-    }
-
-    public void replenish(final int replenishedCredits) {
-        LOG.debug("replenishing client [{}] with {} credits", id, replenishedCredits);
-        link.flow(replenishedCredits);
-    }
-
-    public void drain(final long timeoutMillis, final Handler<AsyncResult<Void>> drainCompletionHandler) {
-        LOG.debug("draining client [{}]", id);
-        link.drain(timeoutMillis, drainCompletionHandler);
-    }
-
-    public int getCredit() {
-        return link.getCredit() - link.getQueued();
-    }
-
-    public void close(final ErrorCondition error) {
-        if (error != null) {
-            link.setCondition(error);
-        }
-        link.close();
+    static UpstreamReceiver atMostOnceReceiver(final String linkId, final ProtonReceiver receiver) {
+        return new UpstreamReceiverImpl(linkId, receiver, ProtonQoS.AT_MOST_ONCE);
     }
 
     /**
-     * @return the link
+     * Creates a new instance for an identifier and a receiver link.
+     * <p>
+     * The receiver is configured for manual flow control and disposition handling.
+     * and uses <em>AT_LEAST_ONCE</em> quality of service.
+     * 
+     * @param linkId The identifier for the link.
+     * @param receiver The link for receiving data from the client.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public ProtonReceiver getLink() {
-        return link;
+    static UpstreamReceiver atLeastOnceReceiver(final String linkId, final ProtonReceiver receiver) {
+        return new UpstreamReceiverImpl(linkId, receiver, ProtonQoS.AT_LEAST_ONCE);
     }
 
+
     /**
-     * @return the link ID
+     * Sends an AMQP 1.0 <em>flow</em> frame to the client with a certain amount of <em>credit</em>.
+     * 
+     * @param replenishedCredits The number of credits to replenish the client with.
      */
-    public String getLinkId() {
-        return id;
-    }
+    void replenish(int replenishedCredits);
 
     /**
-     * Gets the ID of the connection this link is running on.
+     * Sends an AMQP 1.0 <em>flow</em> frame to the client with the <em>drain</em> flag set.
+     * 
+     * @param timeoutMillis The maximum time to wait for a response from the client in milliseconds.
+     * @param drainCompletionHandler The handler to notify about the result of the drain request.
+     */
+    void drain(long timeoutMillis, Handler<AsyncResult<Void>> drainCompletionHandler);
+
+    /**
+     * Closes the decorated link with an error condition.
+     * 
+     * @param error The error condition to set on the link.
+     */
+    void close(ErrorCondition error);
+
+    /**
+     * Gets the link's unique identifier.
+     * 
+     * @return The identifier.
+     */
+    String getLinkId();
+
+    /**
+     * Gets the ID of the client's connection to Hono that the decorated link is part of.
+     * <p>
+     * {@code HonoServer} assigns this (surrogate) identifier when a client establishes a connection with Hono.
      * 
      * @return The ID.
      */
-    public String getConnectionId() {
-        return Constants.getConnectionId(link);
-    }
+    String getConnectionId();
+
+    /**
+     * Gets the decorated link's target address.
+     * 
+     * @return The address.
+     */
+    String getTargetAddress();
+
 }

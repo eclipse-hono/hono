@@ -27,8 +27,9 @@ import org.eclipse.hono.server.BaseEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -39,18 +40,15 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
 /**
- * A Hono {@code Endpoint} for managing devices.
+ * A Hono {@code Endpoint} for managing device registration information.
  */
+@Component
+@Qualifier("registration")
 public final class RegistrationEndpoint extends BaseEndpoint {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RegistrationEndpoint.class);
-
-    public RegistrationEndpoint(final Vertx vertx, final boolean singleTenant) {
-        this(vertx, singleTenant, 0);
-    }
-
-    public RegistrationEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceId) {
-        super(Objects.requireNonNull(vertx), singleTenant, instanceId);
+    @Autowired
+    public RegistrationEndpoint(final Vertx vertx) {
+        super(Objects.requireNonNull(vertx));
     }
 
     @Override
@@ -61,12 +59,12 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     @Override
     public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
-            LOG.debug("client wants to use AT MOST ONCE delivery mode for registration endpoint, this is not supported.");
+            logger.debug("client wants to use AT MOST ONCE delivery mode for registration endpoint, this is not supported.");
             receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
             receiver.close();
         } else {
     
-            LOG.debug("establishing link for receiving registration messages from client [{}]", MessageHelper.getLinkName(receiver));
+            logger.debug("establishing link for receiving registration messages from client [{}]", MessageHelper.getLinkName(receiver));
             receiver
                 .setQoS(ProtonQoS.AT_LEAST_ONCE)
                 .setAutoAccept(true) // settle received messages if the handler succeeds
@@ -92,15 +90,15 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
         /* note: we "misuse" deviceId part of the resource as reply address here */
         if (targetResource.getResourceId() == null) {
-            LOG.debug("link target provided in client's link ATTACH does not match pattern \"registration/<tenant>/<reply-address>\"");
+            logger.debug("link target provided in client's link ATTACH does not match pattern \"registration/<tenant>/<reply-address>\"");
             sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),
                     "link target must have the following format registration/<tenant>/<reply-address>"));
             sender.close();
         } else {
-            LOG.debug("establishing sender link with client [{}]", MessageHelper.getLinkName(sender));
+            logger.debug("establishing sender link with client [{}]", MessageHelper.getLinkName(sender));
             final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(targetResource.toString(), message -> {
                 // TODO check for correct session here...?
-                LOG.trace("forwarding reply to client: {}", message.body());
+                logger.trace("forwarding reply to client: {}", message.body());
                 final Message amqpReply = RegistrationConstants.getAmqpReply(message);
                 sender.send(amqpReply);
             });
@@ -109,7 +107,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                 replyConsumer.unregister();
                 senderClosed.result().close();
                 final String linkName = MessageHelper.getLinkName(sender);
-                LOG.debug("receiver closed link [{}], removing associated event bus consumer [{}]", linkName, replyConsumer.address());
+                logger.debug("receiver closed link [{}], removing associated event bus consumer [{}]", linkName, replyConsumer.address());
             });
 
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
@@ -121,7 +119,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
     }
 
     private void onLinkDetach(final ProtonReceiver client, final ErrorCondition condition) {
-        LOG.debug("closing receiver for client [{}]", getLinkName(client));
+        logger.debug("closing receiver for client [{}]", getLinkName(client));
         client.close();
     }
 
@@ -135,7 +133,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
                         // TODO check for correct session here...?
                         response = (JsonObject) result.result().body();
                     } else {
-                        LOG.debug("failed to process request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
+                        logger.debug("failed to process request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
                         // we need to inform client about failure
                         response = RegistrationConstants.getReply(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
@@ -150,7 +148,7 @@ public final class RegistrationEndpoint extends BaseEndpoint {
 
     private void addHeadersToResponse(final Message request, final JsonObject message) {
         final boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
-        LOG.debug("registration request [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
+        logger.debug("registration request [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
         if (isApplicationCorrelationId) {
             message.put(ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
         }

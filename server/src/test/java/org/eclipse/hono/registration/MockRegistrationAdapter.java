@@ -13,7 +13,7 @@ package org.eclipse.hono.registration;
 
 import java.net.HttpURLConnection;
 
-import org.eclipse.hono.registration.impl.BaseRegistrationAdapter;
+import org.eclipse.hono.registration.impl.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 
 import io.vertx.core.json.JsonObject;
@@ -21,7 +21,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Simple mock implementation of RegistrationAdapter that always returns success.
  */
-public class MockRegistrationAdapter extends BaseRegistrationAdapter {
+public class MockRegistrationAdapter extends BaseRegistrationService {
 
     @Override
     public RegistrationResult getDevice(String tenantId, String deviceId) {

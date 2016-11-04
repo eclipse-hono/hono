@@ -7,7 +7,6 @@ spring:
 spring:
   profiles: default
 hono:
-  maxinstances: 0
   server:
     bindaddress: 0.0.0.0
   telemetry:
@@ -20,8 +19,8 @@ hono:
 spring:
   profiles: activemq
 hono:
+  pathSeparator: .
   telemetry:
-    pathseparator: .
     downstream:
       host: localhost
       port: 5671

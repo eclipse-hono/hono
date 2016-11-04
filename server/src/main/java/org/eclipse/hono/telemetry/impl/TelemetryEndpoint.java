@@ -12,7 +12,6 @@
 package org.eclipse.hono.telemetry.impl;
 
 import static io.vertx.proton.ProtonHelper.condition;
-import static org.eclipse.hono.telemetry.TelemetryConstants.getDownstreamMessageAddress;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.eclipse.hono.util.MessageHelper.getAnnotation;
 
@@ -21,17 +20,21 @@ import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.AmqpMessage;
 import org.eclipse.hono.server.BaseEndpoint;
+import org.eclipse.hono.server.DownstreamAdapter;
 import org.eclipse.hono.server.UpstreamReceiver;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
@@ -39,18 +42,40 @@ import io.vertx.proton.ProtonReceiver;
  * A Hono {@code Endpoint} for uploading telemetry data.
  *
  */
+@Component
+@Scope("prototype")
+@Qualifier("telemetry")
 public final class TelemetryEndpoint extends BaseEndpoint {
 
-    private final String     dataAddress;
+    private DownstreamAdapter             downstreamAdapter;
 
-    public TelemetryEndpoint(final Vertx vertx, final boolean singleTenant) {
-        this(vertx, singleTenant, 0);
+    @Autowired
+    public TelemetryEndpoint(final Vertx vertx) {
+        super(Objects.requireNonNull(vertx));
     }
 
-    public TelemetryEndpoint(final Vertx vertx, final boolean singleTenant, final int instanceId) {
-        super(Objects.requireNonNull(vertx), singleTenant, instanceId);
-        dataAddress = getDownstreamMessageAddress(instanceNo);
-        logger.info("publishing downstream telemetry messages on event bus [address: {}]", dataAddress);
+    @Override
+    protected void doStart(Future<Void> startFuture) {
+        if (downstreamAdapter == null) {
+            startFuture.fail("no downstream adapter configured on Telemetry endpoint");
+        } else {
+            downstreamAdapter.start(startFuture);
+        }
+    }
+
+    @Override
+    protected void doStop(Future<Void> stopFuture) {
+        if (downstreamAdapter == null) {
+            stopFuture.complete();
+        } else {
+            downstreamAdapter.stop(stopFuture);
+        }
+    }
+
+    @Autowired
+    @Qualifier("telemetry")
+    public final void setDownstreamAdapter(final DownstreamAdapter adapter) {
+        this.downstreamAdapter = Objects.requireNonNull(adapter);
     }
 
     @Override
@@ -64,30 +89,30 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         if (ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
             logger.debug("client wants to use AT LEAST ONCE delivery mode, ignoring ...");
         }
-        receiver.setQoS(ProtonQoS.AT_MOST_ONCE);
+
         final String linkId = UUID.randomUUID().toString();
-        onLinkAttach(linkId, receiver, targetAddress);
-    }
+        final UpstreamReceiver link = UpstreamReceiver.atMostOnceReceiver(linkId, receiver);
 
-    void onLinkAttach(final String linkId, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
-
-        final UpstreamReceiver link = new UpstreamReceiver(linkId, receiver);
-
-        receiver.closeHandler(clientDetached -> {
-            // client has closed link -> inform TelemetryAdapter about client detach
-            onLinkDetach(link);
-        }).handler((delivery, message) -> {
-            if (TelemetryMessageFilter.verify(targetAddress, message)) {
-                sendTelemetryData(link, delivery, message);
+        downstreamAdapter.getDownstreamSender(link, s -> {
+            if (s.succeeded()) {
+                receiver.closeHandler(clientDetached -> {
+                    // client has closed link -> inform TelemetryAdapter about client detach
+                    onLinkDetach(link);
+                    downstreamAdapter.onClientDetach(link);
+                }).handler((delivery, message) -> {
+                    if (TelemetryMessageFilter.verify(targetAddress, message)) {
+                        sendTelemetryData(link, delivery, message);
+                    } else {
+                        MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed telemetry message");
+                        onLinkDetach(link, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
+                    }
+                }).open();
+                logger.debug("accepted link from telemetry client [{}]", linkId);
             } else {
-                MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed telemetry message");
-                onLinkDetach(link, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
+                // we cannot connect to downstream container, reject client
+                link.close(condition(AmqpError.PRECONDITION_FAILED, "no consumer available for target"));
             }
-        }).open();
-
-        logger.debug("registering new link for telemetry client [{}]", linkId);
-        registerClientLink(link);
-        sendLinkAttachMessage(link, targetAddress);
+        });
     }
 
     private void sendTelemetryData(final UpstreamReceiver link, final ProtonDelivery delivery, final Message msg) {
@@ -97,24 +122,13 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, APP_PROPERTY_RESOURCE, String.class));
         checkDeviceExists(messageAddress, deviceExists -> {
             if (deviceExists) {
-                final String messageId = UUID.randomUUID().toString();
-                final AmqpMessage amqpMessage = AmqpMessage.of(msg, delivery);
-                vertx.sharedData().getLocalMap(dataAddress).put(messageId, amqpMessage);
-                sendAtMostOnce(link, messageId, delivery);
+                downstreamAdapter.processMessage(link, delivery, msg);
             } else {
                 logger.debug("device {}/{} does not exist, closing link",
                         messageAddress.getTenantId(), messageAddress.getResourceId());
                 MessageHelper.rejected(delivery, AmqpError.PRECONDITION_FAILED.toString(), "device does not exist");
-                onLinkDetach(link, condition(AmqpError.PRECONDITION_FAILED.toString(), "device does not exist"));
+                link.close(condition(AmqpError.PRECONDITION_FAILED.toString(), "device does not exist"));
             }
         });
-    }
-
-    private void sendAtMostOnce(final UpstreamReceiver link, final String messageId, final ProtonDelivery delivery) {
-        vertx.eventBus().send(dataAddress, TelemetryConstants.getTelemetryMsg(messageId, link.getLinkId()));
-        ProtonHelper.accepted(delivery, true);
-        int creditLeft = link.getCredit();
-        logger.trace("publishing telemetry msg received via Link[id: {}, credit left: {}] to {}",
-                link.getLinkId(), creditLeft, dataAddress);
     }
 }

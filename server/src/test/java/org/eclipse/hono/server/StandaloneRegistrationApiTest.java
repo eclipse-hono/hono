@@ -22,7 +22,7 @@ import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.registration.impl.FileBasedRegistrationAdapter;
+import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.registration.impl.RegistrationEndpoint;
 import org.eclipse.hono.util.AggregatingInvocationResultHandler;
 import org.eclipse.hono.util.RegistrationResult;
@@ -59,16 +59,16 @@ public class StandaloneRegistrationApiTest {
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
-    private static FileBasedRegistrationAdapter registrationAdapter;
+    private static FileBasedRegistrationService registrationAdapter;
     private static HonoClient                  client;
     private static RegistrationClient          registrationClient;
 
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        server = new HonoServer(BIND_ADDRESS, 0, false);
-        server.addEndpoint(new RegistrationEndpoint(vertx, false));
-        registrationAdapter = new FileBasedRegistrationAdapter();
+        server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0);
+        server.addEndpoint(new RegistrationEndpoint(vertx));
+        registrationAdapter = new FileBasedRegistrationService();
 
         Future<RegistrationClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {

@@ -29,7 +29,7 @@ services:
       - qdrouter
     environment:
       - HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json
-      - HONO_MAXINSTANCES=1
+      - HONO_MAX_INSTANCES=1
       - LOGGING_CONFIG=file:///etc/hono/logback-spring.xml
       - SPRING_CONFIG_LOCATION=file:/etc/hono/
       - SPRING_PROFILES_ACTIVE=default,dev
@@ -49,7 +49,7 @@ services:
       - HONO_CLIENT_USERNAME=hono-client
       - HONO_CLIENT_PASSWORD=secret
       - HONO_HTTP_BINDADDRESS=0.0.0.0
-      - HONO_MAXINSTANCES=1
+      - HONO_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
 
   mqtt-adapter:
@@ -64,6 +64,6 @@ services:
         - HONO_CLIENT_PORT=5672
         - HONO_CLIENT_USERNAME=hono-client
         - HONO_CLIENT_PASSWORD=secret
-        - HONO_HTTP_BINDADDRESS=0.0.0.0
-        - HONO_MAXINSTANCES=1
+        - HONO_MQTT_BINDADDRESS=0.0.0.0
+        - HONO_MAX_INSTANCES=1
         - SPRING_PROFILES_ACTIVE=dev

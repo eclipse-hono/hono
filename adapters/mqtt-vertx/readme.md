@@ -11,8 +11,8 @@ of the following environment variables:
 
 | Variable | Mandatory | Default | Description |
 | :------- | :-------- | :------ | :---------- |
-| `HONO_HTTP_BINDADDRESS` | yes | `0.0.0.0` | The IP address the protocol adapter should bind to. By default the adapter binds to the *wildcard* address, i.e. all network adapters. |
-| `HONO_HTTP_LISTENPORT` | yes | `1883` | The port the protocol adapter should listen on. |
+| `HONO_MQTT_BINDADDRESS` | yes | `0.0.0.0` | The IP address the protocol adapter should bind to. By default the adapter binds to the *wildcard* address, i.e. all network adapters. |
+| `HONO_MQTT_LISTENPORT` | yes | `1883` | The port the protocol adapter should listen on. |
 | `HONO_CLIENT_HOST` | yes | `localhost` | The IP address or name of the Hono server host. This shoud be set to an address that can be resolved within the network established by Docker. Use Docker's `--link` command line parameter to link the rest adapter to the *Hono Server* host on the Docker network.
 | `HONO_CLIENT_PORT` | yes | `5672` | The port that the Hono server is listening on. |
 | `HONO_CLIENT_USERNAME` | yes | - | The username to use for authenticating to the Hono server. |

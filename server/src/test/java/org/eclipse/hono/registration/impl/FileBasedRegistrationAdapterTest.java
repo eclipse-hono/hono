@@ -26,13 +26,13 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Tests {@link FileBasedRegistrationAdapter}.
+ * Tests {@link FileBasedRegistrationService}.
  */
 public class FileBasedRegistrationAdapterTest
 {
    private static final String TENANT = "tenant";
    private static final String DEVICE = "device";
-   private static FileBasedRegistrationAdapter registrationAdapter;
+   private static FileBasedRegistrationService registrationAdapter;
 
    @BeforeClass
    public static void setUp() throws Exception {
@@ -41,7 +41,7 @@ public class FileBasedRegistrationAdapterTest
       final EventBus eventBus = mock(EventBus.class);
       when(vertx.eventBus()).thenReturn(eventBus);
 
-      registrationAdapter = new FileBasedRegistrationAdapter();
+      registrationAdapter = new FileBasedRegistrationService();
       registrationAdapter.init(vertx, ctx);
    }
 

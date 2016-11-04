@@ -39,6 +39,7 @@ public class SenderFactoryImpl implements SenderFactory {
     public void createSender(
             final ProtonConnection connection,
             final String address,
+            final ProtonQoS qos,
             final Handler<ProtonSender> sendQueueDrainHandler,
             final Future<ProtonSender> result) {
 
@@ -51,7 +52,7 @@ public class SenderFactoryImpl implements SenderFactory {
         } else {
             newSession(connection, remoteOpen -> {
                 if (remoteOpen.succeeded()) {
-                    newSender(connection, remoteOpen.result(), address, sendQueueDrainHandler, result);
+                    newSender(connection, remoteOpen.result(), address, qos, sendQueueDrainHandler, result);
                 } else {
                     result.fail(remoteOpen.cause());
                 }
@@ -67,11 +68,12 @@ public class SenderFactoryImpl implements SenderFactory {
             final ProtonConnection downstreamConnection,
             final ProtonSession session,
             final String address,
+            final ProtonQoS qos,
             final Handler<ProtonSender> sendQueueDrainHandler,
             final Future<ProtonSender> result) {
 
         ProtonSender sender = session.createSender(address);
-        sender.setQoS(ProtonQoS.AT_MOST_ONCE);
+        sender.setQoS(qos);
         sender.sendQueueDrainHandler(sendQueueDrainHandler);
         sender.openHandler(openAttempt -> {
             if (openAttempt.succeeded()) {

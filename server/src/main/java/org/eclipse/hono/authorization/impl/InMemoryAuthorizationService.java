@@ -21,6 +21,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -32,8 +33,10 @@ import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -42,32 +45,18 @@ import io.vertx.core.json.JsonObject;
 /**
  * Implementation of AuthorizationService that holds acl data in memory i.e. no persistent storage.
  */
+@Component
 public final class InMemoryAuthorizationService extends BaseAuthorizationService {
 
     static final Resource DEFAULT_PERMISSIONS_RESOURCE = new ClassPathResource("/permissions.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
     // holds mapping resource -> acl
     private static final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
-    private final Resource permissionsResource;
+    private Resource permissionsResource = DEFAULT_PERMISSIONS_RESOURCE;
 
-    public InMemoryAuthorizationService() {
-        this(false);
-    }
-
-    public InMemoryAuthorizationService(final boolean singleTenant) {
-        this(singleTenant, DEFAULT_PERMISSIONS_RESOURCE);
-    }
-
-    /**
-     * 
-     */
-    public InMemoryAuthorizationService(final boolean singleTenant, final Resource permissionsResource) {
-        this(0, 1, singleTenant, permissionsResource);
-    }
-
-    public InMemoryAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant, final Resource permissionsResource) {
-        super(instanceId, totalNoOfInstances, singleTenant);
-        this.permissionsResource = permissionsResource;
+    @Value("${hono.permissions.path:classpath:/permissions.json}")
+    public void setPermissionsResource(final Resource permissionsResource) {
+        this.permissionsResource = Objects.requireNonNull(permissionsResource);
     }
 
     @Override
@@ -179,7 +168,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     private ResourceIdentifier getResourceIdentifier(final Map.Entry<String, Object> resources) {
-        if (singleTenant) {
+        if (isSingleTenant()) {
             return ResourceIdentifier.fromStringAssumingDefaultTenant(resources.getKey());
         } else {
             return ResourceIdentifier.fromString(resources.getKey());

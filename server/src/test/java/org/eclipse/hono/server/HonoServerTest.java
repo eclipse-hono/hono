@@ -47,7 +47,9 @@ public class HonoServerTest {
     private static final String BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
 
     private static HonoServer createServer(final Endpoint telemetryEndpoint) {
-        HonoServer result = new HonoServer(BIND_ADDRESS, 0, false);
+        HonoServer result = new HonoServer();
+        result.setBindAddress(BIND_ADDRESS);
+        result.setPort(0);
         if (telemetryEndpoint != null) {
             result.addEndpoint(telemetryEndpoint);
         }

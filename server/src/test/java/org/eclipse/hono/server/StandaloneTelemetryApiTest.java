@@ -22,8 +22,8 @@ import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.TelemetrySender;
-import org.eclipse.hono.registration.impl.FileBasedRegistrationAdapter;
-import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryAdapter;
+import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
+import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -59,18 +59,20 @@ public class StandaloneTelemetryApiTest {
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
-    private static FileBasedRegistrationAdapter registrationAdapter;
-    private static MessageDiscardingTelemetryAdapter telemetryAdapter;
+    private static FileBasedRegistrationService registrationAdapter;
+    private static MessageDiscardingTelemetryDownstreamAdapter telemetryAdapter;
     private static HonoClient                  client;
     private static TelemetrySender             telemetrySender;
 
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        server = new HonoServer(BIND_ADDRESS, 0, false);
-        server.addEndpoint(new TelemetryEndpoint(vertx, false));
-        registrationAdapter = new FileBasedRegistrationAdapter();
-        telemetryAdapter = new MessageDiscardingTelemetryAdapter();
+        telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
+        server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0);
+        TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
+        telemetryEndpoint.setDownstreamAdapter(telemetryAdapter);
+        server.addEndpoint(telemetryEndpoint);
+        registrationAdapter = new FileBasedRegistrationService();
 
         final Future<HonoClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess());
@@ -78,14 +80,12 @@ public class StandaloneTelemetryApiTest {
         Future<String> registrationTracker = Future.future();
         Future<String> authenticationTracker = Future.future();
         Future<String> authTracker = Future.future();
-        Future<String> telemetryTracker = Future.future();
 
         vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
         vertx.deployVerticle(AcceptAllPlainAuthenticationService.class.getName(), authenticationTracker.completer());
-        vertx.deployVerticle(telemetryAdapter, telemetryTracker.completer());
 
-        CompositeFuture.all(registrationTracker, authTracker, telemetryTracker)
+        CompositeFuture.all(registrationTracker, authTracker)
         .compose(r -> {
             Future<String> serverTracker = Future.future();
             vertx.deployVerticle(server, serverTracker.completer());

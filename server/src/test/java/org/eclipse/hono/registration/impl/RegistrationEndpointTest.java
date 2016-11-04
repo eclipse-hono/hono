@@ -63,7 +63,7 @@ public class RegistrationEndpointTest {
         when(receiver.setPrefetch(any(Integer.class))).thenReturn(receiver);
         when(receiver.setQoS(any(ProtonQoS.class))).thenReturn(receiver);
         sender = mock(ProtonSender.class);
-        endpoint = new RegistrationEndpoint(vertx, false);
+        endpoint = new RegistrationEndpoint(vertx);
     }
 
     @After

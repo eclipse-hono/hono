@@ -12,57 +12,73 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+import org.eclipse.hono.config.HonoConfigProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+
 /**
  * The Hono MQTT adapter main application class.
  */
-@ComponentScan
+@ComponentScan(basePackages = "org.eclipse.hono")
 @Configuration
 @EnableAutoConfiguration
 public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    @Autowired
     private Vertx vertx;
-    @Value(value = "${hono.maxinstances:1}")
-    private int maxInstances;
-    @Value(value = "${hono.startuptimeout:20}")
-    private int startupTimeout;
-    @Autowired
+    private HonoConfigProperties honoConfig = new HonoConfigProperties();
     private MqttAdapterFactory factory;
     private AtomicBoolean running = new AtomicBoolean();
+
+    /**
+     * @param vertx the vertx to set
+     */
+    @Autowired
+    public final void setVertx(Vertx vertx) {
+        this.vertx = vertx;
+    }
+
+    /**
+     * @param honoConfig the honoConfig to set
+     */
+    @Autowired(required = false)
+    public final void setHonoConfig(HonoConfigProperties honoConfig) {
+        this.honoConfig = honoConfig;
+    }
+
+    /**
+     * @param factory the factory to set
+     */
+    @Autowired
+    public final void setFactory(MqttAdapterFactory factory) {
+        this.factory = factory;
+    }
 
     @PostConstruct
     public void registerVerticles() {
 
         if (running.compareAndSet(false, true)) {
-            final int instanceCount;
-            if (this.maxInstances > 0 && this.maxInstances < Runtime.getRuntime().availableProcessors()) {
-                instanceCount = this.maxInstances;
-            } else {
-                instanceCount = Runtime.getRuntime().availableProcessors();
-            }
+            final int instanceCount = honoConfig.getMaxInstances();
 
             try {
 
@@ -78,10 +94,10 @@ public class Application {
 
                 this.deployVerticle(instanceCount, startFuture);
 
-                if (latch.await(this.startupTimeout, TimeUnit.SECONDS)) {
+                if (latch.await(honoConfig.getStartupTimeout(), TimeUnit.SECONDS)) {
                     LOG.info("MQTT adapter startup completed successfully");
                 } else {
-                    LOG.error("startup timed out after {} seconds, shutting down ...", this.startupTimeout);
+                    LOG.error("startup timed out after {} seconds, shutting down ...", honoConfig.getStartupTimeout());
                     this.shutdown();
                 }
 
@@ -93,6 +109,7 @@ public class Application {
         }
     }
 
+    @SuppressWarnings("rawtypes")
     private void deployVerticle(final int instanceCount, final Future<Void> resultHandler) {
 
         LOG.debug("starting up {} instances of MQTT adapter verticle", instanceCount);
@@ -124,7 +141,7 @@ public class Application {
     @PreDestroy
     public void shutdown() {
         if (this.running.compareAndSet(true, false)) {
-            this.shutdown(startupTimeout, succeeded -> {
+            this.shutdown(honoConfig.getStartupTimeout(), succeeded -> {
                 // do nothing
             });
         }

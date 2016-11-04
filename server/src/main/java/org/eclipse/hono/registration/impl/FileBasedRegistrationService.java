@@ -37,7 +37,7 @@ import io.vertx.core.json.JsonObject;
  * devices kept in memory are written to the file.
  */
 @Service
-public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
+public class FileBasedRegistrationService extends BaseRegistrationService {
 
     private static final String FIELD_DATA = "data";
     private static final String FIELD_HONO_ID = "id";
@@ -202,6 +202,6 @@ public class FileBasedRegistrationAdapter extends BaseRegistrationAdapter {
 
     @Override
     public String toString() {
-        return String.format("%s[filename=%s]", FileBasedRegistrationAdapter.class.getSimpleName(), filename);
+        return String.format("%s[filename=%s]", FileBasedRegistrationService.class.getSimpleName(), filename);
     }
 }

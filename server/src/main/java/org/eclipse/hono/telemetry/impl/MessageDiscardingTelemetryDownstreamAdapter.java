@@ -16,10 +16,21 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.server.DownstreamAdapter;
+import org.eclipse.hono.server.UpstreamReceiver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonSender;
 
 /**
  * A telemetry adapter that simply logs and discards all messages.
@@ -29,24 +40,26 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Profile("standalone")
-public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapter {
+public final class MessageDiscardingTelemetryDownstreamAdapter implements DownstreamAdapter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MessageDiscardingTelemetryAdapter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MessageDiscardingTelemetryDownstreamAdapter.class);
+    private static final int DEFAULT_CREDIT = 10;
+    private final Vertx vertx;
     private final int pauseThreshold;
     private final long pausePeriod;
     private Map<String, LinkStatus> statusMap = new HashMap<>();
     private Consumer<Message> messageConsumer;
 
-    public MessageDiscardingTelemetryAdapter() {
-        this(0, 0, null);
+    public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx) {
+        this(vertx, null);
     }
 
     /**
      * 
      * @param consumer a consumer that is invoked for every message received.
      */
-    public MessageDiscardingTelemetryAdapter(final Consumer<Message> consumer) {
-        this(0, 0, consumer);
+    public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx, final Consumer<Message> consumer) {
+        this(vertx, 0, 0, consumer);
     }
 
     /**
@@ -54,21 +67,31 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
      *                       never be paused.
      * @param pausePeriod the number of milliseconds after which the sender is resumed.
      */
-    public MessageDiscardingTelemetryAdapter(final int pauseThreshold, final long pausePeriod, final Consumer<Message> consumer) {
-        super(0, 1);
+    public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx, final int pauseThreshold, final long pausePeriod, final Consumer<Message> consumer) {
+        this.vertx = vertx;
         this.pauseThreshold = pauseThreshold;
         this.pausePeriod = pausePeriod;
         this.messageConsumer = consumer;
     }
 
     @Override
-    protected void onLinkAttached(String connectionId, String linkId, String targetAddress) {
-        sendFlowControlMessage(linkId, DEFAULT_CREDIT, null);
+    public void start(Future<Void> startFuture) {
+        startFuture.complete();
     }
 
     @Override
-    protected void onLinkDetached(String linkId) {
-        // nothing to do
+    public void stop(Future<Void> stopFuture) {
+        stopFuture.complete();
+    }
+
+    @Override
+    public void getDownstreamSender(UpstreamReceiver client, Handler<AsyncResult<ProtonSender>> resultHandler) {
+        client.replenish(DEFAULT_CREDIT);
+        resultHandler.handle(Future.succeededFuture());
+    }
+
+    @Override
+    public void onClientDetach(final UpstreamReceiver client) {
     }
 
     /**
@@ -81,28 +104,34 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
     }
 
     @Override
-    public void processTelemetryData(final Message data, final String linkId) {
-        LinkStatus status = statusMap.get(linkId);
+    public void onClientDisconnect(final ProtonConnection con) {
+    }
+
+    @Override
+    public void processMessage(final UpstreamReceiver client, final ProtonDelivery delivery, final Message data) {
+
+        LinkStatus status = statusMap.get(client.getLinkId());
         if (status == null) {
-            LOG.debug("creating new link status object [{}]", linkId);
-            status = new LinkStatus(linkId);
-            statusMap.put(linkId, status);
+            LOG.debug("creating new link status object [{}]", client.getLinkId());
+            status = new LinkStatus(client);
+            statusMap.put(client.getLinkId(), status);
         }
         LOG.debug("processing telemetry data [id: {}, to: {}, content-type: {}]", data.getMessageId(), data.getAddress(),
                 data.getContentType());
         if (messageConsumer != null) {
             messageConsumer.accept(data);
         }
+        ProtonHelper.accepted(delivery, true);
         status.onMsgReceived();
     }
 
     private class LinkStatus {
         private long msgCount;
-        private String linkId;
+        private UpstreamReceiver client;
         private boolean suspended;
 
-        public LinkStatus(final String linkId) {
-            this.linkId = linkId;
+        public LinkStatus(final UpstreamReceiver client) {
+            this.client = client;
         }
 
         public void onMsgReceived() {
@@ -114,12 +143,12 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
                 }
             } else if (msgCount % DEFAULT_CREDIT == 0) {
                 // we need to replenish client every DEFAULT_CREDIT messages
-                sendFlowControlMessage(linkId, DEFAULT_CREDIT, null);
+                client.replenish(DEFAULT_CREDIT);
             }
         }
 
         public void pause() {
-            LOG.debug("pausing link [{}]", linkId);
+            LOG.debug("pausing link [{}]", client.getLinkId());
             this.suspended = true;
             vertx.setTimer(pausePeriod, fired -> {
                 vertx.runOnContext(run -> resume());
@@ -128,12 +157,12 @@ public final class MessageDiscardingTelemetryAdapter extends BaseTelemetryAdapte
 
         private void resume() {
             if (suspended) {
-                LOG.debug("resuming link [{}]", linkId);
+                LOG.debug("resuming link [{}]", client.getLinkId());
                 int credit = DEFAULT_CREDIT;
                 if (pauseThreshold > 0) {
                     credit = pauseThreshold;
                 }
-                sendFlowControlMessage(linkId, credit, null);
+                client.replenish(credit);
                 this.suspended = false;
             }
         }

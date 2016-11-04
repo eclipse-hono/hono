@@ -1,5 +1,5 @@
 hono:
-  maxinstances: 1
+  maxInstances: 1
   server:
     bindaddress: 0.0.0.0
 ---
@@ -14,8 +14,8 @@ hono:
 spring:
   profiles: activemq
 hono:
+  pathSeparator: .
   telemetry:
-    pathseparator: .
     downstream:
       host: activemq
       port: 5672

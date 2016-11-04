@@ -20,10 +20,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
@@ -43,33 +43,47 @@ import io.vertx.core.Vertx;
  * of instances to create. This may be useful for executing tests etc.
  * </p>
  */
-@ComponentScan
+@ComponentScan(basePackages = "org.eclipse.hono")
 @Configuration
 @EnableAutoConfiguration
 public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    @Autowired
     private Vertx vertx;
-    @Value(value = "${hono.maxinstances:0}")
-    private int maxInstances;
-    @Value(value = "${hono.startuptimeout:20}")
-    private int startupTimeout;
-    @Autowired
+    private HonoConfigProperties honoConfig = new HonoConfigProperties();
     private RestAdapterFactory factory;
     private AtomicBoolean running = new AtomicBoolean();
+
+    /**
+     * @param vertx the vertx to set
+     */
+    @Autowired
+    public final void setVertx(Vertx vertx) {
+        this.vertx = vertx;
+    }
+
+    /**
+     * @param honoConfig the honoConfig to set
+     */
+    @Autowired(required = false)
+    public final void setHonoConfig(HonoConfigProperties honoConfig) {
+        this.honoConfig = honoConfig;
+    }
+
+    /**
+     * @param factory the factory to set
+     */
+    @Autowired
+    public final void setFactory(RestAdapterFactory factory) {
+        this.factory = factory;
+    }
 
     @PostConstruct
     public void registerVerticles() {
 
         if (running.compareAndSet(false, true)) {
-            final int instanceCount;
-            if (maxInstances > 0 && maxInstances < Runtime.getRuntime().availableProcessors()) {
-                instanceCount = maxInstances;
-            } else {
-                instanceCount = Runtime.getRuntime().availableProcessors();
-            }
+            final int instanceCount = honoConfig.getMaxInstances();
 
             try {
                 final CountDownLatch latch = new CountDownLatch(1);
@@ -84,10 +98,10 @@ public class Application {
 
                 deployVerticle(instanceCount, startFuture);
 
-                if (latch.await(startupTimeout, TimeUnit.SECONDS)) {
+                if (latch.await(honoConfig.getStartupTimeout(), TimeUnit.SECONDS)) {
                     LOG.info("REST adapter startup completed successfully");
                 } else {
-                    LOG.error("startup timed out after {} seconds, shutting down ...", startupTimeout);
+                    LOG.error("startup timed out after {} seconds, shutting down ...", honoConfig.getStartupTimeout());
                     shutdown();
                 }
             } catch (InterruptedException e) {
@@ -129,7 +143,7 @@ public class Application {
     @PreDestroy
     public void shutdown() {
         if (running.compareAndSet(true, false)) {
-            this.shutdown(startupTimeout, succeeded -> {
+            this.shutdown(honoConfig.getStartupTimeout(), succeeded -> {
                 // do nothing
             });
         }

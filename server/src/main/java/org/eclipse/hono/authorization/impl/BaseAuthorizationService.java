@@ -11,20 +11,16 @@
  */
 package org.eclipse.hono.authorization.impl;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.ALLOWED;
-import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.DENIED;
-import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
+import static org.eclipse.hono.authorization.AuthorizationConstants.*;
 
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.authorization.Permission;
-import org.eclipse.hono.util.AbstractInstanceNumberAwareVerticle;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -36,23 +32,15 @@ import io.vertx.core.json.JsonObject;
  * Provides support for processing authorization requests via Vert.x event bus.
  * </p>
  */
-public abstract class BaseAuthorizationService extends AbstractInstanceNumberAwareVerticle implements AuthorizationService
+public abstract class BaseAuthorizationService extends AbstractVerticle implements AuthorizationService
 {
     private static final Logger LOG = LoggerFactory.getLogger(BaseAuthorizationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;
-    protected boolean singleTenant;
-
-    /**
-     * 
-     */
-    protected BaseAuthorizationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant) {
-        super(instanceId, totalNoOfInstances);
-        this.singleTenant = singleTenant;
-    }
+    private boolean singleTenant;
 
     @Override
     public final void start(final Future<Void> startFuture) throws Exception {
-        String listenAddress = getAddressWithId(EVENT_BUS_ADDRESS_AUTHORIZATION_IN);
+        String listenAddress = EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
         authRequestConsumer = vertx.eventBus().consumer(listenAddress);
         authRequestConsumer.handler(this::processMessage);
         LOG.info("listening on event bus [address: {}] for incoming auth messages", listenAddress);
@@ -75,6 +63,27 @@ public abstract class BaseAuthorizationService extends AbstractInstanceNumberAwa
     {
         // to be overridden by subclasses
         stopFuture.complete();
+    }
+
+    /**
+     * Sets whether this instance should support a single tenant only.
+     * <p>
+     * Default is {@code false}.
+     * </p>
+     * 
+     * @param singleTenant {@code true} if this Hono server should support a single tenant only.
+     * @return This instance for setter chaining.
+     */
+    @Value(value = "${hono.singletenant:false}")
+    public void setSingleTenant(final boolean singleTenant) {
+        this.singleTenant = singleTenant;
+    }
+
+    /**
+     * @return the singleTenant
+     */
+    public boolean isSingleTenant() {
+        return singleTenant;
     }
 
     private void processMessage(final Message<JsonObject> message) {

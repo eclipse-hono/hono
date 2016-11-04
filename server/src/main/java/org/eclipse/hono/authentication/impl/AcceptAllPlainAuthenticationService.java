@@ -17,6 +17,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -26,28 +27,11 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A PLAIN SASL authenticator that accepts all credentials.
  */
+@Component
 public final class AcceptAllPlainAuthenticationService extends BaseAuthenticationService {
 
     private static final String PLAIN = "PLAIN";
     private static final Logger LOG = LoggerFactory.getLogger(AcceptAllPlainAuthenticationService.class);
-
-    /**
-     * Creates a new authentication service instance with instance ID {@code 0}
-     * supporting multiple tenants.
-     */
-    public AcceptAllPlainAuthenticationService() {
-        this(0, 1);
-    }
-
-    /**
-     * Creates a new authentication service.
-     * 
-     * @param instanceId the ID to use for this instance.
-     * @param totalNoOfInstances the total number of instances that will be used.
-     */
-    public AcceptAllPlainAuthenticationService(final int instanceId, final int totalNoOfInstances) {
-        super(instanceId, totalNoOfInstances, false);
-    }
 
     @Override
     public void validateResponse(String mechanism, byte[] response, Handler<AsyncResult<String>> resultHandler) {

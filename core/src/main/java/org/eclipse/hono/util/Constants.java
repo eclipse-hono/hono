@@ -40,6 +40,11 @@ public final class Constants {
      */
     public static final String EVENT_BUS_ADDRESS_CONNECTION_CLOSED = "hono.connection.closed";
 
+    /**
+     * The default separator character for target addresses.
+     */
+    public static final String DEFAULT_PATH_SEPARATOR = "/";
+
     private Constants() {
     }
 

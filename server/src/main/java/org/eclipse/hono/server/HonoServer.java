@@ -16,6 +16,7 @@ import static org.apache.qpid.proton.amqp.transport.AmqpError.UNAUTHORIZED_ACCES
 import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
 
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,15 +28,21 @@ import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
@@ -52,28 +59,26 @@ import io.vertx.proton.ProtonSession;
  * <em>Command &amp; Control</em> and <em>Device Registration</em> APIs that <em>Protocol Adapters</em> and
  * <em>Solutions</em> use to interact with devices.
  */
+@Component
+@Scope("prototype")
 public final class HonoServer extends AbstractVerticle {
 
     private static final Logger   LOG = LoggerFactory.getLogger(HonoServer.class);
-    private final String          authServiceAddress;
     private String                bindAddress;
     private int                   port;
-    private boolean               singleTenant;
-    private boolean               networkDebugLoggingEnabled;
-    private final int             instanceNo;
     private ProtonServer          server;
     private Map<String, Endpoint> endpoints = new HashMap<>();
+    private HonoConfigProperties  honoConfig = new HonoConfigProperties();
 
-    HonoServer(final String bindAddress, final int port, final boolean singleTenant) {
-        this(bindAddress, port, singleTenant, 0);
-    }
-
-    HonoServer(final String bindAddress, final int port, final boolean singleTenant, final int instanceNo) {
-        this.bindAddress = Objects.requireNonNull(bindAddress);
-        this.port = port;
-        this.singleTenant = singleTenant;
-        this.instanceNo = instanceNo;
-        this.authServiceAddress = String.format("%s.%d", EVENT_BUS_ADDRESS_AUTHORIZATION_IN, instanceNo);
+    /**
+     * Sets the global Hono configuration properties.
+     * 
+     * @param props The properties.
+     * @throws NullPointerException if props is {@code null}.
+     */
+    @Autowired(required = false)
+    public void setHonoConfiguration(final HonoConfigProperties props) {
+        this.honoConfig = Objects.requireNonNull(props);
     }
 
     @Override
@@ -81,9 +86,9 @@ public final class HonoServer extends AbstractVerticle {
 
         checkStandardEndpointsAreRegistered();
 
-        if (!startEndpoints()) {
-            startupHandler.fail("one or more of the registered endpoints failed to start, aborting ...");
-        } else {
+        Future<Void> endpointsTracker = Future.future();
+        startEndpoints(endpointsTracker);
+        endpointsTracker.compose(s -> {
             final ProtonServerOptions options = createServerOptions();
             server = ProtonServer.create(vertx, options)
                     .saslAuthenticatorFactory(new PlainSaslAuthenticatorFactory(vertx))
@@ -98,7 +103,7 @@ public final class HonoServer extends AbstractVerticle {
                             startupHandler.fail(bindAttempt.cause());
                         }
                     });
-        }
+        }, startupHandler);
     }
 
     private void checkStandardEndpointsAreRegistered() {
@@ -118,17 +123,22 @@ public final class HonoServer extends AbstractVerticle {
         return endpoints.containsKey(RegistrationConstants.REGISTRATION_ENDPOINT);
     }
 
-    private boolean startEndpoints() {
-        boolean succeeded = true;
+    private void startEndpoints(final Future<Void> startFuture) {
+
+        List<Future> endpointFutures = new ArrayList<>(endpoints.size());
         for (Endpoint ep : endpoints.values()) {
             LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
-            succeeded &= ep.start();
-            if (!succeeded) {
-                LOG.error("could not start endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
-                break;
-            }
+            Future<Void> endpointFuture = Future.future();
+            endpointFutures.add(endpointFuture);
+            ep.start(endpointFuture);
         }
-        return succeeded;
+        CompositeFuture.all(endpointFutures).setHandler(startup -> {
+            if (startup.succeeded()) {
+                startFuture.complete();
+            } else {
+                startFuture.fail(startup.cause());
+            }
+        });
     }
 
     ProtonServerOptions createServerOptions() {
@@ -137,7 +147,7 @@ public final class HonoServer extends AbstractVerticle {
         options.setIdleTimeout(0);
         options.setReceiveBufferSize(32 * 1024); // 32kb
         options.setSendBufferSize(32 * 1024); // 32kb
-        options.setLogActivity(networkDebugLoggingEnabled);
+        options.setLogActivity(honoConfig.isNetworkDebugLoggingEnabled());
         return options;
     }
 
@@ -154,6 +164,7 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
+    @Autowired
     public void addEndpoints(final List<Endpoint> definedEndpoints) {
         Objects.requireNonNull(definedEndpoints);
         for (Endpoint ep : definedEndpoints) {
@@ -167,6 +178,25 @@ public final class HonoServer extends AbstractVerticle {
         } else {
             LOG.debug("registering endpoint [{}]", ep.getName());
         }
+    }
+
+    /**
+     * Sets the port Hono will listen on for AMQP 1.0 connections.
+     * <p>
+     * If not set Hono binds to the standard AMQP 1.0 port (5672). If set to {@code 0} Hono will bind to an
+     * arbitrary free port chosen by the operating system during startup.
+     * </p>
+     *
+     * @param port the port to bind to.
+     * @return This instance for setter chaining.
+     */
+    @Value("${hono.server.port:5672}")
+    public HonoServer setPort(final int port) {
+        if (port < 0 || port >= 1 << 16) {
+            throw new IllegalArgumentException("illegal port number");
+        }
+        this.port = port;
+        return this;
     }
 
     /**
@@ -186,23 +216,27 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
+    /**
+     * Sets the IP address Hono will bind to.
+     * <p>
+     * If not set Hono binds to the <em>loopback device</em> (usually 127.0.0.1 on an IPv4 stack).
+     * </p>
+     *  
+     * @param bindAddress the IP address.
+     * @return This instance for setter chaining.
+     */
+    @Value(value = "${hono.server.bindaddress:127.0.0.1}")
+    public HonoServer setBindAddress(final String bindAddress) {
+        this.bindAddress = Objects.requireNonNull(bindAddress);
+        return this;
+    }
+
     public String getBindAddress() {
         return bindAddress;
     }
 
-    public void setNetworkDebugLoggingEnabled(final boolean enabled) {
-        this.networkDebugLoggingEnabled = enabled;
-    }
-
-    /**
-     * @return the singleTenant
-     */
-    public boolean isSingleTenant() {
-        return singleTenant;
-    }
-
     void handleRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-%s:%d-%d", this.bindAddress, server.actualPort(), instanceNo));
+        connection.setContainer(String.format("Hono-%s:%d", this.bindAddress, server.actualPort()));
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
         connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
         connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
@@ -370,13 +404,13 @@ public final class HonoServer extends AbstractVerticle {
         final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(user, targetResource.toString(),
            permission.toString());
         vertx.eventBus().send(
-           authServiceAddress,
+           EVENT_BUS_ADDRESS_AUTHORIZATION_IN,
            authRequest,
            res -> authResultHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
     }
 
     private ResourceIdentifier getResourceIdentifier(final String address) {
-        if (isSingleTenant()) {
+        if (honoConfig.isSingleTenant()) {
             return ResourceIdentifier.fromStringAssumingDefaultTenant(address);
         } else {
             return ResourceIdentifier.fromString(address);
@@ -389,6 +423,6 @@ public final class HonoServer extends AbstractVerticle {
      * @return the address.
      */
     String getAuthServiceAddress() {
-        return authServiceAddress;
+        return EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
     }
 }

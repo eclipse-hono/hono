@@ -13,6 +13,7 @@ package org.eclipse.hono.server;
 
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.vertx.core.Future;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -54,20 +55,18 @@ public interface Endpoint {
      * <p>
      * This method should be used to allocate any required resources.
      * However, no long running tasks should be executed.
-     * </p>
      * 
-     * @return {@code true} if this endpoint has started successfully.
+     * @param startFuture Completes if this endpoint has started successfully.
      */
-    boolean start();
+    void start(Future<Void> startFuture);
 
     /**
      * Stops this endpoint.
      * <p>
      * This method should be used to release any allocated resources.
      * However, no long running tasks should be executed.
-     * </p>
      * 
-     * @return {@code true} if this endpoint has stopped successfully.
+     * @param stopFuture Completes if this endpoint has stopped successfully.
      */
-    boolean stop();
+    void stop(Future<Void> stopFuture);
 }

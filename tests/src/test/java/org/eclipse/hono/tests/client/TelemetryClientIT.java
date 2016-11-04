@@ -58,7 +58,7 @@ public class TelemetryClientIT {
     private static final int HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
     private static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, DEFAULT_HOST);
     private static final int DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
-    private static final String PATH_SEPARATOR = System.getProperty("hono.telemetry.pathSeparator", "/");
+    private static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
     // test constants
     private static final int MSG_COUNT = 50;
     private static final String TEST_TENANT_ID = "DEFAULT_TENANT";

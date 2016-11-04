@@ -11,17 +11,13 @@
  */
 package org.eclipse.hono.authentication.impl;
 
-import static org.eclipse.hono.authentication.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
-import static org.eclipse.hono.authentication.AuthenticationConstants.FIELD_AUTHORIZATION_ID;
-import static org.eclipse.hono.authentication.AuthenticationConstants.FIELD_ERROR;
-import static org.eclipse.hono.authentication.AuthenticationConstants.FIELD_MECHANISM;
-import static org.eclipse.hono.authentication.AuthenticationConstants.FIELD_RESPONSE;
+import static org.eclipse.hono.authentication.AuthenticationConstants.*;
 
 import org.eclipse.hono.authentication.AuthenticationService;
-import org.eclipse.hono.util.AbstractInstanceNumberAwareVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -33,16 +29,10 @@ import io.vertx.core.json.JsonObject;
  * Provides support for processing authorization requests via Vert.x event bus.
  * </p>
  */
-public abstract class BaseAuthenticationService extends AbstractInstanceNumberAwareVerticle implements AuthenticationService
+public abstract class BaseAuthenticationService extends AbstractVerticle implements AuthenticationService
 {
     private static final Logger LOG = LoggerFactory.getLogger(BaseAuthenticationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;
-    protected boolean singleTenant;
-
-    protected BaseAuthenticationService(final int instanceId, final int totalNoOfInstances, final boolean singleTenant) {
-        super(instanceId, totalNoOfInstances);
-        this.singleTenant = singleTenant;
-    }
 
     @Override
     public final void start(final Future<Void> startFuture) throws Exception {

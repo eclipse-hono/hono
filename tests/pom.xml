@@ -158,8 +158,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <link>qdrouter</link>
                               </links>
                               <env>
-                                 <HONO_MAXINSTANCES>2</HONO_MAXINSTANCES>
+                                 <HONO_MAX_INSTANCES>2</HONO_MAX_INSTANCES>
                                  <HONO_PERMISSIONS_PATH>file:///etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
+                                 <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
                                  <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                                  <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                                  <SPRING_PROFILES_ACTIVE>qpid,prod</SPRING_PROFILES_ACTIVE>
@@ -312,10 +313,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <link>activemq</link>
                               </links>
                               <env>
-                                 <HONO_MAXINSTANCES>2</HONO_MAXINSTANCES>
+                                 <HONO_MAX_INSTANCES>2</HONO_MAX_INSTANCES>
                                  <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
                                  <!-- HONO_TELEMETRY_DOWNSTREAM_HOST>activemq</HONO_TELEMETRY_DOWNSTREAM_HOST>
-                                 <HONO_TELEMETRY_PATHSEPARATOR>.</HONO_TELEMETRY_PATHSEPARATOR-->
+                                 <HONO_PATH_SEPARATOR>.</HONO_PATH_SEPARATOR-->
+                                 <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
                                  <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                                  <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                                  <SPRING_PROFILES_ACTIVE>activemq,prod</SPRING_PROFILES_ACTIVE>
@@ -381,7 +383,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                      <systemProperties>
                         <hono.host>${hono.ip}</hono.host>
                         <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
-                        <hono.telemetry.pathSeparator>.</hono.telemetry.pathSeparator>
+                        <hono.pathSeparator>.</hono.pathSeparator>
                         <downstream.host>${broker.ip}</downstream.host>
                         <downstream.amqp.port>${broker.amqp.port}</downstream.amqp.port>
                      </systemProperties>
