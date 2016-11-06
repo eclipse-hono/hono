@@ -19,7 +19,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonSender;
 
 /**
  * An adapter for handling downstream messages in an {@code Endpoint} specific way.
@@ -32,45 +31,46 @@ public interface DownstreamAdapter {
     void stop(Future<Void> stopFuture);
 
     /**
-     * Invoked when a client wants to establish a link with the Hono server for sending
+     * Invoked when an upstream client wants to establish a link with the Hono server for sending
      * messages for a given target address downstream.
      * <p>
-     * Subclasses should use this method for allocating any resources required
+     * Implementations should use this method for allocating any resources required
      * for processing messages sent by the client, e.g. connect to a downstream container.
      * <p>
-     * In order to signal the client to start sending messages the
-     * {@link #sendFlowControlMessage(String, int, Handler)} method must be invoked with
-     * some <em>credit</em>.
+     * In order to signal the client to start sending messages the client will usually need
+     * to be replenished with some credits by invoking {@link UpstreamReceiver#replenish(int)}.
      * 
-     * @param connectionId The unique ID of the AMQP 1.0 connection with the client.
-     * @param linkId The unique ID of the link used by the client for uploading data.
-     * @param targetAddress The target address to upload data to.
+     * @param client The client connecting to the Hono server.
+     * @param resultHandler The handler to notify about the outcome of allocating the required resources.
      */
-    void getDownstreamSender(final UpstreamReceiver client, final Handler<AsyncResult<ProtonSender>> resultHandler);
+    void onClientAttach(UpstreamReceiver client, Handler<AsyncResult<Void>> resultHandler);
 
     /**
-     * Invoked when a client closes a link with the Hono server.
+     * Invoked when an upstream client closes a link with the Hono server.
      * <p>
-     * Subclasses should release any resources allocated as part of the invocation of the
-     * {@link #onLinkAttached(String, String, String)} method.
+     * Implementations should release any resources allocated as part of the invocation of the
+     * {@link #onClientAttach(UpstreamReceiver, Handler)} method.
      * 
-     * @param linkId the unique ID of the link being closed.
+     * @param client The client closing the link.
      */
-    void onClientDetach(final UpstreamReceiver client);
+    void onClientDetach(UpstreamReceiver client);
 
     /**
-     * Invoked when a connection with a client got disconnected unexpectedly.
+     * Invoked when a connection with an upstream client got disconnected unexpectedly.
      * 
      * @param con The failed connection.
      */
-    void onClientDisconnect(final ProtonConnection con);
+    void onClientDisconnect(ProtonConnection con);
 
     /**
      * Processes a message received from an upstream client.
+     * <p>
+     * Implementors are responsible for handling the message's disposition and settlement
+     * using the <em>delivery</em> object.
      * 
      * @param client The client the message originates from.
      * @param delivery The message's disposition handler.
-     * @param message The message.
+     * @param message The message to process.
      */
-    void processMessage(final UpstreamReceiver client, ProtonDelivery delivery, Message message);
+    void processMessage(UpstreamReceiver client, ProtonDelivery delivery, Message message);
 }

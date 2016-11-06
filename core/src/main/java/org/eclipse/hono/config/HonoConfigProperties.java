@@ -33,13 +33,22 @@ public class HonoConfigProperties {
     private boolean waitForDownstreamConnection = false;
     private String pathSeparator = Constants.DEFAULT_PATH_SEPARATOR;
 
+    /**
+     * Gets the character separating the segments of target addresses.
+     * 
+     * @return The separator.
+     */
     public String getPathSeparator() {
         return pathSeparator;
     }
 
     /**
-     * @param pathSeparator the character to use for separating the segments
-     *                      of message addresses.
+     * Sets the character separating the segments of target addresses.
+     * <p>
+     * The default value of this property is {@link Constants#DEFAULT_PATH_SEPARATOR}.
+     * 
+     * @param pathSeparator The separator to use.
+     * @return This instance for setter chaining.
      * @throws NullPointerException if the given character is {@code null}.
      */
     public HonoConfigProperties setPathSeparator(final String pathSeparator) {
@@ -50,17 +59,40 @@ public class HonoConfigProperties {
     /**
      * Gets the maximum time to wait for Hono to start up.
      * 
-     * @return The number of seconds to wait for Hono to start up.
+     * @return The number of seconds to wait.
      */
     public int getStartupTimeout() {
         return startupTimeout;
     }
 
+    /**
+     * Sets the maximum time to wait for Hono to start up.
+     * <p>
+     * The default value of this property is 20 (seconds).
+     * 
+     * @param seconds The maximum number of seconds to wait.
+     * @return This instance for setter chaining.
+     * @throws IllegalArgumentException if <em>seconds</em> &lt; 1.
+     */
     public HonoConfigProperties setStartupTimeout(final int seconds) {
+        if (seconds < 1) {
+            throw new IllegalArgumentException("startup timeout must be at least 1 second");
+        }
         this.startupTimeout = seconds;
         return this;
     }
 
+    /**
+     * Gets the number of {@code HonoServer} verticle instances to deploy.
+     * <p>
+     * The number is calculated as follows:
+     * <ol>
+     * <li>if 0 &lt; <em>maxInstances</em> &lt; #processors, then return <em>maxInstances</em></li>
+     * <li>else return {@code Runtime.getRuntime().availableProcessors()}</li>
+     * </ol>
+     * 
+     * @return the number of verticles to deploy.
+     */
     public int getMaxInstances() {
         if (maxInstances > 0 && maxInstances < Runtime.getRuntime().availableProcessors()) {
             return maxInstances;
@@ -69,7 +101,18 @@ public class HonoConfigProperties {
         }
     }
 
+    /**
+     * Sets the number of {@code HonoServer} verticle instances to deploy.
+     * <p>
+     * The default value of this property is 0.
+     * 
+     * @return the number of verticles to deploy.
+     * @throws IllegalArgumentException if the number is &lt; 0.
+     */
     public HonoConfigProperties setMaxInstances(final int maxVerticleInstances) {
+        if (maxVerticleInstances < 0) {
+            throw new IllegalArgumentException("maxInstances must be >= 0");
+        }
         this.maxInstances = maxVerticleInstances;
         return this;
     }

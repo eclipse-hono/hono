@@ -91,7 +91,7 @@ public class ForwardingTelemetryDownstreamAdapterTest {
         adapter.setDownstreamConnection(con);
 
         // WHEN a client wants to attach to Hono for uploading telemetry data
-        adapter.getDownstreamSender(client, s -> {});
+        adapter.onClientAttach(client, s -> {});
 
         // THEN assert that the client is given some credit
         verify(client).replenish(DEFAULT_CREDITS);
@@ -112,7 +112,7 @@ public class ForwardingTelemetryDownstreamAdapterTest {
         // GIVEN an adapter with a connection to the downstream container and a client attached
         ForwardingTelemetryDownstreamAdapter adapter = new ForwardingTelemetryDownstreamAdapter(vertx, senderFactory);
         adapter.setDownstreamConnection(con);
-        adapter.getDownstreamSender(client, s -> {
+        adapter.onClientAttach(client, s -> {
             assertTrue(s.succeeded());
         });
 
@@ -139,7 +139,7 @@ public class ForwardingTelemetryDownstreamAdapterTest {
 
         // WHEN a client wants to attach to Hono for uploading telemetry data
         // THEN assert that no sender can be created
-        adapter.getDownstreamSender(client, s -> {
+        adapter.onClientAttach(client, s -> {
             assertFalse(s.succeeded());
         });
     }

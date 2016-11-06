@@ -215,7 +215,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     @Override
-    public final void getDownstreamSender(final UpstreamReceiver client, final Handler<AsyncResult<ProtonSender>> resultHandler) {
+    public final void onClientAttach(final UpstreamReceiver client, final Handler<AsyncResult<Void>> resultHandler) {
 
         if (activeSenders.containsKey(client.getLinkId())) {
             logger.info("reusing existing downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
@@ -227,7 +227,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                         if (creationAttempt.succeeded()) {
                             logger.info("created downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
                             addSender(client.getConnectionId(), client.getLinkId(), creationAttempt.result());
-                            resultHandler.handle(Future.succeededFuture(creationAttempt.result()));
+                            resultHandler.handle(Future.succeededFuture());
                         } else {
                             resultHandler.handle(Future.failedFuture(creationAttempt.cause()));
                             logger.warn("can't create downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId(), creationAttempt.cause());

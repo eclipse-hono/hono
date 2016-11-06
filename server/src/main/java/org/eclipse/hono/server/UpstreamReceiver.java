@@ -33,6 +33,7 @@ public interface UpstreamReceiver {
      * 
      * @param linkId The identifier for the link.
      * @param receiver The link for receiving data from the client.
+     * @return The created instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     static UpstreamReceiver atMostOnceReceiver(final String linkId, final ProtonReceiver receiver) {
@@ -47,6 +48,7 @@ public interface UpstreamReceiver {
      * 
      * @param linkId The identifier for the link.
      * @param receiver The link for receiving data from the client.
+     * @return The created instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     static UpstreamReceiver atLeastOnceReceiver(final String linkId, final ProtonReceiver receiver) {

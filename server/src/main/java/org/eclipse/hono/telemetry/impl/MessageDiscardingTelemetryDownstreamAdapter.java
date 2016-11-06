@@ -30,7 +30,6 @@ import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonSender;
 
 /**
  * A telemetry adapter that simply logs and discards all messages.
@@ -50,12 +49,25 @@ public final class MessageDiscardingTelemetryDownstreamAdapter implements Downst
     private Map<String, LinkStatus> statusMap = new HashMap<>();
     private Consumer<Message> messageConsumer;
 
+    /**
+     * Creates a new instance.
+     * <p>
+     * Simply invokes {@link #MessageDiscardingTelemetryDownstreamAdapter(Vertx, Consumer)}
+     * with a {@code null} consumer.
+     * 
+     * @param vertx The Vert.x instance to run on.
+     */
     public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx) {
         this(vertx, null);
     }
 
     /**
+     * Creates a new instance.
+     * <p>
+     * Simply invokes {@link #MessageDiscardingTelemetryDownstreamAdapter(Vertx, int, long, Consumer)}
+     * with a zero pause threshold and period.
      * 
+     * @param vertx The Vert.x instance to run on.
      * @param consumer a consumer that is invoked for every message received.
      */
     public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx, final Consumer<Message> consumer) {
@@ -63,9 +75,13 @@ public final class MessageDiscardingTelemetryDownstreamAdapter implements Downst
     }
 
     /**
+     * Creates a new instance.
+     * 
+     * @param vertx The Vert.x instance to run on.
      * @param pauseThreshold the number of messages after which the sender is paused. If set to 0 (zero) the sender will
      *                       never be paused.
      * @param pausePeriod the number of milliseconds after which the sender is resumed.
+     * @param consumer a consumer that is invoked for every message received.
      */
     public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx, final int pauseThreshold, final long pausePeriod, final Consumer<Message> consumer) {
         this.vertx = vertx;
@@ -85,7 +101,7 @@ public final class MessageDiscardingTelemetryDownstreamAdapter implements Downst
     }
 
     @Override
-    public void getDownstreamSender(UpstreamReceiver client, Handler<AsyncResult<ProtonSender>> resultHandler) {
+    public void onClientAttach(UpstreamReceiver client, Handler<AsyncResult<Void>> resultHandler) {
         client.replenish(DEFAULT_CREDIT);
         resultHandler.handle(Future.succeededFuture());
     }

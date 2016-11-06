@@ -93,7 +93,7 @@ public final class TelemetryEndpoint extends BaseEndpoint {
         final String linkId = UUID.randomUUID().toString();
         final UpstreamReceiver link = UpstreamReceiver.atMostOnceReceiver(linkId, receiver);
 
-        downstreamAdapter.getDownstreamSender(link, s -> {
+        downstreamAdapter.onClientAttach(link, s -> {
             if (s.succeeded()) {
                 receiver.closeHandler(clientDetached -> {
                     // client has closed link -> inform TelemetryAdapter about client detach

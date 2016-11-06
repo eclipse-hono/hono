@@ -168,7 +168,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     private ResourceIdentifier getResourceIdentifier(final Map.Entry<String, Object> resources) {
-        if (isSingleTenant()) {
+        if (honoConfig.isSingleTenant()) {
             return ResourceIdentifier.fromStringAssumingDefaultTenant(resources.getKey());
         } else {
             return ResourceIdentifier.fromString(resources.getKey());

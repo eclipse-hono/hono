@@ -11,14 +11,22 @@
  */
 package org.eclipse.hono.authorization.impl;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.*;
+import static org.eclipse.hono.authorization.AuthorizationConstants.ALLOWED;
+import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
+import static org.eclipse.hono.authorization.AuthorizationConstants.DENIED;
+import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
+import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
+import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
+
+import java.util.Objects;
 
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -36,7 +44,18 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
 {
     private static final Logger LOG = LoggerFactory.getLogger(BaseAuthorizationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;
-    private boolean singleTenant;
+    protected HonoConfigProperties honoConfig = new HonoConfigProperties();
+
+    /**
+     * Sets the global Hono configuration properties.
+     * 
+     * @param props The properties.
+     * @throws NullPointerException if props is {@code null}.
+     */
+    @Autowired(required = false)
+    public void setHonoConfiguration(final HonoConfigProperties props) {
+        this.honoConfig = Objects.requireNonNull(props);
+    }
 
     @Override
     public final void start(final Future<Void> startFuture) throws Exception {
@@ -63,27 +82,6 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
     {
         // to be overridden by subclasses
         stopFuture.complete();
-    }
-
-    /**
-     * Sets whether this instance should support a single tenant only.
-     * <p>
-     * Default is {@code false}.
-     * </p>
-     * 
-     * @param singleTenant {@code true} if this Hono server should support a single tenant only.
-     * @return This instance for setter chaining.
-     */
-    @Value(value = "${hono.singletenant:false}")
-    public void setSingleTenant(final boolean singleTenant) {
-        this.singleTenant = singleTenant;
-    }
-
-    /**
-     * @return the singleTenant
-     */
-    public boolean isSingleTenant() {
-        return singleTenant;
     }
 
     private void processMessage(final Message<JsonObject> message) {

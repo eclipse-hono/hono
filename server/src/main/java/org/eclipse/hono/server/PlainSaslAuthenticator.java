@@ -44,6 +44,8 @@ public final class PlainSaslAuthenticator implements ProtonSaslAuthenticator {
 
     /**
      * Creates a new authenticator for a Vertx environment.
+     * 
+     * @param vertx The Vert.x instance to run on.
      */
     public PlainSaslAuthenticator(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
