@@ -70,7 +70,7 @@ public class StandaloneTelemetryApiTest {
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
         server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0);
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
-        telemetryEndpoint.setDownstreamAdapter(telemetryAdapter);
+        telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         server.addEndpoint(telemetryEndpoint);
         registrationAdapter = new FileBasedRegistrationService();
 
