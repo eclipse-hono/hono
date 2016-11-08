@@ -13,7 +13,7 @@ package org.eclipse.hono.telemetry.impl;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.server.ForwardingDownstreamAdapter;
-import org.eclipse.hono.telemetry.SenderFactory;
+import org.eclipse.hono.server.SenderFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;

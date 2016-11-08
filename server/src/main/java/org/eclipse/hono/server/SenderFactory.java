@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.telemetry;
+package org.eclipse.hono.server;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;

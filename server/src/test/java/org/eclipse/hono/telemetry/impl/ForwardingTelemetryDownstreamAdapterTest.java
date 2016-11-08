@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.server.SenderFactory;
 import org.eclipse.hono.server.UpstreamReceiver;
-import org.eclipse.hono.telemetry.SenderFactory;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;

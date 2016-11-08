@@ -10,11 +10,10 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.telemetry.impl;
+package org.eclipse.hono.server;
 
 import java.util.Objects;
 
-import org.eclipse.hono.telemetry.SenderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -48,7 +47,7 @@ public class SenderFactoryImpl implements SenderFactory {
         Objects.requireNonNull(result);
 
         if (connection.isDisconnected()) {
-            result.fail("no connection to downstream container");
+            result.fail("connection is disconnected");
         } else {
             newSession(connection, remoteOpen -> {
                 if (remoteOpen.succeeded()) {
@@ -65,7 +64,7 @@ public class SenderFactoryImpl implements SenderFactory {
     }
 
     private void newSender(
-            final ProtonConnection downstreamConnection,
+            final ProtonConnection connection,
             final ProtonSession session,
             final String address,
             final ProtonQoS qos,
@@ -78,22 +77,20 @@ public class SenderFactoryImpl implements SenderFactory {
         sender.openHandler(openAttempt -> {
             if (openAttempt.succeeded()) {
                 LOG.debug(
-                        "sender [{}] for downstream container [{}] open",
+                        "sender [{}] for container [{}] open",
                         address,
-                        downstreamConnection.getRemoteContainer());
+                        connection.getRemoteContainer());
                 result.complete(openAttempt.result());
             } else {
-                LOG.debug("could not open sender for downstream container [{}]",
-                        downstreamConnection.getRemoteContainer(), openAttempt.cause());
+                LOG.debug("could not open sender [{}] for container [{}]",
+                        address,
+                        connection.getRemoteContainer(), openAttempt.cause());
                 result.fail(openAttempt.cause());
             }
         });
         sender.closeHandler(closed -> {
             if (closed.succeeded()) {
-                LOG.debug(
-                        "sender [{}] for downstream container [{}] closed",
-                        address,
-                        downstreamConnection.getRemoteContainer());
+                LOG.debug("sender [{}] for container [{}] closed", address, connection.getRemoteContainer());
             }
         });
         sender.open();

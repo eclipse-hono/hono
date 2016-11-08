@@ -20,7 +20,6 @@ import java.util.UUID;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.HonoConfigProperties;
-import org.eclipse.hono.telemetry.SenderFactory;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
