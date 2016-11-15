@@ -127,6 +127,6 @@ public class DeviceRegistrationIT {
     @Test(expected = JMSException.class)
     public void testOpenReceiverWithInvalidReplyAddress() throws Exception {
         final Destination invalid = new JmsQueue("registration/" + TEST_TENANT_ID);
-        registration.createConsumer(invalid);
+        registration.createConsumerWithoutListener(invalid);
     }
 }

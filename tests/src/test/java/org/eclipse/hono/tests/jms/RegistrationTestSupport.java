@@ -33,9 +33,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
+ * Support class for registration related tests.
  */
-public class RegistrationTestSupport {
+class RegistrationTestSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RegistrationTestSupport.class);
 
@@ -47,10 +47,11 @@ public class RegistrationTestSupport {
     private MessageConsumer consumer;
     private MessageProducer producer;
 
-    public RegistrationTestSupport(final Session session, final String tenantId) throws JMSException {
+    RegistrationTestSupport(final Session session, final String tenantId) throws JMSException {
         this(session, tenantId, true);
     }
-    public RegistrationTestSupport(final Session session, final String tenantId, final boolean initializeEndpoints) throws JMSException {
+
+    RegistrationTestSupport(final Session session, final String tenantId, final boolean initializeEndpoints) throws JMSException {
         this.session = session;
 
         destination = new JmsQueue("registration/" + tenantId);
@@ -62,16 +63,17 @@ public class RegistrationTestSupport {
         }
     }
 
-    public void createProducer() throws JMSException {
+    void createProducer() throws JMSException {
         producer = session.createProducer(destination);
     }
 
-    public void createConsumer() throws JMSException {
+    void createConsumer() throws JMSException {
         createConsumer(reply);
     }
 
-    public void createConsumer(final Destination consumerDestination) throws JMSException {
+    private void createConsumer(final Destination consumerDestination) throws JMSException {
         consumer = session.createConsumer(consumerDestination);
+
         consumer.setMessageListener(message -> {
             final String correlationID = getCorrelationID(message);
             LOGGER.debug("received message from {} with correlation ID {}", consumerDestination, correlationID);
@@ -83,43 +85,32 @@ public class RegistrationTestSupport {
         });
     }
 
-    public CompletableFuture<Long> register(final String deviceId) {
+    void createConsumerWithoutListener(final Destination consumerDestination) throws JMSException {
+        consumer = session.createConsumer(consumerDestination);
+        consumer.receiveNoWait();
+    }
+
+    private CompletableFuture<Long> register(final String deviceId) {
         return register(deviceId, (Integer) null);
     }
 
-    public CompletableFuture<Long> deregister(final String deviceId) {
-        return deregister(deviceId, (Integer) null);
-    }
-
-    public CompletableFuture<Long> retrieve(final String deviceId) {
-        return retrieve(deviceId, (Integer) null);
-    }
-
-    public CompletableFuture<Long> register(final String deviceId, final Integer expectedStatus) {
+    CompletableFuture<Long> register(final String deviceId, final Integer expectedStatus) {
         return send(deviceId, ACTION_REGISTER, expectedStatus);
     }
 
-    public CompletableFuture<Long> deregister(final String deviceId, final Integer expectedStatus) {
+    CompletableFuture<Long> deregister(final String deviceId, final Integer expectedStatus) {
         return send(deviceId, ACTION_DEREGISTER, expectedStatus);
     }
 
-    public CompletableFuture<Long> retrieve(final String deviceId, final Integer expectedStatus) {
+    CompletableFuture<Long> retrieve(final String deviceId, final Integer expectedStatus) {
         return send(deviceId, ACTION_GET, expectedStatus);
     }
 
-    public long register(final String deviceId, final Duration timeout) throws Exception {
+    long register(final String deviceId, final Duration timeout) throws Exception {
         return register(deviceId).get(timeout.toMillis(), MILLISECONDS);
     }
 
-    public long deregister(final String deviceId, final Duration timeout) throws Exception {
-        return deregister(deviceId).get(timeout.toMillis(), MILLISECONDS);
-    }
-
-    public long retrieve(final String deviceId, final Duration timeout) throws Exception{
-        return retrieve(deviceId).get(timeout.toMillis(), MILLISECONDS);
-    }
-
-    public void close() throws JMSException {
+    void close() throws JMSException {
         if (consumer != null) {
             consumer.close();
         }
@@ -139,7 +130,7 @@ public class RegistrationTestSupport {
             message.setJMSCorrelationID(correlationId);
 
             LOGGER.debug("adding response handler for request [correlation ID: {}]", correlationId);
-            CompletableFuture<Long> result = c.add(correlationId, response -> {
+            final CompletableFuture<Long> result = c.add(correlationId, response -> {
                 final String status = getStringProperty(response, APP_PROPERTY_STATUS);
                 LOGGER.debug("received response [status: {}] for request [correlation ID: {}]", status, correlationId);
                 final long httpStatus = toLong(status, 0);
@@ -168,7 +159,7 @@ public class RegistrationTestSupport {
         }
     }
 
-    public static String getStringProperty(final Message message, final String name)  {
+    private static String getStringProperty(final Message message, final String name)  {
         try {
             return message.getStringProperty(name);
         } catch (final JMSException e) {
@@ -176,7 +167,7 @@ public class RegistrationTestSupport {
         }
     }
 
-    public static String getCorrelationID(final Message message) {
+    private static String getCorrelationID(final Message message) {
         try {
             return message.getJMSCorrelationID();
         } catch (final JMSException e) {
@@ -184,7 +175,7 @@ public class RegistrationTestSupport {
         }
     }
 
-    public static String getMessageID(final Message message) {
+    private static String getMessageID(final Message message) {
         try {
             return message.getJMSMessageID();
         } catch (final JMSException e) {
@@ -192,7 +183,7 @@ public class RegistrationTestSupport {
         }
     }
 
-    public int getCorrelationHelperSize() {
+    int getCorrelationHelperSize() {
         return c.size();
     }
 }
