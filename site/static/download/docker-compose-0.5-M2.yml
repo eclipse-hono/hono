@@ -1,0 +1,69 @@
+version: '2'
+
+services:
+
+  qpid-config:
+    image: eclipsehono/qpid-default-config:0.5-M2
+
+  qpid-sasldb:
+    image: eclipsehono/qpid-sasldb:0.5-M2
+
+  hono-config:
+    image: eclipsehono/hono-default-config:0.5-M2
+
+  qdrouter:
+    image: gordons/qpid-dispatch:0.6.1
+    ports:
+      - "15672:5672"
+    expose:
+      - "5673"
+    volumes_from:
+      - qpid-config
+      - qpid-sasldb
+
+  hono:
+    image: eclipsehono/hono-server:0.5-M2
+    ports:
+      - "5672:5672"
+    links:
+      - qdrouter
+    environment:
+      - HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json
+      - HONO_MAX_INSTANCES=1
+      - LOGGING_CONFIG=file:///etc/hono/logback-spring.xml
+      - SPRING_CONFIG_LOCATION=file:/etc/hono/
+      - SPRING_PROFILES_ACTIVE=default,dev
+    volumes_from:
+      - hono-config
+
+  rest-adapter:
+    image: eclipsehono/hono-adapter-rest-vertx:0.5-M2
+    ports:
+      - "8080:8080"
+    links:
+      - hono
+    environment:
+      - HONO_CLIENT_NAME=Hono REST Adapter
+      - HONO_CLIENT_HOST=hono
+      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_USERNAME=hono-client
+      - HONO_CLIENT_PASSWORD=secret
+      - HONO_HTTP_BINDADDRESS=0.0.0.0
+      - HONO_MAX_INSTANCES=1
+      - SPRING_PROFILES_ACTIVE=dev
+
+  mqtt-adapter:
+      image: eclipsehono/hono-adapter-mqtt-vertx:0.5-M2
+      ports:
+        - "1883:1883"
+      links:
+        - hono
+      environment:
+        - HONO_CLIENT_NAME=Hono MQTT Adapter
+        - HONO_CLIENT_HOST=hono
+        - HONO_CLIENT_PORT=5672
+        - HONO_CLIENT_USERNAME=hono-client
+        - HONO_CLIENT_PASSWORD=secret
+        - HONO_MQTT_BINDADDRESS=0.0.0.0
+        - HONO_MAX_INSTANCES=1
+        - SPRING_PROFILES_ACTIVE=dev
