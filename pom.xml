@@ -100,6 +100,14 @@
         <role>Committer</role>
       </roles>
     </developer>
+    <developer>
+      <id>ppatierno</id>
+      <name>Paolo Patierno</name>
+      <email>ppatierno@live.com</email>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
   </developers>
 
   <properties>
@@ -298,10 +306,13 @@
               <skip>${snapshotDependencyAllowed}</skip>
               <rules>
                 <requireReleaseDeps>
-                  <message>No Snapshots Allowed!</message>
+                  <message>No dependencies on snapshots allowed!</message>
+                  <excludes>
+                    <exclude>io.vertx:vertx-mqtt-server</exclude>
+                  </excludes>
                 </requireReleaseDeps>
                 <requireReleaseVersion>
-                  <message>No Snapshots Allowed!</message>
+                  <message>Cannot release snapshot version!</message>
                 </requireReleaseVersion>
               </rules>
             </configuration>
