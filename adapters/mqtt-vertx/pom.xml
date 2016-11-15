@@ -35,6 +35,10 @@
       <artifactId>spring-boot-starter-logging</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
+    </dependency>
   </dependencies>
 
   <repositories>
@@ -43,6 +47,17 @@
       <url>https://oss.sonatype.org/content/repositories/snapshots</url>
     </repository>
   </repositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <!-- Copy legal documents from "legal" module to "target/classes" folder so that we make sure to include 
+          legal docs in all modules. -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
 
   <profiles>
     <profile>
