@@ -41,7 +41,7 @@ Clients can interact with Hono by means of AMQP 1.0 based message exchanges. Ple
 
 ### Get in Touch
 
-Please check out the [Hono project home page](https://projects.eclipse.org/projects/iot.hono) for details. We are also available on `#hono` [IRC channel on Freenode](https://webchat.freenode.net/) and [Hono Dev mailing list](https://dev.eclipse.org/mailman/listinfo/hono-dev).
+Please check out the [Hono project home page](https://projects.eclipse.org/projects/iot.hono) for details. We are also available on `#eclipse-hono` [IRC channel on Freenode](https://webchat.freenode.net/) and [Hono Dev mailing list](https://dev.eclipse.org/mailman/listinfo/hono-dev).
 
 ### Build status
 
