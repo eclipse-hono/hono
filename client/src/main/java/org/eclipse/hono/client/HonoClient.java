@@ -24,6 +24,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.impl.RegistrationClientImpl;
 import org.eclipse.hono.client.impl.TelemetryConsumerImpl;
 import org.eclipse.hono.client.impl.TelemetrySenderImpl;
+import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

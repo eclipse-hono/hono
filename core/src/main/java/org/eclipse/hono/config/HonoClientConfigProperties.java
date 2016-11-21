@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.config;
 
 /**
  * Common configuration properties required for accessing a Hono server.

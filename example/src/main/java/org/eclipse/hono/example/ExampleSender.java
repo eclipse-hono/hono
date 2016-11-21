@@ -23,7 +23,7 @@ import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
-import org.eclipse.hono.client.HonoClientConfigProperties;
+import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TelemetrySender;
 import org.eclipse.hono.util.RegistrationResult;
