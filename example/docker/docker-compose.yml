@@ -3,7 +3,7 @@ version: '2'
 services:
 
   qpid-config:
-    image: eclipsehono/qpid-default-config:${project.version}
+    image: eclipsehono/qpid-broker-config:${project.version}
 
   qpid-sasldb:
     image: eclipsehono/qpid-sasldb:${project.version}

@@ -29,7 +29,7 @@ import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
- * A Vertx-Proton based client for event messages to a Hono server.
+ * A Vertx-Proton based client for publishing event messages to a Hono server.
  */
 public class EventSenderImpl extends AbstractSender {
 

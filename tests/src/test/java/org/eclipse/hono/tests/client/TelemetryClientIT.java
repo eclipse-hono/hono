@@ -38,7 +38,7 @@ public class TelemetryClientIT extends ClientTestBase {
 
     @Override
     void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker) {
-        honoClient.createTelemetrySender(tenantId, setupTracker);
+        honoClient.getOrCreateTelemetrySender(tenantId, setupTracker);
     }
 
 }

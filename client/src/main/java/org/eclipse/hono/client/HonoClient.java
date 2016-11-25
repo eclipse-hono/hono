@@ -177,36 +177,43 @@ public class HonoClient {
         }
     }
 
-    public HonoClient getOrCreateTelemetrySender(
-            final String tenantId,
-            final Handler<AsyncResult<MessageSender>> resultHandler) {
-
-        final MessageSender sender = activeSenders.get(Objects.requireNonNull(tenantId));
-        if (sender != null) {
-            resultHandler.handle(Future.succeededFuture(sender));
-        } else {
-            createTelemetrySender(tenantId, resultHandler);
-        }
+    public HonoClient getOrCreateTelemetrySender( final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+        Objects.requireNonNull(tenantId);
+        getOrCreateSender( "telemetry/" + tenantId,  (creationResult) -> createTelemetrySender(tenantId, creationResult), resultHandler);
         return this;
     }
 
-    public HonoClient createTelemetrySender(
+    public HonoClient getOrCreateEventSender( final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+        Objects.requireNonNull(tenantId);
+        getOrCreateSender("event/" + tenantId, (creationResult) -> createEventSender(tenantId, creationResult), resultHandler);
+        return this;
+    }
+
+    private void getOrCreateSender(final String key, final Consumer<Handler> newSenderSupplier,
+            final Handler<AsyncResult<MessageSender>> resultHandler) {
+
+        final MessageSender sender = activeSenders.get(key);
+        if (sender != null && sender.isOpen()) {
+            resultHandler.handle(Future.succeededFuture(sender));
+        } else {
+            final Future<MessageSender> internal = Future.future();
+            internal.setHandler(result -> {
+                if (result.succeeded()) {
+                    activeSenders.put(key, result.result());
+                }
+                resultHandler.handle(result);
+            });
+            newSenderSupplier.accept(internal.completer());
+        }
+    }
+
+    private HonoClient createTelemetrySender(
             final String tenantId,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
-        Objects.requireNonNull(tenantId);
-        if (connection == null || connection.isDisconnected()) {
-            creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
-        } else {
-            TelemetrySenderImpl.create(context, connection, tenantId, creationResult -> {
-                if (creationResult.succeeded()) {
-                    activeSenders.put(tenantId, creationResult.result());
-                    creationHandler.handle(Future.succeededFuture(creationResult.result()));
-                } else {
-                    creationHandler.handle(Future.failedFuture(creationResult.cause()));
-                }
-            });
-        }
+        checkConnection().compose(
+                connected -> TelemetrySenderImpl.create(context, connection, tenantId, creationHandler),
+                Future.<MessageSender> future().setHandler(creationHandler));
         return this;
     }
 
@@ -215,12 +222,9 @@ public class HonoClient {
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
-        Objects.requireNonNull(tenantId);
-        if (connection == null || connection.isDisconnected()) {
-            creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
-        } else {
-            TelemetryConsumerImpl.create(context, connection, tenantId, pathSeparator, telemetryConsumer, creationHandler);
-        }
+        checkConnection().compose(
+                connected -> TelemetryConsumerImpl.create(context, connection, tenantId, pathSeparator, telemetryConsumer, creationHandler),
+                Future.<MessageConsumer> future().setHandler(creationHandler));
         return this;
     }
 
@@ -229,35 +233,29 @@ public class HonoClient {
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
-        Objects.requireNonNull(tenantId);
-        if (connection == null || connection.isDisconnected()) {
-            creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
-        } else {
-            EventConsumerImpl.create(context, connection, tenantId, pathSeparator, eventConsumer, creationHandler);
-        }
+        checkConnection().compose(
+                connected -> EventConsumerImpl.create(context, connection, tenantId, pathSeparator, eventConsumer, creationHandler),
+                Future.<MessageConsumer> future().setHandler(creationHandler));
         return this;
     }
 
-    public HonoClient createEventSender(
+    private HonoClient createEventSender(
             final String tenantId,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
-        Objects.requireNonNull(tenantId);
-        if (connection == null || connection.isDisconnected()) {
-            creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
-        } else {
-            EventSenderImpl.create(context, connection, tenantId, creationResult -> {
-                if (creationResult.succeeded()) {
-                    activeSenders.put(tenantId, creationResult.result());
-                    creationHandler.handle(Future.succeededFuture(creationResult.result()));
-                } else {
-                    creationHandler.handle(Future.failedFuture(creationResult.cause()));
-                }
-            });
-        }
+        checkConnection().compose(
+                connected -> EventSenderImpl.create(context, connection, tenantId, creationHandler),
+                Future.<MessageSender> future().setHandler(creationHandler));
         return this;
     }
 
+    private <T> Future<T> checkConnection() {
+        if (connection == null || connection.isDisconnected()) {
+            return Future.failedFuture("client is not connected to Hono (yet)");
+        } else {
+            return Future.succeededFuture();
+        }
+    }
 
     public HonoClient getOrCreateRegistrationClient(
             final String tenantId,

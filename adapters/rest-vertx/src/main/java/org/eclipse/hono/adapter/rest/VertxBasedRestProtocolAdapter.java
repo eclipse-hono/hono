@@ -75,6 +75,10 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private HttpServer server;
     private HonoClient hono;
+    private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier
+            = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
+    private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier
+            = (tenant, resultHandler) -> hono.getOrCreateTelemetrySender(tenant, resultHandler);
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
@@ -88,13 +92,14 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
      * 
      * @return The router.
      */
-    Router createRouter() {
-        Router router = Router.router(vertx);
+    private Router createRouter() {
+        final Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create().setBodyLimit(2048));
 
         router.route(HttpMethod.GET, "/status").handler(this::doGetStatus);
 
         addTelemetryApiRoutes(router);
+        addEventApiRoutes(router);
         addRegistrationApiRoutes(router);
         return router;
     }
@@ -138,7 +143,14 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
         // route for uploading telemetry data
         router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(this::doUploadTelemetryData);
+            .handler(ctx -> doUploadMessages(ctx, telemetrySenderSupplier));
+    }
+
+    private void addEventApiRoutes(final Router router) {
+
+        // route for sending event messages
+        router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
+            .handler(ctx -> doUploadMessages(ctx, eventSenderSupplier));
     }
 
     private void bindHttpServer(final Router router, final Future<Void> startFuture) {
@@ -415,17 +427,17 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         });
     }
 
-    private void doUploadTelemetryData(final RoutingContext ctx) {
+    private void doUploadMessages(final RoutingContext ctx, final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
+
         final String tenant = getTenantParam(ctx);
         final String contentType = ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);
 
         if (contentType == null) {
             badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
         } else {
-
-            hono.getOrCreateTelemetrySender(tenant, createAttempt -> {
+            senderSupplier.accept(tenant, createAttempt -> {
                 if (createAttempt.succeeded()) {
-                    MessageSender sender = createAttempt.result();
+                    final MessageSender sender = createAttempt.result();
 
                     // sending message only when the "flow" is handled and credits are available
                     // otherwise send will never happen due to no credits

@@ -116,10 +116,10 @@ public class ExampleSender {
             }).compose(v -> {
                 /* step 5: create sender client */
                 if (activeProfiles.contains("event")) {
-                    client.createEventSender(tenantId, startupTracker.completer());
+                    client.getOrCreateEventSender(tenantId, startupTracker.completer());
                 } else {
                     // default to telemetry sender
-                    client.createTelemetrySender(tenantId, startupTracker.completer());
+                    client.getOrCreateTelemetrySender(tenantId, startupTracker.completer());
                 }
             }, startupTracker);
         });

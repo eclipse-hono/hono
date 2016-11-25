@@ -42,7 +42,7 @@ public class EventClientIT extends ClientTestBase {
 
     @Override
     void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker) {
-        honoClient.createEventSender(tenantId, setupTracker);
+        honoClient.getOrCreateEventSender(tenantId, setupTracker);
     }
 
     @Override

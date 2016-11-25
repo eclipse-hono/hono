@@ -41,7 +41,7 @@ import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 
 /**
- * A Vertx-Proton based client for uploading telemtry data to a Hono server.
+ * A Vertx-Proton based client for publishing messages to a Hono server.
  */
 abstract class AbstractSender extends AbstractHonoClient implements MessageSender {
 
@@ -68,7 +68,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         } else {
             this.drainHandler = Objects.requireNonNull(handler);
             sender.sendQueueDrainHandler(replenishedSender -> {
-                LOG.trace("telemetry sender has been replenished with {} credits", replenishedSender.getCredit());
+                LOG.trace("sender has been replenished with {} credits", replenishedSender.getCredit());
                 final Handler<Void> currentHandler = this.drainHandler;
                 this.drainHandler = null;
                 if (currentHandler != null) {
@@ -81,6 +81,11 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     @Override
     public void close(final Handler<AsyncResult<Void>> closeHandler) {
         closeLinks(closeHandler);
+    }
+
+    @Override
+    public boolean isOpen() {
+        return sender.isOpen();
     }
 
     @Override

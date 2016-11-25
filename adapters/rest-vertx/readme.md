@@ -179,3 +179,21 @@ Upload a JSON string for device `4711`:
 
     $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
     $ http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+
+## Event API
+
+### Send Event Message
+
+* URI: `/event/${tenantId}/${deviceId}`
+* Method: `PUT`
+* Headers:
+  * (required) `Content-Type` - the type of payload contained in the body.
+* Body:
+  * (required) Arbitrary payload encoded according to the given content type.
+
+**Example**
+
+Upload a JSON string for device `4711`:
+
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
+    $ http://127.0.0.1:8080/event/DEFAULT_TENANT/4711

@@ -29,7 +29,7 @@ import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
 
 /**
- * A Vertx-Proton based client for consuming telemetry data from a Hono server.
+ * A Vertx-Proton based client for consuming event messages from a Hono server.
  */
 public class EventConsumerImpl extends AbstractHonoClient implements MessageConsumer {
 

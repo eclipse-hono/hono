@@ -108,7 +108,7 @@ public class StandaloneTelemetryApiTest {
 
         registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1, null);
 
-        client.createTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(r -> {
+        client.getOrCreateTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(r -> {
             telemetrySender = r;
         }));
     }
