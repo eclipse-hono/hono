@@ -12,33 +12,16 @@
 
 package org.eclipse.hono.adapter.rest;
 
-import org.eclipse.hono.client.HonoClientConfigProperties;
+import org.eclipse.hono.adapter.AdapterConfig;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import io.vertx.core.Vertx;
-
 /**
- * @author hak8fe
- *
+ * Configuration class
  */
 @Configuration
-public class Config {
-
-    private final Vertx vertx = Vertx.vertx();
-
-    @Bean
-    public Vertx getVertx() {
-        return vertx;
-    }
-
-    @ConfigurationProperties(prefix = "hono.client")
-    @Bean
-    public HonoClientConfigProperties honoClientConfig() {
-        return new HonoClientConfigProperties();
-    }
+public class Config extends AdapterConfig {
 
     @Bean
     public ServiceLocatorFactoryBean serviceLocator() {

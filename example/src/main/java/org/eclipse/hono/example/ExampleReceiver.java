@@ -23,7 +23,7 @@ import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
-import org.eclipse.hono.client.HonoClientConfigProperties;
+import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.client.TelemetryConsumer;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;

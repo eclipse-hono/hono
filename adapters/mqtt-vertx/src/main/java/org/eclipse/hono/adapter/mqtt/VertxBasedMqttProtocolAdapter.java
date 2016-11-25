@@ -24,7 +24,7 @@ import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 import io.vertx.proton.ProtonClientOptions;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.HonoClientConfigProperties;
+import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.client.TelemetrySender;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
