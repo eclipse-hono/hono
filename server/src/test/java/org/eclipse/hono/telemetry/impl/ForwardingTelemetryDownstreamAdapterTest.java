@@ -11,6 +11,11 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
+import static org.eclipse.hono.TestSupport.CLIENT_ID;
+import static org.eclipse.hono.TestSupport.DEFAULT_CREDITS;
+import static org.eclipse.hono.TestSupport.newClient;
+import static org.eclipse.hono.TestSupport.newMockSender;
+import static org.eclipse.hono.TestSupport.newMockSenderFactory;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -20,7 +25,6 @@ import static org.mockito.Mockito.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.server.SenderFactory;
 import org.eclipse.hono.server.UpstreamReceiver;
@@ -28,7 +32,6 @@ import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -44,9 +47,7 @@ import io.vertx.proton.ProtonSender;
 public class ForwardingTelemetryDownstreamAdapterTest {
 
     private static final String TELEMETRY_MSG_CONTENT = "hello";
-    private static final String CLIENT_ID = "protocol_adapter";
     private static final String DEVICE_ID = "myDevice";
-    private static final int    DEFAULT_CREDITS = 20;
 
     @Test
     public void testProcessTelemetryDataForwardsMessageToDownstreamSender() throws InterruptedException {
@@ -142,40 +143,5 @@ public class ForwardingTelemetryDownstreamAdapterTest {
         adapter.onClientAttach(client, s -> {
             assertFalse(s.succeeded());
         });
-    }
-
-    @SuppressWarnings("unchecked")
-    private ProtonSender newMockSender(final boolean drainFlag) {
-        @SuppressWarnings("rawtypes")
-        ArgumentCaptor<Handler> drainHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        Record attachments = mock(Record.class);
-        ProtonSender sender = mock(ProtonSender.class);
-        when(sender.attachments()).thenReturn(attachments);
-        when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(sender.getCredit()).thenReturn(DEFAULT_CREDITS);
-        when(sender.getQueued()).thenReturn(0);
-        when(sender.getDrain()).thenReturn(drainFlag);
-        when(sender.open()).then(invocation -> {
-            drainHandlerCaptor.getValue().handle(sender);
-            return sender;
-        });
-        when(sender.sendQueueDrainHandler(drainHandlerCaptor.capture())).then(invocation -> {
-            return sender;
-        });
-        return sender;
-    }
-
-    private SenderFactory newMockSenderFactory(final ProtonSender senderToCreate) {
-        return (connection, address, qos, sendQueueDrainHandler, resultHandler) -> {
-            senderToCreate.sendQueueDrainHandler(sendQueueDrainHandler);
-            senderToCreate.open();
-            resultHandler.complete(senderToCreate);
-        };
-    }
-
-    private UpstreamReceiver newClient() {
-        UpstreamReceiver client = mock(UpstreamReceiver.class);
-        when(client.getLinkId()).thenReturn(CLIENT_ID);
-        return client;
     }
 }

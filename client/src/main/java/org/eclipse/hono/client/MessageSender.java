@@ -8,25 +8,28 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *
  */
 
 package org.eclipse.hono.client;
 
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.proton.ProtonDelivery;
 
 /**
- * A client for uploading telemetry data to a Hono server.
+ * A client for publishing messages to a Hono server.
  *
  */
-public interface TelemetrySender {
+public interface MessageSender {
 
     /**
-     * Checks if this sender can send or buffer (and send later) a telemetry message.
+     * Checks if this sender can send or buffer (and send later) a message.
      * 
      * @return {@code false} if a message can be sent or buffered.
      */
@@ -34,7 +37,7 @@ public interface TelemetrySender {
 
     /**
      * Sets a handler to be notified once this sender has capacity available to send or
-     * buffer a telemetry message.
+     * buffer a message.
      * <p>
      * The handler registered using this method will be invoked <em>exactly once</em> when
      * this sender is replenished with more credit from the server. For subsequent notifications
@@ -43,7 +46,7 @@ public interface TelemetrySender {
      * Client code should register a handler after it has checked this sender's capacity to send
      * messages using the <em>sendQueueFull</em> method, e.g.
      * <pre>
-     * TelemetrySender sender;
+     * MessageSender sender;
      * ...
      * sender.send(msg);
      * if (sender.sendQueueFull()) {
@@ -58,7 +61,7 @@ public interface TelemetrySender {
     void sendQueueDrainHandler(Handler<Void> handler);
 
     /**
-     * Sends an AMQP 1.0 message to the telemetry endpoint configured for this client.
+     * Sends an AMQP 1.0 message to the endpoint configured for this client.
      * <p>
      * The message will be sent immediately if this client has enough credit available on its
      * link to the Hono server or it will be sent later after this client has been replenished
@@ -73,7 +76,7 @@ public interface TelemetrySender {
     void send(Message message, Handler<Void> capacityAvailableHandler);
 
     /**
-     * Sends an AMQP 1.0 message to the telemetry endpoint configured for this client.
+     * Sends an AMQP 1.0 message to the endpoint configured for this client.
      * 
      * @param message The message to send.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
@@ -83,7 +86,7 @@ public interface TelemetrySender {
     boolean send(Message message);
 
     /**
-     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * Sends a message for a given device to the endpoint configured for this client.
      * 
      * @param deviceId The id of the device.
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
@@ -102,7 +105,7 @@ public interface TelemetrySender {
     boolean send(String deviceId, String payload, String contentType);
 
     /**
-     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * Sends a message for a given device to the endpoint configured for this client.
      * <p>
      * The message will be sent immediately if this client has enough credit available on its
      * link to the Hono server or it will be sent later after this client has been replenished
@@ -126,7 +129,7 @@ public interface TelemetrySender {
     void send(String deviceId, String payload, String contentType, Handler<Void> capacityAvailableHandler);
 
     /**
-     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * Sends a message for a given device to the endpoint configured for this client.
      * 
      * @param deviceId The id of the device.
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
@@ -141,7 +144,7 @@ public interface TelemetrySender {
     boolean send(String deviceId, byte[] payload, String contentType);
 
     /**
-     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * Sends a message for a given device to the endpoint configured for this client.
      * <p>
      * The message will be sent immediately if this client has enough credit available on its
      * link to the Hono server or it will be sent later after this client has been replenished
@@ -161,7 +164,7 @@ public interface TelemetrySender {
     void send(String deviceId, byte[] payload, String contentType, Handler<Void> capacityAvailableHandler);
 
     /**
-     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * Sends a message for a given device to the endpoint configured for this client.
      *
      * @param deviceId The id of the device.
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
@@ -182,7 +185,7 @@ public interface TelemetrySender {
     boolean send(String deviceId, Map<String, ?> properties, String payload, String contentType);
 
     /**
-     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * Sends a message for a given device to the endpoint configured for this client.
      *
      * @param deviceId The id of the device.
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
@@ -199,7 +202,7 @@ public interface TelemetrySender {
     boolean send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType);
 
     /**
-     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * Sends a message for a given device to the endpoint configured for this client.
      * <p>
      * The message will be sent immediately if this client has enough credit available on its
      * link to the Hono server or it will be sent later after this client has been replenished
@@ -225,7 +228,7 @@ public interface TelemetrySender {
     void send(String deviceId, Map<String, ?> properties, String payload, String contentType, Handler<Void> capacityAvailableHandler);
 
     /**
-     * Uploads telemetry data for a given device to the telemetry endpoint configured for this client.
+     * Sends a message for a given device to the endpoint configured for this client.
      * <p>
      * The message will be sent immediately if this client has enough credit available on its
      * link to the Hono server or it will be sent later after this client has been replenished
@@ -250,11 +253,11 @@ public interface TelemetrySender {
      * Sets a callback for handling the closing of this sender due to an error condition indicated by
      * the server.
      * <p>
-     * When this handler is called back, this client's link to the Hono server's telemetry endpoint has been
+     * When this handler is called back, this client's link to the Hono server's endpoint has been
      * closed due to an error condition. Possible reasons include:
      * <ul>
-     * <li>A sent message does not comply with the Hono Telemetry API.</li>
-     * <li>This client is not authorized to upload data for the tenant it has been configured for.</li>
+     * <li>A sent message does not comply with the Hono API.</li>
+     * <li>This client is not authorized to publish messages for the tenant it has been configured for.</li>
      * </ul>
      * The former problem usually indicates an implementation error in the client whereas the
      * latter problem indicates that the client's authorizations might have changed on the server
@@ -266,6 +269,13 @@ public interface TelemetrySender {
     void setErrorHandler(Handler<AsyncResult<Void>> errorHandler);
 
     /**
+     * Sets a callback for disposition updates for messages sent with this {@link MessageSender}.
+     *
+     * @param dispositionHandler consumer that accepts a message id and updated disposition
+     */
+    void setDispositionHandler(BiConsumer<String, ProtonDelivery> dispositionHandler);
+
+    /**
      * Closes the AMQP link with the Hono server this sender is using.
      * <p>
      * The underlying AMQP connection to the server is not affected by this operation.
@@ -273,4 +283,9 @@ public interface TelemetrySender {
      * @param closeHandler A handler that is called back with the outcome of the attempt to close the link.
      */
     void close(Handler<AsyncResult<Void>> closeHandler);
+
+    /**
+     * @return true if the sender is open, false otherwise
+     */
+    boolean isOpen();
 }

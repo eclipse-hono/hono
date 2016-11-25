@@ -16,10 +16,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
 /**
- * A client for consuming telemetry data from a Hono server.
+ * A client for consuming messages from a Hono server.
  *
  */
-public interface TelemetryConsumer {
+public interface MessageConsumer {
 
     /**
      * Closes the AMQP link with the Hono server this client is configured to use.

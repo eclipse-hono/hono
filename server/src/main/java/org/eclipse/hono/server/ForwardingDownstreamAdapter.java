@@ -184,7 +184,9 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                                     downstreamConnection.getRemoteContainer(), openCon.cause());
                             connectFuture.fail(openCon.cause());
                         }
-                    }).open();
+                    })
+                    .closeHandler(closedCon -> logger.debug("Connection to [{}:{}] closed: {}", downstreamContainerHost, downstreamContainerPort))
+                    .open();
             }
         });
     }

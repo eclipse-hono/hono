@@ -2,6 +2,9 @@
   "telemetry/DEFAULT_TENANT": {
     "hono-client": [ "WRITE" ]
   },
+  "event/DEFAULT_TENANT": {
+    "hono-client": [ "WRITE" ]
+  },
   "telemetry/DEFAULT_TENANT/fluxcapacitor": {
     "connector-client": [ "WRITE" ]
   },

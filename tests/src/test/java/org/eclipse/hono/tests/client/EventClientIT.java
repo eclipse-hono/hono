@@ -18,27 +18,39 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.util.MessageHelper;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
- * A simple test that uses the {@code TelemetryClient} to send some messages to
- * Hono server and verifies they are forwarded to the downstream host.
+ * A simple test that uses the {@code HonoClient} to send some event messages to Hono server and verifies they are forwarded to the downstream host
+ * via the configured Artemis broker.
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryClientIT extends ClientTestBase {
+public class EventClientIT extends ClientTestBase {
+
+    private static final String CHECK_ARTEMIS_HEADER_PROPERTY = "CHECK_ARTEMIS_HEADER";
 
     @Override
     void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker) {
-        downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, setupTracker);
+        downstreamClient.createEventConsumer(tenantId, messageConsumer, setupTracker);
     }
 
     @Override
     void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker) {
-        honoClient.getOrCreateTelemetrySender(tenantId, setupTracker);
+        honoClient.getOrCreateEventSender(tenantId, setupTracker);
     }
 
+    @Override
+    protected void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
+        super.assertMessagePropertiesArePresent(ctx, msg);
+        if (Boolean.getBoolean(CHECK_ARTEMIS_HEADER_PROPERTY)) {
+            // assert that the message was routed via Artemis by checking for the _AMQ_VALIDATED_USER field which is populated by Artemis
+            ctx.assertNotNull(MessageHelper.getApplicationProperty(msg.getApplicationProperties(), "_AMQ_VALIDATED_USER", String.class));
+        }
+    }
 }

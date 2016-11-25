@@ -7,9 +7,14 @@ spring:
 spring:
   profiles: default
 hono:
+  pathSeparator: .
   server:
     bindaddress: 0.0.0.0
   telemetry:
+    downstream:
+      host: qdrouter
+      port: 5673
+  event:
     downstream:
       host: qdrouter
       port: 5673
