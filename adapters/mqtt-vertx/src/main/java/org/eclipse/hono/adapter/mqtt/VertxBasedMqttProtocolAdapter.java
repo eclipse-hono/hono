@@ -143,7 +143,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
         LOG.info("Connection request from client {}", endpoint.clientIdentifier());
 
         if (!this.isConnected()) {
-            endpoint.writeConnack(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false);
+            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
 
         } else {
 
@@ -194,7 +194,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
             });
 
-            endpoint.writeConnack(MqttConnectReturnCode.CONNECTION_ACCEPTED, false);
+            endpoint.accept(false);
         }
     }
 
@@ -202,7 +202,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
         boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM);
         if (accepted && message.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-            endpoint.writePuback(message.messageId());
+            endpoint.publishAcknowledge(message.messageId());
         }
     }
 
