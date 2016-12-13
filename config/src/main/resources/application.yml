@@ -7,7 +7,6 @@ spring:
 spring:
   profiles: default
 hono:
-  pathSeparator: .
   server:
     bindaddress: 0.0.0.0
   telemetry:

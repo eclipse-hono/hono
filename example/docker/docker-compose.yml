@@ -3,7 +3,7 @@ version: '2'
 services:
 
   qpid-config:
-    image: eclipsehono/qpid-broker-config:${project.version}
+    image: eclipsehono/qpid-default-config:${project.version}
 
   qpid-sasldb:
     image: eclipsehono/qpid-sasldb:${project.version}
@@ -11,28 +11,31 @@ services:
   hono-config:
     image: eclipsehono/hono-default-config:${project.version}
 
-  artemis-config:
-    image: eclipsehono/artemis-default-config:${project.version}
-
-  # Apache Artemis Broker
-  broker:
-    image: vromero/activemq-artemis:${artemis.version}
-  #  environment:
-  #    - ARTEMIS_USERNAME=artemis
-  #    - ARTEMIS_PASSWORD=artemis
-  #  volumes:
-  #    - /path/to/artemis/etc:/var/lib/artemis/etc
-  #    - /path/to/artemis/data:/var/lib/artemis/data
-  #    - /path/to/artemis/tmp:/var/lib/artemis/tmp
-    volumes_from:
-      - artemis-config
+# Artemis configuration is disabled until Artemis supports
+# addresses containing "/" character as path separator
+#
+#  artemis-config:
+#    image: eclipsehono/artemis-default-config:${project.version}
+#
+#  # Apache Artemis Broker
+#  broker:
+#    image: vromero/activemq-artemis:${artemis.version}
+#  #  environment:
+#  #    - ARTEMIS_USERNAME=artemis
+#  #    - ARTEMIS_PASSWORD=artemis
+#  #  volumes:
+#  #    - /path/to/artemis/etc:/var/lib/artemis/etc
+#  #    - /path/to/artemis/data:/var/lib/artemis/data
+#  #    - /path/to/artemis/tmp:/var/lib/artemis/tmp
+#    volumes_from:
+#      - artemis-config
 
   qdrouter:
     image: gordons/qpid-dispatch:${qpid-dispatch.version}
     ports:
       - "15672:5672"
-    links:
-      - broker
+#    links:
+#      - broker
     volumes_from:
       - qpid-config
       - qpid-sasldb
@@ -71,17 +74,17 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
 
   mqtt-adapter:
-      image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
-      ports:
-        - "1883:1883"
-      links:
-        - hono
-      environment:
-        - HONO_CLIENT_NAME=Hono MQTT Adapter
-        - HONO_CLIENT_HOST=hono
-        - HONO_CLIENT_PORT=5672
-        - HONO_CLIENT_USERNAME=hono-client
-        - HONO_CLIENT_PASSWORD=secret
-        - HONO_MQTT_BINDADDRESS=0.0.0.0
-        - HONO_MAX_INSTANCES=1
-        - SPRING_PROFILES_ACTIVE=dev
+    image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
+    ports:
+      - "1883:1883"
+    links:
+      - hono
+    environment:
+      - HONO_CLIENT_NAME=Hono MQTT Adapter
+      - HONO_CLIENT_HOST=hono
+      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_USERNAME=hono-client
+      - HONO_CLIENT_PASSWORD=secret
+      - HONO_MQTT_BINDADDRESS=0.0.0.0
+      - HONO_MAX_INSTANCES=1
+      - SPRING_PROFILES_ACTIVE=dev
