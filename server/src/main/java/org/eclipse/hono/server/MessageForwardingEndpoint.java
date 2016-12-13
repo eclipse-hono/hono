@@ -20,11 +20,13 @@ import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -37,6 +39,7 @@ import io.vertx.proton.ProtonReceiver;
 public abstract class MessageForwardingEndpoint extends BaseEndpoint {
 
     private DownstreamAdapter             downstreamAdapter;
+    private MessageConsumer<String>       clientDisconnectListener;
 
     protected MessageForwardingEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
@@ -47,6 +50,9 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
         if (downstreamAdapter == null) {
             startFuture.fail("no downstream adapter configured on Telemetry endpoint");
         } else {
+            clientDisconnectListener = vertx.eventBus().consumer(
+                    Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
+                    msg -> onClientDisconnect(msg));
             downstreamAdapter.start(startFuture);
         }
     }
@@ -56,6 +62,7 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
         if (downstreamAdapter == null) {
             stopFuture.complete();
         } else {
+            clientDisconnectListener.unregister();
             downstreamAdapter.stop(stopFuture);
         }
     }
@@ -70,6 +77,10 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
      */
     protected final void setDownstreamAdapter(final DownstreamAdapter adapter) {
         this.downstreamAdapter = Objects.requireNonNull(adapter);
+    }
+
+    private void onClientDisconnect(final io.vertx.core.eventbus.Message<String> conId) {
+        this.downstreamAdapter.onClientDisconnect(conId.body());
     }
 
     @Override

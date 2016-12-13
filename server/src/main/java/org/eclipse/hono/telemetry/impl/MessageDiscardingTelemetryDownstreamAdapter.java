@@ -120,7 +120,7 @@ public final class MessageDiscardingTelemetryDownstreamAdapter implements Downst
     }
 
     @Override
-    public void onClientDisconnect(final ProtonConnection con) {
+    public void onClientDisconnect(final String connectionId) {
     }
 
     @Override

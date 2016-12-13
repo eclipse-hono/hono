@@ -312,8 +312,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     @Override
-    public final void onClientDisconnect(final ProtonConnection con) {
-        String connectionId = con.attachments().get(Constants.KEY_CONNECTION_ID, String.class);
+    public final void onClientDisconnect(final String connectionId) {
         List<String> senders = sendersPerConnection.remove(Objects.requireNonNull(connectionId));
         if (senders != null && !senders.isEmpty()) {
             logger.info("closing {} downstream senders for connection [id: {}]", senders.size(), connectionId);

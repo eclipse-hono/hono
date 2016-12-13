@@ -13,8 +13,7 @@ package org.eclipse.hono.server;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.net.InetAddress;
 import java.security.Principal;
@@ -23,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.engine.Record;
+import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
@@ -30,8 +30,10 @@ import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
@@ -45,6 +47,7 @@ import io.vertx.proton.ProtonReceiver;
 public class HonoServerTest {
 
     private static final String BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
+    private static final String CON_ID = "connection-id";
 
     private static HonoServer createServer(final Endpoint telemetryEndpoint) {
         HonoServer result = new HonoServer();
@@ -126,6 +129,30 @@ public class HonoServerTest {
         assertTrue(linkClosed.await(1, TimeUnit.SECONDS));
     }
 
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public void testServerPublishesConnectionIdOnClientDisconnect() {
+
+        // GIVEN a Hono server
+        final EventBus eventBus = mock(EventBus.class);
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
+        HonoServer server = createServer(null);
+        server.init(vertx, mock(Context.class));
+
+        // WHEN a client connects to the server
+        ArgumentCaptor<Handler> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ProtonConnection con = newAuthenticatedConnection(Constants.DEFAULT_SUBJECT);
+        when(con.disconnectHandler(closeHandlerCaptor.capture())).thenReturn(con);
+
+        server.handleRemoteConnectionOpen(con);
+
+        // THEN a handler is registered with the connection that publishes
+        // an event on the event bus when the client disconnects
+        closeHandlerCaptor.getValue().handle(con);
+        verify(eventBus).publish(Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED, CON_ID);
+    }
+
     private static Target getTarget(final String targetAddress) {
         Target result = mock(Target.class);
         when(result.getAddress()).thenReturn(targetAddress);
@@ -133,8 +160,9 @@ public class HonoServerTest {
     }
 
     private static ProtonConnection newAuthenticatedConnection(final String name) {
-        final Record attachments = mock(Record.class);
-        when(attachments.get(Constants.KEY_CLIENT_PRINCIPAL, Principal.class)).thenReturn(new Principal() {
+        final Record attachments = new RecordImpl();
+        attachments.set(Constants.KEY_CONNECTION_ID, String.class, CON_ID);
+        attachments.set(Constants.KEY_CLIENT_PRINCIPAL, Principal.class, new Principal() {
 
             @Override
             public String getName() {
@@ -143,6 +171,7 @@ public class HonoServerTest {
         });
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.attachments()).thenReturn(attachments);
+        when(con.getRemoteContainer()).thenReturn("test-client");
         return con;
     }
 }
