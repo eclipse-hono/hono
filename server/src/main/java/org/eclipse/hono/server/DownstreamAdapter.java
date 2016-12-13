@@ -61,6 +61,8 @@ public interface DownstreamAdapter {
      * 
      * @param client The client connecting to the Hono server.
      * @param resultHandler The handler to notify about the outcome of allocating the required resources.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalStateException if this adapter is not running.
      */
     void onClientAttach(UpstreamReceiver client, Handler<AsyncResult<Void>> resultHandler);
 
@@ -71,6 +73,8 @@ public interface DownstreamAdapter {
      * {@link #onClientAttach(UpstreamReceiver, Handler)} method.
      * 
      * @param client The client closing the link.
+     * @throws NullPointerException if client is {@code null}.
+     * @throws IllegalStateException if this adapter is not running.
      */
     void onClientDetach(UpstreamReceiver client);
 
@@ -96,6 +100,8 @@ public interface DownstreamAdapter {
      * @param client The client the message originates from.
      * @param delivery The message's disposition handler.
      * @param message The message to process.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalStateException if this adapter is not running.
      */
     void processMessage(UpstreamReceiver client, ProtonDelivery delivery, Message message);
 }

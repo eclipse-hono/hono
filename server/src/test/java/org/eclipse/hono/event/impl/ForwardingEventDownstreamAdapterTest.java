@@ -14,9 +14,7 @@
 package org.eclipse.hono.event.impl;
 
 import static org.eclipse.hono.TestSupport.CLIENT_ID;
-import static org.eclipse.hono.TestSupport.newClient;
-import static org.eclipse.hono.TestSupport.newMockSender;
-import static org.eclipse.hono.TestSupport.newMockSenderFactory;
+import static org.eclipse.hono.TestSupport.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -32,6 +30,7 @@ import org.eclipse.hono.server.UpstreamReceiver;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Test;
 
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
@@ -66,9 +65,11 @@ public class ForwardingEventDownstreamAdapterTest {
             return null;
         });
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
+        adapter.start(Future.future());
         adapter.addSender("CON_ID", CLIENT_ID, sender);
 
-        // WHEN processing a telemetry message
+        // WHEN processing an event
         Message msg = ProtonHelper.message(EVENT_MSG_CONTENT);
         MessageHelper.addDeviceId(msg, DEVICE_ID);
         adapter.processMessage(client, delivery, msg);

@@ -315,8 +315,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <env>
                                  <HONO_MAX_INSTANCES>2</HONO_MAX_INSTANCES>
                                  <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
-                                 <!-- HONO_TELEMETRY_DOWNSTREAM_HOST>activemq</HONO_TELEMETRY_DOWNSTREAM_HOST>
-                                 <HONO_PATH_SEPARATOR>.</HONO_PATH_SEPARATOR-->
                                  <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
                                  <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                                  <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>

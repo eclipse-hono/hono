@@ -12,8 +12,12 @@
 
 package org.eclipse.hono.application;
 
+import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.server.HonoServerFactory;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -47,5 +51,18 @@ public class ApplicationConfig {
         ServiceLocatorFactoryBean bean = new ServiceLocatorFactoryBean();
         bean.setServiceLocatorInterface(HonoServerFactory.class);
         return bean;
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "hono.downstream")
+    public HonoClientConfigProperties downstreamConnectionProperties() {
+        return new HonoClientConfigProperties();
+    }
+
+    @Bean
+    public ConnectionFactory downstreamConnectionFactory() {
+        ConnectionFactoryImpl factory = new ConnectionFactoryImpl();
+        factory.setHostname("hono-internal");
+        return factory;
     }
 }

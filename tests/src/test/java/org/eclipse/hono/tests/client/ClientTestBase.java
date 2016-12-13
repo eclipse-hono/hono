@@ -15,14 +15,9 @@ package org.eclipse.hono.tests.client;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_CREATED;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
+import static org.eclipse.hono.tests.IntegrationTestSupport.*;
 
 import java.net.InetAddress;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -35,7 +30,6 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;

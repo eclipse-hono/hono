@@ -6,29 +6,22 @@ hono:
 spring:
   profiles: qpid
 hono:
-  telemetry:
-    downstream:
-      host: qdrouter
-      port: 5673
+  downstream:
+    host: qdrouter
+    port: 5673
 ---
 spring:
   profiles: activemq
 hono:
   pathSeparator: .
-  telemetry:
-    downstream:
-      host: activemq
-      port: 5672
+  downstream:
+    host: activemq
+    port: 5672
 ---
 spring:
   profiles: artemis
 hono:
   pathSeparator: .
-  telemetry:
-    downstream:
-      host: qdrouter
-      port: 5673
-  event:
-    downstream:
-      host: qdrouter
-      port: 5673
+  downstream:
+    host: qdrouter
+    port: 5673
