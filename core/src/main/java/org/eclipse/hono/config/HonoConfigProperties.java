@@ -106,7 +106,8 @@ public class HonoConfigProperties {
      * <p>
      * The default value of this property is 0.
      * 
-     * @return the number of verticles to deploy.
+     * @param maxVerticleInstances The number of verticles to deploy.
+     * @return This instance for setter chaining.
      * @throws IllegalArgumentException if the number is &lt; 0.
      */
     public HonoConfigProperties setMaxInstances(final int maxVerticleInstances) {
