@@ -52,7 +52,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     protected final String                     tenantId;
 
     private Handler<Void>                      drainHandler;
-    private BiConsumer<String, ProtonDelivery> dispositionHandler = (messageId, delivery) -> LOG.trace("disposition updated [message ID: {}, remote delivery state: {}]", messageId, delivery.getRemoteState());
+    private BiConsumer<Object, ProtonDelivery> dispositionHandler = (messageId, delivery) -> LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
 
     AbstractSender(final String tenantId, final Context context) {
         super(context);
@@ -106,7 +106,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public void setDispositionHandler(final BiConsumer<String, ProtonDelivery> dispositionHandler) {
+    public void setDispositionHandler(final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         this.dispositionHandler = dispositionHandler;
     }
 
@@ -147,13 +147,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     private void sendMessage(final Message rawMessage) {
-        sender.send(rawMessage, deliveryUpdated -> {
-            if (rawMessage.getMessageId() != null) {
-                dispositionHandler.accept(rawMessage.getMessageId().toString(), deliveryUpdated);
-            } else {
-                dispositionHandler.accept("n/a", deliveryUpdated);
-            }
-        });
+        sender.send(rawMessage, deliveryUpdated -> dispositionHandler.accept(rawMessage.getMessageId(), deliveryUpdated));
     }
 
     @Override
