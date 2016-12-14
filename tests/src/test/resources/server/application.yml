@@ -9,6 +9,7 @@ hono:
   downstream:
     host: qdrouter
     port: 5673
+    name: hono-server
 ---
 spring:
   profiles: activemq
@@ -17,6 +18,7 @@ hono:
   downstream:
     host: activemq
     port: 5672
+    name: hono-server
 ---
 spring:
   profiles: artemis
@@ -25,3 +27,4 @@ hono:
   downstream:
     host: qdrouter
     port: 5673
+    name: hono-server

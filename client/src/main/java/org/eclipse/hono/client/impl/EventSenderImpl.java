@@ -33,27 +33,50 @@ import io.vertx.proton.ProtonSender;
  */
 public class EventSenderImpl extends AbstractSender {
 
-    private static final String EVENT_ADDRESS_TEMPLATE = "event/%s";
+    private static final String EVENT_ENDPOINT_NAME = "event/";
     private static final Logger LOG = LoggerFactory.getLogger(EventSenderImpl.class);
 
-    private EventSenderImpl(final Context context, final ProtonSender sender) {
-        super(context);
+    private EventSenderImpl(final String tenantId, final Context context, final ProtonSender sender) {
+        super(tenantId, context);
         this.sender = sender;
+    }
+
+    /**
+     * Gets the AMQP <em>target</em> address to use for sending messages to Hono's event endpoint.
+     * 
+     * @param tenantId The tenant to send events for.
+     * @param deviceId The device to send events for. If {@code null}, the target address can be used
+     *                 to send events for arbitrary devices belonging to the tenant.
+     * @return The target address.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public static String getTargetAddress(final String tenantId, final String deviceId) {
+        StringBuilder address = new StringBuilder(EVENT_ENDPOINT_NAME).append(tenantId);
+        if (deviceId != null && deviceId.length() > 0) {
+            address.append("/").append(deviceId);
+        }
+        return address.toString();
+    }
+
+    @Override
+    protected String getTo(final String deviceId) {
+        return getTargetAddress(tenantId, deviceId);
     }
 
     public static void create(
             final Context context,
             final ProtonConnection con,
             final String tenantId,
+            final String deviceId,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
-        createSender(con, tenantId).setHandler(created -> {
+        createSender(con, tenantId, deviceId).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new EventSenderImpl(context, created.result())));
+                        new EventSenderImpl(tenantId, context, created.result())));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }
@@ -62,10 +85,11 @@ public class EventSenderImpl extends AbstractSender {
 
     private static Future<ProtonSender> createSender(
             final ProtonConnection con,
-            final String tenantId) {
+            final String tenantId,
+            final String deviceId) {
 
         final Future<ProtonSender> result = Future.future();
-        final String targetAddress = String.format(EVENT_ADDRESS_TEMPLATE, tenantId);
+        final String targetAddress = getTargetAddress(tenantId, deviceId);
 
         final ProtonSender sender = con.createSender(targetAddress);
         sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
@@ -89,8 +113,7 @@ public class EventSenderImpl extends AbstractSender {
     }
 
     @Override
-    protected void addProperties(final Message msg, final String deviceId, final String contentType) {
-        super.addProperties(msg, deviceId, contentType);
+    protected void addEndpointSpecificProperties(final Message msg, final String deviceId) {
         msg.setDurable(true);
     }
 }

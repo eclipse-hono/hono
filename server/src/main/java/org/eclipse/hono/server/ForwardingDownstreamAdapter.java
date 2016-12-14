@@ -21,6 +21,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -265,9 +266,15 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         if (downstreamConnection == null || downstreamConnection.isDisconnected()) {
             result.fail("downstream connection must be opened before creating sender");
         } else {
-            String address = targetAddress.replace(Constants.DEFAULT_PATH_SEPARATOR, honoConfig.getPathSeparator());
+            String tenantOnlyTargetAddress = getTenantOnlyTargetAddress(targetAddress);
+            String address = tenantOnlyTargetAddress.replace(Constants.DEFAULT_PATH_SEPARATOR, honoConfig.getPathSeparator());
             senderFactory.createSender(downstreamConnection, address, getDownstreamQos(), sendQueueDrainHandler, result);
         }
+    }
+
+    private static String getTenantOnlyTargetAddress(final String address) {
+        ResourceIdentifier targetAddress = ResourceIdentifier.fromString(address);
+        return String.format("%s/%s", targetAddress.getEndpoint(), targetAddress.getTenantId());
     }
 
     public final void addSender(final String connectionId, final String linkId, final ProtonSender sender) {

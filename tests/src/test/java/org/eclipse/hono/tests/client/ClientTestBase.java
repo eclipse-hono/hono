@@ -46,6 +46,7 @@ import io.vertx.proton.ProtonClientOptions;
 
 abstract class ClientTestBase {
 
+    protected static final String DEVICE_ID = "device-0";
     protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     // connection parameters
@@ -58,13 +59,12 @@ abstract class ClientTestBase {
     // test constants
     private static final int MSG_COUNT = 50;
     private static final String TEST_TENANT_ID = "DEFAULT_TENANT";
-    private static final String DEVICE_ID = "device-0";
     private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
 
     private static Vertx vertx = Vertx.vertx();
 
-    HonoClient honoClient;
-    HonoClient downstreamClient;
+    protected HonoClient honoClient;
+    protected HonoClient downstreamClient;
     RegistrationClient registrationClient;
     MessageSender sender;
     MessageConsumer consumer;
@@ -238,8 +238,6 @@ abstract class ClientTestBase {
 
     @Test(timeout = 5000l)
     public void testCreateReceiverFailsForTenantWithoutAuthorization(final TestContext ctx) {
-        // create sender for tenant that has no permission
-        //downstreamClient.createTelemetryConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure());
 
         createConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure(
                 failed -> LOGGER.debug("creation of receiver failed: {}", failed.getMessage())

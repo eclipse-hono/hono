@@ -2,7 +2,7 @@
   ["policyRuleset",
     {
       "applicationName": "hono",
-      "maxConnections": 100,
+      "maxConnections": 500,
       "maxConnPerUser": 20,
       "maxConnPerHost": 10,
       "userGroups": {
@@ -43,8 +43,8 @@
   ["policyRuleset",
     {
       "applicationName": "hono-internal",
-      "maxConnections": 10,
-      "maxConnPerUser": 10,
+      "maxConnections": 100,
+      "maxConnPerUser": 100,
       "maxConnPerHost": 10,
       "userGroups": {
         "anonymous" : "anonymous"
@@ -58,7 +58,7 @@
       "connectionAllowDefault": false,
       "settings": {
         "anonymous": {
-          "maxSessions": 50,
+          "maxSessions": 500,
           "allowDynamicSrc": false,
           "allowAnonymousSender": false,
           "sources": "$management",
