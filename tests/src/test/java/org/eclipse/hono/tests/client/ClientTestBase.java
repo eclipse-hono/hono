@@ -16,6 +16,8 @@ package org.eclipse.hono.tests.client;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static org.eclipse.hono.tests.IntegrationTestSupport.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assume.*;
 
 import java.net.InetAddress;
 import java.util.function.Consumer;
@@ -204,6 +206,7 @@ abstract class ClientTestBase {
                 createConsumer(TEST_TENANT_ID, msg -> {
                     LOGGER.trace("received {}", msg);
                     assertMessagePropertiesArePresent(ctx, msg);
+                    assertAdditionalMessageProperties(ctx, msg);
                     received.countDown();
                 }, setupTracker.completer());
             } else {
@@ -244,12 +247,18 @@ abstract class ClientTestBase {
         ));
     }
 
-    protected void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
+    private void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
         ctx.assertNotNull(MessageHelper.getDeviceId(msg));
-        // Qpid Dispatch Router < 0.7.0 does not forward custom message annotations
-        // see https://issues.apache.org/jira/browse/DISPATCH-160
-        // thus, the following checks are disabled for now
-//        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
-//        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
+        if (!Boolean.getBoolean("use.qos1")) {
+            // Dispatch Router version < 0.8.0 does not support forwarding of
+            // message annotations over linkRoutes
+            // see https://issues.apache.org/jira/browse/DISPATCH-566
+            ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
+            ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
+        }
+    }
+
+    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+        // empty
     }
 }

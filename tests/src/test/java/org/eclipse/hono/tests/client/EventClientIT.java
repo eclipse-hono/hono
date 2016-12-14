@@ -33,8 +33,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class EventClientIT extends ClientTestBase {
 
-    private static final String CHECK_ARTEMIS_HEADER_PROPERTY = "CHECK_ARTEMIS_HEADER";
-
     @Override
     void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker) {
         downstreamClient.createEventConsumer(tenantId, messageConsumer, setupTracker);
@@ -46,9 +44,8 @@ public class EventClientIT extends ClientTestBase {
     }
 
     @Override
-    protected void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
-        super.assertMessagePropertiesArePresent(ctx, msg);
-        if (Boolean.getBoolean(CHECK_ARTEMIS_HEADER_PROPERTY)) {
+    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+        if (Boolean.getBoolean("check.artemis.header")) {
             // assert that the message was routed via Artemis by checking for the _AMQ_VALIDATED_USER field which is populated by Artemis
             ctx.assertNotNull(MessageHelper.getApplicationProperty(msg.getApplicationProperties(), "_AMQ_VALIDATED_USER", String.class));
         }

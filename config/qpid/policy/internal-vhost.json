@@ -1,0 +1,21 @@
+[
+  # The policy for Hono server's (internal) access to Dispatch Router
+
+  ["vhost",
+    {
+      "id": "hono-internal",
+      "maxConnections": 100,
+      "maxConnectionsPerUser": 10,
+      "maxConnectionsPerHost": 10,
+      "groups": {
+        "anonymous": {
+          "users": "anonymous",
+          "remoteHosts": "*",
+          "maxSessions": 500,
+          "sources": "$management",
+          "targets": "telemetry/*, event/*, $management"
+        }
+      }
+    }
+  ]
+]

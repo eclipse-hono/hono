@@ -17,10 +17,12 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.util.MessageHelper;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
@@ -39,5 +41,11 @@ public class DeviceTelemetryClientIT extends ClientTestBase {
     void createConsumer(final String tenantId, final Consumer<Message> messageConsumer,
             final Handler<AsyncResult<MessageConsumer>> resultHandler) {
         downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, resultHandler);
+    }
+
+    @Override
+    protected void assertAdditionalMessageProperties(TestContext ctx, Message msg) {
+        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
+        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
     }
 }
