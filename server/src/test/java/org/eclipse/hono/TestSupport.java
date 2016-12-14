@@ -118,8 +118,10 @@ public final class TestSupport {
      * Creates a new <em>Proton</em> message containing a JSON encoded temperature reading.
      *
      * @param messageId the value to set as the message ID.
+     * @param action The value to set for the message's <em>action</em> application property.
      * @param tenantId the ID of the tenant the device belongs to.
      * @param deviceId the ID of the device that produced the reading.
+     * @param replyTo The reply-to address to set on the message.
      * @return the message containing the reading as a binary payload.
      */
     public static Message newRegistrationMessage(final String messageId, final String action, final String tenantId, final String deviceId, final String replyTo) {

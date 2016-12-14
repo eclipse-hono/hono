@@ -45,7 +45,7 @@ public interface DownstreamAdapter {
      * Clients <em>must not</em> invoke any of the other methods after this
      * method has completed successfully.
      * 
-     * @param startFuture The handler to inform about the outcome of the shutdown process.
+     * @param stopFuture The handler to inform about the outcome of the shutdown process.
      */
     void stop(Future<Void> stopFuture);
 
