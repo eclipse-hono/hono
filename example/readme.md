@@ -61,7 +61,7 @@ In order to start a router using [Gordon Sim's Qpid Dispatch Router image](https
     $ docker run -d --name qdrouter-config eclipsehono/qpid-default-config:latest
     $ docker run -d --name qdrouter-sasldb eclipsehono/qpid-sasldb:latest
     $ docker run -d --name qdrouter -p 15672:5672 -p 5673:5673 -h qdrouter \
-    $ --volumes-from="qdrouter-config" --volumes-from="qdrouter-sasldb" gordons/qpid-dispatch:0.6.1
+    $ --volumes-from="qdrouter-config" --volumes-from="qdrouter-sasldb" gordons/qpid-dispatch:0.7.0
  
 ##### Start Apache Artemis
 
