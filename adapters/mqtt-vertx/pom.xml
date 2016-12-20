@@ -13,6 +13,13 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-mqtt-server</artifactId>
       <version>${vertx-mqtt.version}</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/vertx-mqtt-server-3.4.0-20161128.154251-24.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-mqtt</artifactId>
+      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -41,13 +48,6 @@
     </dependency>
   </dependencies>
 
-  <repositories>
-    <repository>
-      <id>oss.sonatype.org-snapshot</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    </repository>
-  </repositories>
-
   <build>
     <plugins>
       <plugin>
@@ -55,6 +55,13 @@
           legal docs in all modules. -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <includeSystemScope>true</includeSystemScope>
+        </configuration>
       </plugin>
     </plugins>
   </build>

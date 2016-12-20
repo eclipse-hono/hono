@@ -109,7 +109,6 @@ public class SendReceiveIT {
         IntStream.range(0, COUNT).forEach(i -> {
             try {
                 final Message message = sender.newTextMessage("msg " + i, DEVICE_ID);
-                message.setJMSTimestamp(System.currentTimeMillis());
                 messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
                 if (LOG.isTraceEnabled() && i > 0 && i % 100 == 0) {
@@ -125,13 +124,13 @@ public class SendReceiveIT {
         LOG.info("Delivery statistics: {}", stats);
     }
 
-    @Test
+    @Test(timeout = 5000)
     public void testSendReceiveForSpecificDeviceOnly() throws Exception {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
         final MessageProducer telemetryProducer = connector.getTelemetryProducer(SPECIAL_DEVICE_SENDER_DEST);
-        final MessageConsumer messageConsumer = receiver.getTelemetryConsumer(SPECIAL_DEVICE_RECV_DEST);
+        final MessageConsumer messageConsumer = receiver.getTelemetryConsumer();
         messageConsumer.setMessageListener(message -> {
             final String deviceId = getDeviceId(message);
             LOG.debug("------> Received message for {}", deviceId);
@@ -142,7 +141,7 @@ public class SendReceiveIT {
         final Message message = sender.newTextMessage("update", SPECIAL_DEVICE);
         telemetryProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
-        assertTrue("Did not receive message within timeout.", latch.await(10, TimeUnit.SECONDS));
+        assertTrue("Did not receive message within timeout.", latch.await(6, TimeUnit.SECONDS));
     }
 
     private String getDeviceId(final Message message) {

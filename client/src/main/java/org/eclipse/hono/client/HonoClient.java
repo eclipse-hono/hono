@@ -42,7 +42,7 @@ import io.vertx.proton.ProtonConnection;
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
  */
-public class HonoClient {
+public final class HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClient.class);
     private final String name;
@@ -98,10 +98,27 @@ public class HonoClient {
         return connection != null && !connection.isDisconnected();
     }
 
+    /**
+     * Connects to the Hono server using given options.
+     * 
+     * @param options The options to use (may be {@code null}).
+     * @param connectionHandler The handler to notify about the outcome of the connection attempt.
+     * @return This client for command chaining.
+     * @throws NullPointerException if the connection handler is {@code null}.
+     */
     public HonoClient connect(final ProtonClientOptions options, final Handler<AsyncResult<HonoClient>> connectionHandler) {
         return connect(options, connectionHandler, null);
     }
 
+    /**
+     * Connects to the Hono server using given options.
+     * 
+     * @param options The options to use (may be {@code null}).
+     * @param connectionHandler The handler to notify about the outcome of the connection attempt.
+     * @param disconnectHandler A  handler to notify about connection loss (may be {@code null}).
+     * @return This client for command chaining.
+     * @throws NullPointerException if the connection handler is {@code null}.
+     */
     public HonoClient connect(
             final ProtonClientOptions options,
             final Handler<AsyncResult<HonoClient>> connectionHandler,
@@ -177,15 +194,68 @@ public class HonoClient {
         }
     }
 
-    public HonoClient getOrCreateTelemetrySender( final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+    /**
+     * Gets a client for sending telemetry messages to a Hono server.
+     * 
+     * @param tenantId The ID of the tenant to send messages for.
+     * @param resultHandler The handler to notify about the client.
+     * @return This for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public HonoClient getOrCreateTelemetrySender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+        return getOrCreateTelemetrySender(tenantId, null, resultHandler);
+    }
+
+    /**
+     * Gets a client for sending telemetry messages to a Hono server.
+     * 
+     * @param tenantId The ID of the tenant to send messages for.
+     * @param deviceId The ID of the device to send events for (may be {@code null}).
+     * @param resultHandler The handler to notify about the client.
+     * @return This for command chaining.
+     * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
+     */
+    public HonoClient getOrCreateTelemetrySender(final String tenantId, final String deviceId, final Handler<AsyncResult<MessageSender>> resultHandler) {
         Objects.requireNonNull(tenantId);
-        getOrCreateSender( "telemetry/" + tenantId,  (creationResult) -> createTelemetrySender(tenantId, creationResult), resultHandler);
+        getOrCreateSender(
+                TelemetrySenderImpl.getTargetAddress(tenantId, deviceId),
+                (creationResult) -> createTelemetrySender(tenantId, deviceId, creationResult),
+                resultHandler);
         return this;
     }
 
-    public HonoClient getOrCreateEventSender( final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+    /**
+     * Gets a client for sending events to a Hono server.
+     * 
+     * @param tenantId The ID of the tenant to send events for.
+     * @param resultHandler The handler to notify about the client.
+     * @return This for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public HonoClient getOrCreateEventSender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+        return getOrCreateEventSender(tenantId, null, resultHandler);
+    }
+
+    /**
+     * Gets a client for sending events to a Hono server.
+     * 
+     * @param tenantId The ID of the tenant to send events for.
+     * @param deviceId The ID of the device to send events for (may be {@code null}).
+     * @param resultHandler The handler to notify about the client.
+     * @return This for command chaining.
+     * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
+     */
+    public HonoClient getOrCreateEventSender(
+            final String tenantId,
+            final String deviceId,
+            final Handler<AsyncResult<MessageSender>> resultHandler) {
+
         Objects.requireNonNull(tenantId);
-        getOrCreateSender("event/" + tenantId, (creationResult) -> createEventSender(tenantId, creationResult), resultHandler);
+        Objects.requireNonNull(resultHandler);
+        getOrCreateSender(
+                EventSenderImpl.getTargetAddress(tenantId, deviceId),
+                (creationResult) -> createEventSender(tenantId, deviceId, creationResult),
+                resultHandler);
         return this;
     }
 
@@ -209,10 +279,11 @@ public class HonoClient {
 
     private HonoClient createTelemetrySender(
             final String tenantId,
+            final String deviceId,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
         checkConnection().compose(
-                connected -> TelemetrySenderImpl.create(context, connection, tenantId, creationHandler),
+                connected -> TelemetrySenderImpl.create(context, connection, tenantId, deviceId, creationHandler),
                 Future.<MessageSender> future().setHandler(creationHandler));
         return this;
     }
@@ -241,10 +312,11 @@ public class HonoClient {
 
     private HonoClient createEventSender(
             final String tenantId,
+            final String deviceId,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
         checkConnection().compose(
-                connected -> EventSenderImpl.create(context, connection, tenantId, creationHandler),
+                connected -> EventSenderImpl.create(context, connection, tenantId, deviceId, creationHandler),
                 Future.<MessageSender> future().setHandler(creationHandler));
         return this;
     }

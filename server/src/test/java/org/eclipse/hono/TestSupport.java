@@ -24,6 +24,7 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.server.SenderFactory;
 import org.eclipse.hono.server.UpstreamReceiver;
 import org.eclipse.hono.util.Constants;
@@ -39,6 +40,7 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClient;
+import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
@@ -116,8 +118,10 @@ public final class TestSupport {
      * Creates a new <em>Proton</em> message containing a JSON encoded temperature reading.
      *
      * @param messageId the value to set as the message ID.
+     * @param action The value to set for the message's <em>action</em> application property.
      * @param tenantId the ID of the tenant the device belongs to.
      * @param deviceId the ID of the device that produced the reading.
+     * @param replyTo The reply-to address to set on the message.
      * @return the message containing the reading as a binary payload.
      */
     public static Message newRegistrationMessage(final String messageId, final String action, final String tenantId, final String deviceId, final String replyTo) {
@@ -168,4 +172,29 @@ public final class TestSupport {
         return sender;
     }
 
+    public static ConnectionFactory newMockConnectionFactory(final boolean failToCreate) {
+        return newMockConnectionFactory(mock(ProtonConnection.class), failToCreate);
+    }
+
+    public static ConnectionFactory newMockConnectionFactory(final ProtonConnection connectionToReturn, final boolean failToCreate) {
+        return new ConnectionFactory() {
+
+            @Override
+            public void setHostname(final String hostname) {
+                
+            }
+
+            @Override
+            public void connect(ProtonClientOptions options, Handler<AsyncResult<ProtonConnection>> closeHandler,
+                    Handler<ProtonConnection> disconnectHandler,
+                    Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+
+                if (failToCreate) {
+                    connectionResultHandler.handle(Future.failedFuture("remote host unreachable"));
+                } else {
+                    connectionResultHandler.handle(Future.succeededFuture(connectionToReturn));
+                }
+            }
+        };
+    }
 }

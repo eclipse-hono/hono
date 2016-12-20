@@ -7,17 +7,12 @@ spring:
 spring:
   profiles: default
 hono:
-  pathSeparator: .
   server:
     bindaddress: 0.0.0.0
-  telemetry:
-    downstream:
-      host: qdrouter
-      port: 5673
-  event:
-    downstream:
-      host: qdrouter
-      port: 5673
+  downstream:
+    host: qdrouter
+    port: 5673
+    name: hono-server
 
 ---
 
@@ -25,7 +20,7 @@ spring:
   profiles: activemq
 hono:
   pathSeparator: .
-  telemetry:
-    downstream:
-      host: localhost
-      port: 5671
+  downstream:
+    host: localhost
+    port: 5671
+    name: hono-server

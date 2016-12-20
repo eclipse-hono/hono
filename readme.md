@@ -6,7 +6,12 @@
 
 ### Getting started
 
-##### Compile from Source
+#### Prerequisites
+
+You will need to have access to a [Docker](http://www.docker.com) daemon in order to build from sources and/or to run the pre-built Docker images we provide via Docker Hub. Please follow the instructions on the [Docker web site](http://www.docker.com) in order to install Docker Engine on your platform. 
+Running Hono will be **a lot** easier if you install the [Docker Compose](https://docs.docker.com/compose/install/) client as well because you can then startup and manage all components of a Hono installation as a whole.
+
+##### Compiling from Source
 
 If you do not already have a working Maven installation on your system please follow the [installation instructions on the Maven home page](https://maven.apache.org/). Then simply run the following from the command line.
 

@@ -8,7 +8,6 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
- *
  */
 
 package org.eclipse.hono.tests.client;
@@ -18,29 +17,27 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
- * A simple test that uses the {@code TelemetryClient} to send some messages to
- * Hono server and verifies they are forwarded to the downstream host.
+ * Verifies that a device can send telemetry messages to a Hono server and
+ * that the telemetry messages can be consumed from the downstream host.
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryClientIT extends ClientTestBase {
+public class DeviceEventClientIT extends ClientTestBase {
 
     @Override
-    void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker) {
-        downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, setupTracker);
+    void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+        honoClient.getOrCreateEventSender(tenantId, DEVICE_ID, resultHandler);
     }
 
     @Override
-    void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker) {
-
-        honoClient.getOrCreateTelemetrySender(tenantId, setupTracker);
+    void createConsumer(final String tenantId, final Consumer<Message> messageConsumer,
+            final Handler<AsyncResult<MessageConsumer>> resultHandler) {
+        downstreamClient.createEventConsumer(tenantId, messageConsumer, resultHandler);
     }
 }

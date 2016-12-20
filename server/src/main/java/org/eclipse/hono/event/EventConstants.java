@@ -13,7 +13,7 @@
 package org.eclipse.hono.event;
 
 /**
- * Constants & utility methods used throughout the Event API.
+ * Constants &gt; utility methods used throughout the Event API.
  */
 public final class EventConstants {
 

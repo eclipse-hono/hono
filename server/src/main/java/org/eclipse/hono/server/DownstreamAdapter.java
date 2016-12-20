@@ -17,7 +17,6 @@ import org.apache.qpid.proton.message.Message;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -26,8 +25,28 @@ import io.vertx.proton.ProtonDelivery;
  */
 public interface DownstreamAdapter {
 
+    /**
+     * Invoked on startup of the adapter.
+     * <p>
+     * Subclasses may use this method to allocate any resources required for the adapter.
+     * <p>
+     * Clients <em>must not</em> invoke any of the other methods before the
+     * start future passed in to this method has completed successfully.
+     * 
+     * @param startFuture The handler to inform about the outcome of the startup process.
+     */
     void start(Future<Void> startFuture);
 
+    /**
+     * Invoked on shutdown of the adapter.
+     * <p>
+     * Subclasses should use this method to free up any resources allocated during start up.
+     * <p>
+     * Clients <em>must not</em> invoke any of the other methods after this
+     * method has completed successfully.
+     * 
+     * @param stopFuture The handler to inform about the outcome of the shutdown process.
+     */
     void stop(Future<Void> stopFuture);
 
     /**
@@ -42,6 +61,8 @@ public interface DownstreamAdapter {
      * 
      * @param client The client connecting to the Hono server.
      * @param resultHandler The handler to notify about the outcome of allocating the required resources.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalStateException if this adapter is not running.
      */
     void onClientAttach(UpstreamReceiver client, Handler<AsyncResult<Void>> resultHandler);
 
@@ -52,15 +73,23 @@ public interface DownstreamAdapter {
      * {@link #onClientAttach(UpstreamReceiver, Handler)} method.
      * 
      * @param client The client closing the link.
+     * @throws NullPointerException if client is {@code null}.
+     * @throws IllegalStateException if this adapter is not running.
      */
     void onClientDetach(UpstreamReceiver client);
 
     /**
-     * Invoked when a connection with an upstream client got disconnected unexpectedly.
+     * Invoked when an upstream client disconnects from Hono.
+     * <p>
+     * There is no distinction being made between a client <em>orderly</em>
+     * closing a connection and an unexpected termination, e.g. due to
+     * network failure.
      * 
-     * @param con The failed connection.
+     * @param connectionId The ID of the failed connection.
+     * @throws NullPointerException if connection ID is {@code null}.
+     * @throws IllegalStateException if this adapter is not running.
      */
-    void onClientDisconnect(ProtonConnection con);
+    void onClientDisconnect(String connectionId);
 
     /**
      * Processes a message received from an upstream client.
@@ -71,6 +100,8 @@ public interface DownstreamAdapter {
      * @param client The client the message originates from.
      * @param delivery The message's disposition handler.
      * @param message The message to process.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalStateException if this adapter is not running.
      */
     void processMessage(UpstreamReceiver client, ProtonDelivery delivery, Message message);
 }

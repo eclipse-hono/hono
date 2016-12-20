@@ -45,15 +45,18 @@ import io.vertx.proton.ProtonHelper;
  */
 abstract class AbstractSender extends AbstractHonoClient implements MessageSender {
 
-    private static final Logger     LOG = LoggerFactory.getLogger(AbstractSender.class);
-    private static final AtomicLong messageCounter = new AtomicLong();
-    private static final Pattern    CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
+    private static final Logger                LOG = LoggerFactory.getLogger(AbstractSender.class);
+    private static final AtomicLong            MESSAGE_COUNTER = new AtomicLong();
+    private static final Pattern               CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
 
-    private Handler<Void> drainHandler;
-    private BiConsumer<String, ProtonDelivery> dispositionHandler = (id, delivery) -> LOG.info("Disposition updated for {}: {}", id, delivery.getRemoteState());
+    protected final String                     tenantId;
 
-    AbstractSender(final Context context) {
+    private Handler<Void>                      drainHandler;
+    private BiConsumer<Object, ProtonDelivery> dispositionHandler = (messageId, delivery) -> LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
+
+    AbstractSender(final String tenantId, final Context context) {
         super(context);
+        this.tenantId = Objects.requireNonNull(tenantId);
     }
 
     @Override
@@ -103,7 +106,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public void setDispositionHandler(final BiConsumer<String, ProtonDelivery> dispositionHandler) {
+    public void setDispositionHandler(final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         this.dispositionHandler = dispositionHandler;
     }
 
@@ -144,8 +147,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     private void sendMessage(final Message rawMessage) {
-        sender.send(rawMessage, deliveryUpdated ->
-                dispositionHandler.accept(rawMessage.getMessageId().toString(), deliveryUpdated));
+        sender.send(rawMessage, deliveryUpdated -> dispositionHandler.accept(rawMessage.getMessageId(), deliveryUpdated));
     }
 
     @Override
@@ -200,16 +202,41 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
         final Message msg = ProtonHelper.message();
+        msg.setAddress(getTo(deviceId));
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, contentType);
+        addEndpointSpecificProperties(msg, deviceId);
         send(msg, capacityAvailableHandler);
     }
 
-    protected void addProperties(final Message msg, final String deviceId, final String contentType) {
-        msg.setMessageId(String.format("%s-%d", getClass().getSimpleName(), messageCounter.getAndIncrement()));
+    /**
+     * Gets the value of the <em>to</em> property to be used for messages produced by this sender.
+     * 
+     * @param deviceId The identifier of the device that the message's content originates from.
+     * @return The address.
+     */
+    protected abstract String getTo(final String deviceId);
+
+    private void addProperties(final Message msg, final String deviceId, final String contentType) {
+        msg.setMessageId(String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement()));
         msg.setContentType(contentType);
         addDeviceId(msg, deviceId);
+    }
+
+    /**
+     * Sets additional properties on the message to be sent.
+     * <p>
+     * Subclasses should override this method to set any properties on messages
+     * that are specific to the particular endpoint the message is to be sent to.
+     * <p>
+     * This method does nothing by default.
+     * 
+     * @param msg The message to be sent.
+     * @param deviceId The ID of the device that the message's content originates from.
+     */
+    protected void addEndpointSpecificProperties(final Message msg, final String deviceId) {
+        // empty
     }
 
     private void setApplicationProperties(final Message msg, final Map<String, ?> properties) {

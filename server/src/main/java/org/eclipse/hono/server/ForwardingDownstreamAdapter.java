@@ -16,22 +16,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -46,14 +45,14 @@ import io.vertx.proton.ProtonSender;
 public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     protected Logger                        logger                    = LoggerFactory.getLogger(getClass());
-    protected String                        downstreamContainerHost;
-    protected int                           downstreamContainerPort;
     protected HonoConfigProperties          honoConfig                = new HonoConfigProperties();
     private final Map<String, ProtonSender> activeSenders             = new HashMap<>();
     private final Map<String, List<String>> sendersPerConnection      = new HashMap<>();
+    private boolean                         running                   = false;
     private final Vertx                     vertx;
     private ProtonConnection                downstreamConnection;
     private SenderFactory                   senderFactory;
+    private ConnectionFactory               downstreamConnectionFactory;
 
     /**
      * Creates a new adapter instance for a sender factory.
@@ -72,35 +71,31 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * 
      * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
+     * @throws IllegalStateException if this adapter is already running.
      */
     @Autowired(required = false)
-    public void setHonoConfiguration(final HonoConfigProperties props) {
-        this.honoConfig = Objects.requireNonNull(props);
-    }
-
-    /**
-     * Sets the name or IP address of the downstream AMQP 1.0 container to forward telemetry data to.
-     * 
-     * @param host The hostname or IP address.
-     * @throws NullPointerException if the host is {@code null}.
-     */
-    @Value("${hono.telemetry.downstream.host:localhost}")
-    public final void setDownstreamContainerHost(final String host) {
-        this.downstreamContainerHost = Objects.requireNonNull(host);
-    }
-
-    /**
-     * Sets the port of the downstream AMQP 1.0 container to forward telemetry data to.
-     * 
-     * @param port The port number.
-     * @throws IllegalArgumentException if the given port is not a valid IP port.
-     */
-    @Value("${hono.telemetry.downstream.port:15672}")
-    public final void setDownstreamContainerPort(final int port) {
-        if (port < 1 || port >= 1 << 16) {
-            throw new IllegalArgumentException("illegal port number");
+    public final void setHonoConfiguration(final HonoConfigProperties props) {
+        if (running) {
+            throw new IllegalStateException("configuration can not be set on running adapter");
+        } else {
+            this.honoConfig = Objects.requireNonNull(props);
         }
-        this.downstreamContainerPort = port;
+    }
+
+    /**
+     * Sets the factory to use for connecting to the downstream container.
+     * 
+     * @param factory The factory.
+     * @throws NullPointerException if the factory is {@code null}.
+     * @throws IllegalStateException if this adapter is already running.
+     */
+    @Autowired
+    public final void setDownstreamConnectionFactory(final ConnectionFactory factory) {
+        if (running) {
+            throw new IllegalStateException("downstream container host can not be set on running adapter");
+        } else {
+            this.downstreamConnectionFactory = Objects.requireNonNull(factory);
+        }
     }
 
     /**
@@ -112,14 +107,21 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      */
     public final void start(final Future<Void> startFuture) {
 
-        if (downstreamContainerHost == null) {
-            throw new IllegalStateException("downstream container host is not set");
-        } else if (downstreamContainerPort == 0) {
-            throw new IllegalStateException("downstream container port is not set");
+        if (running) {
+            startFuture.complete();
+        } else if (downstreamConnectionFactory == null) {
+            throw new IllegalStateException("downstream connection factory is not set");
         } else {
+            running = true;
             if (honoConfig.isWaitForDownstreamConnectionEnabled()) {
                 logger.info("waiting for connection to downstream container");
-                connectToDownstream(createClientOptions(), startFuture);
+                connectToDownstream(createClientOptions(), connectAttempt -> {
+                    if (connectAttempt.succeeded()) {
+                        startFuture.complete();
+                    } else {
+                        startFuture.fail(connectAttempt.cause());
+                    }
+                });
             } else {
                 connectToDownstream(createClientOptions());
                 startFuture.complete();
@@ -134,16 +136,26 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      */
     public final void stop(final Future<Void> stopFuture) {
 
-        if (downstreamConnection != null && !downstreamConnection.isDisconnected()) {
-            final String container = downstreamConnection.getRemoteContainer();
-            logger.info("closing connection to downstream container [{}]", container);
-            downstreamConnection.closeHandler(null).disconnectHandler(null).close();
-        } else {
-            logger.debug("downstream connection already closed");
+        if (running) {
+            if (downstreamConnection != null && !downstreamConnection.isDisconnected()) {
+                final String container = downstreamConnection.getRemoteContainer();
+                logger.info("closing connection to downstream container [{}]", container);
+                downstreamConnection.closeHandler(null).disconnectHandler(null).close();
+            } else {
+                logger.debug("downstream connection already closed");
+            }
+            running = false;
         }
         stopFuture.complete();
     }
 
+    protected final String getDownstreamContainer() {
+        if (downstreamConnection != null) {
+            return downstreamConnection.getRemoteContainer();
+        } else {
+            return null;
+        }
+    }
     protected ProtonClientOptions createClientOptions() {
         return new ProtonClientOptions()
                 .setConnectTimeout(100)
@@ -151,44 +163,29 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     private void connectToDownstream(final ProtonClientOptions options) {
-        connectToDownstream(options, Future.future());
+        connectToDownstream(options, conAttempt -> {});
     }
 
-    private void connectToDownstream(final ProtonClientOptions options, final Future<Void> connectFuture) {
+    private void connectToDownstream(final ProtonClientOptions options, final Handler<AsyncResult<ProtonConnection>> connectResultHandler) {
 
-        logger.info("connecting to downstream container [{}:{}]...", downstreamContainerHost, downstreamContainerPort);
+        downstreamConnectionFactory.connect(
+                options,
+                this::onRemoteClose,
+                this::onDisconnectFromDownstreamContainer,
+                connectAttempt -> {
+                    if (connectAttempt.succeeded()) {
+                        this.downstreamConnection = connectAttempt.result();
+                        connectResultHandler.handle(Future.succeededFuture(connectAttempt.result()));
+                    } else {
+                        logger.info("failed to connect to downstream container", connectAttempt.cause());
+                        connectResultHandler.handle(Future.failedFuture(connectAttempt.cause()));
+                    }
+                });
+    }
 
-        ProtonClient client = ProtonClient.create(vertx);
-        client.connect(options, downstreamContainerHost, downstreamContainerPort, conAttempt -> {
-            if (conAttempt.failed()) {
-                logger.warn("can't connect to downstream AMQP 1.0 container [{}:{}]: {}", downstreamContainerHost, downstreamContainerPort, conAttempt.cause().getMessage());
-            } else {
-                logger.info("connected to downstream AMQP 1.0 container [{}:{}], opening connection ...",
-                        downstreamContainerHost, downstreamContainerPort);
-                conAttempt.result()
-                    .setContainer("Hono-TelemetryAdapter" + UUID.randomUUID())
-                    .setHostname("hono-internal")
-                    .openHandler(openCon -> {
-                        if (openCon.succeeded()) {
-                            downstreamConnection = openCon.result();
-                            logger.info("connection to downstream container [{}] open",
-                                    downstreamConnection.getRemoteContainer());
-                            downstreamConnection.disconnectHandler(this::onDisconnectFromDownstreamContainer);
-                            downstreamConnection.closeHandler(closedConnection -> {
-                                logger.info("connection to downstream container [{}] is closed", downstreamConnection.getRemoteContainer());
-                                downstreamConnection.close();
-                            });
-                            connectFuture.complete();
-                        } else {
-                            logger.warn("can't open connection to downstream container [{}]",
-                                    downstreamConnection.getRemoteContainer(), openCon.cause());
-                            connectFuture.fail(openCon.cause());
-                        }
-                    })
-                    .closeHandler(closedCon -> logger.debug("Connection to [{}:{}] closed: {}", downstreamContainerHost, downstreamContainerPort))
-                    .open();
-            }
-        });
+    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose) {
+        logger.info("connection to downstream container [{}] is closed", downstreamConnection.getRemoteContainer());
+        downstreamConnection.close();
     }
 
     /**
@@ -198,25 +195,28 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      */
     private void onDisconnectFromDownstreamContainer(final ProtonConnection con) {
         // all links to downstream host will now be stale and unusable
-        logger.warn("lost connection to downstream container [{}]", downstreamContainerHost);
+        logger.warn("lost connection to downstream container [{}]", con.getRemoteContainer());
         activeSenders.clear();
         con.disconnectHandler(null);
         con.disconnect();
-        ProtonClientOptions clientOptions = createClientOptions();
+        final ProtonClientOptions clientOptions = createClientOptions();
         if (clientOptions.getReconnectAttempts() != 0) {
             vertx.setTimer(300, reconnect -> {
-                logger.info("attempting to re-connect to downstream container [{}]", downstreamContainerHost);
+                logger.info("attempting to re-connect to downstream container");
                 connectToDownstream(clientOptions);
             });
         }
     }
 
-    public final void setDownstreamConnection(final ProtonConnection con) {
-        this.downstreamConnection = con;
-    }
-
     @Override
     public final void onClientAttach(final UpstreamReceiver client, final Handler<AsyncResult<Void>> resultHandler) {
+
+        if (!running) {
+            throw new IllegalStateException("adapter must be started first");
+        }
+
+        Objects.requireNonNull(client);
+        Objects.requireNonNull(resultHandler);
 
         if (activeSenders.containsKey(client.getLinkId())) {
             logger.info("reusing existing downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
@@ -266,9 +266,15 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         if (downstreamConnection == null || downstreamConnection.isDisconnected()) {
             result.fail("downstream connection must be opened before creating sender");
         } else {
-            String address = targetAddress.replace(Constants.DEFAULT_PATH_SEPARATOR, honoConfig.getPathSeparator());
+            String tenantOnlyTargetAddress = getTenantOnlyTargetAddress(targetAddress);
+            String address = tenantOnlyTargetAddress.replace(Constants.DEFAULT_PATH_SEPARATOR, honoConfig.getPathSeparator());
             senderFactory.createSender(downstreamConnection, address, getDownstreamQos(), sendQueueDrainHandler, result);
         }
+    }
+
+    private static String getTenantOnlyTargetAddress(final String address) {
+        ResourceIdentifier targetAddress = ResourceIdentifier.fromString(address);
+        return String.format("%s/%s", targetAddress.getEndpoint(), targetAddress.getTenantId());
     }
 
     public final void addSender(final String connectionId, final String linkId, final ProtonSender sender) {
@@ -290,6 +296,13 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     @Override
     public final void onClientDetach(final UpstreamReceiver client) {
+
+        if (!running) {
+            throw new IllegalStateException("adapter must be started first");
+        }
+
+        Objects.requireNonNull(client);
+
         String connectionId = closeSender(client.getLinkId());
         if (connectionId != null) {
             List<String> senders = sendersPerConnection.get(connectionId);
@@ -312,8 +325,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     @Override
-    public final void onClientDisconnect(final ProtonConnection con) {
-        String connectionId = con.attachments().get(Constants.KEY_CONNECTION_ID, String.class);
+    public final void onClientDisconnect(final String connectionId) {
+
+        if (!running) {
+            throw new IllegalStateException("adapter must be started first");
+        }
+
         List<String> senders = sendersPerConnection.remove(Objects.requireNonNull(connectionId));
         if (senders != null && !senders.isEmpty()) {
             logger.info("closing {} downstream senders for connection [id: {}]", senders.size(), connectionId);
@@ -325,6 +342,10 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     @Override
     public final void processMessage(final UpstreamReceiver client, final ProtonDelivery delivery, final Message msg) {
+
+        if (!running) {
+            throw new IllegalStateException("adapter must be started first");
+        }
 
         Objects.requireNonNull(client);
         Objects.requireNonNull(msg);

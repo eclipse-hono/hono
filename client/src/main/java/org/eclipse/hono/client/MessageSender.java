@@ -273,7 +273,7 @@ public interface MessageSender {
      *
      * @param dispositionHandler consumer that accepts a message id and updated disposition
      */
-    void setDispositionHandler(BiConsumer<String, ProtonDelivery> dispositionHandler);
+    void setDispositionHandler(BiConsumer<Object, ProtonDelivery> dispositionHandler);
 
     /**
      * Closes the AMQP link with the Hono server this sender is using.

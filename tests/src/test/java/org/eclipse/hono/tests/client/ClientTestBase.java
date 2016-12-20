@@ -15,14 +15,11 @@ package org.eclipse.hono.tests.client;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_CREATED;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
+import static org.eclipse.hono.tests.IntegrationTestSupport.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assume.*;
 
 import java.net.InetAddress;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -35,7 +32,6 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -52,6 +48,7 @@ import io.vertx.proton.ProtonClientOptions;
 
 abstract class ClientTestBase {
 
+    protected static final String DEVICE_ID = "device-0";
     protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     // connection parameters
@@ -64,13 +61,12 @@ abstract class ClientTestBase {
     // test constants
     private static final int MSG_COUNT = 50;
     private static final String TEST_TENANT_ID = "DEFAULT_TENANT";
-    private static final String DEVICE_ID = "device-0";
     private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
 
     private static Vertx vertx = Vertx.vertx();
 
-    HonoClient honoClient;
-    HonoClient downstreamClient;
+    protected HonoClient honoClient;
+    protected HonoClient downstreamClient;
     RegistrationClient registrationClient;
     MessageSender sender;
     MessageConsumer consumer;
@@ -210,6 +206,7 @@ abstract class ClientTestBase {
                 createConsumer(TEST_TENANT_ID, msg -> {
                     LOGGER.trace("received {}", msg);
                     assertMessagePropertiesArePresent(ctx, msg);
+                    assertAdditionalMessageProperties(ctx, msg);
                     received.countDown();
                 }, setupTracker.completer());
             } else {
@@ -244,20 +241,24 @@ abstract class ClientTestBase {
 
     @Test(timeout = 5000l)
     public void testCreateReceiverFailsForTenantWithoutAuthorization(final TestContext ctx) {
-        // create sender for tenant that has no permission
-        //downstreamClient.createTelemetryConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure());
 
         createConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure(
                 failed -> LOGGER.debug("creation of receiver failed: {}", failed.getMessage())
         ));
     }
 
-    protected void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
+    private void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
         ctx.assertNotNull(MessageHelper.getDeviceId(msg));
-        // Qpid Dispatch Router < 0.7.0 does not forward custom message annotations
-        // see https://issues.apache.org/jira/browse/DISPATCH-160
-        // thus, the following checks are disabled for now
-//        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
-//        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
+        if (!Boolean.getBoolean("use.qos1")) {
+            // Dispatch Router version < 0.8.0 does not support forwarding of
+            // message annotations over linkRoutes
+            // see https://issues.apache.org/jira/browse/DISPATCH-566
+            ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
+            ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
+        }
+    }
+
+    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+        // empty
     }
 }

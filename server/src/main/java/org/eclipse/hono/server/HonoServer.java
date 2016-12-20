@@ -235,8 +235,16 @@ public final class HonoServer extends AbstractVerticle {
         return bindAddress;
     }
 
+    private int getServerPort() {
+        if (server != null) {
+            return server.actualPort();
+        } else {
+            return port;
+        }
+    }
+
     void handleRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-%s:%d", this.bindAddress, server.actualPort()));
+        connection.setContainer(String.format("Hono-%s:%d", this.bindAddress, getServerPort()));
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
         connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
         connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
@@ -245,7 +253,7 @@ public final class HonoServer extends AbstractVerticle {
         connection.openHandler(remoteOpen -> {
             LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), getUserFromConnection(connection));
             connection.open();
-            // attach an ID so that we can later inform downstream verticles when connection is closed
+            // attach an ID so that we can later inform downstream components when connection is closed
             connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
         });
     }
@@ -265,12 +273,13 @@ public final class HonoServer extends AbstractVerticle {
      * @param con The connection to close.
      * @param res The client's close frame.
      */
-    private static void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
+    private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
         if (res.succeeded()) {
             LOG.info("client [{}] closed connection", con.getRemoteContainer());
         } else {
             LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
+        publishConnectionClosedEvent(con);
         con.close();
     }
 

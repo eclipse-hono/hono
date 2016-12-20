@@ -179,7 +179,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  </from>
                               </volumes>
                               <wait>
-                                 <log>^.*(HonoServer running at).*$</log>
+                                 <log>^.*(startup completed successfully)$</log>
                               </wait>
                            </run>
                         </image>
@@ -315,8 +315,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <env>
                                  <HONO_MAX_INSTANCES>2</HONO_MAX_INSTANCES>
                                  <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
-                                 <!-- HONO_TELEMETRY_DOWNSTREAM_HOST>activemq</HONO_TELEMETRY_DOWNSTREAM_HOST>
-                                 <HONO_PATH_SEPARATOR>.</HONO_PATH_SEPARATOR-->
                                  <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
                                  <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                                  <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
@@ -336,7 +334,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  </from>
                               </volumes>
                               <wait>
-                                 <log>^.*(HonoServer running at).*$</log>
+                                 <log>^.*(startup completed successfully)$</log>
                               </wait>
                            </run>
                         </image>
@@ -520,8 +518,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <env>
                                  <HONO_MAX_INSTANCES>2</HONO_MAX_INSTANCES>
                                  <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
-                                 <!-- HONO_TELEMETRY_DOWNSTREAM_HOST>activemq</HONO_TELEMETRY_DOWNSTREAM_HOST>
-                                 <HONO_PATH_SEPARATOR>.</HONO_PATH_SEPARATOR-->
                                  <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
                                  <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                                  <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
@@ -541,7 +537,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  </from>
                               </volumes>
                               <wait>
-                                 <log>^.*(HonoServer running at).*$</log>
+                                 <log>^.*(startup completed successfully)$</log>
                               </wait>
                            </run>
                         </image>
@@ -586,12 +582,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <artifactId>maven-failsafe-plugin</artifactId>
                   <configuration>
                      <systemProperties>
+                        <check.artemis.header>true</check.artemis.header>
                         <hono.host>${hono.ip}</hono.host>
                         <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
                         <hono.pathSeparator>.</hono.pathSeparator>
                         <downstream.host>${qpid.ip}</downstream.host>
                         <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
-                        <CHECK_ARTEMIS_HEADER>true</CHECK_ARTEMIS_HEADER>
+                        <use.qos1>true</use.qos1>
                      </systemProperties>
                      <includes>
                         <include>**/*IT.java</include>
