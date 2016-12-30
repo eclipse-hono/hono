@@ -65,7 +65,7 @@ public class Application {
      * @param honoConfig the honoConfig to set
      */
     @Autowired
-    public void setHonoConfig(HonoConfigProperties honoConfig) {
+    public void setHonoConfig(final HonoConfigProperties honoConfig) {
         this.honoConfig = honoConfig;
     }
 
@@ -73,7 +73,7 @@ public class Application {
      * @param vertx the vertx to set
      */
     @Autowired
-    public void setVertx(Vertx vertx) {
+    public void setVertx(final Vertx vertx) {
         this.vertx = vertx;
     }
 
@@ -81,7 +81,7 @@ public class Application {
      * @param registrationService the registrationService to set
      */
     @Autowired
-    public void setRegistrationService(RegistrationService registrationService) {
+    public void setRegistrationService(final RegistrationService registrationService) {
         this.registrationService = registrationService;
     }
 
@@ -89,7 +89,7 @@ public class Application {
      * @param authenticationService the authenticationService to set
      */
     @Autowired
-    public void setAuthenticationService(AuthenticationService authenticationService) {
+    public void setAuthenticationService(final AuthenticationService authenticationService) {
         this.authenticationService = authenticationService;
     }
 
@@ -97,7 +97,7 @@ public class Application {
      * @param authorizationService the authorizationService to set
      */
     @Autowired
-    public void setAuthorizationService(AuthorizationService authorizationService) {
+    public void setAuthorizationService(final AuthorizationService authorizationService) {
         this.authorizationService = authorizationService;
     }
 
@@ -105,22 +105,25 @@ public class Application {
      * @param serverFactory the serverFactory to set
      */
     @Autowired
-    public void setServerFactory(HonoServerFactory serverFactory) {
+    public void setServerFactory(final HonoServerFactory serverFactory) {
         this.serverFactory = serverFactory;
     }
 
+    /**
+     * Deploys all verticles the Hono server consists of.
+     */
     @PostConstruct
     public void registerVerticles() {
-
-        final CountDownLatch startupLatch = new CountDownLatch(1);
 
         if (vertx == null) {
             throw new IllegalStateException("no Vert.x instance has been configured");
         }
 
+        final CountDownLatch startupLatch = new CountDownLatch(1);
+
         // without creating a first instance here, deployment of the HonoServer verticles fails
         // TODO: find out why
-        serverFactory.getHonoServer();
+        HonoServer firstInstance = serverFactory.getHonoServer();
 
         final int instanceCount = honoConfig.getMaxInstances();
 
@@ -139,7 +142,7 @@ public class Application {
                 deployAuthorizationService(), // we only need 1 authorization service
                 deployRegistrationService()).setHandler(ar -> {
             if (ar.succeeded()) {
-                deployServer(instanceCount, started);
+                deployServer(firstInstance, instanceCount, started);
             } else {
                 started.fail(ar.cause());
             }
@@ -159,18 +162,6 @@ public class Application {
         }
     }
 
-//    private <T extends Verticle> Future<?> deployVerticle(VerticleFactory<T> factory, int instanceCount) {
-//        LOG.info("Starting component {}", factory);
-//        @SuppressWarnings("rawtypes")
-//        List<Future> results = new ArrayList<>();
-//        for (int i = 1; i <= instanceCount; i++) {
-//            Future<String> result = Future.future();
-//            vertx.deployVerticle(factory.newInstance(i, instanceCount), result.completer());
-//            results.add(result);
-//        }
-//        return CompositeFuture.all(results);
-//    }
-//
     private Future<String> deployRegistrationService() {
         LOG.info("Starting registration service {}", registrationService);
         Future<String> result = Future.future();
@@ -192,18 +183,13 @@ public class Application {
         return result;
     }
 
-    private void deployServer(final int instanceCount, Future<Void> startFuture) {
+    private void deployServer(final HonoServer firstInstance, final int instanceCount, Future<Void> startFuture) {
         @SuppressWarnings("rawtypes")
         List<Future> results = new ArrayList<>();
-        for (int i = 1; i <= instanceCount; i++) {
+        deployServerInstance(firstInstance, results);
+        for (int i = 1; i < instanceCount; i++) {
             HonoServer server = serverFactory.getHonoServer();
-//
-//            for (EndpointFactory<?> ef : endpointFactories) {
-//                server.addEndpoint(ef.newInstance(i, instanceCount));
-//            }
-            Future<String> result = Future.future();
-            vertx.deployVerticle(server, result.completer());
-            results.add(result);
+            deployServerInstance(server, results);
         }
         CompositeFuture.all(results).setHandler(ar -> {
            if (ar.failed()) {
@@ -214,6 +200,16 @@ public class Application {
         });
     }
 
+    @SuppressWarnings("rawtypes")
+    private void deployServerInstance(final HonoServer instance, final List<Future> deployResults) {
+        Future<String> result = Future.future();
+        vertx.deployVerticle(instance, result.completer());
+        deployResults.add(result);
+    }
+
+    /**
+     * Stops the Hono server in a controlled fashion.
+     */
     @PreDestroy
     public void shutdown() {
         this.shutdown(honoConfig.getStartupTimeout(), succeeded -> {
@@ -221,6 +217,12 @@ public class Application {
         });
     }
 
+    /**
+     * Stops the Hono server in a controlled fashion.
+     * 
+     * @param maxWaitTime The maximum time to wait for the server to shut down (in seconds).
+     * @param shutdownHandler The handler to invoke with the result of the shutdown attempt.
+     */
     public void shutdown(final long maxWaitTime, final Handler<Boolean> shutdownHandler) {
 
         try {
@@ -248,6 +250,11 @@ public class Application {
         }
     }
 
+    /**
+     * Starts the Hono server.
+     * 
+     * @param args command line arguments to pass to Hono.
+     */
     public static void main(final String[] args) {
         SpringApplication.run(Application.class, args);
     }
