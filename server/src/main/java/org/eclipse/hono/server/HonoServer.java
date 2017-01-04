@@ -45,7 +45,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.ClientAuth;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.KeyCertOptions;
+import io.vertx.core.net.TrustOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonReceiver;
@@ -165,7 +168,31 @@ public final class HonoServer extends AbstractVerticle {
         options.setReceiveBufferSize(32 * 1024); // 32kb
         options.setSendBufferSize(32 * 1024); // 32kb
         options.setLogActivity(honoConfig.isNetworkDebugLoggingEnabled());
+
+        addTlsKeyCertOptions(options);
+        addTlsTrustOptions(options);
         return options;
+    }
+
+    private void addTlsTrustOptions(final ProtonServerOptions serverOptions) {
+
+        if (serverOptions.isSsl() && serverOptions.getTrustOptions() == null) {
+
+            TrustOptions trustOptions = honoConfig.getTrustOptions();
+            if (trustOptions != null) {
+                serverOptions.setTrustOptions(trustOptions).setClientAuth(ClientAuth.REQUEST);
+                LOG.info("enabling TLS for client authentication");
+            }
+        }
+    }
+
+    private void addTlsKeyCertOptions(final ProtonServerOptions serverOptions) {
+
+        KeyCertOptions keyCertOptions = honoConfig.getKeyCertOptions();
+
+        if (keyCertOptions != null) {
+            serverOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
+        }
     }
 
     @Override
@@ -181,6 +208,11 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
+    /**
+     * Adds multiple endpoints to this server.
+     * 
+     * @param definedEndpoints The endpoints.
+     */
     @Autowired
     public void addEndpoints(final List<Endpoint> definedEndpoints) {
         Objects.requireNonNull(definedEndpoints);
@@ -189,6 +221,11 @@ public final class HonoServer extends AbstractVerticle {
         }
     }
 
+    /**
+     * Adds an endpoint to this server.
+     * 
+     * @param ep The endpoint.
+     */
     public void addEndpoint(final Endpoint ep) {
         if (endpoints.putIfAbsent(ep.getName(), ep) != null) {
             LOG.warn("multiple endpoints defined with name [{}]", ep.getName());
@@ -248,6 +285,11 @@ public final class HonoServer extends AbstractVerticle {
         return this;
     }
 
+    /**
+     * Gets the IP address Hono will bind to.
+     *  
+     * @return The IP address.
+     */
     public String getBindAddress() {
         return bindAddress;
     }

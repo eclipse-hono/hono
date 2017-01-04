@@ -12,8 +12,6 @@
 
 package org.eclipse.hono.config;
 
-import java.util.Objects;
-
 import org.eclipse.hono.util.Constants;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -24,37 +22,13 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @ConfigurationProperties(prefix = "hono")
-public class HonoConfigProperties {
+public final class HonoConfigProperties extends AbstractHonoConfig {
 
     private int maxInstances = 0;
     private int startupTimeout = 20;
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
     private boolean waitForDownstreamConnection = false;
-    private String pathSeparator = Constants.DEFAULT_PATH_SEPARATOR;
-
-    /**
-     * Gets the character separating the segments of target addresses.
-     * 
-     * @return The separator.
-     */
-    public String getPathSeparator() {
-        return pathSeparator;
-    }
-
-    /**
-     * Sets the character separating the segments of target addresses.
-     * <p>
-     * The default value of this property is {@link Constants#DEFAULT_PATH_SEPARATOR}.
-     * 
-     * @param pathSeparator The separator to use.
-     * @return This instance for setter chaining.
-     * @throws NullPointerException if the given character is {@code null}.
-     */
-    public HonoConfigProperties setPathSeparator(final String pathSeparator) {
-        this.pathSeparator = Objects.requireNonNull(pathSeparator);
-        return this;
-    }
 
     /**
      * Gets the maximum time to wait for Hono to start up.

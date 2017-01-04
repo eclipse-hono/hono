@@ -24,12 +24,16 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.net.KeyCertOptions;
+import io.vertx.core.net.TrustOptions;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.sasl.impl.ProtonSaslExternalImpl;
+import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
- *
+ * A <em>vertx-proton</em> based connection factory.
  */
 public class ConnectionFactoryImpl implements ConnectionFactory {
 
@@ -75,11 +79,18 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
             final Handler<ProtonConnection> disconnectHandler,
             final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
+        if (vertx == null) {
+            throw new IllegalStateException("Vert.x instance must be set");
+        } else if (config == null) {
+            throw new IllegalStateException("Client configuration must be set");
+        }
+
         Objects.requireNonNull(connectionResultHandler);
         ProtonClientOptions clientOptions = options;
         if (clientOptions == null) {
             clientOptions = new ProtonClientOptions();
         }
+        addOptions(clientOptions);
 
         ProtonClient client = ProtonClient.create(vertx);
         client.connect(
@@ -104,8 +115,8 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
                     config.getHost(), config.getPort());
             ProtonConnection downstreamConnection = conAttempt.result();
             downstreamConnection
-                    .setContainer(config.getName() + UUID.randomUUID())
-                    .setHostname(hostname)
+                    .setContainer(String.format("%s-%s", config.getName(), UUID.randomUUID()))
+                    .setHostname(config.getAmqpHostname())
                     .openHandler(openCon -> {
                         if (openCon.succeeded()) {
                             logger.info("connection to container [{}] open", downstreamConnection.getRemoteContainer());
@@ -118,6 +129,192 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
                         }
                     })
                     .open();
+        }
+    }
+
+    private void addOptions(final ProtonClientOptions clientOptions) {
+
+        if (config.getUsername() != null && config.getPassword() != null) {
+            clientOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
+        }
+        addTlsTrustOptions(clientOptions);
+        addTlsKeyCertOptions(clientOptions);
+    }
+
+    private void addTlsTrustOptions(final ProtonClientOptions clientOptions) {
+
+        if (clientOptions.getTrustOptions() == null) {
+            TrustOptions trustOptions = config.getTrustOptions();
+            if (trustOptions != null) {
+                clientOptions.setSsl(true).setTrustOptions(trustOptions);
+                if (config.isHostnameVerificationRequired()) {
+                    clientOptions.setHostnameVerificationAlgorithm("HTTPS");
+                } else {
+                    clientOptions.setHostnameVerificationAlgorithm("");
+                }
+            }
+        }
+    }
+
+    private void addTlsKeyCertOptions(final ProtonClientOptions clientOptions) {
+
+        if (clientOptions.getKeyCertOptions() == null) {
+            KeyCertOptions keyCertOptions = config.getKeyCertOptions();
+            if (keyCertOptions != null) {
+                clientOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
+                clientOptions.addEnabledSaslMechanism(ProtonSaslExternalImpl.MECH_NAME);
+            }
+        }
+    }
+
+    /**
+     * Builder for ConnectionFactory instances.
+     */
+    public static final class ConnectionFactoryBuilder {
+
+        private Vertx  vertx;
+        private final HonoClientConfigProperties properties;
+
+        private ConnectionFactoryBuilder(final HonoClientConfigProperties properties) {
+            this.properties = properties;
+        }
+
+        /**
+         * Creates a new builder using default configuration values.
+         * 
+         * @return The builder.
+         */
+        public static ConnectionFactoryBuilder newBuilder() {
+            return new ConnectionFactoryBuilder(new HonoClientConfigProperties());
+        }
+
+        /**
+         * Creates a new builder using given configuration values.
+         * 
+         * @param config The configuration to use.
+         * @return The builder.
+         */
+        public static ConnectionFactoryBuilder newBuilder(final HonoClientConfigProperties config) {
+            return new ConnectionFactoryBuilder(config);
+        }
+
+        /**
+         * Sets the name the client should use as its container name when connecting to the
+         * server.
+         * 
+         * @param name The client's container name.
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder name(final String name) {
+            this.properties.setName(name);
+            return this;
+        }
+
+        /**
+         * @param vertx the Vertx instance to use for the client (may be {@code null})
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder vertx(final Vertx vertx) {
+            this.vertx = vertx;
+            return this;
+        }
+
+        /**
+         * @param host the Hono host
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder host(final String host) {
+            this.properties.setHost(host);
+            return this;
+        }
+
+        /**
+         * @param port the Hono port
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder port(final int port) {
+            this.properties.setPort(port);
+            return this;
+        }
+
+        /**
+         * @param user username used to authenticate
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder user(final String user) {
+            this.properties.setUsername(user);
+            return this;
+        }
+
+        /**
+         * @param password the secret used to authenticate
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder password(final String password) {
+            this.properties.setPassword(password);
+            return this;
+        }
+
+        /**
+         * @param pathSeparator the character to use to separate the segments of message addresses.
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder pathSeparator(final String pathSeparator) {
+            this.properties.setPathSeparator(pathSeparator);
+            return this;
+        }
+
+        /**
+         * Sets the path to the PKCS12 key store to load certificates of trusted CAs from.
+         * 
+         * @param path The absolute path to the key store.
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder trustStorePath(final String path) {
+            this.properties.setTrustStorePath(path);
+            return this;
+        }
+
+        /**
+         * Sets the password for accessing the PKCS12 key store containing the certificates
+         * of trusted CAs.
+         * 
+         * @param password The password to set.
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder trustStorePassword(final String password) {
+            this.properties.setTrustStorePassword(password);
+            return this;
+        }
+
+        /**
+         * Disables matching of the <em>host</em> property against the distinguished name
+         * asserted by the server's certificate when connecting using TLS.
+         * <p>
+         * Verification is enabled by default.
+         * 
+         * @return the builder instance
+         */
+        public ConnectionFactoryBuilder disableHostnameVerification() {
+            this.properties.setHostnameVerificationRequired(false);
+            return this;
+        }
+
+        /**
+         * Creates a new client based on this builder's configuration properties.
+         * 
+         * @return The client instance.
+         * @throws IllegalStateException if any of the mandatory properties are not set.
+         */
+        public ConnectionFactory build() {
+            if (vertx == null) {
+                throw new IllegalStateException("Vertx instance must be set");
+            }else {
+                ConnectionFactoryImpl impl = new ConnectionFactoryImpl();
+                impl.setVertx(vertx);
+                impl.setClientConfig(properties);
+                return impl;
+            }
         }
     }
 }

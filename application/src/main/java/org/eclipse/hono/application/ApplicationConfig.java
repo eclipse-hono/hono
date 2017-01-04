@@ -53,16 +53,30 @@ public class ApplicationConfig {
         return bean;
     }
 
+    /**
+     * Exposes properties for configuring the connection to the downstream
+     * AMQP container as a Spring bean.
+     * 
+     * @return The connection properties.
+     */
     @Bean
     @ConfigurationProperties(prefix = "hono.downstream")
     public HonoClientConfigProperties downstreamConnectionProperties() {
-        return new HonoClientConfigProperties();
+        HonoClientConfigProperties props = new HonoClientConfigProperties();
+        if (props.getAmqpHostname() == null) {
+            props.setAmqpHostname("hono-internal");
+        }
+        return props;
     }
 
+    /**
+     * Exposes a factory for connections to the downstream AMQP container
+     * as a Spring bean.
+     * 
+     * @return The connection factory.
+     */
     @Bean
     public ConnectionFactory downstreamConnectionFactory() {
-        ConnectionFactoryImpl factory = new ConnectionFactoryImpl();
-        factory.setHostname("hono-internal");
-        return factory;
+        return new ConnectionFactoryImpl();
     }
 }

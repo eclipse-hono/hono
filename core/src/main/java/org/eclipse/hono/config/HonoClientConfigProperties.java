@@ -15,14 +15,14 @@ package org.eclipse.hono.config;
 /**
  * Common configuration properties required for accessing a Hono server.
  */
-public class HonoClientConfigProperties {
+public final class HonoClientConfigProperties extends AbstractHonoConfig {
 
-    private String name = "Hono client";
+    private String name;
     private String host = "localhost";
     private int port = 5672;
     private String username;
-    private String password;
-    private String pathSeparator = "/";
+    private char[] password;
+    private String amqpHostname;
 
     /**
      * @return the host
@@ -70,41 +70,57 @@ public class HonoClientConfigProperties {
      * @return the password
      */
     public String getPassword() {
-        return password;
+        if (password == null) {
+            return null;
+        } else {
+            return String.valueOf(password);
+        }
     }
 
     /**
      * @param password the password to set
      */
     public void setPassword(final String password) {
-        this.password = password;
+        if (password != null) {
+            this.password = password.toCharArray();
+        } else {
+            this.password = null;
+        }
     }
 
     /**
-     * @return the pathSeparator
-     */
-    public String getPathSeparator() {
-        return pathSeparator;
-    }
-
-    /**
-     * @param pathSeparator the pathSeparator to set
-     */
-    public void setPathSeparator(String pathSeparator) {
-        this.pathSeparator = pathSeparator;
-    }
-
-    /**
-     * @return the name
+     * Gets the name being indicated as the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
+     * 
+     * @return The name or {@code null} if no name has been set.
      */
     public String getName() {
         return name;
     }
 
     /**
-     * @param name the name to set
+     * Sets the name to indicate as the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
+     * 
+     * @param name The name to set.
      */
-    public void setName(String name) {
+    public void setName(final String name) {
         this.name = name;
+    }
+
+    /**
+     * Gets the name being indicated as the <em>hostname</em> in the client's AMQP <em>Open</em> frame.
+     * 
+     * @return The host name or {@code null} if no host name has been set.
+     */
+    public String getAmqpHostname() {
+        return amqpHostname;
+    }
+
+    /**
+     * Sets the name to indicate as the <em>hostname</em> in the client's AMQP <em>Open</em> frame.
+     * 
+     * @param amqpHostname The host name to set.
+     */
+    public void setAmqpHostname(String amqpHostname) {
+        this.amqpHostname = amqpHostname;
     }
 }
