@@ -13,7 +13,6 @@ package org.eclipse.hono.client;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +25,7 @@ import org.eclipse.hono.client.impl.EventSenderImpl;
 import org.eclipse.hono.client.impl.RegistrationClientImpl;
 import org.eclipse.hono.client.impl.TelemetryConsumerImpl;
 import org.eclipse.hono.client.impl.TelemetrySenderImpl;
-import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.connection.ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +34,8 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
@@ -46,48 +43,29 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 public final class HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClient.class);
-    private final String name;
-    private final String host;
-    private final int port;
-    private final String pathSeparator;
     private final Map<String, MessageSender> activeSenders = new ConcurrentHashMap<>();
     private final Map<String, RegistrationClient> activeRegClients = new ConcurrentHashMap<>();
-    private final String user;
-    private final String password;
+    private final AtomicBoolean connecting = new AtomicBoolean(false);
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
-    private final AtomicBoolean connecting = new AtomicBoolean(false);
-    private final Vertx vertx;
+    private Vertx vertx;
     private Context context;
+    private ConnectionFactory connectionFactory;
+
 
     /**
      * Creates a new client for a set of configuration properties.
      * 
      * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
-     * @param config The configuration properties.
+     * @param connectionFactory The factory to use for creating an AMQP connection to the Hono server.
      */
-    public HonoClient(final Vertx vertx, final HonoClientConfigProperties config) {
-        this(HonoClientBuilder.newClient(config).vertx(vertx));
-    }
-
-    private HonoClient(final HonoClientBuilder builder) {
-
-        if (builder.vertx != null) {
-            this.vertx = builder.vertx;
+    public HonoClient(final Vertx vertx, final ConnectionFactory connectionFactory) {
+        if (vertx != null) {
+            this.vertx = vertx;
         } else {
             this.vertx = Vertx.vertx();
         }
-        if (builder.name != null) {
-            this.name = builder.name;
-        } else {
-            this.name = String.format("Hono-Client-%s", UUID.randomUUID().toString());
-        }
-        this.host = Objects.requireNonNull(builder.host);
-        this.port = builder.port;
-        this.user = builder.user;
-        this.password = builder.password;
-        this.pathSeparator = builder.pathSeparator == null ? "/" : builder.pathSeparator;
-        
+        this.connectionFactory = connectionFactory;
     }
 
     /**
@@ -128,7 +106,7 @@ public final class HonoClient {
         Objects.requireNonNull(connectionHandler);
 
         if (isConnected()) {
-            LOG.debug("already connected to server [{}:{}]", host, port);
+            LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             connectionHandler.handle(Future.succeededFuture(this));
         } else if (connecting.compareAndSet(false, true)) {
 
@@ -139,45 +117,20 @@ public final class HonoClient {
                 clientOptions = options;
             }
 
-            if (user != null && password != null) {
-                clientOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
-            }
-
-            LOG.debug("connecting to server [{}:{}] as user [{}]...", host, port, user);
-
-            final ProtonClient protonClient = ProtonClient.create(vertx);
-            protonClient.connect(clientOptions, host, port, user, password, conAttempt -> {
-
-                if (conAttempt.succeeded()) {
-                    LOG.info("connected to server [{}:{}]", host, port);
-
-                    conAttempt.result()
-                        .setHostname("hono")
-                        .setContainer(name)
-                        .openHandler(opened -> {
-                            connecting.compareAndSet(true, false);
-                            if (opened.succeeded()) {
-                                LOG.info("connection to [{}] open", opened.result().getRemoteContainer());
-                                connection = opened.result();
-                                context = Vertx.currentContext();
-                                if (disconnectHandler != null) {
-                                    connection.disconnectHandler(disconnectHandler);
-                                } else {
-                                    connection.disconnectHandler(this::onRemoteDisconnect);
-                                }
-
-                                connectionHandler.handle(Future.succeededFuture(this));
-                            } else {
-                                LOG.warn("cannot open connection to container [{}:{}]", host, port, opened.cause());
-                                connectionHandler.handle(Future.failedFuture(opened.cause()));
-                            }
-                        }).open();
-                } else {
-                    LOG.warn("connection to server [{}:{}] failed", host, port, conAttempt.cause());
-                    connectionHandler.handle(Future.failedFuture(conAttempt.cause()));
-                }
-            });
-
+            connectionFactory.connect(
+                    clientOptions,
+                    null, // no particular close handler
+                    disconnectHandler != null ? disconnectHandler : this::onRemoteDisconnect,
+                    conAttempt -> {
+                        connecting.compareAndSet(true, false);
+                        if (conAttempt.failed()) {
+                            connectionHandler.handle(Future.failedFuture(conAttempt.cause()));
+                        } else {
+                            connection = conAttempt.result();
+                            context = Vertx.currentContext();
+                            connectionHandler.handle(Future.succeededFuture(this));
+                        }
+                    });
         } else {
             LOG.debug("already trying to connect to Hono server ...");
         }
@@ -186,7 +139,7 @@ public final class HonoClient {
 
     private void onRemoteDisconnect(final ProtonConnection con) {
 
-        LOG.warn("lost connection to Hono server [{}:{}]", host, port);
+        LOG.warn("lost connection to Hono server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
         con.disconnectHandler(null);
         con.disconnect();
         activeSenders.clear();
@@ -194,7 +147,7 @@ public final class HonoClient {
         if (clientOptions.getReconnectAttempts() != 0) {
             // give Vert.x some time to clean up NetClient
             vertx.setTimer(300, reconnect -> {
-                LOG.info("attempting to re-connect to Hono server [{}:{}]", host, port);
+                LOG.info("attempting to re-connect to Hono server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
                 connect(clientOptions, done -> {});
             });
         }
@@ -300,7 +253,7 @@ public final class HonoClient {
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
         checkConnection().compose(
-                connected -> TelemetryConsumerImpl.create(context, connection, tenantId, pathSeparator, telemetryConsumer, creationHandler),
+                connected -> TelemetryConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), telemetryConsumer, creationHandler),
                 Future.<MessageConsumer> future().setHandler(creationHandler));
         return this;
     }
@@ -311,7 +264,7 @@ public final class HonoClient {
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
         checkConnection().compose(
-                connected -> EventConsumerImpl.create(context, connection, tenantId, pathSeparator, eventConsumer, creationHandler),
+                connected -> EventConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), eventConsumer, creationHandler),
                 Future.<MessageConsumer> future().setHandler(creationHandler));
         return this;
     }
@@ -393,125 +346,22 @@ public final class HonoClient {
 
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         if (connection == null || connection.isDisconnected()) {
-            LOG.info("connection to server [{}:{}] already closed", host, port);
+            LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
             completionHandler.handle(Future.succeededFuture());
         } else {
-            LOG.info("closing connection to server [{}:{}]...", host, port);
+            LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
             connection.disconnectHandler(null); // make sure we are not trying to re-connect
             connection.closeHandler(closedCon -> {
                 if (closedCon.succeeded()) {
-                    LOG.info("closed connection to server [{}:{}]", host, port);
+                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
                 } else {
-                    LOG.info("could not close connection to server [{}:{}]", host, port, closedCon.cause());
+                    LOG.info("could not close connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
                 }
                 connection.disconnect();
                 if (completionHandler != null) {
                     completionHandler.handle(Future.succeededFuture());
                 }
             }).close();
-        }
-    }
-
-    /**
-     * Builder for HonoClient instances.
-     */
-    public static class HonoClientBuilder {
-
-        private String name;
-        private Vertx  vertx;
-        private String host;
-        private int    port;
-        private String user;
-        private String password;
-        private String pathSeparator;
-
-        public static HonoClientBuilder newClient() {
-            return new HonoClientBuilder();
-        }
-
-        public static HonoClientBuilder newClient(final HonoClientConfigProperties config) {
-            final HonoClientBuilder builder = new HonoClientBuilder();
-            builder
-                .name(config.getName())
-                .host(config.getHost())
-                .port(config.getPort())
-                .user(config.getUsername())
-                .password(config.getPassword())
-                .pathSeparator(config.getPathSeparator());
-            return builder;
-        }
-
-        /**
-         * Sets the name the client should use as its container name when connecting to the
-         * server.
-         * 
-         * @param name The client's container name.
-         * @return the builder instance
-         */
-        public HonoClientBuilder name(final String name) {
-            this.name = name;
-            return this;
-        }
-
-        /**
-         * @param vertx the Vertx instance to use for the client (may be {@code null})
-         * @return the builder instance
-         */
-        public HonoClientBuilder vertx(final Vertx vertx) {
-            this.vertx = vertx;
-            return this;
-        }
-
-        /**
-         * @param host the Hono host
-         * @return the builder instance
-         */
-        public HonoClientBuilder host(final String host) {
-            this.host = host;
-            return this;
-        }
-
-        /**
-         * @param port the Hono port
-         * @return the builder instance
-         */
-        public HonoClientBuilder port(final int port) {
-            this.port = port;
-            return this;
-        }
-
-        /**
-         * @param user username used to authenticate
-         * @return the builder instance
-         */
-        public HonoClientBuilder user(final String user) {
-            this.user = user;
-            return this;
-        }
-
-        /**
-         * @param password the secret used to authenticate
-         * @return the builder instance
-         */
-        public HonoClientBuilder password(final String password) {
-            this.password = password;
-            return this;
-        }
-
-        /**
-         * @param pathSeparator the character to use to separate the segments of message addresses.
-         * @return the builder instance
-         */
-        public HonoClientBuilder pathSeparator(final String pathSeparator) {
-            this.pathSeparator = pathSeparator;
-            return this;
-        }
-
-        /**
-         * @return a new HonoClient instance
-         */
-        public HonoClient build() {
-            return new HonoClient(this);
         }
     }
 }

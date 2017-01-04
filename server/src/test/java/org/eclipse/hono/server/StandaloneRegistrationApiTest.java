@@ -20,8 +20,8 @@ import java.util.stream.IntStream;
 import org.eclipse.hono.authentication.impl.AcceptAllPlainAuthenticationService;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.registration.impl.RegistrationEndpoint;
 import org.eclipse.hono.util.AggregatingInvocationResultHandler;
@@ -42,6 +42,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
  * Tests validating Hono's Registration API using a stand alone server.
@@ -89,14 +90,14 @@ public class StandaloneRegistrationApiTest {
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
         }).compose(s -> {
-            client = HonoClientBuilder.newClient()
+            client = new HonoClient(vertx, ConnectionFactoryBuilder.newBuilder()
                     .vertx(vertx)
                     .name("test")
                     .host(server.getBindAddress())
                     .port(server.getPort())
                     .user(USER)
                     .password(PWD)
-                    .build();
+                    .build());
 
             Future<HonoClient> clientTracker = Future.future();
             client.connect(new ProtonClientOptions(), clientTracker.completer());

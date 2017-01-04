@@ -16,8 +16,6 @@ package org.eclipse.hono.tests.client;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static org.eclipse.hono.tests.IntegrationTestSupport.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assume.*;
 
 import java.net.InetAddress;
 import java.util.function.Consumer;
@@ -25,10 +23,10 @@ import java.util.stream.IntStream;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
@@ -87,26 +85,26 @@ abstract class ClientTestBase {
             }
         });
 
-        downstreamClient = HonoClientBuilder.newClient()
+        downstreamClient = new HonoClient(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
                 .host(DOWNSTREAM_HOST)
                 .port(DOWNSTREAM_PORT)
                 .pathSeparator(PATH_SEPARATOR)
                 .user("user1@HONO")
                 .password("pw")
-                .build();
+                .build());
         downstreamClient.connect(new ProtonClientOptions(), downstreamTracker.completer());
 
         // step 1
         // connect to Hono server
         Future<HonoClient> honoTracker = Future.future();
-        honoClient = HonoClientBuilder.newClient()
+        honoClient = new HonoClient(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
                 .host(HONO_HOST)
                 .port(HONO_PORT)
                 .user("hono-client")
                 .password("secret")
-                .build();
+                .build());
         honoClient.connect(new ProtonClientOptions(), honoTracker.completer());
         honoTracker.compose(hono -> {
             // step 2

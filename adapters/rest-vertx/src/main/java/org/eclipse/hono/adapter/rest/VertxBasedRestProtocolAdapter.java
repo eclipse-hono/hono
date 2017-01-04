@@ -18,10 +18,9 @@ import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
-import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +58,6 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
-    private static final String NAME = "Hono REST Adapter";
 
     @Value("${hono.http.bindaddress:0.0.0.0}")
     private String bindAddress;
@@ -74,6 +72,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private String activeProfiles;
 
     private HttpServer server;
+    @Autowired
     private HonoClient hono;
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier
             = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
@@ -236,7 +235,8 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private void doGetStatus(final RoutingContext ctx) {
         JsonObject result = new JsonObject()
-                .put("name", NAME)
+                .put("name", honoClientConfig.getName())
+                .put("Hono server", String.format("%s:%d", honoClientConfig.getHost(), honoClientConfig.getPort()))
                 .put("connected", isConnected())
                 .put("active profiles", activeProfiles);
 
@@ -475,15 +475,6 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
 
-        // make sure that we are not trying to connect multiple times in parallel
-        hono = HonoClientBuilder.newClient()
-                .vertx(vertx)
-                .name(NAME)
-                .host(honoClientConfig.getHost())
-                .port(honoClientConfig.getPort())
-                .user(honoClientConfig.getUsername())
-                .password(honoClientConfig.getPassword())
-                .build();
         ProtonClientOptions options = new ProtonClientOptions()
                 .setReconnectAttempts(-1)
                 .setReconnectInterval(200); // try to re-connect every 200 ms

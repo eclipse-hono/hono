@@ -24,8 +24,6 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
-import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.RegistrationResult;
@@ -57,8 +55,8 @@ public class ExampleSender {
     @Value(value = "${device.id}")
     private String deviceId;
 
-    @Autowired
-    private HonoClientConfigProperties clientConfig;
+//    @Autowired
+//    private HonoClientConfigProperties clientConfig;
 
     @Autowired
     private Environment environment;
@@ -66,13 +64,14 @@ public class ExampleSender {
     @Autowired
     private Vertx vertx;
     private Context ctx;
+    @Autowired
     private HonoClient client;
 
     @PostConstruct
     private void start() {
 
         final List<String> activeProfiles = Arrays.asList(environment.getActiveProfiles());
-        client = HonoClientBuilder.newClient(clientConfig).vertx(vertx).build();
+//        client = HonoClientBuilder.newClient(clientConfig).vertx(vertx).build();
         ctx = vertx.getOrCreateContext();
         final Future<MessageSender> startupTracker = Future.future();
         startupTracker.setHandler(done -> {

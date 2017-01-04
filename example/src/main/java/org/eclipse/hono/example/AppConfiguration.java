@@ -13,29 +13,24 @@
 
 package org.eclipse.hono.example;
 
-import org.eclipse.hono.config.HonoClientConfigProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.eclipse.hono.adapter.AdapterConfig;
+import org.eclipse.hono.client.HonoClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import io.vertx.core.Vertx;
 
 /**
  * Configuration for Example application.
  */
 @Configuration
-public class AppConfiguration {
+public class AppConfiguration extends AdapterConfig {
 
-    private final Vertx vertx = Vertx.vertx();
-
-    @ConfigurationProperties(prefix = "hono.client")
+    /**
+     * Exposes a {@code HonoClient} as a Spring bean.
+     * 
+     * @return The Hono client.
+     */
     @Bean
-    public HonoClientConfigProperties honoClientConfig() {
-        return new HonoClientConfigProperties();
-    }
-
-    @Bean
-    public Vertx vertx() {
-        return vertx;
+    public HonoClient honoClient() {
+        return new HonoClient(getVertx(), honoConnectionFactory());
     }
 }

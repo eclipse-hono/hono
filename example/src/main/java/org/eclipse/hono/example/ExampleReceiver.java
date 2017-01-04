@@ -13,9 +13,6 @@
 package org.eclipse.hono.example;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
@@ -24,22 +21,12 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.HonoClient.HonoClientBuilder;
-import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.util.MessageHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
@@ -48,30 +35,12 @@ import io.vertx.proton.ProtonClientOptions;
  */
 @Component
 @Profile("!sender")
-public class ExampleReceiver {
-
-    private static final Logger LOG = LoggerFactory.getLogger(ExampleReceiver.class);
-
-    @Value(value = "${tenant.id}")
-    private String tenantId;
-
-    @Autowired
-    private HonoClientConfigProperties clientConfig;
-
-    @Autowired
-    private Environment environment;
-
-    @Autowired
-    private Vertx vertx;
-    private Context ctx;
-    private HonoClient client;
+public class ExampleReceiver extends AbstractExampleClient {
 
     @PostConstruct
     private void start() {
 
-        final List<String> activeProfiles = Arrays.asList(environment.getActiveProfiles());
-        client = HonoClientBuilder.newClient(clientConfig).vertx(vertx).build();
-        final Future<CompositeFuture> startupTracker = Future.future();
+        final Future<MessageConsumer> startupTracker = Future.future();
         startupTracker.setHandler(done -> {
             if (done.succeeded()) {
                 LOG.info("Receiver created successfully.");
@@ -84,7 +53,6 @@ public class ExampleReceiver {
             }
         });
 
-        ctx = vertx.getOrCreateContext();
         ctx.runOnContext((Void go) -> {
             /* step 1: connect hono client */
             final Future<HonoClient> connectionTracker = Future.future();
@@ -92,23 +60,16 @@ public class ExampleReceiver {
             connectionTracker.compose(honoClient -> {
                 /* step 2: wait for consumers */
 
-                final Future<MessageConsumer> telemetryConsumer = Future.future();
-                final Future<MessageConsumer> eventConsumer = Future.future();
-
                 if (activeProfiles.contains("event")) {
                     client.createEventConsumer(tenantId,
                             (msg) -> handleMessage("event", msg),
-                            eventConsumer.completer());
+                            startupTracker.completer());
                 } else {
-                    eventConsumer.complete();
-
                     // default is telemetry consumer
                     client.createTelemetryConsumer(tenantId,
                             msg -> handleMessage("telemetry", msg),
-                            telemetryConsumer.completer());
+                            startupTracker.completer());
                 }
-
-                CompositeFuture.all(telemetryConsumer, eventConsumer).setHandler(startupTracker.completer());
 
             }, startupTracker);
         });
@@ -137,11 +98,10 @@ public class ExampleReceiver {
             content = ((AmqpValue) msg.getBody()).getValue().toString();
         }
 
-        LOG.info("received " + endpoint + " message [device: {}, content-type: {}]: {}", deviceId, msg.getContentType(), content);
+        LOG.info("received {} message [device: {}, content-type: {}]: {}", endpoint, deviceId, msg.getContentType(), content);
 
         if (msg.getApplicationProperties() != null) {
-            final Map props = msg.getApplicationProperties().getValue();
-            LOG.info("... with application properties: {}", props);
+            LOG.info("... with application properties: {}", msg.getApplicationProperties().getValue());
         }
     }
 }
