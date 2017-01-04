@@ -66,7 +66,7 @@ services:
       - HONO_CLIENT_NAME=Hono REST Adapter
       - HONO_CLIENT_HOST=hono
       - HONO_CLIENT_PORT=5672
-      - HONO_CLIENT_USERNAME=hono-client
+      - HONO_CLIENT_USERNAME=rest-adapter
       - HONO_CLIENT_PASSWORD=secret
       - HONO_HTTP_BINDADDRESS=0.0.0.0
       - HONO_MAX_INSTANCES=1
@@ -82,7 +82,7 @@ services:
       - HONO_CLIENT_NAME=Hono MQTT Adapter
       - HONO_CLIENT_HOST=hono
       - HONO_CLIENT_PORT=5672
-      - HONO_CLIENT_USERNAME=hono-client
+      - HONO_CLIENT_USERNAME=mqtt-adapter
       - HONO_CLIENT_PASSWORD=secret
       - HONO_MQTT_BINDADDRESS=0.0.0.0
       - HONO_MAX_INSTANCES=1
