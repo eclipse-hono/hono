@@ -37,7 +37,7 @@ public class ApplicationConfig {
      * @return the instance.
      */
     @Bean
-    public static Vertx getInstance() {
+    public Vertx vertx() {
         return vertx;
     }
 

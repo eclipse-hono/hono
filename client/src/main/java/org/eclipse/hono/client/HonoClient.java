@@ -38,6 +38,7 @@ import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
@@ -137,6 +138,11 @@ public final class HonoClient {
             } else {
                 clientOptions = options;
             }
+
+            if (user != null && password != null) {
+                clientOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
+            }
+
             LOG.debug("connecting to server [{}:{}] as user [{}]...", host, port, user);
 
             final ProtonClient protonClient = ProtonClient.create(vertx);

@@ -13,6 +13,9 @@ package org.eclipse.hono.server;
 
 import java.util.Objects;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import io.vertx.core.Vertx;
 import io.vertx.proton.sasl.ProtonSaslAuthenticator;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
@@ -20,7 +23,8 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 /**
  * A factory for objects performing SASL authentication on an AMQP connection.
  */
-public final class PlainSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
+@Component
+public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
 
     private Vertx vertx;
 
@@ -29,12 +33,12 @@ public final class PlainSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * 
      * @param vertx the Vertx environment to run the factory in.
      */
-    public PlainSaslAuthenticatorFactory(final Vertx vertx) {
+    public HonoSaslAuthenticatorFactory(@Autowired final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
     }
 
     @Override
     public ProtonSaslAuthenticator create() {
-        return new PlainSaslAuthenticator(vertx);
+        return new HonoSaslAuthenticator(vertx);
     }
 }

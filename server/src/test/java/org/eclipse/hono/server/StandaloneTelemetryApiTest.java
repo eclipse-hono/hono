@@ -68,7 +68,7 @@ public class StandaloneTelemetryApiTest {
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
-        server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0);
+        server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0).setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         server.addEndpoint(telemetryEndpoint);
@@ -157,7 +157,7 @@ public class StandaloneTelemetryApiTest {
         telemetrySender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
     }
 
-    @Test(timeout = 1000l)
+    @Test()
     public void testLinkGetsClosedWhenUploadingMalformedTelemetryDataMessage(final TestContext ctx) throws Exception {
 
         final Message msg = ProtonHelper.message("malformed");
@@ -166,8 +166,9 @@ public class StandaloneTelemetryApiTest {
         telemetrySender.setErrorHandler(ctx.asyncAssertFailure(s -> {
             LOG.debug(s.getMessage());
         }));
-
-        telemetrySender.send(msg, capacityAvailable -> {});
+        Async sent = ctx.async();
+        telemetrySender.send(msg, capacityAvailable -> sent.complete());
+        sent.awaitSuccess(200);
     }
 
     @Test(timeout = 2000l)

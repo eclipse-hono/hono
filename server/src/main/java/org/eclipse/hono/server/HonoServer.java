@@ -53,6 +53,7 @@ import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
 import io.vertx.proton.ProtonSession;
+import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
 /**
  * The Hono server is an AMQP 1.0 container that provides endpoints for the <em>Telemetry</em>,
@@ -63,22 +64,38 @@ import io.vertx.proton.ProtonSession;
 @Scope("prototype")
 public final class HonoServer extends AbstractVerticle {
 
-    private static final Logger   LOG = LoggerFactory.getLogger(HonoServer.class);
-    private String                bindAddress;
-    private int                   port;
-    private ProtonServer          server;
-    private Map<String, Endpoint> endpoints = new HashMap<>();
-    private HonoConfigProperties  honoConfig = new HonoConfigProperties();
+    private static final Logger            LOG = LoggerFactory.getLogger(HonoServer.class);
+    private String                         bindAddress;
+    private int                            port;
+    private ProtonServer                   server;
+    private Map<String, Endpoint>          endpoints = new HashMap<>();
+    private HonoConfigProperties           honoConfig = new HonoConfigProperties();
+    private ProtonSaslAuthenticatorFactory saslAuthenticatorFactory;
 
     /**
      * Sets the global Hono configuration properties.
      * 
      * @param props The properties.
+     * @return This instance for setter chaining.
      * @throws NullPointerException if props is {@code null}.
      */
     @Autowired(required = false)
-    public void setHonoConfiguration(final HonoConfigProperties props) {
+    public HonoServer setHonoConfiguration(final HonoConfigProperties props) {
         this.honoConfig = Objects.requireNonNull(props);
+        return this;
+    }
+
+    /**
+     * Sets the factory to use for creating objects performing SASL based authentication of clients.
+     * 
+     * @param factory The factory.
+     * @return This instance for setter chaining.
+     * @throws NullPointerException if factory is {@code null}.
+     */
+    @Autowired
+    public HonoServer setSaslAuthenticatorFactory(final ProtonSaslAuthenticatorFactory factory) {
+        this.saslAuthenticatorFactory = Objects.requireNonNull(factory);
+        return this;
     }
 
     @Override
@@ -91,7 +108,7 @@ public final class HonoServer extends AbstractVerticle {
         endpointsTracker.compose(s -> {
             final ProtonServerOptions options = createServerOptions();
             server = ProtonServer.create(vertx, options)
-                    .saslAuthenticatorFactory(new PlainSaslAuthenticatorFactory(vertx))
+                    .saslAuthenticatorFactory(saslAuthenticatorFactory)
                     .connectHandler(this::handleRemoteConnectionOpen)
                     .listen(port, bindAddress, bindAttempt -> {
                         if (bindAttempt.succeeded()) {

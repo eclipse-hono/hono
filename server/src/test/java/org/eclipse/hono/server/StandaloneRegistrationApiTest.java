@@ -66,7 +66,7 @@ public class StandaloneRegistrationApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0);
+        server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0).setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
         server.addEndpoint(new RegistrationEndpoint(vertx));
         registrationAdapter = new FileBasedRegistrationService();
 
