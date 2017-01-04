@@ -180,11 +180,6 @@ public final class TestSupport {
         return new ConnectionFactory() {
 
             @Override
-            public void setHostname(final String hostname) {
-                
-            }
-
-            @Override
             public void connect(ProtonClientOptions options, Handler<AsyncResult<ProtonConnection>> closeHandler,
                     Handler<ProtonConnection> disconnectHandler,
                     Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
@@ -194,6 +189,21 @@ public final class TestSupport {
                 } else {
                     connectionResultHandler.handle(Future.succeededFuture(connectionToReturn));
                 }
+            }
+
+            @Override
+            public String getHost() {
+                return "server";
+            }
+
+            @Override
+            public int getPort() {
+                return 5672;
+            }
+
+            @Override
+            public String getPathSeparator() {
+                return Constants.DEFAULT_PATH_SEPARATOR;
             }
         };
     }

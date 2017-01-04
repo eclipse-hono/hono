@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
@@ -157,10 +158,6 @@ public class ForwardingDownstreamAdapterTest {
         ConnectionFactory factory = new ConnectionFactory() {
 
             @Override
-            public void setHostname(final String hostname) {
-            }
-
-            @Override
             public void connect(
                     final ProtonClientOptions options,
                     final Handler<AsyncResult<ProtonConnection>> closeHandler,
@@ -170,6 +167,21 @@ public class ForwardingDownstreamAdapterTest {
                 latch.countDown();
                 disconnectHandlerRef.set(disconnectHandler);
                 connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
+            }
+
+            @Override
+            public String getHost() {
+                return "server";
+            }
+
+            @Override
+            public int getPort() {
+                return 5672;
+            }
+
+            @Override
+            public String getPathSeparator() {
+                return Constants.DEFAULT_PATH_SEPARATOR;
             }
         };
 

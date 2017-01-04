@@ -39,7 +39,6 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionFactoryImpl.class);
     private Vertx                      vertx;
-    private String                     hostname;
     private HonoClientConfigProperties config;
 
     /**
@@ -68,8 +67,18 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
     }
 
     @Override
-    public void setHostname(final String hostname) {
-        this.hostname = hostname;
+    public String getHost() {
+        return config.getHost();
+    }
+
+    @Override
+    public int getPort() {
+        return config.getPort();
+    }
+
+    @Override
+    public String getPathSeparator() {
+        return config.getPathSeparator();
     }
 
     @Override
