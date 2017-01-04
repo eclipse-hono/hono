@@ -34,6 +34,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.Charset;
+import java.util.function.BiConsumer;
 
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
@@ -45,6 +46,8 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
     private static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
     private static final String NAME = "MQTT Adapter";
+    private static final String TELEMETRY_ENDPOINT = "telemetry";
+    private static final String EVENT_ENDPOINT = "event";
 
     @Value("${hono.mqtt.bindaddress:0.0.0.0}")
     private String bindAddress;
@@ -57,6 +60,10 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
     private MqttServer server;
     private HonoClient hono;
+    private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier
+            = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
+    private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier
+            = (tenant, resultHandler) -> hono.getOrCreateTelemetrySender(tenant, resultHandler);
 
     private void bindMqttServer(final Future<Void> startFuture) {
 
@@ -151,51 +158,75 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                 LOG.debug("Just received message on [{}] payload [{}] with QoS [{}]", message.topicName(), message.payload().toString(Charset.defaultCharset()), message.qosLevel());
 
-                ResourceIdentifier resource = ResourceIdentifier.fromString(message.topicName());
+                try {
 
-                // if MQTT client doesn't specify device_id then closing connection (MQTT has now way for errors)
-                if (resource.getResourceId() == null) {
-                    endpoint.close();
-                } else {
+                    ResourceIdentifier resource = ResourceIdentifier.fromString(message.topicName());
 
-                    // check that MQTT client tries to publish on topic with device_id same as on connection
-                    if (resource.getResourceId().equals(endpoint.clientIdentifier())) {
+                    // if MQTT client doesn't specify device_id then closing connection (MQTT has now way for errors)
+                    if (resource.getResourceId() == null) {
+                        endpoint.close();
+                    } else {
 
-                        this.hono.getOrCreateTelemetrySender(resource.getTenantId(), createAttempt -> {
+                        // check that MQTT client tries to publish on topic with device_id same as on connection
+                        if (resource.getResourceId().equals(endpoint.clientIdentifier())) {
 
-                            if (createAttempt.succeeded()) {
+                            if (resource.getEndpoint().equals(TELEMETRY_ENDPOINT)) {
 
-                                MessageSender sender = createAttempt.result();
+                                this.doUploadMessages(resource.getTenantId(), endpoint, message, this.telemetrySenderSupplier);
 
-                                // sending message only when the "flow" is handled and credits are available
-                                // otherwise send will never happen due to no credits
-                                if (!sender.sendQueueFull()) {
-                                    this.sendToHono(endpoint, sender, message);
-                                } else {
-                                    sender.sendQueueDrainHandler(v -> {
-                                        this.sendToHono(endpoint, sender, message);
-                                    });
-                                }
+                            } else if (resource.getEndpoint().equals(EVENT_ENDPOINT)) {
+
+                                this.doUploadMessages(resource.getTenantId(), endpoint, message, this.eventSenderSupplier);
 
                             } else {
-
-                                // we don't have a connection to Hono ? MQTT no other way to close connection
+                                // MQTT client is trying to publish on a not supported endpoint
                                 endpoint.close();
                             }
 
-                        });
+                        } else {
+                            // MQTT client is trying to publish on a different device_id used on connection (MQTT has now way for errors)
+                            endpoint.close();
+                        }
 
-                    } else {
-                        // MQTT client is trying to publish on a different device_id used on connection (MQTT has now way for errors)
-                        endpoint.close();
                     }
 
+                } catch (IllegalArgumentException e) {
+
+                    // MQTT client is trying to publish on invalid topic; it does not contain at least two segments
+                    endpoint.close();
                 }
 
             });
 
             endpoint.accept(false);
         }
+    }
+
+    private void doUploadMessages(final String tenant, final MqttEndpoint endpoint, final MqttPublishMessage message, final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
+
+        senderSupplier.accept(tenant, createAttempt -> {
+
+            if (createAttempt.succeeded()) {
+
+                MessageSender sender = createAttempt.result();
+
+                // sending message only when the "flow" is handled and credits are available
+                // otherwise send will never happen due to no credits
+                if (!sender.sendQueueFull()) {
+                    this.sendToHono(endpoint, sender, message);
+                } else {
+                    sender.sendQueueDrainHandler(v -> {
+                        this.sendToHono(endpoint, sender, message);
+                    });
+                }
+
+            } else {
+
+                // we don't have a connection to Hono ? MQTT no other way to close connection
+                endpoint.close();
+            }
+
+        });
     }
 
     private void sendToHono(final MqttEndpoint endpoint, final MessageSender sender, final MqttPublishMessage message) {

@@ -48,3 +48,18 @@ you can use as a starting point for your own configuration.
 Upload a JSON string for device `4711`:
 
     $ mosquitto_pub -i 4711 -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+
+## Event API
+
+### Send Event Message
+
+* Topic: `event/${tenantId}/${deviceId}`
+* Client-id: ${deviceId}
+* Payload:
+  * (required) Arbitrary payload
+
+**Example**
+
+Upload a JSON string for device `4711`:
+
+    $ mosquitto_pub -i 4711 -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
