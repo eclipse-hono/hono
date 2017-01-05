@@ -98,5 +98,9 @@
             <durable>true</durable>
           </queue>
       </queues>
+
+      <wildcard-addresses>
+        <delimiter>/</delimiter>
+      </wildcard-addresses>
    </core>
 </configuration>
