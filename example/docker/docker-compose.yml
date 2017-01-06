@@ -16,7 +16,7 @@ services:
 
   # Apache Artemis Broker
   broker:
-    image: vromero/activemq-artemis:${artemis.version}
+    image: eclipsehono/activemq-artemis:${project.version}
   #  environment:
   #    - ARTEMIS_USERNAME=artemis
   #    - ARTEMIS_PASSWORD=artemis

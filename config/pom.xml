@@ -200,25 +200,28 @@
                   </build>
                 </image>
                 <image>
-                  <alias>artemis-default-config</alias>
-                  <name>eclipsehono/artemis:${project.version}</name>
+                  <alias>activemq-artemis</alias>
+                  <name>eclipsehono/activemq-artemis:${project.version}</name>
                   <build>
                     <from>java:8u40</from>
                     <assembly>
                       <descriptor>/src/main/descriptors/hono-artemis.xml</descriptor>
                     </assembly>
-<!--                    <entryPoint>
-                      <shell>/maven/bin/activemq console</shell>
+                      <runCmds>
+                        <run>/maven/bin/artemis create artemis --user admin --password admin --role admins --require-login</run>
+                      </runCmds>
+                    <entryPoint>
+                      <shell>/artemis/bin/artemis run</shell>
                     </entryPoint>
                     <ports>
-                      <port>1883</port>
+                      <port>5672</port>
                     </ports>
                     <volumes>
                       <volume>/maven/data</volume>
-                    </volumes>   -->
+                    </volumes>
                   </build>
                 </image>
-<!--                <image>
+                <image>
                   <alias>artemis-default-config</alias>
                   <name>eclipsehono/artemis-default-config:${project.version}</name>
                   <build>
@@ -229,11 +232,11 @@
                       <tag>${timestamp}</tag>
                     </tags>
                     <volumes>
-                      <volume>/var/lib/artemis/etc</volume>
+                      <volume>/artemis/etc</volume>
                     </volumes>
                     <assembly>
                       <mode>dir</mode>
-                      <basedir>/var/lib/artemis/etc</basedir>
+                      <basedir>/artemis/etc</basedir>
                       <inline>
                         <id>artemis-broker</id>
                         <fileSets>
@@ -248,7 +251,7 @@
                       </inline>
                     </assembly>
                   </build>
-                </image>-->
+                </image>
               </images>
             </configuration>
             <executions>

@@ -7,11 +7,17 @@
     </formats>
 
     <fileSets>
-        <!-- Expanded ActiveMQ Runtime -->
+        <!-- Expanded Artemis Runtime -->
         <fileSet>
             <outputDirectory>/</outputDirectory>
             <directory>target/dependencies/artemis/apache-artemis-${artemis.version}</directory>
-            <fileMode>0644</fileMode>
+            <!--<fileMode>0644</fileMode>-->
+        </fileSet>
+
+        <fileSet>
+            <outputDirectory>bin/</outputDirectory>
+            <directory>target/dependencies/artemis/apache-artemis-${artemis.version}/bin/</directory>
+            <fileMode>0755</fileMode>
         </fileSet>
     </fileSets>
 </assembly>
