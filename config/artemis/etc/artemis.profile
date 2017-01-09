@@ -15,8 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-ARTEMIS_HOME='/opt/apache-artemis-1.5.0'
-ARTEMIS_INSTANCE='/var/lib/artemis'
+ARTEMIS_HOME='/maven'
+ARTEMIS_INSTANCE='/artemis'
 
 # Cluster Properties: Used to pass arguments to ActiveMQ Artemis which can be referenced in broker.xml
 #ARTEMIS_CLUSTER_PROPS="-Dactivemq.remoting.default.port=61617 -Dactivemq.remoting.amqp.port=5673 -Dactivemq.remoting.stomp.port=61614 -Dactivemq.remoting.hornetq.port=5446"
