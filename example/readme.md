@@ -68,7 +68,7 @@ In order to start a router using [Gordon Sim's Qpid Dispatch Router image](https
 In order to start an Apache Artemis instance with the required configuration run the following from the command line
 
     $ docker run -d --name artemis-config eclipsehono/artemis-default-config:latest
-    $ docker run -d --name broker -h broker --volumes-from="artemis-config" vromero/activemq-artemis:1.4.0
+    $ docker run -d --name broker -h broker --volumes-from="artemis-config" eclipsehono/activemq-artemis:0.5-M3-SNAPSHOT
  
 ##### Example Configuration
 
