@@ -170,6 +170,11 @@ public class ForwardingDownstreamAdapterTest {
             }
 
             @Override
+            public String getName() {
+                return "client";
+            }
+
+            @Override
             public String getHost() {
                 return "server";
             }

@@ -15,14 +15,12 @@ package org.eclipse.hono.adapter.rest;
 import org.eclipse.hono.adapter.AdapterConfig;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.HonoClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuration class
+ * Spring Beans used by the Hono REST protocol adapter.
  */
 @Configuration
 public class Config extends AdapterConfig {

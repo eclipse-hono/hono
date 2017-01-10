@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.client;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,7 +53,6 @@ public final class HonoClient {
     private Context context;
     private ConnectionFactory connectionFactory;
 
-
     /**
      * Creates a new client for a set of configuration properties.
      * 
@@ -75,6 +75,29 @@ public final class HonoClient {
      */
     public boolean isConnected() {
         return connection != null && !connection.isDisconnected();
+    }
+
+    /**
+     * Gets properties describing the status of the connection to the Hono server.
+     * <p>
+     * The returned map contains the following properties:
+     * <ul>
+     * <li><em>name</em> - The name being indicated as the <em>container-id</em> in the
+     * client's AMQP <em>Open</em> frame.</li>
+     * <li><em>connected</em> - A boolean indicating whether this client is currently connected
+     * to the Hono server.</li>
+     * <li><em>Hono server</em> - The host (either name or literal IP address) and port of the
+     * server this client is configured to connect to.</li>
+     * </ul>
+     * 
+     * @return The connection status properties.
+     */
+    public Map<String, Object> getConnectionStatus() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("name", connectionFactory.getName());
+        result.put("connected", isConnected());
+        result.put("Hono server", String.format("%s:%d", connectionFactory.getHost(), connectionFactory.getPort()));
+        return result;
     }
 
     /**

@@ -23,6 +23,13 @@ import io.vertx.proton.ProtonConnection;
 public interface ConnectionFactory {
 
     /**
+     * Gets the name being indicated as the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
+     * 
+     * @return The name or {@code null} if no name has been set.
+     */
+    String getName();
+
+    /**
      * Gets the host name of the server that this factory creates connections to.
      * 
      * @return The host name or literal IP address.

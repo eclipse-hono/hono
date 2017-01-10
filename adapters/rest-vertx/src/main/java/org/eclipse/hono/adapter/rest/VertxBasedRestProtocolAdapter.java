@@ -15,12 +15,12 @@ package org.eclipse.hono.adapter.rest;
 import static java.net.HttpURLConnection.*;
 
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,25 +65,37 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     @Value("${hono.http.listenport:8080}")
     private int listenPort;
 
-    @Autowired
-    private HonoClientConfigProperties honoClientConfig;
-
     @Value("${spring.profiles.active:prod}")
     private String activeProfiles;
 
     private HttpServer server;
-    @Autowired
     private HonoClient hono;
-    private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier
-            = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
-    private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier
-            = (tenant, resultHandler) -> hono.getOrCreateTelemetrySender(tenant, resultHandler);
+
+    private BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier;
+    private BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier;
+
+    /**
+     * Sets the client to use for connecting to the Hono server.
+     * 
+     * @param honoClient The client.
+     * @throws NullPointerException if hono client is {@code null}.
+     */
+    @Autowired
+    public void setHonoClient(final HonoClient honoClient) {
+        this.hono = Objects.requireNonNull(honoClient);
+    }
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
 
-        bindHttpServer(createRouter(), startFuture);
-        connectToHono(null);
+        if (hono == null) {
+            startFuture.fail("Hono client must be set");
+        } else {
+            eventSenderSupplier = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
+            telemetrySenderSupplier = (tenant, resultHandler) -> hono.getOrCreateTelemetrySender(tenant, resultHandler);
+            bindHttpServer(createRouter(), startFuture);
+            connectToHono(null);
+        }
     }
 
     /**
@@ -234,11 +246,8 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     }
 
     private void doGetStatus(final RoutingContext ctx) {
-        JsonObject result = new JsonObject()
-                .put("name", honoClientConfig.getName())
-                .put("Hono server", String.format("%s:%d", honoClientConfig.getHost(), honoClientConfig.getPort()))
-                .put("connected", isConnected())
-                .put("active profiles", activeProfiles);
+        JsonObject result = new JsonObject(hono.getConnectionStatus());
+        result.put("active profiles", activeProfiles);
 
         ctx.response()
             .putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON)
@@ -483,9 +492,5 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
                 connectHandler.handle(connectAttempt);
             }
         });
-    }
-
-    private boolean isConnected() {
-        return hono != null && hono.isConnected();
     }
 }

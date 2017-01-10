@@ -12,11 +12,14 @@
 
 package org.eclipse.hono.config;
 
+import java.util.Objects;
+
 /**
  * Common configuration properties required for accessing a Hono server.
  */
 public final class HonoClientConfigProperties extends AbstractHonoConfig {
 
+    private static final int MAX_PORT_NO = 65535;
     private String name;
     private String host = "localhost";
     private int port = 5672;
@@ -25,49 +28,70 @@ public final class HonoClientConfigProperties extends AbstractHonoConfig {
     private String amqpHostname;
 
     /**
-     * @return the host
+     * Gets the name or literal IP address of the host that the client is configured to connect to.
+     * 
+     * @return The host name.
      */
     public String getHost() {
         return host;
     }
 
     /**
-     * @param host the host to set
+     * Sets the name or literal IP address of the host that the client should connect to.
+     * 
+     * @param host The host name or IP address.
+     * @throws NullPointerException if host is {@code null}.
      */
     public void setHost(final String host) {
-        this.host = host;
+        this.host = Objects.requireNonNull(host);
     }
 
     /**
-     * @return the port
+     * Gets the TCP port of the server that this client is configured to connect to.
+     * 
+     * @return The port number.
      */
     public int getPort() {
         return port;
     }
 
     /**
-     * @param port the port to set
+     * Sets the TCP port of the server that this client should connect to.
+     * 
+     * @param port The port number.
+     * @throws IllegalArgumentException if port &lt; 1 or port &gt; 65535.
      */
     public void setPort(final int port) {
+        if (port < 1 || port > MAX_PORT_NO) {
+            throw new IllegalArgumentException("port number must be >=1 and <= " + MAX_PORT_NO);
+        } 
         this.port = port;
     }
 
     /**
-     * @return the username
+     * Gets the user name that is used when authenticating to the Hono server.
+     * 
+     * @return The user name or {@code null} if not set.
      */
     public String getUsername() {
         return username;
     }
 
     /**
-     * @param username the username to set
+     * Sets the user name to use when authenticating to the Hono server.
+     * <p>
+     * If not set then this client will not try to authenticate to the server.
+     * 
+     * @param username The user name.
      */
     public void setUsername(final String username) {
         this.username = username;
     }
 
     /**
-     * @return the password
+     * Gets the password that is used when authenticating to the Hono server.
+     * 
+     * @return The password or {@code null} if not set.
      */
     public String getPassword() {
         if (password == null) {
@@ -78,7 +102,11 @@ public final class HonoClientConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * @param password the password to set
+     * Sets the password to use in conjunction with the user name when authenticating to the Hono server.
+     * <p>
+     * If not set then this client will not try to authenticate to the server.
+     * 
+     * @param password The password.
      */
     public void setPassword(final String password) {
         if (password != null) {

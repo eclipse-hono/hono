@@ -192,6 +192,11 @@ public final class TestSupport {
             }
 
             @Override
+            public String getName() {
+                return "client";
+            }
+
+            @Override
             public String getHost() {
                 return "server";
             }

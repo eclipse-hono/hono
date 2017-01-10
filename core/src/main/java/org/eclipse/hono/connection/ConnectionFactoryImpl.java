@@ -67,6 +67,11 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
     }
 
     @Override
+    public String getName() {
+        return config.getName();
+    }
+
+    @Override
     public String getHost() {
         return config.getHost();
     }

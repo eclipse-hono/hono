@@ -122,15 +122,15 @@ public abstract class AbstractHonoConfig {
         if (trustStorePath == null) {
             return null;
         } else if (hasPemFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from {} as trust anchor", trustStorePath);
+            LOG.info("using certificates from file [{}] as trust anchor", trustStorePath);
             return new PemTrustOptions().addCertPath(trustStorePath);
         } else if (hasPkcsFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from {} as trust anchor", trustStorePath);
+            LOG.info("using certificates from PKCS12 key store [{}] as trust anchor", trustStorePath);
             return new PfxOptions()
                         .setPath(getTrustStorePath())
                         .setPassword(getTrustStorePassword());
         } else if (hasJksFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from {} as trust anchor", trustStorePath);
+            LOG.info("using certificates from JKS key store [{}] as trust anchor", trustStorePath);
             return new JksOptions()
                         .setPath(getTrustStorePath())
                         .setPassword(getTrustStorePassword());
@@ -212,15 +212,15 @@ public abstract class AbstractHonoConfig {
     public KeyCertOptions getKeyCertOptions() {
 
         if (keyPath != null && certPath != null && hasPemFileSuffix(keyPath) && hasPemFileSuffix(certPath)) {
-            LOG.info("using key [{}] and certificate [{}] for server identity", keyPath, certPath);
+            LOG.info("using key [{}] and certificate [{}] for identity", keyPath, certPath);
             return new PemKeyCertOptions().setKeyPath(keyPath).setCertPath(certPath);
         } else if (keyStorePath == null) {
             return null;
         } else if (hasPkcsFileSuffix(keyStorePath)) {
-            LOG.info("using key & certificate from key store [{}] for server identity", keyStorePath);
+            LOG.info("using key & certificate from PKCS12 key store [{}] for identity", keyStorePath);
             return new PfxOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
         } else if (hasJksFileSuffix(keyStorePath)) {
-            LOG.info("using key & certificate from key store [{}] for server identity", keyStorePath);
+            LOG.info("using key & certificate from JKS key store [{}] for server identity", keyStorePath);
             return new JksOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
         } else {
             LOG.info("unsupported key store format");

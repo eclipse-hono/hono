@@ -14,6 +14,7 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.nio.charset.Charset;
 import java.util.function.BiConsumer;
+import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
@@ -54,13 +55,23 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
     @Value("${hono.mqtt.listenport:1883}")
     private int listenPort;
 
-    @Autowired
     private HonoClient hono;
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier
             = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier
             = (tenant, resultHandler) -> hono.getOrCreateTelemetrySender(tenant, resultHandler);
     private MqttServer server;
+
+    /**
+     * Sets the client to use for connecting to the Hono server.
+     * 
+     * @param honoClient The client.
+     * @throws NullPointerException if hono client is {@code null}.
+     */
+    @Autowired
+    public void setHonoClient(final HonoClient honoClient) {
+        this.hono = Objects.requireNonNull(honoClient);
+    }
 
     private void bindMqttServer(final Future<Void> startFuture) {
 
@@ -100,8 +111,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
     @Override
     public void start(Future<Void> startFuture) throws Exception {
 
-        this.bindMqttServer(startFuture);
-        this.connectToHono(null);
+        if (hono == null) {
+            startFuture.fail("Hono client must be set");
+        } else {
+            this.bindMqttServer(startFuture);
+            this.connectToHono(null);
+        }
     }
 
     @Override

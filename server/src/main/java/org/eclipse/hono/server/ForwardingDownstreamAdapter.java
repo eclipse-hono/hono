@@ -156,6 +156,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             return null;
         }
     }
+
     protected ProtonClientOptions createClientOptions() {
         return new ProtonClientOptions()
                 .setConnectTimeout(100)
