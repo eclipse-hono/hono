@@ -13,19 +13,19 @@
           "remoteHosts": "*",
           "maxSessions": 100,
           "maxMessageSize": 10240,
-          "sources": "telemetry.DEFAULT_TENANT, event.DEFAULT_TENANT"
+          "sources": "telemetry/DEFAULT_TENANT, event/DEFAULT_TENANT"
         },
         "anotherTenant": {
           "users": "user2@HONO",
           "remoteHosts": "*",
           "maxSessions": 100,
           "maxMessageSize": 10240,
-          "sources": "telemetry.anotherTenant"
+          "sources": "telemetry/anotherTenant"
         },
         "anonymous" : {
           "users": "anonymous",
-          "sources": "telemetry.*",
-          "targets": "telemetry.*"
+          "sources": "telemetry/*",
+          "targets": "telemetry/*"
         }
       }
     }

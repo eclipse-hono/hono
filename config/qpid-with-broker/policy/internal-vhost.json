@@ -13,7 +13,7 @@
           "remoteHosts": "*",
           "maxSessions": 500,
           "sources": "$management",
-          "targets": "telemetry.*, event.*, $management"
+          "targets": "telemetry/*, event/*, $management"
         }
       }
     }
