@@ -7,6 +7,8 @@
     <relativePath>../bom</relativePath>
   </parent>
   <artifactId>hono-config</artifactId>
+
+  <name>Hono Configuration</name>
   <description>Default Hono server configuration to be used by other modules.</description>
 
   <properties>
@@ -17,13 +19,6 @@
 
   <build>
     <resources>
-      <resource>
-        <directory>${project.basedir}/config</directory>
-        <includes>
-          <include>**/*</include>
-        </includes>
-        <targetPath>config</targetPath>
-      </resource>
       <resource>
         <directory>${project.basedir}/src/main/resources</directory>
         <includes>
@@ -211,6 +206,4 @@
       </build>
     </profile>
   </profiles>
-
-  <name>Hono Configuration</name>
 </project>
