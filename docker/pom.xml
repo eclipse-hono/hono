@@ -1,0 +1,105 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.eclipse.hono</groupId>
+    <artifactId>hono-bom</artifactId>
+    <version>0.5-M3-SNAPSHOT</version>
+    <relativePath>../bom</relativePath>
+  </parent>
+  <artifactId>hono-docker</artifactId>
+  <description>Module for building utility Docker images</description>
+
+  <properties>
+    <maven.source.skip>true</maven.source.skip>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <activation>
+        <property>
+          <name>docker.host</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>apache-artemis</artifactId>
+          <version>${artemis.version}</version>
+          <classifier>bin</classifier>
+          <type>tar.gz</type>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.10</version>
+            <executions>
+              <execution>
+                <id>unpack-artemis</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.apache.activemq</groupId>
+                      <artifactId>apache-artemis</artifactId>
+                      <classifier>bin</classifier>
+                      <type>tar.gz</type>
+                      <outputDirectory>target/dependencies/artemis</outputDirectory>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <configuration>
+              <images>
+                <image>
+                  <alias>activemq-artemis</alias>
+                  <name>eclipsehono/activemq-artemis:${project.version}</name>
+                  <build>
+                    <from>java:8u40</from>
+                    <assembly>
+                      <descriptor>/src/main/descriptors/hono-artemis.xml</descriptor>
+                    </assembly>
+                      <runCmds>
+                        <run>/maven/bin/artemis create artemis --user admin --password admin --role admins --require-login</run>
+                      </runCmds>
+                    <entryPoint>
+                      <shell>/artemis/bin/artemis run</shell>
+                    </entryPoint>
+                    <ports>
+                      <port>5672</port>
+                    </ports>
+                    <volumes>
+                      <volume>/maven/data</volume>
+                    </volumes>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <name>Hono Docker</name>
+</project>

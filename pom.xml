@@ -147,6 +147,7 @@
 
   <modules>
     <module>adapters</module>
+    <module>docker</module>
     <module>application</module>
     <module>bom</module>
     <module>config</module>

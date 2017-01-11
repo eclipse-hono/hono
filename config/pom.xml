@@ -41,42 +41,8 @@
           <name>docker.host</name>
         </property>
       </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.activemq</groupId>
-          <artifactId>apache-artemis</artifactId>
-          <version>${artemis.version}</version>
-          <classifier>bin</classifier>
-          <type>tar.gz</type>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-dependency-plugin</artifactId>
-            <version>2.10</version>
-            <executions>
-              <execution>
-                <id>unpack-artemis</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>unpack</goal>
-                </goals>
-                <configuration>
-                  <artifactItems>
-                    <artifactItem>
-                      <groupId>org.apache.activemq</groupId>
-                      <artifactId>apache-artemis</artifactId>
-                      <classifier>bin</classifier>
-                      <type>tar.gz</type>
-                      <outputDirectory>target/dependencies/artemis</outputDirectory>
-                    </artifactItem>
-                  </artifactItems>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
@@ -197,28 +163,6 @@
                         </fileSets>
                       </inline>
                     </assembly>
-                  </build>
-                </image>
-                <image>
-                  <alias>activemq-artemis</alias>
-                  <name>eclipsehono/activemq-artemis:${project.version}</name>
-                  <build>
-                    <from>java:8u40</from>
-                    <assembly>
-                      <descriptor>/src/main/descriptors/hono-artemis.xml</descriptor>
-                    </assembly>
-                      <runCmds>
-                        <run>/maven/bin/artemis create artemis --user admin --password admin --role admins --require-login</run>
-                      </runCmds>
-                    <entryPoint>
-                      <shell>/artemis/bin/artemis run</shell>
-                    </entryPoint>
-                    <ports>
-                      <port>5672</port>
-                    </ports>
-                    <volumes>
-                      <volume>/maven/data</volume>
-                    </volumes>
                   </build>
                 </image>
                 <image>
