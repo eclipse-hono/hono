@@ -62,6 +62,14 @@
                               <include>**/*</include>
                             </includes>
                           </fileSet>
+                          <fileSet>
+                            <directory>${project.basedir}/demo-certs/certs</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>honoKeyStore.p12</include>
+                              <include>ca-cert.pem</include>
+                            </includes>
+                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
@@ -91,6 +99,14 @@
                             <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>**/*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.basedir}/demo-certs/certs</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>qdrouter-*.pem</include>
+                              <include>ca-cert.pem</include>
                             </includes>
                           </fileSet>
                         </fileSets>
@@ -184,6 +200,60 @@
                             <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>**/*</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+                <image>
+                  <alias>rest-adapter-certs</alias>
+                  <name>eclipsehono/rest-adapter-certs:${project.version}</name>
+                  <build>
+                    <from>tianon/true</from>
+                    <volumes>
+                      <volume>/etc/hono</volume>
+                    </volumes>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/hono</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/demo-certs/certs</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>restKeyStore.p12</include>
+                              <include>ca-cert.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+                <image>
+                  <alias>mqtt-adapter-certs</alias>
+                  <name>eclipsehono/mqtt-adapter-certs:${project.version}</name>
+                  <build>
+                    <from>tianon/true</from>
+                    <volumes>
+                      <volume>/etc/hono</volume>
+                    </volumes>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/hono</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/demo-certs/certs</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>mqttKeyStore.p12</include>
+                              <include>ca-cert.pem</include>
                             </includes>
                           </fileSet>
                         </fileSets>

@@ -18,6 +18,8 @@ CURVE=prime256v1
 DIR=certs
 HONO_KEY_STORE=honoKeyStore.p12
 HONO_KEY_STORE_PWD=honokeys
+HONO_TRUST_STORE=trustStore.jks
+HONO_TRUST_STORE_PWD=honotrust
 MQTT_ADAPTER_KEY_STORE=mqttKeyStore.p12
 MQTT_ADAPTER_KEY_STORE_PWD=mqttkeys
 REST_ADAPTER_KEY_STORE=restKeyStore.p12
@@ -33,13 +35,19 @@ echo "creating root key and certificate"
 openssl ecparam -name $CURVE -genkey -noout -out $DIR/root-key.pem
 openssl req -x509 -config ca_opts -new -key $DIR/root-key.pem -out $DIR/root-cert.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=root"
 
+echo ""
 echo "creating CA key and certificate"
 openssl ecparam -name $CURVE -genkey -noout -out $DIR/ca-key.pem
 openssl req -config ca_opts -reqexts intermediate_ext -new -key $DIR/ca-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=ca" | \
  openssl x509 -req -extfile ca_opts -extensions intermediate_ext -out $DIR/ca-cert.pem -days 365 -CA $DIR/root-cert.pem -CAkey $DIR/root-key.pem -CAcreateserial
 
+echo ""
+echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificate"
+keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
+
 function create_cert {
 
+  echo ""
   echo "creating $1 key and certificate"
   openssl ecparam -name $CURVE -genkey -noout -out $DIR/$1-key.pem
   openssl req -config ca_opts -new -key $DIR/$1-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=$1" | \
