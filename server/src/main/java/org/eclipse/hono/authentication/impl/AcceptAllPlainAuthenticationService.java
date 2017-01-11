@@ -50,7 +50,7 @@ public final class AcceptAllPlainAuthenticationService extends BaseAuthenticatio
             String authzid = fields[0];
             String authcid = fields[1];
             String pwd = fields[2];
-            LOG.debug("client provided [authzid: {}, authcid: {}, pwd: {}] in PLAIN response", authzid, authcid, pwd);
+            LOG.debug("client provided [authzid: {}, authcid: {}, pwd: *****] in PLAIN response", authzid, authcid);
 
             // TODO: verify the given credentials
 
