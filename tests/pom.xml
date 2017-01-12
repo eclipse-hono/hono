@@ -448,7 +448,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <!-- ##### Artemis Broker ##### -->
                         <image>
                            <alias>broker</alias>
-                           <name>vromero/activemq-artemis:${artemis.version}</name>
+                           <name>eclipsehono/activemq-artemis:${project.version}</name>
                            <run>
                               <ports>
                                  <port>+broker.ip:broker.amqp.port:5672</port>
@@ -585,7 +585,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <check.artemis.header>true</check.artemis.header>
                         <hono.host>${hono.ip}</hono.host>
                         <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
-                        <hono.pathSeparator>.</hono.pathSeparator>
                         <downstream.host>${qpid.ip}</downstream.host>
                         <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
                         <use.qos1>true</use.qos1>

@@ -23,7 +23,6 @@ hono:
 spring:
   profiles: artemis
 hono:
-  pathSeparator: .
   downstream:
     host: qdrouter
     port: 5673
