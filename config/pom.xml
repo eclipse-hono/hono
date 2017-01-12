@@ -106,7 +106,7 @@
                             <outputDirectory>certs</outputDirectory>
                             <includes>
                               <include>qdrouter-*.pem</include>
-                              <include>ca-cert.pem</include>
+                              <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>
                         </fileSets>
@@ -202,6 +202,14 @@
                               <include>**/*</include>
                             </includes>
                           </fileSet>
+                          <fileSet>
+                            <directory>${project.basedir}/demo-certs/certs</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>artemisKeyStore.p12</include>
+                              <include>ca-cert.pem</include>
+                            </includes>
+                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
@@ -226,7 +234,7 @@
                             <outputDirectory>certs</outputDirectory>
                             <includes>
                               <include>restKeyStore.p12</include>
-                              <include>ca-cert.pem</include>
+                              <include>trustStore.jks</include>
                             </includes>
                           </fileSet>
                         </fileSets>
@@ -253,7 +261,7 @@
                             <outputDirectory>certs</outputDirectory>
                             <includes>
                               <include>mqttKeyStore.p12</include>
-                              <include>ca-cert.pem</include>
+                              <include>trustStore.jks</include>
                             </includes>
                           </fileSet>
                         </fileSets>

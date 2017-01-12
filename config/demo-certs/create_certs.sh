@@ -24,6 +24,8 @@ MQTT_ADAPTER_KEY_STORE=mqttKeyStore.p12
 MQTT_ADAPTER_KEY_STORE_PWD=mqttkeys
 REST_ADAPTER_KEY_STORE=restKeyStore.p12
 REST_ADAPTER_KEY_STORE_PWD=restkeys
+ARTEMIS_KEY_STORE=artemisKeyStore.p12
+ARTEMIS_KEY_STORE_PWD=artemiskeys
 
 if [ -d $DIR ]
 then
@@ -40,9 +42,11 @@ echo "creating CA key and certificate"
 openssl ecparam -name $CURVE -genkey -noout -out $DIR/ca-key.pem
 openssl req -config ca_opts -reqexts intermediate_ext -new -key $DIR/ca-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=ca" | \
  openssl x509 -req -extfile ca_opts -extensions intermediate_ext -out $DIR/ca-cert.pem -days 365 -CA $DIR/root-cert.pem -CAkey $DIR/root-key.pem -CAcreateserial
+cat $DIR/ca-cert.pem $DIR/root-cert.pem > $DIR/trusted-certs.pem
 
 echo ""
 echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificate"
+keytool -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 
 function create_cert {
@@ -63,3 +67,4 @@ create_cert hono $HONO_KEY_STORE $HONO_KEY_STORE_PWD
 create_cert qdrouter
 create_cert rest-adapter $REST_ADAPTER_KEY_STORE $REST_ADAPTER_KEY_STORE_PWD
 create_cert mqtt-adapter $MQTT_ADAPTER_KEY_STORE $MQTT_ADAPTER_KEY_STORE_PWD
+create_cert artemis $ARTEMIS_KEY_STORE $ARTEMIS_KEY_STORE_PWD

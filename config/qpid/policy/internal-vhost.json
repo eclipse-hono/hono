@@ -8,8 +8,8 @@
       "maxConnectionsPerUser": 10,
       "maxConnectionsPerHost": 10,
       "groups": {
-        "anonymous": {
-          "users": "anonymous",
+        "Hono": {
+          "users": "Eclipse IoT;Hono;hono",
           "remoteHosts": "*",
           "maxSessions": 500,
           "sources": "$management",
