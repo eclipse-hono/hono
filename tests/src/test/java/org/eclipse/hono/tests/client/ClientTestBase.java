@@ -131,9 +131,10 @@ abstract class ClientTestBase {
             final Async done = ctx.async();
             LOGGER.debug("deregistering device [{}]", DEVICE_ID);
             registrationClient.deregister(DEVICE_ID, r -> {
-                if (r.succeeded()) {
-                    done.complete();
+                if (r.failed()) {
+                    LOGGER.info("deregistration of device [{}] failed", DEVICE_ID, r.cause());
                 }
+                done.complete();
             });
             done.await(2000);
         }

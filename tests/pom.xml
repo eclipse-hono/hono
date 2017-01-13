@@ -88,15 +88,15 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <!-- ##### volume container with hono server configuration ##### -->
                         <image>
                            <name>eclipsehono/hono-test-config</name>
-                           <alias>hono-config</alias>
+                           <alias>hono-test-config</alias>
                            <build>
                               <from>tianon/true</from>
                               <volumes>
-                                 <volume>/etc/hono</volume>
+                                 <volume>/etc/hono-test</volume>
                               </volumes>
                               <assembly>
                                  <mode>dir</mode>
-                                 <basedir>/etc/hono</basedir>
+                                 <basedir>/etc/hono-test</basedir>
                                  <inline>
                                     <id>config</id>
                                     <fileSets>
@@ -111,6 +111,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  </inline>
                               </assembly>
                            </build>
+                        </image>
+                        <!-- ##### Hono certificates and keys ##### -->
+                        <image>
+                           <alias>hono-default-config</alias>
+                           <name>eclipsehono/hono-default-config:${project.version}</name>
                         </image>
                         <!-- ##### Qpid configuration ##### -->
                         <image>
@@ -158,11 +163,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <link>qdrouter</link>
                               </links>
                               <env>
-                                 <HONO_MAX_INSTANCES>2</HONO_MAX_INSTANCES>
-                                 <HONO_PERMISSIONS_PATH>file:///etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
+                                 <HONO_DOWNSTREAM_KEY_STORE_PATH>/etc/hono/certs/honoKeyStore.p12</HONO_DOWNSTREAM_KEY_STORE_PATH>
+                                 <HONO_DOWNSTREAM_KEY_STORE_PASSWORD>honokeys</HONO_DOWNSTREAM_KEY_STORE_PASSWORD>
+                                 <HONO_DOWNSTREAM_HOST>qdrouter</HONO_DOWNSTREAM_HOST>
+                                 <HONO_DOWNSTREAM_PORT>5673</HONO_DOWNSTREAM_PORT>
+                                 <HONO_DOWNSTREAM_TRUST_STORE_PATH>/etc/hono/certs/ca-cert.pem</HONO_DOWNSTREAM_TRUST_STORE_PATH>
+                                 <HONO_MAX_INSTANCES>1</HONO_MAX_INSTANCES>
+                                 <HONO_PERMISSIONS_PATH>file:///etc/hono-test/permissions.json</HONO_PERMISSIONS_PATH>
                                  <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
-                                 <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                                 <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                                 <LOGGING_CONFIG>file:///etc/hono-test/logback-spring.xml</LOGGING_CONFIG>
+                                 <SPRING_CONFIG_LOCATION>file:///etc/hono-test/</SPRING_CONFIG_LOCATION>
                                  <SPRING_PROFILES_ACTIVE>qpid,prod</SPRING_PROFILES_ACTIVE>
                               </env>
                               <log>
@@ -175,7 +185,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <!--<volume>${project.basedir}/src/test/resources/config:/config</volume>-->
                                  <!--</bind>-->
                                  <from>
-                                    <image>hono-config</image>
+                                    <image>hono-default-config</image>
+                                    <image>hono-test-config</image>
                                  </from>
                               </volumes>
                               <wait>
@@ -313,7 +324,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <link>activemq</link>
                               </links>
                               <env>
-                                 <HONO_MAX_INSTANCES>2</HONO_MAX_INSTANCES>
+                                 <HONO_MAX_INSTANCES>1</HONO_MAX_INSTANCES>
                                  <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
                                  <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
                                  <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -416,7 +427,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <!-- ##### volume container with hono server configuration ##### -->
                         <image>
                            <name>eclipsehono/hono-test-config</name>
-                           <alias>hono-config</alias>
+                           <alias>hono-test-config</alias>
                            <build>
                               <from>tianon/true</from>
                               <volumes>
@@ -467,6 +478,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               </volumes>
                            </run>
                         </image>
+                        <!-- ##### Hono certificates and keys ##### -->
+                        <image>
+                           <alias>hono-default-config</alias>
+                           <name>eclipsehono/hono-default-config:${project.version}</name>
+                        </image>
                         <!-- ##### Qpid configuration ##### -->
                         <image>
                            <alias>qpid-config</alias>
@@ -516,11 +532,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <link>qdrouter</link>
                               </links>
                               <env>
-                                 <HONO_MAX_INSTANCES>2</HONO_MAX_INSTANCES>
-                                 <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
+                                 <HONO_DOWNSTREAM_KEY_STORE_PATH>/etc/hono/certs/honoKeyStore.p12</HONO_DOWNSTREAM_KEY_STORE_PATH>
+                                 <HONO_DOWNSTREAM_KEY_STORE_PASSWORD>honokeys</HONO_DOWNSTREAM_KEY_STORE_PASSWORD>
+                                 <HONO_DOWNSTREAM_HOST>qdrouter</HONO_DOWNSTREAM_HOST>
+                                 <HONO_DOWNSTREAM_PORT>5673</HONO_DOWNSTREAM_PORT>
+                                 <HONO_DOWNSTREAM_TRUST_STORE_PATH>/etc/hono/certs/ca-cert.pem</HONO_DOWNSTREAM_TRUST_STORE_PATH>
+                                 <HONO_MAX_INSTANCES>1</HONO_MAX_INSTANCES>
+                                 <HONO_PERMISSIONS_PATH>file:///etc/hono-test/permissions.json</HONO_PERMISSIONS_PATH>
                                  <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
-                                 <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                                 <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
+                                 <LOGGING_CONFIG>file:///etc/hono-test/logback-spring.xml</LOGGING_CONFIG>
+                                 <SPRING_CONFIG_LOCATION>file:///etc/hono-test/</SPRING_CONFIG_LOCATION>
                                  <SPRING_PROFILES_ACTIVE>artemis,prod</SPRING_PROFILES_ACTIVE>
                               </env>
                               <log>
@@ -533,7 +554,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                                  <!--<volume>${project.basedir}/src/test/resources/config:/config</volume>-->
                                  <!--</bind>-->
                                  <from>
-                                    <image>hono-config</image>
+                                    <image>hono-test-config</image>
+                                    <image>hono-default-config</image>
                                  </from>
                               </volumes>
                               <wait>
