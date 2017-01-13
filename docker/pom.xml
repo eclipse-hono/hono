@@ -69,11 +69,13 @@
                   <build>
                     <from>java:8u40</from>
                     <assembly>
-                      <descriptor>/src/main/descriptors/hono-artemis.xml</descriptor>
+                      <descriptor>descriptors/hono-artemis.xml</descriptor>
+                      <!-- TODO required on windows machine, try to find better solution -->
+                      <permissions>exec</permissions>
                     </assembly>
-                      <runCmds>
-                        <run>/maven/bin/artemis create artemis --user admin --password admin --role admins --require-login</run>
-                      </runCmds>
+                    <runCmds>
+                      <run>/maven/bin/artemis create artemis --user admin --password admin --role admins --require-login</run>
+                    </runCmds>
                     <entryPoint>
                       <shell>/artemis/bin/artemis run</shell>
                     </entryPoint>
