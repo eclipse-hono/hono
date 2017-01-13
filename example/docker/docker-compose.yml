@@ -39,8 +39,9 @@ services:
   qdrouter:
     image: gordons/qpid-dispatch:${qpid-dispatch.version}
     ports:
-      - "15672:5672"
       - "15671:5671"
+      - "15672:5672"
+      - "15673:5673"
 #    links:
 #      - broker
     volumes_from:

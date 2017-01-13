@@ -1,7 +1,5 @@
 ![Hono logo](logo/PNG-150dpi/HONO-Logo_Bild-Wort_quadrat-w-200x180px.png)
 
-### 
-
 [Eclipse Hono](https://projects.eclipse.org/projects/iot.hono) provides uniform (remote) service interfaces for connecting large numbers of IoT devices to a (cloud) back end. It specifically supports scalable and secure data ingestion (*telemetry* data) as well as *command & control* type message exchange patterns and provides interfaces for provisioning & managing device identity and access control rules.
 
 ### Getting started

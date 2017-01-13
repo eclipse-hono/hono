@@ -17,6 +17,8 @@ of the following environment variables:
 | `HONO_CLIENT_PORT` | yes | `5672` | The port that the Hono server is listening on. |
 | `HONO_CLIENT_USERNAME` | yes | - | The username to use for authenticating to the Hono server. |
 | `HONO_CLIENT_PASSWORD` | yes | - | The password to use for authenticating to the Hono server. |
+| `HONO_CLIENT_TRUST_STORE_PATH` | no | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Hono server. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix. |
+| `HONO_CLIENT_TRUST_STORE_PASSWORD` | if trust store path is set | - | The password required to read the contents of the trust store. |
 
 The environment variable(s) only need to be set if the default value does not match your environment.
 

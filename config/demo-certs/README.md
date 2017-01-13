@@ -1,38 +1,37 @@
 # Demo Certificates for Hono
 
-The individual components of Hono communicate with each other using arbitrary TCP based protocol. In order to improve the confidentiality and privacy for the data being transferred these connections can be secured using TLS. All components support the configuration of keys and certificates for that purpose.
+The individual components of Hono communicate with each other using arbitrary TCP based protocol. In order to improve the confidentiality and privacy for the data being transferred these connections can (and should!) be secured using TLS. All components support the configuration of keys and certificates for that purpose.
 
-This module provides some example Java key stores containing public/private key pairs and certificate chains to be used for configuring TLS at the client and server side
+This module provides some example key stores containing public/private key pairs and certificate chains to be used for configuring TLS for all of Hono's components. Please take a look at the documentation for the individual components for information regarding how to configure the components to use the keys and certificates.
 
-### Included Keys and Certificates
+### Provided Keys and Certificates
 
-This module provides some sample keys and certificate chains contained in two Java key stores which can be found in the `src/main/resources` folder.
+You can find the example keys, certificates and key stores in the `certs` folder. They have been generated using teh `create_certs.sh` shell script. You can run that script from the command line in order to either *refresh* the example keys (i.e. extend their validity period) or you can adapt the script to your needs and create your own custom keys and certificates to be used with your Hono installation.
 
-We use a multi-level chain of trust as follows:
+The script creates the following keys and certificates:
 
-1. A pair of private/public keys along with a self signed certificate which together represent the *root CA* identity.
-2. A pair of private/public keys along with a certificate signed with the root CA's key which together represent an *intermediary CA* identity.
-3. A pair of private/public keys along with a certificate signed with the intermediary CA's key which together assert the identity of a *server* component.
-4. A pair of private/public keys along with a certificate signed with the intermediary CA's key which together assert the identity of a *client* component.
+1. A pair of private/public keys along with a self signed certificate which together represent the *root CA* identity. The key file is `root-key.pem` (not password protected) and the corresponding certificate is `root-cert.pem`.
+2. A pair of private/public keys along with a certificate signed with the root CA's key which together represent an *intermediary CA* identity. The key file is `ca-key.pem` (not password protected) and the corresponding certificate is `ca-cert.pem`.
+3. A pair of private/public keys along with a certificate signed with the intermediary CA's key which together assert the identity of the *Hono server* component. The key file is `hono-key.pem` (not password protected) and the corresponding certificate is `hono-cert.pem`. They are both contained in the PKCS12 key store `honoKeyStore.p12` using `honokeys` as the password.
+4. A pair of private/public keys along with a certificate signed with the intermediary CA's key which together assert the identity of the *Qpid Dispatch Router* component. The key file is `qdrouter-key.pem` (not password protected) and the corresponding certificate is `qdrouter-cert.pem`.
+5. A pair of private/public keys along with a certificate signed with the intermediary CA's key which together assert the identity of the *REST adapter* component. The key file is `rest-adapter-key.pem` (not password protected) and the corresponding certificate is `rest-adapter-cert.pem`. They are both contained in the PKCS12 key store `restKeyStore.p12` using `restkeys` as the password.
+6. A pair of private/public keys along with a certificate signed with the intermediary CA's key which together assert the identity of the *MQTT adapter* component. The key file is `mqtt-adapter-key.pem` (not password protected) and the corresponding certificate is `mqtt-adapter-cert.pem`. They are both contained in the PKCS12 key store `mqttKeyStore.p12` using `mqttkeys` as the password.
+7. A pair of private/public keys along with a certificate signed with the intermediary CA's key which together assert the identity of the *Apache Artemis broker* component. The key file is `artemis-key.pem` (not password protected) and the corresponding certificate is `artemis-cert.pem`. They are both contained in the PKCS12 key store `artemisKeyStore.p12` using `artemiskeys` as the password.
 
 **Trust Store**
 
-The `trustStore.jks` contains the self-signed certificate for the root CA (alias `root`) as well as the certificate chain for the intermediary CA (alias `ca`). These certificates are used as the *trust anchors* in Scandium's examples and test cases.
+The `trustStore.jks` contains both the self-signed certificate for the root CA (alias `root`) as well as the certificate for the intermediary CA (alias `ca`). These certificates are supposed to be used as the *trust anchor* in clients that want to access one of Hono's components using TLS.
 
 The password for accessing the trust store is `honotrust` by default.
 
-**Key Store**
-
-The `keyStore.jks` contains the keys and certificate chains for the *client* (alias `client`) and *server* (alias  `server`) identities.
-
-The password for accessing the key store is `honokeys` by default.
-
 ### Creating the Keys and Certificates
 
-The key stores containing the demo keys and certificates can be recreated by means of the `create-keystores.sh` script. It uses the standard Java `keytool` to create keys and certificates.
+The key stores containing the demo keys and certificates can be recreated by means of the `create_certs.sh` script. It relies on `openssl` as well as the standard Java `keytool` to create the keys and certificates.
 
 You can also use the script to create your own certificates for use with Hono. Simply alter the script at the places where you want to use other values as the default, e.g. your own distinguished names for the certificates and/or different key store names.
 
-When running the script you will be prompted twice to trust the intermediary CA certificate so that it can be added to the key store. This is necessary because the `keytool` has no way to create a chain of trust from the *client* and *server* certificates to an already trusted root CA (because the demo root CA certificate is self-signed). Simply enter `yes` and press `enter` to trust the certificate and add it to the key store.
+Then simply run the script from the command line:
 
-If you want to re-create the key stores you need to remove the two `jks` files manually before running the `create-keystores.sh` script. Otherwise, the `keytool` will exit when trying to add the newly created certificates under already existing aliases to the key stores.
+    $~/hono/config/demo-certs> ./create_certs.sh
+
+The script will create the `certs` subfolder (if it already exists it will be removed first) and then create all keys and certificates in that subfolder.
