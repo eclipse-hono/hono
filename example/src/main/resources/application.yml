@@ -1,0 +1,34 @@
+spring:
+  profiles:
+    active: receiver
+
+hono:
+  client:
+    host: localhost
+    hostnameVerificationRequired: false
+    trustStorePath: ../config/demo-certs/certs/trusted-certs.pem
+
+tenant:
+  id: DEFAULT_TENANT
+device:
+  id: 4711
+
+---
+
+spring:
+  profiles: receiver
+hono:
+  client:
+    port: 15671
+    username: user1@HONO
+    password: pw
+
+---
+
+spring:
+  profiles: sender
+hono:
+  client:
+    port: 5672
+    username: hono-client
+    password: secret

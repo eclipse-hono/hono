@@ -16,9 +16,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -27,17 +25,11 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.RegistrationResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
@@ -46,32 +38,15 @@ import io.vertx.proton.ProtonClientOptions;
  */
 @Component
 @Profile("sender")
-public class ExampleSender {
+public class ExampleSender extends AbstractExampleClient {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ExampleSender.class);
-
-    @Value(value = "${tenant.id}")
-    private String tenantId;
     @Value(value = "${device.id}")
     private String deviceId;
-
-//    @Autowired
-//    private HonoClientConfigProperties clientConfig;
-
-    @Autowired
-    private Environment environment;
-
-    @Autowired
-    private Vertx vertx;
-    private Context ctx;
-    @Autowired
-    private HonoClient client;
 
     @PostConstruct
     private void start() {
 
-        final List<String> activeProfiles = Arrays.asList(environment.getActiveProfiles());
-//        client = HonoClientBuilder.newClient(clientConfig).vertx(vertx).build();
+        LOG.info("starting sender");
         ctx = vertx.getOrCreateContext();
         final Future<MessageSender> startupTracker = Future.future();
         startupTracker.setHandler(done -> {
@@ -87,8 +62,10 @@ public class ExampleSender {
 
         ctx.runOnContext(go -> {
            /* step 1: connect Hono client */
+            ProtonClientOptions clientOptions = new ProtonClientOptions();
+            clientOptions.setConnectTimeout(1000);
             final Future<HonoClient> connectionTracker = Future.future();
-            client.connect(new ProtonClientOptions(), connectionTracker.completer());
+            client.connect(clientOptions, connectionTracker.completer());
             connectionTracker.compose(v -> {
             /* step 2: create a registration client */
                 Future<RegistrationClient> regClientTracker = Future.future();

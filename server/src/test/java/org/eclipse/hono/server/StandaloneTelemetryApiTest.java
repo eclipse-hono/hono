@@ -163,12 +163,15 @@ public class StandaloneTelemetryApiTest {
         final Message msg = ProtonHelper.message("malformed");
         msg.setMessageId("malformed-message");
 
-        telemetrySender.setErrorHandler(ctx.asyncAssertFailure(s -> {
-            LOG.debug(s.getMessage());
-        }));
-        Async sent = ctx.async();
-        telemetrySender.send(msg, capacityAvailable -> sent.complete());
-        sent.awaitSuccess(200);
+        Async errorReported = ctx.async();
+        telemetrySender.setErrorHandler(error -> {
+            if (error.failed()) {
+                LOG.debug(error.cause().getMessage());
+                errorReported.complete();
+            }
+        });
+        telemetrySender.send(msg, capacityAvailable -> {});
+        errorReported.awaitSuccess(2000);
     }
 
     @Test(timeout = 2000l)
