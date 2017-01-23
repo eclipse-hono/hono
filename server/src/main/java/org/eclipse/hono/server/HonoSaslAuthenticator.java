@@ -46,7 +46,7 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
  * <p>
  * Verification of credentials provided using PLAIN SASL is delegated to the {@code AuthenticationService}.
  * Client certificate validation is done by Vert.x' {@code NetServer} during the TLS handshake,
- * so this class merely extracts the <em>Common Name<em> (CN) field value from the client certificate's
+ * so this class merely extracts the <em>Common Name</em> (CN) field value from the client certificate's
  * <em>Subject DN</em> and uses it as the authorization id.
  */
 public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {

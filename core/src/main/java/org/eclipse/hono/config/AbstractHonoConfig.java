@@ -205,7 +205,7 @@ public abstract class AbstractHonoConfig {
     }
 
     /**
-     * Gets the key & certificate options derived from the key store properties.
+     * Gets the key &amp; certificate options derived from the key store properties.
      * 
      * @return The options or {@code null} if key store path or key path and cert path are not set or not supported.
      */
