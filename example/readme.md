@@ -124,7 +124,7 @@ You may want to start the *Hono Server* from within your IDE or from the command
 1. Start up the *Dispatch Router* Docker image as described above.
 1. Run the following Maven command from the `application` folder
 
-    ~/hono/application$ mvn spring-boot:run -Drun.arguments=--hono.downstream.host=localhost,--hono.downstream.port=15673,--hono.downstream.keyStorePath=../config/demo-certs/certs/honoKeyStore.jks,--hono.downstream.keyStorePassword=honokeys,--hono.downstream.trustStorePath=../config/demo-certs/certs/trusted-certs.pem,--hono.downstream.hostnameVerificationRequired=false,--logging.config=classpath:logback-spring.xml
+    ~/hono/application$ mvn spring-boot:run -Drun.arguments=--hono.downstream.host=localhost,--hono.downstream.port=15673,--hono.downstream.keyStorePath=../config/demo-certs/certs/honoKeyStore.p12,--hono.downstream.keyStorePassword=honokeys,--hono.downstream.trustStorePath=../config/demo-certs/certs/trusted-certs.pem,--hono.downstream.hostnameVerificationRequired=false,--logging.config=classpath:logback-spring.xml
 
 **NOTE**: Replace `localhost` with the name or IP address of the host that the *Dispatch Router* is running on. The `hono.downstream.keyStorePath` parameter is required because the Dispatch Router requires the Hono server to authenticate by means of a client certificate during connection establishment. The `hono.downstream.hostnameVerificationRequired` parameter is necessary to prevent Hono from validating the Dispatch Router's hostname by means of comparing it to the *common name* of the server's certificate's subject.
 You may want to make logging of the Hono server a little more verbose by enabling the `dev` Spring profile. To do so, append `,--spring.profiles.active=dev` to the command line.
