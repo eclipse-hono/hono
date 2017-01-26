@@ -7,9 +7,8 @@ In order to build the site
 
 1. [Install Hugo](https://gohugo.io/overview/installing/) on your local system.
 2. Run
-   ~~~sh
-   ~/hono/site$ ./build-site.sh
-   ~~~
+
+    ~/hono/site$ ./build-site.sh
 
 This will render the HTML pages constituting the site into the `public` folder.
 
@@ -19,5 +18,5 @@ Please refer to the Hugo documentation for more options.
 
 In order to locally debug the web site you can use Hugo's built-in web server like this:
 
-    ~/hono/site$ hugo server -d $DEST_DIR
+    ~/hono/site$ hugo server -v
 
