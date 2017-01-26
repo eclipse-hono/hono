@@ -107,6 +107,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
         addOptions(clientOptions);
 
         ProtonClient client = ProtonClient.create(vertx);
+        logger.info("connecting to AMQP 1.0 container [{}:{}]", config.getHost(), config.getPort());
         client.connect(
                 options,
                 config.getHost(),
