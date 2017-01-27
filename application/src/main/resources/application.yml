@@ -6,8 +6,8 @@ spring:
 spring:
   profiles: default
 hono:
-  maxinstances: 1
-  singletenant: false
+  maxInstances: 1
+  singleTenant: false
   server:
     bindaddress: 127.0.0.1
     port: 5672
@@ -17,8 +17,7 @@ hono:
 spring:
   profiles: activemq
 hono:
-  telemetry:
+  downstream:
+    host: localhost
+    port: 5671
     pathseparator: .
-    downstream:
-      host: localhost
-      port: 5671
