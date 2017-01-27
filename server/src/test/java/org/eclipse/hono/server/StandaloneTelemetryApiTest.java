@@ -170,7 +170,7 @@ public class StandaloneTelemetryApiTest {
                 errorReported.complete();
             }
         });
-        telemetrySender.send(msg, capacityAvailable -> {});
+        telemetrySender.send(msg);
         errorReported.awaitSuccess(2000);
     }
 
