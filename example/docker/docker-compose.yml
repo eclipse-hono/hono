@@ -52,8 +52,6 @@ services:
     image: eclipsehono/hono-server:${project.version}
     ports:
       - "5672:5672"
-    links:
-      - qdrouter
     environment:
       - HONO_DOWNSTREAM_HOST=qdrouter
       - HONO_DOWNSTREAM_PORT=5673
@@ -74,8 +72,6 @@ services:
     image: eclipsehono/hono-adapter-rest-vertx:${project.version}
     ports:
       - "8080:8080"
-    links:
-      - hono
     environment:
       - HONO_CLIENT_NAME=Hono REST Adapter
       - HONO_CLIENT_HOST=hono
@@ -94,8 +90,6 @@ services:
     image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
     ports:
       - "1883:1883"
-    links:
-      - hono
     environment:
       - HONO_CLIENT_NAME=Hono MQTT Adapter
       - HONO_CLIENT_HOST=hono
