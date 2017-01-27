@@ -59,6 +59,7 @@ function create_cert {
   cat $DIR/$1.pem $DIR/ca-cert.pem > $DIR/$1-cert.pem && rm $DIR/$1.pem
   if [ $2 ]
   then
+    echo "adding key/cert for $1 to key store $DIR/$2"
     openssl pkcs12 -export -inkey $DIR/$1-key.pem -in $DIR/$1-cert.pem -out $DIR/$2 -password pass:$3
   fi
 }
