@@ -148,9 +148,10 @@ abstract class ClientTestBase {
         final Future<Void> honoTracker = Future.future();
         final Future<Void> qpidTracker = Future.future();
         CompositeFuture.all(honoTracker, qpidTracker).setHandler(r -> {
-            if (r.succeeded()) {
-                shutdown.complete();
+            if (r.failed()) {
+                LOGGER.info("error while disconnecting: ", r.cause());
             }
+            shutdown.complete();
         });
 
         if (sender != null) {
@@ -177,7 +178,7 @@ abstract class ClientTestBase {
             downstreamClient.shutdown(qpidTracker.completer());
         }, qpidTracker);
 
-        shutdown.await(1000);
+        shutdown.await(2000);
     }
 
     @Test(timeout = 5000)
