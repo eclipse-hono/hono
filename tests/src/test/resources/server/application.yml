@@ -1,16 +1,27 @@
 hono:
+  downstream:
+    name: hono-server
   maxInstances: 1
+  permissions:
+    path: file:///etc/hono/permissions.json
   server:
     bindaddress: 0.0.0.0
+  waitForDownstreamConnectionEnabled: true
+  
 ---
+
 spring:
   profiles: qpid
 hono:
   downstream:
     host: qdrouter
     port: 5673
-    name: hono-server
+    keyStorePath: /etc/hono/certs/honoKeyStore.p12
+    keyStorePassword: honokeys
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
+
 ---
+
 spring:
   profiles: activemq
 hono:
@@ -18,13 +29,3 @@ hono:
   downstream:
     host: activemq
     port: 5672
-    name: hono-server
----
-spring:
-  profiles: artemis
-hono:
-  pathSeparator: .
-  downstream:
-    host: qdrouter
-    port: 5673
-    name: hono-server

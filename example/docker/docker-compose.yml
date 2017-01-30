@@ -2,51 +2,17 @@ version: '2'
 
 services:
 
-  qpid-config:
-    image: eclipsehono/qpid-default-config:${project.version}
-
-  qpid-sasldb:
-    image: eclipsehono/qpid-sasldb:${project.version}
-
   hono-config:
     image: eclipsehono/hono-default-config:${project.version}
 
-  rest-adapter-certs:
-    image: eclipsehono/rest-adapter-certs:${project.version}
-
-  mqtt-adapter-certs:
-    image: eclipsehono/mqtt-adapter-certs:${project.version}
-
-# Artemis configuration is disabled until Artemis supports
-# addresses containing "/" character as path separator
-#
-#  artemis-config:
-#    image: eclipsehono/artemis-default-config:${project.version}
-#
-#  # Apache Artemis Broker
-#  broker:
-#    image: vromero/activemq-artemis:${artemis.version}
-#  #  environment:
-#  #    - ARTEMIS_USERNAME=artemis
-#  #    - ARTEMIS_PASSWORD=artemis
-#  #  volumes:
-#  #    - /path/to/artemis/etc:/var/lib/artemis/etc
-#  #    - /path/to/artemis/data:/var/lib/artemis/data
-#  #    - /path/to/artemis/tmp:/var/lib/artemis/tmp
-#    volumes_from:
-#      - artemis-config
-
   qdrouter:
     image: gordons/qpid-dispatch:${qpid-dispatch.version}
+    command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
     ports:
       - "15671:5671"
       - "15672:5672"
-      - "15673:5673"
-#    links:
-#      - broker
     volumes_from:
-      - qpid-config
-      - qpid-sasldb
+      - hono-config
 
   hono:
     image: eclipsehono/hono-server:${project.version}
@@ -57,13 +23,13 @@ services:
       - HONO_DOWNSTREAM_PORT=5673
       - HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
       - HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys
-      - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/ca-cert.pem
+      - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
       - HONO_KEY_STORE_PASSWORD=honokeys
       - HONO_MAX_INSTANCES=1
       - HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json
-      - LOGGING_CONFIG=file:///etc/hono/logback-spring.xml
-      - SPRING_CONFIG_LOCATION=file:/etc/hono/
+      - HONO_SERVER_BINDADDRESS=0.0.0.0
+      - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
     volumes_from:
       - hono-config
@@ -84,7 +50,7 @@ services:
       - HONO_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
     volumes_from:
-      - rest-adapter-certs
+      - hono-config
 
   mqtt-adapter:
     image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
@@ -101,5 +67,5 @@ services:
       - HONO_MQTT_BINDADDRESS=0.0.0.0
       - HONO_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
-    volumes_from:
-      - mqtt-adapter-certs
+    volumes_from:    
+      - hono-config

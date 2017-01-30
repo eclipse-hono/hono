@@ -23,6 +23,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <image.target>hono-test-config</image.target>
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <maven.source.skip>true</maven.source.skip>
+    <maven.install.skip>true</maven.install.skip>
     <gpg.skip>true</gpg.skip>
   </properties>
 
@@ -103,21 +104,14 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </assembly>
                   </build>
                 </image>
-                <!-- ##### Qpid configuration ##### -->
-                <image>
-                  <alias>qpid-config</alias>
-                  <name>eclipsehono/qpid-default-config:${project.version}</name>
-                </image>
-                <!-- ##### Qpid sasldb ##### -->
-                <image>
-                  <alias>qpid-sasldb</alias>
-                  <name>eclipsehono/qpid-sasldb:${project.version}</name>
-                </image>
                 <!-- ##### Qpid Dispatch Router ##### -->
                 <image>
                   <alias>qdrouter</alias>
                   <name>gordons/qpid-dispatch:${qpid-dispatch.version}</name>
                   <run>
+                    <cmd>
+                      <shell>/usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json</shell>
+                    </cmd>
                     <ports>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
                       <port>qpid.amqp.internal.port:5673</port>
@@ -132,8 +126,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <volumes>
                       <from>
-                        <image>qpid-sasldb</image>
-                        <image>qpid-config</image>
+                        <image>hono-config</image>
                       </from>
                     </volumes>
                   </run>
@@ -151,14 +144,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                     </network>
                     <env>
-                      <HONO_DOWNSTREAM_KEY_STORE_PATH>/etc/hono/certs/honoKeyStore.p12</HONO_DOWNSTREAM_KEY_STORE_PATH>
-                      <HONO_DOWNSTREAM_KEY_STORE_PASSWORD>honokeys</HONO_DOWNSTREAM_KEY_STORE_PASSWORD>
-                      <HONO_DOWNSTREAM_HOST>qdrouter</HONO_DOWNSTREAM_HOST>
-                      <HONO_DOWNSTREAM_PORT>5673</HONO_DOWNSTREAM_PORT>
-                      <HONO_DOWNSTREAM_TRUST_STORE_PATH>/etc/hono/certs/ca-cert.pem</HONO_DOWNSTREAM_TRUST_STORE_PATH>
-                      <HONO_MAX_INSTANCES>1</HONO_MAX_INSTANCES>
-                      <HONO_PERMISSIONS_PATH>file:///etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
-                      <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>qpid,prod</SPRING_PROFILES_ACTIVE>
@@ -223,9 +208,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.host>${qpid.ip}</downstream.host>
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
               </systemProperties>
-              <includes>
-                <include>**/*IT.java</include>
-              </includes>
+              <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+              <test>*IT</test>
             </configuration>
             <executions>
               <execution>
@@ -310,9 +294,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                     </network>
                     <env>
-                      <HONO_MAX_INSTANCES>1</HONO_MAX_INSTANCES>
-                      <HONO_PERMISSIONS_PATH>file:/etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
-                      <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>activemq,prod</SPRING_PROFILES_ACTIVE>
@@ -378,224 +359,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.host>${broker.ip}</downstream.host>
                 <downstream.amqp.port>${broker.amqp.port}</downstream.amqp.port>
               </systemProperties>
-              <includes>
-                <include>**/*IT.java</include>
-              </includes>
-            </configuration>
-            <executions>
-              <execution>
-                <id>run-integration-tests</id>
-                <phase>integration-test</phase>
-                <goals>
-                  <goal>integration-test</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
-      <id>run-artemis-tests</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
-            <configuration>
-              <verbose>true</verbose>
-              <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
-              <startParallel>true</startParallel>
-              <images>
-                <!-- ##### volume container with hono server configuration ##### -->
-                <image>
-                  <name>eclipsehono/hono-test-config</name>
-                  <alias>hono-config</alias>
-                  <build>
-                    <from>eclipsehono/hono-default-config</from>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/etc/hono</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/src/test/resources/server</directory>
-                            <outputDirectory>.</outputDirectory>
-                            <includes>
-                              <include>*</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-                <!-- ##### Artemis configuration ##### -->
-                <image>
-                  <alias>artemis-config</alias>
-                  <name>eclipsehono/artemis-default-config:${project.version}</name>
-                </image>
-                <!-- ##### Artemis Broker ##### -->
-                <image>
-                  <alias>broker</alias>
-                  <name>vromero/activemq-artemis:${artemis.version}</name>
-                  <run>
-                    <ports>
-                      <port>+broker.ip:broker.amqp.port:5672</port>
-                    </ports>
-                    <network>
-                      <name>hono</name>
-                      <alias>broker</alias>
-                    </network>
-                    <log>
-                      <prefix>ARTEMIS</prefix>
-                      <color>blue</color>
-                    </log>
-                    <wait>
-                      <log>^.*Server is now live.*$</log>
-                    </wait>
-                    <volumes>
-                      <from>
-                        <image>artemis-config</image>
-                      </from>
-                    </volumes>
-                  </run>
-                </image>
-                <!-- ##### Hono certificates and keys ##### -->
-                <image>
-                  <alias>hono-default-config</alias>
-                  <name>eclipsehono/hono-default-config:${project.version}</name>
-                </image>
-                <!-- ##### Qpid configuration ##### -->
-                <image>
-                  <alias>qpid-config</alias>
-                  <name>eclipsehono/qpid-broker-config:${project.version}</name>
-                </image>
-                <!-- ##### Qpid sasldb ##### -->
-                <image>
-                  <alias>qpid-sasldb</alias>
-                  <name>eclipsehono/qpid-sasldb:${project.version}</name>
-                </image>
-                <!-- ##### Qpid Dispatch Router ##### -->
-                <image>
-                  <alias>qdrouter</alias>
-                  <name>gordons/qpid-dispatch:${qpid-dispatch.version}</name>
-                  <run>
-                    <ports>
-                      <port>+qpid.ip:qpid.amqp.port:5672</port>
-                      <port>qpid.amqp.internal.port:5673</port>
-                    </ports>
-                    <network>
-                      <name>hono</name>
-                      <alias>qdrouter</alias>
-                    </network>
-                    <log>
-                      <prefix>QPID</prefix>
-                      <color>blue</color>
-                    </log>
-                    <wait>
-                      <log>^.*Operational.*$</log>
-                    </wait>
-                    <volumes>
-                      <from>
-                        <image>qpid-sasldb</image>
-                        <image>qpid-config</image>
-                      </from>
-                    </volumes>
-                  </run>
-                </image>
-                <!-- ##### Hono server ##### -->
-                <image>
-                  <alias>server</alias>
-                  <name>eclipsehono/hono-server:${project.version}</name>
-                  <run>
-                    <ports>
-                      <port>+hono.ip:hono.amqp.port:5672</port>
-                    </ports>
-                    <network>
-                      <name>hono</name>
-                    </network>
-                    <env>
-                      <HONO_DOWNSTREAM_KEY_STORE_PATH>/etc/hono/certs/honoKeyStore.p12</HONO_DOWNSTREAM_KEY_STORE_PATH>
-                      <HONO_DOWNSTREAM_KEY_STORE_PASSWORD>honokeys</HONO_DOWNSTREAM_KEY_STORE_PASSWORD>
-                      <HONO_DOWNSTREAM_HOST>qdrouter</HONO_DOWNSTREAM_HOST>
-                      <HONO_DOWNSTREAM_PORT>5673</HONO_DOWNSTREAM_PORT>
-                      <HONO_DOWNSTREAM_TRUST_STORE_PATH>/etc/hono/certs/ca-cert.pem</HONO_DOWNSTREAM_TRUST_STORE_PATH>
-                      <HONO_MAX_INSTANCES>1</HONO_MAX_INSTANCES>
-                      <HONO_PERMISSIONS_PATH>file:///etc/hono/permissions.json</HONO_PERMISSIONS_PATH>
-                      <HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>true</HONO_WAIT_FOR_DOWNSTREAM_CONNECTION_ENABLED>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>artemis,prod</SPRING_PROFILES_ACTIVE>
-                    </env>
-                    <log>
-                      <prefix>HONO</prefix>
-                      <color>green</color>
-                    </log>
-                    <volumes>
-                      <from>
-                        <image>hono-config</image>
-                      </from>
-                    </volumes>
-                    <wait>
-                      <log>^.*(startup completed successfully)$</log>
-                    </wait>
-                  </run>
-                </image>
-              </images>
-            </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>start-docker</id>
-                <phase>pre-integration-test</phase>
-                <goals>
-                  <goal>start</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>stop-docker</id>
-                <phase>post-integration-test</phase>
-                <goals>
-                  <goal>stop</goal>
-                  <goal>remove</goal>
-                </goals>
-                <configuration>
-                  <removeVolumes>true</removeVolumes>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-failsafe-plugin</artifactId>
-            <configuration>
-              <systemProperties>
-                <check.artemis.header>true</check.artemis.header>
-                <hono.host>${hono.ip}</hono.host>
-                <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
-                <hono.pathSeparator>.</hono.pathSeparator>
-                <downstream.host>${qpid.ip}</downstream.host>
-                <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
-                <use.qos1>true</use.qos1>
-              </systemProperties>
-              <includes>
-                <include>**/*IT.java</include>
-              </includes>
+              <test>*IT, !*ClientIT#*FailsForTenantWithoutAuthorization</test>
             </configuration>
             <executions>
               <execution>

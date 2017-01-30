@@ -9,24 +9,13 @@
   <artifactId>hono-config</artifactId>
 
   <name>Hono Configuration</name>
-  <description>Default Hono server configuration to be used by other modules.</description>
+  <description>Default Hono configuration to be used by other modules.</description>
 
   <properties>
     <image.target>hono-default-config</image.target>
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
-
-  <build>
-    <resources>
-      <resource>
-        <directory>${project.basedir}/src/main/resources</directory>
-        <includes>
-          <include>**/*</include>
-        </includes>
-      </resource>
-    </resources>
-  </build>
 
   <profiles>
     <profile>
@@ -59,116 +48,33 @@
                             <directory>${project.basedir}/src/main/resources</directory>
                             <outputDirectory>.</outputDirectory>
                             <includes>
-                              <include>**/*</include>
+                              <include>permissions.json</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.basedir}/demo-certs/certs</directory>
                             <outputDirectory>certs</outputDirectory>
                             <includes>
-                              <include>honoKeyStore.p12</include>
-                              <include>ca-cert.pem</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-                <image>
-                  <alias>qpid-default-config</alias>
-                  <name>eclipsehono/qpid-default-config:${project.version}</name>
-                  <build>
-                    <from>tianon/true</from>
-                    <tags>
-                      <tag>latest</tag>
-                      <tag>${project.version}</tag>
-                      <tag>${timestamp}</tag>
-                    </tags>
-                    <volumes>
-                      <volume>/etc/qpid-dispatch</volume>
-                    </volumes>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/etc/qpid-dispatch</basedir>
-                      <inline>
-                        <id>qpid-dispatch</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/qpid</directory>
-                            <outputDirectory>.</outputDirectory>
-                            <includes>
-                              <include>**/*</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.basedir}/demo-certs/certs</directory>
-                            <outputDirectory>certs</outputDirectory>
-                            <includes>
+                              <include>*.p12</include>
                               <include>qdrouter-*.pem</include>
                               <include>trusted-certs.pem</include>
+                              <include>trustStore.jks</include>
                             </includes>
                           </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-                <image>
-                  <alias>qpid-broker-config</alias>
-                  <name>eclipsehono/qpid-broker-config:${project.version}</name>
-                  <build>
-                    <from>tianon/true</from>
-                    <tags>
-                      <tag>latest</tag>
-                      <tag>${project.version}</tag>
-                      <tag>${timestamp}</tag>
-                    </tags>
-                    <volumes>
-                      <volume>/etc/qpid-dispatch</volume>
-                    </volumes>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/etc/qpid-dispatch</basedir>
-                      <inline>
-                        <id>qpid-dispatch</id>
-                        <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/qpid-with-broker</directory>
-                            <outputDirectory>.</outputDirectory>
+                            <directory>${project.basedir}/qpid</directory>
+                            <outputDirectory>qdrouter</outputDirectory>
                             <includes>
-                              <include>**/*</include>
+                              <include>qdrouterd.json</include>
+                              <include>qdrouterd-with-broker.json</include>
                             </includes>
                           </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-                <image>
-                  <alias>qpid-sasldb</alias>
-                  <name>eclipsehono/qpid-sasldb:${project.version}</name>
-                  <build>
-                    <from>tianon/true</from>
-                    <tags>
-                      <tag>latest</tag>
-                      <tag>${project.version}</tag>
-                      <tag>${timestamp}</tag>
-                    </tags>
-                    <volumes>
-                      <volume>/var/lib/qdrouterd</volume>
-                    </volumes>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/var/lib/qdrouterd</basedir>
-                      <inline>
-                        <id>qpid-sasldb</id>
-                        <fileSets>
                           <fileSet>
                             <directory>${project.basedir}/sasl</directory>
-                            <outputDirectory>.</outputDirectory>
+                            <outputDirectory>qdrouter</outputDirectory>
                             <includes>
-                              <include>**/*</include>
+                              <include>qdrouterd.sasldb</include>
+                              <include>qdrouter-sasl.conf</include>
                             </includes>
                           </fileSet>
                         </fileSets>
@@ -176,7 +82,7 @@
                     </assembly>
                   </build>
                 </image>
-                <image>
+                <!-- image>
                   <alias>artemis-default-config</alias>
                   <name>eclipsehono/artemis-default-config:${project.version}</name>
                   <build>
@@ -214,61 +120,7 @@
                       </inline>
                     </assembly>
                   </build>
-                </image>
-                <image>
-                  <alias>rest-adapter-certs</alias>
-                  <name>eclipsehono/rest-adapter-certs:${project.version}</name>
-                  <build>
-                    <from>tianon/true</from>
-                    <volumes>
-                      <volume>/etc/hono</volume>
-                    </volumes>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/etc/hono</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/demo-certs/certs</directory>
-                            <outputDirectory>certs</outputDirectory>
-                            <includes>
-                              <include>restKeyStore.p12</include>
-                              <include>trustStore.jks</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-                <image>
-                  <alias>mqtt-adapter-certs</alias>
-                  <name>eclipsehono/mqtt-adapter-certs:${project.version}</name>
-                  <build>
-                    <from>tianon/true</from>
-                    <volumes>
-                      <volume>/etc/hono</volume>
-                    </volumes>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/etc/hono</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/demo-certs/certs</directory>
-                            <outputDirectory>certs</outputDirectory>
-                            <includes>
-                              <include>mqttKeyStore.p12</include>
-                              <include>trustStore.jks</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
+                </image-->
               </images>
             </configuration>
             <executions>
