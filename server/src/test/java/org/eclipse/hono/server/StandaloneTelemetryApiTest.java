@@ -117,7 +117,9 @@ public class StandaloneTelemetryApiTest {
     public void clearRegistry(final TestContext ctx) throws InterruptedException {
 
         registrationAdapter.clear();
-        telemetrySender.close(ctx.asyncAssertSuccess());
+        if (telemetrySender.isOpen()) {
+            telemetrySender.close(ctx.asyncAssertSuccess());
+        }
     }
 
     @AfterClass
@@ -157,21 +159,16 @@ public class StandaloneTelemetryApiTest {
         telemetrySender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
     }
 
-    @Test()
+    @Test(timeout = 1000l)
     public void testLinkGetsClosedWhenUploadingMalformedTelemetryDataMessage(final TestContext ctx) throws Exception {
 
         final Message msg = ProtonHelper.message("malformed");
         msg.setMessageId("malformed-message");
 
-        Async errorReported = ctx.async();
-        telemetrySender.setErrorHandler(error -> {
-            if (error.failed()) {
-                LOG.debug(error.cause().getMessage());
-                errorReported.complete();
-            }
-        });
-        telemetrySender.send(msg);
-        errorReported.awaitSuccess(2000);
+        telemetrySender.setErrorHandler(ctx.asyncAssertFailure(error -> {
+            LOG.debug(error.getMessage());
+        }));
+        telemetrySender.send(msg, capacityAvailable -> {});
     }
 
     @Test(timeout = 2000l)
