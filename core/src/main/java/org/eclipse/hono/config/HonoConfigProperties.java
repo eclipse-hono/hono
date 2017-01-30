@@ -57,7 +57,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Gets the number of {@code HonoServer} verticle instances to deploy.
+     * Gets the number of verticle instances to deploy.
      * <p>
      * The number is calculated as follows:
      * <ol>
@@ -76,7 +76,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Sets the number of {@code HonoServer} verticle instances to deploy.
+     * Sets the number of verticle instances to deploy.
      * <p>
      * The default value of this property is 0.
      * 
