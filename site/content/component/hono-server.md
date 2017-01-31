@@ -40,17 +40,23 @@ The options only need to be set if the default value does not match your environ
 
 When running the Hono server as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
 
-The following commands first start the volume container containing the example key stores and permissions definition file (from the `example` folder) and then start the Hono server container mounting the exposed volume in order to be able to read the configuration files from it.
+The following commands first start the volume container containing the [Default Configuration]({{< ref "default-config.md" >}}) and then start the Hono server container mounting the exposed volume in order to be able to read the configuration files from `/etc/hono`.
 
 ~~~sh
 $ docker run -d --name hono-config eclipsehono/hono-default-config:latest
-$ docker run -d --name hono --link qdrouter -e 'HONO_DOWNSTREAM_HOST=qdrouter' \
-> -e 'HONO_DOWNSTREAM_PORT=5673' -e 'HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12' \
-> -e 'HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys' -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/ca-cert.pem' \
+$ docker run -d --name hono --network hono-net -e 'HONO_DOWNSTREAM_HOST=qdrouter' -e 'HONO_DOWNSTREAM_PORT=5673' \
+> -e 'HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12' -e 'HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys' \
+> -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' -e 'HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json' \
 > -e 'HONO_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12' -e 'HONO_KEY_STORE_PASSWORD=honokeys' \
-> -e 'HONO_TRUST_STORE_PATH=/etc/hono/certs/ca-cert.pem'
-> -p5672:5672 --volumes-from=hono-config eclipsehono/hono-server:latest
+> -e 'HONO_SERVER_BINDADDRESS=0.0.0.0' -p5672:5672 --volumes-from=hono-config eclipsehono/hono-server:latest
 ~~~
+
+{{% note %}}
+The *--network* command line switch is used to specify the *user defined* Docker network that the Hono server should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the Hono server when they want to connect to it. For the same reason it is important that the Hono server container is attached to the same network that the Dispatch Router is attached to so that the Hono server can use the Dispatch Router's host name to connect to it via the Docker network.
+Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
+
+In cases where the Hono server container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+{{% /note %}}
 
 ## Run using Docker Compose
 

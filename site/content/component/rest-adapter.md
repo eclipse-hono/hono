@@ -30,16 +30,22 @@ The options only need to be set if the default value does not match your environ
 
 When running the adapter as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
 
-The following commands first start the volume container containing the example trust store (from the `example` folder) and then start the MQTT adapter container mounting the exposed volume in order to be able to read the configuration files from it.
+The following commands first start the volume container containing the [Default Configuration]({{< ref "default-config.md" >}}) and then start the REST adapter container mounting the exposed volume in order to be able to read the trusted certificates from `/etc/hono/certs`.
 
 ~~~sh
-$ docker run -d --name rest-certs eclipsehono/rest-adapter-certs:latest
-$ docker run -d --name rest-adapter --link hono -e 'HONO_CLIENT_HOST=hono' \
+$ docker run -d --name hono-config eclipsehono/hono-default-config:latest
+$ docker run -d --name rest-adapter --network hono-net -e 'HONO_CLIENT_HOST=hono' \
 > -e 'HONO_CLIENT_USERNAME=hono-client' -e 'HONO_CLIENT_PASSWORD=secret' \
-> -e 'HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trustStore.jks' \
-> -e 'HONO_CLIENT_TRUST_STORE_PASSWORD=honotrust' \
-> -p8080:8080 --volumes-from=rest-certs eclipsehono/hono-adapter-rest-vertx:latest
+> -e 'HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -p8080:8080 --volumes-from=hono-config eclipsehono/hono-adapter-rest-vertx:latest
 ~~~
+
+{{% note %}}
+The *--network* command line switch is used to specify the *user defined* Docker network that the REST adapter container should attach to. It is important that the REST adapter container is attached to the same network that the Hono server is attached to so that the REST adapter can use the Hono server's host name to connect to it via the Docker network.
+Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
+
+In cases where the REST adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+{{% /note %}}
 
 ## Run using Docker Compose
 

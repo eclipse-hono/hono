@@ -53,9 +53,9 @@ You can start the client from the `example` folder as follows:
 ~/hono/example$ mvn spring-boot:run -Drun.arguments=--spring.profiles.active=receiver,--hono.client.host=localhost
 ~~~
 
-{{% note %}}
+{{% warning %}}
 Replace *localhost* with the name or IP address of the host that Docker is running on.
-{{% /note %}}
+{{% /warning %}}
 
 ## Uploading Telemetry Data
 
@@ -65,9 +65,9 @@ The following sections will use the REST adapter to publish the telemetry data b
 
 Please refer to the [REST Adapter]({{< relref "rest-adapter.md" >}}) documentation for additional information on how to access Hono's functionality via REST.
 
-{{% note %}}
-The following sections assume that the REST adapter Docker container has been started on the local machine. However, if you started the REST adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that host.
-{{% /note %}}
+{{% warning %}}
+The following sections assume that the REST adapter Docker container has been started on the local machine. However, if you started the REST adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
+{{% /warning %}}
 
 ### Registering a device using the REST adapter
 
