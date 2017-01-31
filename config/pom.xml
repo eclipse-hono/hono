@@ -82,45 +82,6 @@
                     </assembly>
                   </build>
                 </image>
-                <!-- image>
-                  <alias>artemis-default-config</alias>
-                  <name>eclipsehono/artemis-default-config:${project.version}</name>
-                  <build>
-                    <from>tianon/true</from>
-                    <tags>
-                      <tag>latest</tag>
-                      <tag>${project.version}</tag>
-                      <tag>${timestamp}</tag>
-                    </tags>
-                    <volumes>
-                      <volume>/var/lib/artemis/etc</volume>
-                    </volumes>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/var/lib/artemis/etc</basedir>
-                      <inline>
-                        <id>artemis-broker</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/artemis/etc</directory>
-                            <outputDirectory>.</outputDirectory>
-                            <includes>
-                              <include>**/*</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.basedir}/demo-certs/certs</directory>
-                            <outputDirectory>certs</outputDirectory>
-                            <includes>
-                              <include>artemisKeyStore.p12</include>
-                              <include>ca-cert.pem</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image-->
               </images>
             </configuration>
             <executions>
