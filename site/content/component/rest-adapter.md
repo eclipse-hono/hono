@@ -64,11 +64,11 @@ The corresponding command to start up the adapter with the configuration used in
 ~~~
 
 {{% note %}}
-In the example above the `--hono.client.host=hono` command line option indicates that the Hono server is running on a host
-with name `hono`. However, if the Hono server has been started as a Docker container then the `hono` host name will most
+In the example above the *--hono.client.host=hono* command line option indicates that the Hono server is running on a host
+with name *hono*. However, if the Hono server has been started as a Docker container then the *hono* host name will most
 likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the REST adapter
 from the Spring Boot application and want it to connect to a Hono server run as a Docker container then you need to set the
-value of the `--hono.client.host` option to the IP address (or name) of the Docker host running the Hono server container.
+value of the *--hono.client.host* option to the IP address (or name) of the Docker host running the Hono server container.
 {{% /note %}}
 
 ## Using the Registration API

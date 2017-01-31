@@ -39,6 +39,7 @@ $ docker run -d --name mqtt-adapter --network hono-net -e 'HONO_CLIENT_HOST=hono
 > -e 'HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trustStore.jks' \
 > -e 'HONO_CLIENT_TRUST_STORE_PASSWORD=honotrust' \
 > -p1883:1883 --volumes-from=hono-config eclipsehono/hono-adapter-mqtt-vertx:latest
+~~~
 
 {{% note %}}
 The *--network* command line switch is used to specify the *user defined* Docker network that the MQTT adapter container should attach to. It is important that the MQTT adapter container is attached to the same network that the Hono server is attached to so that the MQTT adapter can use the Hono server's host name to connect to it via the Docker network.
@@ -64,11 +65,11 @@ The corresponding command to start up the adapter with the configuration used in
 ~~~
 
 {{% note %}}
-In the example above the `--hono.client.host=hono` command line option indicates that the Hono server is running on a host
-with name `hono`. However, if the Hono server has been started as a Docker container then the `hono` host name will most
+In the example above the *--hono.client.host=hono* command line option indicates that the Hono server is running on a host
+with name *hono*. However, if the Hono server has been started as a Docker container then the *hono* host name will most
 likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the REST adapter
 from the Spring Boot application and want it to connect to a Hono server run as a Docker container then you need to set the
-value of the `--hono.client.host` option to the IP address (or name) of the Docker host running the Hono server container.
+value of the *--hono.client.host* option to the IP address (or name) of the Docker host running the Hono server container.
 {{% /note %}}
 
 ## Using the Telemetry Topic Hierarchy
