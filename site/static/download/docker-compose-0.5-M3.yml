@@ -1,0 +1,71 @@
+version: '2'
+
+services:
+
+  hono-config:
+    image: eclipsehono/hono-default-config:0.5-M3
+
+  qdrouter:
+    image: gordons/qpid-dispatch:0.7.0
+    command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
+    ports:
+      - "15671:5671"
+      - "15672:5672"
+    volumes_from:
+      - hono-config
+
+  hono:
+    image: eclipsehono/hono-server:0.5-M3
+    ports:
+      - "5672:5672"
+    environment:
+      - HONO_DOWNSTREAM_HOST=qdrouter
+      - HONO_DOWNSTREAM_PORT=5673
+      - HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
+      - HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys
+      - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
+      - HONO_KEY_STORE_PASSWORD=honokeys
+      - HONO_MAX_INSTANCES=1
+      - HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json
+      - HONO_SERVER_BINDADDRESS=0.0.0.0
+      - LOGGING_CONFIG=classpath:logback-spring.xml
+      - SPRING_PROFILES_ACTIVE=default,dev
+    volumes_from:
+      - hono-config
+
+  rest-adapter:
+    image: eclipsehono/hono-adapter-rest-vertx:0.5-M3
+    ports:
+      - "8080:8080"
+    environment:
+      - HONO_CLIENT_NAME=Hono REST Adapter
+      - HONO_CLIENT_HOST=hono
+      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_USERNAME=rest-adapter
+      - HONO_CLIENT_PASSWORD=secret
+      - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trustStore.jks
+      - HONO_CLIENT_TRUST_STORE_PASSWORD=honotrust
+      - HONO_HTTP_BINDADDRESS=0.0.0.0
+      - HONO_MAX_INSTANCES=1
+      - SPRING_PROFILES_ACTIVE=dev
+    volumes_from:
+      - hono-config
+
+  mqtt-adapter:
+    image: eclipsehono/hono-adapter-mqtt-vertx:0.5-M3
+    ports:
+      - "1883:1883"
+    environment:
+      - HONO_CLIENT_NAME=Hono MQTT Adapter
+      - HONO_CLIENT_HOST=hono
+      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_USERNAME=mqtt-adapter
+      - HONO_CLIENT_PASSWORD=secret
+      - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trustStore.jks
+      - HONO_CLIENT_TRUST_STORE_PASSWORD=honotrust
+      - HONO_MQTT_BINDADDRESS=0.0.0.0
+      - HONO_MAX_INSTANCES=1
+      - SPRING_PROFILES_ACTIVE=dev
+    volumes_from:    
+      - hono-config
