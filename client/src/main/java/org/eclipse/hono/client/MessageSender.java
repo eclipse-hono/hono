@@ -285,7 +285,9 @@ public interface MessageSender {
     void close(Handler<AsyncResult<Void>> closeHandler);
 
     /**
-     * @return true if the sender is open, false otherwise
+     * Checks if this sender is (locally) open.
+     * 
+     * @return {@code true} if this sender can be used to send messages to the peer.
      */
     boolean isOpen();
 }
