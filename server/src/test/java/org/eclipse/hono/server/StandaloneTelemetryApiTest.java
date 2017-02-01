@@ -174,15 +174,11 @@ public class StandaloneTelemetryApiTest {
     @Test(timeout = 2000l)
     public void testLinkGetsClosedWhenDeviceUploadsDataOriginatingFromOtherDevice(final TestContext ctx) throws Exception {
 
-        Async closed = ctx.async();
-        telemetrySender.close(ctx.asyncAssertSuccess(done -> closed.complete()));
-        closed.await(1000);
         client.getOrCreateTelemetrySender(DEFAULT_TENANT, "device-0", ctx.asyncAssertSuccess(sender -> {
-            telemetrySender = sender;
-            telemetrySender.setErrorHandler(ctx.asyncAssertFailure(s -> {
+            sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
                 LOG.debug(s.getMessage());
             }));
-            telemetrySender.send("device-1", "from other device", "text/plain");
+            sender.send("device-1", "from other device", "text/plain");
         }));
     }
 }
