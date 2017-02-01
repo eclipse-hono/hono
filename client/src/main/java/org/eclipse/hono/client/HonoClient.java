@@ -248,12 +248,17 @@ public final class HonoClient {
         if (sender != null && sender.isOpen()) {
             resultHandler.handle(Future.succeededFuture(sender));
         } else {
+            LOG.debug("creating new message sender for {}", key);
             final Future<MessageSender> internal = Future.future();
-            internal.setHandler(result -> {
-                if (result.succeeded()) {
-                    activeSenders.put(key, result.result());
+            internal.setHandler(creationAttempt -> {
+                if (creationAttempt.succeeded()) {
+                    MessageSender newSender = creationAttempt.result();
+                    LOG.debug("successfully created new message sender for {}", key);
+                    activeSenders.put(key, newSender);
+                } else {
+                    LOG.debug("failed to create new message sender for {}", key, creationAttempt.cause());
                 }
-                resultHandler.handle(result);
+                resultHandler.handle(creationAttempt);
             });
             newSenderSupplier.accept(internal.completer());
         }
@@ -264,9 +269,11 @@ public final class HonoClient {
             final String deviceId,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
+        Future<MessageSender> senderTracker = Future.future();
+        senderTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> TelemetrySenderImpl.create(context, connection, tenantId, deviceId, creationHandler),
-                Future.<MessageSender> future().setHandler(creationHandler));
+                connected -> TelemetrySenderImpl.create(context, connection, tenantId, deviceId, senderTracker.completer()),
+                senderTracker);
         return this;
     }
 
@@ -275,9 +282,11 @@ public final class HonoClient {
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
+        Future<MessageConsumer> consumerTracker = Future.future();
+        consumerTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> TelemetryConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), telemetryConsumer, creationHandler),
-                Future.<MessageConsumer> future().setHandler(creationHandler));
+                connected -> TelemetryConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer()),
+                consumerTracker);
         return this;
     }
 
@@ -286,9 +295,11 @@ public final class HonoClient {
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
+        Future<MessageConsumer> consumerTracker = Future.future();
+        consumerTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> EventConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), eventConsumer, creationHandler),
-                Future.<MessageConsumer> future().setHandler(creationHandler));
+                connected -> EventConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer()),
+                consumerTracker);
         return this;
     }
 
@@ -297,9 +308,11 @@ public final class HonoClient {
             final String deviceId,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
+        Future<MessageSender> senderTracker = Future.future();
+        senderTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> EventSenderImpl.create(context, connection, tenantId, deviceId, creationHandler),
-                Future.<MessageSender> future().setHandler(creationHandler));
+                connected -> EventSenderImpl.create(context, connection, tenantId, deviceId, senderTracker.completer()),
+                senderTracker);
         return this;
     }
 

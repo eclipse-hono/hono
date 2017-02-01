@@ -39,6 +39,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonSender;
 
 /**
  * A Vertx-Proton based client for publishing messages to a Hono server.
@@ -54,8 +55,9 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     private Handler<Void>                      drainHandler;
     private BiConsumer<Object, ProtonDelivery> dispositionHandler = (messageId, delivery) -> LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
 
-    AbstractSender(final String tenantId, final Context context) {
+    AbstractSender(final ProtonSender sender, final String tenantId, final Context context) {
         super(context);
+        this.sender = Objects.requireNonNull(sender);
         this.tenantId = Objects.requireNonNull(tenantId);
     }
 
@@ -83,6 +85,8 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
 
     @Override
     public void close(final Handler<AsyncResult<Void>> closeHandler) {
+        Objects.requireNonNull(closeHandler);
+        LOG.info("closing sender ...");
         closeLinks(closeHandler);
     }
 

@@ -34,9 +34,8 @@ public class TelemetrySenderImpl extends AbstractSender {
     private static final String     TELEMETRY_ENDPOINT_NAME  = "telemetry/";
     private static final Logger     LOG = LoggerFactory.getLogger(TelemetrySenderImpl.class);
 
-    private TelemetrySenderImpl(final String tenantId, final Context context, final ProtonSender sender) {
-        super(tenantId, context);
-        this.sender = sender;
+    private TelemetrySenderImpl(final ProtonSender sender, final String tenantId, final Context context) {
+        super(sender, tenantId, context);
     }
 
     /**
@@ -71,10 +70,11 @@ public class TelemetrySenderImpl extends AbstractSender {
         Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
-        createSender(context, con, tenantId, deviceId).setHandler(created -> {
+        final String targetAddress = getTargetAddress(tenantId, deviceId);
+        createSender(context, con, targetAddress).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new TelemetrySenderImpl(tenantId, context, created.result())));
+                        new TelemetrySenderImpl(created.result(), tenantId, context)));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }
@@ -84,29 +84,28 @@ public class TelemetrySenderImpl extends AbstractSender {
     private static Future<ProtonSender> createSender(
             final Context ctx,
             final ProtonConnection con,
-            final String tenantId,
-            final String deviceId) {
+            final String targetAddress) {
 
         final Future<ProtonSender> result = Future.future();
-        final String targetAddress = getTargetAddress(tenantId, deviceId);
 
         ctx.runOnContext(create -> {
             final ProtonSender sender = con.createSender(targetAddress);
             sender.setQoS(ProtonQoS.AT_MOST_ONCE);
             sender.openHandler(senderOpen -> {
                 if (senderOpen.succeeded()) {
-                    LOG.debug("telemetry sender for [{}] open", senderOpen.result().getRemoteTarget());
+                    LOG.debug("telemetry sender for [{}] open", targetAddress);
                     result.complete(senderOpen.result());
                 } else {
-                    LOG.debug("telemetry sender open for [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
+                    LOG.debug("opening telemetry sender for [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
                     result.fail(senderOpen.cause());
                 }
             }).closeHandler(senderClosed -> {
                 if (senderClosed.succeeded()) {
-                    LOG.debug("telemetry sender for [{}] closed", senderClosed.result().getRemoteTarget());
+                    LOG.debug("telemetry sender for [{}] closed", targetAddress);
                 } else {
-                    LOG.debug("telemetry closed due to {}", senderClosed.cause().getMessage());
+                    LOG.debug("telemetry sender for [{}] closed due to {}", targetAddress, senderClosed.cause().getMessage());
                 }
+                sender.close();
             }).open();
         });
 

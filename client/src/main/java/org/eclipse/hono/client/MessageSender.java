@@ -281,6 +281,7 @@ public interface MessageSender {
      * The underlying AMQP connection to the server is not affected by this operation.
      * 
      * @param closeHandler A handler that is called back with the outcome of the attempt to close the link.
+     * @throws NullPointerException if the handler is {@code null}.
      */
     void close(Handler<AsyncResult<Void>> closeHandler);
 

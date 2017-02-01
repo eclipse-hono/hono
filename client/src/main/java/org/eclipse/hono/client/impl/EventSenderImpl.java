@@ -36,9 +36,8 @@ public class EventSenderImpl extends AbstractSender {
     private static final String EVENT_ENDPOINT_NAME = "event/";
     private static final Logger LOG = LoggerFactory.getLogger(EventSenderImpl.class);
 
-    private EventSenderImpl(final String tenantId, final Context context, final ProtonSender sender) {
-        super(tenantId, context);
-        this.sender = sender;
+    private EventSenderImpl(final ProtonSender sender, final String tenantId, final Context context) {
+        super(sender, tenantId, context);
     }
 
     /**
@@ -73,10 +72,11 @@ public class EventSenderImpl extends AbstractSender {
         Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
-        createSender(con, tenantId, deviceId).setHandler(created -> {
+        final String targetAddress = getTargetAddress(tenantId, deviceId);
+        createSender(con, targetAddress).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new EventSenderImpl(tenantId, context, created.result())));
+                        new EventSenderImpl(created.result(), tenantId, context)));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }
@@ -85,11 +85,9 @@ public class EventSenderImpl extends AbstractSender {
 
     private static Future<ProtonSender> createSender(
             final ProtonConnection con,
-            final String tenantId,
-            final String deviceId) {
+            final String targetAddress) {
 
         final Future<ProtonSender> result = Future.future();
-        final String targetAddress = getTargetAddress(tenantId, deviceId);
 
         final ProtonSender sender = con.createSender(targetAddress);
         sender.setQoS(ProtonQoS.AT_LEAST_ONCE);

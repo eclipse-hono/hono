@@ -131,26 +131,8 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     public void close(final Handler<AsyncResult<Void>> closeHandler) {
 
         Objects.requireNonNull(closeHandler);
-        LOG.info("closing registration client...");
-        final Future<ProtonReceiver> closeTracker = Future.future();
-        closeTracker.setHandler(r -> {
-            if (r.succeeded()) {
-                this.receiver = null;
-                LOG.info("sender and receiver closed");
-                closeHandler.handle(Future.succeededFuture());
-            } else {
-                closeHandler.handle(Future.failedFuture(r.cause()));
-            }
-        });
-
-        context.runOnContext(close -> {
-            final Future<ProtonSender> senderCloseTracker = Future.future();
-            sender.closeHandler(senderCloseTracker.completer()).close();
-            senderCloseTracker.compose(s -> {
-                this.sender = null;
-                receiver.closeHandler(closeTracker.completer()).close();
-            }, closeTracker);
-        });
+        LOG.info("closing registration client ...");
+        closeLinks(closeHandler);
     }
 
     private void createAndSendRequest(final String action, final String deviceId, final JsonObject payload,

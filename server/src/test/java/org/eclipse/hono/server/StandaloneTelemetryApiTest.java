@@ -107,18 +107,27 @@ public class StandaloneTelemetryApiTest {
     public void createSender(final TestContext ctx) {
 
         registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1, null);
-
-        client.getOrCreateTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(r -> {
-            telemetrySender = r;
-        }));
+        telemetryAdapter.setMessageConsumer(msg -> {});
+//        Async done = ctx.async();
+//        client.getOrCreateTelemetrySender(DEFAULT_TENANT, creationAttempt -> {
+//            ctx.assertTrue(creationAttempt.succeeded());
+//            telemetrySender = creationAttempt.result();
+//            done.complete();
+//        });
+//        done.await(1000L);
     }
 
     @After
     public void clearRegistry(final TestContext ctx) throws InterruptedException {
 
         registrationAdapter.clear();
-        if (telemetrySender.isOpen()) {
-            telemetrySender.close(ctx.asyncAssertSuccess());
+        if (telemetrySender != null && telemetrySender.isOpen()) {
+            Async done = ctx.async();
+            telemetrySender.close(closeAttempt -> {
+                ctx.assertTrue(closeAttempt.succeeded());
+                done.complete();
+            });
+            done.await(1000L);
         }
     }
 
@@ -141,6 +150,14 @@ public class StandaloneTelemetryApiTest {
             LOG.debug("received message [id: {}]", msg.getMessageId());
         });
 
+        Async sender = ctx.async();
+        client.getOrCreateTelemetrySender(DEFAULT_TENANT, creationAttempt -> {
+            ctx.assertTrue(creationAttempt.succeeded());
+            telemetrySender = creationAttempt.result();
+            sender.complete();
+        });
+        sender.await(1000L);
+
         IntStream.range(0, count).forEach(i -> {
             Async waitForCredit = ctx.async();
             LOG.trace("sending message {}", i);
@@ -148,15 +165,19 @@ public class StandaloneTelemetryApiTest {
             LOG.trace("sender's send queue full: {}", telemetrySender.sendQueueFull());
             waitForCredit.await();
         });
+
     }
 
     @Test(timeout = 1000l)
     public void testLinkGetsClosedWhenUploadingDataForUnknownDevice(final TestContext ctx) throws Exception {
 
-        telemetrySender.setErrorHandler(ctx.asyncAssertFailure(s -> {
-            LOG.debug(s.getMessage());
+        client.getOrCreateTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
+            sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
+                LOG.debug(s.getMessage());
+            }));
+            sender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
         }));
-        telemetrySender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
+
     }
 
     @Test(timeout = 1000l)
@@ -165,10 +186,13 @@ public class StandaloneTelemetryApiTest {
         final Message msg = ProtonHelper.message("malformed");
         msg.setMessageId("malformed-message");
 
-        telemetrySender.setErrorHandler(ctx.asyncAssertFailure(error -> {
-            LOG.debug(error.getMessage());
+        client.getOrCreateTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
+            sender.setErrorHandler(ctx.asyncAssertFailure(error -> {
+                LOG.debug(error.getMessage());
+            }));
+            sender.send(msg, capacityAvailable -> {});
         }));
-        telemetrySender.send(msg, capacityAvailable -> {});
+
     }
 
     @Test(timeout = 2000l)
