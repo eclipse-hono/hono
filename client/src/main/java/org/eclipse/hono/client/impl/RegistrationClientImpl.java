@@ -128,6 +128,11 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     }
 
     @Override
+    public boolean isOpen() {
+        return sender != null && sender.isOpen() && receiver != null && receiver.isOpen();
+    }
+
+    @Override
     public void close(final Handler<AsyncResult<Void>> closeHandler) {
 
         Objects.requireNonNull(closeHandler);

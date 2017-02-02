@@ -96,4 +96,11 @@ public interface RegistrationClient {
      * @param closeHandler A handler that is called back with the result of the attempt to close the links.
      */
     void close(Handler<AsyncResult<Void>> closeHandler);
+
+    /**
+     * Checks if this client's sender and receiver are (locally) open.
+     * 
+     * @return {@code true} if this client can be used to exchange messages with the peer.
+     */
+    boolean isOpen();
 }
