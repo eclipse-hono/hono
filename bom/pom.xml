@@ -47,7 +47,7 @@
     <spring-boot.version>1.4.0.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.3.3</vertx.version>
-    <vertx-proton.version>3.3.3</vertx-proton.version>
+    <vertx-proton.version>3.4.0.Beta1</vertx-proton.version>
     <vertx-mqtt.version>3.4.0-20161128.154251-24</vertx-mqtt.version>
   </properties>
 
@@ -193,6 +193,11 @@
       	<artifactId>hono-legal</artifactId>
       	<version>${project.version}</version>
       	<scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-mysql-postgresql-client</artifactId>
+        <version>${vertx.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

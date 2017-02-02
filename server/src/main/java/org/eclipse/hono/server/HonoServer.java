@@ -164,9 +164,9 @@ public final class HonoServer extends AbstractVerticle {
     ProtonServerOptions createServerOptions() {
 
         ProtonServerOptions options = new ProtonServerOptions();
-        options.setIdleTimeout(0);
-        options.setReceiveBufferSize(32 * 1024); // 32kb
-        options.setSendBufferSize(32 * 1024); // 32kb
+        options.setHeartbeat(60000); // // close idle connections after two minutes of inactivity
+        options.setReceiveBufferSize(16 * 1024); // 16kb
+        options.setSendBufferSize(16 * 1024); // 16kb
         options.setLogActivity(honoConfig.isNetworkDebugLoggingEnabled());
 
         addTlsKeyCertOptions(options);
