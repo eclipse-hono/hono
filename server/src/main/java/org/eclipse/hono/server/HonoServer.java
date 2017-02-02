@@ -338,8 +338,9 @@ public final class HonoServer extends AbstractVerticle {
         } else {
             LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
-        publishConnectionClosedEvent(con);
         con.close();
+        con.disconnect();
+        publishConnectionClosedEvent(con);
     }
 
     private void handleRemoteDisconnect(final ProtonConnection connection) {
