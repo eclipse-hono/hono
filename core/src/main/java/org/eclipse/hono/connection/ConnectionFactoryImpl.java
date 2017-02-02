@@ -100,50 +100,51 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
         }
 
         Objects.requireNonNull(connectionResultHandler);
-        ProtonClientOptions clientOptions = options;
-        if (clientOptions == null) {
-            clientOptions = new ProtonClientOptions();
-        }
+        final ProtonClientOptions clientOptions = options != null ? options : new ProtonClientOptions();
         addOptions(clientOptions);
 
         ProtonClient client = ProtonClient.create(vertx);
-        logger.info("connecting to AMQP 1.0 container [{}:{}]", config.getHost(), config.getPort());
+        logger.info("connecting to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
+                config.getHost(), config.getPort());
         client.connect(
                 options,
                 config.getHost(),
                 config.getPort(),
                 config.getUsername(),
                 config.getPassword(),
-                conAttempt -> handleConnectionAttemptResult(conAttempt, closeHandler, disconnectHandler, connectionResultHandler));
+                conAttempt -> handleConnectionAttemptResult(conAttempt, clientOptions, closeHandler, disconnectHandler, connectionResultHandler));
     }
 
     private void handleConnectionAttemptResult(
             final AsyncResult<ProtonConnection> conAttempt,
+            final ProtonClientOptions clientOptions,
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
             final Handler<ProtonConnection> disconnectHandler,
             final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
         if (conAttempt.failed()) {
-            logger.warn("can't connect to AMQP 1.0 container [{}:{}]", config.getHost(), config.getPort(), conAttempt.cause());
+            logger.warn("can't connect to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
+                    config.getHost(), config.getPort(), conAttempt.cause());
         } else {
-            logger.info("connected to AMQP 1.0 container [{}:{}], opening connection ...",
-                    config.getHost(), config.getPort());
+            logger.info("connected to AMQP 1.0 container [{}://{}:{}], opening connection ...",
+                    clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort());
             ProtonConnection downstreamConnection = conAttempt.result();
             downstreamConnection
                     .setContainer(String.format("%s-%s", config.getName(), UUID.randomUUID()))
                     .setHostname(config.getAmqpHostname())
                     .openHandler(openCon -> {
                         if (openCon.succeeded()) {
-                            logger.info("connection to container [{}] open", downstreamConnection.getRemoteContainer());
+                            logger.info("connection to container [{}] at [{}://{}:{}] open", downstreamConnection.getRemoteContainer(),
+                                    clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort());
                             downstreamConnection.disconnectHandler(disconnectHandler);
                             downstreamConnection.closeHandler(closeHandler);
                             connectionResultHandler.handle(Future.succeededFuture(downstreamConnection));
                         } else {
-                            logger.warn("can't open connection to container [{}]", downstreamConnection.getRemoteContainer(), openCon.cause());
+                            logger.warn("can't open connection to container [{}] at [{}://{}:{}]", downstreamConnection.getRemoteContainer(),
+                                    clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort(), openCon.cause());
                             connectionResultHandler.handle(Future.failedFuture(openCon.cause()));
                         }
-                    })
-                    .open();
+                    }).open();
         }
     }
 
