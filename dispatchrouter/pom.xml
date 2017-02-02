@@ -1,0 +1,103 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.eclipse.hono</groupId>
+    <artifactId>hono-bom</artifactId>
+    <version>0.5-M4-SNAPSHOT</version>
+    <relativePath>../bom</relativePath>
+  </parent>
+
+  <artifactId>dispatch-router</artifactId>
+  <name>Qpid Dispatch Router</name>
+  <description>Module for building the Qpid Dispatch Router image</description>
+
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <configuration>
+              <verbose>true</verbose>
+              <images>
+                <image>
+                  <build>
+                    <from>gordons/qpid-dispatch:${qpid-dispatch.version}</from>
+                    <ports>
+                      <port>5671</port>
+                      <port>5672</port>
+                    </ports>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/hono</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/qpid</directory>
+                            <outputDirectory>qdrouter</outputDirectory>
+                            <includes>
+                              <include>qdrouterd.json</include>
+                              <include>qdrouterd-with-broker.json</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.basedir}/sasl</directory>
+                            <outputDirectory>qdrouter</outputDirectory>
+                            <includes>
+                              <include>qdrouterd.sasldb</include>
+                              <include>qdrouter-sasl.conf</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.basedir}/../config/demo-certs/certs</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>*.p12</include>
+                              <include>qdrouter-*.pem</include>
+                              <include>trusted-certs.pem</include>
+                              <include>trustStore.jks</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>fabric8-maven-plugin</artifactId>
+            <version>3.2.14</version>
+            <configuration>
+
+            </configuration>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>resource</goal>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

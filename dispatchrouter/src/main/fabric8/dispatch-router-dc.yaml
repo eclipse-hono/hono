@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: hono
+    name: ${project.artifactId}
+  name: ${project.artifactId}
+spec:
+  replicas: 1
+  selector:
+    name: ${project.artifactId}
+  template:
+    metadata:
+      labels:
+        app: hono
+        capability: router
+        name: ${project.artifactId}
+    spec:
+      containers:
+      - image: eclipsehono/dispatch-router:${project.version}
+        name: ${project.artifactId}
+        ports:
+        - containerPort: 5671
+          protocol: TCP
+        - containerPort: 5672
+          protocol: TCP
+        - containerPort: 5673
+          protocol: TCP
+        env:
+        - name: PN_TRACE_FRM
+          value: "1"
+        args:
+          - /usr/sbin/qdrouterd
+          - -c
+          - /etc/hono/qdrouter/qdrouterd.json
