@@ -1,7 +1,7 @@
-spring:
-  profiles:
-    active: default
----
+#spring:
+#  profiles:
+#    active: default
+#---
 
 spring:
   profiles: default
