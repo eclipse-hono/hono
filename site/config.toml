@@ -5,7 +5,7 @@ theme = "hugo-material-docs"
 metadataformat = "toml"
 canonifyurls = false
 # Enable Google Analytics by entering your tracking id
-googleAnalytics = ""
+googleAnalytics = "UA-91336727-1"
 pluralizeListTitles = "false"
 
 [params]
