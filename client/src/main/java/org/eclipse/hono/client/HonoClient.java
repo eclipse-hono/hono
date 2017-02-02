@@ -256,6 +256,7 @@ public final class HonoClient {
 
         final MessageSender sender = activeSenders.get(key);
         if (sender != null && sender.isOpen()) {
+            LOG.debug("reusing existing message sender for [{}]", key);
             resultHandler.handle(Future.succeededFuture(sender));
         } else {
             LOG.debug("creating new message sender for {}", key);
@@ -340,6 +341,7 @@ public final class HonoClient {
 
         final RegistrationClient regClient = activeRegClients.get(Objects.requireNonNull(tenantId));
         if (regClient != null && regClient.isOpen()) {
+            LOG.debug("reusing existing registration client for [{}]", tenantId);
             resultHandler.handle(Future.succeededFuture(regClient));
         } else {
             createRegistrationClient(tenantId, resultHandler);
