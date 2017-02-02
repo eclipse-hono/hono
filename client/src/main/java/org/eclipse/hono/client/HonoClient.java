@@ -97,6 +97,8 @@ public final class HonoClient {
         result.put("name", connectionFactory.getName());
         result.put("connected", isConnected());
         result.put("Hono server", String.format("%s:%d", connectionFactory.getHost(), connectionFactory.getPort()));
+        result.put("#senders", activeSenders.size());
+        result.put("#regClients", activeRegClients.size());
         return result;
     }
 
@@ -142,7 +144,7 @@ public final class HonoClient {
 
             connectionFactory.connect(
                     clientOptions,
-                    null, // no particular close handler
+                    this::onRemoteClose,
                     disconnectHandler != null ? disconnectHandler : this::onRemoteDisconnect,
                     conAttempt -> {
                         connecting.compareAndSet(true, false);
@@ -160,10 +162,18 @@ public final class HonoClient {
         return this;
     }
 
+    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose) {
+        if (remoteClose.failed()) {
+            LOG.info("Hono server [{}:{}] closed connection with error condition: {}",
+                    connectionFactory.getHost(), connectionFactory.getPort(), remoteClose.cause().getMessage());
+        }
+        connection.close();
+        onRemoteDisconnect(connection);
+    }
+
     private void onRemoteDisconnect(final ProtonConnection con) {
 
         LOG.warn("lost connection to Hono server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-        con.disconnectHandler(null);
         con.disconnect();
         activeSenders.clear();
         activeRegClients.clear();
@@ -329,7 +339,7 @@ public final class HonoClient {
             final Handler<AsyncResult<RegistrationClient>> resultHandler) {
 
         final RegistrationClient regClient = activeRegClients.get(Objects.requireNonNull(tenantId));
-        if (regClient != null) {
+        if (regClient != null && regClient.isOpen()) {
             resultHandler.handle(Future.succeededFuture(regClient));
         } else {
             createRegistrationClient(tenantId, resultHandler);
@@ -345,11 +355,14 @@ public final class HonoClient {
         if (connection == null || connection.isDisconnected()) {
             creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
         } else {
+            LOG.debug("creating new registration client for [{}]", tenantId);
             RegistrationClientImpl.create(context, connection, tenantId, creationAttempt -> {
                 if (creationAttempt.succeeded()) {
                     activeRegClients.put(tenantId, creationAttempt.result());
+                    LOG.debug("successfully created registration client for [{}]", tenantId);
                     creationHandler.handle(Future.succeededFuture(creationAttempt.result()));
                 } else {
+                    LOG.debug("failed to create registration client for [{}]", tenantId, creationAttempt.cause());
                     creationHandler.handle(Future.failedFuture(creationAttempt.cause()));
                 }
             });
