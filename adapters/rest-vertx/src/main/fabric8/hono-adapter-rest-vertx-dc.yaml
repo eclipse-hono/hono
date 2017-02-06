@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: hono
+    name: ${project.artifactId}
+  name: ${project.artifactId}
+spec:
+  replicas: 1
+  selector:
+    name: ${project.artifactId}
+  template:
+    metadata:
+      labels:
+        app: hono
+        name: ${project.artifactId}
+    spec:
+      containers:
+      - image: eclipsehono/hono-adapter-rest-vertx:${project.version}
+        name: ${project.artifactId}
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+        - name: HONO_CLIENT_NAME
+          value: Hono REST Adapter
+        - name: HONO_CLIENT_HOST
+          value: ${HONO_APP_SERVICE_HOST}
+        - name: HONO_CLIENT_PORT
+          value: ${HONO_APP_SERVICE_PORT}
+        - name: HONO_CLIENT_USERNAME
+          value: rest-adapter
+        - name: HONO_CLIENT_PASSWORD
+          value: secret
+        - name: HONO_CLIENT_TRUST_STORE_PATH
+          value: /etc/hono/certs/trustStore.jks
+        - name: HONO_CLIENT_TRUST_STORE_PASSWORD
+          value: honotrust
+        - name: HONO_HTTP_BINDADDRESS
+          value: 0.0.0.0
+        - name: HONO_MAX_INSTANCES
+          value: "1"
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: HONO_CLIENT_HOSTNAME_VERIFICATION_REQUIRED
+          value: "false"
