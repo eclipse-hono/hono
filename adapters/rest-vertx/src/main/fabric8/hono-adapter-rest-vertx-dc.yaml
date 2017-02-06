@@ -44,3 +44,10 @@ spec:
           value: dev
         - name: HONO_CLIENT_HOSTNAME_VERIFICATION_REQUIRED
           value: "false"
+        volumeMounts:
+        - name: ${project.artifactId}-volume
+          mountPath: /home/hono/file-uploads
+      volumes:
+      - name: ${project.artifactId}-volume
+        persistentVolumeClaim:
+          claimName: ${project.artifactId}-pv-claim
