@@ -1,17 +1,3 @@
-#spring:
-#  profiles:
-#    active: default
-#---
-
 spring:
-  profiles: default
-hono:
-  downstream:
-    host: localhost
-    port: 5672
-    name: hono-server
-  maxInstances: 0
-  singleTenant: false
-  server:
-    bindaddress: 127.0.0.1
-    port: 5672
+  profiles:
+    active: default
