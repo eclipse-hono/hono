@@ -26,8 +26,17 @@ public interface AuthenticationService extends Verticle {
      * Validates the SASL response provided by the client.
      * 
      * @param mechanism the SASL mechanism used to authenticate the client.
-     * @param response the raw bytes provided by the client.
+     * @param response the raw bytes provided by the client in its SASL <em>response</em>.
      * @param resultHandler the handler to invoke with the issued authorization ID.
+     * @throws IllegalArgumentException if the given mechanism is not supported.
      */
-    void validateResponse(String mechanism, byte[] response, Handler<AsyncResult<String>> resultHandler);
+    void validateResponse(String mechanism, byte[] response, Handler<AsyncResult<String>> resultHandler) throws IllegalArgumentException;
+
+    /**
+     * Checks whether this authentication service supports a particular SASL mechanism.
+     * 
+     * @param mechanism The SASL mechanism to check.
+     * @return {@code true} if the mechanism is supported.
+     */
+    boolean isSupported(String mechanism);
 }

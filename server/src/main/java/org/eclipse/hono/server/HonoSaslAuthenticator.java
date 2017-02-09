@@ -30,12 +30,11 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetSocket;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.sasl.ProtonSaslAuthenticator;
-import io.vertx.proton.sasl.impl.ProtonSaslExternalImpl;
-import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
  * A SASL authenticator that supports the PLAIN and EXTERNAL mechanisms for authenticating clients.
@@ -51,13 +50,14 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
  */
 public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
 
-    private static final      Logger LOG = LoggerFactory.getLogger(HonoSaslAuthenticator.class);
-    private static final      Pattern PATTERN_CN = Pattern.compile("^CN=(.+?)(?:,\\s*[A-Z]{1,2}=.+|$)");
-    private final Vertx       vertx;
-    private Sasl              sasl;
-    private boolean           succeeded;
-    private ProtonConnection  protonConnection;
-    private X509Certificate[] peerCertificateChain;
+    private static final Logger   LOG = LoggerFactory.getLogger(HonoSaslAuthenticator.class);
+    private static final Pattern  PATTERN_CN = Pattern.compile("^CN=(.+?)(?:,\\s*[A-Z]{1,2}=.+|$)");
+    private static final int      AUTH_REQUEST_TIMEOUT_MILLIS = 300;
+    private final Vertx           vertx;
+    private Sasl                  sasl;
+    private boolean               succeeded;
+    private ProtonConnection      protonConnection;
+    private X509Certificate[]     peerCertificateChain;
 
     /**
      * Creates a new authenticator for a Vertx environment.
@@ -76,14 +76,14 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
         // TODO determine supported mechanisms dynamically based on registered AuthenticationService implementations
         sasl.server();
         sasl.allowSkip(false);
-        sasl.setMechanisms(ProtonSaslPlainImpl.MECH_NAME, ProtonSaslExternalImpl.MECH_NAME);
+        sasl.setMechanisms(MECHANISM_EXTERNAL, MECHANISM_PLAIN);
         if (socket.isSsl()) {
             LOG.debug("client connected using TLS, extracting client certificate chain");
             try {
                 peerCertificateChain = socket.peerCertificateChain();
-                LOG.debug("client identity is {}", peerCertificateChain[0].getSubjectDN());
+                LOG.debug("found valid client certificate DN [{}]", peerCertificateChain[0].getSubjectDN());
             } catch (SSLPeerUnverifiedException e) {
-                LOG.debug("could not extract client certificate chain, maybe client auth is not required");
+                LOG.debug("could not extract client certificate chain, maybe TLS based client auth is not required");
             }
         }
     }
@@ -98,9 +98,9 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             LOG.debug("client wants to use {} SASL mechanism [host: {}, state: {}]",
                     chosenMechanism, sasl.getHostname(), sasl.getState().name());
 
-            if (ProtonSaslPlainImpl.MECH_NAME.equals(chosenMechanism)) {
+            if (MECHANISM_PLAIN.equals(chosenMechanism)) {
                 evaluatePlainResponse(completionHandler);
-            } else if (ProtonSaslExternalImpl.MECH_NAME.equals(chosenMechanism)) {
+            } else if (MECHANISM_EXTERNAL.equals(chosenMechanism)) {
                 evaluateExternalResponse(completionHandler);
             } else {
                 LOG.info("client wants to use unsupported {} SASL mechanism [host: {}, state: {}]",
@@ -123,7 +123,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
     private void evaluateExternalResponse(final Handler<Boolean> completionHandler) {
 
         if (peerCertificateChain == null) {
-            LOG.debug("SASL EXTERNAL authentication of client failed, client did not provide certificate chain");
+            LOG.debug("SASL EXTERNAL authentication of client failed, client did not provide valid certificate chain");
             sasl.done(SaslOutcome.PN_SASL_AUTH);
         } else {
             Principal clientIdentity = peerCertificateChain[0].getSubjectDN();
@@ -140,31 +140,22 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
 
     private void evaluatePlainResponse(final Handler<Boolean> completionHandler) {
 
-        byte[] response = new byte[sasl.pending()];
-        sasl.recv(response, 0, response.length);
+        byte[] saslResponse = new byte[sasl.pending()];
+        sasl.recv(saslResponse, 0, saslResponse.length);
 
-        final JsonObject authenticationRequest = getAuthenticationRequest(ProtonSaslPlainImpl.MECH_NAME, response);
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHENTICATION_IN, authenticationRequest, reply -> {
+        final DeliveryOptions options = new DeliveryOptions().setSendTimeout(AUTH_REQUEST_TIMEOUT_MILLIS);
+        final JsonObject authenticationRequest = getAuthenticationRequest(MECHANISM_PLAIN, saslResponse);
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_AUTHENTICATION_IN, authenticationRequest, options, reply -> {
             if (reply.succeeded()) {
                 JsonObject result = (JsonObject) reply.result().body();
-                handleAuthenticationResult(result);
+                LOG.debug("received result of successful authentication request: {}", result);
+                addPrincipal(result.getString(FIELD_AUTHORIZATION_ID));
             } else {
-                LOG.warn("could not process SASL PLAIN response from client", reply.cause());
+                LOG.debug("authentication of client failed", reply.cause());
+                sasl.done(SaslOutcome.PN_SASL_AUTH);
             }
             completionHandler.handle(true);
         });
-    }
-
-    private void handleAuthenticationResult(final JsonObject result) {
-
-        LOG.debug("received result of authentication request: {}", result);
-        String error = result.getString(FIELD_ERROR);
-        if (error != null) {
-            LOG.debug("authentication of client failed", error);
-            sasl.done(SaslOutcome.PN_SASL_AUTH);
-        } else {
-            addPrincipal(result.getString(FIELD_AUTHORIZATION_ID));
-        }
     }
 
     private void addPrincipal(final String authzId) {
@@ -185,7 +176,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
         sasl.done(SaslOutcome.PN_SASL_OK);
     }
 
-    private String getCommonName(final String subject) {
+    private static String getCommonName(final String subject) {
         Matcher matcher = PATTERN_CN.matcher(subject);
         if (matcher.matches()) {
             return matcher.group(1); // return CN field value

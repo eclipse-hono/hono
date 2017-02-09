@@ -24,10 +24,9 @@ import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing an {@code AuthorizationService}.
+ * Base class for implementing an {@code AuthenticationService}.
  * <p>
- * Provides support for processing authorization requests via Vert.x event bus.
- * </p>
+ * Provides support for receiving and processing authentication requests received via Vert.x event bus.
  */
 public abstract class BaseAuthenticationService extends AbstractVerticle implements AuthenticationService
 {
@@ -64,15 +63,27 @@ public abstract class BaseAuthenticationService extends AbstractVerticle impleme
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
         LOG.debug("received authentication request: {}", body);
-        final String mechanism = body.getString(FIELD_MECHANISM, "PLAIN");
-        final byte[] response = body.getBinary(FIELD_RESPONSE);
+        final String mechanism = body.getString(FIELD_MECHANISM);
+        if (!isSupported(mechanism)) {
+            replyWithError(message, ERROR_CODE_UNSUPPORTED_MECHANISM, "unsupported SASL mechanism");
+        } else {
+            final byte[] response = body.getBinary(FIELD_RESPONSE);
 
-        validateResponse(mechanism, response, validation -> {
-            if (validation.succeeded()) {
-                message.reply(new JsonObject().put(FIELD_AUTHORIZATION_ID, validation.result()));
-            } else {
-                message.reply(new JsonObject().put(FIELD_ERROR, validation.cause().getMessage()));
-            }
-        });
+            validateResponse(mechanism, response, validation -> {
+                if (validation.succeeded()) {
+                    replyWithAuthorizationId(message, validation.result());
+                } else {
+                    replyWithError(message, ERROR_CODE_AUTHENTICATION_FAILED, validation.cause().getMessage());
+                }
+            });
+        }
+    }
+
+    private void replyWithError(final Message<JsonObject> request, final int errorCode, final String message) {
+        request.fail(errorCode, message);
+    }
+
+    private void replyWithAuthorizationId(final Message<JsonObject> message, final String authzId) {
+        message.reply(new JsonObject().put(FIELD_AUTHORIZATION_ID, authzId));
     }
 }
