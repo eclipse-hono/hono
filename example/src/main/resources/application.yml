@@ -6,7 +6,7 @@ hono:
   client:
     host: localhost
     hostnameVerificationRequired: false
-    #trustStorePath: ../config/demo-certs/certs/trusted-certs.pem
+    trustStorePath: ../config/demo-certs/certs/trusted-certs.pem
 
 tenant:
   id: DEFAULT_TENANT

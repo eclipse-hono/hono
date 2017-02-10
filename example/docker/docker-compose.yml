@@ -2,17 +2,12 @@ version: '2'
 
 services:
 
-  hono-config:
-    image: eclipsehono/hono-default-config:${project.version}
-
   qdrouter:
-    image: gordons/qpid-dispatch:${qpid-dispatch.version}
+    image: eclipsehono/dispatch-router:${project.version}
     command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
     ports:
       - "15671:5671"
       - "15672:5672"
-    volumes_from:
-      - hono-config
 
   hono:
     image: eclipsehono/hono-server:${project.version}
@@ -31,8 +26,6 @@ services:
       - HONO_SERVER_BINDADDRESS=0.0.0.0
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
-    volumes_from:
-      - hono-config
 
   rest-adapter:
     image: eclipsehono/hono-adapter-rest-vertx:${project.version}
@@ -49,8 +42,6 @@ services:
       - HONO_HTTP_BINDADDRESS=0.0.0.0
       - HONO_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
-    volumes_from:
-      - hono-config
 
   mqtt-adapter:
     image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
@@ -67,5 +58,3 @@ services:
       - HONO_MQTT_BINDADDRESS=0.0.0.0
       - HONO_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
-    volumes_from:    
-      - hono-config

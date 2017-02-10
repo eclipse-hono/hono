@@ -46,22 +46,46 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-legal</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-config</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
-      <plugin>
-        <!-- Copy legal documents from "legal" module to "target/classes" folder so that we make sure to include 
-          legal docs in all modules. -->
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-      </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
           <includeSystemScope>true</includeSystemScope>
         </configuration>
+      </plugin>
+      <plugin>
+        <!--
+          Copy legal documents from "legal" module to "target/classes" folder
+          so that we make sure to include legal docs in all modules.
+         -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <!--
+          Execution and configuration for copying certificates from related module
+          to "target/classes" folder so that we can include them in the image.
+         -->
+        <executions>
+          <execution>
+            <id>copy_config</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeArtifactIds>hono-config</includeArtifactIds>
+              <outputDirectory>${project.build.outputDirectory}/certs</outputDirectory>
+              <excludes>META-INF/**</excludes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -119,7 +143,7 @@
                       <inline>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/../../config/demo-certs/certs</directory>
+                            <directory>${project.basedir}/target/classes/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>trustStore.jks</include>
