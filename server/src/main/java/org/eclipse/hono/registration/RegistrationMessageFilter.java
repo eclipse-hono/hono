@@ -40,12 +40,13 @@ public final class RegistrationMessageFilter extends BaseMessageFilter {
      */
      public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
 
-         if (!verifyStandardProperties(linkTarget, msg)) {
+         final String action = getAction(msg);
+         if (!verifyProperties(action,linkTarget,msg)) {
              return false;
          } else if (msg.getMessageId() == null && msg.getCorrelationId() == null) {
              LOG.trace("message has neither a message-id nor correlation-id");
              return false;
-         } else if (!hasValidAction(msg)) {
+         } else if (!RegistrationConstants.isValidAction(action)) {
              LOG.trace("message [{}] does not contain valid action property", msg.getMessageId());
              return false;
          } else if (msg.getReplyTo() == null) {
@@ -64,14 +65,33 @@ public final class RegistrationMessageFilter extends BaseMessageFilter {
          } else {
              return true;
          }
-    }
+     }
 
-     private static boolean hasValidAction(final Message msg) {
-         String action = MessageHelper.getApplicationProperty(
+     private static String getAction(final Message msg) {
+         return MessageHelper.getApplicationProperty(
                  msg.getApplicationProperties(),
                  RegistrationConstants.APP_PROPERTY_ACTION,
                  String.class);
-         return RegistrationConstants.isValidAction(action);
      }
+
+    private static boolean verifyProperties(final String action, final ResourceIdentifier linkTarget, final Message msg) {
+        if(!RegistrationConstants.ACTION_FIND.equals(action)) {
+            return verifyStandardProperties(linkTarget,msg);
+        }
+        else {
+            final String valueProperty = MessageHelper.getApplicationProperty(msg.getApplicationProperties(),
+                    RegistrationConstants.APP_PROPERTY_VALUE, String.class);
+            if (valueProperty == null) {
+                LOG.trace("message [{}] contains no {} application property", msg.getMessageId(), RegistrationConstants.APP_PROPERTY_VALUE);
+                return false;
+            } else {
+                final ResourceIdentifier targetResource = ResourceIdentifier
+                        .from(linkTarget.getEndpoint(), linkTarget.getTenantId(), null);
+                MessageHelper.annotate(msg, targetResource);
+                return true;
+            }
+        }
+    }
+
 
 }
