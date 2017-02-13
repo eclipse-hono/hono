@@ -103,6 +103,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
         final String key = body.getString(RegistrationConstants.APP_PROPERTY_KEY);
+        final String value = body.getString(RegistrationConstants.APP_PROPERTY_VALUE);
         final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
         final JsonObject payload = body.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
 
@@ -112,8 +113,8 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
             reply(regMsg, getDevice(tenantId, deviceId));
             break;
         case ACTION_FIND:
-            LOG.debug("looking up device [key: {}, value: {}] of tenant [{}]", key, deviceId, tenantId);
-            reply(regMsg, findDevice(tenantId, key, deviceId));
+            LOG.debug("looking up device [key: {}, value: {}] of tenant [{}]", key, value, tenantId);
+            reply(regMsg, findDevice(tenantId, key, value));
             break;
         case ACTION_REGISTER:
             LOG.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
