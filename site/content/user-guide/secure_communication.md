@@ -18,24 +18,19 @@ Within a Hono installation the following communication channels can be secured w
 2. Hono server to Dispatch Router - The Hono server connects to the Dispatch Router in order to forward telemetry data and commands hence and forth between downstream components (client applications) and devices. This (internal) connection can be secured by configuring the Dispatch Router and Hono Server for TLS.
 3. Protocol Adapter to Hono server - A protocol adapter connects to Hono to e.g. forward telemetry data received from devices to downstream consumers. This (internal) connection can be secured by configuring the protocol adapter and Hono server for TLS.
 
-The certificates and keys for all the Hono components provided by the `config` module are the following.
+The certificates and keys for all the Hono components are provided by the `config` module in the `config/demo-certs/certs` folder.
+
+## Dispatch Router
+
+The dispatch router by default tries to read its configuration from `/etc/qpid-dispatch/qdrouterd.conf`. The default configuration included with the Dispatch Router Docker image can be replaced by means of *mounting a volume* during startup of the Docker image. Please refer to the [Docker documentation for details regarding how to create and use volumes](https://docs.docker.com/engine/tutorials/dockervolumes/).
+
+Regarding the TLS configuration, the needed demo keys and certificates are available in the `/etc/hono/certs` folder of the Docker image.
 
 | File                                     | Description                                                      |
 | :--------------------------------------- | :--------------------------------------------------------------- |
 | `/etc/hono/certs/qdrouter-key.pem`    | An example private key to use for enabling TLS on the Dispatch Router. |
 | `/etc/hono/certs/qdrouter-cert.pem`   | A certificate containing the public key corresponding to the example private key. |
 | `/etc/hono/certs/trusted-certs.pem`   | A list of the CA certificates used to sign the example keys and certificates. |
-| `/etc/hono/certs/honoKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the Hono server. |
-| `/etc/hono/certs/restKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the REST adapter. |
-| `/etc/hono/certs/mqttKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the MQTT adapter. |
-
-The file paths are related to the Docker images where such certificates and keys are needed for enabling TLS.
-
-## Dispatch Router
-
-The dispatch router by default tries to read its configuration from `/etc/qpid-dispatch/qdrouterd.conf`. The default configuration included with the Dispatch Router Docker image can be replaced by means of *mounting a volume* during startup of the Docker image. Please refer to the [Docker documentation for details regarding how to create and use volumes](https://docs.docker.com/engine/tutorials/dockervolumes/).
-
-Such default configuration uses the demo keys and certificates from `config/demo-certs/certs` to enable TLS mapped to the `/etc/hono/certs` folder in the Docker image.
 
 Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration of TLS/SSL.
 
@@ -43,6 +38,13 @@ Please refer to the [Dispatch Router documentation](https://qpid.apache.org/comp
 
 Support for TLS needs to be explicitly configured by means of command line options or environment variables.
 Hono needs to be configured with a private key and a certificate for that purpose.
+
+The Hono Server Docker image provides following demo keys and certificates in the `/etc/hono/certs` folder.
+
+| File                                     | Description                                                      |
+| :--------------------------------------- | :--------------------------------------------------------------- |
+| `/etc/hono/certs/trusted-certs.pem`   | A list of the CA certificates used to sign the example keys and certificates. |
+| `/etc/hono/certs/honoKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the Hono server. |
 
 ### Configuration via Key Store
 
@@ -82,6 +84,13 @@ When the connection between the REST adapter and the Hono server is supposed to 
 | `HONO_CLIENT_TRUST_STORE_PATH`<br>`--hono.client.trustStorePath` | no | - | The absolute path to the trust store containing the CA certificates the adapter uses for authenticating the Hono server. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_CLIENT_TRUST_STORE_PASSWORD`<br>`--hono.client.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 
+The REST Adapter Docker image provides following demo keys and certificates in the `/etc/hono/certs` folder.
+
+| File                                     | Description                                                      |
+| :--------------------------------------- | :--------------------------------------------------------------- |
+| `/etc/hono/certs/trusted-certs.pem`   | A list of the CA certificates used to sign the example keys and certificates. |
+| `/etc/hono/certs/restKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the REST adapter. |
+
 ## MQTT Adapter
 
 When the connection between the MQTT adapter and the Hono server is supposed to be secured by TLS (which is a good idea), then the MQTT adapter needs to be configured with a set of *trusted certificates* which are used to validate the Hono server's certificate chain it provides to the REST adapter during connection establishment in order to authenticate to the adapter.
@@ -90,6 +99,13 @@ When the connection between the MQTT adapter and the Hono server is supposed to 
 | :------------------------------------------ | :-------- | :------ | :---------- |
 | `HONO_CLIENT_TRUST_STORE_PATH`<br>`--hono.client.trustStorePath` | no | - | The absolute path to the trust store containing the CA certificates the adapter uses for authenticating the Hono server. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_CLIENT_TRUST_STORE_PASSWORD`<br>`--hono.client.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+
+The MQTT Adapter Docker image provides following demo keys and certificates in the `/etc/hono/certs` folder.
+
+| File                                     | Description                                                      |
+| :--------------------------------------- | :--------------------------------------------------------------- |
+| `/etc/hono/certs/trusted-certs.pem`   | A list of the CA certificates used to sign the example keys and certificates. |
+| `/etc/hono/certs/mqttKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the MQTT adapter. |
 
 ## Client Application
 

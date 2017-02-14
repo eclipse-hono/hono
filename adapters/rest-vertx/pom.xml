@@ -137,6 +137,7 @@
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>trusted-certs.pem</include>
+                              <include>restKeyStore.p12</include>
                             </includes>
                           </fileSet>
                           <fileSet>

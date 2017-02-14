@@ -146,6 +146,7 @@
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>trusted-certs.pem</include>
+                              <include>mqttKeyStore.p12</include>
                             </includes>
                           </fileSet>
                           <fileSet>
