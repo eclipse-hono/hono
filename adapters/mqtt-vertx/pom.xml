@@ -124,8 +124,7 @@
                     <cmd>
                       <exec>
                         <arg>java</arg>
-                        <arg>-Dvertx.disableFileCaching=true</arg>
-                        <arg>-Dvertx.disableFileCPResolving=true</arg>
+                        <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-Dvertx.disableDnsResolver=true</arg>
                         <arg>-Dnetworkaddress.cache.ttl=0</arg>
                         <arg>-Dnetworkaddress.cache.negative.ttl=0</arg>

@@ -98,10 +98,8 @@
                             <directory>${project.basedir}/target/classes/certs</directory>
                             <outputDirectory>certs</outputDirectory>
                             <includes>
-                              <include>*.p12</include>
                               <include>qdrouter-*.pem</include>
                               <include>trusted-certs.pem</include>
-                              <include>trustStore.jks</include>
                             </includes>
                           </fileSet>
                         </fileSets>
