@@ -18,13 +18,24 @@ Within a Hono installation the following communication channels can be secured w
 2. Hono server to Dispatch Router - The Hono server connects to the Dispatch Router in order to forward telemetry data and commands hence and forth between downstream components (client applications) and devices. This (internal) connection can be secured by configuring the Dispatch Router and Hono Server for TLS.
 3. Protocol Adapter to Hono server - A protocol adapter connects to Hono to e.g. forward telemetry data received from devices to downstream consumers. This (internal) connection can be secured by configuring the protocol adapter and Hono server for TLS.
 
+The certificates and keys for all the Hono components provided by the `config` module are the following.
+
+| File                                     | Description                                                      |
+| :--------------------------------------- | :--------------------------------------------------------------- |
+| `/etc/hono/certs/qdrouter-key.pem`    | An example private key to use for enabling TLS on the Dispatch Router. |
+| `/etc/hono/certs/qdrouter-cert.pem`   | A certificate containing the public key corresponding to the example private key. |
+| `/etc/hono/certs/trusted-certs.pem`   | A list of the CA certificates used to sign the example keys and certificates. |
+| `/etc/hono/certs/honoKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the Hono server. |
+| `/etc/hono/certs/restKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the REST adapter. |
+| `/etc/hono/certs/mqttKeyStore.p12`    | A key store containing an example private key and matching certificate for enabling TLS on the MQTT adapter. |
+
+The file paths are related to the Docker images where such certificates and keys are needed for enabling TLS.
+
 ## Dispatch Router
 
 The dispatch router by default tries to read its configuration from `/etc/qpid-dispatch/qdrouterd.conf`. The default configuration included with the Dispatch Router Docker image can be replaced by means of *mounting a volume* during startup of the Docker image. Please refer to the [Docker documentation for details regarding how to create and use volumes](https://docs.docker.com/engine/tutorials/dockervolumes/).
 
-As part of building the `config` module the `eclipsehono/qpid-default-config` Docker image is created. It exposes configuration files from the `config/qpid` folder as a Docker volume with `/etc/qpid-dispatch` as the volume path. The configuration uses the demo keys and certificates from `config/demo-certs/certs` to enable TLS.
-
-The `eclipsehono/qpid-default-config` volume image is also used by the `example` module to read the Dispatch Router configuration from. Please refer to the readme.md file in the `example` folder for more information.
+Such default configuration uses the demo keys and certificates from `config/demo-certs/certs` to enable TLS mapped to the `/etc/hono/certs` folder in the Docker image.
 
 Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration of TLS/SSL.
 

@@ -36,19 +36,24 @@ The following table provides an overview of the configuration options the adapte
 
 The options only need to be set if the default value does not match your environment.
 
+The permissions file is available at the following path in the Docker image of the Hono server.
+
+| File                                     | Description                                                      |
+| :--------------------------------------- | :--------------------------------------------------------------- |
+| `/etc/hono/permissions.json`          | Example access control lists for Hono's endpoint resources.      |
+
 ## Run as a Docker Container
 
 When running the Hono server as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
 
-The following commands first start the volume container containing the [Default Configuration]({{< ref "default-config.md" >}}) and then start the Hono server container mounting the exposed volume in order to be able to read the configuration files from `/etc/hono`.
+The following command starts the Hono server container using the configuration files from `/etc/hono`.
 
 ~~~sh
-$ docker run -d --name hono-config eclipsehono/hono-default-config:latest
 $ docker run -d --name hono --network hono-net -e 'HONO_DOWNSTREAM_HOST=qdrouter' -e 'HONO_DOWNSTREAM_PORT=5673' \
 > -e 'HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12' -e 'HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys' \
 > -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' -e 'HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json' \
 > -e 'HONO_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12' -e 'HONO_KEY_STORE_PASSWORD=honokeys' \
-> -e 'HONO_SERVER_BINDADDRESS=0.0.0.0' -p5672:5672 --volumes-from=hono-config eclipsehono/hono-server:latest
+> -e 'HONO_SERVER_BINDADDRESS=0.0.0.0' -p5672:5672 eclipsehono/hono-server:latest
 ~~~
 
 {{% note %}}
