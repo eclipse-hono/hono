@@ -25,7 +25,7 @@ The file paths are related to the Docker images where such configuration files a
 
 ## Run as a Docker Container
 
-The Dispatch Router can be run as a Docker container from the command line. The following command starts the Dispatch Router container using the provided configuration files.
+The Dispatch Router can be run as a Docker container from the command line. The following command starts the Dispatch Router container using using the default configuration files included in the Dispatch Router image.
 
 ~~~sh
 $ docker run -d --name qdrouter --network hono-net -p 15671:5671 -p 15672:5672 -p 15673:5673 \

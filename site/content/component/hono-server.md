@@ -46,7 +46,7 @@ The permissions file is available at the following path in the Docker image of t
 
 When running the Hono server as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
 
-The following command starts the Hono server container using the configuration files from `/etc/hono`.
+The following command starts the Hono server container using the configuration files included in the image under path `/etc/hono`.
 
 ~~~sh
 $ docker run -d --name hono --network hono-net -e 'HONO_DOWNSTREAM_HOST=qdrouter' -e 'HONO_DOWNSTREAM_PORT=5673' \
