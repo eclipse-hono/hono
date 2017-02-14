@@ -108,8 +108,7 @@
                     <cmd>
                       <exec>
                         <arg>java</arg>
-                        <arg>-Dvertx.disableFileCaching=true</arg>
-                        <arg>-Dvertx.disableFileCPResolving=true</arg>
+                        <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-Dvertx.disableDnsResolver=true</arg>
                         <arg>-Dnetworkaddress.cache.ttl=0</arg>
                         <arg>-Dnetworkaddress.cache.negative.ttl=0</arg>
@@ -130,10 +129,8 @@
                             <directory>${project.basedir}/target/classes/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
-                              <include>*.p12</include>
-                              <include>qdrouter-*.pem</include>
+                              <include>honoKeyStore.p12</include>
                               <include>trusted-certs.pem</include>
-                              <include>trustStore.jks</include>
                             </includes>
                           </fileSet>
                           <fileSet>
