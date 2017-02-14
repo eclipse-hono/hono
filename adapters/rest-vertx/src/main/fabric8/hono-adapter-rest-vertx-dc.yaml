@@ -33,9 +33,7 @@ spec:
         - name: HONO_CLIENT_PASSWORD
           value: secret
         - name: HONO_CLIENT_TRUST_STORE_PATH
-          value: /etc/hono/certs/trustStore.jks
-        - name: HONO_CLIENT_TRUST_STORE_PASSWORD
-          value: honotrust
+          value: /etc/hono/certs/trusted-certs.pem
         - name: HONO_HTTP_BINDADDRESS
           value: 0.0.0.0
         - name: HONO_MAX_INSTANCES
