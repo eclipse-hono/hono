@@ -57,3 +57,4 @@ spec:
       - name: ${project.artifactId}-volume
         persistentVolumeClaim:
           claimName: ${project.artifactId}-pv-claim
+
