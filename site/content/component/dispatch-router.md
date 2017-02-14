@@ -9,18 +9,27 @@ The north bound API is used by applications to consume telemetry data and events
 
 ## Configuration
 
-The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of a [Docker image](https://hub.docker.com/r/gordons/qpid-dispatch/) created from the Qpid project source code. 
+The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of a [Docker image](https://hub.docker.com/r/gordons/qpid-dispatch/) created from the Qpid project source code.
 
-The Dispatch Router can be configured by means of configuration files. Hono contains a default configuration in the `config/qpid` folder. Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration file format and options.
+The Dispatch Router can be configured by means of configuration files. Hono contains a default configuration in the `dispatchrouter/qpid` folder and in the `dispatchrouter/sasl` for enabling authentication through SASL. Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration file format and options.
+
+The provided configuration files are the following.
+
+| File                                     | Description                                                      |
+| :--------------------------------------- | :--------------------------------------------------------------- |
+| `/etc/hono/qdrouter/qdrouterd.json`  | The Dispatch Router configuration file. |
+| `/etc/hono/qdrouter/qdrouter-sasl.conf` | The configuration file for the [Cyrus SASL Library](http://www.cyrusimap.org/sasl/getting_started.html) used by Dispatch Router for authenticating clients. This configuration file can be adapted to e.g. configure LDAP or a database for verifying credentials.
+| `/etc/hono/qdrouter/qdrouterd.sasldb` | The Berkley DB file used by Cyrus SASL that contains the example users which are supported by the Dispatch Router.
+
+The file paths are related to the Docker images where such configuration files are needed.
 
 ## Run as a Docker Container
 
-The Dispatch Router can be run as a Docker container from the command line. The following commands first start the volume container containing the [Default Configuration]({{< ref "default-config.md" >}}) and then start the Dispatch Router container mounting the configuration volume in order to be able to read the configuration files from it.
+The Dispatch Router can be run as a Docker container from the command line. The following command starts the Dispatch Router container using the provided configuration files.
 
 ~~~sh
-$ docker run -d --name hono-config eclipsehono/hono-default-config:latest
 $ docker run -d --name qdrouter --network hono-net -p 15671:5671 -p 15672:5672 -p 15673:5673 \
-> --volumes-from=hono-config gordons/qpid-dispatch:0.7.0 /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
+> eclipsehono/dispatch-router:latest /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
 ~~~
 
 {{% note %}}
@@ -35,4 +44,3 @@ There are two things noteworthy about the above command to start the Dispatch Ro
 In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
 See the `example` module for details. The `example` module also contains an example service definition file that
 you can use as a starting point for your own configuration.
-

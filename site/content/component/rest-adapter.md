@@ -30,14 +30,13 @@ The options only need to be set if the default value does not match your environ
 
 When running the adapter as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
 
-The following commands first start the volume container containing the [Default Configuration]({{< ref "default-config.md" >}}) and then start the REST adapter container mounting the exposed volume in order to be able to read the trusted certificates from `/etc/hono/certs`.
+The following command starts the REST adapter container using the trusted certificates from `/etc/hono/certs`.
 
 ~~~sh
-$ docker run -d --name hono-config eclipsehono/hono-default-config:latest
 $ docker run -d --name rest-adapter --network hono-net -e 'HONO_CLIENT_HOST=hono' \
 > -e 'HONO_CLIENT_USERNAME=hono-client' -e 'HONO_CLIENT_PASSWORD=secret' \
 > -e 'HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
-> -p8080:8080 --volumes-from=hono-config eclipsehono/hono-adapter-rest-vertx:latest
+> -p8080:8080 eclipsehono/hono-adapter-rest-vertx:latest
 ~~~
 
 {{% note %}}
@@ -112,7 +111,7 @@ The response will look similar to this:
     HTTP/1.1 200 OK
     Content-Type: application/json; charset=utf-8
     Content-Length: 35
-    
+
     {
       "data" : {
          "ep": "IMEI4711"
@@ -135,14 +134,14 @@ This resource can be used to look up registration data by one of the additional 
 
 The following command retrieves registration data for device `4711`:
 
-    $ curl -i -X POST -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT/find 
+    $ curl -i -X POST -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT/find
 
 The response will look similar to this:
 
     HTTP/1.1 200 OK
     Content-Type: application/json; charset=utf-8
     Content-Length: 35
-    
+
     {
       "data" : {
          "ep": "IMEI4711"
@@ -168,7 +167,7 @@ The response will look similar to this:
     HTTP/1.1 200 OK
     Content-Type: application/json; charset=utf-8
     Content-Length: 35
-    
+
     {
       "data" : {
          "ep": "IMEI4711"
@@ -190,7 +189,7 @@ The response will look similar to this:
     HTTP/1.1 200 OK
     Content-Type: application/json; charset=utf-8
     Content-Length: 35
-    
+
     {
       "data" : {
          "ep": "IMEI4711",
