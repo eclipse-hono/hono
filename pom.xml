@@ -135,9 +135,10 @@
     <module>adapters</module>
     <module>application</module>
     <module>bom</module>
-    <module>config</module>
     <module>core</module>
     <module>client</module>
+    <module>demo-certs</module>
+    <module>dispatchrouter</module>
     <module>example</module>
     <module>legal</module>
     <module>server</module>

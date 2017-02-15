@@ -15,7 +15,7 @@
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-config</artifactId>
+      <artifactId>hono-demo-certs</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -38,13 +38,13 @@
          -->
         <executions>
           <execution>
-            <id>copy_config</id>
+            <id>copy_demo_certs</id>
             <phase>prepare-package</phase>
             <goals>
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>hono-config</includeArtifactIds>
+              <includeArtifactIds>hono-demo-certs</includeArtifactIds>
               <outputDirectory>${project.build.outputDirectory}/certs</outputDirectory>
               <excludes>META-INF/**</excludes>
             </configuration>

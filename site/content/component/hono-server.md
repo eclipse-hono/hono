@@ -78,10 +78,10 @@ The corresponding command to start up the server with the configuration used in 
 ~~~sh
 ~/hono/application$ mvn spring-boot:run -Drun.arguments=--hono.downstream.host=qdrouter,\
 > --hono.downstream.port=5673,--hono.downstream.hostnameVerificationRequired=false,\
-> --hono.downstream.keyStorePath=../config/demo-certs/certs/honoKeyStore.p12,--hono.downstream.keyStorePassword=honokeys,\
-> --hono.downstream.trustStorePath=../config/demo-certs/certs/ca-cert.pem,\
-> --hono.keyStorePath=../config/demo-certs/certs/honoKeyStore.p12,--hono.keyStorePassword=honokeys,\
-> --hono.trustStorePath=../config/demo-certs/certs/ca-cert.pem
+> --hono.downstream.keyStorePath=../demo-certs/certs/honoKeyStore.p12,--hono.downstream.keyStorePassword=honokeys,\
+> --hono.downstream.trustStorePath=../demo-certs/certs/ca-cert.pem,\
+> --hono.keyStorePath=../demo-certs/certs/honoKeyStore.p12,--hono.keyStorePassword=honokeys,\
+> --hono.trustStorePath=../demo-certs/certs/ca-cert.pem
 ~~~
 
 {{% note %}}

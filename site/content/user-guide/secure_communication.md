@@ -18,7 +18,7 @@ Within a Hono installation the following communication channels can be secured w
 2. Hono server to Dispatch Router - The Hono server connects to the Dispatch Router in order to forward telemetry data and commands hence and forth between downstream components (client applications) and devices. This (internal) connection can be secured by configuring the Dispatch Router and Hono Server for TLS.
 3. Protocol Adapter to Hono server - A protocol adapter connects to Hono to e.g. forward telemetry data received from devices to downstream consumers. This (internal) connection can be secured by configuring the protocol adapter and Hono server for TLS.
 
-The certificates and keys for all the Hono components are provided by the `config` module in the `config/demo-certs/certs` folder.
+The certificates and keys for all the Hono components are provided by the `demo-certs` module in the `demo-certs/certs` folder.
 
 ## Dispatch Router
 
