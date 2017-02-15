@@ -30,7 +30,7 @@ The options only need to be set if the default value does not match your environ
 
 When running the adapter as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
 
-The following command starts the REST adapter container using the trusted certificates included in the image under under path `/etc/hono/certs`.
+The following command starts the REST adapter container using the trusted certificates included in the image under path `/etc/hono/certs`.
 
 ~~~sh
 $ docker run -d --name rest-adapter --network hono-net -e 'HONO_CLIENT_HOST=hono' \
