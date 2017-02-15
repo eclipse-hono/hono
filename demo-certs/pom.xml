@@ -6,15 +6,15 @@
     <version>0.5-M4-SNAPSHOT</version>
     <relativePath>../bom</relativePath>
   </parent>
-  <artifactId>hono-config</artifactId>
+  <artifactId>hono-demo-certs</artifactId>
 
-  <name>Hono Configuration</name>
-  <description>Default Hono configuration to be used by other modules.</description>
+  <name>Hono Demo Certs</name>
+  <description>Hono demo certificates and keys for TLS support</description>
 
   <build>
     <resources>
       <resource>
-        <directory>demo-certs/certs</directory>
+        <directory>certs</directory>
       </resource>
     </resources>
   </build>

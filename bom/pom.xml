@@ -120,7 +120,7 @@
       </dependency>
       <dependency>
       	<groupId>org.eclipse.hono</groupId>
-      	<artifactId>hono-config</artifactId>
+      	<artifactId>hono-demo-certs</artifactId>
       	<version>${project.version}</version>
       </dependency>
       <dependency>
