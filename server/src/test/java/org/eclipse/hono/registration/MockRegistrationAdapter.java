@@ -16,6 +16,9 @@ import java.net.HttpURLConnection;
 import org.eclipse.hono.registration.impl.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -24,27 +27,30 @@ import io.vertx.core.json.JsonObject;
 public class MockRegistrationAdapter extends BaseRegistrationService {
 
     @Override
-    public RegistrationResult getDevice(String tenantId, String deviceId) {
-        return RegistrationResult.from(HttpURLConnection.HTTP_OK);
+    public void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK)));
     }
 
     @Override
-    public RegistrationResult findDevice(String tenantId, String key, String value) {
-        return RegistrationResult.from(HttpURLConnection.HTTP_OK);
+    public void findDevice(String tenantId, String key, String value,
+            Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK)));
     }
 
     @Override
-    public RegistrationResult addDevice(String tenantId, String deviceId, JsonObject data) {
-        return RegistrationResult.from(HttpURLConnection.HTTP_CREATED);
+    public void addDevice(String tenantId, String deviceId, JsonObject otherKeys,
+            Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_CREATED)));
     }
 
     @Override
-    public RegistrationResult updateDevice(String tenantId, String deviceId, JsonObject data) {
-        return RegistrationResult.from(HttpURLConnection.HTTP_OK);
+    public void updateDevice(String tenantId, String deviceId, JsonObject otherKeys,
+            Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK)));
     }
 
     @Override
-    public RegistrationResult removeDevice(String tenantId, String deviceId) {
-        return RegistrationResult.from(HttpURLConnection.HTTP_OK);
+    public void removeDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK)));
     }
 }

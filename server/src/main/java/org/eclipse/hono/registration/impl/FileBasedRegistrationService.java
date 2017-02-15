@@ -22,9 +22,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonArray;
@@ -36,7 +38,7 @@ import io.vertx.core.json.JsonObject;
  * On startup this adapter loads all registered devices from a file. On shutdown all
  * devices kept in memory are written to the file.
  */
-@Service
+@Repository
 public class FileBasedRegistrationService extends BaseRegistrationService {
 
     private static final String FIELD_DATA = "data";
@@ -64,7 +66,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
     private void loadRegistrationData() {
         if (filename != null) {
             final FileSystem fs = vertx.fileSystem();
-            LOG.debug("trying to load device registration information from file {}", filename);
+            log.debug("trying to load device registration information from file {}", filename);
             if (fs.existsBlocking(filename)) {
                 final AtomicInteger deviceCount = new AtomicInteger();
                 fs.readFile(filename, readAttempt -> {
@@ -81,13 +83,13 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
                            }
                            identities.put(tenantId, deviceMap);
                        }
-                       LOG.info("successfully loaded {} device identities from file [{}]", deviceCount.get(), filename);
+                       log.info("successfully loaded {} device identities from file [{}]", deviceCount.get(), filename);
                    } else {
-                       LOG.warn("could not load device identities from file [{}]", filename, readAttempt.cause());
+                       log.warn("could not load device identities from file [{}]", filename, readAttempt.cause());
                    }
                 });
             } else {
-                LOG.debug("device identity file {} does not exist", filename);
+                log.debug("device identity file {} does not exist", filename);
             }
         }
     }
@@ -120,16 +122,20 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         }
         fs.writeFile(filename, Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
             if (writeAttempt.succeeded()) {
-                LOG.trace("successfully wrote {} device identities to file {}", idCount.get(), filename);
+                log.trace("successfully wrote {} device identities to file {}", idCount.get(), filename);
                 writeResult.complete();
             } else {
-                LOG.warn("could not write device identities to file {}", filename, writeAttempt.cause());
+                log.warn("could not write device identities to file {}", filename, writeAttempt.cause());
                 writeResult.fail(writeAttempt.cause());
             }
         });
     }
 
     @Override
+    public void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(getDevice(tenantId, deviceId)));
+    }
+
     public RegistrationResult getDevice(final String tenantId, final String deviceId) {
         final Map<String, JsonObject> devices = identities.get(tenantId);
         if (devices != null) {
@@ -142,6 +148,10 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
+    public void findDevice(final String tenantId, final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(findDevice(tenantId, key, value)));
+    }
+
     public RegistrationResult findDevice(final String tenantId, final String key, final String value) {
         final Map<String, JsonObject> devices = identities.get(tenantId);
         if (devices != null) {
@@ -159,6 +169,11 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
+    public void removeDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        resultHandler.handle(Future.succeededFuture(removeDevice(tenantId, deviceId)));
+    }
+
     public RegistrationResult removeDevice(final String tenantId, final String deviceId) {
 
         final Map<String, JsonObject> devices = identities.get(tenantId);
@@ -170,6 +185,11 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
+    public void addDevice(final String tenantId, final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        resultHandler.handle(Future.succeededFuture(addDevice(tenantId, deviceId, data)));
+    }
+
     public RegistrationResult addDevice(final String tenantId, final String deviceId, final JsonObject data) {
 
         JsonObject obj = data != null ? data : new JsonObject();
@@ -181,6 +201,11 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
+    public void updateDevice(final String tenantId, final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        resultHandler.handle(Future.succeededFuture(updateDevice(tenantId, deviceId, data)));
+    }
+
     public RegistrationResult updateDevice(final String tenantId, final String deviceId, final JsonObject data) {
 
         JsonObject obj = data != null ? data : new JsonObject();
@@ -196,6 +221,9 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
     }
 
+    /**
+     * Removes all devices from the registry.
+     */
     public void clear() {
         identities.clear();
     }

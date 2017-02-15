@@ -14,14 +14,18 @@ package org.eclipse.hono.registration.impl;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.registration.RegistrationService;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.support.GenericTypeAwareAutowireCandidateResolver;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -36,7 +40,10 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class BaseRegistrationService extends AbstractVerticle implements RegistrationService {
 
-    protected final Logger LOG = LoggerFactory.getLogger(getClass());
+    /**
+     * A logger to be shared by subclasses.
+     */
+    protected final Logger log = LoggerFactory.getLogger(getClass());
     private MessageConsumer<JsonObject> registrationConsumer;
 
     /**
@@ -68,7 +75,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
     private void registerConsumer() {
         registrationConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_REGISTRATION_IN);
         registrationConsumer.handler(this::processRegistrationMessage);
-        LOG.info("listening on event bus [address: {}] for incoming registration messages",
+        log.info("listening on event bus [address: {}] for incoming registration messages",
                 EVENT_BUS_ADDRESS_REGISTRATION_IN);
     }
 
@@ -80,7 +87,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
     @Override
     public final void stop(final Future<Void> stopFuture) {
         registrationConsumer.unregister();
-        LOG.info("unregistered registration data consumer from event bus");
+        log.info("unregistered registration data consumer from event bus");
         doStop(stopFuture);
     }
 
@@ -108,32 +115,42 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
 
         switch (action) {
         case ACTION_GET:
-            LOG.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-            reply(regMsg, getDevice(tenantId, deviceId));
+            log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
+            getDevice(tenantId, deviceId, result -> reply(regMsg, result));
             break;
         case ACTION_FIND:
-            LOG.debug("looking up device [key: {}, value: {}] of tenant [{}]", key, deviceId, tenantId);
-            reply(regMsg, findDevice(tenantId, key, deviceId));
+            log.debug("looking up device [key: {}, value: {}] of tenant [{}]", key, deviceId, tenantId);
+            findDevice(tenantId, key, deviceId, result -> reply(regMsg, result));
             break;
         case ACTION_REGISTER:
-            LOG.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
-            reply(regMsg, addDevice(tenantId, deviceId, payload));
+            log.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
+            addDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
             break;
         case ACTION_UPDATE:
-            LOG.debug("updating registration for device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
-            reply(regMsg, updateDevice(tenantId, deviceId, payload));
+            log.debug("updating registration for device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
+            updateDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
             break;
         case ACTION_DEREGISTER:
-            LOG.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
-            reply(regMsg, removeDevice(tenantId, deviceId));
+            log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
+            removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
             break;
         default:
-            LOG.info("action [{}] not supported", action);
+            log.info("action [{}] not supported", action);
             reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
         }
     }
 
+    private void reply(final Message<JsonObject> request, final AsyncResult<RegistrationResult> result) {
+
+        if (result.succeeded()) {
+            reply(request, result.result());
+        } else {
+            request.fail(HttpURLConnection.HTTP_INTERNAL_ERROR, "cannot process registration request");
+        }
+    }
+
     protected final void reply(final Message<JsonObject> request, final RegistrationResult result) {
+
         final JsonObject body = request.body();
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);

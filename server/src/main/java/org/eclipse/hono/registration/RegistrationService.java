@@ -16,6 +16,8 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.util.RegistrationResult;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
@@ -30,12 +32,12 @@ public interface RegistrationService extends Verticle {
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get registration data for.
-     * @return The result of the operation. If a device with the given ID is registered for the tenant,
-     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will
-     *         contain the keys registered for the device.
+     * @param resultHandler The handler to invoke with the result of the operation. If a device with the
+     *         given ID is registered for the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
+     *         and the <em>payload</em> will contain the keys registered for the device.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
-    RegistrationResult getDevice(String tenantId, String deviceId);
+    void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Finds device registration data by a key registered for the device.
@@ -43,12 +45,12 @@ public interface RegistrationService extends Verticle {
      * @param tenantId The tenant the device belongs to.
      * @param key The name of the key to look up the device registration by.
      * @param value The value for the key to match on.
-     * @return The result of the operation. If a device with the given key/value is registered for the tenant,
-     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will
-     *         contain the keys registered for the device.
+     * @param resultHandler The handler to invoke with the result of the operation. If a device with the
+     *         given key/value is registered for the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
+     *         and the <em>payload</em> will contain the keys registered for the device.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
-    RegistrationResult findDevice(String tenantId, String key, String value);
+    void findDevice(String tenantId, String key, String value, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Registers a device.
@@ -56,11 +58,11 @@ public interface RegistrationService extends Verticle {
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID the device should be registered under.
      * @param otherKeys A map containing additional keys and values that the device can be identified by (within the tenant).
-     * @return The result of the operation. If a device with the given ID does not yet exist for the tenant,
-     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_CREATED}.
+     * @param resultHandler The handler to invoke with the result of the operation. If a device with the given ID does not
+     *         yet exist for the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_CREATED}.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_CONFLICT}.
      */
-    RegistrationResult addDevice(String tenantId, String deviceId, JsonObject otherKeys);
+    void addDevice(String tenantId, String deviceId, JsonObject otherKeys, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Updates device registration data.
@@ -69,23 +71,23 @@ public interface RegistrationService extends Verticle {
      * @param deviceId The ID of the device to update the registration for.
      * @param otherKeys A map containing additional keys and values that the device can be identified by (within the tenant).
      *                  The keys provided in this parameter will completely replace the former keys registered for the device.
-     * @return The result of the operation. If a device with the given ID exists for the tenant,
-     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain the
-     *         keys that had originally been registered for the device.
+     * @param resultHandler The handler to invoke with the result of the operation. If a device with the given ID exists for
+     *         the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain
+     *         the keys that had originally been registered for the device.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
-    RegistrationResult updateDevice(String tenantId, String deviceId, JsonObject otherKeys);
+    void updateDevice(String tenantId, String deviceId, JsonObject otherKeys, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Removes a device.
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to remove.
-     * @return The result of the operation. If the device has been removed, the <em>status</em> will
-     *         be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain the keys
+     * @param resultHandler The handler to invoke with the result of the operation. If the device has been removed,
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain the keys
      *         that had been registered for the removed device.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
-    RegistrationResult removeDevice(String tenantId, String deviceId);
+    void removeDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
 }
