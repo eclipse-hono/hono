@@ -80,12 +80,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>true</startParallel>
               <images>
-                <!-- ##### volume container with hono server configuration ##### -->
+                <!-- ##### Hono server ##### -->
                 <image>
-                  <name>eclipsehono/hono-test-config</name>
-                  <alias>hono-config</alias>
+                  <name>eclipsehono/hono-test-server</name>
+                  <alias>server</alias>
                   <build>
-                    <from>eclipsehono/hono-default-config</from>
+                    <from>eclipsehono/hono-server:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
@@ -103,38 +103,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       </inline>
                     </assembly>
                   </build>
-                </image>
-                <!-- ##### Qpid Dispatch Router ##### -->
-                <image>
-                  <alias>qdrouter</alias>
-                  <name>gordons/qpid-dispatch:${qpid-dispatch.version}</name>
-                  <run>
-                    <cmd>
-                      <shell>/usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json</shell>
-                    </cmd>
-                    <ports>
-                      <port>+qpid.ip:qpid.amqp.port:5672</port>
-                      <port>qpid.amqp.internal.port:5673</port>
-                    </ports>
-                    <network>
-                      <name>hono</name>
-                      <alias>qdrouter</alias>
-                    </network>
-                    <log>
-                      <prefix>QPID</prefix>
-                      <color>blue</color>
-                    </log>
-                    <volumes>
-                      <from>
-                        <image>hono-config</image>
-                      </from>
-                    </volumes>
-                  </run>
-                </image>
-                <!-- ##### Hono server ##### -->
-                <image>
-                  <alias>server</alias>
-                  <name>eclipsehono/hono-server:${project.version}</name>
                   <run>
                     <ports>
                       <port>+hono.ip:hono.amqp.port:5672</port>
@@ -152,14 +120,31 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>HONO</prefix>
                       <color>green</color>
                     </log>
-                    <volumes>
-                      <from>
-                        <image>hono-config</image>
-                      </from>
-                    </volumes>
                     <wait>
                       <log>^.*(startup completed successfully)$</log>
                     </wait>
+                  </run>
+                </image>
+                <!-- ##### Qpid Dispatch Router ##### -->
+                <image>
+                  <name>eclipsehono/dispatch-router:${project.version}</name>
+                  <alias>qdrouter</alias>
+                  <run>
+                    <cmd>
+                      <shell>/usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json</shell>
+                    </cmd>
+                    <ports>
+                      <port>+qpid.ip:qpid.amqp.port:5672</port>
+                      <port>qpid.amqp.internal.port:5673</port>
+                    </ports>
+                    <network>
+                      <name>hono</name>
+                      <alias>qdrouter</alias>
+                    </network>
+                    <log>
+                      <prefix>QPID</prefix>
+                      <color>blue</color>
+                    </log>
                   </run>
                 </image>
               </images>
@@ -185,9 +170,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <goal>stop</goal>
                   <goal>remove</goal>
                 </goals>
-                <configuration>
-                  <removeVolumes>true</removeVolumes>
-                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -237,12 +219,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>true</startParallel>
               <images>
-                <!-- ##### volume container with hono server configuration ##### -->
+                <!-- ##### Hono server ##### -->
                 <image>
-                  <name>eclipsehono/hono-test-config</name>
-                  <alias>hono-config</alias>
+                  <name>eclipsehono/hono-test-server</name>
+                  <alias>server</alias>
                   <build>
-                    <from>eclipsehono/hono-default-config</from>
+                    <from>eclipsehono/hono-server:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
@@ -260,32 +242,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       </inline>
                     </assembly>
                   </build>
-                </image>
-                <!-- ##### ActiveMQ Broker ##### -->
-                <image>
-                  <alias>activemq</alias>
-                  <name>rmohr/activemq:${activemq.version}</name>
-                  <run>
-                    <ports>
-                      <port>+broker.ip:broker.amqp.port:5672</port>
-                    </ports>
-                    <network>
-                      <name>hono</name>
-                      <alias>activemq</alias>
-                    </network>
-                    <log>
-                      <prefix>ACTIVEMQ</prefix>
-                      <color>blue</color>
-                    </log>
-                    <wait>
-                      <log>^.*Connector amqp started.*$</log>
-                    </wait>
-                  </run>
-                </image>
-                <!-- ##### Hono server ##### -->
-                <image>
-                  <alias>server</alias>
-                  <name>eclipsehono/hono-server:${project.version}</name>
                   <run>
                     <ports>
                       <port>+hono.ip:hono.amqp.port:5672</port>
@@ -302,13 +258,29 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>HONO</prefix>
                       <color>green</color>
                     </log>
-                    <volumes>
-                      <from>
-                        <image>hono-config</image>
-                      </from>
-                    </volumes>
                     <wait>
                       <log>^.*(startup completed successfully)$</log>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### ActiveMQ Broker ##### -->
+                <image>
+                  <name>rmohr/activemq:${activemq.version}</name>
+                  <alias>activemq</alias>
+                  <run>
+                    <ports>
+                      <port>+broker.ip:broker.amqp.port:5672</port>
+                    </ports>
+                    <network>
+                      <name>hono</name>
+                      <alias>activemq</alias>
+                    </network>
+                    <log>
+                      <prefix>ACTIVEMQ</prefix>
+                      <color>blue</color>
+                    </log>
+                    <wait>
+                      <log>^.*Connector amqp started.*$</log>
                     </wait>
                   </run>
                 </image>
@@ -335,9 +307,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <goal>stop</goal>
                   <goal>remove</goal>
                 </goals>
-                <configuration>
-                  <removeVolumes>true</removeVolumes>
-                </configuration>
               </execution>
             </executions>
           </plugin>
