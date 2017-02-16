@@ -203,7 +203,7 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     public void find(final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(APP_PROPERTY_DEVICE_ID, value);
+        properties.put(APP_PROPERTY_VALUE, value);
         properties.put(APP_PROPERTY_ACTION, ACTION_FIND);
         properties.put(APP_PROPERTY_KEY, key);
         sendMessage(createMessage(properties), resultHandler);

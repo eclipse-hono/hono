@@ -46,6 +46,7 @@ public final class RegistrationConstants {
     public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
     public static final String APP_PROPERTY_ACTION               = "action";
     public static final String APP_PROPERTY_KEY                  = "key";
+    public static final String APP_PROPERTY_VALUE                = "value";
     public static final String APP_PROPERTY_STATUS               = "status";
     public static final String FIELD_PAYLOAD                     = "payload";
 
@@ -91,9 +92,10 @@ public final class RegistrationConstants {
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
         final String key = getKey(message);
+        final String value = getValue(message);
         final String action = getAction(message);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getRegistrationJson(action, tenantId, deviceId, key, payload);
+        return getRegistrationJson(action, tenantId, deviceId, key, value, payload);
     }
 
     public static JsonObject getReply(final int status, final String tenantId, final String deviceId) {
@@ -158,16 +160,19 @@ public final class RegistrationConstants {
     }
 
     public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId, final JsonObject payload) {
-        return getRegistrationJson(action, tenantId, deviceId, null, payload);
+        return getRegistrationJson(action, tenantId, deviceId, null, null, payload);
     }
 
-    public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId, final String key, final JsonObject payload) {
+    public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId, final String key, final String value, final JsonObject payload) {
         final JsonObject msg = new JsonObject();
         msg.put(APP_PROPERTY_ACTION, action);
         msg.put(APP_PROPERTY_DEVICE_ID, deviceId);
         msg.put(APP_PROPERTY_TENANT_ID, tenantId);
         if (key != null) {
             msg.put(APP_PROPERTY_KEY, key);
+        }
+        if (value != null) {
+            msg.put(APP_PROPERTY_VALUE, value);
         }
         if (payload != null) {
             msg.put(FIELD_PAYLOAD, payload);
@@ -184,4 +189,10 @@ public final class RegistrationConstants {
         Objects.requireNonNull(msg);
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_KEY, String.class);
     }
+
+    private static String getValue(final Message msg) {
+        Objects.requireNonNull(msg);
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_VALUE, String.class);
+    }
+
 }
