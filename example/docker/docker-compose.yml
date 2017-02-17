@@ -1,9 +1,15 @@
-version: '2'
+version: '3.0'
+
+networks:
+  hono-net:
+    driver: overlay
 
 services:
 
   qdrouter:
     image: eclipsehono/dispatch-router:${project.version}
+    networks:
+      - hono-net
     command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
     ports:
       - "15671:5671"
@@ -11,6 +17,8 @@ services:
 
   hono:
     image: eclipsehono/hono-server:${project.version}
+    networks:
+      - hono-net
     ports:
       - "5672:5672"
     environment:
@@ -29,6 +37,8 @@ services:
 
   rest-adapter:
     image: eclipsehono/hono-adapter-rest-vertx:${project.version}
+    networks:
+      - hono-net
     ports:
       - "8080:8080"
     environment:
@@ -44,6 +54,8 @@ services:
 
   mqtt-adapter:
     image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
+    networks:
+      - hono-net
     ports:
       - "1883:1883"
     environment:

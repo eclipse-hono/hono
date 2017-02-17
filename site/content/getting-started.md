@@ -14,6 +14,10 @@ In order to build and run the images you need access to a [Docker](http://www.do
 
 As noted above, Hono consists of multiple service components that together comprise a Hono instance. The remainder of this guide employs *Docker Compose* for configuring, running and managing all Hono components as a whole. Please follow the instructions on the [Docker Compose site](https://docs.docker.com/compose/install/) to install the Docker Compose client on your computer.
 
+{{% warning %}}
+You will need at least Docker version 1.13.0 and Docker Compose version 1.10.0 in order to run the example in this guide. By the time of this writing, the latest released versions of Docker and Docker Compose were 1.13.1 and 1.11.1 respectively.
+{{% /warning %}}
+
 ### Compiling
 
 If you do not already have a working Maven installation on your system, please follow the [installation instructions on the Maven home page](https://maven.apache.org/).
