@@ -51,6 +51,7 @@ import io.vertx.proton.ProtonSender;
 public final class TestSupport {
 
     public static final String CLIENT_ID = "protocol_adapter";
+    public static final String CON_ID = "connection-1";
     public static final int DEFAULT_CREDITS = 20;
 
     public static ProtonConnection openConnection(final TestContext ctx, final Vertx vertx, final String host, final int port) {
@@ -145,9 +146,39 @@ public final class TestSupport {
         };
     }
 
+    /**
+     * Creates a new mock upstream client for the {@linkplain #CLIENT_ID default link ID}
+     * and {@linkplain #CON_ID default connection ID}.
+     * 
+     * @return The new client.
+     */
     public static UpstreamReceiver newClient() {
+        return newClient(CLIENT_ID);
+    }
+
+    /**
+     * Creates a new mock upstream client for a link ID and the {@linkplain #CON_ID default connection ID}.
+     * 
+     * @param linkId The client's link ID.
+     * @return The new client.
+     */
+    public static UpstreamReceiver newClient(final String linkId) {
+
+        return newClient(linkId, CON_ID);
+    }
+
+    /**
+     * Creates a new mock upstream client for a link and connection ID.
+     * 
+     * @param linkId The client's link ID.
+     * @param connectionId The client's conenction ID.
+     * @return The new client.
+     */
+    public static UpstreamReceiver newClient(final String linkId, final String connectionId) {
+
         UpstreamReceiver client = mock(UpstreamReceiver.class);
-        when(client.getLinkId()).thenReturn(CLIENT_ID);
+        when(client.getLinkId()).thenReturn(linkId);
+        when(client.getConnectionId()).thenReturn(connectionId);
         return client;
     }
 

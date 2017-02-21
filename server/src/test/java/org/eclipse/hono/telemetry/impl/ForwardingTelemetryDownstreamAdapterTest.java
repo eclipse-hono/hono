@@ -43,11 +43,20 @@ public class ForwardingTelemetryDownstreamAdapterTest {
     private static final String DEVICE_ID = "myDevice";
     private ConnectionFactory connectionFactory;
 
+    /**
+     * Initializes mocks etc.
+     */
     @Before
     public void setup() {
         connectionFactory = newMockConnectionFactory(false);
     }
 
+    /**
+     * Verifies that telemetry data uploaded by an upstream client is forwarded to the
+     * downstream container.
+     * 
+     * @throws InterruptedException if test execution gets interrupted.
+     */
     @Test
     public void testProcessTelemetryDataForwardsMessageToDownstreamSender() throws InterruptedException {
 
@@ -65,7 +74,7 @@ public class ForwardingTelemetryDownstreamAdapterTest {
         ForwardingTelemetryDownstreamAdapter adapter = new ForwardingTelemetryDownstreamAdapter(vertx, newMockSenderFactory(sender));
         adapter.setDownstreamConnectionFactory(connectionFactory);
         adapter.start(Future.future());
-        adapter.addSender("CON_ID", CLIENT_ID, sender);
+        adapter.addSender(client, sender);
 
         // WHEN processing a telemetry message
         Message msg = ProtonHelper.message(TELEMETRY_MSG_CONTENT);

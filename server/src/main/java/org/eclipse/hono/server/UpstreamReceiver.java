@@ -21,6 +21,9 @@ import io.vertx.proton.ProtonReceiver;
 
 /**
  * A decorator for a {@code ProtonReceiver} representing a client uploading data to a Hono endpoint.
+ * <p>
+ * Subclasses are strongly encouraged to implement {@link Object#hashCode()} and {@link Object#equals(Object)}
+ * based on the <em>linkId</em> because instances of this interface are used as keys in maps in other classes of Hono.
  *
  */
 public interface UpstreamReceiver {
@@ -114,5 +117,4 @@ public interface UpstreamReceiver {
      * @return The address.
      */
     String getTargetAddress();
-
 }

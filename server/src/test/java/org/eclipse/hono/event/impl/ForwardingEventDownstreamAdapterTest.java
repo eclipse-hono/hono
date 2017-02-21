@@ -35,6 +35,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -67,7 +68,7 @@ public class ForwardingEventDownstreamAdapterTest {
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());
-        adapter.addSender("CON_ID", CLIENT_ID, sender);
+        adapter.addSender(client, sender);
 
         // WHEN processing an event
         Message msg = ProtonHelper.message(EVENT_MSG_CONTENT);
