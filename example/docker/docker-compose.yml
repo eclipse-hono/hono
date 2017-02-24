@@ -33,6 +33,8 @@ services:
       - HONO_SERVER_BINDADDRESS=0.0.0.0
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
+    volumes:
+      - /home/hono/registration
 
   rest-adapter:
     image: eclipsehono/hono-adapter-rest-vertx:${project.version}

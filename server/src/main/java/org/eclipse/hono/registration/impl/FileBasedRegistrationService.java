@@ -89,7 +89,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
                    }
                 });
             } else {
-                log.debug("device identity file {} does not exist", filename);
+                log.debug("device identity file {} does not exist (yet)", filename);
             }
         }
     }

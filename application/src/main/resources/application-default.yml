@@ -4,6 +4,8 @@ hono:
     port: 5672
     name: hono-server
   maxInstances: 0
+  registration:
+    filename: /home/hono/registration/device-identities.json
   singleTenant: false
   server:
     bindaddress: 127.0.0.1
