@@ -98,14 +98,14 @@
           "users": "user1@HONO",
           "remoteHosts": "*",
           "maxSessions": 100,
-          "maxMessageSize": 10240,
+          "maxMessageSize": 102400,
           "sources": "telemetry/DEFAULT_TENANT, event/DEFAULT_TENANT"
         },
         "anotherTenant": {
           "users": "user2@HONO",
           "remoteHosts": "*",
           "maxSessions": 100,
-          "maxMessageSize": 10240,
+          "maxMessageSize": 102400,
           "sources": "telemetry/anotherTenant"
         },
         "anonymous" : {
@@ -126,6 +126,7 @@
           "users": "Eclipse IoT;Hono;hono",
           "remoteHosts": "*",
           "maxSessions": 500,
+          "maxMessageSize": 204800,
           "sources": "$management",
           "targets": "telemetry/*, event/*, $management"
         }

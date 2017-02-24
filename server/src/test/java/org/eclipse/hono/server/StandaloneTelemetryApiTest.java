@@ -51,7 +51,6 @@ import io.vertx.proton.ProtonHelper;
 public class StandaloneTelemetryApiTest {
 
     private static final Logger                LOG = LoggerFactory.getLogger(StandaloneTelemetryApiTest.class);
-    private static final String                BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
     private static final String                DEVICE_PREFIX = "device";
     private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
     private static final String                USER = "hono-client";
@@ -68,7 +67,7 @@ public class StandaloneTelemetryApiTest {
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
-        server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0).setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
+        server = new HonoServer().setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         server.addEndpoint(telemetryEndpoint);

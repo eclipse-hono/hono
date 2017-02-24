@@ -35,6 +35,8 @@ public abstract class AbstractHonoConfig {
     private static final Pattern PATTERN_PEM = Pattern.compile("^.*\\.[pP][eE][mM]$");
     private static final Pattern PATTERN_PKCS = Pattern.compile("^.*\\.[pP](12|[fF][xX])$");
     private static final Pattern PATTERN_JKS = Pattern.compile("^.*\\.[jJ][kK][sS]$");
+    private static final int MAX_PORT_NO = 65535;
+    private static final int MIN_PORT_NO = 0;
 
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -46,6 +48,16 @@ public abstract class AbstractHonoConfig {
     private char[] keyStorePassword;
     private String certPath;
     private String keyPath;
+
+    /**
+     * Checks if a given port number is valid.
+     * 
+     * @param port The port number.
+     * @return {@code true} if port &gt;= 0 and port &lt;= 65535.
+     */
+    protected boolean isValidPort(final int port) {
+        return port >= MIN_PORT_NO && port <= MAX_PORT_NO;
+    }
 
     /**
      * Gets the character separating the segments of target addresses.

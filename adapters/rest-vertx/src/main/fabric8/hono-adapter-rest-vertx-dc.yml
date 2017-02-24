@@ -34,9 +34,9 @@ spec:
           value: secret
         - name: HONO_CLIENT_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_HTTP_BINDADDRESS
+        - name: HONO_HTTP_BIND_ADDRESS
           value: 0.0.0.0
-        - name: HONO_MAX_INSTANCES
+        - name: HONO_HTTP_MAX_INSTANCES
           value: "1"
         - name: SPRING_PROFILES_ACTIVE
           value: dev

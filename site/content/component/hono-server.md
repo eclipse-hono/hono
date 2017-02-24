@@ -18,21 +18,21 @@ The following table provides an overview of the configuration options the adapte
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------: | :------ | :---------- |
 | `HONO_AUTHORIZATION_PERMISSIONS_PATH`<br>`--hono.authorization.permissionsPath` | no | `classpath:/permissions.json` | The Spring resource URI of the JSON file defining the permissions to Hono's endpoint resources. The default file bundled with Hono defines permissions for the *DEAFAULT_TENANT* only and should only be used for evaluation purposes. |
-| `HONO_SERVER_BINDADDRESS`<br>`--hono.server.bindaddress` | yes | `127.0.0.1` | The IP address the Hono server should bind to. By default the adapter binds to the *loopback device* address, i.e. the adapter will **not** be accessible from other hosts. |
-| `HONO_SERVER_PORT`<br>`--hono.server.port` | yes | `5672` | The port the server should listen on. |
 | `HONO_DOWNSTREAM_HOST`<br>`--hono.downstream.host` | yes | `localhost` | The IP address or name of the downstream *Dispatch Router* host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--link` command line option to link the Hono server container to the host of the *Dispatch Router* container on the Docker network.
 | `HONO_DOWNSTREAM_PORT`<br>`--hono.downstream.port` | yes | `5672` | The port that the Dispatch Router is listening on for connection from the Hono server.<br>**NB** When using the Dispatch Router image with the example configuration then this property needs to be set to `5673`. This is because in the example configuration the Dispatch Router's *internal* listener used for accepting connections from the Hono server is configured to attach to port 5673. |
 | `HONO_DOWNSTREAM_USERNAME`<br>`--hono.downstream.username` | no | - | The username to use for authenticating to the Dispatch Router. This property (and the corresponding password) needs to be set only if the Dispatch Router component is configured to use `SASL PLAIN` instead of `SASL EXTERNAL` for authenticating the Hono server. |
 | `HONO_DOWNSTREAM_PASSWORD`<br>`--hono.downstream.password` | no | - | The password to use for authenticating to the Hono server. This property (and the corresponding username) needs to be set only if the Dispatch Router component is configured to use `SASL PLAIN` instead of `SASL EXTERNAL` for authenticating the Hono server. |
 | `HONO_DOWNSTREAM_TRUST_STORE_PATH`<br>`--hono.downstream.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating the Dispatch Router. This property **must** be set if the Dispatch Router has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_DOWNSTREAM_TRUST_STORE_PASSWORD`<br>`--hono.downstream.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_CERT_PATH`<br>`--hono.certPath` | no | - | The absolute path to the PEM file containing the certificate the Hono server uses for authenticating to clients. Either this or the `HONO_KEY_STORE_PATH` option **must** be set to enable TLS secured connections with clients. |
-| `HONO_KEY_PATH`<br>`--hono.keyPath` | no | - | The absolute path to the PEM file containing the private key the Hono server uses for authenticating to clients. Either this or the `HONO_KEY_STORE_PATH` option **must** be set to enable TLS secured connections with clients. |
-| `HONO_KEY_STORE_PATH`<br>`--hono.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate the Hono server uses for authenticating to clients. Either this or the `HONO_KEY_PATH` and `HONO_CERT_PATH` options **must** be set to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix. |
-| `HONO_KEY_STORE_PASSWORD`<br>`--hono.keyStorePassword` | no | - | The password required to read the contents of the key store. |
-| `HONO_TRUST_STORE_PATH`<br>`--hono.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
-| `HONO_TRUST_STORE_PASSWORD`<br>`--hono.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_MAX_INSTANCES`<br>`--hono.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
+| `HONO_SERVER_BIND_ADDRESS`<br>`--hono.server.bindaddress` | yes | `127.0.0.1` | The IP address the Hono server should bind to. By default the adapter binds to the *loopback device* address, i.e. the adapter will **not** be accessible from other hosts. |
+| `HONO_SERVER_CERT_PATH`<br>`--hono.server.certPath` | no | - | The absolute path to the PEM file containing the certificate the Hono server uses for authenticating to clients. Either this or the `HONO_SERVER_KEY_STORE_PATH` option **must** be set to enable TLS secured connections with clients. |
+| `HONO_SERVER_KEY_PATH`<br>`--hono.server.keyPath` | no | - | The absolute path to the PEM file containing the private key the Hono server uses for authenticating to clients. Either this or the `HONO_SERVER_KEY_STORE_PATH` option **must** be set to enable TLS secured connections with clients. |
+| `HONO_SERVER_KEY_STORE_PATH`<br>`--hono.server.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate the Hono server uses for authenticating to clients. Either this or the `HONO_SERVER_KEY_PATH` and `HONO_SERVER_CERT_PATH` options **must** be set to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix. |
+| `HONO_SERVER_KEY_STORE_PASSWORD`<br>`--hono.server.keyStorePassword` | no | - | The password required to read the contents of the key store. |
+| `HONO_SERVER_MAX_INSTANCES`<br>`--hono.server.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
+| `HONO_SERVER_PORT`<br>`--hono.server.port` | yes | `5672` | The port the server should listen on. |
+| `HONO_SERVER_TRUST_STORE_PATH`<br>`--hono.server.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_SERVER_TRUST_STORE_PASSWORD`<br>`--hono.server.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 
 The options only need to be set if the default value does not match your environment.
 
@@ -45,9 +45,9 @@ The following command starts the Hono server container using the configuration f
 ~~~sh
 $ docker run -d --name hono --network hono-net -e 'HONO_DOWNSTREAM_HOST=qdrouter' -e 'HONO_DOWNSTREAM_PORT=5673' \
 > -e 'HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12' -e 'HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys' \
-> -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' -e 'HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json' \
-> -e 'HONO_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12' -e 'HONO_KEY_STORE_PASSWORD=honokeys' \
-> -e 'HONO_SERVER_BINDADDRESS=0.0.0.0' -p5672:5672 eclipsehono/hono-server:latest
+> -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' -e 'HONO_AUTHORIZATION_PERMISSIONS_PATH=file:/etc/hono/permissions.json' \
+> -e 'HONO_SERVER_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12' -e 'HONO_SERVER_KEY_STORE_PASSWORD=honokeys' \
+> -e 'HONO_SERVER_BIND_ADDRESS=0.0.0.0' -p5672:5672 eclipsehono/hono-server:latest
 ~~~
 
 {{% note %}}
@@ -73,9 +73,9 @@ The corresponding command to start up the server with the configuration used in 
 ~/hono/application$ mvn spring-boot:run -Drun.arguments=--hono.downstream.host=qdrouter,\
 > --hono.downstream.port=5673,--hono.downstream.hostnameVerificationRequired=false,\
 > --hono.downstream.keyStorePath=../demo-certs/certs/honoKeyStore.p12,--hono.downstream.keyStorePassword=honokeys,\
-> --hono.downstream.trustStorePath=../demo-certs/certs/ca-cert.pem,\
-> --hono.keyStorePath=../demo-certs/certs/honoKeyStore.p12,--hono.keyStorePassword=honokeys,\
-> --hono.trustStorePath=../demo-certs/certs/ca-cert.pem
+> --hono.downstream.trustStorePath=../demo-certs/certs/trusted-certs.pem,\
+> --hono.server.keyStorePath=../demo-certs/certs/honoKeyStore.p12,--hono.server.keyStorePassword=honokeys,\
+> --hono.server.trustStorePath=../demo-certs/certs/trusted-certs.pem
 ~~~
 
 {{% note %}}

@@ -19,7 +19,6 @@ import java.util.Objects;
  */
 public final class HonoClientConfigProperties extends AbstractHonoConfig {
 
-    private static final int MAX_PORT_NO = 65535;
     private String name;
     private String host = "localhost";
     private int port = 5672;
@@ -59,13 +58,14 @@ public final class HonoClientConfigProperties extends AbstractHonoConfig {
      * Sets the TCP port of the server that this client should connect to.
      * 
      * @param port The port number.
-     * @throws IllegalArgumentException if port &lt; 1 or port &gt; 65535.
+     * @throws IllegalArgumentException if port &lt; 1000 or port &gt; 65535.
      */
     public void setPort(final int port) {
-        if (port < 1 || port > MAX_PORT_NO) {
-            throw new IllegalArgumentException("port number must be >=1 and <= " + MAX_PORT_NO);
-        } 
-        this.port = port;
+        if (isValidPort(port)) {
+            this.port = port;
+        } else {
+            throw new IllegalArgumentException("invalid port number");
+        }
     }
 
     /**

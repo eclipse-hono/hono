@@ -15,7 +15,9 @@ package org.eclipse.hono.adapter.rest;
 import org.eclipse.hono.adapter.AdapterConfig;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -45,6 +47,21 @@ public class Config extends AdapterConfig {
     @Bean
     public HonoClient honoClient() {
         return new HonoClient(getVertx(), honoConnectionFactory());
+    }
+
+    /**
+     * Exposes the REST adapter's configuration properties as a Spring bean.
+     * 
+     * @return The configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.http")
+    public HonoConfigProperties honoServerProperties() {
+        HonoConfigProperties props = new HonoConfigProperties();
+        if (props.getPort() == 0) {
+            props.setPort(8080); // set default port
+        }
+        return props;
     }
 
     @Bean

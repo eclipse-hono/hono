@@ -3,11 +3,11 @@ hono:
       permissionsPath: file:///etc/hono/permissions.json
   downstream:
     name: hono-server
-  maxInstances: 1
   server:
-    bindaddress: 0.0.0.0
-  waitForDownstreamConnectionEnabled: true
-  
+    bindAddress: 0.0.0.0
+    maxInstances: 1
+    waitForDownstreamConnectionEnabled: true
+
 ---
 
 spring:
@@ -25,7 +25,8 @@ hono:
 spring:
   profiles: activemq
 hono:
-  pathSeparator: .
+  server:
+    pathSeparator: .
   downstream:
     host: activemq
     port: 5672

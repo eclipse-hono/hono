@@ -15,14 +15,15 @@ The following table provides an overview of the configuration options the adapte
 
 | Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
 | :------------------------------------------ | :-------: | :------------ | :------------|
-| `HONO_MQTT_BINDADDRESS`<br>`--hono.mqtt.bindAddress` | yes | `0.0.0.0` | The IP address the protocol adapter should bind to. By default the adapter binds to the *wildcard* address, i.e. all network adapters. |
-| `HONO_MQTT_LISTENPORT`<br>`--hono.mqtt.listenPort` | yes | `1883` | The port the protocol adapter should listen on. |
 | `HONO_CLIENT_HOST`<br>`--hono.client.host` | yes | `localhost` | The IP address or name of the Hono server host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--link` command line option to link the adapter container to the host of the *Hono Server* container on the Docker network.
 | `HONO_CLIENT_PORT`<br>`--hono.client.port` | yes | `5672` | The port that the Hono server is listening on. |
 | `HONO_CLIENT_USERNAME`<br>`--hono.client.username` | yes | - | The username to use for authenticating to the Hono server. |
 | `HONO_CLIENT_PASSWORD`<br>`--hono.client.password` | yes | - | The password to use for authenticating to the Hono server. |
 | `HONO_CLIENT_TRUST_STORE_PATH`<br>`--hono.client.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Hono server. This property **must** be set if the Hono server has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_CLIENT_TRUST_STORE_PASSWORD`<br>`--hono.client.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+| `HONO_MQTT_BIND_ADDRESS`<br>`--hono.mqtt.bindAddress` | yes | `0.0.0.0` | The IP address the protocol adapter should bind to. By default the adapter binds to the *wildcard* address, i.e. all network adapters. |
+| `HONO_MQTT_MAX_INSTANCES`<br>`--hono.mqtt.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
+| `HONO_MQTT_PORT`<br>`--hono.mqtt.port` | yes | `1883` | The port the protocol adapter should listen on. If set to 0 the adapter will bind to an arbitrary free port determined by the operating system during start up. |
 
 The options only need to be set if the default value does not match your environment.
 
@@ -35,8 +36,7 @@ The following command starts the MQTT adapter container using the trusted certif
 ~~~sh
 $ docker run -d --name mqtt-adapter --network hono-net -e 'HONO_CLIENT_HOST=hono' \
 > -e 'HONO_CLIENT_USERNAME=hono-client' -e 'HONO_CLIENT_PASSWORD=secret' \
-> -e 'HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trustStore.jks' \
-> -e 'HONO_CLIENT_TRUST_STORE_PASSWORD=honotrust' \
+> -e 'HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
 > -p1883:1883 eclipsehono/hono-adapter-mqtt-vertx:latest
 ~~~
 

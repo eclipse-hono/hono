@@ -13,6 +13,7 @@
 package org.eclipse.hono.application;
 
 import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.server.HonoServerFactory;
@@ -65,6 +66,21 @@ public class ApplicationConfig {
         HonoClientConfigProperties props = new HonoClientConfigProperties();
         if (props.getAmqpHostname() == null) {
             props.setAmqpHostname("hono-internal");
+        }
+        return props;
+    }
+
+    /**
+     * Exposes properties for configuring the Hono server as a Spring bean.
+     * 
+     * @return The configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.server")
+    public HonoConfigProperties honoServerProperties() {
+        HonoConfigProperties props = new HonoConfigProperties();
+        if (props.getPort() == 0) {
+            props.setPort(5672); // set default AMQP port
         }
         return props;
     }

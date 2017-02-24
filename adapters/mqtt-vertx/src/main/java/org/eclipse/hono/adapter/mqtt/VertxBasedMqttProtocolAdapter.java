@@ -18,11 +18,11 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
@@ -49,13 +49,8 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
     private static final String TELEMETRY_ENDPOINT = "telemetry";
     private static final String EVENT_ENDPOINT = "event";
 
-    @Value("${hono.mqtt.bindaddress:0.0.0.0}")
-    private String bindAddress;
-
-    @Value("${hono.mqtt.listenport:1883}")
-    private int listenPort;
-
     private HonoClient hono;
+    private HonoConfigProperties config;
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier
             = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier
@@ -73,10 +68,21 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
         this.hono = Objects.requireNonNull(honoClient);
     }
 
+    /**
+     * Sets configuration properties.
+     * 
+     * @param properties The configuration properties to use.
+     * @throws NullPointerException if properties is {@code null}.
+     */
+    @Autowired
+    public void setConfig(final HonoConfigProperties properties) {
+        this.config = Objects.requireNonNull(properties);
+    }
+
     private void bindMqttServer(final Future<Void> startFuture) {
 
         MqttServerOptions options = new MqttServerOptions();
-        options.setHost(this.bindAddress).setPort(this.listenPort);
+        options.setHost(config.getBindAddress()).setPort(config.getPort());
 
         this.server = MqttServer.create(this.vertx, options);
 
@@ -85,7 +91,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
                 .listen(done -> {
 
                     if (done.succeeded()) {
-                        LOG.info("Hono MQTT adapter running on {}:{}", this.bindAddress, this.server.actualPort());
+                        LOG.info("Hono MQTT adapter running on {}:{}", config.getBindAddress(), this.server.actualPort());
                         startFuture.complete();
                     } else {
                         LOG.error("error while starting up Hono MQTT adapter", done.cause());

@@ -27,10 +27,10 @@ services:
       - HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
       - HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys
       - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
-      - HONO_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
-      - HONO_KEY_STORE_PASSWORD=honokeys
-      - HONO_MAX_INSTANCES=1
-      - HONO_SERVER_BINDADDRESS=0.0.0.0
+      - HONO_SERVER_BIND_ADDRESS=0.0.0.0
+      - HONO_SERVER_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
+      - HONO_SERVER_KEY_STORE_PASSWORD=honokeys
+      - HONO_SERVER_MAX_INSTANCES=1
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
     volumes:
@@ -49,8 +49,8 @@ services:
       - HONO_CLIENT_USERNAME=rest-adapter
       - HONO_CLIENT_PASSWORD=secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
-      - HONO_HTTP_BINDADDRESS=0.0.0.0
-      - HONO_MAX_INSTANCES=1
+      - HONO_HTTP_BIND_ADDRESS=0.0.0.0
+      - HONO_HTTP_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
 
   mqtt-adapter:
@@ -66,6 +66,6 @@ services:
       - HONO_CLIENT_USERNAME=mqtt-adapter
       - HONO_CLIENT_PASSWORD=secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
-      - HONO_MQTT_BINDADDRESS=0.0.0.0
-      - HONO_MAX_INSTANCES=1
+      - HONO_MQTT_BIND_ADDRESS=0.0.0.0
+      - HONO_MQTT_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev

@@ -3,10 +3,10 @@ hono:
     host: localhost
     port: 5672
     name: hono-server
-  maxInstances: 0
   registration:
     filename: /home/hono/registration/device-identities.json
-  singleTenant: false
   server:
-    bindaddress: 127.0.0.1
+    bindAddress: 127.0.0.1
     port: 5672
+    maxInstances: 0
+    singleTenant: false

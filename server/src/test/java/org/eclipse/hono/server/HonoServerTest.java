@@ -26,6 +26,7 @@ import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -46,13 +47,11 @@ import io.vertx.proton.ProtonReceiver;
  */
 public class HonoServerTest {
 
-    private static final String BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
     private static final String CON_ID = "connection-id";
 
     private static HonoServer createServer(final Endpoint telemetryEndpoint) {
+
         HonoServer result = new HonoServer();
-        result.setBindAddress(BIND_ADDRESS);
-        result.setPort(0);
         if (telemetryEndpoint != null) {
             result.addEndpoint(telemetryEndpoint);
         }

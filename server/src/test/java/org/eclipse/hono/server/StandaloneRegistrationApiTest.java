@@ -14,7 +14,6 @@ package org.eclipse.hono.server;
 import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 
-import java.net.InetAddress;
 import java.util.stream.IntStream;
 
 import org.eclipse.hono.authentication.impl.AcceptAllPlainAuthenticationService;
@@ -42,7 +41,6 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
-import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
  * Tests validating Hono's Registration API using a stand alone server.
@@ -50,7 +48,6 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 @RunWith(VertxUnitRunner.class)
 public class StandaloneRegistrationApiTest {
 
-    private static final String                BIND_ADDRESS = InetAddress.getLoopbackAddress().getHostAddress();
     private static final int                   NO_OF_DEVICES = 20;
     private static final int                   TIMEOUT = 5000; // milliseconds
     private static final String                DEVICE_PREFIX = "device";
@@ -67,7 +64,7 @@ public class StandaloneRegistrationApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        server = new HonoServer().setBindAddress(BIND_ADDRESS).setPort(0).setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
+        server = new HonoServer().setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
         server.addEndpoint(new RegistrationEndpoint(vertx));
         registrationAdapter = new FileBasedRegistrationService();
 

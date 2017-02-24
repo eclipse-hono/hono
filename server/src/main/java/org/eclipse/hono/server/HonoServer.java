@@ -36,7 +36,6 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -68,8 +67,6 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public final class HonoServer extends AbstractVerticle {
 
     private static final Logger            LOG = LoggerFactory.getLogger(HonoServer.class);
-    private String                         bindAddress;
-    private int                            port;
     private ProtonServer                   server;
     private Map<String, Endpoint>          endpoints = new HashMap<>();
     private HonoConfigProperties           honoConfig = new HonoConfigProperties();
@@ -85,6 +82,12 @@ public final class HonoServer extends AbstractVerticle {
     @Autowired(required = false)
     public HonoServer setHonoConfiguration(final HonoConfigProperties props) {
         this.honoConfig = Objects.requireNonNull(props);
+        if (LOG.isWarnEnabled()) {
+            StringBuilder b = new StringBuilder()
+                    .append("Hono server does not yet support limiting the incoming message size ")
+                    .append("via the maxPayloadSize property");
+            LOG.warn(b.toString());
+        }
         return this;
     }
 
@@ -113,10 +116,9 @@ public final class HonoServer extends AbstractVerticle {
             server = ProtonServer.create(vertx, options)
                     .saslAuthenticatorFactory(saslAuthenticatorFactory)
                     .connectHandler(this::handleRemoteConnectionOpen)
-                    .listen(port, bindAddress, bindAttempt -> {
+                    .listen(honoConfig.getPort(), honoConfig.getBindAddress(), bindAttempt -> {
                         if (bindAttempt.succeeded()) {
-                            this.port = bindAttempt.result().actualPort();
-                            LOG.info("HonoServer running at [{}:{}]", bindAddress, this.port);
+                            LOG.info("HonoServer running at [{}:{}]", getBindAddress(), getPort());
                             startupHandler.complete();
                         } else {
                             LOG.error("cannot start up HonoServer", bindAttempt.cause());
@@ -235,25 +237,6 @@ public final class HonoServer extends AbstractVerticle {
     }
 
     /**
-     * Sets the port Hono will listen on for AMQP 1.0 connections.
-     * <p>
-     * If not set Hono binds to the standard AMQP 1.0 port (5672). If set to {@code 0} Hono will bind to an
-     * arbitrary free port chosen by the operating system during startup.
-     * </p>
-     *
-     * @param port the port to bind to.
-     * @return This instance for setter chaining.
-     */
-    @Value("${hono.server.port:5672}")
-    public HonoServer setPort(final int port) {
-        if (port < 0 || port >= 1 << 16) {
-            throw new IllegalArgumentException("illegal port number");
-        }
-        this.port = port;
-        return this;
-    }
-
-    /**
      * Gets the port Hono listens on for AMQP 1.0 connections.
      * <p>
      * If the port has been set to 0 Hono will bind to an arbitrary free port chosen by the operating system during
@@ -266,44 +249,21 @@ public final class HonoServer extends AbstractVerticle {
         if (server != null) {
             return server.actualPort();
         } else {
-            return this.port;
+            return this.honoConfig.getPort();
         }
     }
 
     /**
-     * Sets the IP address Hono will bind to.
-     * <p>
-     * If not set Hono binds to the <em>loopback device</em> (usually 127.0.0.1 on an IPv4 stack).
-     * </p>
-     *  
-     * @param bindAddress the IP address.
-     * @return This instance for setter chaining.
-     */
-    @Value(value = "${hono.server.bindaddress:127.0.0.1}")
-    public HonoServer setBindAddress(final String bindAddress) {
-        this.bindAddress = Objects.requireNonNull(bindAddress);
-        return this;
-    }
-
-    /**
-     * Gets the IP address Hono will bind to.
+     * Gets the IP address Hono is bound to.
      *  
      * @return The IP address.
      */
     public String getBindAddress() {
-        return bindAddress;
-    }
-
-    private int getServerPort() {
-        if (server != null) {
-            return server.actualPort();
-        } else {
-            return port;
-        }
+        return honoConfig.getBindAddress();
     }
 
     void handleRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-%s:%d", this.bindAddress, getServerPort()));
+        connection.setContainer(String.format("Hono-%s:%d", getBindAddress(), getPort()));
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
         connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
         connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));

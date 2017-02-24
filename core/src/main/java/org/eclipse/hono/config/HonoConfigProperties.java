@@ -12,23 +12,99 @@
 
 package org.eclipse.hono.config;
 
+import java.util.Objects;
+
 import org.eclipse.hono.util.Constants;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 /**
- * A POJO for Hono's global configuration properties.
+ * A POJO for configuring common properties of server components.
  *
  */
-@Component
-@ConfigurationProperties(prefix = "hono")
 public final class HonoConfigProperties extends AbstractHonoConfig {
+
+    private static final int MIN_PAYLOAD_SIZE = 128; // bytes
 
     private int maxInstances = 0;
     private int startupTimeout = 20;
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
     private boolean waitForDownstreamConnection = false;
+    private String bindAddress = "127.0.0.1";
+    private int port = 0;
+    private int maxPayloadSize = 2048;
+
+    /**
+     * Gets the host name or literal IP address of the network interface that this server is bound to.
+     * 
+     * @return The host name.
+     */
+    public String getBindAddress() {
+        return bindAddress;
+    }
+
+    /**
+     * Sets the host name or literal IP address of the network interface that this server should bind to.
+     * <p>
+     * The default value of this property is <em>127.0.0.1</em> (the loop back device) on IPv4 stacks.
+     * 
+     * @param address  The host name or IP address.
+     * @throws NullPointerException if host is {@code null}.
+     */
+    public void setBindAddress(final String address) {
+        this.bindAddress = Objects.requireNonNull(address);
+    }
+
+    /**
+     * Gets the port this server is bound to/listens on.
+     * <p>
+     * If the port has been set to 0 this server will bind to an arbitrary free port chosen by the
+     * operating system during startup. Once Hono is up and running this method returns the
+     * <em>actual port</em> the server has bound to.
+     * 
+     * @return The port number.
+     */
+    public int getPort() {
+        return port;
+    }
+
+    /**
+     * Sets the port that this server should bind to/listen on.
+     * <p>
+     * If the port is set to 0 (the default value), then this server will bind to an arbitrary free
+     * port chosen by the operating system during startup.
+     * 
+     * @param port The port number.
+     * @throws IllegalArgumentException if port &lt; 0 or port &gt; 65535.
+     */
+    public void setPort(final int port) {
+        if (isValidPort(port)) {
+            this.port = port;
+        } else {
+            throw new IllegalArgumentException("invalid port number");
+        }
+    }
+
+    /**
+     * Sets the maximum size of a message payload this server accepts from clients.
+     * 
+     * @param bytes The maximum number of bytes.
+     * @throws IllegalArgumentException if bytes is &lt; 128.
+     */
+    public void setMaxPayloadSize(final int bytes) {
+        if (bytes <= MIN_PAYLOAD_SIZE) {
+            throw new IllegalArgumentException("minimum message payload size is 128 bytes");
+        }
+        this.maxPayloadSize = bytes;
+    }
+
+    /**
+     * Gets the maximum size of a message payload this server accepts from clients.
+     * 
+     * @return The maximum number of bytes.
+     */
+    public int getMaxPayloadSize() {
+        return maxPayloadSize;
+    }
 
     /**
      * Gets the maximum time to wait for Hono to start up.

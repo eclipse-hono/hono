@@ -32,15 +32,15 @@ spec:
           value: honokeys
         - name: HONO_DOWNSTREAM_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_KEY_STORE_PATH
+        - name: HONO_SERVER_KEY_STORE_PATH
           value: /etc/hono/certs/honoKeyStore.p12
-        - name: HONO_KEY_STORE_PASSWORD
+        - name: HONO_SERVER_KEY_STORE_PASSWORD
           value: honokeys
-        - name: HONO_MAX_INSTANCES
+        - name: HONO_SERVER_MAX_INSTANCES
           value: "1"
         - name: HONO_AUTHORIZATION_PERMISSIONS_PATH
           value: file:/etc/hono/permissions.json
-        - name: HONO_SERVER_BINDADDRESS
+        - name: HONO_SERVER_BIND_ADDRESS
           value: 0.0.0.0
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml

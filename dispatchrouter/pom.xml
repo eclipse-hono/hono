@@ -57,6 +57,11 @@
   <profiles>
     <profile>
       <id>build-docker-image</id>
+      <activation>
+        <property>
+          <name>docker.host</name>
+        </property>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -105,6 +110,9 @@
                         </fileSets>
                       </inline>
                     </assembly>
+                    <runCmds>
+                      <runCmd>dnf -y install cyrus-sasl-sql</runCmd>
+                    </runCmds>
                   </build>
                 </image>
               </images>

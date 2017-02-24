@@ -21,6 +21,7 @@ import java.util.function.BiConsumer;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,17 +60,12 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
 
-    @Value("${hono.http.bindaddress:0.0.0.0}")
-    private String bindAddress;
-
-    @Value("${hono.http.listenport:8080}")
-    private int listenPort;
-
     @Value("${spring.profiles.active:prod}")
     private String activeProfiles;
 
     private HttpServer server;
     private HonoClient hono;
+    private HonoConfigProperties config;
 
     private BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier;
     private BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier;
@@ -83,6 +79,17 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     @Autowired
     public void setHonoClient(final HonoClient honoClient) {
         this.hono = Objects.requireNonNull(honoClient);
+    }
+
+    /**
+     * Sets configuration properties.
+     * 
+     * @param properties The configuration properties to use.
+     * @throws NullPointerException if properties is {@code null}.
+     */
+    @Autowired
+    public void setConfig(final HonoConfigProperties properties) {
+        this.config = Objects.requireNonNull(properties);
     }
 
     @Override
@@ -105,7 +112,8 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
      */
     private Router createRouter() {
         final Router router = Router.router(vertx);
-        router.route().handler(BodyHandler.create().setBodyLimit(2048));
+        LOG.info("limiting size of inbound request body to {} bytes", config.getMaxPayloadSize());
+        router.route().handler(BodyHandler.create().setBodyLimit(config.getMaxPayloadSize()));
 
         router.route(HttpMethod.GET, "/status").handler(this::doGetStatus);
 
@@ -166,11 +174,11 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private void bindHttpServer(final Router router, final Future<Void> startFuture) {
         HttpServerOptions options = new HttpServerOptions();
-        options.setHost(bindAddress).setPort(listenPort).setMaxChunkSize(4096);
+        options.setHost(config.getBindAddress()).setPort(config.getPort()).setMaxChunkSize(4096);
         server = vertx.createHttpServer(options);
         server.requestHandler(router::accept).listen(done -> {
             if (done.succeeded()) {
-                LOG.info("Hono REST adapter running on {}:{}", bindAddress, server.actualPort());
+                LOG.info("Hono REST adapter running on {}:{}", config.getBindAddress(), server.actualPort());
                 startFuture.complete();
             } else {
                 LOG.error("error while starting up Hono REST adapter", done.cause());
