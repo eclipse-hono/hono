@@ -33,7 +33,7 @@ import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -46,16 +46,23 @@ import io.vertx.core.json.JsonObject;
  * Implementation of AuthorizationService that holds acl data in memory i.e. no persistent storage.
  */
 @Component
+@ConfigurationProperties(prefix = "hono.authorization")
 public final class InMemoryAuthorizationService extends BaseAuthorizationService {
 
-    static final Resource DEFAULT_PERMISSIONS_RESOURCE = new ClassPathResource("/permissions.json");
+    static final Resource DEFAULT_PERMISSIONS_RESOURCE = new ClassPathResource("permissions.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
     // holds mapping resource -> acl
     private static final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
     private Resource permissionsResource = DEFAULT_PERMISSIONS_RESOURCE;
 
-    @Value("${hono.permissions.path:classpath:/permissions.json}")
-    public void setPermissionsResource(final Resource permissionsResource) {
+    /**
+     * Set the resource that the authorization rules should be loaded from.
+     * <p>
+     * If not set the default permissions will be loaded from <em>classpath:permissions.json</em>.
+     * 
+     * @param permissionsResource The resource.
+     */
+    public void setPermissionsPath(final Resource permissionsResource) {
         this.permissionsResource = Objects.requireNonNull(permissionsResource);
     }
 

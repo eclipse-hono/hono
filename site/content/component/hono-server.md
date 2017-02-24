@@ -17,6 +17,7 @@ The following table provides an overview of the configuration options the adapte
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------: | :------ | :---------- |
+| `HONO_AUTHORIZATION_PERMISSIONS_PATH`<br>`--hono.authorization.permissionsPath` | no | `classpath:/permissions.json` | The Spring resource URI of the JSON file defining the permissions to Hono's endpoint resources. The default file bundled with Hono defines permissions for the *DEAFAULT_TENANT* only and should only be used for evaluation purposes. |
 | `HONO_SERVER_BINDADDRESS`<br>`--hono.server.bindaddress` | yes | `127.0.0.1` | The IP address the Hono server should bind to. By default the adapter binds to the *loopback device* address, i.e. the adapter will **not** be accessible from other hosts. |
 | `HONO_SERVER_PORT`<br>`--hono.server.port` | yes | `5672` | The port the server should listen on. |
 | `HONO_DOWNSTREAM_HOST`<br>`--hono.downstream.host` | yes | `localhost` | The IP address or name of the downstream *Dispatch Router* host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--link` command line option to link the Hono server container to the host of the *Dispatch Router* container on the Docker network.
@@ -32,15 +33,8 @@ The following table provides an overview of the configuration options the adapte
 | `HONO_TRUST_STORE_PATH`<br>`--hono.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_TRUST_STORE_PASSWORD`<br>`--hono.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_MAX_INSTANCES`<br>`--hono.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
-| `HONO_PERMISSIONS_PATH`<br>`--hono.permissions.path` | no | `classpath:/permissions.json` | The Spring resource URI of the JSON file defining the permissions to Hono's endpoint resources. |
 
 The options only need to be set if the default value does not match your environment.
-
-The permissions file is available at the following path in the Docker image of the Hono server.
-
-| File                                     | Description                                                      |
-| :--------------------------------------- | :--------------------------------------------------------------- |
-| `/etc/hono/permissions.json`          | Example access control lists for Hono's endpoint resources.      |
 
 ## Run as a Docker Container
 

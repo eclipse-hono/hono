@@ -30,7 +30,6 @@ services:
       - HONO_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
       - HONO_KEY_STORE_PASSWORD=honokeys
       - HONO_MAX_INSTANCES=1
-      - HONO_PERMISSIONS_PATH=file:/etc/hono/permissions.json
       - HONO_SERVER_BINDADDRESS=0.0.0.0
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev

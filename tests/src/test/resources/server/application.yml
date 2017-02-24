@@ -1,9 +1,9 @@
 hono:
+  authorization:
+      permissionsPath: file:///etc/hono/permissions.json
   downstream:
     name: hono-server
   maxInstances: 1
-  permissions:
-    path: file:///etc/hono/permissions.json
   server:
     bindaddress: 0.0.0.0
   waitForDownstreamConnectionEnabled: true

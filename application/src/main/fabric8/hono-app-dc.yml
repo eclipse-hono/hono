@@ -38,7 +38,7 @@ spec:
           value: honokeys
         - name: HONO_MAX_INSTANCES
           value: "1"
-        - name: HONO_PERMISSIONS_PATH
+        - name: HONO_AUTHORIZATION_PERMISSIONS_PATH
           value: file:/etc/hono/permissions.json
         - name: HONO_SERVER_BINDADDRESS
           value: 0.0.0.0

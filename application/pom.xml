@@ -138,13 +138,6 @@
                               <include>${project.artifactId}-${project.version}.jar</include>
                             </includes>
                           </fileSet>
-                          <fileSet>
-                            <directory>${project.basedir}/src/main/resources</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
-                            <includes>
-                              <include>permissions.json</include>
-                            </includes>
-                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
