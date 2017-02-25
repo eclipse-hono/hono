@@ -1,0 +1,71 @@
+version: '3.0'
+
+networks:
+  hono-net:
+    driver: overlay
+
+services:
+
+  qdrouter:
+    image: eclipsehono/dispatch-router:0.5-M4
+    networks:
+      - hono-net
+    command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
+    ports:
+      - "15671:5671"
+      - "15672:5672"
+
+  hono:
+    image: eclipsehono/hono-server:0.5-M4
+    networks:
+      - hono-net
+    ports:
+      - "5672:5672"
+    environment:
+      - HONO_DOWNSTREAM_HOST=qdrouter
+      - HONO_DOWNSTREAM_PORT=5673
+      - HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
+      - HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys
+      - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_SERVER_BIND_ADDRESS=0.0.0.0
+      - HONO_SERVER_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
+      - HONO_SERVER_KEY_STORE_PASSWORD=honokeys
+      - HONO_SERVER_MAX_INSTANCES=1
+      - LOGGING_CONFIG=classpath:logback-spring.xml
+      - SPRING_PROFILES_ACTIVE=default,dev
+    volumes:
+      - /home/hono/registration
+
+  rest-adapter:
+    image: eclipsehono/hono-adapter-rest-vertx:0.5-M4
+    networks:
+      - hono-net
+    ports:
+      - "8080:8080"
+    environment:
+      - HONO_CLIENT_NAME=Hono REST Adapter
+      - HONO_CLIENT_HOST=hono
+      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_USERNAME=rest-adapter
+      - HONO_CLIENT_PASSWORD=secret
+      - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_HTTP_BIND_ADDRESS=0.0.0.0
+      - HONO_HTTP_MAX_INSTANCES=1
+      - SPRING_PROFILES_ACTIVE=dev
+
+  mqtt-adapter:
+    image: eclipsehono/hono-adapter-mqtt-vertx:0.5-M4
+    networks:
+      - hono-net
+    ports:
+      - "1883:1883"
+    environment:
+      - HONO_CLIENT_NAME=Hono MQTT Adapter
+      - HONO_CLIENT_HOST=hono
+      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_USERNAME=mqtt-adapter
+      - HONO_CLIENT_PASSWORD=secret
+      - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_MQTT_BIND_ADDRESS=0.0.0.0
+      - HONO_MQTT_MAX_INSTANCES=1
+      - SPRING_PROFILES_ACTIVE=dev
