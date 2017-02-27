@@ -25,7 +25,7 @@ bash -c "while true; do echo \$(date) - building ...; sleep $PING_SLEEP; done" &
 PING_LOOP_PID=$!
 
 # Build Qpid Dispatch Router Docker image
-make
+bash ./dispatchrouter/docker-build.sh
 
 mvn install -Pbuild-docker-image,run-tests >> $BUILD_OUTPUT 2>&1
 
