@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # Assumes that COMMIT, DOCKER_USER and DOCKER_PASS to be set
-REPO=$1
-DIR=$2
+REPO=eclipsehono/qpid-dispatch
+DIR=.
 TAG="latest"
 
 if [ -n "$TRAVIS_TAG" ]
