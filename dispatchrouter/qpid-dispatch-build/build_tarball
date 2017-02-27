@@ -1,0 +1,24 @@
+#!/usr/bin/bash
+
+# set working and output directory
+BASE=`dirname $0`
+ABS_BASE=`cd $BASE && pwd`
+WORKING=`pwd`
+OUTDIR?=${3:-$ABS_BASE}
+
+# download released source code for Qpid Proton and Qpid Dispatch Router from official Apache web site
+wget ${1:-http://archive.apache.org/dist/qpid/dispatch/0.7.0/qpid-dispatch-0.7.0.tar.gz} -O qpid-dispatch.tar.gz
+wget ${2:-http://archive.apache.org/dist/qpid/proton/0.15.0/qpid-proton-0.15.0.tar.gz} -O qpid-proton.tar.gz
+
+# make dirs and untar source code files for building
+mkdir qpid-dispatch-src qpid-proton-src build staging proton_build proton_install
+tar -zxf qpid-dispatch.tar.gz -C qpid-dispatch-src --strip-components 1
+tar -zxf qpid-proton.tar.gz -C qpid-proton-src --strip-components 1
+
+# build Qpid Proton and generating a tar file with its installation
+cd proton_build
+cmake -DCMAKE_INSTALL_PREFIX=$WORKING/proton_install/usr -DCMAKE_BUILD_TYPE=Debug -DBUILD_CPP=OFF -DBUILD_PERL=OFF -DBUILD_RUBY=OFF -DBUILD_JAVA=OFF -DBUILD_GO=OFF -DBUILD_JAVASCRIPT=OFF -DBUILD_PHP=OFF $WORKING/qpid-proton-src/ && make && make install && tar -z -C $WORKING/proton_install/ -cf $OUTDIR/qpid-proton-binary.tar.gz usr
+
+# build Qpid Dispatch Router and generating a tar file with its installation
+cd $WORKING/build
+CMAKE_PREFIX_PATH=$WORKING/proton_install/usr cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCS=OFF -DCONSOLE_INSTALL=OFF -DCMAKE_INSTALL_PREFIX=/usr $WORKING/qpid-dispatch-src/ && make && make DESTDIR=$WORKING/staging/ install && tar -z -C $WORKING/staging/ -cf $OUTDIR/qpid-dispatch-binary.tar.gz usr etc
