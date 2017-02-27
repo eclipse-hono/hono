@@ -24,8 +24,8 @@ trap 'error_handler' ERR
 bash -c "while true; do echo \$(date) - building ...; sleep $PING_SLEEP; done" &
 PING_LOOP_PID=$!
 
-# Build Qpid Proton and Qpid Dispatch Router bits and related Docker image
-#make
+# Build Qpid Dispatch Router Docker image
+make
 
 mvn install -Pbuild-docker-image,run-tests >> $BUILD_OUTPUT 2>&1
 
