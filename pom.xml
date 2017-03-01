@@ -363,7 +363,7 @@
         <version>1.6.7</version>
         <extensions>true</extensions>
         <configuration>
-          <serverId>edc</serverId>
+          <serverId>edc-thirdparty</serverId>
           <nexusUrl>https://repo.bosch-si.com/</nexusUrl>
           <autoReleaseAfterClose>false</autoReleaseAfterClose>
         </configuration>
