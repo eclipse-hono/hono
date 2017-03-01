@@ -344,9 +344,9 @@
           </execution>
         </executions>
       </plugin>
-        <!--
-      <plugin>
 
+      <plugin>
+      <!--
           Use the Nexus Staging plugin as a full replacement for the standard
           Maven Deploy plugin.
           See https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin
@@ -358,7 +358,7 @@
           makes sure that all artifacts of a multi-module project are deployed as a whole
           at the end of the build process instead of deploying each module's artifacts
           individually as part of building the module.
-
+-->
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
         <version>1.6.8</version>
@@ -369,7 +369,7 @@
           <autoReleaseAfterClose>false</autoReleaseAfterClose>
         </configuration>
       </plugin>
--->
+
 
       <!--execute git commands on maven command line, for instance mvn scm:tag -->
       <plugin>
