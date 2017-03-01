@@ -17,6 +17,7 @@ import static java.net.HttpURLConnection.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,17 +49,48 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
 
     private final Map<String, Map<String, JsonObject>> identities = new HashMap<>();
     // the name of the file used to persist the registry content
-    @Value("${hono.registration.filename:device-identities.json}")
     private String filename;
+    private boolean saveToFile;
+
+    /**
+     * Sets the path to the file that the content of the registry should be persisted
+     * periodically.
+     * <p>
+     * Default value is <em>device-identities.json</em>.
+     * 
+     * @param filename The name of the file to persist to (can be a relative or absolute path).
+     */
+    @Value("${hono.registration.filename:device-identities.json}")
+    public void setFilename(final String filename) {
+        this.filename = Objects.requireNonNull(filename);
+    }
+
+    /**
+     * Sets whether the content of the registry should be persisted to the file system
+     * periodically.
+     * <p>
+     * Default value is {@code true}.
+     * 
+     * @param enabled {@code true} if registry content should be persisted.
+     */
+    @Value("${hono.registration.savetofile:true}")
+    public void setSaveToFile(final boolean enabled) {
+        this.saveToFile = enabled;
+    }
 
     @Override
     protected void doStart(Future<Void> startFuture) throws Exception {
 
         if (filename != null) {
             loadRegistrationData();
-            vertx.setPeriodic(3000, saveIdentities -> {
-                saveToFile(Future.future());
-            });
+            if (saveToFile) {
+                log.info("saving device identities to file every 3 seconds");
+                vertx.setPeriodic(3000, saveIdentities -> {
+                    saveToFile(Future.future());
+                });
+            } else {
+                log.info("persistence is disabled, will not safe device identities to file");
+            }
         }
         startFuture.complete();
     }
@@ -96,7 +128,11 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
 
     @Override
     protected void doStop(Future<Void> stopFuture) {
-        saveToFile(stopFuture);
+        if (saveToFile) {
+            saveToFile(stopFuture);
+        } else {
+            stopFuture.complete();
+        }
     }
 
     private void saveToFile(final Future<Void> writeResult) {
