@@ -360,10 +360,10 @@
 -->
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.7</version>
+        <version>1.6.8</version>
         <extensions>true</extensions>
         <configuration>
-          <serverId>edc-thirdparty</serverId>
+          <serverId>edc</serverId>
           <nexusUrl>https://repo.bosch-si.com/</nexusUrl>
           <autoReleaseAfterClose>false</autoReleaseAfterClose>
         </configuration>
