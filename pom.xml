@@ -16,7 +16,7 @@
 
   <groupId>org.eclipse.hono</groupId>
   <artifactId>hono-parent</artifactId>
-  <version>0.5-M5-BOSCH-SNAPSHOT</version>
+  <version>${revision}</version>
   <packaging>pom</packaging>
 
   <name>Hono</name>
@@ -37,7 +37,7 @@
   </licenses>
 
   <scm>
-    <developerConnection>scm:git:ssh://git@imbvl2vm294.bosch-si.com:7999/iothub/eclipse-hono.git</developerConnection>
+    <developerConnection>scm:git:https://products.bosch-si.com/stash/scm/iothub/eclipse-hono.git</developerConnection>
     <url>https://products.bosch-si.com/stash/projects/IOTHUB/repos/eclipse-hono/browse</url>
     <tag>HEAD</tag>
   </scm>
@@ -130,6 +130,8 @@
       when doing a release build, set this property to false.
      -->
     <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
+    <!-- default when no revision property is passed in from the commandline -->
+    <revision>0-SNAPSHOT</revision>
   </properties>
 
   <modules>
@@ -244,7 +246,7 @@
           <version>2.19.1</version>
         </plugin>
         <plugin>
-          <!-- 
+          <!--
             Copy legal documents from "legal" module to "target/classes" folder
             so that we make sure to include legal docs in all modules.
            -->
@@ -305,7 +307,7 @@
         <version>1.4.1</version>
         <executions>
           <execution>
-            <!-- Make sure that only non-snapshot versions are used for the dependencies. 
+            <!-- Make sure that only non-snapshot versions are used for the dependencies.
               Only active when property 'snapshotDependencyAllowed' is false. -->
             <id>enforce-no-snapshots</id>
             <goals>
@@ -342,8 +344,8 @@
           </execution>
         </executions>
       </plugin>
+      <!--
       <plugin>
-        <!-- 
           Use the Nexus Staging plugin as a full replacement for the standard
           Maven Deploy plugin.
           See https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin
@@ -355,7 +357,7 @@
           makes sure that all artifacts of a multi-module project are deployed as a whole
           at the end of the build process instead of deploying each module's artifacts
           individually as part of building the module.
-         -->
+
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
         <version>1.6.7</version>
@@ -364,6 +366,16 @@
           <serverId>ossrh</serverId>
           <nexusUrl>https://oss.sonatype.org/</nexusUrl>
           <autoReleaseAfterClose>false</autoReleaseAfterClose>
+        </configuration>
+      </plugin>
+      -->
+
+      <!--execute git commands on maven command line, for instance mvn scm:tag -->
+      <plugin>
+        <artifactId>maven-scm-plugin</artifactId>
+        <version>1.9.4</version>
+        <configuration>
+          <tag>${project.artifactId}-${project.version}</tag>
         </configuration>
       </plugin>
     </plugins>
