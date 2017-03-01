@@ -32,6 +32,7 @@ import io.vertx.proton.ProtonReceiver;
  */
 public class UpstreamReceiverImpl implements UpstreamReceiver {
 
+    private static final int DEFAULT_LINK_CREDIT = 20;
     private static final Logger LOG = LoggerFactory.getLogger(UpstreamReceiverImpl.class);
     private ProtonReceiver link;
     private String id;
@@ -43,9 +44,18 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
     }
 
     @Override
-    public void replenish(final int replenishedCredits) {
-        LOG.debug("replenishing client [{}] with {} credits", id, replenishedCredits);
-        link.flow(replenishedCredits);
+    public void replenish(final int downstreamCredit) {
+
+        int remainingCredit = link.getCredit();
+        int maxCredit = Math.min(DEFAULT_LINK_CREDIT, downstreamCredit);
+        int credit = maxCredit - remainingCredit;
+        if (link.getCredit() <= 0) {
+            credit = maxCredit;
+        }
+        if (credit > 0) {
+            LOG.debug("replenishing client [{}] with {} credits", id, credit);
+            link.flow(credit);
+        }
     }
 
     @Override

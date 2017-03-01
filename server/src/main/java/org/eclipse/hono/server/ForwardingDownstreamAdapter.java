@@ -34,6 +34,7 @@ import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
@@ -258,9 +259,9 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             final ProtonSender replenishedSender,
             final UpstreamReceiver client) {
 
-        int credits = getAvailableCredit(replenishedSender);
-        logger.trace("received FLOW from downstream sender for upstream client [con:{}, link: {}, credits: {}, drain: {}",
-                client.getConnectionId(), client.getLinkId(), credits, replenishedSender.getDrain());
+        logger.trace("received FLOW from downstream sender [con:{}, link: {}, credits: {}, queued: {}, drain: {}",
+                client.getConnectionId(), client.getLinkId(), replenishedSender.getCredit(),
+                replenishedSender.getQueued(), replenishedSender.getDrain());
         if (replenishedSender.getDrain()) {
             // send drain request upstream and act upon result of request to drain upstream client
             client.drain(10000, drainAttempt -> {
@@ -269,7 +270,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 }
             });
         } else {
-            client.replenish(credits);
+            int downstreamCredit = replenishedSender.getCredit() - replenishedSender.getQueued();
+            if (downstreamCredit > 0) {
+                client.replenish(downstreamCredit);
+            } else {
+                // queue is already full, prevent upstream client from sending additional messages
+            }
         }
     }
 
@@ -294,6 +300,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         return String.format("%s/%s", targetAddress.getEndpoint(), targetAddress.getTenantId());
     }
 
+    /**
+     * Associates a downstream sender with a corresponding upstream client.
+     * 
+     * @param link The upstream client.
+     * @param sender The downstream sender.
+     */
     public final void addSender(final UpstreamReceiver link, final ProtonSender sender) {
         sender.attachments().set(Constants.KEY_CONNECTION_ID, String.class, link.getConnectionId());
         sender.setAutoDrained(false); // we need to propagate drain requests upstream and wait for the result
@@ -304,11 +316,6 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             sendersPerConnection.put(link.getConnectionId(), senders);
         }
         senders.add(link);
-    }
-
-    private static int getAvailableCredit(final ProtonSender sender) {
-        // TODO: is it correct to subtract the queued messages?
-        return sender.getCredit() - sender.getQueued();
     }
 
     @Override
@@ -366,7 +373,23 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             logger.info("no downstream sender for link [{}] available, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
         } else if (sender.isOpen()) {
-            forwardMessage(sender, msg, delivery);
+            if (sender.getCredit() <= 0) {
+                if (delivery.remotelySettled()) {
+                    // sender has sent the message pre-settled, i.e. we can simply discard the message
+                    logger.debug("no downstream credit available for link [{}], discarding message [{}]",
+                            client.getLinkId(), msg.getMessageId());
+                    ProtonHelper.accepted(delivery, true);
+                } else {
+                    // sender needs to be informed that we cannot process the message
+                    logger.debug("no downstream credit available for link [{}], releasing message [{}]",
+                            client.getLinkId(), msg.getMessageId());
+                    ProtonHelper.released(delivery, true);
+                }
+            } else {
+                logger.trace("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}], credit available: {}, queued: {}",
+                        msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer(), sender.getCredit(), sender.getQueued());
+                forwardMessage(sender, msg, delivery);
+            }
         } else {
             logger.warn("downstream sender for link [{}] is not open, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
