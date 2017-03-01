@@ -22,7 +22,6 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.support.GenericTypeAwareAutowireCandidateResolver;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
@@ -39,6 +38,11 @@ import io.vertx.core.json.JsonObject;
  * indicated in the message.
  */
 public abstract class BaseRegistrationService extends AbstractVerticle implements RegistrationService {
+
+    protected static final String FIELD_DATA      = "data";
+    protected static final String FIELD_ENABLED   = "enabled";
+    protected static final String FIELD_HONO_ID   = "id";
+
 
     /**
      * A logger to be shared by subclasses.
@@ -106,36 +110,44 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
 
     public final void processRegistrationMessage(final Message<JsonObject> regMsg) {
 
-        final JsonObject body = regMsg.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String key = body.getString(RegistrationConstants.APP_PROPERTY_KEY);
-        final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
-        final JsonObject payload = body.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
+        try {
+            final JsonObject body = regMsg.body();
+            final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+            final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+            final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
 
-        switch (action) {
-        case ACTION_GET:
-            log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-            getDevice(tenantId, deviceId, result -> reply(regMsg, result));
-            break;
-        case ACTION_FIND:
-            log.debug("looking up device [key: {}, value: {}] of tenant [{}]", key, deviceId, tenantId);
-            findDevice(tenantId, key, deviceId, result -> reply(regMsg, result));
-            break;
-        case ACTION_REGISTER:
-            log.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
-            addDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
-            break;
-        case ACTION_UPDATE:
-            log.debug("updating registration for device [{}] of tenant [{}] with data {}", deviceId, tenantId, payload.encode());
-            updateDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
-            break;
-        case ACTION_DEREGISTER:
-            log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
-            removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
-            break;
-        default:
-            log.info("action [{}] not supported", action);
+            switch (action) {
+            case ACTION_GET:
+                log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
+                getDevice(tenantId, deviceId, result -> reply(regMsg, result));
+                break;
+            case ACTION_FIND:
+                final String key = body.getString(RegistrationConstants.APP_PROPERTY_KEY);
+                log.debug("looking up device [key: {}, value: {}] of tenant [{}]", key, deviceId, tenantId);
+                findDevice(tenantId, key, deviceId, result -> reply(regMsg, result));
+                break;
+            case ACTION_REGISTER:
+                JsonObject payload = getRequestPayload(body);
+                log.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId,
+                        payload != null ? payload.encode() : null);
+                addDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
+                break;
+            case ACTION_UPDATE:
+                payload = getRequestPayload(body);
+                log.debug("updating registration for device [{}] of tenant [{}] with data {}", deviceId, tenantId,
+                        payload != null ? payload.encode() : null);
+                updateDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
+                break;
+            case ACTION_DEREGISTER:
+                log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
+                removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
+                break;
+            default:
+                log.info("action [{}] not supported", action);
+                reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
+            }
+        } catch (ClassCastException e) {
+            log.debug("malformed request message");
             reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
         }
     }
@@ -156,6 +168,30 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
 
         request.reply(RegistrationConstants.getReply(tenantId, deviceId, result));
+    }
+
+    private final JsonObject getRequestPayload(final JsonObject request) {
+
+        final JsonObject payload = request.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
+        Boolean enabled = payload.getBoolean(FIELD_ENABLED);
+        if (enabled == null) {
+            log.debug("adding 'enabled' key to payload");
+            payload.put(FIELD_ENABLED, Boolean.TRUE);
+        }
+        return payload;
+    }
+
+    /**
+     * Wraps a given device ID and registration data into a JSON structure suitable
+     * to be returned to clients as the result of a registration operation.
+     * 
+     * @param id The device ID.
+     * @param data The registration data.
+     * @return The JSON structure.
+     */
+    protected final static JsonObject getResultPayload(final String id, final JsonObject data) {
+
+        return new JsonObject().put(FIELD_HONO_ID, id).put(FIELD_DATA, data);
     }
 
 }

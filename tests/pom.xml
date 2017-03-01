@@ -114,7 +114,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>qpid,prod</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>registration-file,qpid,prod</SPRING_PROFILES_ACTIVE>
                     </env>
                     <log>
                       <prefix>HONO</prefix>
@@ -252,7 +252,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>activemq,prod</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>registration-file,activemq,prod</SPRING_PROFILES_ACTIVE>
                     </env>
                     <log>
                       <prefix>HONO</prefix>
