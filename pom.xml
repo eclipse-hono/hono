@@ -37,8 +37,8 @@
   </licenses>
 
   <scm>
-    <developerConnection>scm:git:https://github.com/eclipse/hono.git</developerConnection>
-    <url>https://github.com/eclipse/hono</url>
+    <developerConnection>scm:git:ssh://git@imbvl2vm294.bosch-si.com:7999/iothub/eclipse-hono.git</developerConnection>
+    <url>https://products.bosch-si.com/stash/projects/IOTHUB/repos/eclipse-hono/browse</url>
     <tag>HEAD</tag>
   </scm>
 
@@ -48,16 +48,17 @@
   </issueManagement>
 
   <distributionManagement>
-    <repository>
-      <id>repo.eclipse.org</id>
-      <name>Hono Releases</name>
-      <url>https://repo.eclipse.org/content/repositories/hono-releases/</url>
-    </repository>
     <snapshotRepository>
-      <id>repo.eclipse.org</id>
-      <name>Hono Snapshots</name>
-      <url>https://repo.eclipse.org/content/repositories/hono-snapshots/</url>
+      <id>3rdparty-snapshots</id>
+      <name>inst-thirdparty-snapshots</name>
+      <uniqueVersion>false</uniqueVersion>
+      <url>https://repo.bosch-si.com/content/repositories/inst-thirdparty-snapshots</url>
     </snapshotRepository>
+    <repository>
+      <id>edc</id>
+      <name>edc-thirdparty</name>
+      <url>https://repo.bosch-si.com/content/repositories/edc-thirdparty</url>
+    </repository>
   </distributionManagement>
 
   <developers>
