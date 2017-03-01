@@ -57,7 +57,7 @@ abstract class ClientTestBase {
     private static final int DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
     private static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
     // test constants
-    private static final int MSG_COUNT = 50;
+    private static final int MSG_COUNT = 1000;
     private static final String TEST_TENANT_ID = "DEFAULT_TENANT";
     private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
 
@@ -217,6 +217,7 @@ abstract class ClientTestBase {
 
         setup.await(1000);
 
+        long start = System.currentTimeMillis();
         IntStream.range(0, MSG_COUNT).forEach(i -> {
             Async latch = ctx.async();
             sender.send(DEVICE_ID, "payload" + i, CONTENT_TYPE_TEXT_PLAIN, capacityAvailable -> {
@@ -228,6 +229,7 @@ abstract class ClientTestBase {
 
         received.await(5000);
         accepted.await(5000);
+        LOGGER.info("sending and receiving {} messages took {} milliseconds", MSG_COUNT, System.currentTimeMillis() - start);
     }
 
     abstract void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker);
