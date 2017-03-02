@@ -213,6 +213,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         for (UpstreamReceiver client : activeSenders.keySet()) {
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
         }
+        sendersPerConnection.clear();
         activeSenders.clear();
         con.disconnectHandler(null);
         con.disconnect();
@@ -235,7 +236,8 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         Objects.requireNonNull(client);
         Objects.requireNonNull(resultHandler);
 
-        if (activeSenders.containsKey(client.getLinkId())) {
+        ProtonSender sender = activeSenders.get(client.getLinkId());
+        if (sender != null && sender.isOpen()) {
             logger.info("reusing existing downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
             resultHandler.handle(Future.succeededFuture());
         } else {
@@ -249,12 +251,21 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                             resultHandler.handle(Future.succeededFuture());
                         } else {
                             logger.warn("can't create downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId(), creationAttempt.cause());
+                            removeSender(client);
                             resultHandler.handle(Future.failedFuture(creationAttempt.cause()));
                         }
                     });
         }
     }
 
+    /**
+     * Invoked when a downstream sender receives link credit and/or a drain request from the downstream container.
+     * <p>
+     * The credits/drain request is forwarded to the corresponding upstream client.
+     * 
+     * @param replenishedSender The downstream sender that has received the FLOW.
+     * @param client The upstream client associated with the sender.
+     */
     public final void handleFlow(
             final ProtonSender replenishedSender,
             final UpstreamReceiver client) {
@@ -318,6 +329,25 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         senders.add(link);
     }
 
+    /**
+     * Removes all state kept for an upstream client.
+     * <p>
+     * Any downstream sender associated with the client is closed.
+     * 
+     * @param link The upstream client.
+     */
+    public final void removeSender(final UpstreamReceiver link) {
+        List<UpstreamReceiver> senders = sendersPerConnection.get(link.getConnectionId());
+        if (senders != null) {
+            senders.remove(link);
+        }
+        ProtonSender downstreamSender = activeSenders.remove(link);
+        if (downstreamSender != null && downstreamSender.isOpen()) {
+            logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
+            downstreamSender.close();
+        }
+    }
+
     @Override
     public final void onClientDetach(final UpstreamReceiver client) {
 
@@ -327,19 +357,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
         Objects.requireNonNull(client);
 
-        closeSender(client);
-        List<UpstreamReceiver> senders = sendersPerConnection.get(client.getConnectionId());
-        if (senders != null) {
-            senders.remove(client);
-        }
-    }
-
-    private void closeSender(final UpstreamReceiver link) {
-        ProtonSender sender = activeSenders.remove(link);
-        if (sender != null && sender.isOpen()) {
-            logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
-            sender.close();
-        }
+        removeSender(client);
     }
 
     @Override
@@ -355,6 +373,14 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             for (UpstreamReceiver link : senders) {
                 closeSender(link);
             }
+        }
+    }
+
+    private void closeSender(final UpstreamReceiver link) {
+        ProtonSender sender = activeSenders.remove(link);
+        if (sender != null && sender.isOpen()) {
+            logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
+            sender.close();
         }
     }
 
@@ -395,6 +421,24 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
             onClientDetach(client);
         }
+    }
+
+    /**
+     * Checks if there are any downstream senders associated with upstream clients.
+     * 
+     * @return {@code true} if there are.
+     */
+    protected boolean isActiveSendersEmpty() {
+        return activeSenders != null && activeSenders.isEmpty();
+    }
+
+    /**
+     * Checks if there are any downstream senders associated with a particular upstream client connection.
+     * 
+     * @return {@code true} if there are.
+     */
+    protected boolean isSendersPerConnectionEmpty() {
+        return sendersPerConnection != null && sendersPerConnection.isEmpty();
     }
 
     /**
