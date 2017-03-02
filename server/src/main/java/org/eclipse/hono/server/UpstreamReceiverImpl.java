@@ -13,6 +13,7 @@
 package org.eclipse.hono.server;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.util.Constants;
@@ -20,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -32,8 +34,10 @@ import io.vertx.proton.ProtonReceiver;
  */
 public class UpstreamReceiverImpl implements UpstreamReceiver {
 
-    private static final int DEFAULT_LINK_CREDIT = 20;
+    private static final int DEFAULT_LINK_CREDIT = 40;
+    private static final int MIN_LINK_CREDIT = 20;
     private static final Logger LOG = LoggerFactory.getLogger(UpstreamReceiverImpl.class);
+    private final AtomicBoolean drainFlag = new AtomicBoolean(false);
     private ProtonReceiver link;
     private String id;
 
@@ -47,21 +51,28 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
     public void replenish(final int downstreamCredit) {
 
         int remainingCredit = link.getCredit();
-        int maxCredit = Math.min(DEFAULT_LINK_CREDIT, downstreamCredit);
-        int credit = maxCredit - remainingCredit;
-        if (link.getCredit() <= 0) {
-            credit = maxCredit;
-        }
-        if (credit > 0) {
+        if (downstreamCredit > 0 && remainingCredit <= MIN_LINK_CREDIT) {
+            int credit = Math.min(DEFAULT_LINK_CREDIT, downstreamCredit);
             LOG.debug("replenishing client [{}] with {} credits", id, credit);
             link.flow(credit);
+        } else {
+            // link has remaining credit, no need to replenish yet
         }
     }
 
     @Override
     public void drain(final long timeoutMillis, final Handler<AsyncResult<Void>> drainCompletionHandler) {
-        LOG.debug("draining client [{}]", id);
-        link.drain(timeoutMillis, drainCompletionHandler);
+        if (drainFlag.compareAndSet(false, true)) {
+            LOG.debug("draining client [{}]", id);
+            link.drain(timeoutMillis, result -> {
+                drainFlag.set(false);
+                drainCompletionHandler.handle(result);
+            });
+        } else {
+            // already draining
+            LOG.debug("already draining client, discarding additional drain request");
+            drainCompletionHandler.handle(Future.succeededFuture());
+        }
     }
 
     @Override

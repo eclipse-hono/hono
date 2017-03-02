@@ -281,13 +281,13 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 }
             });
         } else {
-            int downstreamCredit = replenishedSender.getCredit() - replenishedSender.getQueued();
-            if (downstreamCredit > 0) {
-                client.replenish(downstreamCredit);
-            } else {
-                // queue is already full, prevent upstream client from sending additional messages
-            }
+            int downstreamCredit = getAvailableDownstreamCredit(replenishedSender);
+            client.replenish(downstreamCredit);
         }
+    }
+
+    private static int getAvailableDownstreamCredit(final ProtonSender downstreamSender) {
+        return Math.max(0, downstreamSender.getCredit() - downstreamSender.getQueued());
     }
 
     private void createSender(
@@ -412,6 +412,8 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     ProtonHelper.released(delivery, true);
                 }
             } else {
+                // make sure upstream client does not starve before more credits flow in from downstream container
+                client.replenish(getAvailableDownstreamCredit(sender));
                 logger.trace("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}], credit available: {}, queued: {}",
                         msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer(), sender.getCredit(), sender.getQueued());
                 forwardMessage(sender, msg, delivery);
