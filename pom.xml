@@ -381,7 +381,7 @@
         <artifactId>maven-scm-plugin</artifactId>
         <version>1.9.4</version>
         <configuration>
-          <tag>${project.artifactId}-${project.version}</tag>
+          <tag>hono-${project.version}</tag>
         </configuration>
       </plugin>
 
@@ -389,7 +389,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>flatten-maven-plugin</artifactId>
-        <!--<version>1.0.0</version>-->
+        <version>1.0.0</version>
         <configuration>
           <!--flattenMode>minimum</flattenMode-->
         </configuration>
