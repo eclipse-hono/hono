@@ -57,6 +57,8 @@ public interface MessageSender {
      * </pre>
      * 
      * @param handler The handler to invoke when this sender has been replenished with credit.
+     * @throws IllegalStateException if there already is a handler registered. Note that this means
+     *                               that this sender is already waiting for credit.
      */
     void sendQueueDrainHandler(Handler<Void> handler);
 
