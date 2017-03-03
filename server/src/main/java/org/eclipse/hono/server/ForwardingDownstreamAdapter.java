@@ -270,7 +270,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             final ProtonSender replenishedSender,
             final UpstreamReceiver client) {
 
-        logger.trace("received FLOW from downstream sender [con:{}, link: {}, credits: {}, queued: {}, drain: {}",
+        logger.debug("received FLOW from downstream sender [con:{}, link: {}, credits: {}, queued: {}, drain: {}",
                 client.getConnectionId(), client.getLinkId(), replenishedSender.getCredit(),
                 replenishedSender.getQueued(), replenishedSender.getDrain());
         if (replenishedSender.getDrain()) {
