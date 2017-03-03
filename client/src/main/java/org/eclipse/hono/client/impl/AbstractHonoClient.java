@@ -12,15 +12,12 @@
 
 package org.eclipse.hono.client.impl;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -32,17 +29,24 @@ import io.vertx.proton.ProtonSender;
  * <p>
  * Holds a sender and a receiver to an AMQP 1.0 server and provides
  * support for closing these links gracefully.
- * </p>
  */
 public abstract class AbstractHonoClient {
 
-    protected static final Logger     LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
-    protected static final int        DEFAULT_RECEIVER_CREDITS    = 20;
+    /**
+     * The number of credits to flow to senders by default.
+     */
+    protected static final int    DEFAULT_SENDER_CREDITS = 50;
+    private static final Logger   LOG                    = LoggerFactory.getLogger(AbstractHonoClient.class);
 
-    protected ProtonSender            sender;
-    protected ProtonReceiver          receiver;
-    protected Context                 context;
+    protected ProtonSender        sender;
+    protected ProtonReceiver      receiver;
+    protected Context             context;
 
+    /**
+     * Creates a client for a vert.x context.
+     * 
+     * @param context The context to run all interactions with the server on.
+     */
     protected AbstractHonoClient(final Context context) {
         this.context = Objects.requireNonNull(context);
     }

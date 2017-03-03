@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,37 @@ public class EventConsumerImpl extends AbstractHonoClient implements MessageCons
         this.receiver = receiver;
     }
 
+    /**
+     * Creates a new event consumer for a tenant.
+     * 
+     * @param context The vert.x context to run all interactions with the server on.
+     * @param con The AMQP connection to the server.
+     * @param tenantId The tenant to consumer events for.
+     * @param eventConsumer The consumer to invoke with each event received.
+     * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static void create(
+            final Context context,
+            final ProtonConnection con,
+            final String tenantId,
+            final Consumer<Message> eventConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+
+        create(context, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, eventConsumer, creationHandler);
+    }
+
+    /**
+     * Creates a new event consumer for a tenant.
+     * 
+     * @param context The vert.x context to run all interactions with the server on.
+     * @param con The AMQP connection to the server.
+     * @param tenantId The tenant to consumer events for.
+     * @param pathSeparator The address path separator character used by the server.
+     * @param eventConsumer The consumer to invoke with each event received.
+     * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
     public static void create(
             final Context context,
             final ProtonConnection con,
@@ -49,9 +81,12 @@ public class EventConsumerImpl extends AbstractHonoClient implements MessageCons
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
+        Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(pathSeparator);
+        Objects.requireNonNull(eventConsumer);
+        Objects.requireNonNull(creationHandler);
         createConsumer(context, con, tenantId, pathSeparator, eventConsumer).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
@@ -74,7 +109,7 @@ public class EventConsumerImpl extends AbstractHonoClient implements MessageCons
 
         context.runOnContext(open -> {
             final ProtonReceiver receiver = con.createReceiver(targetAddress);
-            receiver.setAutoAccept(true).setPrefetch(DEFAULT_RECEIVER_CREDITS);
+            receiver.setAutoAccept(true).setPrefetch(DEFAULT_SENDER_CREDITS);
             receiver.openHandler(receiverOpen -> {
                 if (receiverOpen.succeeded()) {
                     LOG.debug("event receiver for [{}] open", receiverOpen.result().getRemoteSource());

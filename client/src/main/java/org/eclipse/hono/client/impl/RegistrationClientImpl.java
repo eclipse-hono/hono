@@ -82,7 +82,7 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
             final ProtonReceiver receiver = con.createReceiver(registrationReplyToAddress);
             receiver
                 .setAutoAccept(true)
-                .setPrefetch(DEFAULT_RECEIVER_CREDITS)
+                .setPrefetch(DEFAULT_SENDER_CREDITS)
                 .handler((delivery, message) -> {
                     final Handler<AsyncResult<RegistrationResult>> handler = replyMap.remove(message.getCorrelationId());
                     if (handler != null) {
@@ -117,6 +117,15 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
         return RegistrationResult.from(Integer.valueOf(status), payload);
     }
 
+    /**
+     * Creates a new registration client for a tenant.
+     * 
+     * @param context The vert.x context to run all interactions with the server on.
+     * @param con The AMQP connection to the server.
+     * @param tenantId The tenant to consumer events for.
+     * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
     public static void create(final Context context, final ProtonConnection con, final String tenantId,
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
 
