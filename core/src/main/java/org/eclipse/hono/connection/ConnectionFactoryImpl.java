@@ -125,6 +125,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
         if (conAttempt.failed()) {
             logger.warn("can't connect to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
                     config.getHost(), config.getPort(), conAttempt.cause());
+            connectionResultHandler.handle(Future.failedFuture(conAttempt.cause()));
         } else {
             logger.info("connected to AMQP 1.0 container [{}://{}:{}], opening connection ...",
                     clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort());
