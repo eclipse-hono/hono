@@ -20,8 +20,13 @@ public final class IntegrationTestSupport {
 
     public static final String PROPERTY_HONO_HOST = "hono.host";
     public static final String PROPERTY_HONO_PORT = "hono.amqp.port";
+    public static final String PROPERTY_HONO_USERNAME = "hono.username";
+    public static final String PROPERTY_HONO_PASSWORD = "hono.password";
     public static final String PROPERTY_DOWNSTREAM_HOST = "downstream.host";
     public static final String PROPERTY_DOWNSTREAM_PORT = "downstream.amqp.port";
+    public static final String PROPERTY_DOWNSTREAM_USERNAME = "downstream.username";
+    public static final String PROPERTY_DOWNSTREAM_PASSWORD = "downstream.password";
+    public static final String PROPERTY_TENANT = "tenant";
 
     private IntegrationTestSupport() {
         // prevent instantiation

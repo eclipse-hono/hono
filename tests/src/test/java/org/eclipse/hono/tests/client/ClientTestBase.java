@@ -18,6 +18,7 @@ import static java.net.HttpURLConnection.HTTP_CREATED;
 import static org.eclipse.hono.tests.IntegrationTestSupport.*;
 
 import java.net.InetAddress;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -27,6 +28,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
@@ -44,7 +46,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClientOptions;
 
-abstract class ClientTestBase {
+public abstract class ClientTestBase {
 
     protected static final String DEVICE_ID = "device-0";
     protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
@@ -53,12 +55,16 @@ abstract class ClientTestBase {
     private static final String DEFAULT_HOST = InetAddress.getLoopbackAddress().getHostAddress();
     private static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, DEFAULT_HOST);
     private static final int HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
+    private static final String HONO_USER = System.getProperty(PROPERTY_HONO_USERNAME, "hono-client");
+    private static final String HONO_PWD = System.getProperty(PROPERTY_HONO_PASSWORD, "secret");
     private static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, DEFAULT_HOST);
     private static final int DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
+    private static final String DOWNSTREAM_USER = System.getProperty(PROPERTY_DOWNSTREAM_USERNAME, "user1@HONO");
+    private static final String DOWNSTREAM_PWD = System.getProperty(PROPERTY_DOWNSTREAM_PASSWORD, "pw");
     private static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
     // test constants
-    private static final int MSG_COUNT = 1000;
-    private static final String TEST_TENANT_ID = "DEFAULT_TENANT";
+    private static final int MSG_COUNT = Integer.getInteger("msg.count", 1000);
+    private static final String TEST_TENANT_ID = System.getProperty(PROPERTY_TENANT, Constants.DEFAULT_TENANT);
     private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
 
     private static Vertx vertx = Vertx.vertx();
@@ -90,8 +96,8 @@ abstract class ClientTestBase {
                 .host(DOWNSTREAM_HOST)
                 .port(DOWNSTREAM_PORT)
                 .pathSeparator(PATH_SEPARATOR)
-                .user("user1@HONO")
-                .password("pw")
+                .user(DOWNSTREAM_USER)
+                .password(DOWNSTREAM_PWD)
                 .build());
         downstreamClient.connect(new ProtonClientOptions(), downstreamTracker.completer());
 
@@ -102,8 +108,8 @@ abstract class ClientTestBase {
                 .vertx(vertx)
                 .host(HONO_HOST)
                 .port(HONO_PORT)
-                .user("hono-client")
-                .password("secret")
+                .user(HONO_USER)
+                .password(HONO_PWD)
                 .build());
         honoClient.connect(new ProtonClientOptions(), honoTracker.completer());
         honoTracker.compose(hono -> {
@@ -181,7 +187,7 @@ abstract class ClientTestBase {
         shutdown.await(2000);
     }
 
-    @Test(timeout = 5000)
+    @Test
     public void testSendingMessages(final TestContext ctx) throws Exception {
 
         final Async received = ctx.async(MSG_COUNT);
@@ -195,7 +201,6 @@ abstract class ClientTestBase {
         }));
 
         sender.setDispositionHandler((id, disposition) -> accepted.countDown());
-
 
         Future<RegistrationResult> regTracker = Future.future();
         registrationClient.register(DEVICE_ID, null, regTracker.completer());
@@ -218,18 +223,23 @@ abstract class ClientTestBase {
         setup.await(1000);
 
         long start = System.currentTimeMillis();
+        final AtomicInteger messagesSent = new AtomicInteger();
         IntStream.range(0, MSG_COUNT).forEach(i -> {
             Async latch = ctx.async();
             sender.send(DEVICE_ID, "payload" + i, CONTENT_TYPE_TEXT_PLAIN, capacityAvailable -> {
                 latch.complete();
+                if (messagesSent.incrementAndGet() % 200 == 0) {
+                    LOGGER.info("messages sent: {}", messagesSent.get());
+                }
             });
-            LOGGER.trace("sent message {}", i);
             latch.await();
         });
 
-        received.await(5000);
-        accepted.await(5000);
-        LOGGER.info("sending and receiving {} messages took {} milliseconds", MSG_COUNT, System.currentTimeMillis() - start);
+        long timeToWait = Math.min(5000, Math.round(MSG_COUNT * 1.2));
+        received.await(timeToWait);
+        accepted.await(timeToWait);
+        LOGGER.info("sent {} and received {} messages after {} milliseconds",
+                messagesSent.get(), MSG_COUNT - received.count(), System.currentTimeMillis() - start);
     }
 
     abstract void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker);
