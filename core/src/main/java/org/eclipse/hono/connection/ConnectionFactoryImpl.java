@@ -107,7 +107,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
         logger.info("connecting to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
                 config.getHost(), config.getPort());
         client.connect(
-                options,
+                clientOptions,
                 config.getHost(),
                 config.getPort(),
                 config.getUsername(),
@@ -220,7 +220,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
          * server.
          * 
          * @param name The client's container name.
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder name(final String name) {
             this.properties.setName(name);
@@ -228,8 +228,10 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
         }
 
         /**
-         * @param vertx the Vertx instance to use for the client (may be {@code null})
-         * @return the builder instance
+         * Sets the vert.x instance to use for running the AMQP protocol.
+         * 
+         * @param vertx The vert.x instance to use. A new instance will be created if not set or {@code null}.
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder vertx(final Vertx vertx) {
             this.vertx = vertx;
@@ -238,7 +240,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
         /**
          * @param host the Hono host
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder host(final String host) {
             this.properties.setHost(host);
@@ -247,7 +249,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
         /**
          * @param port the Hono port
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder port(final int port) {
             this.properties.setPort(port);
@@ -256,7 +258,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
         /**
          * @param user username used to authenticate
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder user(final String user) {
             this.properties.setUsername(user);
@@ -265,7 +267,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
         /**
          * @param password the secret used to authenticate
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder password(final String password) {
             this.properties.setPassword(password);
@@ -274,7 +276,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
         /**
          * @param pathSeparator the character to use to separate the segments of message addresses.
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder pathSeparator(final String pathSeparator) {
             this.properties.setPathSeparator(pathSeparator);
@@ -285,7 +287,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
          * Sets the path to the PKCS12 key store to load certificates of trusted CAs from.
          * 
          * @param path The absolute path to the key store.
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder trustStorePath(final String path) {
             this.properties.setTrustStorePath(path);
@@ -297,7 +299,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
          * of trusted CAs.
          * 
          * @param password The password to set.
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder trustStorePassword(final String password) {
             this.properties.setTrustStorePassword(password);
@@ -310,7 +312,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
          * <p>
          * Verification is enabled by default.
          * 
-         * @return the builder instance
+         * @return This builder for command chaining.
          */
         public ConnectionFactoryBuilder disableHostnameVerification() {
             this.properties.setHostnameVerificationRequired(false);
@@ -325,13 +327,12 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
          */
         public ConnectionFactory build() {
             if (vertx == null) {
-                throw new IllegalStateException("Vertx instance must be set");
-            }else {
-                ConnectionFactoryImpl impl = new ConnectionFactoryImpl();
-                impl.setVertx(vertx);
-                impl.setClientConfig(properties);
-                return impl;
+                vertx = Vertx.vertx();
             }
+            ConnectionFactoryImpl impl = new ConnectionFactoryImpl();
+            impl.setVertx(vertx);
+            impl.setClientConfig(properties);
+            return impl;
         }
     }
 }

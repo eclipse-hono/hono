@@ -86,6 +86,18 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-autoconfigure</artifactId>
     </dependency>
+    <dependency>
+     <groupId>io.netty</groupId>
+     <artifactId>netty-handler</artifactId>
+     <version>${netty.version}</version>
+     <scope>test</scope>
+    </dependency>
+    <dependency>
+     <groupId>io.netty</groupId>
+     <artifactId>netty-resolver-dns</artifactId>
+     <version>${netty.version}</version>
+     <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
