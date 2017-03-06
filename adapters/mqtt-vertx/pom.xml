@@ -13,6 +13,8 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-mqtt-server</artifactId>
       <version>${vertx-mqtt.version}</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/vertx-mqtt-server-3.4.0-20161128.154251-24.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
