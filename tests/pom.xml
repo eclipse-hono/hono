@@ -14,7 +14,6 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>hono-tests</artifactId>
-  <packaging>pom</packaging>
 
   <name>Hono Integration Tests</name>
   <description>Integration tests verifying Hono's APIs.
@@ -67,7 +66,19 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>qpid-jms-client</artifactId>
     </dependency>
   </dependencies>
-
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.8</version>
+        <extensions>true</extensions>
+        <configuration>
+          <skipStaging>true</skipStaging>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
   <profiles>
     <profile>
       <id>run-tests</id>
