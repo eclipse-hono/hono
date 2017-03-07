@@ -64,6 +64,7 @@ Add to your pom.xml:
       <version>0.5-M4</version>
 </dependency>
 ```
+  
 ### Copy truststore
 
 For the encrypted communication with Hono, please copy the provided truststore from the Hono project, e.g. like
@@ -247,7 +248,7 @@ The message sender instance is constructed in the senderFuture and can be access
 Here the flow control of the AMQP protocol is relevant: the `HonoClient` considers the available credits and invokes the callback once as soon as there are enough credits to send. 
 At the time the callback is invoked the message was sent already.
 
-The callback itself counts down a latch ("messageSenderLatch") which has blocked the main thread. If the latch was counted down, the main thread continues and sends the next message.
+The callback itself counts down a latch `messageSenderLatch` which has blocked the main thread. If the latch was counted down, the main thread continues and sends the next message.
 
 
 ### Insert logger
@@ -273,3 +274,30 @@ You can use the example receiver of the Hono project for that (please see the [G
 ## Flow control
 If you do not have a consumer registered with Hono and start the sender, no credits at all will be available and the sender of this example will wait for being allowed to send the very first message.
 If you start the consumer now, the sender soon will get credits and starts to send it's messages until the configured number of messages was sent.
+
+## Use a nightly build of Hono
+Sometimes you may want to use the most current build of Hono that is available (usually nightly snapshots).
+
+For this purpose, please add the Eclipse snapshot repository to your Maven `settings.xml`:
+
+```xml
+	<repository>
+	  <id>eclipse-snapshots</id>
+	  <url>https://repo.eclipse.org/content/repositories/snapshots</url>
+	  <releases>
+	    <enabled>false</enabled>
+	  </releases>
+	  <snapshots>
+	    <enabled>true</enabled>
+	  </snapshots>
+	</repository>
+```
+After that, you can reference a snapshot build in your `pom.xml`:
+
+```xml
+ <dependency>
+       <groupId>org.eclipse.hono</groupId>
+       <artifactId>hono-client</artifactId>
+       <version>0.5-M5-SNAPSHOT</version>
+ </dependency>
+```
