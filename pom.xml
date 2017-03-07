@@ -315,9 +315,6 @@
               <rules>
                 <requireReleaseDeps>
                   <message>No dependencies on snapshots allowed!</message>
-                  <excludes>
-                    <exclude>io.vertx:vertx-mqtt-server</exclude>
-                  </excludes>
                 </requireReleaseDeps>
                 <requireReleaseVersion>
                   <message>Cannot release snapshot version!</message>
