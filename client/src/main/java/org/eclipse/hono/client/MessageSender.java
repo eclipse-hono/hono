@@ -29,6 +29,13 @@ import io.vertx.proton.ProtonDelivery;
 public interface MessageSender {
 
     /**
+     * Gets the number of messages this sender can send based on its current number of credits.
+     * 
+     * @return The number of messages.
+     */
+    int getCredit();
+
+    /**
      * Checks if this sender can send or buffer (and send later) a message.
      * 
      * @return {@code false} if a message can be sent or buffered.

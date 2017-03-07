@@ -62,6 +62,15 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
+    public int getCredit() {
+        if (sender == null) {
+            return 0;
+        } else {
+            return sender.getCredit();
+        }
+    }
+
+    @Override
     public boolean sendQueueFull() {
         return sender.sendQueueFull();
     }
