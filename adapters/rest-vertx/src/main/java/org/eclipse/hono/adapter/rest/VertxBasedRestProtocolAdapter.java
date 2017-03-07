@@ -267,7 +267,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private void doGetStatus(final RoutingContext ctx) {
         JsonObject result = new JsonObject(hono.getConnectionStatus());
         result.put("active profiles", activeProfiles);
-
+        result.put("senders", hono.getSenderStatus());
         ctx.response()
             .putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON)
             .end(result.encodePrettily());

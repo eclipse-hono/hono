@@ -13,6 +13,7 @@ package org.eclipse.hono.client;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -35,6 +36,8 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 
@@ -93,12 +96,39 @@ public final class HonoClient {
      * @return The connection status properties.
      */
     public Map<String, Object> getConnectionStatus() {
+
         Map<String, Object> result = new HashMap<>();
         result.put("name", connectionFactory.getName());
         result.put("connected", isConnected());
         result.put("Hono server", String.format("%s:%d", connectionFactory.getHost(), connectionFactory.getPort()));
-        result.put("#senders", activeSenders.size());
         result.put("#regClients", activeRegClients.size());
+        result.put("senders", getSenderStatus());
+        return result;
+    }
+
+    /**
+     * Gets a list of all senders and their current status.
+     * <p>
+     * For each sender the following properties are contained:
+     * <ol>
+     * <li>address - the link target address</li>
+     * <li>open - indicates whether the link is (still) open</li>
+     * <li>credit - the link-credit available</li>
+     * </ol>
+     * 
+     * @return The status information.
+     */
+    public JsonArray getSenderStatus() {
+
+        JsonArray result = new JsonArray();
+        for (Entry<String, MessageSender> senderEntry : activeSenders.entrySet()) {
+            final MessageSender sender = senderEntry.getValue();
+            JsonObject senderStatus = new JsonObject()
+                .put("address", senderEntry.getKey())
+                .put("open", sender.isOpen())
+                .put("credit", sender.getCredit());
+            result.add(senderStatus);
+        }
         return result;
     }
 
@@ -415,4 +445,5 @@ public final class HonoClient {
             }).close();
         }
     }
+
 }
