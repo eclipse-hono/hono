@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy.
 node {
 
-    def buildDate = new java.text.SimpleDateFormat("yyyy-MM-dd")
+    def buildDate = new Date().format('yyyy-MM-dd')
     def mvnHome = tool 'mvn3.3.9'
     env.JAVA_HOME = tool 'jdk8u74'
 
