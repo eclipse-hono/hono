@@ -1,23 +1,27 @@
 +++
-title = "Java - integrate Hono sender"
-weight = 280
+title = "Java - integrate Hono consumer"
+weight = 290
 +++
 
-Simple example of a Java main program that sends telemetry data to the default tenant from the registered default device. 
+Simple example of a Java main program that consumes telemetry data that was sent for the default tenant (usually devices). 
 It shall serve as a blueprint to integrate your existing java source code with Hono. 
 <!--more-->
 
 
 
-The goal of the following description is to extend an arbitrary Java program to send telemetry data *downstream* to Hono.
+The goal of the following description is to extend an arbitrary Java program to **consume** telemetry data that was sent *downstream* to Hono.
 
 For that the following example is kept as simple as possible (in the tradition of a classical "Hello World" implementation).
 This means that we will make use of simple constant definitions, deal with exceptions as rarely as possible and use a few `System.out`'s.
 
-The only exception to pure simplicity is that we will send several messages in sequence to show the necessary programming patterns.
+The application waits for messages until you press the return key (and then regularly finishes it). You can safely kill it if that should be simpler for you.
+
+Please note that consumers do not connect with Hono directly, but rather with an AMQP router network. 
+In the standard setup of Hono this is the [qdrouter](https://qpid.apache.org/components/dispatch-router/index.html) from the Apache Qpid project.
+In production scenarios this might be a large setup of AMQP routers, brokers, etc.
 
 {{% warning %}}
-Note that production ready code likely has to think more about error handling and logging than this simple blueprint.
+Note that production ready code likely has to think more about error handling and logging than this simple blueprint. 
 {{% /warning %}}
 
 ## Setup your project
@@ -27,7 +31,7 @@ To have a common base, we start with a simple maven project that generates a jav
 ```shell
 $ mvn archetype:generate -B -DarchetypeGroupId=org.apache.maven.archetypes \
 -DarchetypeArtifactId=maven-archetype-quickstart -DarchetypeVersion=1.1 \
--DgroupId=org.eclipse.hono -DartifactId=honoTelemetryDownstreamSender -Dversion=0.1-SNAPSHOT -Dpackage=org.eclipse.hono
+-DgroupId=org.eclipse.hono -DartifactId=honoTelemetryDownstreamConsumer -Dversion=0.1-SNAPSHOT -Dpackage=org.eclipse.hono
 ```
 
 If you wish to use your own java project you can skip this step. The integration of the following steps into your existing source code will be straightforward.
@@ -67,7 +71,7 @@ Add to your pom.xml:
   
 ### Copy truststore
 
-For the encrypted communication with Hono, please copy the provided truststore from the Hono project, e.g. like
+For the encrypted communication with qdrouter (which forwards to Hono), please copy the provided truststore from the Hono project, e.g. like
 
     $ mkdir -p ${yourProjectDir}/src/main/resources/certs
     $ cp ${honoProjectDir}/demo-certs/certs/trusted-certs.pem ${yourProjectDir}/src/main/resources/certs
@@ -84,42 +88,39 @@ Here is the code:
 ```java
 package org.eclipse.hono;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.Section;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.util.MessageHelper;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
-
 
 public class App {
-    public static final String HONO_HOST = "localhost";
-    public static final int    HONO_PORT = 5672;
+    public static final String QPID_ROUTER_HOST = "192.168.99.100";
+    public static final short  QPID_ROUTER_PORT = 15671;
 
     public static final String TENANT_ID = "DEFAULT_TENANT";
-    public static final String DEVICE_ID = "4711";
-
-    public static final int COUNT        = 50;
 
     private final Vertx vertx = Vertx.vertx();
     private final HonoClient honoClient;
-    
+
     private final CountDownLatch latch;
 
     public App() {
         honoClient = new HonoClient(vertx,
                 ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
                         .vertx(vertx)
-                        .host(HONO_HOST)
-                        .port(HONO_PORT)
-                        .user("hono-client")
-                        .password("secret")
+                        .host(QPID_ROUTER_HOST)
+                        .port(QPID_ROUTER_PORT)
+                        .user("user1@HONO")
+                        .password("pw")
                         .trustStorePath("certs/trusted-certs.pem")
                         .disableHostnameVerification()
                         .build());
@@ -127,63 +128,59 @@ public class App {
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Starting downstream sender...");
+        System.out.println("Starting downstream consumer...");
         App app = new App();
-        app.sendTelemetryData();
-        System.out.println("Finishing downstream sender.");
+        app.consumeTelemetryData();
+        System.out.println("Finishing downstream consumer.");
     }
 
+    private void consumeTelemetryData() throws Exception {
+        final Future<MessageConsumer> consumerFuture = Future.future();
 
-    private void sendTelemetryData() throws Exception {
-        final Future<MessageSender> senderFuture = Future.future();
-
-        senderFuture.setHandler(result -> {
+        consumerFuture.setHandler(result -> {
             if (!result.succeeded()) {
-                System.err.println("honoClient could not create telemetry sender : " + result.cause().getMessage());
+                System.err.println("honoClient could not create telemetry consumer : " + result.cause());
             }
             latch.countDown();
         });
 
         final Future<HonoClient> connectionTracker = Future.future();
+
         honoClient.connect(new ProtonClientOptions(), connectionTracker.completer());
 
         connectionTracker.compose(honoClient -> {
-                    honoClient.getOrCreateTelemetrySender(TENANT_ID, senderFuture.completer());
+                    honoClient.createTelemetryConsumer(TENANT_ID,
+                            msg -> handleTelemetryMessage(msg), consumerFuture.completer());
                 },
-                senderFuture);
+                consumerFuture);
 
         latch.await();
 
-        if (senderFuture.succeeded()) {
-            MessageSender ms = senderFuture.result();
-
-            IntStream.range(0, COUNT).forEach(value -> {
-                sendSingleMessage(ms, value);
-            });
-        }
-
+        if (consumerFuture.succeeded())
+            System.in.read();
         vertx.close();
     }
 
-    private void sendSingleMessage(MessageSender ms, int value) {
-        CountDownLatch messageSenderLatch = new CountDownLatch(1);
-        System.out.println("Sending message... #" + value);
+    private void handleTelemetryMessage(final Message msg) {
+        final Section body = msg.getBody();
+        String content = null;
+        if (!(body instanceof Data))
+            return;
 
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put("my_prop_string", "I'm a string");
-        properties.put("my_prop_int", 10);
+        content = ((Data) msg.getBody()).getValue().toString();
 
-        ms.send(DEVICE_ID, properties, "myMessage" + value, "text/plain",
-                v -> {
-                    messageSenderLatch.countDown();
-                });
-        try {
-            messageSenderLatch.await();
-        } catch (InterruptedException e) {
+        final String deviceId = MessageHelper.getDeviceId(msg);
+
+        StringBuilder sb = new StringBuilder("received message [device: ").
+                append(deviceId).append(", content-type: ").append(msg.getContentType()).append(" ]: ").append(content);
+
+        if (msg.getApplicationProperties() != null) {
+            sb.append(" with application properties: ").append(msg.getApplicationProperties().getValue());
         }
+
+        System.out.println(sb.toString());
     }
 }
-
 ```
 
 ## Detailed description of the code
@@ -191,16 +188,14 @@ public class App {
 The code consists of several parts that are discussed now:
   
 ### Define connection details
-We need the host address and port of Hono and define them for simplicity as constants in the main class (HONO_HOST, HONO_PORT).
+We need the host address and port of qdrouter and define them for simplicity as constants in the main class (QPID_ROUTER_HOST, QPID_ROUTER_PORT).
 
 {{% warning %}}
-Please replace them with the values corresponding to your Hono server.
+Please replace them with the values corresponding to your qdrouter installation.
 {{% /warning %}}
                 
-For downstream data we will need the tenant and the deviceId for which we plan to send data from.
-We define them as constants here  (TENANT_ID, DEVICE_ID) as well and use the defaults that Hono is using ("DEFAULT_TENANT", "4711").
-
-COUNT defines the number of the sequentially sent messages.
+For downstream data we will need the tenant from which we plan to consume data.
+We define it as constant here (TENANT_ID) as well and use the default that Hono is using ("DEFAULT_TENANT").
 
 ### Fields
 
@@ -218,40 +213,46 @@ The `CountDownLatch` is initialized for one count down that is used in callbacks
 
 {{% warning %}}
 \\
-The shown code configures the client to use an encrypted communication channel to Hono (due to the presence of **trustStorePath**).
+The shown code configures the client to use an encrypted communication channel to qdrouter (due to the presence of **trustStorePath**).
+
 If you want to use unencrypted communication, please:
-- configure the Hono server by not setting any **hono.server.keyStorePath** (restart necessary)
+
+- use the qdrouter port that is used for unencrypted AMQP (in the standard installation 15672)
+
 - remove the lines for encrypted communication in the shown code (**trustStorePath(...)** and **disableHostnameVerification()**)
 {{% /warning %}}
 
 ### Main method
 
-Initiates the control flow in the method sendTelemetryData.
+Initiates the control flow in the method consumeTelemetryData.
 
 
-### Send downstream telemetry data
+### Consume downstream telemetry data
 
 This is the most important part of the example and consists of:
 
 
-#### Buildup of a telemetry sender to Hono
+#### Buildup of a telemetry consumer from Hono
 
-The buildup of a Hono telemetry sender is a typical piece of asynchronous vertx code.
+The buildup of a Hono telemetry consumer is a typical piece of asynchronous vertx code.
 
-Therefore it is important to not let the main thread end before all AMQP messages were sent and acknowledged - this is were the CountDownLatch is used to block the main thread at the appropriate lines.
-The `latch.await()` code is blocking the main thread until the `HonoClient` was successfully connected and then starts to send the first message.
+Since we want to consume messages from Hono until we are stopped, it is important to not let the main thread end.
+
+First, the `latch.await()` code is blocking the main thread until the `HonoClient` was successfully connected.
+
+Then we use `System.read.in()` to block the main thread. As soon as you press the Return-key, the consumer shuts down.
 
 
-#### Use the sender to send several messages in sequence to Hono
-The message sender instance is constructed in the senderFuture and can be accessed via the `result()` method.
+#### Consume messages from Hono
+The telemetry consumer handles incoming messages in a callback which directly delegates processing to the method `handleTelemetryMessage`.
 
-Here the flow control of the AMQP protocol is relevant: the `HonoClient` considers the available credits and invokes the callback once as soon as there are enough credits to send. 
-At the time the callback is invoked the message was sent already.
+Since the AMQP message delivered is based on Apache Qpid Proton please refer to the [Proton documentation](https://qpid.apache.org/proton/) for details.
+We only deal with messages that contain a body of type `Data` here.
 
-The callback itself counts down a latch `messageSenderLatch` which has blocked the main thread. If the latch was counted down, the main thread continues and sends the next message.
+The code prints out the received message and continues to listen.
 
 #### Close the connection
-For simplicity, the Hono client is not shutdown in this example. Instead only vertx is closed.
+For simplicity, the Hono client is not shutdown in this example - instead only vertx is closed.
 
 The integration of shutdown code is straightforward and thus not shown here.
 
@@ -271,14 +272,13 @@ You should get several logging messages during startup then.
 
 ## Start and test your implementation
 
-Before you start your application, you normally want to start a consumer for the tenant first (please see *Flow control* why). 
-You can use the example receiver of the Hono project for that (please see the [Getting started](https://www.eclipse.org/hono/getting-started/) page for instructions) 
-or write an own consumer (see [Java Hono consumer](https://www.eclipse.org/hono/user-guide/java_client_consumer/)).
+When you start your application, there might be no messages that are currently sent to the tenant. This means your application will just wait for incoming messages.
 
+To start sending messages to the tenant, you can use the example sender of the Hono project (see [Getting started](https://www.eclipse.org/hono/getting-started/) or a self-written sender 
+(see [Java Hono sender](https://www.eclipse.org/hono/user-guide/java_client_sender/)) for that.
 
-## Flow control
-If you do not have a consumer registered with Hono and start the sender, no credits at all will be available and the sender of this example will wait for being allowed to send the very first message.
-If you start the consumer now, the sender soon will get credits and starts to send it's messages until the configured number of messages was sent.
+As soon as you start to send telemetry data to the tenant, you will receive messages. Note that the code easily retrieves the `deviceId` from which the message was sent.
+
 
 ## Use a nightly build of Hono
 Sometimes you may want to use the most current build of Hono that is available (usually nightly snapshots).
