@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters</artifactId>
-    <version>0.5-M2-SNAPSHOT</version>
+    <version>0.5-M5-SNAPSHOT</version>
   </parent>
   <artifactId>hono-adapter-lwm2m</artifactId>
   <name>Hono LWM2M Adapter</name>
@@ -77,6 +77,10 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-demo-certs</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -92,6 +96,119 @@
           </jvmArguments>
         </configuration>
       </plugin>
+      <plugin>
+        <!--
+          Copy legal documents from "legal" module to "target/classes" folder
+          so that we make sure to include legal docs in all modules.
+         -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <!--
+          Execution and configuration for copying certificates from related module
+          to "target/classes" folder so that we can include them in the image.
+         -->
+        <executions>
+          <execution>
+            <id>copy_demo_certs</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeArtifactIds>hono-demo-certs</includeArtifactIds>
+              <outputDirectory>${project.build.outputDirectory}/certs</outputDirectory>
+              <excludes>META-INF/**</excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+  
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <activation>
+        <property>
+          <name>docker.host</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <configuration>
+              <verbose>true</verbose>
+              <images>
+                <image>
+                  <build>
+                    <from>anapsix/alpine-java:8</from>
+                    <ports>
+                      <port>5683</port>
+                      <port>5684</port>
+                      <port>8090</port>
+                    </ports>
+                    <runCmds>
+                      <runCmd>adduser -S -D hono nogroup</runCmd>
+                    </runCmds>
+                    <user>hono</user>
+                    <workdir>/home/hono</workdir>
+                    <cmd>
+                      <exec>
+                        <arg>java</arg>
+                        <arg>-Dvertx.disableDnsResolver=true</arg>
+                        <arg>-Dnetworkaddress.cache.ttl=0</arg>
+                        <arg>-Dnetworkaddress.cache.negative.ttl=0</arg>
+                        <arg>-jar</arg>
+                        <arg>
+                          /opt/hono/${project.artifactId}-${project.version}.jar
+                        </arg>
+                      </exec>
+                    </cmd>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/target/classes/certs</directory>
+                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <includes>
+                              <include>trusted-certs.pem</include>
+                              <include>restKeyStore.p12</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.basedir}/target</directory>
+                            <outputDirectory>opt/hono</outputDirectory>
+                            <includes>
+                              <include>${project.artifactId}-${project.version}.jar</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+  
 </project>

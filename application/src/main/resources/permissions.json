@@ -2,16 +2,19 @@
   "telemetry/DEFAULT_TENANT": {
       "hono-client": [ "WRITE" ],
       "rest-adapter": [ "WRITE" ],
-      "mqtt-adapter": [ "WRITE" ]
+      "mqtt-adapter": [ "WRITE" ],
+	  "lwm2m-adapter": [ "WRITE" ]
   },
   "event/DEFAULT_TENANT": {
       "hono-client": [ "WRITE" ],
       "rest-adapter": [ "WRITE" ],
-      "mqtt-adapter": [ "WRITE" ]
+      "mqtt-adapter": [ "WRITE" ],
+	  "lwm2m-adapter": [ "WRITE" ]
   },
   "registration/DEFAULT_TENANT": {
       "hono-client": [ "READ", "WRITE" ],
       "rest-adapter": [ "READ", "WRITE" ],
-      "mqtt-adapter": [ "READ" ]
+      "mqtt-adapter": [ "READ" ],
+	  "lwm2m-adapter": [ "READ", "WRITE" ]
   }
 }
