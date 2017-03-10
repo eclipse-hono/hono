@@ -19,7 +19,7 @@ import java.util.Objects;
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.adapter.lwm2m.AbstractHonoClientSupport;
-import org.eclipse.hono.client.TelemetrySender;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.leshan.core.model.LwM2mModel;
 import org.eclipse.leshan.core.model.ObjectModel;
 import org.eclipse.leshan.core.node.LwM2mNode;
@@ -135,7 +135,7 @@ public class TelemetryForwarder extends AbstractHonoClientSupport implements Obs
         } else {
             hono.getOrCreateTelemetrySender(tenant, creationAttempt -> {
                 if (creationAttempt.succeeded()) {
-                    TelemetrySender sender = creationAttempt.result();
+                    MessageSender sender = creationAttempt.result();
                     sendMostRecentValue(sender, client, deviceId, observation.getPath(), mostRecentValue);
                 } else {
                     LOG.error("cannot create telemetry sender for tenant {}, discarding notification", tenant, creationAttempt.cause());
@@ -144,7 +144,7 @@ public class TelemetryForwarder extends AbstractHonoClientSupport implements Obs
         }
     }
 
-    private void sendMostRecentValue(final TelemetrySender sender, final Client client, final String deviceId, final LwM2mPath resourcePath, final LwM2mNode mostRecentValue) {
+    private void sendMostRecentValue(final MessageSender sender, final Client client, final String deviceId, final LwM2mPath resourcePath, final LwM2mNode mostRecentValue) {
 
         synchronized (sender) {
             if (sender.sendQueueFull()) {

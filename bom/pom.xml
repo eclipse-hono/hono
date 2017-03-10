@@ -205,6 +205,5 @@
         <version>${spring.version}</version>
       </dependency>
     </dependencies>
-    </dependencies>
   </dependencyManagement>
 </project>

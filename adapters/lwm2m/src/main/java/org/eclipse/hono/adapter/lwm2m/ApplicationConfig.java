@@ -15,8 +15,9 @@ package org.eclipse.hono.adapter.lwm2m;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.eclipse.hono.adapter.AdapterConfig;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.HonoClientConfigProperties;
+import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.leshan.server.client.ClientRegistry;
 import org.eclipse.leshan.server.impl.ClientRegistryImpl;
 import org.eclipse.leshan.server.impl.SecurityRegistryImpl;
@@ -30,15 +31,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-import io.vertx.core.Vertx;
-
 /**
  * Configuration for the LWM2M protocol adapter.
  */
 @Configuration
-public class ApplicationConfig {
-
-    private final Vertx vertx = Vertx.vertx();
+public class ApplicationConfig extends AdapterConfig {
 
     @ConfigurationProperties(prefix = "hono.client")
     @Bean
@@ -50,7 +47,7 @@ public class ApplicationConfig {
     @Bean
     @Profile("!standalone")
     public HonoClient honoClient(final HonoClientConfigProperties config) {
-        return new HonoClient(vertx, config);
+        return new HonoClient(getVertx(), honoConnectionFactory());
     }
 
     @Bean
