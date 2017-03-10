@@ -69,3 +69,22 @@ services:
       - HONO_MQTT_BIND_ADDRESS=0.0.0.0
       - HONO_MQTT_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
+
+  lwm2m-adapter:
+    image: eclipsehono/hono-adapter-lwm2m:${project.version}
+    networks:
+      - hono-net
+    ports:
+      - "5683:5683/udp"
+      - "5684:5684/udp"
+      - "8090:8090"
+    environment:
+      - HONO_CLIENT_NAME=Hono LWM2M Adapter
+      - HONO_CLIENT_HOST=hono
+      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_USERNAME=lwm2m-adapter
+      - HONO_CLIENT_PASSWORD=secret
+      - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_HTTP_BINDADDRESS=0.0.0.0
+      - HONO_MAX_INSTANCES=1
+      - SPRING_PROFILES_ACTIVE=dev,step1,step2
