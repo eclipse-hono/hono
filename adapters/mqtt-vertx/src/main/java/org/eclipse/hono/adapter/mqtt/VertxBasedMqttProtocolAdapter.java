@@ -24,6 +24,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
@@ -42,6 +43,7 @@ import io.vertx.proton.ProtonClientOptions;
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
  */
 @Component
+@Scope("prototype")
 public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedMqttProtocolAdapter.class);

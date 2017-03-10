@@ -20,6 +20,7 @@ import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 
 /**
  * Spring Beans used by the Hono REST protocol adapter.
@@ -45,6 +46,7 @@ public class Config extends AdapterConfig {
      * @return The client.
      */
     @Bean
+    @Scope("prototype")
     public HonoClient honoClient() {
         return new HonoClient(getVertx(), honoConnectionFactory());
     }
