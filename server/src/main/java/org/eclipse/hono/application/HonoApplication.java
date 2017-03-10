@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -28,7 +29,6 @@ import org.eclipse.hono.server.HonoServerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -44,7 +44,6 @@ import io.vertx.core.Vertx;
  * of instances to create. This may be useful for executing tests etc.
  * </p>
  */
-@Component
 public class HonoApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoApplication.class);
@@ -60,61 +59,98 @@ public class HonoApplication {
      * @param honoConfig the honoConfig to set
      */
     @Autowired
-    public void setHonoConfig(final HonoConfigProperties honoConfig) {
+    public final void setHonoConfig(final HonoConfigProperties honoConfig) {
         this.honoConfig = honoConfig;
+    }
+
+    public HonoConfigProperties getHonoConfig() {
+        return honoConfig;
     }
 
     /**
      * @param vertx the vertx to set
      */
     @Autowired
-    public void setVertx(final Vertx vertx) {
+    public final void setVertx(final Vertx vertx) {
         this.vertx = vertx;
+    }
+
+    public Vertx getVertx() {
+        return vertx;
     }
 
     /**
      * @param registrationService the registrationService to set
      */
     @Autowired
-    public void setRegistrationService(final RegistrationService registrationService) {
+    public final void setRegistrationService(final RegistrationService registrationService) {
         this.registrationService = registrationService;
+    }
+
+    public RegistrationService getRegistrationService() {
+        return registrationService;
     }
 
     /**
      * @param authenticationService the authenticationService to set
      */
     @Autowired
-    public void setAuthenticationService(final AuthenticationService authenticationService) {
+    public final void setAuthenticationService(final AuthenticationService authenticationService) {
         this.authenticationService = authenticationService;
+    }
+
+    public AuthenticationService getAuthenticationService() {
+        return authenticationService;
     }
 
     /**
      * @param authorizationService the authorizationService to set
      */
     @Autowired
-    public void setAuthorizationService(final AuthorizationService authorizationService) {
+    public final void setAuthorizationService(final AuthorizationService authorizationService) {
         this.authorizationService = authorizationService;
+    }
+
+    public AuthorizationService getAuthorizationService() {
+        return authorizationService;
     }
 
     /**
      * @param serverFactory the serverFactory to set
      */
     @Autowired
-    public void setServerFactory(final HonoServerFactory serverFactory) {
+    public final void setServerFactory(final HonoServerFactory serverFactory) {
         this.serverFactory = serverFactory;
     }
 
+    public HonoServerFactory getServerFactory() {
+        return serverFactory;
+    }
+
     /**
-     * Deploys all verticles the Hono server consists of.
+     * Starts the Hono server.
      */
     @PostConstruct
-    public void registerVerticles() {
+    public final void startup() {
+        boolean startupSuccessful = registerVerticles();
+        if (startupSuccessful) {
+            postRegisterVerticles();
+        }
+    }
+    
+    /**
+     * Deploys all verticles the Hono server consists of.
+     * 
+     * @return true if deployment was successful
+     */
+    private boolean registerVerticles() {
 
         if (vertx == null) {
             throw new IllegalStateException("no Vert.x instance has been configured");
         }
 
         final CountDownLatch startupLatch = new CountDownLatch(1);
+        final AtomicBoolean startupFailed = new AtomicBoolean(false);
 
         // without creating a first instance here, deployment of the HonoServer verticles fails
         // TODO: find out why
@@ -126,10 +162,9 @@ public class HonoApplication {
         started.setHandler(ar -> {
             if (ar.failed()) {
                 LOG.error("cannot start up HonoServer", ar.cause());
-                shutdown();
-            } else {
-                startupLatch.countDown();
+                startupFailed.set(true);
             }
+            startupLatch.countDown();
         });
 
         CompositeFuture.all(
@@ -145,16 +180,31 @@ public class HonoApplication {
 
         try {
             if (startupLatch.await(honoConfig.getStartupTimeout(), TimeUnit.SECONDS)) {
-                LOG.info("Hono startup completed successfully");
+                if (!startupFailed.get()) {
+                    LOG.info("Hono startup completed successfully");
+                } else {
+                    shutdown();
+                }
             } else {
                 LOG.error("startup timed out after {} seconds, shutting down ...", honoConfig.getStartupTimeout());
+                startupFailed.set(true);
                 shutdown();
             }
         } catch (InterruptedException e) {
             LOG.error("startup process has been interrupted, shutting down ...");
             Thread.currentThread().interrupt();
+            startupFailed.set(true);
             shutdown();
         }
+        return !startupFailed.get();
+    }
+
+    /**
+     * Invoked after the Hono verticles have been registered as part of Hono startup.
+     * May be overridden to provide additional startup logic.
+     */
+    protected void postRegisterVerticles() {
+        // empty
     }
 
     private Future<String> deployRegistrationService() {
@@ -188,7 +238,7 @@ public class HonoApplication {
         }
         CompositeFuture.all(results).setHandler(ar -> {
            if (ar.failed()) {
-              startFuture.fail(ar.cause());
+               startFuture.fail(ar.cause());
            } else {
                startFuture.complete();
            }
@@ -206,8 +256,8 @@ public class HonoApplication {
      * Stops the Hono server in a controlled fashion.
      */
     @PreDestroy
-    public void shutdown() {
-        this.shutdown(honoConfig.getStartupTimeout(), succeeded -> {
+    public final void shutdown() {
+        shutdown(honoConfig.getStartupTimeout(), succeeded -> {
             // do nothing
         });
     }
@@ -218,9 +268,10 @@ public class HonoApplication {
      * @param maxWaitTime The maximum time to wait for the server to shut down (in seconds).
      * @param shutdownHandler The handler to invoke with the result of the shutdown attempt.
      */
-    public void shutdown(final long maxWaitTime, final Handler<Boolean> shutdownHandler) {
+    public final void shutdown(final long maxWaitTime, final Handler<Boolean> shutdownHandler) {
 
         try {
+            preShutdown();
             final CountDownLatch latch = new CountDownLatch(1);
             if (vertx != null) {
                 LOG.debug("shutting down Hono server...");
@@ -245,4 +296,11 @@ public class HonoApplication {
         }
     }
 
+    /**
+     * Invoked before Hono shutdown is initiated.
+     * May be overridden to provide additional shutdown handling.
+     */
+    protected void preShutdown() {
+        // empty
+    }
 }

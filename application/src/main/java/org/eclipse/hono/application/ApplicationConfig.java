@@ -33,6 +33,17 @@ public class ApplicationConfig {
     private static final Vertx vertx = Vertx.vertx();
 
     /**
+     * Returns the HonoApplication instance responsible for initializing the
+     * Hono server components.
+     * 
+     * @return HonoApplication instance
+     */
+    @Bean
+    public HonoApplication honoApplication() {
+        return new HonoApplication();
+    }
+    
+    /**
      * Gets the singleton Vert.x instance to be used by Hono.
      * 
      * @return the instance.
