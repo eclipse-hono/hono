@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Configuration;
 @ComponentScan(basePackages = "org.eclipse.hono")
 @Configuration
 @EnableAutoConfiguration
-public class Application {
+public class Application extends HonoApplication {
 
     /**
      * Starts the Hono server.
