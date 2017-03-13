@@ -63,7 +63,7 @@ public class HonoApplication {
         this.honoConfig = honoConfig;
     }
 
-    public HonoConfigProperties getHonoConfig() {
+    public final HonoConfigProperties getHonoConfig() {
         return honoConfig;
     }
 
@@ -75,7 +75,7 @@ public class HonoApplication {
         this.vertx = vertx;
     }
 
-    public Vertx getVertx() {
+    public final Vertx getVertx() {
         return vertx;
     }
 
@@ -87,7 +87,7 @@ public class HonoApplication {
         this.registrationService = registrationService;
     }
 
-    public RegistrationService getRegistrationService() {
+    public final RegistrationService getRegistrationService() {
         return registrationService;
     }
 
@@ -99,7 +99,7 @@ public class HonoApplication {
         this.authenticationService = authenticationService;
     }
 
-    public AuthenticationService getAuthenticationService() {
+    public final AuthenticationService getAuthenticationService() {
         return authenticationService;
     }
 
@@ -111,7 +111,7 @@ public class HonoApplication {
         this.authorizationService = authorizationService;
     }
 
-    public AuthorizationService getAuthorizationService() {
+    public final AuthorizationService getAuthorizationService() {
         return authorizationService;
     }
 
@@ -123,7 +123,7 @@ public class HonoApplication {
         this.serverFactory = serverFactory;
     }
 
-    public HonoServerFactory getServerFactory() {
+    public final HonoServerFactory getServerFactory() {
         return serverFactory;
     }
 
@@ -150,7 +150,7 @@ public class HonoApplication {
         }
 
         final CountDownLatch startupLatch = new CountDownLatch(1);
-        final AtomicBoolean startupFailed = new AtomicBoolean(false);
+        final AtomicBoolean startupSucceeded = new AtomicBoolean(false);
 
         // without creating a first instance here, deployment of the HonoServer verticles fails
         // TODO: find out why
@@ -162,7 +162,8 @@ public class HonoApplication {
         started.setHandler(ar -> {
             if (ar.failed()) {
                 LOG.error("cannot start up HonoServer", ar.cause());
-                startupFailed.set(true);
+            } else {
+                startupSucceeded.set(true);
             }
             startupLatch.countDown();
         });
@@ -180,23 +181,23 @@ public class HonoApplication {
 
         try {
             if (startupLatch.await(honoConfig.getStartupTimeout(), TimeUnit.SECONDS)) {
-                if (!startupFailed.get()) {
+                if (startupSucceeded.get()) {
                     LOG.info("Hono startup completed successfully");
                 } else {
                     shutdown();
                 }
             } else {
                 LOG.error("startup timed out after {} seconds, shutting down ...", honoConfig.getStartupTimeout());
-                startupFailed.set(true);
                 shutdown();
+                startupSucceeded.set(false);
             }
         } catch (InterruptedException e) {
             LOG.error("startup process has been interrupted, shutting down ...");
             Thread.currentThread().interrupt();
-            startupFailed.set(true);
             shutdown();
+            startupSucceeded.set(false);
         }
-        return !startupFailed.get();
+        return startupSucceeded.get();
     }
 
     /**
