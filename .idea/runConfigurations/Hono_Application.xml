@@ -1,0 +1,85 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Hono Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea">
+      <pattern>
+        <option name="PATTERN" value="org.eclipse.hono.application.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="SPRING_BOOT_MAIN_CLASS" value="org.eclipse.hono.application.Application" />
+    <option name="ACTIVE_PROFILES" value="default,dev" />
+    <option name="VM_PARAMETERS" value="-Dvertx.disableDnsResolver=true -Dnetworkaddress.cache.ttl=0 -Dnetworkaddress.cache.negative.ttl=0" />
+    <option name="WORKING_DIRECTORY" value="file://$MODULE_DIR$" />
+    <option name="ALTERNATIVE_JRE_PATH" />
+    <additionalParameters>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.downstream.host" />
+        <option name="value" value="192.168.99.100" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.downstream.port" />
+        <option name="value" value="15673" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.downstream.keyStorePath" />
+        <option name="value" value="../demo-certs/certs/honoKeyStore.p12" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.downstream.keyStorePassword" />
+        <option name="value" value="honokeys" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.downstream.trustStorePath" />
+        <option name="value" value="../demo-certs/certs/trusted-certs.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.server.keyStorePath" />
+        <option name="value" value="../demo-certs/certs/honoKeyStore.p12" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.server.keyStorePassword" />
+        <option name="value" value="honokeys" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.downstream.hostnameVerificationRequired" />
+        <option name="value" value="false" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.server.bindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.server.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.authorization.permissionsPath" />
+        <option name="value" value="permissions.json" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.filename" />
+        <option name="value" value="device-identities.json" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="logging.config" />
+        <option name="value" value="classpath:logback-spring.xml" />
+      </param>
+    </additionalParameters>
+    <module name="hono-app" />
+    <envs />
+    <method />
+  </configuration>
+</component>
