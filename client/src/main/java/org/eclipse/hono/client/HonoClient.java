@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -49,6 +49,7 @@ public final class HonoClient {
     private static final Logger LOG = LoggerFactory.getLogger(HonoClient.class);
     private final Map<String, MessageSender> activeSenders = new ConcurrentHashMap<>();
     private final Map<String, RegistrationClient> activeRegClients = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> senderCreationLocks = new ConcurrentHashMap<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
@@ -286,9 +287,10 @@ public final class HonoClient {
 
         final MessageSender sender = activeSenders.get(key);
         if (sender != null && sender.isOpen()) {
-            LOG.debug("reusing existing message sender for [{}]", key);
+            LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
             resultHandler.handle(Future.succeededFuture(sender));
-        } else {
+        } else if (!senderCreationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+            senderCreationLocks.put(key, Boolean.TRUE);
             LOG.debug("creating new message sender for {}", key);
             final Future<MessageSender> internal = Future.future();
             internal.setHandler(creationAttempt -> {
@@ -298,10 +300,14 @@ public final class HonoClient {
                     activeSenders.put(key, newSender);
                 } else {
                     LOG.debug("failed to create new message sender for {}", key, creationAttempt.cause());
+                    activeSenders.remove(key);
                 }
+                senderCreationLocks.remove(key);
                 resultHandler.handle(creationAttempt);
             });
             newSenderSupplier.accept(internal.completer());
+        } else {
+            LOG.debug("already trying to create a message sender for {}", key);
         }
     }
 
@@ -313,7 +319,11 @@ public final class HonoClient {
         Future<MessageSender> senderTracker = Future.future();
         senderTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> TelemetrySenderImpl.create(context, connection, tenantId, deviceId, senderTracker.completer()),
+                connected -> TelemetrySenderImpl.create(context, connection, tenantId, deviceId,
+                        onSenderClosed -> {
+                            activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, deviceId));
+                        },
+                        senderTracker.completer()),
                 senderTracker);
         return this;
     }
@@ -352,7 +362,11 @@ public final class HonoClient {
         Future<MessageSender> senderTracker = Future.future();
         senderTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> EventSenderImpl.create(context, connection, tenantId, deviceId, senderTracker.completer()),
+                connected -> EventSenderImpl.create(context, connection, tenantId, deviceId,
+                        onSenderClosed -> {
+                            activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
+                        },
+                        senderTracker.completer()),
                 senderTracker);
         return this;
     }
@@ -425,6 +439,13 @@ public final class HonoClient {
         }
     }
 
+    /**
+     * Closes this client's connection to the Hono server.
+     * <p>
+     * Any senders or consumers opened by this client will be implicitly closed as well.
+     * 
+     * @param completionHandler The handler to invoke with the result of the operation.
+     */
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         if (connection == null || connection.isDisconnected()) {
             LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
@@ -445,5 +466,4 @@ public final class HonoClient {
             }).close();
         }
     }
-
 }

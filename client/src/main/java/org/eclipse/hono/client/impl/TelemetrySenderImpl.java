@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -15,8 +15,6 @@ package org.eclipse.hono.client.impl;
 import java.util.Objects;
 
 import org.eclipse.hono.client.MessageSender;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -29,13 +27,13 @@ import io.vertx.proton.ProtonSender;
 /**
  * A Vertx-Proton based client for uploading telemtry data to a Hono server.
  */
-public class TelemetrySenderImpl extends AbstractSender {
+public final class TelemetrySenderImpl extends AbstractSender {
 
-    private static final String     TELEMETRY_ENDPOINT_NAME  = "telemetry/";
-    private static final Logger     LOG = LoggerFactory.getLogger(TelemetrySenderImpl.class);
+    private static final String TELEMETRY_ENDPOINT_NAME  = "telemetry/";
 
-    private TelemetrySenderImpl(final ProtonSender sender, final String tenantId, final Context context) {
-        super(sender, tenantId, context);
+    private TelemetrySenderImpl(final ProtonSender sender, final String tenantId, final String targetAddress,
+            final Context context, final Handler<String> closeHook) {
+        super(sender, tenantId, targetAddress, context, closeHook);
     }
 
     /**
@@ -60,55 +58,41 @@ public class TelemetrySenderImpl extends AbstractSender {
         return getTargetAddress(tenantId, deviceId);
     }
 
+    /**
+     * Creates a new sender for publishing telemetry data to a Hono server.
+     * 
+     * @param context The vertx context to run all interactions with the server on.
+     * @param con The connection to the Hono server.
+     * @param tenantId The tenant that the telemetry data will be uploaded for.
+     * @param deviceId The device that the telemetry data will be uploaded for or {@code null}
+     *                 if the data to be uploaded will be produced by arbitrary devices of the
+     *                 tenant.
+     * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
+     *                  target address is provided as an argument to the handler.
+     * @param creationHandler The handler to invoke with the result of the creation attempt.
+     * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
+     */
     public static void create(
             final Context context,
             final ProtonConnection con,
             final String tenantId,
             final String deviceId,
+            final Handler<String> closeHook,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(creationHandler);
+
         final String targetAddress = getTargetAddress(tenantId, deviceId);
-        createSender(context, con, targetAddress).setHandler(created -> {
+        createSender(context, con, targetAddress, ProtonQoS.AT_MOST_ONCE, closeHook).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new TelemetrySenderImpl(created.result(), tenantId, context)));
+                        new TelemetrySenderImpl(created.result(), tenantId, targetAddress, context, closeHook)));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }
         });
-    }
-
-    private static Future<ProtonSender> createSender(
-            final Context ctx,
-            final ProtonConnection con,
-            final String targetAddress) {
-
-        final Future<ProtonSender> result = Future.future();
-
-        ctx.runOnContext(create -> {
-            final ProtonSender sender = con.createSender(targetAddress);
-            sender.setQoS(ProtonQoS.AT_MOST_ONCE);
-            sender.openHandler(senderOpen -> {
-                if (senderOpen.succeeded()) {
-                    LOG.debug("telemetry sender for [{}] open", targetAddress);
-                    result.complete(senderOpen.result());
-                } else {
-                    LOG.debug("opening telemetry sender for [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
-                    result.fail(senderOpen.cause());
-                }
-            }).closeHandler(senderClosed -> {
-                if (senderClosed.succeeded()) {
-                    LOG.debug("telemetry sender for [{}] closed", targetAddress);
-                } else {
-                    LOG.debug("telemetry sender for [{}] closed due to {}", targetAddress, senderClosed.cause().getMessage());
-                }
-                sender.close();
-            }).open();
-        });
-
-        return result;
     }
 }
