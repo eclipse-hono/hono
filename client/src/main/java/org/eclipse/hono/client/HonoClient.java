@@ -447,23 +447,26 @@ public final class HonoClient {
      * @param completionHandler The handler to invoke with the result of the operation.
      */
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
+
         if (connection == null || connection.isDisconnected()) {
             LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
             completionHandler.handle(Future.succeededFuture());
         } else {
-            LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
-            connection.disconnectHandler(null); // make sure we are not trying to re-connect
-            connection.closeHandler(closedCon -> {
-                if (closedCon.succeeded()) {
-                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-                } else {
-                    LOG.info("could not close connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
-                }
-                connection.disconnect();
-                if (completionHandler != null) {
-                    completionHandler.handle(Future.succeededFuture());
-                }
-            }).close();
+            context.runOnContext(close -> {
+                LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
+                connection.disconnectHandler(null); // make sure we are not trying to re-connect
+                connection.closeHandler(closedCon -> {
+                    if (closedCon.succeeded()) {
+                        LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                    } else {
+                        LOG.info("could not close connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
+                    }
+                    connection.disconnect();
+                    if (completionHandler != null) {
+                        completionHandler.handle(Future.succeededFuture());
+                    }
+                }).close();
+            });
         }
     }
 }
