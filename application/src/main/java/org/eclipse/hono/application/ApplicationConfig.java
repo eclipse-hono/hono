@@ -31,7 +31,7 @@ import io.vertx.core.Vertx;
 public class ApplicationConfig {
 
     private static final Vertx vertx = Vertx.vertx();
-
+    
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
      * 

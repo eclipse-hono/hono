@@ -47,8 +47,6 @@ public final class ForwardingEventDownstreamAdapter extends ForwardingDownstream
     }
 
     protected void forwardMessage(final ProtonSender sender, final Message msg, final ProtonDelivery delivery) {
-        logger.debug("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}]",
-                msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer());
         sender.send(msg, updatedDelivery -> delivery.disposition(updatedDelivery.getRemoteState(), updatedDelivery.remotelySettled()));
     }
 

@@ -162,14 +162,14 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
         // route for uploading telemetry data
         router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(ctx -> doUploadMessages(ctx, telemetrySenderSupplier));
+            .handler(ctx -> doUploadMessage(ctx, telemetrySenderSupplier));
     }
 
     private void addEventApiRoutes(final Router router) {
 
         // route for sending event messages
         router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(ctx -> doUploadMessages(ctx, eventSenderSupplier));
+            .handler(ctx -> doUploadMessage(ctx, eventSenderSupplier));
     }
 
     private void bindHttpServer(final Router router, final Future<Void> startFuture) {
@@ -236,10 +236,21 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     }
 
     private static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds) {
+        serviceUnavailable(response, retryAfterSeconds, null, null);
+    }
+
+    private static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds,
+            final String msg, final String contentType) {
         response
             .setStatusCode(HTTP_UNAVAILABLE)
-            .putHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds))
-            .end();
+            .putHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
+        if (msg != null) {
+            response
+                .putHeader(HttpHeaders.CONTENT_TYPE, contentType)
+                .end(msg);
+        } else {
+            response.end();
+        }
     }
 
     private static JsonObject getPayloadForParams(final HttpServerRequest request) {
@@ -256,7 +267,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private void doGetStatus(final RoutingContext ctx) {
         JsonObject result = new JsonObject(hono.getConnectionStatus());
         result.put("active profiles", activeProfiles);
-
+        result.put("senders", hono.getSenderStatus());
         ctx.response()
             .putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON)
             .end(result.encodePrettily());
@@ -444,7 +455,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         });
     }
 
-    private void doUploadMessages(final RoutingContext ctx, final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
+    private void doUploadMessage(final RoutingContext ctx, final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
 
         final String tenant = getTenantParam(ctx);
         final String contentType = ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);
@@ -456,16 +467,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
                 if (createAttempt.succeeded()) {
                     final MessageSender sender = createAttempt.result();
 
-                    // sending message only when the "flow" is handled and credits are available
-                    // otherwise send will never happen due to no credits
-                    if (!sender.sendQueueFull()) {
-                        this.sendToHono(ctx, sender);
-                    } else {
-                        sender.sendQueueDrainHandler(v -> {
-                            this.sendToHono(ctx, sender);
-                        });
-                    }
-
+                    sendToHono(ctx, sender);
                 } else {
                     // we don't have a connection to Hono
                     serviceUnavailable(ctx.response(), 5);
@@ -486,7 +488,9 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
             ctx.response().setStatusCode(HTTP_ACCEPTED).end();
         } else {
             // we currently have no credit for uploading data to Hono's Telemetry endpoint
-            serviceUnavailable(ctx.response(), 2);
+            serviceUnavailable(ctx.response(), 2,
+                    "resource limit exceeded, please try again later",
+                    "text/plain");
         }
     }
 

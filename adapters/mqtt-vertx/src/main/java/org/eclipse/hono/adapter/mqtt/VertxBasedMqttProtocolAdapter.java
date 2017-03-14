@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.mqtt;
 import java.nio.charset.Charset;
 import java.util.function.BiConsumer;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
@@ -23,6 +24,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
@@ -41,6 +43,7 @@ import io.vertx.proton.ProtonClientOptions;
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
  */
 @Component
+@Scope("prototype")
 public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedMqttProtocolAdapter.class);
@@ -120,6 +123,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
         if (hono == null) {
             startFuture.fail("Hono client must be set");
         } else {
+            if (LOG.isWarnEnabled()) {
+                StringBuilder b = new StringBuilder()
+                        .append("MQTT protocol adapter does not yet support limiting the incoming message size ")
+                        .append("via the maxPayloadSize property. Default max payload size is 8kb.");
+                LOG.warn(b.toString());
+            }
             this.bindMqttServer(startFuture);
             this.connectToHono(null);
         }
@@ -162,8 +171,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
 
         } else {
-
-            endpoint.publishHandler(message -> {
+            final AtomicBoolean clientConnected = new AtomicBoolean(false);
+            endpoint
+              .closeHandler(clientDisconnected -> {
+                  clientConnected.compareAndSet(true, false);
+              })
+              .publishHandler(message -> {
 
                 LOG.debug("Just received message on [{}] payload [{}] with QoS [{}]", message.topicName(), message.payload().toString(Charset.defaultCharset()), message.qosLevel());
 
@@ -173,7 +186,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                     // if MQTT client doesn't specify device_id then closing connection (MQTT has now way for errors)
                     if (resource.getResourceId() == null) {
-                        endpoint.close();
+                        close(endpoint, clientConnected);
                     } else {
 
                         // check that MQTT client tries to publish on topic with device_id same as on connection
@@ -181,20 +194,24 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                             if (resource.getEndpoint().equals(TELEMETRY_ENDPOINT)) {
 
-                                this.doUploadMessages(resource.getTenantId(), endpoint, message, this.telemetrySenderSupplier);
+                                this.doUploadMessages(resource.getTenantId(), endpoint, message,
+                                        this.telemetrySenderSupplier, clientConnected);
 
                             } else if (resource.getEndpoint().equals(EVENT_ENDPOINT)) {
 
-                                this.doUploadMessages(resource.getTenantId(), endpoint, message, this.eventSenderSupplier);
+                                this.doUploadMessages(resource.getTenantId(), endpoint, message,
+                                        this.eventSenderSupplier, clientConnected);
 
                             } else {
                                 // MQTT client is trying to publish on a not supported endpoint
-                                endpoint.close();
+                                LOG.debug("no such endpoint [{}]", resource.getEndpoint());
+                                close(endpoint, clientConnected);
                             }
 
                         } else {
                             // MQTT client is trying to publish on a different device_id used on connection (MQTT has now way for errors)
-                            endpoint.close();
+                            LOG.debug("client [ID: {}] not authorized to publish data for device [{}]", endpoint.clientIdentifier(), resource.getResourceId());
+                            close(endpoint, clientConnected);
                         }
 
                     }
@@ -202,16 +219,27 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
                 } catch (IllegalArgumentException e) {
 
                     // MQTT client is trying to publish on invalid topic; it does not contain at least two segments
-                    endpoint.close();
+                    LOG.debug("client [ID: {}] tries to publish on unsupported topic", endpoint.clientIdentifier());
+                    close(endpoint, clientConnected);
                 }
 
             });
-
+            clientConnected.compareAndSet(false, true);
             endpoint.accept(false);
         }
     }
 
-    private void doUploadMessages(final String tenant, final MqttEndpoint endpoint, final MqttPublishMessage message, final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
+    private static void close(final MqttEndpoint endpoint, final AtomicBoolean clientConnected) {
+        if (clientConnected.get()) {
+            LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
+            endpoint.close();
+        } else {
+            LOG.debug("client has already closed connection");
+        }
+    }
+
+    private void doUploadMessages(final String tenant, final MqttEndpoint endpoint, final MqttPublishMessage message,
+            final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier, final AtomicBoolean clientConnected) {
 
         senderSupplier.accept(tenant, createAttempt -> {
 
@@ -219,31 +247,24 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                 MessageSender sender = createAttempt.result();
 
-                // sending message only when the "flow" is handled and credits are available
-                // otherwise send will never happen due to no credits
-                if (!sender.sendQueueFull()) {
-                    this.sendToHono(endpoint, sender, message);
+                boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM);
+                if (accepted) {
+                    if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE && clientConnected.get()) {
+                        endpoint.publishAcknowledge(message.messageId());
+                    }
                 } else {
-                    sender.sendQueueDrainHandler(v -> {
-                        this.sendToHono(endpoint, sender, message);
-                    });
+                    LOG.debug("no credit available for sending message");
+                    close(endpoint, clientConnected);
                 }
 
             } else {
 
                 // we don't have a connection to Hono ? MQTT no other way to close connection
-                endpoint.close();
+                LOG.debug("no connection to Hono server");
+                close(endpoint, clientConnected);
             }
 
         });
-    }
-
-    private void sendToHono(final MqttEndpoint endpoint, final MessageSender sender, final MqttPublishMessage message) {
-
-        boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM);
-        if (accepted && message.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-            endpoint.publishAcknowledge(message.messageId());
-        }
     }
 
     private boolean isConnected() {

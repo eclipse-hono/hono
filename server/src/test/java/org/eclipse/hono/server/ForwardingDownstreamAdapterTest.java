@@ -13,10 +13,12 @@
 package org.eclipse.hono.server;
 
 import static org.eclipse.hono.TestSupport.*;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -118,9 +120,10 @@ public class ForwardingDownstreamAdapterTest {
     /**
      * Verifies that the adapter refuses to accept a link from an upstream client
      * when there is no connection to the downstream container.
+     * @throws InterruptedException 
      */
     @Test
-    public void testGetDownstreamSenderClosesLinkIfDownstreamConnectionIsBroken() {
+    public void testGetDownstreamSenderClosesLinkIfDownstreamConnectionIsBroken() throws InterruptedException {
 
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX, "myTenant", null);
         final UpstreamReceiver client = newClient();
@@ -135,9 +138,15 @@ public class ForwardingDownstreamAdapterTest {
 
         // WHEN a client wants to attach to Hono for uploading telemetry data
         // THEN assert that no sender can be created
+        CountDownLatch latch = new CountDownLatch(1);
         adapter.onClientAttach(client, s -> {
-            assertFalse(s.succeeded());
+            if (s.failed()) {
+                latch.countDown();
+            }
         });
+        assertTrue(latch.await(100, TimeUnit.MILLISECONDS));
+        assertTrue(adapter.isActiveSendersEmpty());
+        assertTrue(adapter.isSendersPerConnectionEmpty());
     }
 
     /**
@@ -162,6 +171,8 @@ public class ForwardingDownstreamAdapterTest {
 
         // THEN the downstream sender is closed and removed from the sender list
         verify(downstreamSender).close();
+        assertTrue(adapter.isActiveSendersEmpty());
+        assertTrue(adapter.isSendersPerConnectionEmpty());
     }
 
     /**
@@ -187,14 +198,17 @@ public class ForwardingDownstreamAdapterTest {
 
         // THEN the adapter tries to reconnect to the downstream container
         factory.await(1, TimeUnit.SECONDS);
+        assertTrue(adapter.isActiveSendersEmpty());
     }
 
     /**
      * Verifies that all links to upstream clients are closed when the connection to the
      * downstream container is lost.
+     * 
+     * @throws Exception if the test fails.
      */
     @Test
-    public void testDownstreamDisconnectClosesUpstreamReceivers() {
+    public void testDownstreamDisconnectClosesUpstreamReceivers() throws Exception {
 
         final ProtonConnection connectionToCreate = mock(ProtonConnection.class);
         when(connectionToCreate.getRemoteContainer()).thenReturn("downstream");
@@ -217,6 +231,8 @@ public class ForwardingDownstreamAdapterTest {
         // THEN the adapter tries to reconnect to the downstream container and has closed all upstream receivers
         factory.await(1, TimeUnit.SECONDS);
         verify(client).close(any(ErrorCondition.class));
+        assertTrue(adapter.isActiveSendersEmpty());
+        assertTrue(adapter.isSendersPerConnectionEmpty());
     }
 
     private void givenADownstreamAdapter() {

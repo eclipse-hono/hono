@@ -3,6 +3,8 @@ hono:
       permissionsPath: file:///etc/hono/permissions.json
   downstream:
     name: hono-server
+  registration:
+    saveToFile: false
   server:
     bindAddress: 0.0.0.0
     maxInstances: 1

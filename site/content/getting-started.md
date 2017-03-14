@@ -18,6 +18,12 @@ As noted above, Hono consists of multiple service components that together compr
 You will need at least Docker version 1.13.0 and Docker Compose version 1.10.0 in order to run the example in this guide. By the time of this writing, the latest released versions of Docker and Docker Compose were 1.13.1 and 1.11.1 respectively.
 {{% /warning %}}
 
+Do not forget to initialize your docker swarm mode first, e.g. like
+
+    $ docker swarm init
+
+Please refer to the [docker swarm mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
+
 ### Compiling
 
 If you do not already have a working Maven installation on your system, please follow the [installation instructions on the Maven home page](https://maven.apache.org/).

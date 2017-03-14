@@ -16,38 +16,46 @@ import static org.eclipse.hono.util.RegistrationConstants.*;
 import static org.mockito.Mockito.*;
 
 import org.junit.After;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
  * Tests {@link FileBasedRegistrationService}.
  */
-public class FileBasedRegistrationAdapterTest
+@RunWith(VertxUnitRunner.class)
+public class FileBasedRegistrationServiceTest
 {
    private static final String TENANT = "tenant";
    private static final String DEVICE = "device";
-   private static FileBasedRegistrationService registrationAdapter;
+   private FileBasedRegistrationService registrationService;
+   Vertx vertx;
+   EventBus eventBus;
 
-   @BeforeClass
-   public static void setUp() throws Exception {
-      final Vertx vertx = mock(Vertx.class);
-      final Context ctx = mock(Context.class);
-      final EventBus eventBus = mock(EventBus.class);
+   @Before
+   public void setUp() throws Exception {
+      vertx = mock(Vertx.class);
+      Context ctx = mock(Context.class);
+      eventBus = mock(EventBus.class);
       when(vertx.eventBus()).thenReturn(eventBus);
 
-      registrationAdapter = new FileBasedRegistrationService();
-      registrationAdapter.init(vertx, ctx);
+      registrationService = new FileBasedRegistrationService();
+      registrationService.init(vertx, ctx);
    }
 
    @After
    public void clear() {
-       registrationAdapter.clear();
+       registrationService.clear();
    }
 
    @Test
@@ -84,8 +92,37 @@ public class FileBasedRegistrationAdapterTest
        processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_NOT_FOUND, TENANT, DEVICE));
    }
 
+   @Test
+   public void testPeriodicSafeJobIsNotScheduledIfSavingIfDisabled(final TestContext ctx) throws Exception {
+
+       Future<Void> startupTracker = Future.future();
+       startupTracker.setHandler(ctx.asyncAssertSuccess(done -> {
+           verify(vertx, never()).setPeriodic(anyLong(), any(Handler.class));
+       }));
+
+       registrationService.setSaveToFile(false);
+       registrationService.doStart(startupTracker);
+   }
+
+   @Test
+   public void testContentsNotSavedOnShutdownIfSavingIfDisabled(final TestContext ctx) throws Exception {
+
+       Future<Void> shutdownTracker = Future.future();
+       shutdownTracker.setHandler(ctx.asyncAssertSuccess(done -> {
+           verify(vertx, never()).fileSystem();
+       }));
+
+       registrationService.setSaveToFile(false);
+       registrationService.addDevice(TENANT, DEVICE, new JsonObject());
+       registrationService.doStop(shutdownTracker);
+   }
+
    private static JsonObject expectedMessage(final String id) {
-       return new JsonObject().put("id", id).put("data", new JsonObject());
+       return new JsonObject()
+               .put(BaseRegistrationService.FIELD_HONO_ID, id)
+               .put(
+                       BaseRegistrationService.FIELD_DATA, 
+                       new JsonObject().put(BaseRegistrationService.FIELD_ENABLED, Boolean.TRUE));
    }
 
    private static Message<JsonObject> mockMsg(final String action) {
@@ -102,8 +139,8 @@ public class FileBasedRegistrationAdapterTest
       return message;
    }
 
-   private static void processMessageAndExpectResponse(final Message<JsonObject> request, final JsonObject expectedResponse) {
-      registrationAdapter.processRegistrationMessage(request);
+   private void processMessageAndExpectResponse(final Message<JsonObject> request, final JsonObject expectedResponse) {
+      registrationService.processRegistrationMessage(request);
       verify(request).reply(expectedResponse);
    }
 

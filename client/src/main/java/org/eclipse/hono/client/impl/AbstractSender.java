@@ -62,6 +62,15 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
+    public int getCredit() {
+        if (sender == null) {
+            return 0;
+        } else {
+            return sender.getCredit();
+        }
+    }
+
+    @Override
     public boolean sendQueueFull() {
         return sender.sendQueueFull();
     }
@@ -73,7 +82,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         } else {
             this.drainHandler = Objects.requireNonNull(handler);
             sender.sendQueueDrainHandler(replenishedSender -> {
-                LOG.trace("sender has been replenished with {} credits", replenishedSender.getCredit());
+                LOG.trace("sender has received FLOW [credits: {}, queued:{}]", replenishedSender.getCredit(), replenishedSender.getQueued());
                 final Handler<Void> currentHandler = this.drainHandler;
                 this.drainHandler = null;
                 if (currentHandler != null) {
@@ -152,6 +161,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
 
     private void sendMessage(final Message rawMessage) {
         sender.send(rawMessage, deliveryUpdated -> dispositionHandler.accept(rawMessage.getMessageId(), deliveryUpdated));
+        LOG.trace("sent message, remaining credit: {}, queued messages: {}", sender.getCredit(), sender.getQueued());
     }
 
     @Override

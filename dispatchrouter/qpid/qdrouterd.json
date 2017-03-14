@@ -1,12 +1,8 @@
 [
-  ["container", {
-    "workerThreads": 2,
-    "containerName": "Hono.Example.Container"
-  }],
-
   ["router", {
     "id": "Hono.Example.Router",
     "mode": "standalone",
+    "workerThreads": 4,
     "saslConfigName": "qdrouter-sasl",
     "saslConfigPath": "/etc/hono/qdrouter/"
   }],
