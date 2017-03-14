@@ -42,6 +42,8 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClientOptions;
@@ -185,6 +187,32 @@ public abstract class ClientTestBase {
         }, qpidTracker);
 
         shutdown.await(2000);
+    }
+
+    @Test(timeout = 2000)
+    public void testClosedLinkIsRemovedFromCachedSenders(final TestContext ctx) {
+
+        final Async setup = ctx.async();
+        final Async closed = ctx.async();
+
+        createConsumer(TEST_TENANT_ID, msg -> {
+            LOGGER.trace("received {}", msg);
+        }, ctx.asyncAssertSuccess(done -> {
+            setup.complete();
+        }));
+
+        setup.await(1000);
+
+        sender.setErrorHandler(onClose -> {
+            if (onClose.failed()) {
+                final JsonArray status = honoClient.getSenderStatus();
+                LOGGER.debug("status: {}", status.encodePrettily());
+                ctx.assertTrue(status.size() == 0);
+                closed.complete();
+            }
+        });
+        sender.send("non-existing-device", new byte[]{0x00}, "application/binary", capacityAvailable -> {});
+        closed.await(1000);
     }
 
     @Test
