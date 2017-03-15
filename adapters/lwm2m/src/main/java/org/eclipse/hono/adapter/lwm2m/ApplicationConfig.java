@@ -18,12 +18,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.hono.adapter.AdapterConfig;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.HonoClientConfigProperties;
-import org.eclipse.leshan.server.client.ClientRegistry;
-import org.eclipse.leshan.server.impl.ClientRegistryImpl;
-import org.eclipse.leshan.server.impl.SecurityRegistryImpl;
+import org.eclipse.leshan.server.californium.CaliforniumRegistrationStore;
+import org.eclipse.leshan.server.californium.impl.InMemoryRegistrationStore;
+import org.eclipse.leshan.server.impl.InMemorySecurityStore;
 import org.eclipse.leshan.server.model.LwM2mModelProvider;
 import org.eclipse.leshan.server.model.StandardModelProvider;
-import org.eclipse.leshan.server.security.SecurityRegistry;
+import org.eclipse.leshan.server.security.EditableSecurityStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -58,8 +58,8 @@ public class ApplicationConfig extends AdapterConfig {
     }
 
     @Bean
-    public ClientRegistry defaultClientRegistry() {
-        return new ClientRegistryImpl();
+    public CaliforniumRegistrationStore defaultCaliforniumRegistrationStore() {
+        return new InMemoryRegistrationStore();
     }
 
     @Bean
@@ -69,7 +69,7 @@ public class ApplicationConfig extends AdapterConfig {
 
     @Bean
     @Profile("standalone")
-    public SecurityRegistry defaultSecurityRegistry(@Autowired final ServerKeyProvider keyProvider) {
-        return new SecurityRegistryImpl(keyProvider.getServerPrivateKey(), keyProvider.getServerPublicKey());
+    public EditableSecurityStore defaultSecurityStore(@Autowired final ServerKeyProvider keyProvider) {
+        return new InMemorySecurityStore();
     }
 }

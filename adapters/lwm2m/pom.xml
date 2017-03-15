@@ -11,7 +11,7 @@
   <description>A protocol adapter for connecting devices using OMA's Lightweight M2M protocol.</description>
 
   <properties>
-    <leshan.version>0.1.11-M14</leshan.version>
+    <leshan.version>1.0.0-M1</leshan.version>
   </properties>
 
   <dependencies>

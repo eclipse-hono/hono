@@ -26,10 +26,9 @@ import org.eclipse.leshan.core.node.LwM2mNode;
 import org.eclipse.leshan.core.node.LwM2mPath;
 import org.eclipse.leshan.core.observation.Observation;
 import org.eclipse.leshan.core.response.ObserveResponse;
-import org.eclipse.leshan.server.client.Client;
-import org.eclipse.leshan.server.client.ClientRegistry;
 import org.eclipse.leshan.server.model.LwM2mModelProvider;
-import org.eclipse.leshan.server.observation.ObservationRegistryListener;
+import org.eclipse.leshan.server.observation.ObservationListener;
+import org.eclipse.leshan.server.registration.Registration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,17 +37,16 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * A <em>leshan</em> {@code ObservationRegistryListener} for publishing notifications received from LWM2M clients to Hono's
+ * A <em>leshan</em> {@code ObservationListener} for publishing notifications received from LWM2M clients to Hono's
  * Telemetry API.
  */
 @Component
 @Profile("step2")
-public class TelemetryForwarder extends AbstractHonoClientSupport implements ObservationRegistryListener {
+public class TelemetryForwarder extends AbstractHonoClientSupport implements ObservationListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(TelemetryForwarder.class);
     private TelemetryPayloadFactory messageFactory;
     private LwM2mModelProvider modelProvider;
-    private ClientRegistry clientRegistry;
     private Map<String, String> endpointMap;
 
     /**
@@ -74,17 +72,6 @@ public class TelemetryForwarder extends AbstractHonoClientSupport implements Obs
     }
 
     /**
-     * Sets the registry to use for looking up LWM2M clients corresponding to observed resources.
-     * 
-     * @param clientRegistry The registry to use.
-     * @throws NullPointerException if the registry is {@code null}.
-     */
-    @Autowired
-    public void setClientRegistry(final ClientRegistry clientRegistry) {
-        this.clientRegistry = Objects.requireNonNull(clientRegistry);
-    }
-
-    /**
      * Sets the map containing LWM2M endpoint name to Hono identifier mappings.
      * 
      * @param endpointMap The endpoint map.
@@ -98,18 +85,15 @@ public class TelemetryForwarder extends AbstractHonoClientSupport implements Obs
 
     @PostConstruct
     public void startup() throws IllegalStateException {
-
         connectToHono();
     }
 
     @Override
-    public void newObservation(final Observation observation) {
-
-        Client client = clientRegistry.findByRegistrationId(observation.getRegistrationId());
-        LOG.info("New observation for resource [client: {}, path: {}] has been established", client.getEndpoint(),
+    public void newObservation(final Observation observation, final Registration registration) {
+        LOG.info("New observation for resource [client: {}, path: {}] has been established", registration.getEndpoint(),
                 observation.getPath());
     }
-
+    
     @Override
     public void cancelled(final Observation observation) {
         LOG.info("Observation [id: {}] for resource [path: {}] has been cancelled", observation.getRegistrationId(),
@@ -117,48 +101,53 @@ public class TelemetryForwarder extends AbstractHonoClientSupport implements Obs
     }
 
     @Override
-    public void newValue(final Observation observation, final ObserveResponse response) {
-
-        Client client = clientRegistry.findByRegistrationId(observation.getRegistrationId());
-        if (client == null) {
-            LOG.info("discarding notification from unknown device");
-        } else {
-            newValue(client, observation, response.getContent());
-        }
+    public void onResponse(final Observation observation, final Registration registration,
+            final ObserveResponse response) {
+        newValue(registration, observation, response.getContent());
     }
 
-    private void newValue(final Client client, final Observation observation, final LwM2mNode mostRecentValue) {
+    @Override
+    public void onError(final Observation observation, final Registration registration, final Exception error) {
+        LOG.warn("Error while receiving notification [client: {}, path: {}]", registration.getEndpoint(),
+                observation.getPath(), error);
+    }
 
-        final String deviceId = endpointMap.get(client.getEndpoint());
+    private void newValue(final Registration registration, final Observation observation,
+            final LwM2mNode mostRecentValue) {
+        final String deviceId = endpointMap.get(registration.getEndpoint());
         if (deviceId == null) {
-            LOG.warn("endpoint {} cannot be resolved to Hono ID, has device been registered with Hono?", client.getEndpoint());
+            LOG.warn("endpoint {} cannot be resolved to Hono ID, has device been registered with Hono?",
+                    registration.getEndpoint());
         } else {
             hono.getOrCreateTelemetrySender(tenant, creationAttempt -> {
                 if (creationAttempt.succeeded()) {
-                    MessageSender sender = creationAttempt.result();
-                    sendMostRecentValue(sender, client, deviceId, observation.getPath(), mostRecentValue);
+                    final MessageSender sender = creationAttempt.result();
+                    sendMostRecentValue(sender, registration, deviceId, observation.getPath(), mostRecentValue);
                 } else {
-                    LOG.error("cannot create telemetry sender for tenant {}, discarding notification", tenant, creationAttempt.cause());
+                    LOG.error("cannot create telemetry sender for tenant {}, discarding notification", tenant,
+                            creationAttempt.cause());
                 }
             });
         }
     }
 
-    private void sendMostRecentValue(final MessageSender sender, final Client client, final String deviceId, final LwM2mPath resourcePath, final LwM2mNode mostRecentValue) {
+    private void sendMostRecentValue(final MessageSender sender, final Registration registration, final String deviceId,
+            final LwM2mPath resourcePath, final LwM2mNode mostRecentValue) {
 
         synchronized (sender) {
             if (sender.sendQueueFull()) {
                 LOG.info("discarding telemetry data reported by {}, no downstream credit for tenant {}",
                         deviceId, tenant);
             } else if (mostRecentValue != null) {
-                LwM2mModel definitions = modelProvider.getObjectModel(client);
-                ObjectModel objectModel = definitions.getObjectModel(resourcePath.getObjectId());
+                final LwM2mModel definitions = modelProvider.getObjectModel(registration);
+                final ObjectModel objectModel = definitions.getObjectModel(resourcePath.getObjectId());
                 if (objectModel == null) {
-                    LOG.error("cannot resolve ObjectModel for Object [id: {}], discarding notification", resourcePath.getObjectId());
+                    LOG.error("cannot resolve ObjectModel for Object [id: {}], discarding notification",
+                            resourcePath.getObjectId());
                 } else {
-                    byte[] msg = messageFactory.getPayload(resourcePath, objectModel, mostRecentValue);
-                    String contentType = messageFactory.getContentType();
-                    Map<String, Object> props = new HashMap<>();
+                    final byte[] msg = messageFactory.getPayload(resourcePath, objectModel, mostRecentValue);
+                    final String contentType = messageFactory.getContentType();
+                    final Map<String, Object> props = new HashMap<>();
                     props.put("content_type", contentType);
                     props.put("object", objectModel.name);
                     sender.send(deviceId, props, msg, contentType);

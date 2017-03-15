@@ -13,10 +13,6 @@
 package org.eclipse.hono.adapter.lwm2m.security;
 
 import java.net.HttpURLConnection;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -27,9 +23,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.eclipse.hono.adapter.lwm2m.AbstractHonoClientSupport;
-import org.eclipse.hono.adapter.lwm2m.ServerKeyProvider;
+import org.eclipse.leshan.server.security.EditableSecurityStore;
 import org.eclipse.leshan.server.security.SecurityInfo;
-import org.eclipse.leshan.server.security.SecurityRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -39,7 +34,7 @@ import io.vertx.core.json.JsonObject;
  * A leshan {@code SecurityRegistry} which provides support for using Hono's Registration API as
  * the persistence store for identities and secrets.
  */
-public abstract class AbstractHonoBasedSecurityRegistry extends AbstractHonoClientSupport implements SecurityRegistry {
+public abstract class AbstractHonoBasedSecurityRegistry extends AbstractHonoClientSupport implements EditableSecurityStore {
 
     protected static final String FIELD_DATA = "data";
     protected static final String FIELD_ENDPOINT = "ep";
@@ -49,7 +44,6 @@ public abstract class AbstractHonoBasedSecurityRegistry extends AbstractHonoClie
     protected static final long TIMEOUT_SECS = 5;
 
     protected Map<String, String> endpointMap;
-    private ServerKeyProvider keyProvider;
 
     /**
      * Sets the map containing LWM2M endpoint name to Hono identifier mappings.
@@ -61,17 +55,6 @@ public abstract class AbstractHonoBasedSecurityRegistry extends AbstractHonoClie
     @Qualifier("endpointMap")
     public void setEndpointMap(final Map<String, String> endpointMap) {
         this.endpointMap = Objects.requireNonNull(endpointMap);
-    }
-
-    /**
-     * Sets the provider for the server's private and public keys.
-     * 
-     * @param keyProvider The provider to use.
-     * @throws NullPointerException if the map is {@code null}.
-     */
-    @Autowired
-    public void setServerKeyProvider(final ServerKeyProvider keyProvider) {
-        this.keyProvider = Objects.requireNonNull(keyProvider);
     }
 
     abstract protected SecurityInfo fromJson(final JsonObject data);
@@ -129,25 +112,5 @@ public abstract class AbstractHonoBasedSecurityRegistry extends AbstractHonoClie
     @Override
     public Collection<SecurityInfo> getAll() {
         return Collections.EMPTY_LIST;
-    }
-
-    @Override
-    public final PublicKey getServerPublicKey() {
-        return keyProvider.getServerPublicKey();
-    }
-
-    @Override
-    public final PrivateKey getServerPrivateKey() {
-        return keyProvider.getServerPrivateKey();
-    }
-
-    @Override
-    public final X509Certificate[] getServerX509CertChain() {
-        return keyProvider.getServerX509CertChain();
-    }
-
-    @Override
-    public final Certificate[] getTrustedCertificates() {
-        return keyProvider.getTrustedCertificates();
     }
 }
