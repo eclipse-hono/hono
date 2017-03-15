@@ -93,7 +93,7 @@ public class TelemetryForwarder extends AbstractHonoClientSupport implements Obs
         LOG.info("New observation for resource [client: {}, path: {}] has been established", registration.getEndpoint(),
                 observation.getPath());
     }
-    
+
     @Override
     public void cancelled(final Observation observation) {
         LOG.info("Observation [id: {}] for resource [path: {}] has been cancelled", observation.getRegistrationId(),

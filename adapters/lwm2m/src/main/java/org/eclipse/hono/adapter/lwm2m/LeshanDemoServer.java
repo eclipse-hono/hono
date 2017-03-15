@@ -68,36 +68,36 @@ public class LeshanDemoServer {
     private LeshanServer lwServer;
 
     @Autowired
-    public void setModelProvider(LwM2mModelProvider modelProvider) {
+    public void setModelProvider(final LwM2mModelProvider modelProvider) {
         this.modelProvider = Objects.requireNonNull(modelProvider);
         LOG.info("using LwM2mModelProvider: {}", modelProvider.getClass().getName());
     }
 
     @Autowired
-    public void setLeshanConfigProperties(LeshanConfigProperties leshanConfig) {
+    public void setLeshanConfigProperties(final LeshanConfigProperties leshanConfig) {
         this.leshanConfig = Objects.requireNonNull(leshanConfig);
     }
 
     @Autowired
-    public void setSecurityStore(EditableSecurityStore securityStore) {
+    public void setSecurityStore(final EditableSecurityStore securityStore) {
         this.securityStore = Objects.requireNonNull(securityStore);
         LOG.info("using SecurityStore: {}", securityStore.getClass().getName());
     }
 
     @Autowired
-    public void setServerKeyProvider(ServerKeyProvider serverKeyProvider) {
+    public void setServerKeyProvider(final ServerKeyProvider serverKeyProvider) {
         this.serverKeyProvider = serverKeyProvider;
         LOG.info("using ServerKeyProvider: {}", serverKeyProvider.getClass().getName());
     }
     
     @Autowired
-    public void setRegistrationStore(CaliforniumRegistrationStore registrationStore) {
+    public void setRegistrationStore(final CaliforniumRegistrationStore registrationStore) {
         this.registrationStore = registrationStore;
         LOG.info("using CaliforniumRegistrationStore: {}", registrationStore.getClass().getName());
     }
 
     @Autowired(required = false)
-    public void setObservationListeners(Set<ObservationListener> listeners) {
+    public void setObservationListeners(final Set<ObservationListener> listeners) {
         Objects.requireNonNull(listeners);
         this.observationListeners.addAll(listeners);
     }
@@ -128,12 +128,13 @@ public class LeshanDemoServer {
     @PostConstruct
     public void startup() throws GeneralSecurityException {
         lwServer = createServer();
-        lwServer.start();
         
         for (ObservationListener listener : observationListeners) {
             LOG.debug("adding observation listener: {}", listener);
             lwServer.getObservationService().addListener(listener);
         }
+        
+        lwServer.start();
     }
 
     private LeshanServer createServer() throws GeneralSecurityException {
@@ -153,7 +154,7 @@ public class LeshanDemoServer {
         return builder.build();
     }
 
-    private void registerServlets(ServletContextHandler root) throws GeneralSecurityException {
+    private void registerServlets(final ServletContextHandler root) throws GeneralSecurityException {
 
         EventServlet eventServlet = new EventServlet(lwServer, lwServer.getSecureAddress().getPort());
         root.addServlet(new ServletHolder(eventServlet), "/event/*");
