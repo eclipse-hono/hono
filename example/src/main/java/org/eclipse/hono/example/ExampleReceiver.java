@@ -12,8 +12,6 @@
  */
 package org.eclipse.hono.example;
 
-import java.io.IOException;
-
 import javax.annotation.PostConstruct;
 
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -34,7 +32,7 @@ import io.vertx.proton.ProtonClientOptions;
  * payload if anything is received.
  */
 @Component
-@Profile("!sender")
+@Profile("receiver")
 public class ExampleReceiver extends AbstractExampleClient {
 
     @PostConstruct
@@ -43,10 +41,7 @@ public class ExampleReceiver extends AbstractExampleClient {
         final Future<MessageConsumer> startupTracker = Future.future();
         startupTracker.setHandler(done -> {
             if (done.succeeded()) {
-                LOG.info("Receiver created successfully.");
-                vertx.executeBlocking(this::waitForInput, false, finish -> {
-                    vertx.close();
-                });
+                LOG.info("Receiver created successfully, hit ctrl-c to exit");
             } else {
                 LOG.error("Error occurred during initialization of message receiver: {}", done.cause().getMessage());
                 vertx.close();
@@ -73,19 +68,6 @@ public class ExampleReceiver extends AbstractExampleClient {
 
             }, startupTracker);
         });
-    }
-
-    private void waitForInput(final Future<Object> f) {
-        try {
-            LOG.info("Press enter to stop receiver.");
-            System.in.read();
-            f.complete();
-        } catch (final IOException e) {
-            LOG.error("problem reading message from STDIN", e);
-            f.fail(e);
-        } finally {
-            client.shutdown();
-        }
     }
 
     private void handleMessage(final String endpoint, final Message msg) {

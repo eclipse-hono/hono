@@ -14,6 +14,7 @@ package org.eclipse.hono.example;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
 import org.slf4j.Logger;
@@ -37,7 +38,6 @@ abstract class AbstractExampleClient {
     @Value(value = "${tenant.id}")
     protected String tenantId;
     protected Vertx vertx;
-    @Autowired
     protected HonoClient client;
     protected List<String> activeProfiles;
 
@@ -57,5 +57,10 @@ abstract class AbstractExampleClient {
     public final void setVertx(final Vertx vertx) {
         this.vertx = vertx;
         this.ctx = vertx.getOrCreateContext();
+    }
+
+    @Autowired
+    public final void setHonoClient(final HonoClient client) {
+        this.client = Objects.requireNonNull(client);
     }
 }
