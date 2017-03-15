@@ -73,6 +73,28 @@ public final class HonoClient {
     }
 
     /**
+     * Sets the connection to the Hono server.
+     * <p>
+     * This method is mostly useful to inject a (mock) connection when running tests.
+     * 
+     * @param connection The connection to use.
+     */
+    void setConnection(final ProtonConnection connection) {
+        this.connection = connection;
+    }
+
+    /**
+     * Sets the vertx context to run all interactions with the Hono server on.
+     * <p>
+     * This method is mostly useful to inject a (mock) context when running tests.
+     * 
+     * @param context The context to use.
+     */
+    void setContext(final Context context) {
+        this.context = context;
+    }
+
+    /**
      * Checks whether this client is connected to the Hono server.
      * 
      * @return {@code true} if this client is connected.
@@ -166,7 +188,7 @@ public final class HonoClient {
             connectionHandler.handle(Future.succeededFuture(this));
         } else if (connecting.compareAndSet(false, true)) {
 
-            connection = null;
+            setConnection(null);
             if (options == null) {
                 clientOptions = new ProtonClientOptions();
             } else {
@@ -182,8 +204,8 @@ public final class HonoClient {
                         if (conAttempt.failed()) {
                             connectionHandler.handle(Future.failedFuture(conAttempt.cause()));
                         } else {
-                            connection = conAttempt.result();
-                            context = Vertx.currentContext();
+                            setConnection(conAttempt.result());
+                            setContext(Vertx.currentContext());
                             connectionHandler.handle(Future.succeededFuture(this));
                         }
                     });
@@ -238,6 +260,7 @@ public final class HonoClient {
      * @return This for command chaining.
      * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
      */
+    @SuppressWarnings("unchecked")
     public HonoClient getOrCreateTelemetrySender(final String tenantId, final String deviceId, final Handler<AsyncResult<MessageSender>> resultHandler) {
         Objects.requireNonNull(tenantId);
         getOrCreateSender(
@@ -268,6 +291,7 @@ public final class HonoClient {
      * @return This for command chaining.
      * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
      */
+    @SuppressWarnings("unchecked")
     public HonoClient getOrCreateEventSender(
             final String tenantId,
             final String deviceId,
@@ -282,6 +306,7 @@ public final class HonoClient {
         return this;
     }
 
+    @SuppressWarnings("rawtypes")
     private void getOrCreateSender(final String key, final Consumer<Handler> newSenderSupplier,
             final Handler<AsyncResult<MessageSender>> resultHandler) {
 
@@ -308,6 +333,7 @@ public final class HonoClient {
             newSenderSupplier.accept(internal.completer());
         } else {
             LOG.debug("already trying to create a message sender for {}", key);
+            resultHandler.handle(Future.failedFuture("sender link not established yet"));
         }
     }
 
