@@ -7,7 +7,7 @@ metadata:
 spec:
   ports:
   - name: amqps
-    port: 15761
+    port: 15671
     protocol: TCP
     targetPort: 5671
   - name: amqp

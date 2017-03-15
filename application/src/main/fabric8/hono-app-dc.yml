@@ -1,5 +1,5 @@
-apiVersion: v1
-kind: DeploymentConfig
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
   labels:
     app: hono
@@ -7,8 +7,6 @@ metadata:
   name: ${project.artifactId}
 spec:
   replicas: 1
-  selector:
-    name: ${project.artifactId}
   template:
     metadata:
       labels:
