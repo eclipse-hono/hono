@@ -27,6 +27,7 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>http-vertx-base</module>
     <module>rest-vertx</module>
     <module>mqtt-vertx</module>
   </modules>
