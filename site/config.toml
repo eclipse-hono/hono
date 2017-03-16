@@ -74,8 +74,8 @@ pluralizeListTitles = "false"
   weight = 500
 
 [[menu.main]]
-  name   = "Deployments"
-  identifier = "Deployments"
+  name   = "Deployment"
+  identifier = "Deployment"
   url    = "/deployment/"
   weight = 500
 
