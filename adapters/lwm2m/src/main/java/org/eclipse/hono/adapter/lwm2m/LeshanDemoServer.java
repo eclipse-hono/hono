@@ -27,21 +27,16 @@ import org.eclipse.leshan.core.node.codec.DefaultLwM2mNodeDecoder;
 import org.eclipse.leshan.core.node.codec.DefaultLwM2mNodeEncoder;
 import org.eclipse.leshan.core.node.codec.LwM2mNodeDecoder;
 import org.eclipse.leshan.core.node.codec.LwM2mNodeEncoder;
-import org.eclipse.leshan.server.californium.CaliforniumObservationRegistry;
+import org.eclipse.leshan.server.californium.CaliforniumRegistrationStore;
 import org.eclipse.leshan.server.californium.LeshanServerBuilder;
-import org.eclipse.leshan.server.californium.impl.CaliforniumObservationRegistryImpl;
-import org.eclipse.leshan.server.californium.impl.InMemoryLwM2mObservationStore;
 import org.eclipse.leshan.server.californium.impl.LeshanServer;
-import org.eclipse.leshan.server.californium.impl.LwM2mObservationStore;
-import org.eclipse.leshan.server.client.ClientRegistry;
-import org.eclipse.leshan.server.client.ClientRegistryListener;
 import org.eclipse.leshan.server.demo.servlet.ClientServlet;
 import org.eclipse.leshan.server.demo.servlet.EventServlet;
 import org.eclipse.leshan.server.demo.servlet.ObjectSpecServlet;
 import org.eclipse.leshan.server.demo.servlet.SecurityServlet;
 import org.eclipse.leshan.server.model.LwM2mModelProvider;
-import org.eclipse.leshan.server.observation.ObservationRegistryListener;
-import org.eclipse.leshan.server.security.SecurityRegistry;
+import org.eclipse.leshan.server.observation.ObservationListener;
+import org.eclipse.leshan.server.security.EditableSecurityStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,23 +56,16 @@ public class LeshanDemoServer {
 
     private static final Logger LOG = LoggerFactory.getLogger(LeshanDemoServer.class);
 
-    private final LwM2mObservationStore observationStore = new InMemoryLwM2mObservationStore();
     private final LwM2mNodeEncoder encoder = new DefaultLwM2mNodeEncoder();
     private final LwM2mNodeDecoder decoder = new DefaultLwM2mNodeDecoder();
 
-    private final Set<ClientRegistryListener> clientRegistryListeners = new HashSet<>();
-    private final Set<ObservationRegistryListener> observationRegistryListeners = new HashSet<>();
-    private LeshanConfigProperties leshanConfig;
-    private CaliforniumObservationRegistry observationRegistry;
-    private ClientRegistry clientRegistry;
-    private LwM2mModelProvider modelProvider;
-    private SecurityRegistry securityRegistry;
-
-    @Autowired
-    public void setClientRegistry(final ClientRegistry clientRegistry) {
-        this.clientRegistry = Objects.requireNonNull(clientRegistry);
-        LOG.info("using ClientRegistry: {}", clientRegistry.getClass().getName());
-    }
+    private final Set<ObservationListener> observationListeners = new HashSet<>();
+    private LeshanConfigProperties         leshanConfig;
+    private LwM2mModelProvider             modelProvider;
+    private EditableSecurityStore          securityStore;
+    private CaliforniumRegistrationStore   registrationStore;
+    private ServerKeyProvider              serverKeyProvider;
+    private LeshanServer lwServer;
 
     @Autowired
     public void setModelProvider(final LwM2mModelProvider modelProvider) {
@@ -91,21 +79,27 @@ public class LeshanDemoServer {
     }
 
     @Autowired
-    public void setSecurityRegistry(final SecurityRegistry securityRegistry) {
-        this.securityRegistry = Objects.requireNonNull(securityRegistry);
-        LOG.info("using SecurityRegistry: {}", securityRegistry.getClass().getName());
+    public void setSecurityStore(final EditableSecurityStore securityStore) {
+        this.securityStore = Objects.requireNonNull(securityStore);
+        LOG.info("using SecurityStore: {}", securityStore.getClass().getName());
+    }
+
+    @Autowired
+    public void setServerKeyProvider(final ServerKeyProvider serverKeyProvider) {
+        this.serverKeyProvider = serverKeyProvider;
+        LOG.info("using ServerKeyProvider: {}", serverKeyProvider.getClass().getName());
+    }
+    
+    @Autowired
+    public void setRegistrationStore(final CaliforniumRegistrationStore registrationStore) {
+        this.registrationStore = registrationStore;
+        LOG.info("using CaliforniumRegistrationStore: {}", registrationStore.getClass().getName());
     }
 
     @Autowired(required = false)
-    public void setClientRegistryListeners(final Set<ClientRegistryListener> listeners) {
+    public void setObservationListeners(final Set<ObservationListener> listeners) {
         Objects.requireNonNull(listeners);
-        this.clientRegistryListeners.addAll(listeners);
-    }
-
-    @Autowired(required = false)
-    public void setObservationRegistryListeners(final Set<ObservationRegistryListener> listeners) {
-        Objects.requireNonNull(listeners);
-        this.observationRegistryListeners.addAll(listeners);
+        this.observationListeners.addAll(listeners);
     }
 
     @Bean
@@ -132,40 +126,35 @@ public class LeshanDemoServer {
     }
 
     @PostConstruct
-    public void startup() {
-        observationRegistry = new CaliforniumObservationRegistryImpl(observationStore,
-                clientRegistry, modelProvider, decoder);
-
-        for (ObservationRegistryListener listener : observationRegistryListeners) {
+    public void startup() throws GeneralSecurityException {
+        lwServer = createServer();
+        
+        for (ObservationListener listener : observationListeners) {
             LOG.debug("adding observation listener: {}", listener);
-            observationRegistry.addListener(listener);
+            lwServer.getObservationService().addListener(listener);
         }
-
-        for (ClientRegistryListener listener : clientRegistryListeners) {
-            LOG.debug("adding client registry listener: {}", listener);
-            clientRegistry.addListener(listener);
-        }
+        
+        lwServer.start();
     }
 
     private LeshanServer createServer() throws GeneralSecurityException {
-
         // Prepare LWM2M server
         LeshanServerBuilder builder = new LeshanServerBuilder()
                 .setLocalAddress(leshanConfig.getCoapBindAddress(), leshanConfig.getCoapPort())
                 .setLocalSecureAddress(leshanConfig.getCoapsBindAddress(), leshanConfig.getCoapsPort())
+                .setPrivateKey(serverKeyProvider.getServerPrivateKey())
+                .setPublicKey(serverKeyProvider.getServerPublicKey())
+                .setTrustedCertificates(serverKeyProvider.getTrustedCertificates())
                 .setEncoder(encoder)
                 .setDecoder(decoder)
-                .setObservationRegistry(observationRegistry)
+                .setRegistrationStore(registrationStore)
                 .setObjectModelProvider(modelProvider)
-                .setSecurityRegistry(securityRegistry)
-                .setClientRegistry(clientRegistry);
+                .setSecurityStore(securityStore);
 
         return builder.build();
     }
 
     private void registerServlets(final ServletContextHandler root) throws GeneralSecurityException {
-
-        LeshanServer lwServer = createServer();
 
         EventServlet eventServlet = new EventServlet(lwServer, lwServer.getSecureAddress().getPort());
         root.addServlet(new ServletHolder(eventServlet), "/event/*");
@@ -173,12 +162,11 @@ public class LeshanDemoServer {
         ClientServlet clientServlet = new ClientServlet(lwServer, lwServer.getSecureAddress().getPort());
         root.addServlet(new ServletHolder(clientServlet), "/api/clients/*");
 
-        SecurityServlet securityServlet = new SecurityServlet(lwServer.getSecurityRegistry());
+        SecurityServlet securityServlet = new SecurityServlet(securityStore,
+                serverKeyProvider.getServerPublicKey());
         root.addServlet(new ServletHolder(securityServlet), "/api/security/*");
 
         ObjectSpecServlet objectSpecServlet = new ObjectSpecServlet(lwServer.getModelProvider());
         root.addServlet(new ServletHolder(objectSpecServlet), "/api/objectspecs/*");
-
-        lwServer.start();
     }
 }

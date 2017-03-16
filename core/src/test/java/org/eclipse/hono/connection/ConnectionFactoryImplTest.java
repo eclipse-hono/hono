@@ -72,7 +72,7 @@ public class ConnectionFactoryImplTest {
         factory.connect(null, null, null, connectionHandler);
 
         // THEN the connection attempt fails and the given handler is invoked
-        assertTrue(latch.await(200, TimeUnit.MILLISECONDS));
+        assertTrue(latch.await(2000, TimeUnit.MILLISECONDS));
         assertThat(cause.get(), is(notNullValue()));
     }
 
