@@ -15,7 +15,24 @@ using the OpenShift client tools that can be downloaded from the [OpenShift Orig
 Follow [this guide](https://github.com/openshift/origin/blob/master/docs/cluster_up_down.md) for setting up a local developer instance of OpenShift,
 for having an accessible registry for Docker and starting the cluster locally.
 
-## Setting up Hono
+## One "script" deployment
+
+In order to deploy Eclipse Hono on OpenShift, a bunch of steps are needed as explained in the next chapter. If you want to avoid to do them, a "one click" deployment
+script is available in the repository.
+After having the OpenShift cluster up and running and the client tools in the PATH, the deployment can be executed launching the following bash script
+(from the "example/openshift" directory)
+
+~~~sh
+$ bash openshift_deploy.sh
+~~~
+
+When you want to shutdown the Eclipse Hono instance, there is the following useful script :
+
+~~~sh
+$ bash openshift_undeploy.sh
+~~~
+
+## Step by Step deployment
 
 ### Creating a project
 
