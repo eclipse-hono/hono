@@ -41,6 +41,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -111,6 +112,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
      * @return The router.
      */
     private Router createRouter() {
+
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", config.getMaxPayloadSize());
         router.route().handler(BodyHandler.create().setBodyLimit(config.getMaxPayloadSize()));
@@ -128,21 +130,20 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         // ADD device registration
         router.route(HttpMethod.POST, String.format("/registration/:%s", PARAM_TENANT))
             .consumes(CONTENT_TYPE_JSON)
-            .handler(this::doRegisterDeviceJson)
-            .produces(CONTENT_TYPE_JSON);
+            .handler(this::doRegisterDeviceJson);
         router.route(HttpMethod.POST, String.format("/registration/:%s", PARAM_TENANT))
             .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-            .handler(this::doRegisterDeviceForm)
-            .produces(CONTENT_TYPE_JSON);
+            .handler(this::doRegisterDeviceForm);
+        router.route(HttpMethod.POST, "/registration/*/*").handler(ctx -> {
+            badRequest(ctx, "missing or unsupported content-type");
+        });
 
         // GET or FIND device registration
         router.route(HttpMethod.GET, String.format("/registration/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(this::doGetDevice)
-            .produces(CONTENT_TYPE_JSON);
+            .handler(this::doGetDevice);
         router.route(HttpMethod.POST, String.format("/registration/:%s/find", PARAM_TENANT))
             .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-            .handler(this::doFindDevice)
-            .produces(CONTENT_TYPE_JSON);
+            .handler(this::doFindDevice);
 
         // UPDATE existing registration
         router.route(HttpMethod.PUT, String.format("/registration/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
@@ -151,11 +152,13 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
         router.route(HttpMethod.PUT, String.format("/registration/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
             .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
             .handler(this::doUpdateRegistrationForm);
+        router.route(HttpMethod.PUT, "/registration/*/*").handler(ctx -> {
+            badRequest(ctx, "missing or unsupported content-type");
+        });
 
         // REMOVE registration
         router.route(HttpMethod.DELETE, String.format("/registration/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(this::doUnregisterDevice)
-            .produces(CONTENT_TYPE_JSON);
+            .handler(this::doUnregisterDevice);
     }
 
     private void addTelemetryApiRoutes(final Router router) {
@@ -225,7 +228,13 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     }
 
     private static void badRequest(final RoutingContext ctx, final String msg) {
-        ctx.response().setStatusCode(HTTP_BAD_REQUEST).end(msg);
+        badRequest(ctx, msg, "text/plain");
+    }
+
+    private static void badRequest(final RoutingContext ctx, final String msg, final String contentType) {
+        ctx.response()
+            .putHeader(HttpHeaders.CONTENT_TYPE, contentType)
+            .setStatusCode(HTTP_BAD_REQUEST).end(msg);
     }
 
     private static void internalServerError(final HttpServerResponse response, final String msg) {
@@ -275,7 +284,15 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private void doRegisterDeviceJson(final RoutingContext ctx) {
 
-        registerDevice(ctx, ctx.getBodyAsJson());
+        try {
+            JsonObject payload = null;
+            if (ctx.getBody().length() > 0) {
+                payload = ctx.getBodyAsJson();
+            }
+            registerDevice(ctx, payload);
+        } catch (DecodeException e) {
+            badRequest(ctx, "body does not contain a valid JSON object");
+        }
     }
 
     private void doRegisterDeviceForm(final RoutingContext ctx) {
@@ -286,7 +303,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
     private void registerDevice(final RoutingContext ctx, final JsonObject payload) {
 
         if (payload == null) {
-            badRequest(ctx, "payload is missing");
+            badRequest(ctx, "missing body");
         } else {
             Object deviceId = payload.remove(PARAM_DEVICE_ID);
             if (deviceId == null) {
@@ -320,7 +337,15 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
     private void doUpdateRegistrationJson(final RoutingContext ctx) {
 
-        updateRegistration(getDeviceIdParam(ctx), ctx.getBodyAsJson(), ctx);
+        try {
+            JsonObject payload = null;
+            if (ctx.getBody().length() > 0) {
+                payload = ctx.getBodyAsJson();
+            }
+            updateRegistration(getDeviceIdParam(ctx), payload, ctx);
+        } catch (DecodeException e) {
+            badRequest(ctx, "body does not contain a valid JSON object");
+        }
     }
 
     private void doUpdateRegistrationForm(final RoutingContext ctx) {
@@ -462,6 +487,8 @@ public class VertxBasedRestProtocolAdapter extends AbstractVerticle {
 
         if (contentType == null) {
             badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
+        } else if (ctx.getBody().length() == 0) {
+            badRequest(ctx, "missing body");
         } else {
             senderSupplier.accept(tenant, createAttempt -> {
                 if (createAttempt.succeeded()) {

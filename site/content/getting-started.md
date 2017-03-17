@@ -123,7 +123,9 @@ Content-Type: application/json; charset=utf-8
 Content-Length: 35
 
 {
-  "data" : { },
+  "data" : {
+      "enabled": true
+  },
   "id" : "4711"
 }
 ~~~
@@ -141,8 +143,12 @@ or (using HTTPie):
 $ http PUT http://localhost:8080/registration/DEFAULT_TENANT/4711 temp:=5
 ~~~
 
-If you have started the consumer as described above, you should now see the telemetry message being logged to the console. 
- 
+If you have started the consumer as described above, you should now see the telemetry message being logged to the console.
+
+{{% note %}}
+Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
+{{% /note %}}
+
 ## Stopping Hono
 
 The Hono instance's containers can be stopped using the following command:
