@@ -17,6 +17,9 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
@@ -50,12 +53,18 @@ import io.vertx.proton.ProtonClientOptions;
  */
 public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVerticle {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
-
+    /**
+     * The <em>application/json</em> content type.
+     */
     protected static final String CONTENT_TYPE_JSON = "application/json";
+    /**
+     * The <em>application/json; charset=utf-8</em> content type.
+     */
     protected static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
 
-    @Value("${spring.profiles.active:prod}")
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
+
+    @Value("${spring.profiles.active}")
     private String activeProfiles;
 
     private HttpServer server;
@@ -76,6 +85,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
         this.hono = Objects.requireNonNull(honoClient);
     }
 
+    /**
+     * Gets the client for interacting with the Hono server.
+     * 
+     * @return The client.
+     */
     public final HonoClient getHonoClient() {
         return hono;
     }
@@ -91,10 +105,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
         this.config = Objects.requireNonNull(properties);
     }
 
+    /**
+     * Gets the properties of the Hono server this adapter is interacting with.
+     * 
+     * @return The configuration properties.
+     */
     public final HonoConfigProperties getConfig() {
         return config;
     }
-    
+
     @Override
     public final void start(Future<Void> startFuture) throws Exception {
 
@@ -123,17 +142,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     }
 
     /**
-     * Invoked before the Http server is started.
+     * Invoked before the http server is started.
+     * <p>
      * May be overridden by sub-classes to provide additional startup handling.
      * 
-     * @param startFuture  a future that has to be completed when this operation is finished
+     * @param startFuture The future that needs to complete for the startup process to proceed. If this future
+     *                    is failed, the adapter does not start up.
      */
     protected void preStartup(final Future<Void> startFuture) {
         startFuture.complete();
     }
 
     /**
-     * Invoked after startup of this Adapter is successful.
+     * Invoked after this adapter has started up successfully.
+     * <p>
      * May be overridden by sub-classes.
      */
     protected void onStartupSuccess() {
@@ -161,11 +183,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     }
 
     /**
-     * Returns the path for the status resource. By default, this is "/status".
-     * Subclasses may override this method to return a different path or to return null, 
+     * Returns the path for the status resource.
+     * <p>
+     * By default, this method returns {@code /status}.
+     * Subclasses may override this method to return a different path or {@code null},
      * in which case the status resource will be disabled.
      * 
-     * @return path or null
+     * @return The resource path or {@code null}.
      */
     protected String getStatusResourcePath() {
         return "/status";
@@ -181,10 +205,26 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
      */
     protected abstract void addRoutes(final Router router);
 
-    private void bindHttpServer(final Router router, final Future<Void> startFuture) {
+    /**
+     * Gets the options to use for creating the http server.
+     * <p>
+     * Subclasses may override this method in order to customize the http server.
+     * <p>
+     * This method returns default options with the host and port being set to the corresponding values
+     * from the <em>config</em> properties and using a maximum chunk size of 4096 bytes.
+     * 
+     * @return The http server options.
+     */
+    protected HttpServerOptions getHttpServerOptions() {
+
         HttpServerOptions options = new HttpServerOptions();
         options.setHost(config.getBindAddress()).setPort(config.getPort()).setMaxChunkSize(4096);
-        server = vertx.createHttpServer(options);
+        return options;
+    }
+
+    private void bindHttpServer(final Router router, final Future<Void> startFuture) {
+
+        server = vertx.createHttpServer(getHttpServerOptions());
         server.requestHandler(router::accept).listen(done -> {
             if (done.succeeded()) {
                 LOG.info("adapter running on {}:{}", config.getBindAddress(), server.actualPort());
@@ -253,70 +293,104 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     }
 
     /**
-     * Ends the given response with status code HTTP_BAD_REQUEST and the given message.
-     * The content type of the message will be "text/plain".
+     * Ends a response with HTTP status code 400 (Bad Request) and an optional message.
+     * <p>
+     * The content type of the message will be <em>text/plain</em>.
      * 
-     * @param response response
-     * @param msg message to write in the response
+     * @param response The HTTP response to write to.
+     * @param msg The message to write to the response's body (may be {@code null}).
+     * @throws NullPointerException if response is {@code null}.
      */
     protected static void badRequest(final HttpServerResponse response, final String msg) {
-        badRequest(response, msg, "text/plain");
+        badRequest(response, msg, null);
     }
 
     /**
-     * Ends the given response with status code HTTP_BAD_REQUEST and the given message.
+     * Ends a response with HTTP status code 400 (Bad Request) and an optional message.
      *
-     * @param response response
-     * @param msg message to write in the response
-     * @param contentType content type of the message
+     * @param response The HTTP response to write to.
+     * @param msg The message to write to the response's body (may be {@code null}).
+     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
+     * @throws NullPointerException if response is {@code null}.
      */
     protected static void badRequest(final HttpServerResponse response, final String msg, final String contentType) {
-        response
-            .putHeader(HttpHeaders.CONTENT_TYPE, contentType)
-            .setStatusCode(HTTP_BAD_REQUEST).end(msg);
+
+        endWithStatus(response, HTTP_BAD_REQUEST, null, msg, contentType);
     }
 
     /**
-     * Ends the given response with status code HTTP_INTERNAL_ERROR and the given message.
+     * Ends a response with HTTP status code 500 (Internal Error) and an optional message.
+     * <p>
+     * The content type of the message will be <em>text/plain</em>.
      *
-     * @param response response
-     * @param msg message to write in the response
+     * @param response The HTTP response to write to.
+     * @param msg The message to write to the response's body (may be {@code null}).
+     * @throws NullPointerException if response is {@code null}.
      */
     protected static void internalServerError(final HttpServerResponse response, final String msg) {
-        response
-            .setStatusCode(HTTP_INTERNAL_ERROR)
-            .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain; charset=utf-8")
-            .end(msg);
+
+        endWithStatus(response, HTTP_INTERNAL_ERROR, null, msg, null);
     }
 
     /**
-     * Ends the given response with status code HTTP_UNAVAILABLE and sets a RETRY_AFTER header with the given number of seconds.
+     * Ends a response with HTTP status code 503 (Service Unavailable) and sets the <em>Retry-After</em> HTTP header
+     * to a given number of seconds.
      * 
-     * @param response response
-     * @param retryAfterSeconds number of seconds to set in the RETRY_AFTER header
+     * @param response The HTTP response to write to.
+     * @param retryAfterSeconds The number of seconds to set in the header.
      */
     protected static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds) {
         serviceUnavailable(response, retryAfterSeconds, null, null);
     }
 
     /**
-     * Ends the given response with status code HTTP_UNAVAILABLE and sets a RETRY_AFTER header with the given number of seconds.
-     * Additionally sets the given message and content type.
+     * Ends a response with HTTP status code 503 (Service Unavailable) and sets the <em>Retry-After</em> HTTP header
+     * to a given number of seconds.
      * 
-     * @param response response
-     * @param retryAfterSeconds number of seconds to set in the RETRY_AFTER header
-     * @param msg message to write in the response
-     * @param contentType content type of the message
+     * @param response The HTTP response to write to.
+     * @param retryAfterSeconds The number of seconds to set in the header.
+     * @param detail The message to write to the response's body (may be {@code null}).
+     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
+     * @throws NullPointerException if response is {@code null}.
      */
     protected static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds,
-            final String msg, final String contentType) {
-        response
-            .setStatusCode(HTTP_UNAVAILABLE)
-            .putHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
-        if (msg != null) {
-            response
-                .putHeader(HttpHeaders.CONTENT_TYPE, contentType)
-                .end(msg);
+            final String detail, final String contentType) {
+
+        endWithStatus(
+                response,
+                HTTP_UNAVAILABLE,
+                Collections.singletonMap(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "text/plain"),
+                detail,
+                contentType);
+    }
+
+    /**
+     * Ends a response with a given HTTP status code and detail message.
+     *
+     * @param response The HTTP response to write to.
+     * @param status The status code to write to the response.
+     * @param headers HTTP headers to set on the response (may be {@code null}).
+     * @param detail The message to write to the response's body (may be {@code null}).
+     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
+     * @throws NullPointerException if response is {@code null}.
+     */
+    protected static void endWithStatus(final HttpServerResponse response, final int status,
+            Map<CharSequence, CharSequence> headers, final String detail, final String contentType) {
+
+        Objects.requireNonNull(response);
+        response.setStatusCode(HTTP_BAD_REQUEST);
+        if (headers != null) {
+            for (Entry<CharSequence, CharSequence> header : headers.entrySet()) {
+                response.putHeader(header.getKey(), header.getValue());
+            }
+        }
+        if (detail != null) {
+            if (contentType != null) {
+                response.putHeader(HttpHeaders.CONTENT_TYPE, contentType);
+            } else {
+                response.putHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
+            }
+            response.end(detail);
         } else {
             response.end();
         }
@@ -342,82 +416,128 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
         // empty
     }
 
+    /**
+     * Gets the value of the <em>Content-Type</em> HTTP header for a request.
+     * 
+     * @param ctx The routing context containing the HTTP request.
+     * @return The content type or {@code null} if the request doesn't contain a
+     *         <em>Content-Type</em> header.
+     * @throws NullPointerException if context is {@code null}.
+     */
     protected static String getContentType(final RoutingContext ctx) {
-        return ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);
+
+        return Objects.requireNonNull(ctx).request().getHeader(HttpHeaders.CONTENT_TYPE);
+    }
+
+    /**
+     * Uploads the body of an HTTP request as a telemetry message to the Hono server.
+     * <p>
+     * This method simply invokes {@link #uploadTelemetryMessage(HttpServerResponse, String, String, Buffer, String)}
+     * with objects retrieved from the routing context.
+     *
+     * @param ctx The context to retrieve the message payload and content type from.
+     * @param tenant The tenant of the device that has produced the data.
+     * @param deviceId The id of the device that has produced the data.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public final void uploadTelemetryMessage(final RoutingContext ctx, final String tenant, final String deviceId) {
+
+        uploadTelemetryMessage(
+                Objects.requireNonNull(ctx).response(),
+                Objects.requireNonNull(tenant),
+                Objects.requireNonNull(deviceId),
+                ctx.getBody(),
+                getContentType(ctx));
     }
 
     /**
      * Uploads a telemetry message to the Hono server.
-     * Payload and content type of the message are taken from the current request.
-     *
-     * @param ctx the request context
-     * @param tenant tenant for the message
-     * @param deviceId device id for the message
-     */
-    public final void uploadTelemetryMessage(final RoutingContext ctx, final String tenant, final String deviceId) {
-        doUploadMessage(ctx, tenant, deviceId, telemetrySenderSupplier);
-    }
-    
-    /**
-     * Uploads a telemetry message to the Hono server.
-     *
-     * @param response the response in which the upload result will be set
-     * @param tenant tenant for the message
-     * @param deviceId device id for the message
-     * @param payload payload for the message
-     * @param contentType content type of the message payload
+     * <p>
+     * Depending on the outcome of the attempt to upload the message to Hono, the HTTP response's code is
+     * set as follows:
+     * <ul>
+     * <li>202 (Accepted) - if the telemetry message has been sent to the Hono server.</li>
+     * <li>400 (Bad Request) - if the message payload is {@code null} or empty or if the content type is {@code null}.</li>
+     * <li>503 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of connection or credit.</li>
+     * </ul>
+     * 
+     * @param response The HTTP response to write the result of the operation to.
+     * @param tenant The tenant of the device that has produced the data.
+     * @param deviceId The id of the device that has produced the data.
+     * @param payload The message payload to send.
+     * @param contentType The content type of the message payload.
+     * @throws NullPointerException if any of response, tenant or device ID is {@code null}.
      */
     public final void uploadTelemetryMessage(final HttpServerResponse response, final String tenant, final String deviceId,
             final Buffer payload, final String contentType) {
-        doUploadMessage(response, tenant, deviceId, payload, contentType, telemetrySenderSupplier);
+
+        doUploadMessage(
+                Objects.requireNonNull(response),
+                Objects.requireNonNull(tenant),
+                Objects.requireNonNull(deviceId),
+                payload,
+                contentType,
+                telemetrySenderSupplier);
     }
 
     /**
-     * Uploads an event message to the Hono server.
-     * Payload and content type of the message are taken from the current request.
+     * Uploads the body of an HTTP request as an event message to the Hono server.
+     * <p>
+     * This method simply invokes {@link #uploadEventMessage(HttpServerResponse, String, String, Buffer, String)}
+     * with objects retrieved from the routing context.
      *
-     * @param ctx the request context
-     * @param tenant tenant for the message
-     * @param deviceId device id for the message
+     * @param ctx The context to retrieve the message payload and content type from.
+     * @param tenant The tenant of the device that has produced the data.
+     * @param deviceId The id of the device that has produced the data.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public final void uploadEventMessage(final RoutingContext ctx, final String tenant, final String deviceId) {
-        doUploadMessage(ctx, tenant, deviceId, eventSenderSupplier);
+
+        uploadEventMessage(
+                Objects.requireNonNull(ctx).response(),
+                Objects.requireNonNull(tenant),
+                Objects.requireNonNull(deviceId),
+                ctx.getBody(),
+                getContentType(ctx));
     }
 
     /**
      * Uploads an event message to the Hono server.
+     * <p>
+     * Depending on the outcome of the attempt to upload the message to Hono, the HTTP response's code is
+     * set as follows:
+     * <ul>
+     * <li>202 (Accepted) - if the telemetry message has been sent to the Hono server.</li>
+     * <li>400 (Bad Request) - if the message payload is {@code null} or empty or if the content type is {@code null}.</li>
+     * <li>503 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of connection or credit.</li>
+     * </ul>
      * 
-     * @param response the response in which the upload result will be set
-     * @param tenant tenant for the message
-     * @param deviceId device id for the message
-     * @param payload payload for the message
-     * @param contentType content type of the message payload 
+     * @param response The HTTP response to write the result of the operation to.
+     * @param tenant The tenant of the device that has produced the data.
+     * @param deviceId The id of the device that has produced the data.
+     * @param payload The message payload to send.
+     * @param contentType The content type of the message payload.
+     * @throws NullPointerException if any of response, tenant or device ID is {@code null}.
      */
     public final void uploadEventMessage(final HttpServerResponse response, final String tenant, final String deviceId,
             final Buffer payload, final String contentType) {
-        doUploadMessage(response, tenant, deviceId, payload, contentType, eventSenderSupplier);
+
+        doUploadMessage(
+                Objects.requireNonNull(response),
+                Objects.requireNonNull(tenant),
+                Objects.requireNonNull(deviceId),
+                payload,
+                contentType,
+                eventSenderSupplier);
     }
 
-    private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
-                                 final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
-
-        final String contentType = getContentType(ctx);
-        if (contentType == null) {
-            badRequest(ctx.response(), String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
-        } else if (ctx.getBody().length() == 0) {
-            badRequest(ctx.response(), "missing body");
-        } else {
-            doUploadMessage(ctx.response(), tenant, deviceId, ctx.getBody(), contentType, senderSupplier);
-        }
-    }
-    
     private void doUploadMessage(final HttpServerResponse response, final String tenant, final String deviceId,
             final Buffer payload, final String contentType, final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
 
         if (contentType == null) {
-            badRequest(response, "content type is not set");
+            badRequest(response, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
         } else if (payload == null || payload.length() == 0) {
-            badRequest(response, "payload is empty");
+            badRequest(response, "missing body");
         } else {
             senderSupplier.accept(tenant, createAttempt -> {
                 if (createAttempt.succeeded()) {
