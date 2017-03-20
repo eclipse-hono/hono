@@ -24,8 +24,8 @@ import io.vertx.core.Handler;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
- * Verifies that a device can send telemetry messages to a Hono server and
- * that the telemetry messages can be consumed from the downstream host.
+ * Verifies that a device can send event messages to a Hono server and
+ * that the events can be consumed from the downstream host.
  */
 @RunWith(VertxUnitRunner.class)
 public class DeviceEventClientIT extends ClientTestBase {

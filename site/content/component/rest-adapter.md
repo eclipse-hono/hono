@@ -79,10 +79,14 @@ value of the *--hono.client.host* option to the IP address (or name) of the Dock
 * URI: `/registration/${tenantId}`
 * Method: `POST`
 * Headers:
-  * (required) `Content-Type: application/x-www-url-encoded`
+  * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
 * Parameters (encoded as payload according to the content type):
   * (required) `device_id`: The ID of the device to register.
   * (optional) Arbitrary key/value pairs containing additional data to be registered with the device.
+* Status Codes:
+  * 201 (Created): Device has been registered successfully under resource indicated by `Location` header.
+  * 400 (Bad Request): Device has not been registered because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
+  * 409 (Conflict): There already exists a device with the given ID. The request has not been processed.
 
 **Example**
 
@@ -101,6 +105,9 @@ like this:
 
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `GET`
+* Status Codes:
+  * 200 (OK): Device has been found, body contains registration data.
+  * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
 
@@ -116,6 +123,7 @@ The response will look similar to this:
 
     {
       "data" : {
+         "enabled": true,
          "ep": "IMEI4711"
       },
       "id" : "4711"
@@ -146,6 +154,7 @@ The response will look similar to this:
 
     {
       "data" : {
+         "enabled": true,
          "ep": "IMEI4711"
       },
       "id" : "4711"
@@ -156,9 +165,13 @@ The response will look similar to this:
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Headers:
-  * (required) `Content-Type: application/x-www-url-encoded`
+  * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
 * Parameters (encoded as payload according to content type):
   * (optional) Arbitrary key/value pairs containing additional data to be registered with the device. The existing key/valule pairs will be replaced with these key/values.
+* Status Codes:
+  * 200 (OK): Device registration data has been updated. The body contains the *previous* data registered for the device.
+  * 400 (Bad Request): Device registration has not been updated because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
+  * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
 
@@ -172,6 +185,7 @@ The response will look similar to this:
 
     {
       "data" : {
+         "enabled": true,
          "ep": "IMEI4711"
       },
       "id" : "4711"
@@ -181,6 +195,9 @@ The response will look similar to this:
 
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `DELETE`
+* Status Codes:
+  * 200 (OK): Device registration has been deleted. The payload contains the data that had been registered for the device.
+  * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
 
@@ -194,6 +211,7 @@ The response will look similar to this:
 
     {
       "data" : {
+         "enabled": true,
          "ep": "IMEI4711",
          "psk-id": "psk4711"
       },
@@ -207,9 +225,12 @@ The response will look similar to this:
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Headers:
-  * (required) `Content-Type` - the type of payload contained in the body.
+  * (required) `Content-Type`: the type of payload contained in the body.
 * Body:
   * (required) Arbitrary payload encoded according to the given content type.
+* Status Codes:
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
+  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
 
 **Example**
 
@@ -228,6 +249,9 @@ Upload a JSON string for device `4711`:
   * (required) `Content-Type` - the type of payload contained in the body.
 * Body:
   * (required) Arbitrary payload encoded according to the given content type.
+* Status Codes:
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
+  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
 
 **Example**
 

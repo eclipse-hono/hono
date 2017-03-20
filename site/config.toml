@@ -73,6 +73,12 @@ pluralizeListTitles = "false"
   url    = "/architecture/"
   weight = 500
 
+[[menu.main]]
+  name   = "Deployment"
+  identifier = "Deployment"
+  url    = "/deployment/"
+  weight = 500
+
 [blackfriday]
 	smartypants	= true
 	fractions = true

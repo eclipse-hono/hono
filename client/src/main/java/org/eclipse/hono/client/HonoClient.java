@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -49,6 +49,7 @@ public final class HonoClient {
     private static final Logger LOG = LoggerFactory.getLogger(HonoClient.class);
     private final Map<String, MessageSender> activeSenders = new ConcurrentHashMap<>();
     private final Map<String, RegistrationClient> activeRegClients = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> senderCreationLocks = new ConcurrentHashMap<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
@@ -69,6 +70,28 @@ public final class HonoClient {
             this.vertx = Vertx.vertx();
         }
         this.connectionFactory = connectionFactory;
+    }
+
+    /**
+     * Sets the connection to the Hono server.
+     * <p>
+     * This method is mostly useful to inject a (mock) connection when running tests.
+     * 
+     * @param connection The connection to use.
+     */
+    void setConnection(final ProtonConnection connection) {
+        this.connection = connection;
+    }
+
+    /**
+     * Sets the vertx context to run all interactions with the Hono server on.
+     * <p>
+     * This method is mostly useful to inject a (mock) context when running tests.
+     * 
+     * @param context The context to use.
+     */
+    void setContext(final Context context) {
+        this.context = context;
     }
 
     /**
@@ -165,7 +188,7 @@ public final class HonoClient {
             connectionHandler.handle(Future.succeededFuture(this));
         } else if (connecting.compareAndSet(false, true)) {
 
-            connection = null;
+            setConnection(null);
             if (options == null) {
                 clientOptions = new ProtonClientOptions();
             } else {
@@ -181,8 +204,8 @@ public final class HonoClient {
                         if (conAttempt.failed()) {
                             connectionHandler.handle(Future.failedFuture(conAttempt.cause()));
                         } else {
-                            connection = conAttempt.result();
-                            context = Vertx.currentContext();
+                            setConnection(conAttempt.result());
+                            setContext(Vertx.currentContext());
                             connectionHandler.handle(Future.succeededFuture(this));
                         }
                     });
@@ -237,6 +260,7 @@ public final class HonoClient {
      * @return This for command chaining.
      * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
      */
+    @SuppressWarnings("unchecked")
     public HonoClient getOrCreateTelemetrySender(final String tenantId, final String deviceId, final Handler<AsyncResult<MessageSender>> resultHandler) {
         Objects.requireNonNull(tenantId);
         getOrCreateSender(
@@ -267,6 +291,7 @@ public final class HonoClient {
      * @return This for command chaining.
      * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
      */
+    @SuppressWarnings("unchecked")
     public HonoClient getOrCreateEventSender(
             final String tenantId,
             final String deviceId,
@@ -281,14 +306,16 @@ public final class HonoClient {
         return this;
     }
 
+    @SuppressWarnings("rawtypes")
     private void getOrCreateSender(final String key, final Consumer<Handler> newSenderSupplier,
             final Handler<AsyncResult<MessageSender>> resultHandler) {
 
         final MessageSender sender = activeSenders.get(key);
         if (sender != null && sender.isOpen()) {
-            LOG.debug("reusing existing message sender for [{}]", key);
+            LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
             resultHandler.handle(Future.succeededFuture(sender));
-        } else {
+        } else if (!senderCreationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+            senderCreationLocks.put(key, Boolean.TRUE);
             LOG.debug("creating new message sender for {}", key);
             final Future<MessageSender> internal = Future.future();
             internal.setHandler(creationAttempt -> {
@@ -298,10 +325,15 @@ public final class HonoClient {
                     activeSenders.put(key, newSender);
                 } else {
                     LOG.debug("failed to create new message sender for {}", key, creationAttempt.cause());
+                    activeSenders.remove(key);
                 }
+                senderCreationLocks.remove(key);
                 resultHandler.handle(creationAttempt);
             });
             newSenderSupplier.accept(internal.completer());
+        } else {
+            LOG.debug("already trying to create a message sender for {}", key);
+            resultHandler.handle(Future.failedFuture("sender link not established yet"));
         }
     }
 
@@ -313,7 +345,11 @@ public final class HonoClient {
         Future<MessageSender> senderTracker = Future.future();
         senderTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> TelemetrySenderImpl.create(context, connection, tenantId, deviceId, senderTracker.completer()),
+                connected -> TelemetrySenderImpl.create(context, connection, tenantId, deviceId,
+                        onSenderClosed -> {
+                            activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, deviceId));
+                        },
+                        senderTracker.completer()),
                 senderTracker);
         return this;
     }
@@ -352,7 +388,11 @@ public final class HonoClient {
         Future<MessageSender> senderTracker = Future.future();
         senderTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> EventSenderImpl.create(context, connection, tenantId, deviceId, senderTracker.completer()),
+                connected -> EventSenderImpl.create(context, connection, tenantId, deviceId,
+                        onSenderClosed -> {
+                            activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
+                        },
+                        senderTracker.completer()),
                 senderTracker);
         return this;
     }
@@ -425,25 +465,34 @@ public final class HonoClient {
         }
     }
 
+    /**
+     * Closes this client's connection to the Hono server.
+     * <p>
+     * Any senders or consumers opened by this client will be implicitly closed as well.
+     * 
+     * @param completionHandler The handler to invoke with the result of the operation.
+     */
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
+
         if (connection == null || connection.isDisconnected()) {
             LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
             completionHandler.handle(Future.succeededFuture());
         } else {
-            LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
-            connection.disconnectHandler(null); // make sure we are not trying to re-connect
-            connection.closeHandler(closedCon -> {
-                if (closedCon.succeeded()) {
-                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-                } else {
-                    LOG.info("could not close connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
-                }
-                connection.disconnect();
-                if (completionHandler != null) {
-                    completionHandler.handle(Future.succeededFuture());
-                }
-            }).close();
+            context.runOnContext(close -> {
+                LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
+                connection.disconnectHandler(null); // make sure we are not trying to re-connect
+                connection.closeHandler(closedCon -> {
+                    if (closedCon.succeeded()) {
+                        LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                    } else {
+                        LOG.info("could not close connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
+                    }
+                    connection.disconnect();
+                    if (completionHandler != null) {
+                        completionHandler.handle(Future.succeededFuture());
+                    }
+                }).close();
+            });
         }
     }
-
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -17,8 +17,6 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -31,13 +29,13 @@ import io.vertx.proton.ProtonSender;
 /**
  * A Vertx-Proton based client for publishing event messages to a Hono server.
  */
-public class EventSenderImpl extends AbstractSender {
+public final class EventSenderImpl extends AbstractSender {
 
     private static final String EVENT_ENDPOINT_NAME = "event/";
-    private static final Logger LOG = LoggerFactory.getLogger(EventSenderImpl.class);
 
-    private EventSenderImpl(final ProtonSender sender, final String tenantId, final Context context) {
-        super(sender, tenantId, context);
+    private EventSenderImpl(final ProtonSender sender, final String tenantId, final String targetAddress,
+            final Context context, final Handler<String> closeHook) {
+        super(sender, tenantId, targetAddress, context, closeHook);
     }
 
     /**
@@ -62,52 +60,42 @@ public class EventSenderImpl extends AbstractSender {
         return getTargetAddress(tenantId, deviceId);
     }
 
+    /**
+     * Creates a new sender for publishing events to a Hono server.
+     * 
+     * @param context The vertx context to run all interactions with the server on.
+     * @param con The connection to the Hono server.
+     * @param tenantId The tenant that the events will be published for.
+     * @param deviceId The device that the events will be published for or {@code null}
+     *                 if the events are going to be be produced by arbitrary devices of the
+     *                 tenant.
+     * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
+     *                  target address is provided as an argument to the handler.
+     * @param creationHandler The handler to invoke with the result of the creation attempt.
+     * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
+     */
     public static void create(
             final Context context,
             final ProtonConnection con,
             final String tenantId,
             final String deviceId,
+            final Handler<String> closeHook,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(creationHandler);
+
         final String targetAddress = getTargetAddress(tenantId, deviceId);
-        createSender(con, targetAddress).setHandler(created -> {
+        createSender(context, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new EventSenderImpl(created.result(), tenantId, context)));
+                        new EventSenderImpl(created.result(), tenantId, targetAddress, context, closeHook)));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }
         });
-    }
-
-    private static Future<ProtonSender> createSender(
-            final ProtonConnection con,
-            final String targetAddress) {
-
-        final Future<ProtonSender> result = Future.future();
-
-        final ProtonSender sender = con.createSender(targetAddress);
-        sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
-        sender.openHandler(senderOpen -> {
-            if (senderOpen.succeeded()) {
-                LOG.debug("event sender for [{}] open", senderOpen.result().getRemoteTarget());
-                result.complete(senderOpen.result());
-            } else {
-                LOG.debug("event sender open failed [{}]", senderOpen.cause().getMessage());
-                result.fail(senderOpen.cause());
-            }
-        }).closeHandler(senderClosed -> {
-            if (senderClosed.succeeded()) {
-                LOG.debug("event sender for [{}] closed", targetAddress);
-            } else {
-                LOG.debug("event sender for [{}] closed: {}", targetAddress, senderClosed.cause().getMessage());
-            }
-        }).open();
-
-        return result;
     }
 
     @Override

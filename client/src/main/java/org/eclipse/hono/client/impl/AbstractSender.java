@@ -37,8 +37,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -51,18 +53,23 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     private static final Pattern               CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
 
     protected final String                     tenantId;
+    protected final String                     targetAddress;
 
+    private final Handler<String>              closeHook;
     private Handler<Void>                      drainHandler;
     private BiConsumer<Object, ProtonDelivery> dispositionHandler = (messageId, delivery) -> LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
 
-    AbstractSender(final ProtonSender sender, final String tenantId, final Context context) {
+    AbstractSender(final ProtonSender sender, final String tenantId, final String targetAddress,
+            final Context context, final Handler<String> closeHook) {
         super(context);
         this.sender = Objects.requireNonNull(sender);
         this.tenantId = Objects.requireNonNull(tenantId);
+        this.targetAddress = targetAddress;
+        this.closeHook = closeHook;
     }
 
     @Override
-    public int getCredit() {
+    public final int getCredit() {
         if (sender == null) {
             return 0;
         } else {
@@ -71,12 +78,12 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public boolean sendQueueFull() {
+    public final boolean sendQueueFull() {
         return sender.sendQueueFull();
     }
 
     @Override
-    public void sendQueueDrainHandler(final Handler<Void> handler) {
+    public final void sendQueueDrainHandler(final Handler<Void> handler) {
         if (this.drainHandler != null) {
             throw new IllegalStateException("already waiting for replenishment with credit");
         } else {
@@ -93,38 +100,45 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public void close(final Handler<AsyncResult<Void>> closeHandler) {
+    public final void close(final Handler<AsyncResult<Void>> closeHandler) {
         Objects.requireNonNull(closeHandler);
         LOG.info("closing sender ...");
         closeLinks(closeHandler);
     }
 
     @Override
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return sender.isOpen();
     }
 
     @Override
-    public void setErrorHandler(final Handler<AsyncResult<Void>> errorHandler) {
+    public final void setErrorHandler(final Handler<AsyncResult<Void>> errorHandler) {
+
         sender.closeHandler(s -> {
             if (s.failed()) {
                 LOG.debug("server closed link with error condition: {}", s.cause().getMessage());
                 sender.close();
+                if (closeHook != null) {
+                    closeHook.handle(targetAddress);
+                }
                 errorHandler.handle(Future.failedFuture(s.cause()));
             } else {
                 LOG.debug("server closed link");
                 sender.close();
+                if (closeHook != null) {
+                    closeHook.handle(targetAddress);
+                }
             }
         });
     }
 
     @Override
-    public void setDispositionHandler(final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
+    public final void setDispositionHandler(final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         this.dispositionHandler = dispositionHandler;
     }
 
     @Override
-    public void send(final Message rawMessage, final Handler<Void> capacityAvailableHandler) {
+    public final void send(final Message rawMessage, final Handler<Void> capacityAvailableHandler) {
         Objects.requireNonNull(rawMessage);
         if (capacityAvailableHandler == null) {
             context.runOnContext(send -> {
@@ -147,7 +161,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public boolean send(final Message rawMessage) {
+    public final boolean send(final Message rawMessage) {
         Objects.requireNonNull(rawMessage);
         if (sender.sendQueueFull()) {
             return false;
@@ -165,34 +179,34 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public boolean send(final String deviceId, final byte[] payload, final String contentType) {
+    public final boolean send(final String deviceId, final byte[] payload, final String contentType) {
         return send(deviceId, null, payload, contentType);
     }
 
     @Override
-    public void send(final String deviceId, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+    public final void send(final String deviceId, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
         send(deviceId, null, payload, contentType, capacityAvailableHandler);
     }
 
     @Override
-    public boolean send(final String deviceId, final String payload, final String contentType) {
+    public final boolean send(final String deviceId, final String payload, final String contentType) {
         return send(deviceId, null, payload, contentType);
     }
 
     @Override
-    public void send(final String deviceId, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+    public final void send(final String deviceId, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
         send(deviceId, null, payload, contentType, capacityAvailableHandler);
     }
 
     @Override
-    public boolean send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType) {
+    public final boolean send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType) {
         Objects.requireNonNull(payload);
         final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
         return send(deviceId, properties, payload.getBytes(charset), contentType);
     }
 
     @Override
-    public boolean send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
+    public final boolean send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
@@ -204,14 +218,14 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public void send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+    public final void send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
         Objects.requireNonNull(payload);
         final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
         send(deviceId, properties, payload.getBytes(charset), contentType, capacityAvailableHandler);
     }
 
     @Override
-    public void send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+    public final void send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
@@ -280,5 +294,51 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         } else {
             return StandardCharsets.UTF_8;
         }
+    }
+
+    /**
+     * Creates a sender link.
+     * 
+     * @param ctx The vertx context to use for establishing the link.
+     * @param con The connection to create the link for.
+     * @param targetAddress The target address of the link.
+     * @param qos The quality of service to use for the link.
+     * @param closeHook The handler to invoke when the link is closed by the peer.
+     * @return A future for the created link.
+     */
+    protected static final Future<ProtonSender> createSender(
+            final Context ctx,
+            final ProtonConnection con,
+            final String targetAddress,
+            final ProtonQoS qos,
+            final Handler<String> closeHook) {
+
+        final Future<ProtonSender> result = Future.future();
+
+        ctx.runOnContext(create -> {
+            final ProtonSender sender = con.createSender(targetAddress);
+            sender.setQoS(qos);
+            sender.openHandler(senderOpen -> {
+                if (senderOpen.succeeded()) {
+                    LOG.debug("sender open [{}]", sender.getRemoteTarget());
+                    result.complete(senderOpen.result());
+                } else {
+                    LOG.debug("opening sender [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
+                    result.fail(senderOpen.cause());
+                }
+            }).closeHandler(senderClosed -> {
+                if (senderClosed.succeeded()) {
+                    LOG.debug("sender [{}] closed", targetAddress);
+                } else {
+                    LOG.debug("sender [{}] closed: {}", targetAddress, senderClosed.cause().getMessage());
+                }
+                sender.close();
+                if (closeHook != null) {
+                    closeHook.handle(targetAddress);
+                }
+            }).open();
+        });
+
+        return result;
     }
 }

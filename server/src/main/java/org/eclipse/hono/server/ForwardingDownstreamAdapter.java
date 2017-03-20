@@ -112,6 +112,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @throws IllegalStateException If the downstream container host is {@code null}
      *                               or the downstream container port is 0.
      */
+    @Override
     public final void start(final Future<Void> startFuture) {
 
         if (running) {
@@ -141,6 +142,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * 
      * @param stopFuture Always succeeds.
      */
+    @Override
     public final void stop(final Future<Void> stopFuture) {
 
         if (running) {
@@ -236,7 +238,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         Objects.requireNonNull(client);
         Objects.requireNonNull(resultHandler);
 
-        ProtonSender sender = activeSenders.get(client.getLinkId());
+        ProtonSender sender = activeSenders.get(client);
         if (sender != null && sender.isOpen()) {
             logger.info("reusing existing downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
             resultHandler.handle(Future.succeededFuture());
