@@ -19,10 +19,13 @@ spec:
         name: ${project.artifactId}
         ports:
         - containerPort: 5671
+          name: amqps
           protocol: TCP
         - containerPort: 5672
+          name: amqp
           protocol: TCP
         - containerPort: 5673
+          name: downstream
           protocol: TCP
         env:
         - name: PN_TRACE_FRM
@@ -31,3 +34,6 @@ spec:
           - /usr/sbin/qdrouterd
           - -c
           - /etc/hono/qdrouter/qdrouterd.json
+        livenessProbe:
+          tcpSocket:
+            port: amqp

@@ -18,6 +18,7 @@ spec:
         name: ${project.artifactId}
         ports:
         - containerPort: 8080
+          name: http
           protocol: TCP
         env:
         - name: HONO_CLIENT_NAME
@@ -43,6 +44,10 @@ spec:
         volumeMounts:
         - name: ${project.artifactId}-volume
           mountPath: /home/hono/file-uploads
+        livenessProbe:
+          httpGet:
+            path: "/status"
+            port: http
       volumes:
       - name: ${project.artifactId}-volume
         emptyDir: {}
