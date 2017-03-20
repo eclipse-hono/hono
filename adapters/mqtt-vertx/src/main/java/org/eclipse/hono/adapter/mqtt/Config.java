@@ -14,6 +14,7 @@ package org.eclipse.hono.adapter.mqtt;
 
 import org.eclipse.hono.adapter.AdapterConfig;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.config.HonoConfigProperties;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
@@ -48,7 +49,7 @@ public class Config extends AdapterConfig {
     @Bean
     @Scope("prototype")
     public HonoClient honoClient() {
-        return new HonoClient(getVertx(), honoConnectionFactory());
+        return new HonoClientImpl(getVertx(), honoConnectionFactory());
     }
 
     /**

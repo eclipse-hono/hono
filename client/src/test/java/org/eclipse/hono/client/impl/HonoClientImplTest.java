@@ -10,10 +10,11 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.impl;
 
 import static org.mockito.Mockito.*;
 
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -33,7 +34,7 @@ import io.vertx.proton.ProtonSender;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class HonoClientTest {
+public class HonoClientImplTest {
 
     Vertx vertx;
 
@@ -71,7 +72,7 @@ public class HonoClientTest {
         when(con.createSender("telemetry/tenant")).thenReturn(sender);
         when(sender.openHandler(any(Handler.class))).thenReturn(sender);
         when(sender.closeHandler(any(Handler.class))).thenReturn(sender);
-        HonoClient client = new HonoClient(vertx, connectionFactory);
+        HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.setConnection(con);
         client.setContext(vertx.getOrCreateContext());
         client.getOrCreateTelemetrySender("tenant", creationAttempt -> {

@@ -13,7 +13,6 @@ package org.eclipse.hono.server;
 
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 
-import java.net.InetAddress;
 import java.util.stream.IntStream;
 
 import org.apache.qpid.proton.message.Message;
@@ -21,6 +20,7 @@ import org.eclipse.hono.authentication.impl.AcceptAllPlainAuthenticationService;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
@@ -90,7 +90,7 @@ public class StandaloneTelemetryApiTest {
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
         }).compose(s -> {
-            client = new HonoClient(vertx, ConnectionFactoryBuilder.newBuilder()
+            client = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                     .vertx(vertx)
                     .name("test")
                     .host(server.getBindAddress())
