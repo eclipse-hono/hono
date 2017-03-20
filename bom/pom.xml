@@ -48,7 +48,7 @@
     <truth.version>0.28</truth.version>
     <vertx.version>3.4.0</vertx.version>
     <vertx-proton.version>3.4.0</vertx-proton.version>
-    <vertx-mqtt.version>3.4.0.Beta1</vertx-mqtt.version>
+    <vertx-mqtt.version>3.4.0</vertx-mqtt.version>
   </properties>
 
   <dependencyManagement>
