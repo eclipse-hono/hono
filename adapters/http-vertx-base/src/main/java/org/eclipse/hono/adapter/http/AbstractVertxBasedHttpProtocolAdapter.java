@@ -75,6 +75,27 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     private BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier;
 
     /**
+     * Sets the http server instance to use for this adapter.
+     * <p>
+     * If no server is set using this method, then a server instance is created during
+     * startup of this adapter based on the <em>config</em> properties and the server options
+     * returned by the <em>getHttpServerOptions</em> method.
+     * 
+     * @param server The http server.
+     * @throws NullPointerException if server is {@code null}.
+     * @throws IllegalArgumentException if the server is already started and listening on an address/port.
+     */
+    @Autowired(required = false)
+    public final void setHttpServer(final HttpServer server) {
+        Objects.requireNonNull(server);
+        if (server.actualPort() > 0) {
+            throw new IllegalArgumentException("http server must not be started already");
+        } else {
+            this.server = server;
+        }
+    }
+
+    /**
      * Sets the client to use for connecting to the Hono server.
      * 
      * @param honoClient The client.
@@ -126,17 +147,23 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
             Future<Void> preStartupFuture = Future.future();
             preStartup(preStartupFuture);
             preStartupFuture.compose(v -> {
-                Future<Void> httpServerStartupFuture = Future.future();
-                bindHttpServer(createRouter(), httpServerStartupFuture);
-                connectToHono(null);
-                return httpServerStartupFuture; 
+                Future<Void> httpServerTracker = Future.future();
+                Router router = createRouter();
+                if (router == null) {
+                    httpServerTracker.fail("no router configured");
+                } else {
+                    addRoutes(router);
+                    bindHttpServer(router, httpServerTracker);
+                    connectToHono(null);
+                }
+                return httpServerTracker; 
             }).compose(ar -> {
-                startFuture.complete();
                 try {
                     onStartupSuccess();
                 } catch (Exception e) {
                     LOG.error("error in onStartupSuccess", e);
                 }
+                startFuture.complete();
             }, startFuture);
         }
     }
@@ -150,6 +177,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
      *                    is failed, the adapter does not start up.
      */
     protected void preStartup(final Future<Void> startFuture) {
+
         startFuture.complete();
     }
 
@@ -164,10 +192,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
 
     /**
      * Creates the router for handling requests.
+     * <p>
+     * This method creates a router instance with the following routes:
+     * <ol>
+     * <li>A default route limiting the body size of requests to the maximum payload size set in the
+     * <em>config</em> properties.</li>
+     * <li>A route for retrieving this adapter's current status from the resource path returned by
+     * {@link #getStatusResourcePath()} (if not {@code null}).</li>
+     * </ol>
      * 
-     * @return The router.
+     * @return The newly created router (never {@code null}).
      */
-    private Router createRouter() {
+    protected Router createRouter() {
 
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", config.getMaxPayloadSize());
@@ -178,7 +214,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
             router.route(HttpMethod.GET, statusResourcePath).handler(this::doGetStatus);
         }
 
-        addRoutes(router);
         return router;
     }
 
@@ -196,12 +231,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     }
 
     /**
-     * Adds the routes for handling requests to this adapter.
+     * Adds custom routes for handling requests.
+     * <p>
+     * This method is invoked right before the http server is started with the value returned by
+     * {@link AbstractVertxBasedHttpProtocolAdapter#createRouter()}.
      * 
-     * The handler of each route is to invoke one of the uploadTelemetryMessage() 
-     * or uploadEventMessage() methods.
-     * 
-     * @param router router to add the routes to
+     * @param router The router to add the custom routes to.
      */
     protected abstract void addRoutes(final Router router);
 
@@ -224,7 +259,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
 
     private void bindHttpServer(final Router router, final Future<Void> startFuture) {
 
-        server = vertx.createHttpServer(getHttpServerOptions());
+        if (server == null) {
+            server = vertx.createHttpServer(getHttpServerOptions());
+        }
         server.requestHandler(router::accept).listen(done -> {
             if (done.succeeded()) {
                 LOG.info("adapter running on {}:{}", config.getBindAddress(), server.actualPort());
