@@ -76,7 +76,7 @@ public class HonoClientImplTest {
         client.setConnection(con);
         client.setContext(vertx.getOrCreateContext());
         client.getOrCreateTelemetrySender("tenant", creationAttempt -> {
-            ctx.fail("should not have opened sender yet");
+            ctx.fail("should not have created sender");
         });
 
         // WHEN an additional, concurrent attempt is made to create a telemetry sender for "tenant"
@@ -87,7 +87,7 @@ public class HonoClientImplTest {
         });
 
         // THEN the concurrent attempt fails immediately without any attempt being made to create another sender
-        creationFailure.await(200);
-        verify(con, times(1)).createSender("telemetry/tenant");
+        creationFailure.await(2000);
+        verify(con).createSender("telemetry/tenant");
     }
 }
