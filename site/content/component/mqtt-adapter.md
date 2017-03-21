@@ -23,6 +23,7 @@ The following table provides an overview of the configuration options the adapte
 | `HONO_CLIENT_TRUST_STORE_PASSWORD`<br>`--hono.client.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_MQTT_BIND_ADDRESS`<br>`--hono.mqtt.bindAddress` | yes | `0.0.0.0` | The IP address the protocol adapter should bind to. By default the adapter binds to the *wildcard* address, i.e. all network adapters. |
 | `HONO_MQTT_MAX_INSTANCES`<br>`--hono.mqtt.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
+| `HONO_MQTT_MAX_PAYLOAD_SIZE`<br>`--hono.mqtt.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming MQTT message's payload in bytes. When a client sends a message with a larger payload, the message is discarded and the connection to the client gets closed. |
 | `HONO_MQTT_PORT`<br>`--hono.mqtt.port` | yes | `1883` | The port the protocol adapter should listen on. If set to 0 the adapter will bind to an arbitrary free port determined by the operating system during start up. |
 
 The options only need to be set if the default value does not match your environment.

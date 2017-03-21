@@ -22,7 +22,7 @@ The following table provides an overview of the configuration options the adapte
 | `HONO_CLIENT_TRUST_STORE_PATH`<br>`--hono.client.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Hono server. This property **must** be set if the Hono server has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_CLIENT_TRUST_STORE_PASSWORD`<br>`--hono.client.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_HTTP_BIND_ADDRESS`<br>`--hono.http.bindAddress` | yes | `0.0.0.0` | The IP address the protocol adapter should bind to. By default the adapter binds to the *wildcard* address, i.e. the adapter will bind to all network adapters. |
-| `HONO_MQTT_MAX_INSTANCES`<br>`--hono.mqtt.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
+| `HONO_HTTP_MAX_INSTANCES`<br>`--hono.http.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
 | `HONO_HTTP_MAX_PAYLOAD_SIZE`<br>`--hono.http.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming HTTP request's body in bytes. Requests with a larger body size are rejected with a 413 `Request entity too large` response. |
 | `HONO_HTTP_PORT`<br>`--hono.http.port` | yes | `8080` | The port the protocol adapter should listen on. If set to 0 the adapter will bind to an arbitrary free port determined by the operating system during start up. |
 
