@@ -30,7 +30,7 @@ import org.springframework.context.annotation.Scope;
 public class Config extends AdapterConfig {
 
     @Override
-    protected void customizeClientConfigProperties(HonoClientConfigProperties props) {
+    protected void customizeClientConfigProperties(final HonoClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName("Hono MQTT Adapter");
         }
@@ -67,6 +67,11 @@ public class Config extends AdapterConfig {
         return props;
     }
 
+    /**
+     * Exposes a factory for creating MQTT adapter instances.
+     * 
+     * @return The factory bean.
+     */
     @Bean
     public ServiceLocatorFactoryBean serviceLocator() {
         ServiceLocatorFactoryBean bean = new ServiceLocatorFactoryBean();
