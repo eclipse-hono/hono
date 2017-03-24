@@ -52,7 +52,6 @@ contributor(nodeCtx) {
     def call = enclosingCall('node')
     if (call) {
         method(name: 'bat', type: 'Object', params: [script:'java.lang.String'], doc: 'Windows Batch Script')
-        method(name: 'bat2', type: 'Object', params: [script:'java.lang.String'], doc: 'Windows Batch Script')
         method(name: 'bat', type: 'Object', namedParams: [parameter(name: 'script', type: 'java.lang.String'), parameter(name: 'encoding', type: 'java.lang.String'), parameter(name: 'returnStatus', type: 'boolean'), parameter(name: 'returnStdout', type: 'boolean'), ], doc: 'Windows Batch Script')
         method(name: 'checkout', type: 'Object', params: [scm:'Map'], doc: 'General SCM')
         method(name: 'checkout', type: 'Object', namedParams: [parameter(name: 'scm', type: 'Map'), parameter(name: 'changelog', type: 'boolean'), parameter(name: 'poll', type: 'boolean'), ], doc: 'General SCM')
@@ -75,6 +74,8 @@ contributor(nodeCtx) {
         method(name: 'svn', type: 'Object', namedParams: [parameter(name: 'url', type: 'java.lang.String'), parameter(name: 'changelog', type: 'boolean'), parameter(name: 'poll', type: 'boolean'), ], doc: 'Subversion')
         method(name: 'unstash', type: 'Object', params: [name:'java.lang.String'], doc: 'Restore files previously stashed')
         method(name: 'withCredentials', type: 'Object', params: [bindings:Map, body:'Closure'], doc: 'Bind credentials to variables')
+        method(name: 'withMaven', type: 'Object', params: [body:'Closure'], doc: 'Provide Maven environment')
+        method(name: 'withMaven', type: 'Object', params: [body:Closure], namedParams: [parameter(name: 'globalMavenSettingsConfig', type: 'java.lang.String'), parameter(name: 'globalMavenSettingsFilePath', type: 'java.lang.String'), parameter(name: 'jdk', type: 'java.lang.String'), parameter(name: 'maven', type: 'java.lang.String'), parameter(name: 'mavenLocalRepo', type: 'java.lang.String'), parameter(name: 'mavenOpts', type: 'java.lang.String'), parameter(name: 'mavenSettingsConfig', type: 'java.lang.String'), parameter(name: 'mavenSettingsFilePath', type: 'java.lang.String'), ], doc: 'Provide Maven environment')
         method(name: 'wrap', type: 'Object', params: [delegate:Map, body:'Closure'], doc: 'General Build Wrapper')
         method(name: 'writeFile', type: 'Object', namedParams: [parameter(name: 'file', type: 'java.lang.String'), parameter(name: 'text', type: 'java.lang.String'), parameter(name: 'encoding', type: 'java.lang.String'), ], doc: 'Write file to workspace')
         method(name: 'archive', type: 'Object', params: [includes:'java.lang.String'], doc: 'Advanced/Deprecated Archive artifacts')
