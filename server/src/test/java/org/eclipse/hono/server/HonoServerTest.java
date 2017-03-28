@@ -11,15 +11,16 @@
  */
 package org.eclipse.hono.server;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
-import java.net.InetAddress;
 import java.security.Principal;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import io.vertx.core.Future;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
@@ -150,6 +151,161 @@ public class HonoServerTest {
         // an event on the event bus when the client disconnects
         closeHandlerCaptor.getValue().handle(con);
         verify(eventBus).publish(Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED, CON_ID);
+    }
+
+    @Test
+    public void testIanaPortConfigurations() throws InterruptedException {
+
+        // GIVEN a server with a telemetry endpoint
+        final EventBus eventBus = mock(EventBus.class);
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
+
+        checkSecurePortAutoSelect(vertx);
+        checkSecurePortExplicitlySet(vertx);
+
+        checkNoPortsSet(vertx);
+
+        checkInsecureOnlyPort(vertx);
+        checkInsecureOnlyPortExplicitlySet(vertx);
+
+        checkBothPortsOpen(vertx);
+        checkBothPortsSetToSame(vertx);
+    }
+
+    private void checkSecurePortAutoSelect(Vertx vertx) {
+        // secure port config: no port set -> secure IANA port selected
+        HonoServer server = createServer(null);
+        server.init(vertx, mock(Context.class));
+
+
+        Future<Void> portConfigurationTracker;HonoConfigProperties configProperties = new HonoConfigProperties();
+        configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
+        server.setHonoConfiguration(configProperties);
+
+        portConfigurationTracker = Future.future();
+        server.determinePortConfigurations(portConfigurationTracker);
+
+        assertTrue(portConfigurationTracker.succeeded());
+        assertTrue(server.isOpenSecurePort());
+        assertTrue(server.getPort() == Constants.PORT_AMQP);
+        assertFalse(server.isOpenInsecurePort());
+    }
+
+    private void checkSecurePortExplicitlySet(Vertx vertx) {
+
+        // secure port config: explicit port set -> port used
+        HonoServer server = createServer(null);
+        server.init(vertx, mock(Context.class));
+
+        Future<Void> portConfigurationTracker;
+        HonoConfigProperties configProperties = new HonoConfigProperties();
+        configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
+        configProperties.setPort(8989);
+        server.setHonoConfiguration(configProperties);
+
+        portConfigurationTracker = Future.future();
+        server.determinePortConfigurations(portConfigurationTracker);
+
+        assertTrue(portConfigurationTracker.succeeded());
+        assertTrue(server.isOpenSecurePort());
+        assertTrue(server.getPort() == 8989);
+        assertFalse(server.isOpenInsecurePort());
+    }
+
+    private void checkNoPortsSet(Vertx vertx) {
+
+        // secure and insecure port config: nothing set
+        HonoServer server = createServer(null);
+        server.init(vertx, mock(Context.class));
+
+        Future<Void> portConfigurationTracker;HonoConfigProperties configProperties = new HonoConfigProperties();
+        server.setHonoConfiguration(configProperties);
+
+        portConfigurationTracker = Future.future();
+        server.determinePortConfigurations(portConfigurationTracker);
+
+        assertTrue(portConfigurationTracker.failed());
+    }
+
+    private void checkInsecureOnlyPort(Vertx vertx) {
+
+        // insecure port config
+        HonoServer server = createServer(null);
+        server.init(vertx, mock(Context.class));
+
+        HonoConfigProperties configProperties = new HonoConfigProperties();
+        configProperties.setInsecurePortEnabled(true);
+        server.setHonoConfiguration(configProperties);
+
+        Future<Void> portConfigurationTracker = Future.future();
+        server.determinePortConfigurations(portConfigurationTracker);
+
+        assertTrue(portConfigurationTracker.succeeded());
+        assertFalse(server.isOpenSecurePort());
+        assertTrue(server.isOpenInsecurePort());
+        assertTrue(server.getInsecurePort() == Constants.PORT_AMQP_INSECURE);
+    }
+
+    private void checkInsecureOnlyPortExplicitlySet(Vertx vertx) {
+
+        // insecure port config
+        HonoServer server = createServer(null);
+        server.init(vertx, mock(Context.class));
+
+        HonoConfigProperties configProperties = new HonoConfigProperties();
+        configProperties.setInsecurePortEnabled(true);
+        configProperties.setInsecurePort(8888);
+        server.setHonoConfiguration(configProperties);
+
+        Future<Void> portConfigurationTracker = Future.future();
+        server.determinePortConfigurations(portConfigurationTracker);
+
+        assertTrue(portConfigurationTracker.succeeded());
+        assertFalse(server.isOpenSecurePort());
+        assertTrue(server.isOpenInsecurePort());
+        assertTrue(server.getInsecurePort() == 8888);
+    }
+
+
+    private void checkBothPortsOpen(Vertx vertx)
+    {
+
+        HonoServer server = createServer(null);
+        server.init(vertx, mock(Context.class));
+
+        HonoConfigProperties configProperties = new HonoConfigProperties();
+        configProperties.setInsecurePortEnabled(true);
+        configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
+        server.setHonoConfiguration(configProperties);
+
+        Future<Void> portConfigurationTracker = Future.future();
+        server.determinePortConfigurations(portConfigurationTracker);
+
+        assertTrue(portConfigurationTracker.succeeded());
+        assertTrue(server.isOpenSecurePort());
+        assertTrue(server.getPort() == Constants.PORT_AMQP);
+        assertTrue(server.isOpenInsecurePort());
+        assertTrue(server.getInsecurePort() == Constants.PORT_AMQP_INSECURE);
+    }
+
+    private void checkBothPortsSetToSame(Vertx vertx)
+    {
+
+        HonoServer server = createServer(null);
+        server.init(vertx, mock(Context.class));
+
+        HonoConfigProperties configProperties = new HonoConfigProperties();
+        configProperties.setInsecurePortEnabled(true);
+        configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
+        configProperties.setInsecurePort(8888);
+        configProperties.setPort(8888);
+        server.setHonoConfiguration(configProperties);
+
+        Future<Void> portConfigurationTracker = Future.future();
+        server.determinePortConfigurations(portConfigurationTracker);
+
+        assertTrue(portConfigurationTracker.failed());
     }
 
     private static Target getTarget(final String targetAddress) {

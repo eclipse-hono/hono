@@ -21,6 +21,7 @@ import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
@@ -68,6 +69,10 @@ public class StandaloneTelemetryApiTest {
 
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
         server = new HonoServer().setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
+        HonoConfigProperties configProperties = new HonoConfigProperties();
+        configProperties.setInsecurePortEnabled(true);
+        configProperties.setInsecurePort(0);
+        server.setHonoConfiguration(configProperties);
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         server.addEndpoint(telemetryEndpoint);
@@ -93,8 +98,8 @@ public class StandaloneTelemetryApiTest {
             client = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                     .vertx(vertx)
                     .name("test")
-                    .host(server.getBindAddress())
-                    .port(server.getPort())
+                    .host(server.getInsecurePortBindAddress())
+                    .port(server.getInsecurePort())
                     .user(USER)
                     .password(PWD)
                     .build());
