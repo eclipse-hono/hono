@@ -96,6 +96,7 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.util.MessageHelper;
@@ -114,7 +115,7 @@ public class App {
     private final CountDownLatch latch;
 
     public App() {
-        honoClient = new HonoClient(vertx,
+        honoClient = new HonoClientImpl(vertx,
                 ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
                         .vertx(vertx)
                         .host(QPID_ROUTER_HOST)

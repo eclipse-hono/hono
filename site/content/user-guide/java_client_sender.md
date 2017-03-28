@@ -89,6 +89,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 
@@ -113,7 +114,7 @@ public class App {
     private final CountDownLatch latch;
 
     public App() {
-        honoClient = new HonoClient(vertx,
+        honoClient = new HonoClientImpl(vertx,
                 ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
                         .vertx(vertx)
                         .host(HONO_HOST)
