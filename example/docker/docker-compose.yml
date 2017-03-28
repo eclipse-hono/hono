@@ -20,7 +20,7 @@ services:
     networks:
       - hono-net
     ports:
-      - "5672:5672"
+      - "5671:5671"
     environment:
       - HONO_DOWNSTREAM_HOST=qdrouter
       - HONO_DOWNSTREAM_PORT=5673
@@ -30,6 +30,7 @@ services:
       - HONO_SERVER_BIND_ADDRESS=0.0.0.0
       - HONO_SERVER_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
       - HONO_SERVER_KEY_STORE_PASSWORD=honokeys
+      - HONO_SERVER_INSECURE_PORT_ENABLED=false
       - HONO_SERVER_MAX_INSTANCES=1
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
@@ -45,7 +46,7 @@ services:
     environment:
       - HONO_CLIENT_NAME=Hono REST Adapter
       - HONO_CLIENT_HOST=hono
-      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_PORT=5671
       - HONO_CLIENT_USERNAME=rest-adapter
       - HONO_CLIENT_PASSWORD=secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
@@ -62,7 +63,7 @@ services:
     environment:
       - HONO_CLIENT_NAME=Hono MQTT Adapter
       - HONO_CLIENT_HOST=hono
-      - HONO_CLIENT_PORT=5672
+      - HONO_CLIENT_PORT=5671
       - HONO_CLIENT_USERNAME=mqtt-adapter
       - HONO_CLIENT_PASSWORD=secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem

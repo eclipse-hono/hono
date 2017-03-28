@@ -56,6 +56,7 @@ import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
 import io.vertx.proton.ProtonSession;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
+import org.springframework.util.StringUtils;
 
 /**
  * The Hono server is an AMQP 1.0 container that provides endpoints for the <em>Telemetry</em>,
@@ -66,15 +67,19 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 @Scope("prototype")
 public final class HonoServer extends AbstractVerticle {
 
-    private static final Logger            LOG = LoggerFactory.getLogger(HonoServer.class);
-    private ProtonServer                   server;
-    private Map<String, Endpoint>          endpoints = new HashMap<>();
-    private HonoConfigProperties           honoConfig = new HonoConfigProperties();
+    private static final Logger LOG = LoggerFactory.getLogger(HonoServer.class);
+    private ProtonServer server;
+    private ProtonServer insecureServer;
+    private Map<String, Endpoint> endpoints = new HashMap<>();
+    private HonoConfigProperties honoConfig = new HonoConfigProperties();
     private ProtonSaslAuthenticatorFactory saslAuthenticatorFactory;
+
+    private int amqpPort         = Constants.PORT_UNCONFIGURED;
+    private int amqpInsecurePort = Constants.PORT_UNCONFIGURED;
 
     /**
      * Sets the global Hono configuration properties.
-     * 
+     *
      * @param props The properties.
      * @return This instance for setter chaining.
      * @throws NullPointerException if props is {@code null}.
@@ -93,7 +98,7 @@ public final class HonoServer extends AbstractVerticle {
 
     /**
      * Sets the factory to use for creating objects performing SASL based authentication of clients.
-     * 
+     *
      * @param factory The factory.
      * @return This instance for setter chaining.
      * @throws NullPointerException if factory is {@code null}.
@@ -109,23 +114,120 @@ public final class HonoServer extends AbstractVerticle {
 
         checkStandardEndpointsAreRegistered();
 
-        Future<Void> endpointsTracker = Future.future();
-        startEndpoints(endpointsTracker);
-        endpointsTracker.compose(s -> {
+        Future<Void> portConfigurationTracker = Future.future();
+        determinePortConfigurations(portConfigurationTracker);
+
+        portConfigurationTracker.compose(s -> startEndpoints()
+        ).compose(s -> startSecureServer()
+        ).compose(s -> startInsecureServer(startupHandler)
+        , startupHandler);
+    }
+
+    private void startInsecureServer(Future<Void> startupHandler) {
+        if (isOpenInsecurePort()) {
             final ProtonServerOptions options = createServerOptions();
-            server = ProtonServer.create(vertx, options)
-                    .saslAuthenticatorFactory(saslAuthenticatorFactory)
-                    .connectHandler(this::handleRemoteConnectionOpen)
-                    .listen(honoConfig.getPort(), honoConfig.getBindAddress(), bindAttempt -> {
+            insecureServer = createProtonServer(options)
+                    .connectHandler(this::handleRemoteConnectionOpenInsecurePort)
+                    .listen(amqpInsecurePort, honoConfig.getInsecurePortBindAddress(), bindAttempt -> {
                         if (bindAttempt.succeeded()) {
-                            LOG.info("HonoServer running at [{}:{}]", getBindAddress(), getPort());
+                            LOG.info("HonoServer insecure port listening on [{}:{}]", getInsecurePortBindAddress(), getInsecurePort());
+                            if (getInsecurePort() != Constants.PORT_AMQP_INSECURE)
+                                LOG.warn("This is NOT the IANA standard insecure port {}!", Constants.PORT_AMQP_INSECURE);
                             startupHandler.complete();
                         } else {
-                            LOG.error("cannot start up HonoServer", bindAttempt.cause());
+                            LOG.error("cannot start up HonoServer (insecure port failed) ", bindAttempt.cause());
                             startupHandler.fail(bindAttempt.cause());
                         }
                     });
-        }, startupHandler);
+        } else {
+            startupHandler.complete();
+        }
+    }
+
+    private Future<Void> startSecureServer() {
+        final Future<Void> startSecurePortTracker = Future.future();
+        if (isOpenSecurePort()) {
+            final ProtonServerOptions options = createSecureServerOptions();
+            server = createProtonServer(options)
+                    .connectHandler(this::handleRemoteConnectionOpen)
+                    .listen(amqpPort, honoConfig.getBindAddress(), bindAttempt -> {
+                        if (bindAttempt.succeeded()) {
+                            LOG.info("HonoServer secure port listening on [{}:{}]", getBindAddress(), getPort());
+                            if (getPort() != Constants.PORT_AMQP)
+                                LOG.warn("This is NOT the IANA standard port {}!", Constants.PORT_AMQP);
+                            startSecurePortTracker.complete();
+                        } else {
+                            LOG.error("cannot start up HonoServer (secure port failed) ", bindAttempt.cause());
+                            startSecurePortTracker.fail(bindAttempt.cause());
+                        }
+                    });
+        } else {
+            startSecurePortTracker.complete();
+        }
+        return startSecurePortTracker;
+    }
+
+    private ProtonServer createProtonServer(ProtonServerOptions options) {
+        return ProtonServer.create(vertx, options)
+                .saslAuthenticatorFactory(saslAuthenticatorFactory);
+    }
+
+    /**
+     * Either one secure, one insecure or one secure AND insecure ports are supported in Hono.
+     * The secure port should stick to the IANA default 5671, otherwise a warning will be issued.
+     * The insecure port should stick to the IANA default 5672, otherwise a warning will be issued.
+     *
+     * @param portConfigurationTracker The future to continue or fail (in case of configuration errors).
+     * @throws NullPointerException if portConfigurationTracker is null.
+     */
+    void determinePortConfigurations(Future<Void> portConfigurationTracker) {
+        Objects.requireNonNull(portConfigurationTracker);
+
+        // secure port first
+        determineSecurePortConfiguration();
+        determineInsecurePortConfiguration();
+
+        if (isPortUnconfigured(amqpPort) && isPortUnconfigured(amqpInsecurePort)) {
+            final String message = "cannot start up HonoServer - no listening ports found.";
+            portConfigurationTracker.fail(message);
+        } else if (isPortConfigured(amqpPort) && isPortConfigured(amqpInsecurePort) && amqpPort == amqpInsecurePort) {
+            final String message = String.format("cannot start up HonoServer - secure and insecure ports configured to same port number %s.",
+                    amqpPort);
+            portConfigurationTracker.fail(message);
+        } else {
+            portConfigurationTracker.complete();
+        }
+    }
+
+    private void determineSecurePortConfiguration() {
+        if (StringUtils.isEmpty(honoConfig.getKeyStorePath())) {
+            if (honoConfig.getPort() >= 0) {
+                LOG.warn("AMQP 1.0 secure port number configured, but no keyStorePath set. No secure port will be opened!");
+            }
+            return;
+        }
+
+        if (honoConfig.getPort(Constants.PORT_AMQP) == Constants.PORT_AMQP) {
+            LOG.info("HonoServer uses secure IANA standard port {}", Constants.PORT_AMQP);
+        } else if (honoConfig.getPort() == 0) {
+            LOG.info("HonoServer found secure port number configured for ephemeral port selection (port chosen automatically).");
+        }
+        amqpPort = honoConfig.getPort(Constants.PORT_AMQP);
+    }
+
+    private void determineInsecurePortConfiguration() {
+        if (!honoConfig.isInsecurePortEnabled())
+            return;
+
+        if (honoConfig.getInsecurePort() == 0) {
+            LOG.info("HonoServer found insecure port number configured for ephemeral port selection (port chosen automatically).");
+        } else if (honoConfig.getInsecurePort(Constants.PORT_AMQP_INSECURE) == Constants.PORT_AMQP_INSECURE) {
+            LOG.info("HonoServer uses IANA standard insecure port {}", honoConfig.getInsecurePort());
+        } else if (honoConfig.getInsecurePort() == Constants.PORT_AMQP) {
+            LOG.warn("HonoServer found insecure port number configured to IANA standard port for secure connections {}", honoConfig.getInsecurePort());
+            LOG.warn("Possibly misconfigured?");
+        }
+        amqpInsecurePort = honoConfig.getInsecurePort(Constants.PORT_AMQP_INSECURE);
     }
 
     private void checkStandardEndpointsAreRegistered() {
@@ -145,8 +247,8 @@ public final class HonoServer extends AbstractVerticle {
         return endpoints.containsKey(RegistrationConstants.REGISTRATION_ENDPOINT);
     }
 
-    private void startEndpoints(final Future<Void> startFuture) {
-
+    private Future<Void> startEndpoints() {
+        final Future<Void> startFuture = Future.future();
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
         for (Endpoint ep : endpoints.values()) {
             LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
@@ -161,6 +263,15 @@ public final class HonoServer extends AbstractVerticle {
                 startFuture.fail(startup.cause());
             }
         });
+        return startFuture;
+    }
+
+    ProtonServerOptions createSecureServerOptions() {
+        ProtonServerOptions options = createServerOptions();
+
+        addTlsKeyCertOptions(options);
+        addTlsTrustOptions(options);
+        return options;
     }
 
     ProtonServerOptions createServerOptions() {
@@ -171,8 +282,6 @@ public final class HonoServer extends AbstractVerticle {
         options.setSendBufferSize(16 * 1024); // 16kb
         options.setLogActivity(honoConfig.isNetworkDebugLoggingEnabled());
 
-        addTlsKeyCertOptions(options);
-        addTlsTrustOptions(options);
         return options;
     }
 
@@ -205,14 +314,14 @@ public final class HonoServer extends AbstractVerticle {
                 shutdownHandler.complete();
             });
         } else {
-           LOG.info("HonoServer has been already shut down");
-           shutdownHandler.complete();
+            LOG.info("HonoServer has been already shut down");
+            shutdownHandler.complete();
         }
     }
 
     /**
      * Adds multiple endpoints to this server.
-     * 
+     *
      * @param definedEndpoints The endpoints.
      */
     @Autowired
@@ -225,7 +334,7 @@ public final class HonoServer extends AbstractVerticle {
 
     /**
      * Adds an endpoint to this server.
-     * 
+     *
      * @param ep The endpoint.
      */
     public void addEndpoint(final Endpoint ep) {
@@ -249,21 +358,74 @@ public final class HonoServer extends AbstractVerticle {
         if (server != null) {
             return server.actualPort();
         } else {
-            return this.honoConfig.getPort();
+            return this.honoConfig.getPort(Constants.PORT_AMQP);
         }
     }
 
     /**
+     * Gets if Hono opens a secure port.
+     *
+     * @return The flag value for opening a secure port.
+     */
+    public boolean isOpenSecurePort() {
+        return (amqpPort >= 0);
+    }
+
+    /**
+     * Gets the insecure port Hono listens on for AMQP 1.0 connections (if configured).
+     * <p>
+     * If the port has been set to 0 Hono will bind to an arbitrary free port chosen by the operating system during
+     * startup. Once Hono is up and running this method returns the <em>actual port</em> Hono has bound to.
+     * </p>
+     *
+     * @return the insecure port Hono listens on.
+     */
+    public int getInsecurePort() {
+        if (!honoConfig.isInsecurePortEnabled())
+            return Constants.PORT_UNCONFIGURED;
+        if (insecureServer != null) {
+            return insecureServer.actualPort();
+        } else {
+            return this.honoConfig.getInsecurePort(Constants.PORT_AMQP_INSECURE);
+        }
+    }
+
+    /**
+     * Gets if Hono opens an insecure port.
+     *
+     * @return The flag value for opening an insecure port.
+     */
+    public boolean isOpenInsecurePort() {
+        return (amqpInsecurePort >= 0);
+    }
+    /**
      * Gets the IP address Hono is bound to.
-     *  
+     *
      * @return The IP address.
      */
     public String getBindAddress() {
         return honoConfig.getBindAddress();
     }
 
-    void handleRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-%s:%d", getBindAddress(), getPort()));
+    /**
+     * Gets the IP address Hono's insecure port is bound to.
+     *
+     * @return The IP address.
+     */
+    public String getInsecurePortBindAddress() {
+        return honoConfig.getInsecurePortBindAddress();
+    }
+
+    private static boolean isPortUnconfigured(int portToCheck) {
+        return (portToCheck == Constants.PORT_UNCONFIGURED);
+    }
+
+    private static boolean isPortConfigured(int portToCheck) {
+        return (portToCheck != Constants.PORT_UNCONFIGURED && portToCheck != 0);
+    }
+
+
+    private void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
         connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
         connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
@@ -277,6 +439,16 @@ public final class HonoServer extends AbstractVerticle {
         });
     }
 
+    void handleRemoteConnectionOpen(final ProtonConnection connection) {
+        connection.setContainer(String.format("Hono-%s:%d", getBindAddress(), getPort()));
+        setRemoteConnectionOpenHandler(connection);
+    }
+
+    void handleRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
+        connection.setContainer(String.format("Hono-%s:%d", getInsecurePortBindAddress(), getInsecurePort()));
+        setRemoteConnectionOpenHandler(connection);
+    }
+
     private void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
         LOG.info("opening new session with client [{}]", con.getRemoteContainer());
         session.closeHandler(sessionResult -> {
@@ -288,7 +460,7 @@ public final class HonoServer extends AbstractVerticle {
 
     /**
      * Invoked when a client closes the connection with this server.
-     * 
+     *
      * @param con The connection to close.
      * @param res The client's close frame.
      */
@@ -311,7 +483,7 @@ public final class HonoServer extends AbstractVerticle {
 
     /**
      * Handles a request from a client to establish a link for sending messages to this server.
-     * 
+     *
      * @param con the connection to the client.
      * @param receiver the receiver created for the link.
      */
@@ -364,7 +536,7 @@ public final class HonoServer extends AbstractVerticle {
 
     /**
      * Gets the authenticated client principal name for an AMQP connection.
-     * 
+     *
      * @param con the connection to read the user from
      * @return the user associated with the connection or {@link Constants#DEFAULT_SUBJECT} if it cannot be determined.
      */
@@ -448,7 +620,7 @@ public final class HonoServer extends AbstractVerticle {
 
     /**
      * Gets the event bus address this Hono server uses for authorizing client requests.
-     * 
+     *
      * @return the address.
      */
     String getAuthServiceAddress() {

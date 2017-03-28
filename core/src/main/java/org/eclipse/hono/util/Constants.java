@@ -45,6 +45,21 @@ public final class Constants {
      */
     public static final String DEFAULT_PATH_SEPARATOR = "/";
 
+    /**
+     * The AMQP 1.0 port defined by IANA for TLS encrypted connections.
+     */
+    public static final int PORT_AMQP = 5671;
+
+    /**
+     * The AMQP 1.0 port defined by IANA for unencrypted connections.
+     */
+    public static final int PORT_AMQP_INSECURE = 5672;
+
+    /**
+     * Default value for a port that is not explicitly configured.
+     */
+    public static final int PORT_UNCONFIGURED = -1;
+
     private Constants() {
     }
 
