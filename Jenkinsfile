@@ -25,7 +25,9 @@ node {
                 sh "${mvnHome}/bin/mvn -s ${MAVEN_SETTINGS} clean deploy -Pbuild-docker-image scm:tag -Drevision=${buildVersion} -DskipStaging=true -DconnectionUrl='scm:git:https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git' -Ddocker.host.name=sazvl0062.saz.bosch-si.com -Ddocker.host=tcp://10.56.22.164:2376"
 
                 // deploy documentation to nginx via shared directory
-                sh "cp -R site/target/public /home/jenkins-slave/docker-share/hono-site"
+                sh "rm -rf /home/jenkins-slave/docker-share/hono-site"
+                sh "mkdir -p /home/jenkins-slave/docker-share/hono-site"
+                sh "cp -R site/target/site/public/* /home/jenkins-slave/docker-share/hono-site"
             }
         }
     }
