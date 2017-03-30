@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (c) 2016 Bosch Software Innovations GmbH.
+
+    All rights reserved. This program and the accompanying materials
+    are made available under the terms of the Eclipse Public License v1.0
+    which accompanies this distribution, and is available at
+    http://www.eclipse.org/legal/epl-v10.html
+
+    Contributors:
+       Bosch Software Innovations GmbH - initial API and implementation and initial documentation
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-bom</artifactId>
+        <version>${revision}</version>
+        <relativePath>../bom</relativePath>
+    </parent>
+
+    <artifactId>hono-site</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Hono Site</name>
+    <description>The content of the Hono website.</description>
+
+    <build>
+        <outputDirectory>${project.build.directory}/site</outputDirectory>
+        <resources>
+            <resource>
+                <directory>${project.basedir}</directory>
+                <targetPath>${project.build.directory}/site</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.6</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/site</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <targetPath>${project.build.directory}/site</targetPath>
+                                    <directory>${project.basedir}</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <phase>compile</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <executable>/bin/bash</executable>
+                    <workingDirectory>${project.build.outputDirectory}</workingDirectory>
+                    <arguments>
+                        <argument>build-site.sh</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>assembly-src.xml</descriptor>
+                    </descriptors>
+                    <outputDirectory>target/assembly</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
