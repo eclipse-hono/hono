@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -34,7 +34,7 @@ public abstract class BaseAuthenticationService extends AbstractVerticle impleme
     private MessageConsumer<JsonObject> authRequestConsumer;
 
     @Override
-    public final void start(final Future<Void> startFuture) throws Exception {
+    public final void start(final Future<Void> startFuture) {
         String listenAddress = EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
         authRequestConsumer = vertx.eventBus().consumer(listenAddress);
         authRequestConsumer.handler(this::processMessage);
@@ -42,32 +42,48 @@ public abstract class BaseAuthenticationService extends AbstractVerticle impleme
         doStart(startFuture);
     }
 
-    protected void doStart(final Future<Void> startFuture) throws Exception
+    /**
+     * Subclasses should override this method to create required resources
+     * during startup.
+     * <p>
+     * This implementation always completes the start future.
+     * 
+     * @param startFuture Completes if startup succeeded.
+     */
+    protected void doStart(final Future<Void> startFuture)
     {
         // should be overridden by subclasses
         startFuture.complete();
     }
 
     @Override
-    public final void stop(final Future<Void> stopFuture) throws Exception {
+    public final void stop(final Future<Void> stopFuture) {
         authRequestConsumer.unregister();
         doStop(stopFuture);
     }
 
-    protected void doStop(final Future<Void> stopFuture) throws Exception
-    {
+    /**
+     * Subclasses should override this method to release resources
+     * during shutdown.
+     * <p>
+     * This implementation always completes the stop future.
+     * 
+     * @param stopFuture Completes if shutdown succeeded.
+     */
+    protected void doStop(final Future<Void> stopFuture) {
+
         // to be overridden by subclasses
         stopFuture.complete();
     }
 
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
-        LOG.debug("received authentication request: {}", body);
         final String mechanism = body.getString(FIELD_MECHANISM);
         if (!isSupported(mechanism)) {
             replyWithError(message, ERROR_CODE_UNSUPPORTED_MECHANISM, "unsupported SASL mechanism");
         } else {
             final byte[] response = body.getBinary(FIELD_RESPONSE);
+            LOG.debug("received authentication request [mechanism: {}, response: {}]", mechanism, response != null ? "*****" : "empty");
 
             validateResponse(mechanism, response, validation -> {
                 if (validation.succeeded()) {
