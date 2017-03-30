@@ -17,6 +17,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -61,7 +62,7 @@ public class Config extends AdapterConfig {
     @ConfigurationProperties(prefix = "hono.http")
     public HonoConfigProperties honoServerProperties() {
         HonoConfigProperties props = new HonoConfigProperties();
-        if (props.getPort() == 0) {
+        if (props.getPort() == Constants.PORT_UNCONFIGURED) {
             props.setPort(8080); // set default port
         }
         return props;
