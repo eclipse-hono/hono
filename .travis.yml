@@ -12,12 +12,6 @@ before_install:
   - unzip -qq apache-maven-3.3.9-bin.zip
   - export M2_HOME=$PWD/apache-maven-3.3.9
   - export PATH=$M2_HOME/bin:$PATH
-# build the Docker image used for building binaries of Qpid Proton and Qpid Dispatch Router
-before_script:
-  - cd $TRAVIS_BUILD_DIR/dispatchrouter/qpid-dispatch-build
-  - docker build -t eclipsehono/qpid-dispatch-build:latest .
-  - docker run -v $TRAVIS_BUILD_DIR/dispatchrouter:/binaries eclipsehono/qpid-dispatch-build:latest
-  - cd $TRAVIS_BUILD_DIR
 env:
   global:
   - COMMIT=${TRAVIS_COMMIT::8}
