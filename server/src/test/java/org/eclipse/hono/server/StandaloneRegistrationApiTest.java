@@ -70,7 +70,7 @@ public class StandaloneRegistrationApiTest {
         HonoConfigProperties configProperties = new HonoConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
-        server.setHonoConfiguration(configProperties);
+        server.setConfig(configProperties);
         server.addEndpoint(new RegistrationEndpoint(vertx));
         registrationAdapter = new FileBasedRegistrationService();
 
