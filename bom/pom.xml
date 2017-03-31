@@ -49,6 +49,7 @@
     <vertx.version>3.4.1</vertx.version>
     <vertx-proton.version>3.4.1</vertx-proton.version>
     <vertx-mqtt.version>3.4.1</vertx-mqtt.version>
+    <vertx-mongo.version>3.4.1</vertx-mongo.version>
   </properties>
 
   <dependencyManagement>

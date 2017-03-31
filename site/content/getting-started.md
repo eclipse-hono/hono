@@ -35,6 +35,12 @@ with `${host}` and `${port}` reflecting the name/IP address and port of the host
 
 If you plan to build the Docker images more frequently, e.g. because you want to extend or improve the Hono code, then you should define the `docker.host` property in your Maven `settings.xml` file containing the very same value as you would use on the command line as indicated above. This way you can simply do a `mvn clean install` later on and the Docker images will be built automatically as well because the `build-docker-image` profile is activated automatically if the Maven property `docker.host` is set.
 
+#### Adding support for a DB-based device registry {#db-based-device-registry}
+
+By default, Hono stores identities of registered devices in the file system. In order to build Hono with support for a MongoDB-based device registry, run the above Maven command with an additional `registration-mongodb` maven profile:
+
+    ~/hono$ mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,registration-mongodb
+
 ## Starting Hono
 
 The easiest way to start the server components is by deploying them as a *stack*. As part of the build process, a *Docker Compose* file is generated under `example/target/hono/docker-compose.yml` which can be used to start up a Hono instance on your Docker host. Simply run the following from the `example/target/hono` directory
@@ -51,6 +57,8 @@ This will create and start up Docker Swarm *services* for all components that to
 * A *Hono Server* instance that protocol adapters connect to in order to forward data from devices.
 * A *REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
 * An *MQTT Adapter* instance that exposes Hono's Telemetry API as an MQTT topic hierarchy.
+
+If Hono was build with support for a MongoDB-based device registry, an adapted Docker Compose file is used, causing an additional *MongoDB* container to be started.
 
 ## Starting a Consumer
 

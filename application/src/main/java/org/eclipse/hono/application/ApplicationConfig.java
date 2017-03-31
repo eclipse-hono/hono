@@ -16,8 +16,11 @@ import org.eclipse.hono.config.HonoClientConfigProperties;
 import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.registration.RegistrationService;
+import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.server.HonoServerFactory;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -94,5 +97,17 @@ public class ApplicationConfig {
     @Bean
     public ConnectionFactory downstreamConnectionFactory() {
         return new ConnectionFactoryImpl();
+    }
+
+    /**
+     * Exposes a FileBasedRegistrationService instance in case no other 
+     * RegistrationService was instantiated.
+     * 
+     * @return RegistrationService instance
+     */
+    @Bean
+    @ConditionalOnMissingBean(RegistrationService.class)
+    public RegistrationService fileBasedRegistrationService() {
+        return new FileBasedRegistrationService();
     }
 }

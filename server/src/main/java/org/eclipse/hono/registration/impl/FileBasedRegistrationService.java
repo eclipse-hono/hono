@@ -43,7 +43,7 @@ import io.vertx.core.json.JsonObject;
  */
 @Repository
 @ConfigurationProperties(prefix = "hono.registration")
-@Profile({"default", "registration-file"})
+@Profile("registration-file")
 public class FileBasedRegistrationService extends BaseRegistrationService {
 
     /**
