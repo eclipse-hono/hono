@@ -48,12 +48,12 @@ public final class Constants {
     /**
      * The AMQP 1.0 port defined by IANA for TLS encrypted connections.
      */
-    public static final int PORT_AMQP = 5671;
+    public static final int PORT_AMQPS = 5671;
 
     /**
      * The AMQP 1.0 port defined by IANA for unencrypted connections.
      */
-    public static final int PORT_AMQP_INSECURE = 5672;
+    public static final int PORT_AMQP = 5672;
 
     /**
      * Default value for a port that is not explicitly configured.

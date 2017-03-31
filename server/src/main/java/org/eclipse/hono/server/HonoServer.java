@@ -131,8 +131,8 @@ public final class HonoServer extends AbstractVerticle {
                     .listen(amqpInsecurePort, honoConfig.getInsecurePortBindAddress(), bindAttempt -> {
                         if (bindAttempt.succeeded()) {
                             LOG.info("HonoServer insecure port listening on [{}:{}]", getInsecurePortBindAddress(), getInsecurePort());
-                            if (getInsecurePort() != Constants.PORT_AMQP_INSECURE)
-                                LOG.warn("This is NOT the IANA standard insecure port {}!", Constants.PORT_AMQP_INSECURE);
+                            if (getInsecurePort() != Constants.PORT_AMQP)
+                                LOG.warn("This is NOT the IANA standard insecure port {}!", Constants.PORT_AMQP);
                             startupHandler.complete();
                         } else {
                             LOG.error("cannot start up HonoServer (insecure port failed) ", bindAttempt.cause());
@@ -153,8 +153,8 @@ public final class HonoServer extends AbstractVerticle {
                     .listen(amqpPort, honoConfig.getBindAddress(), bindAttempt -> {
                         if (bindAttempt.succeeded()) {
                             LOG.info("HonoServer secure port listening on [{}:{}]", getBindAddress(), getPort());
-                            if (getPort() != Constants.PORT_AMQP)
-                                LOG.warn("This is NOT the IANA standard port {}!", Constants.PORT_AMQP);
+                            if (getPort() != Constants.PORT_AMQPS)
+                                LOG.warn("This is NOT the IANA standard port {}!", Constants.PORT_AMQPS);
                             startSecurePortTracker.complete();
                         } else {
                             LOG.error("cannot start up HonoServer (secure port failed) ", bindAttempt.cause());
@@ -207,12 +207,12 @@ public final class HonoServer extends AbstractVerticle {
             return;
         }
 
-        if (honoConfig.getPort(Constants.PORT_AMQP) == Constants.PORT_AMQP) {
-            LOG.info("HonoServer uses secure IANA standard port {}", Constants.PORT_AMQP);
+        if (honoConfig.getPort(Constants.PORT_AMQPS) == Constants.PORT_AMQPS) {
+            LOG.info("HonoServer uses secure IANA standard port {}", Constants.PORT_AMQPS);
         } else if (honoConfig.getPort() == 0) {
             LOG.info("HonoServer found secure port number configured for ephemeral port selection (port chosen automatically).");
         }
-        amqpPort = honoConfig.getPort(Constants.PORT_AMQP);
+        amqpPort = honoConfig.getPort(Constants.PORT_AMQPS);
     }
 
     private void determineInsecurePortConfiguration() {
@@ -221,13 +221,13 @@ public final class HonoServer extends AbstractVerticle {
 
         if (honoConfig.getInsecurePort() == 0) {
             LOG.info("HonoServer found insecure port number configured for ephemeral port selection (port chosen automatically).");
-        } else if (honoConfig.getInsecurePort(Constants.PORT_AMQP_INSECURE) == Constants.PORT_AMQP_INSECURE) {
+        } else if (honoConfig.getInsecurePort(Constants.PORT_AMQP) == Constants.PORT_AMQP) {
             LOG.info("HonoServer uses IANA standard insecure port {}", honoConfig.getInsecurePort());
-        } else if (honoConfig.getInsecurePort() == Constants.PORT_AMQP) {
+        } else if (honoConfig.getInsecurePort() == Constants.PORT_AMQPS) {
             LOG.warn("HonoServer found insecure port number configured to IANA standard port for secure connections {}", honoConfig.getInsecurePort());
             LOG.warn("Possibly misconfigured?");
         }
-        amqpInsecurePort = honoConfig.getInsecurePort(Constants.PORT_AMQP_INSECURE);
+        amqpInsecurePort = honoConfig.getInsecurePort(Constants.PORT_AMQP);
     }
 
     private void checkStandardEndpointsAreRegistered() {
@@ -358,7 +358,7 @@ public final class HonoServer extends AbstractVerticle {
         if (server != null) {
             return server.actualPort();
         } else {
-            return this.honoConfig.getPort(Constants.PORT_AMQP);
+            return this.honoConfig.getPort(Constants.PORT_AMQPS);
         }
     }
 
@@ -386,7 +386,7 @@ public final class HonoServer extends AbstractVerticle {
         if (insecureServer != null) {
             return insecureServer.actualPort();
         } else {
-            return this.honoConfig.getInsecurePort(Constants.PORT_AMQP_INSECURE);
+            return this.honoConfig.getInsecurePort(Constants.PORT_AMQP);
         }
     }
 

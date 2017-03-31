@@ -177,7 +177,7 @@ public class HonoServerTest {
         // THEN the default AMQPS port is selected and no insecure port will be opened
         assertTrue(portConfigurationTracker.succeeded());
         assertTrue(server.isOpenSecurePort());
-        assertThat(server.getPort(), is(Constants.PORT_AMQP));
+        assertThat(server.getPort(), is(Constants.PORT_AMQPS));
         assertFalse(server.isOpenInsecurePort());
     }
 
@@ -248,7 +248,7 @@ public class HonoServerTest {
         assertTrue(portConfigurationTracker.succeeded());
         assertFalse(server.isOpenSecurePort());
         assertTrue(server.isOpenInsecurePort());
-        assertThat(server.getInsecurePort(), is(Constants.PORT_AMQP_INSECURE));
+        assertThat(server.getInsecurePort(), is(Constants.PORT_AMQP));
     }
 
     /**
@@ -298,9 +298,9 @@ public class HonoServerTest {
         // THEN the server will bind to both the default AMQP and AMQPS ports
         assertTrue(portConfigurationTracker.succeeded());
         assertTrue(server.isOpenSecurePort());
-        assertThat(server.getPort(), is(Constants.PORT_AMQP));
+        assertThat(server.getPort(), is(Constants.PORT_AMQPS));
         assertTrue(server.isOpenInsecurePort());
-        assertThat(server.getInsecurePort(), is(Constants.PORT_AMQP_INSECURE));
+        assertThat(server.getInsecurePort(), is(Constants.PORT_AMQP));
     }
 
     /**
