@@ -142,6 +142,7 @@
     <module>example</module>
     <module>legal</module>
     <module>server</module>
+    <module>service-base</module>
     <module>tests</module>
     <module>site</module>
   </modules>

@@ -72,7 +72,7 @@ public class StandaloneTelemetryApiTest {
         HonoConfigProperties configProperties = new HonoConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
-        server.setHonoConfiguration(configProperties);
+        server.setConfig(configProperties);
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         server.addEndpoint(telemetryEndpoint);
