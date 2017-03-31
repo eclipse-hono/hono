@@ -200,9 +200,9 @@ public final class HonoServer extends AbstractVerticle {
     }
 
     private void determineSecurePortConfiguration() {
-        if (StringUtils.isEmpty(honoConfig.getKeyStorePath())) {
+        if (honoConfig.getKeyCertOptions() == null) {
             if (honoConfig.getPort() >= 0) {
-                LOG.warn("AMQP 1.0 secure port number configured, but no keyStorePath set. No secure port will be opened!");
+                LOG.warn("AMQP 1.0 secure port number configured, but the certificate setup is not correct. No secure port will be opened - please check your configuration!");
             }
             return;
         }
