@@ -1,6 +1,6 @@
 +++
 title = "Implement a Custom Hono HTTP Protocol Adapter"
-weight = 100
+weight = 250
 +++
 
 Hono comes with the Hono REST protocol adapter which you may use as a blueprint for your own HTTP protocol adapter 
@@ -33,8 +33,8 @@ Like many other Hono components, the Hono REST protocol adapter makes use of the
 All Hono protocol adapters are implemented as Vert.x verticles.
 
 The Hono REST protocol adapter class `VertxBasedRestProtocolAdapter` is derived from an abstract base class. This base 
-class implements the functionality for component initialization, receiving telemetry and event data from devices or 
-external clients, and forwarding of data to the Hono server. Additionally, the Hono REST protocol adapter implements an 
+class implements the base functionality for component initialization, receiving HTTP requests from devices or external 
+clients, and forwarding of data to the Hono server. Additionally, the Hono REST protocol adapter implements an 
 interface for device registration.
 
 ## Derive Your Custom HTTP Adapter
@@ -49,7 +49,8 @@ In Vert.x, a *route* is a mapping of a HTTP request to a handler. Inside a route
 instance which gives access to the HTTP request (and response) object containing the HTTP headers. 
 
 The Hono REST protocol adapter overrides the abstract method `addRoutes()`, provided by its base class, and adds the 
-routes for telemetry data, event data, and device registration.
+routes for telemetry data, event data, and device registration. Thereby, it connects incoming requests to their 
+appropriate handler.
 
 ```java
 // route for uploading telemetry data
@@ -61,7 +62,9 @@ The route for telemetry data parses the HTTP request, extracts the two parameter
 request URL path, and forwards the message payload to the method `uploadTelemetryMessage()`, provided by the base class.
 
 {{% note %}}
-Note the Vert.x placeholder indicators `:` inside the URL path pattern `/telemetry/:%s/:%s`. 
+Note the Vert.x placeholder indicators `:` inside the URL path pattern `/telemetry/:%s/:%s`. Vert.x makes matching 
+placeholders available as request parameters. See [Capturing path parameters](
+http://vertx.io/docs/vertx-web/java/#_capturing_path_parameters) in the Vert.x documentation.
 {{% /note %}}
 
 The route for event data looks very similar to the route for telemetry data. It forwards the event message payload to 
