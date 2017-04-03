@@ -62,6 +62,7 @@ The `MongoDbBasedRegistrationService` can be configured with these options:
 | `HONO_REGISTRATION_MONGODB_USERNAME`<br>`--hono.registration.mongoDb.username` | no | - | The username to use for authentication. |
 | `HONO_REGISTRATION_MONGODB_PASSWORD`<br>`--hono.registration.mongoDb.password` | no | - | The password to use for authentication. |
 | `HONO_REGISTRATION_MONGODB_CONNECTIONSTRING`<br>`--hono.registration.mongoDb.connectionString` | no | - | *Alternative to the options above. If set, the other options will be ignored.*<br>The URL for connecting to the MongoDB. The format is `mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]`. For further details, see the [MongoDB documentation](https://docs.mongodb.com/manual/reference/connection-string/). |
+| `HONO_REGISTRATION_MONGODB_COLLECTION`<br>`--hono.registration.mongoDb.collection` | no | devices | The collection to use for storing the device identities. |
 
 ### Port configuration
 

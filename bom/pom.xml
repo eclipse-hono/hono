@@ -50,6 +50,7 @@
     <vertx-proton.version>3.4.1</vertx-proton.version>
     <vertx-mqtt.version>3.4.1</vertx-mqtt.version>
     <vertx-mongo.version>3.4.1</vertx-mongo.version>
+    <flapdoodle-mongo.version>2.0.0</flapdoodle-mongo.version>
   </properties>
 
   <dependencyManagement>
@@ -74,6 +75,11 @@
        <groupId>io.vertx</groupId>
        <artifactId>vertx-proton</artifactId>
        <version>${vertx-proton.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-mongo-client</artifactId>
+        <version>${vertx-mongo.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.qpid</groupId>
@@ -192,6 +198,12 @@
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-amqp</artifactId>
         <version>${activemq.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>de.flapdoodle.embed</groupId>
+        <artifactId>de.flapdoodle.embed.mongo</artifactId>
+        <version>${flapdoodle-mongo.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>

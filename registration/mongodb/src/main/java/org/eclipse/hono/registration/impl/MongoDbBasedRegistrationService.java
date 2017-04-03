@@ -18,9 +18,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 
 import org.eclipse.hono.util.RegistrationResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
@@ -38,9 +36,7 @@ import io.vertx.ext.mongo.MongoClient;
 @Profile("registration-mongodb")
 public class MongoDbBasedRegistrationService extends BaseRegistrationService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationService.class);
-    
-    private static final String COLLECTION_DEVICES = "devices";
+    private static final String DEFAULT_COLLECTION_NAME = "devices";
     
     private static final String FIELD_DEVICE_ID = "deviceId";
     private static final String FIELD_TENANT_ID = "tenantId";
@@ -48,47 +44,23 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
     
     private MongoClient mongoClient;
 
-    /**
-     * Connection string for the MongoDB client. 
-     * If set, the connection string overrides the other configuration settings.
-     * Format:
-     * mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
-     * See https://docs.mongodb.com/manual/reference/connection-string/
-     */
-    @Value("${hono.registration.mongoDb.connectionString:#{null}}")
-    private String connectionString;
-    
-    @Value("${hono.registration.mongoDb.host:#{null}'}")
-    private String host;
-    @Value("${hono.registration.mongoDb.port:0}")
-    private int port;
-    @Value("${hono.registration.mongoDb.dbName:#{null}}")
-    private String dbName;
-    @Value("${hono.registration.mongoDb.username:#{null}}")
-    private String username;
-    @Value("${hono.registration.mongoDb.password:#{null}}")
-    private String password;
+    @Autowired
+    private MongoDbConfigProperties mongoDbConfigProperties;
     
     public MongoDbBasedRegistrationService() {
         // empty
     }
     
-    public MongoDbBasedRegistrationService(final String host, final int port, final String dbName,
-            final String username, final String password) {
-        this.host = host;
-        this.port = port;
-        this.dbName = dbName;
-        this.username = username;
-        this.password = password;
+    public MongoDbBasedRegistrationService(final MongoDbConfigProperties mongoDbConfigProperties) {
+        this.mongoDbConfigProperties = mongoDbConfigProperties;
     }
-
-    public MongoDbBasedRegistrationService(final String connectionString) {
-        this.connectionString = connectionString;
-    }
-
+    
     @Override
     protected void doStart(final Future<Void> startFuture) throws Exception {
-        JsonObject mongoConfig = getMongoConfig();
+        if (mongoDbConfigProperties.getCollection() == null) {
+            mongoDbConfigProperties.setCollection(DEFAULT_COLLECTION_NAME);
+        }
+        JsonObject mongoConfig = mongoDbConfigProperties.asMongoClientConfigJson();
         log.info("Starting MongoDB client ...");
         mongoClient = MongoClient.createShared(vertx, mongoConfig);
 
@@ -102,40 +74,12 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
         });
     }
 
-    private JsonObject getMongoConfig() {
-        final JsonObject config = new JsonObject();
-        if (connectionString != null) {
-            config.put("connection_string", connectionString);
-            
-            if (host != null || port != 0 || dbName != null || username != null || password != null) {
-                LOG.info("hono.registration.mongoDb.connectionString is set, other properties will be ignored");
-            }
-        } else {
-            if (host != null) {
-                config.put("host", host);
-            }
-            if (port != 0) {
-                config.put("port", port);
-            }
-            if (dbName != null) {
-                config.put("db_name", dbName);
-            }
-            if (username != null) {
-                config.put("username", username);
-            }
-            if (password != null) {
-                config.put("password", password);
-            }
-        }
-        return config;
-    }
-
     private void createIndices(final Handler<AsyncResult<Void>> indexCreationTracker) {
         JsonObject keys = new JsonObject()
             .put(FIELD_DEVICE_ID, 1)
             .put(FIELD_TENANT_ID, 1);
         IndexOptions options = new IndexOptions().unique(true);
-        mongoClient.createIndexWithOptions(COLLECTION_DEVICES, keys, options, indexCreationTracker);
+        mongoClient.createIndexWithOptions(mongoDbConfigProperties.getCollection(), keys, options, indexCreationTracker);
     }
 
     @Override
@@ -145,13 +89,15 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
-    public void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void getDevice(final String tenantId, final String deviceId,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         JsonObject query = createDeviceDocument(tenantId, deviceId);
         findDevice(query, resultHandler);
     }
 
     @Override
-    public void findDevice(final String tenantId, final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void findDevice(final String tenantId, final String key, final String value,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         if (key == null) {
             handleResult(resultHandler, RegistrationResult.from(HTTP_BAD_REQUEST));
             return;
@@ -163,7 +109,7 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
     }
 
     private void findDevice(final JsonObject query, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        mongoClient.findOne(COLLECTION_DEVICES, query, null, res -> {
+        mongoClient.findOne(mongoDbConfigProperties.getCollection(), query, null, res -> {
             JsonObject foundData = res.succeeded() && res.result() != null ? res.result().getJsonObject(FIELD_DATA) : null;
             if (foundData != null) {
                 handleResult(resultHandler, RegistrationResult.from(HTTP_OK, foundData));
@@ -174,12 +120,13 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
-    public void removeDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void removeDevice(final String tenantId, final String deviceId,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         // data of the removed device shall be returned, so try to get it first
         getDevice(tenantId, deviceId, getResult -> {
             final JsonObject dataOfDevice = getResult.result() != null ? getResult.result().getPayload() : null;
             // now remove
-            mongoClient.removeDocuments(COLLECTION_DEVICES, createDeviceDocument(tenantId, deviceId), res -> {
+            mongoClient.removeDocuments(mongoDbConfigProperties.getCollection(), createDeviceDocument(tenantId, deviceId), res -> {
                 if (res.succeeded() && res.result().getRemovedCount() == 1) {
                     handleResult(resultHandler, RegistrationResult.from(HTTP_OK, dataOfDevice));
                 } else {
@@ -190,8 +137,9 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
-    public void addDevice(final String tenantId, final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        mongoClient.insert(COLLECTION_DEVICES, createDeviceDocument(tenantId, deviceId, data), res -> {
+    public void addDevice(final String tenantId, final String deviceId, final JsonObject data,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        mongoClient.insert(mongoDbConfigProperties.getCollection(), createDeviceDocument(tenantId, deviceId, data), res -> {
             if (res.succeeded()) {
                 handleResult(resultHandler, RegistrationResult.from(HTTP_CREATED));
             } else {
@@ -201,7 +149,8 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
-    public void updateDevice(final String tenantId, final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void updateDevice(final String tenantId, final String deviceId, final JsonObject data,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         // the original data of the updated device shall be returned, so try to get it first
         getDevice(tenantId, deviceId, getResult -> {
             final JsonObject prevDataOfDevice = getResult.result() != null ? getResult.result().getPayload() : null;
@@ -209,7 +158,7 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
             JsonObject query = createDeviceDocument(tenantId, deviceId);
             JsonObject update = new JsonObject()
                 .put("$set", new JsonObject().put(FIELD_DATA, data != null ? data : new JsonObject()));
-            mongoClient.updateCollection(COLLECTION_DEVICES, query, update, res -> {
+            mongoClient.updateCollection(mongoDbConfigProperties.getCollection(), query, update, res -> {
                 if (res.succeeded() && res.result().getDocMatched() == 1) {
                     handleResult(resultHandler, RegistrationResult.from(HTTP_OK, prevDataOfDevice));
                 } else {
@@ -223,7 +172,7 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
      * Removes all devices from the registry.
      */
     void clear(final Handler<AsyncResult<Void>> resultHandler) {
-        mongoClient.removeDocuments(COLLECTION_DEVICES, new JsonObject(), res -> {
+        mongoClient.removeDocuments(mongoDbConfigProperties.getCollection(), new JsonObject(), res -> {
             log.debug("all devices removed");
             resultHandler.handle(Future.succeededFuture());
         });

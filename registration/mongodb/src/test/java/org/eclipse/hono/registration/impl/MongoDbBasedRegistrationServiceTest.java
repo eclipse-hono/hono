@@ -18,7 +18,6 @@ import static java.net.HttpURLConnection.HTTP_OK;
 
 import java.io.IOException;
 
-import org.eclipse.hono.registration.impl.MongoDbBasedRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -63,7 +62,9 @@ public class MongoDbBasedRegistrationServiceTest {
         final String mongoDbHost = "localhost";
         final int mongoDbPort = Network.getFreeServerPort();
         startEmbeddedMongoDb(mongoDbHost, mongoDbPort);
-        registrationAdapter = new MongoDbBasedRegistrationService(mongoDbHost, mongoDbPort, "deviceRegistry", null, null);
+        MongoDbConfigProperties mongoDbConfigProperties = new MongoDbConfigProperties();
+        mongoDbConfigProperties.setHost(mongoDbHost).setPort(mongoDbPort).setDbName("deviceRegistry");
+        registrationAdapter = new MongoDbBasedRegistrationService(mongoDbConfigProperties);
         
         vertx = Vertx.vertx();
         vertx.deployVerticle(registrationAdapter, context.asyncAssertSuccess());

@@ -75,6 +75,9 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
       <resource>
         <directory>${project.basedir}/docker</directory>
         <filtering>true</filtering>
+        <excludes>
+          <exclude>registration-mongodb/**</exclude>
+        </excludes>
         <targetPath>${project.build.directory}/hono</targetPath>
       </resource>
       <resource>
