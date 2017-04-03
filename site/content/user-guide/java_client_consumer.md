@@ -14,7 +14,7 @@ The goal of the following description is to extend an arbitrary Java program to 
 For that the following example is kept as simple as possible (in the tradition of a classical "Hello World" implementation).
 This means that we will make use of simple constant definitions, deal with exceptions as rarely as possible and use a few `System.out`'s.
 
-The application waits for messages until you press the return key (and then regularly finishes it). You can safely kill it if that should be simpler for you.
+The application waits for messages until you press CTRL+C or kill it.
 
 Please note that consumers do not connect with Hono directly, but rather with an AMQP router network. 
 In the standard setup of Hono this is the [qdrouter](https://qpid.apache.org/components/dispatch-router/index.html) from the Apache Qpid project.
