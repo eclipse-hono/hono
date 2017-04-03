@@ -167,7 +167,7 @@ The response will look similar to this:
 * Headers:
   * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
 * Parameters (encoded as payload according to content type):
-  * (optional) Arbitrary key/value pairs containing additional data to be registered with the device. The existing key/valule pairs will be replaced with these key/values.
+  * (optional) Arbitrary key/value pairs containing additional data to be registered with the device. The existing key/value pairs will be replaced with these key/values.
 * Status Codes:
   * 200 (OK): Device registration data has been updated. The body contains the *previous* data registered for the device.
   * 400 (Bad Request): Device registration has not been updated because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
