@@ -221,7 +221,6 @@ public final class HonoClientImpl implements HonoClient {
      * @see org.eclipse.hono.client.HonoClient#getOrCreateTelemetrySender(java.lang.String, java.lang.String, io.vertx.core.Handler)
      */
     @Override
-    @SuppressWarnings("unchecked")
     public HonoClient getOrCreateTelemetrySender(final String tenantId, final String deviceId, final Handler<AsyncResult<MessageSender>> resultHandler) {
         Objects.requireNonNull(tenantId);
         getOrCreateSender(
@@ -243,7 +242,6 @@ public final class HonoClientImpl implements HonoClient {
      * @see org.eclipse.hono.client.HonoClient#getOrCreateEventSender(java.lang.String, java.lang.String, io.vertx.core.Handler)
      */
     @Override
-    @SuppressWarnings("unchecked")
     public HonoClient getOrCreateEventSender(
             final String tenantId,
             final String deviceId,
@@ -258,8 +256,7 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    @SuppressWarnings("rawtypes")
-    private void getOrCreateSender(final String key, final Consumer<Handler> newSenderSupplier,
+    void getOrCreateSender(final String key, final Consumer<Handler<AsyncResult<MessageSender>>> newSenderSupplier,
             final Handler<AsyncResult<MessageSender>> resultHandler) {
 
         final MessageSender sender = activeSenders.get(key);
@@ -269,8 +266,8 @@ public final class HonoClientImpl implements HonoClient {
         } else if (!senderCreationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
             senderCreationLocks.put(key, Boolean.TRUE);
             LOG.debug("creating new message sender for {}", key);
-            final Future<MessageSender> internal = Future.future();
-            internal.setHandler(creationAttempt -> {
+
+            newSenderSupplier.accept(creationAttempt -> {
                 if (creationAttempt.succeeded()) {
                     MessageSender newSender = creationAttempt.result();
                     LOG.debug("successfully created new message sender for {}", key);
@@ -282,7 +279,7 @@ public final class HonoClientImpl implements HonoClient {
                 senderCreationLocks.remove(key);
                 resultHandler.handle(creationAttempt);
             });
-            newSenderSupplier.accept(internal.completer());
+
         } else {
             LOG.debug("already trying to create a message sender for {}", key);
             resultHandler.handle(Future.failedFuture("sender link not established yet"));
