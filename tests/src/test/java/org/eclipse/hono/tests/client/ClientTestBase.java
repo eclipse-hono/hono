@@ -263,7 +263,7 @@ public abstract class ClientTestBase {
             latch.await();
         });
 
-        long timeToWait = Math.min(5000, Math.round(MSG_COUNT * 1.2));
+        long timeToWait = Math.max(5000, Math.round(MSG_COUNT * 1.2));
         received.await(timeToWait);
         accepted.await(timeToWait);
         LOGGER.info("sent {} and received {} messages after {} milliseconds",
