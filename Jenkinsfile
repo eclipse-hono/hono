@@ -22,7 +22,7 @@ node {
                 sh "git config user.name '${USER_ID}'"
                 sh "git config remote.origin.url 'https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git'"
                 sh "git remote set-url origin 'https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git'"
-                sh "${mvnHome}/bin/mvn -s ${MAVEN_SETTINGS} clean deploy -Pbuild-docker-image scm:tag -Drevision=${buildVersion} -DskipStaging=true -DconnectionUrl='scm:git:https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git' -Ddocker.host.name=sazvl0062.saz.bosch-si.com -Ddocker.host=tcp://10.56.22.164:2376"
+                sh "${mvnHome}/bin/mvn -s ${MAVEN_SETTINGS} clean deploy -Pbuild-docker-image,run-tests scm:tag -Drevision=${buildVersion} -DskipStaging=true -DconnectionUrl='scm:git:https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git' -Ddocker.host.name=sazvl0062.saz.bosch-si.com -Ddocker.host=tcp://10.56.22.164:2376"
 
                 // deploy documentation to nginx via shared directory
                 sh "cd site && ${mvnHome}/bin/mvn -s ${MAVEN_SETTINGS} clean deploy -Drevision=${buildVersion} -DskipStaging=true"
