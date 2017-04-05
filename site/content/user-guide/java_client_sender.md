@@ -101,7 +101,7 @@ import java.util.stream.IntStream;
 
 public class App {
     public static final String HONO_HOST = "localhost";
-    public static final int    HONO_PORT = 5672;
+    public static final int    HONO_PORT = 5671;
 
     public static final String TENANT_ID = "DEFAULT_TENANT";
     public static final String DEVICE_ID = "4711";
@@ -192,6 +192,7 @@ public class App {
 The code consists of several parts that are discussed now:
   
 ### Define connection details
+
 We need the host address and port of Hono and define them for simplicity as constants in the main class (HONO_HOST, HONO_PORT).
 
 {{% warning %}}
