@@ -93,7 +93,7 @@ public class HonoServerTest {
             }
         };
         HonoServer server = createServer(telemetryEndpoint);
-        final JsonObject authMsg = AuthorizationConstants.getAuthorizationMsg(Constants.DEFAULT_SUBJECT, targetAddress, Permission.WRITE.toString());
+        final JsonObject authMsg = AuthorizationConstants.getAuthorizationMsg(Constants.SUBJECT_ANONYMOUS, targetAddress, Permission.WRITE.toString());
         TestSupport.expectReplyForMessage(eventBus, server.getAuthServiceAddress(), authMsg, AuthorizationConstants.ALLOWED);
 
         // WHEN a client connects to the server using a telemetry address
@@ -101,7 +101,7 @@ public class HonoServerTest {
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteTarget()).thenReturn(target);
         when(receiver.attachments()).thenReturn(mock(Record.class));
-        server.handleReceiverOpen(newAuthenticatedConnection(Constants.DEFAULT_SUBJECT), receiver);
+        server.handleReceiverOpen(newAuthenticatedConnection(Constants.SUBJECT_ANONYMOUS), receiver);
 
         // THEN the server delegates link establishment to the telemetry endpoint 
         assertTrue(linkEstablished.await(1, TimeUnit.SECONDS));
@@ -145,7 +145,7 @@ public class HonoServerTest {
 
         // WHEN a client connects to the server
         ArgumentCaptor<Handler> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        final ProtonConnection con = newAuthenticatedConnection(Constants.DEFAULT_SUBJECT);
+        final ProtonConnection con = newAuthenticatedConnection(Constants.SUBJECT_ANONYMOUS);
         when(con.disconnectHandler(closeHandlerCaptor.capture())).thenReturn(con);
 
         server.handleRemoteConnectionOpen(con);

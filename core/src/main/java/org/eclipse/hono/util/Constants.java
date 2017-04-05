@@ -22,8 +22,11 @@ import io.vertx.proton.ProtonLink;
  */
 public final class Constants {
 
+    /**
+     * The name of the default tenant.
+     */
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
-    public static final String DEFAULT_SUBJECT = "hono-client";
+
     /**
      * The key that an authenticated client's principal is stored under in a {@code ProtonConnection}'s
      * attachments.
@@ -59,6 +62,11 @@ public final class Constants {
      * Default value for a port that is not explicitly configured.
      */
     public static final int PORT_UNCONFIGURED = -1;
+
+    /**
+     * The subject name to use for anonymous clients.
+     */
+    public static final String SUBJECT_ANONYMOUS = "ANONYMOUS";
 
     private Constants() {
     }

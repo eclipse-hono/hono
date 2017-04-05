@@ -538,15 +538,15 @@ public final class HonoServer extends AbstractVerticle {
      * Gets the authenticated client principal name for an AMQP connection.
      *
      * @param con the connection to read the user from
-     * @return the user associated with the connection or {@link Constants#DEFAULT_SUBJECT} if it cannot be determined.
+     * @return the user associated with the connection or {@link Constants#SUBJECT_ANONYMOUS} if it cannot be determined.
      */
     private static String getUserFromConnection(final ProtonConnection con) {
 
         Principal clientId = Constants.getClientPrincipal(con);
         if (clientId == null) {
             LOG.warn("connection from client [{}] is not authenticated properly using SASL, falling back to default subject [{}]",
-                    con.getRemoteContainer(), Constants.DEFAULT_SUBJECT);
-            return Constants.DEFAULT_SUBJECT;
+                    con.getRemoteContainer(), Constants.SUBJECT_ANONYMOUS);
+            return Constants.SUBJECT_ANONYMOUS;
         } else {
             return clientId.getName();
         }

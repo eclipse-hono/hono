@@ -50,6 +50,7 @@ import io.vertx.proton.ProtonSender;
  */
 public final class TestSupport {
 
+    public static final String CLIENT_CONTAINER = "hono-client";
     public static final String CLIENT_ID = "protocol_adapter";
     public static final String CON_ID = "connection-1";
     public static final int DEFAULT_CREDITS = 20;
@@ -63,7 +64,7 @@ public final class TestSupport {
         client.connect(host, port, ar -> {
             if (ar.succeeded()) {
                 protonConnection.set(ar.result());
-                protonConnection.get().setContainer(Constants.DEFAULT_SUBJECT).open();
+                protonConnection.get().setContainer(CLIENT_CONTAINER).open();
                 connected.complete();
             }
             else
