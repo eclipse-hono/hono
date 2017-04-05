@@ -29,6 +29,5 @@ spring:
   profiles: sender
 hono:
   client:
-    port: 5672
     username: hono-client
     password: secret
