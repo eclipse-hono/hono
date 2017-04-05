@@ -415,7 +415,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
             Map<CharSequence, CharSequence> headers, final String detail, final String contentType) {
 
         Objects.requireNonNull(response);
-        response.setStatusCode(HTTP_BAD_REQUEST);
+        response.setStatusCode(status);
         if (headers != null) {
             for (Entry<CharSequence, CharSequence> header : headers.entrySet()) {
                 response.putHeader(header.getKey(), header.getValue());
