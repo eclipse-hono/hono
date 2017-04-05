@@ -72,7 +72,7 @@
               <images>
                 <image>
                   <build>
-                    <from>eclipsehono/qpid-dispatch:latest</from>
+                    <from>eclipsehono/qpid-dispatch:${qpid-dispatch.version}</from>
                     <ports>
                       <port>5671</port>
                       <port>5672</port>
@@ -110,9 +110,6 @@
                         </fileSets>
                       </inline>
                     </assembly>
-                    <runCmds>
-                      <runCmd>dnf -y install cyrus-sasl-sql</runCmd>
-                    </runCmds>
                   </build>
                 </image>
               </images>
