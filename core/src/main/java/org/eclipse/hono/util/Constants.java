@@ -22,8 +22,11 @@ import io.vertx.proton.ProtonLink;
  */
 public final class Constants {
 
+    /**
+     * The name of the default tenant.
+     */
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
-    public static final String DEFAULT_SUBJECT = "hono-client";
+
     /**
      * The key that an authenticated client's principal is stored under in a {@code ProtonConnection}'s
      * attachments.
@@ -44,6 +47,26 @@ public final class Constants {
      * The default separator character for target addresses.
      */
     public static final String DEFAULT_PATH_SEPARATOR = "/";
+
+    /**
+     * The AMQP 1.0 port defined by IANA for TLS encrypted connections.
+     */
+    public static final int PORT_AMQPS = 5671;
+
+    /**
+     * The AMQP 1.0 port defined by IANA for unencrypted connections.
+     */
+    public static final int PORT_AMQP = 5672;
+
+    /**
+     * Default value for a port that is not explicitly configured.
+     */
+    public static final int PORT_UNCONFIGURED = -1;
+
+    /**
+     * The subject name to use for anonymous clients.
+     */
+    public static final String SUBJECT_ANONYMOUS = "ANONYMOUS";
 
     private Constants() {
     }

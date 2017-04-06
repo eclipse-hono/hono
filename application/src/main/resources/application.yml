@@ -1,13 +1,16 @@
 hono:
   downstream:
     host: localhost
-    port: 5672
+    port: 5671
     name: hono-server
   server:
     bindAddress: 127.0.0.1
-    port: 5672
+    port: 5671
     maxInstances: 0
     singleTenant: false
+    insecurePortEnabled: false
+    bindAddressInsecurePort: 127.0.0.1
+    insecurePort: 5672
 spring:
   profiles:
     active: default

@@ -85,7 +85,11 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
     private void bindMqttServer(final Future<Void> startFuture) {
 
         MqttServerOptions options = new MqttServerOptions();
-        options.setHost(config.getBindAddress()).setPort(config.getPort());
+        options
+            .setHost(config.getBindAddress())
+            .setPort(config.getPort())
+            .setMaxMessageSize(config.getMaxPayloadSize());
+        LOG.info("limiting size of inbound message payload to {} bytes", config.getMaxPayloadSize());
 
         this.server = MqttServer.create(this.vertx, options);
 
@@ -123,12 +127,6 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
         if (hono == null) {
             startFuture.fail("Hono client must be set");
         } else {
-            if (LOG.isWarnEnabled()) {
-                StringBuilder b = new StringBuilder()
-                        .append("MQTT protocol adapter does not yet support limiting the incoming message size ")
-                        .append("via the maxPayloadSize property. Default max payload size is 8kb.");
-                LOG.warn(b.toString());
-            }
             this.bindMqttServer(startFuture);
             this.connectToHono(null);
         }

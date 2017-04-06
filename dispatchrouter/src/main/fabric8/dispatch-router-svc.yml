@@ -14,7 +14,7 @@ spec:
     port: 15672
     protocol: TCP
     targetPort: 5672
-  - name: internal
+  - name: downstream
     port: 5673
     protocol: TCP
     targetPort: 5673

@@ -25,6 +25,7 @@ import org.junit.Test;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 
 /**
@@ -69,7 +70,8 @@ public class ConnectionFactoryImplTest {
             }
         };
 
-        factory.connect(null, null, null, connectionHandler);
+        ProtonClientOptions options = new ProtonClientOptions().setConnectTimeout(100);
+        factory.connect(options, null, null, connectionHandler);
 
         // THEN the connection attempt fails and the given handler is invoked
         assertTrue(latch.await(200, TimeUnit.MILLISECONDS));

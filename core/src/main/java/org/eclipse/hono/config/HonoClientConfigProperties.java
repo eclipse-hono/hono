@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -14,6 +14,8 @@ package org.eclipse.hono.config;
 
 import java.util.Objects;
 
+import org.eclipse.hono.util.Constants;
+
 /**
  * Common configuration properties required for accessing a Hono server.
  */
@@ -21,7 +23,7 @@ public final class HonoClientConfigProperties extends AbstractHonoConfig {
 
     private String name;
     private String host = "localhost";
-    private int port = 5672;
+    private int port = Constants.PORT_AMQPS;
     private String username;
     private char[] password;
     private String amqpHostname;
@@ -47,6 +49,8 @@ public final class HonoClientConfigProperties extends AbstractHonoConfig {
 
     /**
      * Gets the TCP port of the server that this client is configured to connect to.
+     * <p>
+     * The default value of this property is {@link Constants#PORT_AMQPS}.
      * 
      * @return The port number.
      */
@@ -56,6 +60,8 @@ public final class HonoClientConfigProperties extends AbstractHonoConfig {
 
     /**
      * Sets the TCP port of the server that this client should connect to.
+     * <p>
+     * The default value of this property is {@link Constants#PORT_AMQPS}.
      * 
      * @param port The port number.
      * @throws IllegalArgumentException if port &lt; 1000 or port &gt; 65535.

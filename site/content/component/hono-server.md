@@ -19,23 +19,73 @@ The following table provides an overview of the configuration options the adapte
 | :------------------------------------------ | :-------: | :------ | :---------- |
 | `HONO_AUTHORIZATION_PERMISSIONS_PATH`<br>`--hono.authorization.permissionsPath` | no | `classpath:/permissions.json` | The Spring resource URI of the JSON file defining the permissions to Hono's endpoint resources. The default file bundled with Hono defines permissions for the *DEAFAULT_TENANT* only and should only be used for evaluation purposes. |
 | `HONO_DOWNSTREAM_HOST`<br>`--hono.downstream.host` | yes | `localhost` | The IP address or name of the downstream *Dispatch Router* host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--link` command line option to link the Hono server container to the host of the *Dispatch Router* container on the Docker network.
-| `HONO_DOWNSTREAM_PORT`<br>`--hono.downstream.port` | yes | `5672` | The port that the Dispatch Router is listening on for connection from the Hono server.<br>**NB** When using the Dispatch Router image with the example configuration then this property needs to be set to `5673`. This is because in the example configuration the Dispatch Router's *internal* listener used for accepting connections from the Hono server is configured to attach to port 5673. |
-| `HONO_DOWNSTREAM_USERNAME`<br>`--hono.downstream.username` | no | - | The username to use for authenticating to the Dispatch Router. This property (and the corresponding password) needs to be set only if the Dispatch Router component is configured to use `SASL PLAIN` instead of `SASL EXTERNAL` for authenticating the Hono server. |
 | `HONO_DOWNSTREAM_PASSWORD`<br>`--hono.downstream.password` | no | - | The password to use for authenticating to the Hono server. This property (and the corresponding username) needs to be set only if the Dispatch Router component is configured to use `SASL PLAIN` instead of `SASL EXTERNAL` for authenticating the Hono server. |
-| `HONO_DOWNSTREAM_TRUST_STORE_PATH`<br>`--hono.downstream.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating the Dispatch Router. This property **must** be set if the Dispatch Router has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_DOWNSTREAM_PORT`<br>`--hono.downstream.port` | yes | `5672` | The port that the Dispatch Router is listening on for connection from the Hono server.<br>**NB** When using the Dispatch Router image with the example configuration then this property needs to be set to `5673`. This is because in the example configuration the Dispatch Router's *internal* listener used for accepting connections from the Hono server is configured to attach to port 5673. |
 | `HONO_DOWNSTREAM_TRUST_STORE_PASSWORD`<br>`--hono.downstream.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+| `HONO_DOWNSTREAM_TRUST_STORE_PATH`<br>`--hono.downstream.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating the Dispatch Router. This property **must** be set if the Dispatch Router has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_DOWNSTREAM_USERNAME`<br>`--hono.downstream.username` | no | - | The username to use for authenticating to the Dispatch Router. This property (and the corresponding password) needs to be set only if the Dispatch Router component is configured to use `SASL PLAIN` instead of `SASL EXTERNAL` for authenticating the Hono server. |
 | `HONO_REGISTRATION_FILENAME`<br>`--hono.registration.filename` | no | `/home/hono/registration/device-identities.json` | The path to the file where Hono's `FileBasedRegistrationService` stores identities of registered devices. Hono tries to read device identities from this file during start-up and writes out all identities to this file periodically. The `eclipsehono/hono-server` Docker image creates a volume under `/home/hono/registration` so that registration information survives container restarts and/or image updates. If you are running the Hono server from the command line you will probably want to set this variable to a path using an existing folder since Hono will not try to create the path. |
-| `HONO_SERVER_BIND_ADDRESS`<br>`--hono.server.bindaddress` | yes | `127.0.0.1` | The IP address the Hono server should bind to. By default the adapter binds to the *loopback device* address, i.e. the adapter will **not** be accessible from other hosts. |
+| `HONO_SERVER_BIND_ADDRESS`<br>`--hono.server.bindAddress` | no | `127.0.0.1` | The IP address the Hono server port shall bind to. By default the server binds to the *loopback device* address, i.e. the server will **not** be accessible from other hosts. |
 | `HONO_SERVER_CERT_PATH`<br>`--hono.server.certPath` | no | - | The absolute path to the PEM file containing the certificate the Hono server uses for authenticating to clients. Either this or the `HONO_SERVER_KEY_STORE_PATH` option **must** be set to enable TLS secured connections with clients. |
+| `HONO_SERVER_INSECURE_PORT`<br>`--hono.server.insecurePort` | no | `5672` | The insecure port the Hono server shall listen on (if enabled). <br>In order to open an insecure port only, set this property to true but do neither set `HONO_SERVER_KEY_STORE_PATH` nor `HONO_SERVER_KEY_PATH` nor `HONO_SERVER_CERT_PATH`. This will prevent the secure port from being opened. <br> For dual port configurations Hono will not start if this property is set to the same value as `HONO_SERVER_PORT`.|
+| `HONO_SERVER_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.server.insecurePortBindAddress` | no | `127.0.0.1` | The IP address the insecure port of the Hono server shall bind to. By default the server binds to the *loopback device* address, i.e. the server will **not** be accessible from other hosts. |
+| `HONO_SERVER_INSECURE_PORT_ENABLED`<br>`--hono.server.insecurePortEnabled` | no | `false` | Enables the Hono server to open an insecure port (not secured by TLS). <br>This allows for a dual port setup of the Hono server (secure and insecure port). |
 | `HONO_SERVER_KEY_PATH`<br>`--hono.server.keyPath` | no | - | The absolute path to the PEM file containing the private key the Hono server uses for authenticating to clients. Either this or the `HONO_SERVER_KEY_STORE_PATH` option **must** be set to enable TLS secured connections with clients. |
-| `HONO_SERVER_KEY_STORE_PATH`<br>`--hono.server.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate the Hono server uses for authenticating to clients. Either this or the `HONO_SERVER_KEY_PATH` and `HONO_SERVER_CERT_PATH` options **must** be set to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix. |
 | `HONO_SERVER_KEY_STORE_PASSWORD`<br>`--hono.server.keyStorePassword` | no | - | The password required to read the contents of the key store. |
+| `HONO_SERVER_KEY_STORE_PATH`<br>`--hono.server.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate the Hono server uses for authenticating to clients. Either this or the `HONO_SERVER_KEY_PATH` and `HONO_SERVER_CERT_PATH` options **must** be set to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix. |
 | `HONO_SERVER_MAX_INSTANCES`<br>`--hono.server.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
-| `HONO_SERVER_PORT`<br>`--hono.server.port` | yes | `5672` | The port the server should listen on. |
-| `HONO_SERVER_TRUST_STORE_PATH`<br>`--hono.server.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_SERVER_PORT`<br>`--hono.server.port` | no | `5671` | The secure port the server shall listen on. <br> In order for this to work either `HONO_SERVER_KEY_STORE_PATH` (and `HONO_SERVER_KEY_STORE_PASSWORD`) or `HONO_SERVER_KEY_PATH` and `HONO_SERVER_CERT_PATH` need to be set appropriately. Otherwise the Hono server will not open the configured port. |
 | `HONO_SERVER_TRUST_STORE_PASSWORD`<br>`--hono.server.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+| `HONO_SERVER_TRUST_STORE_PATH`<br>`--hono.server.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 
 The options only need to be set if the default value does not match your environment.
+
+### Port configuration
+
+Hono server supports a secure and an insecure listening port by means of configuration. This leverages the following configuration scenarios:
+
+- only one secure port (default)
+- only one insecure port
+- one secure **and** one insecure port (dual port configuration)
+
+If both ports are not configured correctly or are disabled, the Hono server will fail to start. 
+
+#### Only one secure port
+This is the default configuration. It only needs the configuration of a keystore (`HONO_SERVER_KEY_STORE_PATH` and `HONO_SERVER_KEY_STORE_PASSWORD`) or PEM files (`HONO_SERVER_KEY_PATH` and `HONO_SERVER_CERT_PATH`).
+
+Hono server then opens the IANA default port number 5671 as TLS secured AMQP 1.0 port. 
+
+If `HONO_SERVER_PORT` is configured explicitly this port will be used instead. 
+
+The `HONO_SERVER_BIND_ADDRESS` property can be used to specify the network interface that the port should be exposed on. Setting this property to 0.0.0.0 will let the Hono server bind to all network interfaces.
+
+#### Only one insecure port
+
+While in production scenarios it is almost certainly necessary that the Hono server communicates via the encrypted AMQP 1.0 port, a setup with an insecure (i.e. unencrypted) AMQP port sometimes is
+desirable.
+This may ease the debugging of AMQP 1.0 frames by using proxies or network sniffers that log the details while developing client applications (e.g. protocol adapters) for Hono.  
+
+To avoid accidental configuration of an insecure port this feature of Hono server must be explicitly enabled by  setting `HONO_SERVER_INSECURE_PORT_ENABLED` to true.
+
+Hono server then opens the IANA default port number 5672 as unsecured AMQP 1.0 port. 
+
+If `HONO_SERVER_INSECURE_PORT` is configured explicitly this port will be used instead. 
+If set to the IANA port number 5671 for secured AMQP 1.0 a warning is printed.
+
+
+#### One secure **and** one insecure port (dual port configuration)
+ 
+In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port at the same time.
+ 
+This is achieved by configuring both ports correctly (see above). 
+If the same port number is configured for both ports it is considered as misconfiguration and Hono server fails to start.
+
+Since the secure port may need different visibility in the network setup compared to the secure port, it has it's own binding address `HONO_SERVER_INSECURE_PORT_BIND_ADDRESS`. 
+This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide. 
+
+#### Ephemeral port configuration
+
+Both ports may be explicitly configured to `0`. Hono server will then open arbitrary ports that are available.
 
 ## Run as a Docker Container
 

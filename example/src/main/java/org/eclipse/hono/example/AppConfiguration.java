@@ -15,6 +15,7 @@ package org.eclipse.hono.example;
 
 import org.eclipse.hono.adapter.AdapterConfig;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -31,6 +32,6 @@ public class AppConfiguration extends AdapterConfig {
      */
     @Bean
     public HonoClient honoClient() {
-        return new HonoClient(getVertx(), honoConnectionFactory());
+        return new HonoClientImpl(getVertx(), honoConnectionFactory());
     }
 }

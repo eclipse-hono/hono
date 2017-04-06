@@ -27,6 +27,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -43,7 +44,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClientOptions;
@@ -93,7 +93,7 @@ public abstract class ClientTestBase {
             }
         });
 
-        downstreamClient = new HonoClient(vertx, ConnectionFactoryBuilder.newBuilder()
+        downstreamClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
                 .host(DOWNSTREAM_HOST)
                 .port(DOWNSTREAM_PORT)
@@ -106,7 +106,7 @@ public abstract class ClientTestBase {
         // step 1
         // connect to Hono server
         Future<HonoClient> honoTracker = Future.future();
-        honoClient = new HonoClient(vertx, ConnectionFactoryBuilder.newBuilder()
+        honoClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
                 .host(HONO_HOST)
                 .port(HONO_PORT)
@@ -263,7 +263,7 @@ public abstract class ClientTestBase {
             latch.await();
         });
 
-        long timeToWait = Math.min(5000, Math.round(MSG_COUNT * 1.2));
+        long timeToWait = Math.max(5000, Math.round(MSG_COUNT * 1.2));
         received.await(timeToWait);
         accepted.await(timeToWait);
         LOGGER.info("sent {} and received {} messages after {} milliseconds",

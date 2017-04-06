@@ -14,7 +14,7 @@ The goal of the following description is to extend an arbitrary Java program to 
 For that the following example is kept as simple as possible (in the tradition of a classical "Hello World" implementation).
 This means that we will make use of simple constant definitions, deal with exceptions as rarely as possible and use a few `System.out`'s.
 
-The application waits for messages until you press the return key (and then regularly finishes it). You can safely kill it if that should be simpler for you.
+The application waits for messages until you press CTRL+C or kill it.
 
 Please note that consumers do not connect with Hono directly, but rather with an AMQP router network. 
 In the standard setup of Hono this is the [qdrouter](https://qpid.apache.org/components/dispatch-router/index.html) from the Apache Qpid project.
@@ -96,6 +96,7 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.util.MessageHelper;
@@ -114,7 +115,7 @@ public class App {
     private final CountDownLatch latch;
 
     public App() {
-        honoClient = new HonoClient(vertx,
+        honoClient = new HonoClientImpl(vertx,
                 ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
                         .vertx(vertx)
                         .host(QPID_ROUTER_HOST)

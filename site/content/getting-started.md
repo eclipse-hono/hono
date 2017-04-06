@@ -12,17 +12,16 @@ This guide will walk you through building the images and example code from sourc
 
 In order to build and run the images you need access to a [Docker](http://www.docker.com) daemon running either locally on your computer or another host you have access to. Please follow the instructions on the [Docker web site](http://www.docker.com) to install *Docker Engine* on your platform.
 
-As noted above, Hono consists of multiple service components that together comprise a Hono instance. The remainder of this guide employs *Docker Compose* for configuring, running and managing all Hono components as a whole. Please follow the instructions on the [Docker Compose site](https://docs.docker.com/compose/install/) to install the Docker Compose client on your computer.
-
-{{% warning %}}
-You will need at least Docker version 1.13.0 and Docker Compose version 1.10.0 in order to run the example in this guide. By the time of this writing, the latest released versions of Docker and Docker Compose were 1.13.1 and 1.11.1 respectively.
-{{% /warning %}}
-
-Do not forget to initialize your docker swarm mode first, e.g. like
+As noted above, Hono consists of multiple service components that together comprise a Hono instance. The remainder of this guide employs Docker's *Swarm Mode* for configuring, running and managing all Hono components as a whole.
+In order to enable *Swarm Mode* on your *Docker Engine* run the following command
 
     $ docker swarm init
 
-Please refer to the [docker swarm mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
+Please refer to the [Docker Swarm Mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
+
+{{% warning %}}
+You will need at least Docker version 1.13.0 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 1.13.1.
+{{% /warning %}}
 
 ### Compiling
 
@@ -38,13 +37,13 @@ If you plan to build the Docker images more frequently, e.g. because you want to
 
 ## Starting Hono
 
-The easiest way to start the server components is by using *Docker Compose*. As part of the build process a Docker Compose file is generated under `example/target/hono/docker-compose.yml` that can be used to start up a Hono instance on your Docker host. Simply run the following from the `example/target/hono` directory
+The easiest way to start the server components is by deploying them as a *stack*. As part of the build process, a *Docker Compose* file is generated under `example/target/hono/docker-compose.yml` which can be used to start up a Hono instance on your Docker host. Simply run the following from the `example/target/hono` directory
 
 ~~~sh
-~/hono/example/target/hono$ docker-compose up -d
+~/hono/example/target/hono$ docker stack deploy -c docker-compose.yml hono
 ~~~
 
-This will create and start up Docker containers for all components that together comprise a Hono instance, in particular the following containers are started:
+This will create and start up Docker Swarm *services* for all components that together comprise a Hono instance, in particular the following services are started:
 
 {{< figure src="../Hono_instance.png" title="Hono instance containers">}}
 
@@ -60,7 +59,7 @@ In this example we will use a simple command line client that logs all telemetry
 You can start the client from the `example` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--spring.profiles.active=receiver,--hono.client.host=localhost
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost
 ~~~
 
 {{% warning %}}
@@ -71,7 +70,7 @@ Replace *localhost* with the name or IP address of the host that Docker is runni
 
 Now that the Hono instance is up and running you can use Hono's protocol adapters to upload some telemetry data and watch it being forwarded to the downstream consumer.
 
-The following sections will use the REST adapter to publish the telemetry data because it is more convenient to access using a standard HTTP client like `curl` or [`HTTPie`](https://httpie.org/) from the command line.
+The following sections will use the REST adapter to publish the telemetry data because it is very easy to access using a standard HTTP client like `curl` or [`HTTPie`](https://httpie.org/) from the command line.
 
 Please refer to the [REST Adapter]({{< relref "rest-adapter.md" >}}) documentation for additional information on how to access Hono's functionality via REST.
 
@@ -145,22 +144,22 @@ $ http PUT http://localhost:8080/registration/DEFAULT_TENANT/4711 temp:=5
 
 If you have started the consumer as described above, you should now see the telemetry message being logged to the console.
 
-{{% note %}}
 Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
-{{% /note %}}
 
 ## Stopping Hono
 
-The Hono instance's containers can be stopped using the following command:
+The Hono instance's services can be stopped and removed using the following command:
 
 ~~~sh
-~/hono/example/target/hono$ docker-compose stop
+~/hono/example/target/hono$ docker stack rm hono
 ~~~
+
+Please refer to the [Docker Swarm documenation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of services.
 
 ## Restarting
 
-In order to restart the containers later:
+In order to start up the instance again:
 
 ~~~sh
-~/hono/example/target/hono$ docker-compose start
+~/hono/example/target/hono$ docker stack deploy -c docker-compose.yml hono
 ~~~

@@ -168,8 +168,8 @@ public class JmsIntegrationTestSupport {
 
         final Hashtable<Object, Object> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
-        env.put("connectionfactory." + HONO, honoURI);
-        env.put("connectionfactory." + DISPATCH_ROUTER, qdrURI);
+        env.put("connectionfactory." + HONO, honoURI.toString());
+        env.put("connectionfactory." + DISPATCH_ROUTER, qdrURI.toString());
 
         ctx = new InitialContext(env);
     }

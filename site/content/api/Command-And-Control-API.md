@@ -44,7 +44,7 @@ The following table provides an overview of the properties a client needs to set
 | *device_id* | yes | *application-properties* | UTF-8 *string* | MUST contain the ID of the device the data in the payload has been reported by. |
 | *tenant_id* | yes | *application-properties* | UTF-8 *string* | MAY be set by the client to indicate which tenant the the device belongs to. |
 | *command* | no | *application-properties* | UTF-8 *string* | MUST contain the command to be executed by a device. |
-|*ttl* | no | *properties* | *int* | Indicates the timeout value (in miliseconds) indicating when server can assume that command has not been executed because of the lack of the response from the client. Default timeout is *60000* (1 minute). |
+|*ttl* | no | *properties* | *int* | Indicates the timeout value (in milliseconds) indicating when server can assume that command has not been executed because of the lack of the response from the client. Default timeout is *60000* (1 minute). |
 |*durable* | no | *properties* | *boolean* | Indicates if the message should be persisted (*store and forward*) by the underlying message transport middleware. By default command&control messages are durable.  |
 
 If a control message requires additional data to be properly executed (like command parameters), the body of the message MUST consist of a single AMQP *Data* section containing a control 
