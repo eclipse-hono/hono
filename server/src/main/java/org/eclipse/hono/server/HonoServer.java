@@ -216,7 +216,7 @@ public final class HonoServer extends AbstractVerticle {
     }
 
     private void determineInsecurePortConfiguration() {
-        if (!honoConfig.isInsecurePortEnabled())
+        if (honoConfig.isInsecurePortUnconfigured() && !honoConfig.isInsecurePortEnabled())
             return;
 
         if (honoConfig.getInsecurePort() == 0) {
@@ -381,7 +381,7 @@ public final class HonoServer extends AbstractVerticle {
      * @return the insecure port Hono listens on.
      */
     public int getInsecurePort() {
-        if (!honoConfig.isInsecurePortEnabled())
+        if (honoConfig.isInsecurePortUnconfigured() && !honoConfig.isInsecurePortEnabled())
             return Constants.PORT_UNCONFIGURED;
         if (insecureServer != null) {
             return insecureServer.actualPort();

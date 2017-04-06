@@ -65,12 +65,11 @@ While in production scenarios it is almost certainly necessary that the Hono ser
 desirable.
 This may ease the debugging of AMQP 1.0 frames by using proxies or network sniffers that log the details while developing client applications (e.g. protocol adapters) for Hono.  
 
-To avoid accidental configuration of an insecure port this feature of Hono server must be explicitly enabled by  setting `HONO_SERVER_INSECURE_PORT_ENABLED` to true.
+The configuration of an insecure port must be explicitly enabled for the Hono server by either
+- setting `HONO_SERVER_INSECURE_PORT_ENABLED` to true: then a port with the IANA default port number 5672 is opened, or by
+- setting `HONO_SERVER_INSECURE_PORT` to any valid port number: then a port with this number is opened (even when `HONO_SERVER_INSECURE_PORT_ENABLED` is not configured or set to false).
 
-Hono server then opens the IANA default port number 5672 as unsecured AMQP 1.0 port. 
-
-If `HONO_SERVER_INSECURE_PORT` is configured explicitly this port will be used instead. 
-If set to the IANA port number 5671 for secured AMQP 1.0 a warning is printed.
+If `HONO_SERVER_INSECURE_PORT` is set to the IANA port number 5671 (secured AMQP 1.0) a warning is printed.
 
 
 #### One secure **and** one insecure port (dual port configuration)
