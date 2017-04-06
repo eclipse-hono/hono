@@ -260,7 +260,7 @@ public class HonoServerTest {
 
         // GIVEN a default configuration with insecure port being set to a specific port.
         HonoConfigProperties configProperties = new HonoConfigProperties();
-        configProperties.setInsecurePortEnabled(true);
+        configProperties.setInsecurePortEnabled(false);
         configProperties.setInsecurePort(8888);
 
         // WHEN using this configuration to determine the server's port configuration
