@@ -142,7 +142,27 @@ or (using HTTPie):
 $ http PUT http://localhost:8080/registration/DEFAULT_TENANT/4711 temp:=5
 ~~~
 
-If you have started the consumer as described above, you should now see the telemetry message being logged to the console.
+When you first invoke any of the two commands above after you have started up your Hono instance, you will get the following response:
+
+~~~
+HTTP/1.1 503 Service Unavailable
+Content-Length: 47
+Content-Type: text/plain
+
+resource limit exceeded, please try again later
+~~~
+
+This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono server to forward the data over.
+You can simply ignore this response and re-submit the command. You should then get a response like this:
+
+~~~
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
+
+If you have started the consumer as described above, you should now see the telemetry message being logged to the console. You can publish more data simply by issuing additional requests.
+
+If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is never persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no destination to deliver it to.
 
 Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
 
