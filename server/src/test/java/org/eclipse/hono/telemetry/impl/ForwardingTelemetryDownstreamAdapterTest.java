@@ -32,6 +32,8 @@ import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
+import org.springframework.boot.actuate.metrics.CounterService;
+import org.springframework.boot.actuate.metrics.GaugeService;
 
 /**
  * Verifies behavior of the {@code ForwardingTelemetryDownstreamAdapter}.
@@ -72,6 +74,8 @@ public class ForwardingTelemetryDownstreamAdapterTest {
             return null;
         });
         ForwardingTelemetryDownstreamAdapter adapter = new ForwardingTelemetryDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        adapter.setCounterService(mock(CounterService.class));
+        adapter.setGaugeService(mock(GaugeService.class));
         adapter.setDownstreamConnectionFactory(connectionFactory);
         adapter.start(Future.future());
         adapter.addSender(client, sender);

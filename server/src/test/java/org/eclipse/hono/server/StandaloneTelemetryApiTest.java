@@ -12,6 +12,7 @@
 package org.eclipse.hono.server;
 
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
+import static org.mockito.Mockito.mock;
 
 import java.util.stream.IntStream;
 
@@ -45,6 +46,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonHelper;
+import org.springframework.boot.actuate.metrics.CounterService;
 
 /**
  * Stand alone integration tests for Hono's Telemetry API.
@@ -77,6 +79,7 @@ public class StandaloneTelemetryApiTest {
         configProperties.setInsecurePort(0);
         server.setConfig(configProperties);
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
+        telemetryEndpoint.setCounterService(mock(CounterService.class));
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         server.addEndpoint(telemetryEndpoint);
         registrationAdapter = new FileBasedRegistrationService();

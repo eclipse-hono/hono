@@ -38,6 +38,8 @@ import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
+import org.springframework.boot.actuate.metrics.CounterService;
+import org.springframework.boot.actuate.metrics.GaugeService;
 
 /**
  * Verifies standard behavior of {@code ForwardingDownstreamAdapter}.
@@ -299,6 +301,8 @@ public class ForwardingDownstreamAdapterTest {
                 // nothing to do
             }
         };
+        adapter.setCounterService(mock(CounterService.class));
+        adapter.setGaugeService(mock(GaugeService.class));
     }
 
     private class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
