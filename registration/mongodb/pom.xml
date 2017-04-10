@@ -18,7 +18,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-registration</artifactId>
-    <version>0.5-M5-SNAPSHOT</version>
+    <version>0.5-M6-SNAPSHOT</version>
   </parent>
   <artifactId>hono-registration-mongodb</artifactId>
   <name>Hono MongoDB device registry</name>
