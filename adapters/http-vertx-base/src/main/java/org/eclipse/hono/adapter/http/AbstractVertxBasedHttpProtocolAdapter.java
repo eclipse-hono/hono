@@ -64,7 +64,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
-    @Value("${spring.profiles.active}")
+    @Value("${spring.profiles.active:}")
     private String activeProfiles;
 
     private HttpServer server;

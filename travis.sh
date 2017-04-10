@@ -24,10 +24,14 @@ trap 'error_handler' ERR
 bash -c "while true; do echo \$(date) - building ...; sleep $PING_SLEEP; done" &
 PING_LOOP_PID=$!
 
-# Build Qpid Dispatch Router Docker image
-cd $TRAVIS_BUILD_DIR/dispatchrouter
-bash docker-build.sh
-cd $TRAVIS_BUILD_DIR
+if [ "$TRAVIS_EVENT_TYPE" = "cron" ]
+then
+  # Build Qpid Dispatch Router Docker image
+  cd $TRAVIS_BUILD_DIR/dispatchrouter
+  mvn process-resources
+  bash target/qpid-dispatch/build-qpid-dispatch-image.sh
+  cd $TRAVIS_BUILD_DIR
+fi
 
 mvn install -Pbuild-docker-image,run-tests >> $BUILD_OUTPUT 2>&1
 

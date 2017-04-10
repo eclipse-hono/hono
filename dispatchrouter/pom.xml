@@ -26,6 +26,28 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create_dockerfile</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/qpid-dispatch</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/main/qpid-dispatch</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <!--
           Copy legal documents from "legal" module to "target/classes" folder
           so that we make sure to include legal docs in all modules.

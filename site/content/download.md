@@ -10,13 +10,15 @@ The preferred way of deploying Eclipse Hono&trade; is by means of using the pre-
 on [Docker Hub](https://hub.docker.com/u/eclipsehono/).
 
 The most convenient way to both pull the images and start corresponding containers is by means of
-Docker Compose. You can find an example Docker Compose file based on the published images here:
+[deploying a *stack* using Docker's *Swarm Mode*](https://docs.docker.com/engine/reference/commandline/stack_deploy/). You can find an example stack definition using the published Hono images here:
 
-* [0.5-M4 Docker Compose file](docker-compose-0.5-M4.yml)
+* [0.5-M5 Docker Compose file](docker-compose-0.5-M5.yml)
 
-{{% note %}}
-After downloading the file to your local computer you may want to rename it to just *docker-compose.yml* so that you do not need to specify the *-f* command line option with Docker Compose all the time.
-{{% /note %}}
+After downloading the file, simply run the following from the command line (assuming that you have Docker Engine running in Swarm mode):
+
+~~~sh
+$ docker stack deploy -c docker-compose-0.5-M5.yml hono
+~~~
 
 ## Source Code
 

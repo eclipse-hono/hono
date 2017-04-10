@@ -13,7 +13,7 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-adapter-http-vertx-base</artifactId>
-      <version>${revision}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
