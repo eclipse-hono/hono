@@ -1,5 +1,12 @@
 #!/bin/bash
 
+hugo version
+if [ $? != 0 ]
+then
+  echo "Please install \"hugo\" to be able to build the hono documentation. See readme.md for further details."
+  exit 0
+fi
+
 if [ ! -d themes/hugo-material-docs ]
 then
   git clone https://github.com/digitalcraftsman/hugo-material-docs.git themes/hugo-material-docs
