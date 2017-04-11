@@ -9,11 +9,6 @@ hono:
       console:
         active: false
         period: 5000
-      graphite:
-        active: false
-        host: "localhost"
-        port: 2003
-        period: 5000
 
 # disable spring boot actuator endpoints, enable metrics
 endpoints:

@@ -49,6 +49,7 @@
     <vertx.version>3.4.1</vertx.version>
     <vertx-proton.version>3.4.1</vertx-proton.version>
     <vertx-mqtt.version>3.4.1</vertx-mqtt.version>
+    <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
   </properties>
 
   <dependencyManagement>
@@ -101,9 +102,14 @@
         <version>${spring-boot.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.vertx</groupId>
-        <artifactId>vertx-dropwizard-metrics</artifactId>
-        <version>${vertx.version}</version>
+        <groupId>io.dropwizard.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>${dropwizard-metrics.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.dropwizard.metrics</groupId>
+        <artifactId>metrics-jvm</artifactId>
+        <version>${dropwizard-metrics.version}</version>
       </dependency>
       <dependency>
        <groupId>org.slf4j</groupId>
