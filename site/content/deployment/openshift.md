@@ -1,6 +1,6 @@
 +++
 title = "OpenShift"
-weight = 500
+weight = 475
 +++
 
 All the Eclipse Hono&trade; components can be deployed on OpenShift, thanks to the resources YAML files that are provided through the repository.
