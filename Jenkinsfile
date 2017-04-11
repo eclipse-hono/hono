@@ -28,7 +28,7 @@ node {
                 sh "cd site && ${mvnHome}/bin/mvn -s ${MAVEN_SETTINGS} clean deploy -Drevision=${buildVersion} -DskipStaging=true"
                 sh "rm -rf /home/jenkins-slave/docker-share/hono-site"
                 sh "mkdir -p /home/jenkins-slave/docker-share/hono-site"
-                sh "cp -R site/target/site/public/* /home/jenkins-slave/docker-share/hono-site"
+                sh "cp -R site/target/* /home/jenkins-slave/docker-share/hono-site"
             }
         }
     }
