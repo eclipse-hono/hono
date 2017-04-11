@@ -17,8 +17,8 @@ spec:
       - image: eclipsehono/hono-server:${project.version}
         name: ${project.artifactId}
         ports:
-        - containerPort: 5672
-          name: amqp
+        - containerPort: 5671
+          name: amqps
           protocol: TCP
         env:
         - name: HONO_DOWNSTREAM_HOST
@@ -54,7 +54,7 @@ spec:
           mountPath: /registry
         livenessProbe:
           tcpSocket:
-            port: amqp
+            port: amqps
       volumes:
       - name: ${project.artifactId}-volume
         persistentVolumeClaim:
