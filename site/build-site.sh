@@ -14,5 +14,10 @@ then
   git checkout 194c497216c8389e02e9719381168a668a0ffb05
   cd ../..
 fi
-hugo --theme hugo-material-docs --baseURL https://iot-hub.dev.saz.bosch-si.com/hono-site
+if [ $1 ]
+then
+  hugo --theme hugo-material-docs -d $1 --baseURL https://iot-hub.dev.saz.bosch-si.com/hono-site
+else
+  hugo --theme hugo-material-docs --baseURL https://iot-hub.dev.saz.bosch-si.com/hono-site
+fi
 
