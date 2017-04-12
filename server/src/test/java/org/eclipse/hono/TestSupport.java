@@ -11,8 +11,7 @@
  */
 package org.eclipse.hono;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -140,10 +139,11 @@ public final class TestSupport {
     }
 
     public static SenderFactory newMockSenderFactory(final ProtonSender senderToCreate) {
-        return (connection, address, qos, sendQueueDrainHandler, resultHandler) -> {
-            senderToCreate.sendQueueDrainHandler(sendQueueDrainHandler);
+
+        return (connection, address, qos, drainHandler) -> {
+            senderToCreate.sendQueueDrainHandler(drainHandler);
             senderToCreate.open();
-            resultHandler.complete(senderToCreate);
+            return Future.succeededFuture(senderToCreate);
         };
     }
 

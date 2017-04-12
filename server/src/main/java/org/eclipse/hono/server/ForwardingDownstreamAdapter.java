@@ -13,6 +13,7 @@ package org.eclipse.hono.server;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +46,8 @@ import io.vertx.proton.ProtonSender;
 @Component
 public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
+    private static final int RECONNECT_INTERVAL_MILLIS = 200;
+
     /**
      * A logger to be shared with subclasses.
      */
@@ -53,8 +56,11 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * The Hono configuration.
      */
     protected HonoConfigProperties          honoConfig                      = new HonoConfigProperties();
+
     private final Map<UpstreamReceiver, ProtonSender> activeSenders         = new HashMap<>();
     private final Map<String, List<UpstreamReceiver>> sendersPerConnection  = new HashMap<>();
+    private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers  = new ArrayList<>();
+
     private boolean                         running                         = false;
     private final Vertx                     vertx;
     private ProtonConnection                downstreamConnection;
@@ -174,7 +180,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     private ProtonClientOptions createClientOptions() {
         return new ProtonClientOptions()
                 .setConnectTimeout(100)
-                .setReconnectAttempts(-1).setReconnectInterval(200); // reconnect forever, every 200 millisecs
+                .setReconnectAttempts(-1).setReconnectInterval(RECONNECT_INTERVAL_MILLIS);
     }
 
     private void connectToDownstream(final ProtonClientOptions options) {
@@ -206,25 +212,36 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     /**
      * Handles unexpected disconnection from downstream container.
      * 
-     * @param con the failed connection
+     * @param con The failed connection.
      */
     private void onDisconnectFromDownstreamContainer(final ProtonConnection con) {
-        // all links to downstream host will now be stale and unusable
-        logger.warn("lost connection to downstream container [{}], closing upstream receivers ...", con.getRemoteContainer());
 
-        for (UpstreamReceiver client : activeSenders.keySet()) {
-            client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
-        }
-        sendersPerConnection.clear();
-        activeSenders.clear();
-        con.disconnectHandler(null);
-        con.disconnect();
-        final ProtonClientOptions clientOptions = createClientOptions();
-        if (clientOptions.getReconnectAttempts() != 0) {
-            vertx.setTimer(300, reconnect -> {
-                logger.info("attempting to re-connect to downstream container");
-                connectToDownstream(clientOptions);
-            });
+        if (con != downstreamConnection) {
+            logger.warn("unknown connection to downstream container has been disconnected");
+        } else {
+            // all links to downstream host will now be stale and unusable
+            logger.warn("lost connection to downstream container [{}], closing upstream receivers ...", con.getRemoteContainer());
+
+            for (UpstreamReceiver client : activeSenders.keySet()) {
+                client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
+            }
+            sendersPerConnection.clear();
+            activeSenders.clear();
+            downstreamConnection.disconnectHandler(null);
+            downstreamConnection.disconnect();
+
+            for (Iterator<Handler<AsyncResult<Void>>> iter = clientAttachHandlers.iterator(); iter.hasNext(); ) {
+                iter.next().handle(Future.failedFuture("connection to downstream container failed"));
+                iter.remove();
+            }
+
+            final ProtonClientOptions clientOptions = createClientOptions();
+            if (clientOptions.getReconnectAttempts() != 0) {
+                vertx.setTimer(RECONNECT_INTERVAL_MILLIS, reconnect -> {
+                    logger.info("attempting to re-connect to downstream container");
+                    connectToDownstream(clientOptions);
+                });
+            }
         }
     }
 
@@ -243,20 +260,26 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             logger.info("reusing existing downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
             resultHandler.handle(Future.succeededFuture());
         } else {
-            createSender(
-                    client.getTargetAddress(),
-                    replenishedSender -> handleFlow(replenishedSender, client),
-                    creationAttempt -> {
-                        if (creationAttempt.succeeded()) {
-                            logger.info("created downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
-                            addSender(client, creationAttempt.result());
-                            resultHandler.handle(Future.succeededFuture());
-                        } else {
-                            logger.warn("can't create downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId(), creationAttempt.cause());
-                            removeSender(client);
-                            resultHandler.handle(Future.failedFuture(creationAttempt.cause()));
-                        }
-                    });
+            removeSender(client);
+            // register the result handler to be failed if the connection to the downstream container fails during
+            // the attempt to create a downstream sender
+            clientAttachHandlers.add(resultHandler);
+            Future<Void> tracker = Future.future();
+            tracker.setHandler(attempt -> {
+                if (attempt.succeeded()) {
+                    logger.info("created downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
+                } else {
+                    logger.warn("can't create downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId(), attempt.cause());
+                }
+                clientAttachHandlers.remove(resultHandler);
+                resultHandler.handle(attempt);
+            });
+
+            createSender(client.getTargetAddress(), replenishedSender -> handleFlow(replenishedSender, client))
+            .compose(createdSender -> {
+                addSender(client, createdSender);
+                tracker.complete();
+            }, tracker);
         }
     }
 
@@ -292,19 +315,16 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         return Math.max(0, downstreamSender.getCredit() - downstreamSender.getQueued());
     }
 
-    private void createSender(
+    private Future<ProtonSender> createSender(
             final String targetAddress,
-            final Handler<ProtonSender> sendQueueDrainHandler,
-            final Handler<AsyncResult<ProtonSender>> handler) {
+            final Handler<ProtonSender> sendQueueDrainHandler) {
 
-        Future<ProtonSender> result = Future.future();
-        result.setHandler(handler);
-        if (downstreamConnection == null || downstreamConnection.isDisconnected()) {
-            result.fail("downstream connection must be opened before creating sender");
+        if (!isConnected()) {
+            return Future.failedFuture("downstream connection must be opened before creating sender");
         } else {
             String tenantOnlyTargetAddress = getTenantOnlyTargetAddress(targetAddress);
             String address = tenantOnlyTargetAddress.replace(Constants.DEFAULT_PATH_SEPARATOR, honoConfig.getPathSeparator());
-            senderFactory.createSender(downstreamConnection, address, getDownstreamQos(), sendQueueDrainHandler, result);
+            return senderFactory.createSender(downstreamConnection, address, getDownstreamQos(), sendQueueDrainHandler);
         }
     }
 
@@ -428,11 +448,20 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     /**
+     * Checks if this adapter has an open connection to the downstream container.
+     * 
+     * @return {@code true} if the connection is open (and thus usable).
+     */
+    public final boolean isConnected() {
+        return downstreamConnection != null && !downstreamConnection.isDisconnected();
+    }
+
+    /**
      * Checks if there are any downstream senders associated with upstream clients.
      * 
      * @return {@code true} if there are.
      */
-    protected boolean isActiveSendersEmpty() {
+    protected final boolean isActiveSendersEmpty() {
         return activeSenders != null && activeSenders.isEmpty();
     }
 
@@ -441,7 +470,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * 
      * @return {@code true} if there are.
      */
-    protected boolean isSendersPerConnectionEmpty() {
+    protected final boolean isSendersPerConnectionEmpty() {
         return sendersPerConnection != null && sendersPerConnection.isEmpty();
     }
 
