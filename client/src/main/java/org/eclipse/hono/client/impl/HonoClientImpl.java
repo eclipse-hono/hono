@@ -11,7 +11,10 @@
  */
 package org.eclipse.hono.client.impl;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -49,6 +52,7 @@ public final class HonoClientImpl implements HonoClient {
     private final Map<String, MessageSender> activeSenders = new ConcurrentHashMap<>();
     private final Map<String, RegistrationClient> activeRegClients = new ConcurrentHashMap<>();
     private final Map<String, Boolean> senderCreationLocks = new ConcurrentHashMap<>();
+    private final List<Handler<Void>> creationRequests = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
@@ -196,16 +200,30 @@ public final class HonoClientImpl implements HonoClient {
 
     private void onRemoteDisconnect(final ProtonConnection con) {
 
-        LOG.warn("lost connection to Hono server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-        con.disconnect();
-        activeSenders.clear();
-        activeRegClients.clear();
-        if (clientOptions.getReconnectAttempts() != 0) {
-            // give Vert.x some time to clean up NetClient
-            vertx.setTimer(300, reconnect -> {
-                LOG.info("attempting to re-connect to Hono server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-                connect(clientOptions, done -> {});
-            });
+        if (con != connection) {
+            LOG.warn("cannot handle failure of unknown connection");
+        } else {
+            LOG.warn("lost connection to Hono server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+            connection.disconnect();
+            activeSenders.clear();
+            activeRegClients.clear();
+            failAllCreationRequests();
+            connection = null;
+            if (clientOptions.getReconnectAttempts() != 0) {
+                // give Vert.x some time to clean up NetClient
+                vertx.setTimer(300, reconnect -> {
+                    LOG.info("attempting to re-connect to Hono server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                    connect(clientOptions, done -> {});
+                });
+            }
+        }
+    }
+
+    private void failAllCreationRequests() {
+
+        for (Iterator<Handler<Void>> iter = creationRequests.iterator(); iter.hasNext(); ) {
+            iter.next().handle(null);
+            iter.remove();
         }
     }
 
@@ -264,6 +282,13 @@ public final class HonoClientImpl implements HonoClient {
             LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
             resultHandler.handle(Future.succeededFuture(sender));
         } else if (!senderCreationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+
+            // register a handler to be notified if the underlying connection to the server fails
+            // so that we can fail the result handler passed in
+            final Handler<Void> connectionFailureHandler = connectionLost -> {
+                resultHandler.handle(Future.failedFuture("connection to server lost"));
+            };
+            creationRequests.add(connectionFailureHandler);
             senderCreationLocks.put(key, Boolean.TRUE);
             LOG.debug("creating new message sender for {}", key);
 
@@ -277,6 +302,7 @@ public final class HonoClientImpl implements HonoClient {
                     activeSenders.remove(key);
                 }
                 senderCreationLocks.remove(key);
+                creationRequests.remove(connectionFailureHandler);
                 resultHandler.handle(creationAttempt);
             });
 
@@ -312,8 +338,18 @@ public final class HonoClientImpl implements HonoClient {
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
+        // register a handler to be notified if the underlying connection to the server fails
+        // so that we can fail the result handler passed in
+        final Handler<Void> connectionFailureHandler = connectionLost -> {
+            creationHandler.handle(Future.failedFuture("connection to server lost"));
+        };
+        creationRequests.add(connectionFailureHandler);
+
         Future<MessageConsumer> consumerTracker = Future.future();
-        consumerTracker.setHandler(creationHandler);
+        consumerTracker.setHandler(attempt -> {
+            creationRequests.remove(connectionFailureHandler);
+            creationHandler.handle(attempt);
+        });
         checkConnection().compose(
                 connected -> TelemetryConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer()),
                 consumerTracker);
@@ -329,8 +365,18 @@ public final class HonoClientImpl implements HonoClient {
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
+        // register a handler to be notified if the underlying connection to the server fails
+        // so that we can fail the result handler passed in
+        final Handler<Void> connectionFailureHandler = connectionLost -> {
+            creationHandler.handle(Future.failedFuture("connection to server lost"));
+        };
+        creationRequests.add(connectionFailureHandler);
+
         Future<MessageConsumer> consumerTracker = Future.future();
-        consumerTracker.setHandler(creationHandler);
+        consumerTracker.setHandler(attempt -> {
+            creationRequests.remove(connectionFailureHandler);
+            creationHandler.handle(attempt);
+        });
         checkConnection().compose(
                 connected -> EventConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer()),
                 consumerTracker);
@@ -354,11 +400,11 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    private <T> Future<T> checkConnection() {
+    private Future<ProtonConnection> checkConnection() {
         if (connection == null || connection.isDisconnected()) {
             return Future.failedFuture("client is not connected to Hono (yet)");
         } else {
-            return Future.succeededFuture();
+            return Future.succeededFuture(connection);
         }
     }
 
@@ -392,16 +438,23 @@ public final class HonoClientImpl implements HonoClient {
         if (connection == null || connection.isDisconnected()) {
             creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
         } else {
+            // register a handler to be notified if the underlying connection to the server fails
+            // so that we can fail the result handler passed in
+            final Handler<Void> connectionFailureHandler = connectionLost -> {
+                creationHandler.handle(Future.failedFuture("connection to server lost"));
+            };
+            creationRequests.add(connectionFailureHandler);
+
             LOG.debug("creating new registration client for [{}]", tenantId);
             RegistrationClientImpl.create(context, connection, tenantId, creationAttempt -> {
                 if (creationAttempt.succeeded()) {
                     activeRegClients.put(tenantId, creationAttempt.result());
                     LOG.debug("successfully created registration client for [{}]", tenantId);
-                    creationHandler.handle(Future.succeededFuture(creationAttempt.result()));
                 } else {
                     LOG.debug("failed to create registration client for [{}]", tenantId, creationAttempt.cause());
-                    creationHandler.handle(Future.failedFuture(creationAttempt.cause()));
                 }
+                creationRequests.remove(connectionFailureHandler);
+                creationHandler.handle(creationAttempt);
             });
         }
         return this;

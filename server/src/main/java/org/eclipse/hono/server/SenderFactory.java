@@ -32,13 +32,12 @@ public interface SenderFactory {
      * @param address The target address to use for the sender.
      * @param qos The quality of service the sender should use.
      * @param sendQueueDrainHandler The handler to notify about credits the sender is getting replenished with.
-     * @param result The future to notify about the outcome of the creation.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @return The outcome of the creation attempt.
+     * @throws NullPointerException if any of connection, address or QoS is {@code null}.
      */
-    void createSender(
+    Future<ProtonSender> createSender(
             ProtonConnection connection,
             String address,
             ProtonQoS qos,
-            Handler<ProtonSender> sendQueueDrainHandler,
-            Future<ProtonSender> result);
+            Handler<ProtonSender> sendQueueDrainHandler);
 }

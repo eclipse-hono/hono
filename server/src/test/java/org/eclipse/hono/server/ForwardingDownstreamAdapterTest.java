@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -17,8 +17,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -235,13 +233,60 @@ public class ForwardingDownstreamAdapterTest {
         assertTrue(adapter.isSendersPerConnectionEmpty());
     }
 
+    /**
+     * Verifies that all requests from upstream clients to attach are failed when the connection to the
+     * downstream container is lost.
+     * 
+     * @throws Exception if the test fails.
+     */
+    @Test
+    public void testDownstreamDisconnectFailsClientAttachRequests() throws Exception {
+
+        final ProtonConnection connectionToCreate = mock(ProtonConnection.class);
+        when(connectionToCreate.getRemoteContainer()).thenReturn("downstream");
+        when(connectionToCreate.isDisconnected()).thenReturn(Boolean.FALSE);
+        final UpstreamReceiver client = newClient();
+        when(client.getTargetAddress()).thenReturn("telemetry/TENANT");
+        final DisconnectHandlerProvidingConnectionFactory factory = new DisconnectHandlerProvidingConnectionFactory(connectionToCreate);
+        final SenderFactory senderFactory = (con, address, qos, drainHandler) -> {
+            Future<ProtonSender> result = Future.future();
+            return result;
+        };
+        final CountDownLatch disconnected = new CountDownLatch(1);
+
+        // GIVEN an adapter connected to a downstream container with a client trying to attach
+        givenADownstreamAdapter(senderFactory);
+        adapter.setDownstreamConnectionFactory(factory);
+        adapter.start(Future.future());
+        assertTrue(adapter.isConnected());
+        adapter.onClientAttach(client, attachAttempt -> {
+            if (attachAttempt.failed()) {
+                disconnected.countDown();
+            } else {
+                fail("client attach should not have succeeded");
+            }
+        });
+
+        // WHEN the downstream connection fails
+        factory.getDisconnectHandler().handle(connectionToCreate);
+
+        // THEN the adapter tries to reconnect to the downstream container and has closed all upstream receivers
+        assertTrue("client attach request should have failed on downstream disconnect",
+                disconnected.await(1, TimeUnit.SECONDS));
+        assertTrue(adapter.isActiveSendersEmpty());
+        assertTrue(adapter.isSendersPerConnectionEmpty());
+    }
+
     private void givenADownstreamAdapter() {
         givenADownstreamAdapter(newMockSender(false));
     }
 
     private void givenADownstreamAdapter(final ProtonSender senderToCreate) {
+        givenADownstreamAdapter(newMockSenderFactory(senderToCreate));
+    }
 
-        final SenderFactory senderFactory = newMockSenderFactory(senderToCreate);
+    private void givenADownstreamAdapter(final SenderFactory senderFactory) {
+
         adapter = new ForwardingDownstreamAdapter(vertx, senderFactory) {
 
             @Override
@@ -261,6 +306,10 @@ public class ForwardingDownstreamAdapterTest {
         private Handler<ProtonConnection> disconnectHandler;
         private CountDownLatch expectedConnectionAttemps;
         private ProtonConnection connectionToCreate;
+
+        public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate) {
+            this(conToCreate, 1);
+        }
 
         public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate, final int expectedConnectionAttempts) {
             this.connectionToCreate = conToCreate;
