@@ -130,7 +130,7 @@
                             <directory>${project.basedir}/target/classes/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
-                              <include>honoKeyStore.p12</include>
+                              <include>hono-*.pem</include>
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>

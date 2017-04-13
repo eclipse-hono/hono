@@ -24,12 +24,12 @@ services:
     environment:
       - HONO_DOWNSTREAM_HOST=qdrouter
       - HONO_DOWNSTREAM_PORT=5673
-      - HONO_DOWNSTREAM_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
-      - HONO_DOWNSTREAM_KEY_STORE_PASSWORD=honokeys
+      - HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem
+      - HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-cert.pem
       - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_SERVER_BIND_ADDRESS=0.0.0.0
-      - HONO_SERVER_KEY_STORE_PATH=/etc/hono/certs/honoKeyStore.p12
-      - HONO_SERVER_KEY_STORE_PASSWORD=honokeys
+      - HONO_SERVER_KEY_PATH=/etc/hono/certs/hono-key.pem
+      - HONO_SERVER_CERT_PATH=/etc/hono/certs/hono-cert.pem
       - HONO_SERVER_INSECURE_PORT_ENABLED=false
       - HONO_SERVER_MAX_INSTANCES=1
       - LOGGING_CONFIG=classpath:logback-spring.xml

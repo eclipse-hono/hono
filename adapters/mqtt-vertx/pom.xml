@@ -141,8 +141,8 @@
                             <directory>${project.basedir}/target/classes/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
+                              <include>mqtt-adapter-*.pem</include>
                               <include>trusted-certs.pem</include>
-                              <include>mqttKeyStore.p12</include>
                             </includes>
                           </fileSet>
                           <fileSet>
