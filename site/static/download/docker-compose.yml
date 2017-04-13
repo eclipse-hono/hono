@@ -7,7 +7,7 @@ networks:
 services:
 
   qdrouter:
-    image: eclipsehono/dispatch-router:0.5-M5-SNAPSHOT
+    image: eclipsehono/dispatch-router:0.5-M5
     networks:
       - hono-net
     command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
@@ -16,7 +16,7 @@ services:
       - "15672:5672"
 
   hono:
-    image: eclipsehono/hono-server:0.5-M5-SNAPSHOT
+    image: eclipsehono/hono-server:0.5-M5
     networks:
       - hono-net
     ports:
@@ -38,7 +38,7 @@ services:
       - /home/hono/registration
 
   rest-adapter:
-    image: eclipsehono/hono-adapter-rest-vertx:0.5-M5-SNAPSHOT
+    image: eclipsehono/hono-adapter-rest-vertx:0.5-M5
     networks:
       - hono-net
     ports:
@@ -55,7 +55,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
 
   mqtt-adapter:
-    image: eclipsehono/hono-adapter-mqtt-vertx:0.5-M5-SNAPSHOT
+    image: eclipsehono/hono-adapter-mqtt-vertx:0.5-M5
     networks:
       - hono-net
     ports:
