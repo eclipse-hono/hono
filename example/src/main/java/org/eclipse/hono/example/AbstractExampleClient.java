@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -25,6 +25,7 @@ import org.springframework.core.env.Environment;
 
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonClientOptions;
 
 /**
  * A base class providing support for connecting to a Hono server.
@@ -33,6 +34,7 @@ import io.vertx.core.Vertx;
 abstract class AbstractExampleClient {
 
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
+    protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 200;
 
     protected Context ctx;
     @Value(value = "${tenant.id}")
@@ -42,10 +44,9 @@ abstract class AbstractExampleClient {
     protected List<String> activeProfiles;
 
     /**
-     * 
+     * Empty default constructor.
      */
     protected AbstractExampleClient() {
-        // TODO Auto-generated constructor stub
     }
 
     @Autowired
@@ -62,5 +63,9 @@ abstract class AbstractExampleClient {
     @Autowired
     public final void setHonoClient(final HonoClient client) {
         this.client = Objects.requireNonNull(client);
+    }
+
+    protected final ProtonClientOptions getClientOptions() {
+        return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS).setReconnectAttempts(-1);
     }
 }

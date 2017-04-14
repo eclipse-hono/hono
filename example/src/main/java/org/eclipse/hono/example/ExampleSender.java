@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,12 +12,13 @@
  */
 package org.eclipse.hono.example;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.PostConstruct;
 
@@ -26,11 +27,12 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
-import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Example of a telemetry/event sender that connects to the Hono Server, registers a device, waits for input from command line
@@ -43,29 +45,28 @@ public class ExampleSender extends AbstractExampleClient {
     @Value(value = "${device.id}")
     private String deviceId;
 
+    /**
+     * Connects to the Hono server.
+     */
     @PostConstruct
-    private void start() {
+    public void prepare() {
 
         LOG.info("starting sender");
+        final CountDownLatch startup = new CountDownLatch(1);
         ctx = vertx.getOrCreateContext();
         final Future<MessageSender> startupTracker = Future.future();
         startupTracker.setHandler(done -> {
             if (done.succeeded()) {
-                vertx.executeBlocking(f -> readMessagesFromStdin(done.result(), f), false, exit -> {
-                    vertx.close();
-                });
+                startup.countDown();
             } else {
                 LOG.error("Error occurred during initialization: {}", done.cause().getMessage());
-                vertx.close();
             }
         });
 
         ctx.runOnContext(go -> {
            /* step 1: connect Hono client */
-            ProtonClientOptions clientOptions = new ProtonClientOptions();
-            clientOptions.setConnectTimeout(1000);
             final Future<HonoClient> connectionTracker = Future.future();
-            client.connect(clientOptions, connectionTracker.completer());
+            client.connect(getClientOptions(), connectionTracker.completer());
             connectionTracker.compose(v -> {
             /* step 2: create a registration client */
                 Future<RegistrationClient> regClientTracker = Future.future();
@@ -78,50 +79,91 @@ public class ExampleSender extends AbstractExampleClient {
                 return regResultTracker;
             }).compose(regResult -> {
             /* step 4: handle result of registration */
-                Future<Void> resultCodeTracker = Future.future();
                 if (regResult.getStatus() == HttpURLConnection.HTTP_CREATED) {
                     LOG.info("Device registered successfully.");
-                    resultCodeTracker.complete();
+                    startupTracker.complete();
                 } else if (regResult.getStatus() == HttpURLConnection.HTTP_CONFLICT) {
                     LOG.info("Device already registered.");
-                    resultCodeTracker.complete();
+                    startupTracker.complete();
                 } else {
-                    resultCodeTracker.fail(String.format("Failed to register device [%s]: %s", deviceId, regResult));
-                }
-                return resultCodeTracker;
-            }).compose(v -> {
-                /* step 5: create sender client */
-                if (activeProfiles.contains("event")) {
-                    client.getOrCreateEventSender(tenantId, startupTracker.completer());
-                } else {
-                    // default to telemetry sender
-                    client.getOrCreateTelemetrySender(tenantId, startupTracker.completer());
+                    startupTracker.fail(String.format("Failed to register device [%s]: %s", deviceId, regResult));
                 }
             }, startupTracker);
         });
+
+        try {
+            if (!startup.await(5, TimeUnit.SECONDS)) {
+                LOG.error("shutting down");
+                vertx.close();
+            }
+        } catch (InterruptedException e) {
+            // nothing to do
+        }
     }
 
-    private void readMessagesFromStdin(final MessageSender messageSender, final Future<Object> f) {
-        final BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        String input;
-        try {
-            do {
-                LOG.info("Enter some message to send (empty message to quit): ");
-                input = reader.readLine();
-                if (!input.isEmpty()) {
+    /**
+     * Reads user input from the console and sends it to the Hono server.
+     */
+    @EventListener(classes = { ApplicationReadyEvent.class })
+    public void readMessagesFromStdin() {
 
-                    final Map<String, Object> properties = new HashMap<>();
-                    properties.put("my_prop_string", "I'm a string");
-                    properties.put("my_prop_int", 10);
-                    messageSender.send(deviceId, properties, input, "text/plain");
+        Runnable reader = new Runnable() {
+
+            public void run() {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
                 }
-            } while (!input.isEmpty());
-            f.complete();
-        } catch (final IOException e) {
-            LOG.error("problem reading message from STDIN", e);
-            f.fail(e);
-        } finally {
-            client.shutdown();
+                LOG.info("Enter some message(s) (hit return to send, ctrl-c to quit)");
+                String input;
+                Scanner scanner = new Scanner(System.in);
+                do {
+                    input = scanner.nextLine();
+                    if (!input.isEmpty()) {
+
+                        final Map<String, Object> properties = new HashMap<>();
+                        properties.put("my_prop_string", "I'm a string");
+                        properties.put("my_prop_int", 10);
+                        send(input, properties);
+                    }
+                } while (!input.isEmpty());
+                scanner.close();
+            };
+        };
+        new Thread(reader).start();
+    }
+
+    private void send(final String msg, final Map<String, Object> props) {
+
+        CountDownLatch senderTracker = new CountDownLatch(1);
+        AtomicReference<MessageSender> sender = new AtomicReference<MessageSender>(null);
+
+        if (activeProfiles.contains("event")) {
+            client.getOrCreateEventSender(tenantId, attempt -> {
+                if (attempt.succeeded()) {
+                    sender.set(attempt.result());
+                    senderTracker.countDown();
+                }
+            });
+        } else {
+            client.getOrCreateTelemetrySender(tenantId, attempt -> {
+                if (attempt.succeeded()) {
+                    sender.set(attempt.result());
+                    senderTracker.countDown();
+                }
+            });
+        }
+
+        try {
+            if (senderTracker.await(1, TimeUnit.SECONDS)) {
+                if (!sender.get().send(deviceId, props, msg, "text/plain")) {
+                    LOG.info("sender has no credit (yet), maybe no consumers attached? Try again ...");
+                }
+            } else {
+                LOG.warn("cannot connect to server");
+            }
+        } catch (InterruptedException e) {
+            // nothing to do
         }
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -24,8 +24,10 @@ import org.eclipse.hono.util.MessageHelper;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.proton.ProtonClientOptions;
+import io.vertx.core.Handler;
+import io.vertx.proton.ProtonConnection;
 
 /**
  * Example of a event/telemetry receiver that connects to the Hono Server, waits for incoming messages and logs the message
@@ -39,34 +41,42 @@ public class ExampleReceiver extends AbstractExampleClient {
     private void start() {
 
         final Future<MessageConsumer> startupTracker = Future.future();
-        startupTracker.setHandler(done -> {
-            if (done.succeeded()) {
+        startupTracker.setHandler(startup -> {
+            if (startup.succeeded()) {
                 LOG.info("Receiver created successfully, hit ctrl-c to exit");
             } else {
-                LOG.error("Error occurred during initialization of message receiver: {}", done.cause().getMessage());
+                LOG.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
                 vertx.close();
             }
         });
 
-        ctx.runOnContext((Void go) -> {
-            /* step 1: connect hono client */
-            final Future<HonoClient> connectionTracker = Future.future();
-            client.connect(new ProtonClientOptions(), connectionTracker.completer());
-            connectionTracker.compose(honoClient -> {
-                /* step 2: wait for consumers */
+        final Future<HonoClient> connectionTracker = Future.future();
+        client.connect(getClientOptions(), connectionTracker.completer(), this::onDisconnect);
+        connectionTracker.compose(honoClient -> {
+            onConnectionEstablished(startupTracker.completer());
+        }, startupTracker);
+    }
 
-                if (activeProfiles.contains("event")) {
-                    client.createEventConsumer(tenantId,
-                            (msg) -> handleMessage("event", msg),
-                            startupTracker.completer());
-                } else {
-                    // default is telemetry consumer
-                    client.createTelemetryConsumer(tenantId,
-                            msg -> handleMessage("telemetry", msg),
-                            startupTracker.completer());
-                }
+    private void onConnectionEstablished(Handler<AsyncResult<MessageConsumer>> handler) {
 
-            }, startupTracker);
+        if (activeProfiles.contains("event")) {
+            client.createEventConsumer(tenantId,
+                    (msg) -> handleMessage("event", msg),
+                    handler);
+        } else {
+            // default is telemetry consumer
+            client.createTelemetryConsumer(tenantId,
+                    msg -> handleMessage("telemetry", msg),
+                    handler);
+        }
+    }
+
+    private void onDisconnect(final ProtonConnection con) {
+
+        // give Vert.x some time to clean up NetClient
+        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+            LOG.info("attempting to re-connect to Hono server");
+            client.connect(getClientOptions(), connectionAttempt -> onConnectionEstablished(done -> {}), this::onDisconnect);
         });
     }
 
