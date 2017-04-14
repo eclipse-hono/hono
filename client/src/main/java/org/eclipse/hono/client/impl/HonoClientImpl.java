@@ -138,17 +138,11 @@ public final class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#connect(io.vertx.proton.ProtonClientOptions, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient connect(final ProtonClientOptions options, final Handler<AsyncResult<HonoClient>> connectionHandler) {
         return connect(options, connectionHandler, null);
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#connect(io.vertx.proton.ProtonClientOptions, io.vertx.core.Handler, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient connect(
             final ProtonClientOptions options,
@@ -172,7 +166,7 @@ public final class HonoClientImpl implements HonoClient {
             connectionFactory.connect(
                     clientOptions,
                     this::onRemoteClose,
-                    disconnectHandler != null ? disconnectHandler : this::onRemoteDisconnect,
+                    failedConnection -> onRemoteDisconnect(failedConnection, disconnectHandler),
                     conAttempt -> {
                         connecting.compareAndSet(true, false);
                         if (conAttempt.failed()) {
@@ -195,10 +189,10 @@ public final class HonoClientImpl implements HonoClient {
                     connectionFactory.getHost(), connectionFactory.getPort(), remoteClose.cause().getMessage());
         }
         connection.close();
-        onRemoteDisconnect(connection);
+        onRemoteDisconnect(connection, null);
     }
 
-    private void onRemoteDisconnect(final ProtonConnection con) {
+    private void onRemoteDisconnect(final ProtonConnection con, final Handler<ProtonConnection> nextHandler) {
 
         if (con != connection) {
             LOG.warn("cannot handle failure of unknown connection");
@@ -209,7 +203,10 @@ public final class HonoClientImpl implements HonoClient {
             activeRegClients.clear();
             failAllCreationRequests();
             connection = null;
-            if (clientOptions.getReconnectAttempts() != 0) {
+
+            if (nextHandler != null) {
+                nextHandler.handle(con);
+            } else if (clientOptions.getReconnectAttempts() != 0) {
                 // give Vert.x some time to clean up NetClient
                 vertx.setTimer(300, reconnect -> {
                     LOG.info("attempting to re-connect to Hono server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
