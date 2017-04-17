@@ -114,6 +114,7 @@ public class ExampleSender extends AbstractExampleClient {
                     Thread.sleep(50);
                 } catch (InterruptedException e) {
                 }
+                LOG.info("sender for tenant [{}] created successfully", tenantId);
                 LOG.info("Enter some message(s) (hit return to send, ctrl-c to quit)");
                 String input;
                 Scanner scanner = new Scanner(System.in);

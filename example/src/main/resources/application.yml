@@ -1,12 +1,10 @@
 spring:
   profiles:
-    active: receiver
+    active: receiver,ssl
 
 hono:
   client:
     host: localhost
-    hostnameVerificationRequired: false
-    trustStorePath: ../demo-certs/certs/trusted-certs.pem
 
 tenant:
   id: DEFAULT_TENANT
@@ -20,8 +18,6 @@ spring:
 hono:
   client:
     port: 15671
-    username: user1@HONO
-    password: pw
 
 ---
 
@@ -30,5 +26,12 @@ spring:
 hono:
   client:
     port: 5671
-    username: hono-client
-    password: secret
+
+---
+
+spring:
+  profiles: ssl
+hono:
+  client:
+    hostnameVerificationRequired: false
+    trustStorePath: ../demo-certs/certs/trusted-certs.pem

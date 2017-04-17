@@ -59,7 +59,7 @@ In this example we will use a simple command line client that logs all telemetry
 You can start the client from the `example` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=user1@HONO,--hono.client.password=pw
 ~~~
 
 {{% warning %}}
@@ -174,7 +174,7 @@ The Hono instance's services can be stopped and removed using the following comm
 ~/hono/example/target/hono$ docker stack rm hono
 ~~~
 
-Please refer to the [Docker Swarm documenation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of services.
+Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of services.
 
 ## Restarting
 

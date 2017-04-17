@@ -43,7 +43,7 @@ public class ExampleReceiver extends AbstractExampleClient {
         final Future<MessageConsumer> startupTracker = Future.future();
         startupTracker.setHandler(startup -> {
             if (startup.succeeded()) {
-                LOG.info("Receiver created successfully, hit ctrl-c to exit");
+                LOG.info("Receiver for tenant [{}] created successfully, hit ctrl-c to exit", tenantId);
             } else {
                 LOG.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
                 vertx.close();
