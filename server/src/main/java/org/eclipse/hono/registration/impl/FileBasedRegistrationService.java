@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.util.RegistrationResult;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
@@ -41,16 +41,26 @@ import io.vertx.core.json.JsonObject;
  * devices kept in memory are written to the file.
  */
 @Repository
+@ConfigurationProperties(prefix = "hono.registration")
 @Profile({"default", "registration-file"})
 public class FileBasedRegistrationService extends BaseRegistrationService {
 
+    /**
+     * The default number of devices that can be registered for each tenant.
+     */
+    public static final int DEFAULT_MAX_DEVICES_PER_TENANT = 100;
     private static final String ARRAY_DEVICES = "devices";
     private static final String FIELD_TENANT = "tenant";
 
-    private final Map<String, Map<String, JsonObject>> identities = new HashMap<>();
+    // <tenantId, <deviceId, registrationData>>
+    private Map<String, Map<String, JsonObject>> identities = new HashMap<>();
     // the name of the file used to persist the registry content
-    private String filename;
+    private String filename = "device-identities.json";
     private boolean saveToFile = true;
+    private boolean isModificationEnabled = true;
+    private int maxDevicesPerTenant = DEFAULT_MAX_DEVICES_PER_TENANT;
+    private boolean running = false;
+    private boolean dirty = false;
 
     /**
      * Sets the path to the file that the content of the registry should be persisted
@@ -59,9 +69,12 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
      * Default value is <em>device-identities.json</em>.
      * 
      * @param filename The name of the file to persist to (can be a relative or absolute path).
+     * @throws IllegalStateException if this registry is already running.
      */
-    @Value("${hono.registration.filename:device-identities.json}")
     public void setFilename(final String filename) {
+        if (running) {
+            throw new IllegalStateException("registry already started");
+        }
         this.filename = Objects.requireNonNull(filename);
     }
 
@@ -72,26 +85,64 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
      * Default value is {@code true}.
      * 
      * @param enabled {@code true} if registry content should be persisted.
+     * @throws IllegalStateException if this registry is already running.
      */
-    @Value("${hono.registration.savetofile:true}")
     public void setSaveToFile(final boolean enabled) {
+        if (running) {
+            throw new IllegalStateException("registry already started");
+        }
         this.saveToFile = enabled;
+    }
+
+    /**
+     * Sets whether this registry allows modification and removal of registered devices.
+     * <p>
+     * If set to {@code false} then the methods {@link #updateDevice(String, String, JsonObject, Handler)}
+     * and {@link #removeDevice(String, String, Handler)} always return a <em>403 Forbidden</em> response.
+     * <p>
+     * The default value of this property is {@code true}.
+     * 
+     * @param flag The flag.
+     */
+    public void setModificationEnabled(final boolean flag) {
+        isModificationEnabled = flag;
+    }
+
+    /**
+     * Sets the maximum nubmer of devices that can be registered for each tenant.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_MAX_DEVICES_PER_TENANT}.
+     * 
+     * @param maxDevices The maximum number of devices.
+     * @throws IllegalArgumentException if the number of devices is &lt;= 0.
+     */
+    public void setMaxDevicesPerTenant(final int maxDevices) {
+        if (maxDevices <= 0) {
+            throw new IllegalArgumentException("max devices must be > 0");
+        }
+        this.maxDevicesPerTenant = maxDevices;
     }
 
     @Override
     protected void doStart(Future<Void> startFuture) throws Exception {
 
-        if (filename != null) {
-            loadRegistrationData();
-            if (saveToFile) {
-                log.info("saving device identities to file every 3 seconds");
-                vertx.setPeriodic(3000, saveIdentities -> {
-                    saveToFile(Future.future());
-                });
-            } else {
-                log.info("persistence is disabled, will not safe device identities to file");
+        if (!running) {
+            if (!isModificationEnabled) {
+                log.info("modification of registered devices has been disabled");
+            }
+            if (filename != null) {
+                loadRegistrationData();
+                if (saveToFile) {
+                    log.info("saving device identities to file every 3 seconds");
+                    vertx.setPeriodic(3000, saveIdentities -> {
+                        saveToFile(Future.future());
+                    });
+                } else {
+                    log.info("persistence is disabled, will not safe device identities to file");
+                }
             }
         }
+        running = true;
         startFuture.complete();
     }
 
@@ -128,14 +179,31 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
 
     @Override
     protected void doStop(Future<Void> stopFuture) {
-        if (saveToFile) {
-            saveToFile(stopFuture);
+
+        if (running) {
+            Future<Void> stopTracker = Future.future();
+            stopTracker.setHandler(stopAttempt -> {
+                running = false;
+                stopFuture.complete();
+            });
+
+            if (saveToFile) {
+                saveToFile(stopTracker);
+            } else {
+                stopTracker.complete();
+            }
         } else {
             stopFuture.complete();
         }
     }
 
     private void saveToFile(final Future<Void> writeResult) {
+
+        if (!dirty) {
+            log.trace("registry does not need to be persisted");
+            return;
+        }
+
         final FileSystem fs = vertx.fileSystem();
         if (!fs.existsBlocking(filename)) {
             fs.createFileBlocking(filename);
@@ -158,6 +226,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         }
         fs.writeFile(filename, Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
             if (writeAttempt.succeeded()) {
+                dirty = false;
                 log.trace("successfully wrote {} device identities to file {}", idCount.get(), filename);
                 writeResult.complete();
             } else {
@@ -208,11 +277,16 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
 
     public RegistrationResult removeDevice(final String tenantId, final String deviceId) {
 
-        final Map<String, JsonObject> devices = identities.get(tenantId);
-        if (devices != null && devices.containsKey(deviceId)) {
-            return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, devices.remove(deviceId)));
+        if (isModificationEnabled) {
+            final Map<String, JsonObject> devices = identities.get(tenantId);
+            if (devices != null && devices.containsKey(deviceId)) {
+                dirty = true;
+                return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, devices.remove(deviceId)));
+            } else {
+                return RegistrationResult.from(HTTP_NOT_FOUND);
+            }
         } else {
-            return RegistrationResult.from(HTTP_NOT_FOUND);
+            return RegistrationResult.from(HTTP_FORBIDDEN);
         }
     }
 
@@ -225,10 +299,16 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
     public RegistrationResult addDevice(final String tenantId, final String deviceId, final JsonObject data) {
 
         JsonObject obj = data != null ? data : new JsonObject();
-        if (getDevicesForTenant(tenantId).putIfAbsent(deviceId, obj) == null) {
-            return RegistrationResult.from(HTTP_CREATED);
+        Map<String, JsonObject> devices = getDevicesForTenant(tenantId);
+        if (devices.size() < maxDevicesPerTenant) {
+            if (devices.putIfAbsent(deviceId, obj) == null) {
+                dirty = true;
+                return RegistrationResult.from(HTTP_CREATED);
+            } else {
+                return RegistrationResult.from(HTTP_CONFLICT);
+            }
         } else {
-            return RegistrationResult.from(HTTP_CONFLICT);
+            return RegistrationResult.from(HTTP_FORBIDDEN);
         }
     }
 
@@ -240,12 +320,17 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
 
     public RegistrationResult updateDevice(final String tenantId, final String deviceId, final JsonObject data) {
 
-        JsonObject obj = data != null ? data : new JsonObject();
-        final Map<String, JsonObject> devices = identities.get(tenantId);
-        if (devices != null && devices.containsKey(deviceId)) {
-            return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, devices.put(deviceId, obj)));
+        if (isModificationEnabled) {
+            JsonObject obj = data != null ? data : new JsonObject();
+            final Map<String, JsonObject> devices = identities.get(tenantId);
+            if (devices != null && devices.containsKey(deviceId)) {
+                dirty = true;
+                return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, devices.put(deviceId, obj)));
+            } else {
+                return RegistrationResult.from(HTTP_NOT_FOUND);
+            }
         } else {
-            return RegistrationResult.from(HTTP_NOT_FOUND);
+            return RegistrationResult.from(HTTP_FORBIDDEN);
         }
     }
 
@@ -257,6 +342,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
      * Removes all devices from the registry.
      */
     public void clear() {
+        dirty = true;
         identities.clear();
     }
 

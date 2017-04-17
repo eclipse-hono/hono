@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,9 +12,12 @@
 package org.eclipse.hono.registration.impl;
 
 import static java.net.HttpURLConnection.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.*;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 import static org.mockito.Mockito.*;
 
+import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,6 +29,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -56,6 +60,62 @@ public class FileBasedRegistrationServiceTest
    @After
    public void clear() {
        registrationService.clear();
+   }
+
+   /**
+    * Verifies that the registry enforces the maximum devices per tenant limit.
+    */
+   @Test
+   public void testAddDeviceFailsIfDeviceLimitIsReached() {
+
+       // GIVEN a registry whose devices-per-tenant limit has been reached
+       registrationService.setMaxDevicesPerTenant(1);
+       registrationService.addDevice(TENANT, DEVICE, null);
+
+       // WHEN registering an additional device for the tenant
+       RegistrationResult result = registrationService.addDevice(TENANT, "newDevice", null);
+
+       // THEN the result contains a FORBIDDEN status code and the device has not been added to the registry
+       assertThat(result.getStatus(), is(HTTP_FORBIDDEN));
+       assertThat(registrationService.getDevice(TENANT, "newDevice").getStatus(), is(HTTP_NOT_FOUND));
+   }
+
+   /**
+    * Verifies that the <em>modificationEnabled</em> property prevents updating an existing entry.
+    */
+   @Test
+   public void testUpdateDeviceFailsIfModificationIsDisabled() {
+
+       // GIVEN a registry that has been configured to not allow modification of entries
+       // which contains a device
+       registrationService.setModificationEnabled(false);
+       registrationService.addDevice(TENANT, DEVICE, null);
+
+       // WHEN trying to update the device
+       RegistrationResult result = registrationService.updateDevice(TENANT, DEVICE, new JsonObject().put("updated", true));
+
+       // THEN the result contains a FORBIDDEN status code and the device has not been updated
+       assertThat(result.getStatus(), is(HTTP_FORBIDDEN));
+       assertFalse(registrationService.getDevice(TENANT, DEVICE).getPayload().containsKey("updated"));
+   }
+
+   /**
+    * Verifies that the <em>modificationEnabled</em> property prevents removing an existing entry.
+    */
+   @Test
+   public void testRemoveDeviceFailsIfModificationIsDisabled() {
+
+       // GIVEN a registry that has been configured to not allow modification of entries
+       // which contains a device
+       registrationService.setModificationEnabled(false);
+       registrationService.addDevice(TENANT, DEVICE, null);
+
+       // WHEN trying to remove the device
+       RegistrationResult result = registrationService.removeDevice(TENANT, DEVICE);
+
+       // THEN the result contains a FORBIDDEN status code and the device has not been removed
+       assertThat(result.getStatus(), is(HTTP_FORBIDDEN));
+       assertThat(registrationService.getDevice(TENANT, DEVICE).getStatus(), is(HTTP_OK));
    }
 
    @Test
@@ -95,6 +155,10 @@ public class FileBasedRegistrationServiceTest
    @Test
    public void testPeriodicSafeJobIsNotScheduledIfSavingIfDisabled(final TestContext ctx) throws Exception {
 
+       FileSystem fs = mock(FileSystem.class);
+       when(fs.existsBlocking(anyString())).thenReturn(Boolean.FALSE);
+       when(vertx.fileSystem()).thenReturn(fs);
+
        Future<Void> startupTracker = Future.future();
        startupTracker.setHandler(ctx.asyncAssertSuccess(done -> {
            verify(vertx, never()).setPeriodic(anyLong(), any(Handler.class));
@@ -107,14 +171,22 @@ public class FileBasedRegistrationServiceTest
    @Test
    public void testContentsNotSavedOnShutdownIfSavingIfDisabled(final TestContext ctx) throws Exception {
 
+       FileSystem fs = mock(FileSystem.class);
+       when(fs.existsBlocking(anyString())).thenReturn(Boolean.FALSE);
+       when(vertx.fileSystem()).thenReturn(fs);
+
        Future<Void> shutdownTracker = Future.future();
        shutdownTracker.setHandler(ctx.asyncAssertSuccess(done -> {
-           verify(vertx, never()).fileSystem();
+           verify(vertx, times(1)).fileSystem();
        }));
 
        registrationService.setSaveToFile(false);
-       registrationService.addDevice(TENANT, DEVICE, new JsonObject());
-       registrationService.doStop(shutdownTracker);
+       Future<Void> startupTracker = Future.future();
+       registrationService.doStart(startupTracker);
+       startupTracker.compose(started -> {
+           registrationService.addDevice(TENANT, DEVICE, new JsonObject());
+           registrationService.doStop(shutdownTracker);
+       }, shutdownTracker);
    }
 
    private static JsonObject expectedMessage(final String id) {
@@ -126,22 +198,20 @@ public class FileBasedRegistrationServiceTest
    }
 
    private static Message<JsonObject> mockMsg(final String action) {
-      final JsonObject registrationJson = getRegistrationJson(action, TENANT, DEVICE);
-      final Message<JsonObject> message = mock(Message.class);
-      when(message.body()).thenReturn(registrationJson);
-      return message;
+       return mockMsg(action, TENANT);
    }
 
+   @SuppressWarnings("unchecked")
    private static Message<JsonObject> mockMsg(final String action, final String tenant) {
-      final JsonObject registrationJson = getRegistrationJson(action, tenant, DEVICE);
-      final Message<JsonObject> message = mock(Message.class);
-      when(message.body()).thenReturn(registrationJson);
-      return message;
+       final JsonObject registrationJson = getRegistrationJson(action, tenant, DEVICE);
+       final Message<JsonObject> message = mock(Message.class);
+       when(message.body()).thenReturn(registrationJson);
+       return message;
    }
 
    private void processMessageAndExpectResponse(final Message<JsonObject> request, final JsonObject expectedResponse) {
-      registrationService.processRegistrationMessage(request);
-      verify(request).reply(expectedResponse);
+       registrationService.processRegistrationMessage(request);
+       verify(request).reply(expectedResponse);
    }
 
 }
