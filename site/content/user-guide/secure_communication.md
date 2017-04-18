@@ -22,7 +22,7 @@ The certificates and keys for all the Hono components are provided by the `demo-
 
 ## Dispatch Router
 
-The dispatch router by default tries to read its configuration from `/etc/qpid-dispatch/qdrouterd.conf`. The default configuration included with the Dispatch Router Docker image can be replaced by means of *mounting a volume* during startup of the Docker image. Please refer to the [Docker documentation for details regarding how to create and use volumes](https://docs.docker.com/engine/tutorials/dockervolumes/).
+The Dispatch Router by default tries to read its configuration from `/etc/qpid-dispatch/qdrouterd.conf`. The default configuration included with the Dispatch Router Docker image can be replaced by means of *mounting a volume* during startup of the Docker image. Please refer to the [Docker documentation for details regarding how to create and use volumes](https://docs.docker.com/engine/tutorials/dockervolumes/).
 
 Regarding the TLS configuration, the needed demo keys and certificates are available in the `/etc/hono/certs` folder of the Docker image.
 
@@ -52,8 +52,8 @@ The table below provides an overview of the options/environment variables releva
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------- | :------ | :---------- |
-| `HONO_KEY_STORE_PATH`<br>`--hono.keyStorePath` | no | - | The absolute path to the Java key store containing the key and certificate chain the Hono server should use for authenticating to clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix. |
-| `HONO_KEY_STORE_PASSWORD`<br>`--hono.keyStorePassword` | no | - | The password required to read the contents of the key store. |
+| `HONO_SERVER_KEY_STORE_PATH`<br>`--hono.server.keyStorePath` | no | - | The absolute path to the Java key store containing the key and certificate chain the Hono server should use for authenticating to clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix. |
+| `HONO_SERVER_KEY_STORE_PASSWORD`<br>`--hono.server.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 
 ### Configuration via PEM Files
 
@@ -61,8 +61,8 @@ Alternatively, Hono can be configured with separate files containing the private
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------- | :------ | :---------- |
-| `HONO_KEY_FILE`<br>`--hono.keyFile`     | no | - | The absolute path to the file containing the private key. The file must contain the key in PEM format. |
-| `HONO_CERT_FILE`<br>`--hono.certFile`   | no | - | The absolute path to the file containing the certificate chain to use for authenticating to clients. The file must contain the certificate chain in PEM format. |
+| `HONO_SERVER_KEY_FILE`<br>`--hono.server.keyFile`     | no | - | The absolute path to the file containing the private key. The file must contain the key in PEM format. |
+| `HONO_SERVER_CERT_FILE`<br>`--hono.server.certFile`   | no | - | The absolute path to the file containing the certificate chain to use for authenticating to clients. The file must contain the certificate chain in PEM format. |
 
 Note that in this case the private key is not protected by a password. you should therefore make sure that the key file can only be read by the user that the Hono process is running under.
 
@@ -109,4 +109,4 @@ The MQTT Adapter Docker image provides following demo keys and certificates in t
 
 ## Client Application
 
-When the connection between an application client and Hono (i.e. the Dispatch Router) is supposed to be secured by TLS (which is a good idea), then the client application needs to be configured to trust the CA that signed the Dispatch Router's certificate chain. When the application uses the `org.eclipse.hono.client.HonoClient` class from the `client` module, then this can be done by means of configuring the `org.eclipse.hono.connection.ConnectionFactoryImpl` with a trust store containing the CA's certificate. Please refer to that class' JavaDocs for more information.
+When the connection between an application client and Hono (i.e. the Dispatch Router) is supposed to be secured by TLS (which is a good idea), then the client application needs to be configured to trust the CA that signed the Dispatch Router's certificate chain. When the application uses the `org.eclipse.hono.client.HonoClientImpl` class from the `client` module, then this can be done by means of configuring the `org.eclipse.hono.connection.ConnectionFactoryImpl` with a trust store containing the CA's certificate. Please refer to that class' JavaDocs for more information.
