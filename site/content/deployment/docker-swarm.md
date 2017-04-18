@@ -198,7 +198,7 @@ The log output of the Hono server should contain a line similar to this:
 14:02:15.790 [vert.x-eventloop-thread-1] INFO  o.e.h.a.i.InMemoryAuthorizationService - loading permissions from resource file:/run/secrets/custom-permissions
 ~~~
 
-Once the stack is up and running you should start up a consumer as described by the [Getting started Guide]({{< "getting-started.md#starting-a-consumer" >}}). You should then be able to connect to the Hono server using the example sender from the `example` module, specifying `new-user` as the user name.
+Once the stack is up and running you should start up a consumer as described by the [Getting started Guide]({{< relref "getting-started.md#starting-a-consumer" >}}). You should then be able to connect to the Hono server using the example sender from the `example` module, specifying `new-user` as the user name.
 
 ~~~sh
 ~/hono/example$ mvn spring-boot:run -Drun.profiles=sender,ssl -Drun.arguments=--hono.client.username=new-user,--hono.client.password=secret,--hono.client.hostname=my-swarm.my-domain.com
