@@ -34,7 +34,7 @@ pluralizeListTitles = "false"
 	highlight_css  = ""
 
 [params.palette]
-	primary = "orange"
+	primary = "indigo"
 	accent  = "teal"
 
 [params.font]
