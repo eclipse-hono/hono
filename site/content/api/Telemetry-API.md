@@ -38,18 +38,16 @@ The following sequence diagram illustrates the flow of messages involved in a *P
 
 Note that the sequence diagram is based on the [Hybrid Connection Model]({{< relref "Topology-Options.md" >}}) topology option. 
 
-![Upload telemetry data flow](../Upload_Telemetry_Data.png)
+![Upload telemetry data flow](../upload-telemetry-data.png)
 
-1. *Telemetry Endpoint* connects to *Dispatch Router*. *Dispatch Router* successfully verifies credentials.
-2. *Protocol Adapter* connects to *Telemetry Endpoint*.
-   1. *Telemetry Endpoint* successfully verifies credentials using *Auth Service*.
-3. *Protocol Adapter* establishes link with *Telemetry Endpoint* for sending telemetry data for tenant `TENANT`.
-   1. *Telemetry Endpoint* establishes link with *Dispatch Router* for sending telemetry data for tenant `TENANT`.
-4. *Protocol Adapter* sends temperature reading for device `4711`.
-   1. *Telemetry Endpoint* successfully verifies that client is allowed to publish data for device `4711` of tenant `TENANT` using *Auth Service*.
-       
-       **Open issue**: should the Telemetry Endpoint also check if device really belongs to tenant?    
-   2. *Telemetry Endpoint* sends temperature reading to *Dispatch Router*.
+1. *Protocol Adapter* connects to *Telemetry Endpoint*.
+   1. *Telemetry* endpoint successfully verifies credentials using *Authentication* service.
+1. *Protocol Adapter* establishes link with *Telemetry Endpoint* for sending telemetry data for tenant `TENANT`.
+   1. *Telemetry* endpoint successfully verifies that the adapter has permission to upload telemetry data for `TENANT` using *Authorization* service.
+   1. *Telemetry* endpoint opens downstream link to *Dispatch Router* for telemetry data.
+1. *Protocol Adapter* sends telemetry data for device `4711`.
+   1. *Telemetry* endpoint successfully verifies that device `4711` of `TENANT` exists and is enabled using *Device Registration* service.
+   1. *Telemetry* endpoint forwards data to *Dispatch Router*.
 
 **Message Format**
 
@@ -93,14 +91,14 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 
 Note that the sequence diagram is based on the [Hybrid Connection Model]({{< relref "Topology-Options.md" >}}) topology option. 
 
-![Receive Telemetry Data](../Receive_Telemetry_Data.png)
+![Receive Telemetry Data](../consume-telemetry-data.png)
 
 1. *Business Application* connects to *Dispatch Router*. *Dispatch Router* successfully verifies credentials.
-1. *Business Application* establishes link with *Dispatch Router* for receiving telemetry data for tenant `TENANT`. *Dispatch Router* successfully verifies that client is allowed to receive data for tenant `TENANT` (How?).
+1. *Business Application* establishes link with *Dispatch Router* for receiving telemetry data for tenant `TENANT`. *Dispatch Router* successfully verifies that client is allowed to receive data for tenant `TENANT`.
 1. *Dispatch Router* delivers telemetry message to *Business Application*.
 
 {{% note %}}
-The *Business Application* can only receive telemetry messages that have been uploaded to Hono *after* the *Business Application* has established the link with the *Dispatch Router* because telemetry messages are not *durable*, i.e. they are not stored and forwarded.
+The *Business Application* can only consume telemetry messages that have been uploaded to Hono *after* the *Business Application* has established the link with the *Dispatch Router*. This is because telemetry messages are not *durable*, i.e. they are not persisted in Hono in order to be forwarded at a later time.
 {{% /note %}}
 
 **Message Format**
