@@ -56,11 +56,13 @@ public class HonoClientImplTest {
 
     /**
      * Cleans up after test execution.
+     * 
+     * @param ctx The helper to use for running async tests.
      */
     @After
-    public void shutdown() {
+    public void shutdown(final TestContext ctx) {
         if (vertx != null) {
-            vertx.close();
+            vertx.close(ctx.asyncAssertSuccess());
         }
     }
 
