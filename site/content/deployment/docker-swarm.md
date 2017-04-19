@@ -10,7 +10,7 @@ The focus of this guide is on describing how custom configuration files can be u
 
 ## Prerequisites
 
-The only requirement for this guide is a working cluster of Docker Engine instances running in Swarm mode. While this guide also works with a single Docker Engine instance in Swarm mode (see [Getting started]({{< relref "getting-started.md" >}}), the main deployment target will probably be a multi-node cluster running on some cloud infrastructure, e.g. a [Docker for AWS](https://docs.docker.com/docker-for-aws/) instance running on Amazon Web Services infrastructure. Please refer to the Docker for AWS documentation for instructions on how to set up a Swarm on AWS.
+The only requirement for this guide is a working cluster of Docker Engine instances running in Swarm mode. While this guide also works with a single Docker Engine instance in Swarm mode (see [Getting started]({{< relref "getting-started.md" >}})), the main deployment target will probably be a multi-node cluster running on some cloud infrastructure, e.g. a [Docker for AWS](https://docs.docker.com/docker-for-aws/) instance running on Amazon Web Services infrastructure. Please refer to the Docker for AWS documentation for instructions on how to set up a Swarm on AWS.
 
 ## Deployment
 

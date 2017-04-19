@@ -47,9 +47,9 @@ Note that the sequence diagram is based on the [Hybrid Connection Model]({{< rel
    1. *Telemetry Endpoint* establishes link with *Dispatch Router* for sending telemetry data for tenant `TENANT`.
 4. *Protocol Adapter* sends temperature reading for device `4711`.
    1. *Telemetry Endpoint* successfully verifies that client is allowed to publish data for device `4711` of tenant `TENANT` using *Auth Service*.
-
-    **Open issue**: should the Telemetry Endpoint also check if device really belongs to tenant?
- 1. *Telemetry Endpoint* sends temperature reading to *Dispatch Router*.
+       
+       **Open issue**: should the Telemetry Endpoint also check if device really belongs to tenant?    
+   2. *Telemetry Endpoint* sends temperature reading to *Dispatch Router*.
 
 **Message Format**
 
