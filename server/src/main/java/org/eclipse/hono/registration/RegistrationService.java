@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -38,6 +38,18 @@ public interface RegistrationService extends Verticle {
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
     void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
+
+    /**
+     * Checks whether a device is registered and enabled.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to check.
+     * @param resultHandler The handler to invoke with the result of the operation. If a device with the
+     *         given ID is registered for the tenant, then the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
+     *         and the <em>payload</em> will contain the <em>enabled</em> property of the device.
+     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     */
+    void isEnabled(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Finds device registration data by a key registered for the device.

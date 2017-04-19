@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -39,6 +39,7 @@ public final class RegistrationConstants {
     public static final String ACTION_REGISTER   = "register";
     public static final String ACTION_FIND       = "find";
     public static final String ACTION_GET        = "get";
+    public static final String ACTION_ENABLED    = "enabled";
     public static final String ACTION_DEREGISTER = "deregister";
     public static final String ACTION_UPDATE     = "update";
 
@@ -47,7 +48,13 @@ public final class RegistrationConstants {
     public static final String APP_PROPERTY_ACTION               = "action";
     public static final String APP_PROPERTY_KEY                  = "key";
     public static final String APP_PROPERTY_STATUS               = "status";
+
+    /* message payload fields */
     public static final String FIELD_PAYLOAD                     = "payload";
+    public static final String FIELD_ENABLED                     = "enabled";
+    public static final String FIELD_DATA                        = "data";
+    public static final String FIELD_HONO_ID                     = "id";
+
 
     public static final String REGISTRATION_ENDPOINT             = "registration";
     public static final String PATH_SEPARATOR                    = "/";

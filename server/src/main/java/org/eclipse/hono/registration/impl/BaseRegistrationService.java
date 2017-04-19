@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
@@ -38,11 +39,6 @@ import io.vertx.core.json.JsonObject;
  * indicated in the message.
  */
 public abstract class BaseRegistrationService extends AbstractVerticle implements RegistrationService {
-
-    protected static final String FIELD_DATA      = "data";
-    protected static final String FIELD_ENABLED   = "enabled";
-    protected static final String FIELD_HONO_ID   = "id";
-
 
     /**
      * A logger to be shared by subclasses.
@@ -108,6 +104,11 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
         stopFuture.complete();
     }
 
+    /**
+     * Processes a registration request message received via the Vertx event bus.
+     * 
+     * @param regMsg The message.
+     */
     public final void processRegistrationMessage(final Message<JsonObject> regMsg) {
 
         try {
@@ -142,6 +143,10 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
                 log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
                 removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
+            case ACTION_ENABLED:
+                log.debug("checking if device [{}] of tenant [{}] is enabled", deviceId, tenantId);
+                isEnabled(tenantId, deviceId, result -> reply(regMsg, result));
+                break;
             default:
                 log.info("action [{}] not supported", action);
                 reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
@@ -150,6 +155,30 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
             log.debug("malformed request message");
             reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This default implementation simply invokes {@link RegistrationService#getDevice(String, String, Handler)}
+     * with the parameters passed in to this method.
+     * <p>
+     * Subclasses should override this method in order to use a more efficient way of determining the device's status.
+     */
+    @Override
+    public void isEnabled(final String tenantId, final String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        getDevice(tenantId, deviceId, getAttempt -> {
+            if (getAttempt.succeeded()) {
+                RegistrationResult result = getAttempt.result();
+                if (result.getStatus() == HttpURLConnection.HTTP_OK) {
+                    resultHandler.handle(Future.succeededFuture(RegistrationResult.from(result.getStatus(), result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA))));
+                } else {
+                    resultHandler.handle(getAttempt);
+                }
+            } else {
+                resultHandler.handle(getAttempt);
+            }
+        });
     }
 
     private void reply(final Message<JsonObject> request, final AsyncResult<RegistrationResult> result) {
@@ -161,6 +190,12 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
         }
     }
 
+    /**
+     * Sends a response to a registration request over the Vertx event bus.
+     * 
+     * @param request The message to respond to.
+     * @param result The registration result that should be conveyed in the response.
+     */
     protected final void reply(final Message<JsonObject> request, final RegistrationResult result) {
 
         final JsonObject body = request.body();

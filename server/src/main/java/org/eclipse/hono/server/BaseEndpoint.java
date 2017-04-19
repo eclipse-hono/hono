@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -104,10 +105,21 @@ public abstract class BaseEndpoint implements Endpoint {
         stopFuture.complete();
     }
 
+    /**
+     * Closes the link to an upstream client and removes all state kept for it.
+     * 
+     * @param client The client to detach.
+     */
     protected final void onLinkDetach(final UpstreamReceiver client) {
         onLinkDetach(client, null);
     }
 
+    /**
+     * Closes the link to an upstream client and removes all state kept for it.
+     * 
+     * @param client The client to detach.
+     * @param error The error condition to convey to the client when closing the link.
+     */
     protected final void onLinkDetach(final UpstreamReceiver client, final ErrorCondition error) {
         if (error == null) {
             logger.debug("closing receiver for client [{}]", client.getLinkId());
@@ -162,36 +174,45 @@ public abstract class BaseEndpoint implements Endpoint {
     }
 
     /**
-     * Checks with the registration service whether a device is registered.
+     * Checks with the registration service whether a device is registered and enabled.
      * 
      * @param resource The resource identifier containing the tenant and device identifier to check.
-     * @param resultHandler The result handler will be invoked with {@code true} if the device is registered,
-     *                      otherwise the handler will be invoked with {@code false}.
+     * @param resultHandler The result handler will be invoked with the value of the device's <em>enabled</em>
+     *                      property if the device exists, otherwise the handler will be invoked with {@code false}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected final void checkDeviceExists(final ResourceIdentifier resource, final Handler<Boolean> resultHandler) {
+    protected final void checkDeviceEnabled(final ResourceIdentifier resource, final Handler<AsyncResult<Boolean>> resultHandler) {
 
         Objects.requireNonNull(resource);
         Objects.requireNonNull(resultHandler);
 
         final JsonObject registrationJson = RegistrationConstants
-                .getRegistrationJson(RegistrationConstants.ACTION_GET, resource.getTenantId(), resource.getResourceId());
+                .getRegistrationJson(RegistrationConstants.ACTION_ENABLED, resource.getTenantId(), resource.getResourceId());
 
         vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationJson, response -> {
 
             if (response.succeeded()) {
                 final io.vertx.core.eventbus.Message<Object> message = response.result();
                 if (message.body() instanceof JsonObject) {
-                    final JsonObject body = (JsonObject) message.body();
-                    final String status = body.getString(RegistrationConstants.APP_PROPERTY_STATUS);
-                    resultHandler.handle(STATUS_OK.equals(status));
+                    JsonObject result = (JsonObject) message.body();
+                    resultHandler.handle(Future.succeededFuture(getEnabled(result)));
                 } else {
                     logger.error("received malformed response from registration service [type: {}]", response.result().getClass().getName());
+                    resultHandler.handle(Future.failedFuture("internal error"));
                 }
             } else {
                 logger.error("could not retrieve device information from registration service", response.cause());
-                resultHandler.handle(false);
+                resultHandler.handle(Future.failedFuture(response.cause()));
             }
         });
+    }
+
+    private boolean getEnabled(final JsonObject registrationResponse) {
+        JsonObject payload = registrationResponse.getJsonObject(RegistrationConstants.FIELD_PAYLOAD);
+        if (payload == null) {
+            return false;
+        } else {
+            return payload.getBoolean(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
+        }
     }
 }

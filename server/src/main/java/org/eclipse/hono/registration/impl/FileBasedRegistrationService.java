@@ -13,14 +13,15 @@
 package org.eclipse.hono.registration.impl;
 
 import static java.net.HttpURLConnection.*;
+import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Profile;
@@ -56,7 +57,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
     private Map<String, Map<String, JsonObject>> identities = new HashMap<>();
     // the name of the file used to persist the registry content
     private String filename = "device-identities.json";
-    private boolean saveToFile = true;
+    private boolean saveToFile = false;
     private boolean isModificationEnabled = true;
     private int maxDevicesPerTenant = DEFAULT_MAX_DEVICES_PER_TENANT;
     private boolean running = false;
@@ -75,7 +76,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         if (running) {
             throw new IllegalStateException("registry already started");
         }
-        this.filename = Objects.requireNonNull(filename);
+        this.filename = filename;
     }
 
     /**
@@ -241,15 +242,23 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         resultHandler.handle(Future.succeededFuture(getDevice(tenantId, deviceId)));
     }
 
-    public RegistrationResult getDevice(final String tenantId, final String deviceId) {
+    RegistrationResult getDevice(final String tenantId, final String deviceId) {
+        JsonObject data = getRegistrationData(tenantId, deviceId);
+        if (data != null) {
+            return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, data));
+        } else {
+            return RegistrationResult.from(HTTP_NOT_FOUND);
+        }
+    }
+
+    private JsonObject getRegistrationData(final String tenantId, final String deviceId) {
+
         final Map<String, JsonObject> devices = identities.get(tenantId);
         if (devices != null) {
-            JsonObject data = devices.get(deviceId);
-            if (data != null) {
-                return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, data));
-            }
+            return devices.get(deviceId);
+        } else {
+            return null;
         }
-        return RegistrationResult.from(HTTP_NOT_FOUND);
     }
 
     @Override
@@ -257,7 +266,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         resultHandler.handle(Future.succeededFuture(findDevice(tenantId, key, value)));
     }
 
-    public RegistrationResult findDevice(final String tenantId, final String key, final String value) {
+    RegistrationResult findDevice(final String tenantId, final String key, final String value) {
         final Map<String, JsonObject> devices = identities.get(tenantId);
         if (devices != null) {
             for (Entry<String, JsonObject> entry : devices.entrySet()) {
@@ -275,7 +284,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         resultHandler.handle(Future.succeededFuture(removeDevice(tenantId, deviceId)));
     }
 
-    public RegistrationResult removeDevice(final String tenantId, final String deviceId) {
+    RegistrationResult removeDevice(final String tenantId, final String deviceId) {
 
         if (isModificationEnabled) {
             final Map<String, JsonObject> devices = identities.get(tenantId);
@@ -298,7 +307,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
 
     public RegistrationResult addDevice(final String tenantId, final String deviceId, final JsonObject data) {
 
-        JsonObject obj = data != null ? data : new JsonObject();
+        JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
         Map<String, JsonObject> devices = getDevicesForTenant(tenantId);
         if (devices.size() < maxDevicesPerTenant) {
             if (devices.putIfAbsent(deviceId, obj) == null) {
@@ -318,10 +327,10 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         resultHandler.handle(Future.succeededFuture(updateDevice(tenantId, deviceId, data)));
     }
 
-    public RegistrationResult updateDevice(final String tenantId, final String deviceId, final JsonObject data) {
+    RegistrationResult updateDevice(final String tenantId, final String deviceId, final JsonObject data) {
 
         if (isModificationEnabled) {
-            JsonObject obj = data != null ? data : new JsonObject();
+            JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
             final Map<String, JsonObject> devices = identities.get(tenantId);
             if (devices != null && devices.containsKey(deviceId)) {
                 dirty = true;

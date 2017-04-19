@@ -191,10 +191,8 @@ public class FileBasedRegistrationServiceTest
 
    private static JsonObject expectedMessage(final String id) {
        return new JsonObject()
-               .put(BaseRegistrationService.FIELD_HONO_ID, id)
-               .put(
-                       BaseRegistrationService.FIELD_DATA, 
-                       new JsonObject().put(BaseRegistrationService.FIELD_ENABLED, Boolean.TRUE));
+               .put(FIELD_HONO_ID, id)
+               .put(FIELD_DATA, new JsonObject().put(FIELD_ENABLED, Boolean.TRUE));
    }
 
    private static Message<JsonObject> mockMsg(final String action) {

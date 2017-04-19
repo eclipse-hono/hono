@@ -26,6 +26,7 @@ import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilde
 import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -54,6 +56,7 @@ public class StandaloneTelemetryApiTest {
     private static final Logger                LOG = LoggerFactory.getLogger(StandaloneTelemetryApiTest.class);
     private static final String                DEVICE_PREFIX = "device";
     private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
+    private static final String                DEVICE_DISABLED = DEVICE_PREFIX + "_disabled";
     private static final String                USER = "hono-client";
     private static final String                PWD = "secret";
 
@@ -112,13 +115,6 @@ public class StandaloneTelemetryApiTest {
 
         registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1, null);
         telemetryAdapter.setMessageConsumer(msg -> {});
-//        Async done = ctx.async();
-//        client.getOrCreateTelemetrySender(DEFAULT_TENANT, creationAttempt -> {
-//            ctx.assertTrue(creationAttempt.succeeded());
-//            telemetrySender = creationAttempt.result();
-//            done.complete();
-//        });
-//        done.await(1000L);
     }
 
     @After
@@ -143,7 +139,7 @@ public class StandaloneTelemetryApiTest {
         }
     }
 
-    @Test(timeout = 10000l)
+    @Test(timeout = 2000l)
     public void testTelemetryUploadSucceedsForRegisteredDevice(final TestContext ctx) throws Exception {
 
         LOG.debug("starting telemetry upload test");
@@ -180,6 +176,20 @@ public class StandaloneTelemetryApiTest {
                 LOG.debug(s.getMessage());
             }));
             sender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
+        }));
+
+    }
+
+    @Test(timeout = 1000l)
+    public void testLinkGetsClosedWhenUploadingDataForDisabledDevice(final TestContext ctx) throws Exception {
+
+        registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_DISABLED, new JsonObject().put(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE));
+
+        client.getOrCreateTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
+            sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
+                LOG.debug(s.getMessage());
+            }));
+            sender.send(DEVICE_DISABLED, "payload", "text/plain", capacityAvailable -> {});
         }));
 
     }

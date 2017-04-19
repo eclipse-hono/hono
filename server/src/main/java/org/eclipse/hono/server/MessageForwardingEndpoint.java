@@ -114,14 +114,20 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
     private void forwardMessage(final UpstreamReceiver link, final ProtonDelivery delivery, final Message msg) {
 
         final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, APP_PROPERTY_RESOURCE, String.class));
-        checkDeviceExists(messageAddress, deviceExists -> {
-            if (deviceExists) {
-                downstreamAdapter.processMessage(link, delivery, msg);
+        checkDeviceEnabled(messageAddress, checkAttempt -> {
+            if (checkAttempt.failed()) {
+                MessageHelper.rejected(delivery, AmqpError.INTERNAL_ERROR.toString(), "cannot determine device status");
+                link.close(condition(AmqpError.INTERNAL_ERROR.toString(), "internal error"));
             } else {
-                logger.debug("device {}/{} does not exist, closing link",
-                        messageAddress.getTenantId(), messageAddress.getResourceId());
-                MessageHelper.rejected(delivery, AmqpError.PRECONDITION_FAILED.toString(), "device does not exist");
-                link.close(condition(AmqpError.PRECONDITION_FAILED.toString(), "device does not exist"));
+                boolean deviceEnabled = checkAttempt.result();
+                if (deviceEnabled) {
+                    downstreamAdapter.processMessage(link, delivery, msg);
+                } else {
+                    logger.debug("device {}/{} does not exist or is not enabled, closing link",
+                            messageAddress.getTenantId(), messageAddress.getResourceId());
+                    MessageHelper.rejected(delivery, AmqpError.PRECONDITION_FAILED.toString(), "device non-existent/disabled");
+                    link.close(condition(AmqpError.PRECONDITION_FAILED.toString(), "device non-existent/disabled"));
+                }
             }
         });
     }
