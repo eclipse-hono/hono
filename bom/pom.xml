@@ -40,7 +40,7 @@
     <objenesis.version>2.4</objenesis.version>
     <proton.version>0.18.0</proton.version>
     <qpid-dispatch.version>0.7.0</qpid-dispatch.version>
-    <qpid-jms.version>0.11.0</qpid-jms.version>
+    <qpid-jms.version>0.21.0</qpid-jms.version>
     <slf4j.version>1.7.24</slf4j.version>
     <snakeyaml.version>1.17</snakeyaml.version>
     <spring.version>4.3.7.RELEASE</spring.version>
