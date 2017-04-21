@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Red Hat
+ * Copyright (c) 2016, 2017 Red Hat and others
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.mqtt;
 import java.nio.charset.Charset;
 import java.util.function.BiConsumer;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
@@ -165,16 +164,11 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
         LOG.info("Connection request from client {}", endpoint.clientIdentifier());
 
-        if (!this.isConnected()) {
+        if (!hono.isConnected()) {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
 
         } else {
-            final AtomicBoolean clientConnected = new AtomicBoolean(false);
-            endpoint
-              .closeHandler(clientDisconnected -> {
-                  clientConnected.compareAndSet(true, false);
-              })
-              .publishHandler(message -> {
+            endpoint.publishHandler(message -> {
 
                 LOG.debug("Just received message on [{}] payload [{}] with QoS [{}]", message.topicName(), message.payload().toString(Charset.defaultCharset()), message.qosLevel());
 
@@ -184,7 +178,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                     // if MQTT client doesn't specify device_id then closing connection (MQTT has now way for errors)
                     if (resource.getResourceId() == null) {
-                        close(endpoint, clientConnected);
+                        close(endpoint);
                     } else {
 
                         // check that MQTT client tries to publish on topic with device_id same as on connection
@@ -192,24 +186,22 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                             if (resource.getEndpoint().equals(TELEMETRY_ENDPOINT)) {
 
-                                this.doUploadMessages(resource.getTenantId(), endpoint, message,
-                                        this.telemetrySenderSupplier, clientConnected);
+                                this.doUploadMessages(resource.getTenantId(), endpoint, message, this.telemetrySenderSupplier);
 
                             } else if (resource.getEndpoint().equals(EVENT_ENDPOINT)) {
 
-                                this.doUploadMessages(resource.getTenantId(), endpoint, message,
-                                        this.eventSenderSupplier, clientConnected);
+                                this.doUploadMessages(resource.getTenantId(), endpoint, message, this.eventSenderSupplier);
 
                             } else {
                                 // MQTT client is trying to publish on a not supported endpoint
                                 LOG.debug("no such endpoint [{}]", resource.getEndpoint());
-                                close(endpoint, clientConnected);
+                                close(endpoint);
                             }
 
                         } else {
                             // MQTT client is trying to publish on a different device_id used on connection (MQTT has now way for errors)
                             LOG.debug("client [ID: {}] not authorized to publish data for device [{}]", endpoint.clientIdentifier(), resource.getResourceId());
-                            close(endpoint, clientConnected);
+                            close(endpoint);
                         }
 
                     }
@@ -218,17 +210,16 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                     // MQTT client is trying to publish on invalid topic; it does not contain at least two segments
                     LOG.debug("client [ID: {}] tries to publish on unsupported topic", endpoint.clientIdentifier());
-                    close(endpoint, clientConnected);
+                    close(endpoint);
                 }
 
             });
-            clientConnected.compareAndSet(false, true);
             endpoint.accept(false);
         }
     }
 
-    private static void close(final MqttEndpoint endpoint, final AtomicBoolean clientConnected) {
-        if (clientConnected.get()) {
+    private static void close(final MqttEndpoint endpoint) {
+        if (endpoint.isConnected()) {
             LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
             endpoint.close();
         } else {
@@ -237,7 +228,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
     }
 
     private void doUploadMessages(final String tenant, final MqttEndpoint endpoint, final MqttPublishMessage message,
-            final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier, final AtomicBoolean clientConnected) {
+            final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
 
         senderSupplier.accept(tenant, createAttempt -> {
 
@@ -247,25 +238,21 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
 
                 boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM);
                 if (accepted) {
-                    if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE && clientConnected.get()) {
+                    if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE && endpoint.isConnected()) {
                         endpoint.publishAcknowledge(message.messageId());
                     }
                 } else {
                     LOG.debug("no credit available for sending message");
-                    close(endpoint, clientConnected);
+                    close(endpoint);
                 }
 
             } else {
 
                 // we don't have a connection to Hono ? MQTT no other way to close connection
                 LOG.debug("no connection to Hono server");
-                close(endpoint, clientConnected);
+                close(endpoint);
             }
 
         });
-    }
-
-    private boolean isConnected() {
-        return this.hono != null && this.hono.isConnected();
     }
 }

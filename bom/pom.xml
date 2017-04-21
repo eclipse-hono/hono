@@ -46,9 +46,9 @@
     <spring.version>4.3.7.RELEASE</spring.version>
     <spring-boot.version>1.4.5.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
-    <vertx.version>3.4.0</vertx.version>
-    <vertx-proton.version>3.4.0</vertx-proton.version>
-    <vertx-mqtt.version>3.4.0</vertx-mqtt.version>
+    <vertx.version>3.4.1</vertx.version>
+    <vertx-proton.version>3.4.1</vertx-proton.version>
+    <vertx-mqtt.version>3.4.1</vertx-mqtt.version>
   </properties>
 
   <dependencyManagement>
