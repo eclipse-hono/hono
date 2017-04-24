@@ -16,6 +16,7 @@ import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,9 +39,7 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
 
     private static final String DEFAULT_COLLECTION_NAME = "devices";
     
-    private static final String FIELD_DEVICE_ID = "deviceId";
     private static final String FIELD_TENANT_ID = "tenantId";
-    private static final String FIELD_DATA = "data";
     
     private MongoClient mongoClient;
 
@@ -76,7 +75,7 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
 
     private void createIndices(final Handler<AsyncResult<Void>> indexCreationTracker) {
         JsonObject keys = new JsonObject()
-            .put(FIELD_DEVICE_ID, 1)
+            .put(FIELD_HONO_ID, 1)
             .put(FIELD_TENANT_ID, 1);
         IndexOptions options = new IndexOptions().unique(true);
         mongoClient.createIndexWithOptions(mongoDbConfigProperties.getCollection(), keys, options, indexCreationTracker);
@@ -110,9 +109,10 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
 
     private void findDevice(final JsonObject query, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         mongoClient.findOne(mongoDbConfigProperties.getCollection(), query, null, res -> {
-            JsonObject foundData = res.succeeded() && res.result() != null ? res.result().getJsonObject(FIELD_DATA) : null;
-            if (foundData != null) {
-                handleResult(resultHandler, RegistrationResult.from(HTTP_OK, foundData));
+            if (res.succeeded() && res.result() != null) {
+                String deviceId = res.result().getString(FIELD_HONO_ID);
+                JsonObject data = res.result().getJsonObject(FIELD_DATA);
+                handleResult(resultHandler, RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, data)));
             } else {
                 handleResult(resultHandler, RegistrationResult.from(HTTP_NOT_FOUND));
             }
@@ -124,11 +124,11 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         // data of the removed device shall be returned, so try to get it first
         getDevice(tenantId, deviceId, getResult -> {
-            final JsonObject dataOfDevice = getResult.result() != null ? getResult.result().getPayload() : null;
+            final JsonObject resultPayload = getResult.result() != null ? getResult.result().getPayload() : null;
             // now remove
             mongoClient.removeDocuments(mongoDbConfigProperties.getCollection(), createDeviceDocument(tenantId, deviceId), res -> {
                 if (res.succeeded() && res.result().getRemovedCount() == 1) {
-                    handleResult(resultHandler, RegistrationResult.from(HTTP_OK, dataOfDevice));
+                    handleResult(resultHandler, RegistrationResult.from(HTTP_OK, resultPayload));
                 } else {
                     handleResult(resultHandler, RegistrationResult.from(HTTP_NOT_FOUND));
                 }
@@ -153,14 +153,14 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         // the original data of the updated device shall be returned, so try to get it first
         getDevice(tenantId, deviceId, getResult -> {
-            final JsonObject prevDataOfDevice = getResult.result() != null ? getResult.result().getPayload() : null;
+            final JsonObject resultPayload = getResult.result() != null ? getResult.result().getPayload() : null;
             
             JsonObject query = createDeviceDocument(tenantId, deviceId);
             JsonObject update = new JsonObject()
                 .put("$set", new JsonObject().put(FIELD_DATA, data != null ? data : new JsonObject()));
             mongoClient.updateCollection(mongoDbConfigProperties.getCollection(), query, update, res -> {
                 if (res.succeeded() && res.result().getDocMatched() == 1) {
-                    handleResult(resultHandler, RegistrationResult.from(HTTP_OK, prevDataOfDevice));
+                    handleResult(resultHandler, RegistrationResult.from(HTTP_OK, resultPayload));
                 } else {
                     handleResult(resultHandler, RegistrationResult.from(HTTP_NOT_FOUND));
                 }
@@ -190,7 +190,7 @@ public class MongoDbBasedRegistrationService extends BaseRegistrationService {
     private JsonObject createDeviceDocument(final String tenantId, final String deviceId) {
         return new JsonObject()
             .put(FIELD_TENANT_ID, tenantId)
-            .put(FIELD_DEVICE_ID, deviceId);
+            .put(FIELD_HONO_ID, deviceId);
     }
 
 }

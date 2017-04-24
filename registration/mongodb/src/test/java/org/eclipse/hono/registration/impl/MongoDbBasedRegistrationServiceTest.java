@@ -122,7 +122,7 @@ public class MongoDbBasedRegistrationServiceTest {
         }).compose(res -> {
             // 'removeDevice' should return 'HTTP_OK'
             context.assertEquals(HTTP_OK, res.getStatus());
-            context.assertEquals(data, res.getPayload());
+            context.assertEquals(getResultPayload(data), res.getPayload());
             done.complete();
         }, done);
     }
@@ -182,7 +182,7 @@ public class MongoDbBasedRegistrationServiceTest {
         }).compose(res -> {
             // 'getDevice' should return 'HTTP_OK'
             context.assertEquals(HTTP_OK, res.getStatus());
-            context.assertEquals(data, res.getPayload());
+            context.assertEquals(getResultPayload(data), res.getPayload());
             done.complete();
         }, done);
     }
@@ -207,7 +207,7 @@ public class MongoDbBasedRegistrationServiceTest {
         }).compose(res -> {
             // 'removeDevice' invocation should return 'HTTP_OK'
             context.assertEquals(HTTP_OK, res.getStatus());
-            context.assertEquals(data, res.getPayload());
+            context.assertEquals(getResultPayload(data), res.getPayload());
 
             // remove device
             Future<RegistrationResult> getDeviceTracker = Future.future();
@@ -244,7 +244,7 @@ public class MongoDbBasedRegistrationServiceTest {
             // 'updateDevice' should return 'HTTP_OK'
             context.assertEquals(HTTP_OK, res.getStatus());
             // initial data should be returned
-            context.assertEquals(data, res.getPayload());
+            context.assertEquals(getResultPayload(data), res.getPayload());
             done.complete();
         }, done);
     }
@@ -298,7 +298,7 @@ public class MongoDbBasedRegistrationServiceTest {
         }).compose(res -> {
             // 'findDevice' should return 'HTTP_OK'
             context.assertEquals(HTTP_OK, res.getStatus());
-            context.assertEquals(data, res.getPayload());
+            context.assertEquals(getResultPayload(data), res.getPayload());
             done.complete();
         }, done);
     }
@@ -336,7 +336,7 @@ public class MongoDbBasedRegistrationServiceTest {
         }).compose(res -> {
             // 'findDevice' should return 'HTTP_OK'
             context.assertEquals(HTTP_OK, res.getStatus());
-            context.assertEquals(data, res.getPayload());
+            context.assertEquals(getResultPayload(data), res.getPayload());
             done.complete();
         }, done);
     }
@@ -350,5 +350,9 @@ public class MongoDbBasedRegistrationServiceTest {
             context.assertEquals(HTTP_NOT_FOUND, result.getStatus());
             async.complete();
         });
+    }
+
+    private static JsonObject getResultPayload(JsonObject data) {
+        return BaseRegistrationService.getResultPayload(DEVICE, data);
     }
 }
