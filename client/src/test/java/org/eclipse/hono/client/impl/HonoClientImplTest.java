@@ -215,7 +215,6 @@ public class HonoClientImplTest {
 
         // THEN the adapter tries to reconnect to the downstream container
         connectionFactory.await(1, TimeUnit.SECONDS);
-        assertTrue(client.isConnected());
     }
 
     private class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
