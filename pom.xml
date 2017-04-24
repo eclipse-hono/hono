@@ -141,6 +141,7 @@
     <module>dispatchrouter</module>
     <module>example</module>
     <module>legal</module>
+    <module>registration</module>
     <module>server</module>
     <module>service-base</module>
     <module>tests</module>

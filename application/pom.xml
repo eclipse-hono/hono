@@ -176,6 +176,17 @@
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>registration-mongodb</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.eclipse.hono</groupId>
+          <artifactId>hono-registration-mongodb</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
   </profiles>
 
 </project>

@@ -13,21 +13,17 @@ to downstream consumers.
 The Hono server is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image created from it.
 
 The server can be configured by means of environment variables or corresponding command line options.
-The following table provides an overview of the configuration options the adapter supports:
+The following table provides an overview of the configuration options the server supports:
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------: | :------ | :---------- |
-| `HONO_AUTHORIZATION_PERMISSIONS_PATH`<br>`--hono.authorization.permissionsPath` | no | `classpath:/permissions.json` | The Spring resource URI of the JSON file defining the permissions to Hono's endpoint resources. The default file bundled with Hono defines permissions for the *DEAFAULT_TENANT* only and should only be used for evaluation purposes. |
+| `HONO_AUTHORIZATION_PERMISSIONS_PATH`<br>`--hono.authorization.permissionsPath` | no | `classpath:/permissions.json` | The Spring resource URI of the JSON file defining the permissions to Hono's endpoint resources. The default file bundled with Hono defines permissions for the *DEFAULT_TENANT* only and should only be used for evaluation purposes. |
 | `HONO_DOWNSTREAM_HOST`<br>`--hono.downstream.host` | yes | `localhost` | The IP address or name of the downstream *Dispatch Router* host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--link` command line option to link the Hono server container to the host of the *Dispatch Router* container on the Docker network.
 | `HONO_DOWNSTREAM_PASSWORD`<br>`--hono.downstream.password` | no | - | The password to use for authenticating to the Hono server. This property (and the corresponding username) needs to be set only if the Dispatch Router component is configured to use `SASL PLAIN` instead of `SASL EXTERNAL` for authenticating the Hono server. |
 | `HONO_DOWNSTREAM_PORT`<br>`--hono.downstream.port` | yes | `5672` | The port that the Dispatch Router is listening on for connection from the Hono server.<br>**NB** When using the Dispatch Router image with the example configuration then this property needs to be set to `5673`. This is because in the example configuration the Dispatch Router's *internal* listener used for accepting connections from the Hono server is configured to attach to port 5673. |
 | `HONO_DOWNSTREAM_TRUST_STORE_PASSWORD`<br>`--hono.downstream.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_DOWNSTREAM_TRUST_STORE_PATH`<br>`--hono.downstream.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating the Dispatch Router. This property **must** be set if the Dispatch Router has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_DOWNSTREAM_USERNAME`<br>`--hono.downstream.username` | no | - | The username to use for authenticating to the Dispatch Router. This property (and the corresponding password) needs to be set only if the Dispatch Router component is configured to use `SASL PLAIN` instead of `SASL EXTERNAL` for authenticating the Hono server. |
-| `HONO_REGISTRATION_FILENAME`<br>`--hono.registration.filename` | no | `/home/hono/registration/device-identities.json` | The path to the file where Hono's `FileBasedRegistrationService` stores identities of registered devices. Hono tries to read device identities from this file during start-up and writes out all identities to this file periodically if property `HONO_REGISTRATION_SAVE_TO_FILE` is set to `true`. The `eclipsehono/hono-server` Docker image creates a volume under `/home/hono/registration` so that registration information survives container restarts and/or image updates. If you are running the Hono server from the command line you will probably want to set this variable to a path using an existing folder since Hono will not try to create the path. |
-| `HONO_REGISTRATION_MAX_DEVICES_PER_TENANT`<br>`--hono.registration.maxDevicesPerTenant` | no | `100` | The number of devices that can be registered for each tenant. It is an error to set this property to a value <= 0. |
-| `HONO_REGISTRATION_MODIFICATION_ENABLED`<br>`--hono.registration.modificationEnabled` | no | `true` | When set to `false` the device information registered cannot be updated nor removed from the registry. |
-| `HONO_REGISTRATION_SAVE_TO_FILE`<br>`--hono.registration.saveToFile` | no | `false` | When set to `true` Hono's `FileBasedRegistrationService` will periodically write out the registered device information to the file specified by the `HONO_REGISTRATION_FILENAME` property. |
 | `HONO_SERVER_BIND_ADDRESS`<br>`--hono.server.bindAddress` | no | `127.0.0.1` | The IP address the Hono server port shall bind to. By default the server binds to the *loopback device* address, i.e. the server will **not** be accessible from other hosts. |
 | `HONO_SERVER_CERT_PATH`<br>`--hono.server.certPath` | no | - | The absolute path to the PEM file containing the certificate the Hono server uses for authenticating to clients. Either this or the `HONO_SERVER_KEY_STORE_PATH` option **must** be set to enable TLS secured connections with clients. |
 | `HONO_SERVER_INSECURE_PORT`<br>`--hono.server.insecurePort` | no | `5672` | The insecure port the Hono server shall listen on (if enabled). <br>In order to open an insecure port only, set this property to true but do neither set `HONO_SERVER_KEY_STORE_PATH` nor `HONO_SERVER_KEY_PATH` nor `HONO_SERVER_CERT_PATH`. This will prevent the secure port from being opened. <br> For dual port configurations Hono will not start if this property is set to the same value as `HONO_SERVER_PORT`.|
@@ -42,6 +38,31 @@ The following table provides an overview of the configuration options the adapte
 | `HONO_SERVER_TRUST_STORE_PATH`<br>`--hono.server.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 
 The options only need to be set if the default value does not match your environment.
+
+### Device registry configuration
+
+The Hono server contains a `RegistrationService` that stores identities of registered devices. 
+For the default `FileBasedRegistrationService` implementation, these configuration options are supported:
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description |
+| :------------------------------------------ | :-------: | :------ | :---------- |
+| `HONO_REGISTRATION_FILENAME`<br>`--hono.registration.filename` | no | `/home/hono/registration/device-identities.json` | The path to the file where identities of registered devices are stored. Hono tries to read device identities from this file during start-up and writes out all identities to this file periodically if property `HONO_REGISTRATION_SAVE_TO_FILE` is set to `true`. The `eclipsehono/hono-server` Docker image creates a volume under `/home/hono/registration` so that registration information survives container restarts and/or image updates. If you are running the Hono server from the command line you will probably want to set this variable to a path using an existing folder since Hono will not try to create the path. |
+| `HONO_REGISTRATION_MAX_DEVICES_PER_TENANT`<br>`--hono.registration.maxDevicesPerTenant` | no | `100` | The number of devices that can be registered for each tenant. It is an error to set this property to a value <= 0. |
+| `HONO_REGISTRATION_MODIFICATION_ENABLED`<br>`--hono.registration.modificationEnabled` | no | `true` | When set to `false` the device information registered cannot be updated nor removed from the registry. |
+| `HONO_REGISTRATION_SAVE_TO_FILE`<br>`--hono.registration.saveToFile` | no | `false` | When set to `true` Hono's `FileBasedRegistrationService` will periodically write out the registered device information to the file specified by the `HONO_REGISTRATION_FILENAME` property. |
+
+As an alternative, a MongoDB-based implementation can be used (see the [Getting started]({{< relref "getting-started.md#db-based-device-registry" >}}) guide for information on how to include this implementation).
+The `MongoDbBasedRegistrationService` can be configured with these options:
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description |
+| :------------------------------------------ | :-------: | :------ | :---------- | 
+| `HONO_REGISTRATION_MONGODB_HOST`<br>`--hono.registration.mongoDb.host` | no | 127.0.0.1 | The host the MongoDB is running on. |
+| `HONO_REGISTRATION_MONGODB_PORT`<br>`--hono.registration.mongoDb.port` | no | 27017 | The port the MongoDB is listening on. |
+| `HONO_REGISTRATION_MONGODB_DBNAME`<br>`--hono.registration.mongoDb.dbName` | no | default_db | Name of the database to use. |
+| `HONO_REGISTRATION_MONGODB_USERNAME`<br>`--hono.registration.mongoDb.username` | no | - | The username to use for authentication. |
+| `HONO_REGISTRATION_MONGODB_PASSWORD`<br>`--hono.registration.mongoDb.password` | no | - | The password to use for authentication. |
+| `HONO_REGISTRATION_MONGODB_CONNECTIONSTRING`<br>`--hono.registration.mongoDb.connectionString` | no | - | *Alternative to the options above. If set, the other options will be ignored.*<br>The URL for connecting to the MongoDB. The format is `mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]`. For further details, see the [MongoDB documentation](https://docs.mongodb.com/manual/reference/connection-string/). |
+| `HONO_REGISTRATION_MONGODB_COLLECTION`<br>`--hono.registration.mongoDb.collection` | no | devices | The collection to use for storing the device identities. |
 
 ### Port configuration
 
@@ -104,6 +125,8 @@ $ docker run -d --name hono --network hono-net -e 'HONO_DOWNSTREAM_HOST=qdrouter
 > -e 'HONO_SERVER_BIND_ADDRESS=0.0.0.0' -p5672:5672 eclipsehono/hono-server:latest
 ~~~
 
+If Hono was built with support for the MongoDB-based device registry, the `MongoDbBasedRegistrationService` can be used by adding `-e SPRING_PROFILES_ACTIVE=default,registration-mongodb` along with corresponding database configuration options (see above).
+
 {{% note %}}
 The *--network* command line switch is used to specify the *user defined* Docker network that the Hono server should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the Hono server when they want to connect to it. For the same reason it is important that the Hono server container is attached to the same network that the Dispatch Router is attached to so that the Hono server can use the Dispatch Router's host name to connect to it via the Docker network.
 Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
@@ -131,6 +154,8 @@ The corresponding command to start up the server with the configuration used in 
 > --hono.server.keyStorePath=../demo-certs/certs/honoKeyStore.p12,--hono.server.keyStorePassword=honokeys,\
 > --hono.server.trustStorePath=../demo-certs/certs/trusted-certs.pem
 ~~~
+
+If Hono was built with support for the MongoDB-based device registry, the `MongoDbBasedRegistrationService` can be used by adding `--spring.profiles.active=default,registration-mongodb` along with corresponding database configuration options (see above) to the `run.arguments`.
 
 {{% note %}}
 In the example above the *hono.downstream.host=qdrouter* command line option indicates that the Dispatch Router is running on a host with name *qdrouter*. However, if the Dispatch Router has been started as a Docker container then the *qdrouter* host name will most likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the Hono server from the Spring Boot application and want it to connect to a Dispatch Router run as a Docker container then you need to set the value of the *hono.downstream.host* option to the IP address (or name) of the Docker host running the Dispatch Router container.
