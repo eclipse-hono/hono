@@ -255,6 +255,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             activeSenders.clear();
             downstreamConnection.disconnectHandler(null);
             downstreamConnection.disconnect();
+            counterService.decrement(MetricConstants.metricNameDownstreamConnections());
 
             for (Iterator<Handler<AsyncResult<Void>>> iter = clientAttachHandlers.iterator(); iter.hasNext(); ) {
                 iter.next().handle(Future.failedFuture("connection to downstream container failed"));
