@@ -12,7 +12,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -124,7 +123,7 @@ public class HonoClientImplTest {
             disconnected.complete();
         }));
 
-        // WHEN the underyling connection fails
+        // WHEN the underlying connection fails
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN all creation requests are failed
@@ -153,7 +152,7 @@ public class HonoClientImplTest {
             disconnected.complete();
         }));
 
-        // WHEN the underyling connection fails
+        // WHEN the underlying connection fails
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN all creation requests are failed
@@ -182,7 +181,7 @@ public class HonoClientImplTest {
             disconnected.complete();
         }));
 
-        // WHEN the underyling connection fails
+        // WHEN the underlying connection fails
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN all creation requests are failed
@@ -256,7 +255,7 @@ public class HonoClientImplTest {
 
         @Override
         public int getPort() {
-            return 5672;
+            return Constants.PORT_AMQP;
         }
 
         @Override
