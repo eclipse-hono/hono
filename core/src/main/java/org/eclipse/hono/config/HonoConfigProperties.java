@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -22,6 +22,10 @@ import org.eclipse.hono.util.Constants;
  */
 public final class HonoConfigProperties extends AbstractHonoConfig {
 
+    /**
+     * The loopback device address.
+     */
+    public static final String LOOPBACK_DEVICE_ADDRESS = "127.0.0.1";
     private static final int MIN_PAYLOAD_SIZE  = 128; // bytes
 
     private int maxInstances = 0;
@@ -29,15 +33,16 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
     private boolean waitForDownstreamConnection = false;
-    private String bindAddress = "127.0.0.1";
+    private String bindAddress = LOOPBACK_DEVICE_ADDRESS;
     private int port = Constants.PORT_UNCONFIGURED;
     private boolean insecurePortEnabled = false;
-    private String insecurePortBindAddress = "127.0.0.1";
+    private String insecurePortBindAddress = LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
     private int maxPayloadSize = 2048;
 
     /**
-     * Gets the host name or literal IP address of the network interface that this server is bound to.
+     * Gets the host name or literal IP address of the network interface that this server's secure port is
+     * configured to be bound to.
      *
      * @return The host name.
      */
@@ -46,9 +51,9 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Sets the host name or literal IP address of the network interface that this server should bind to.
+     * Sets the host name or literal IP address of the network interface that this server's secure port should be bound to.
      * <p>
-     * The default value of this property is <em>127.0.0.1</em> (the loop back device) on IPv4 stacks.
+     * The default value of this property is {@link #LOOPBACK_DEVICE_ADDRESS} on IPv4 stacks.
      *
      * @param address  The host name or IP address.
      * @throws NullPointerException if host is {@code null}.
@@ -58,11 +63,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Gets the port this server is bound to/listens on.
-     * <p>
-     * If the port has been set to 0 this server will bind to an arbitrary free port chosen by the
-     * operating system during startup. Once Hono is up and running this method returns the
-     * <em>actual port</em> the server has bound to.
+     * Gets the secure port this server is configured to listen on.
      *
      * @return The port number.
      */
@@ -71,31 +72,19 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Gets the port this server is bound to/listens on. If the port is not configured, it returns the defaultPort.
-     * <p>
-     * @see #getPort() for more information.
+     * Gets the secure port this server is configured to listen on.
      *
-     * @param defaultPort The default port to use if it was not configured so far.
-     * @return The port number.
+     * @param defaultPort The port to use if this property has not been set explicitly.
+     * @return The configured port number or the <em>defaultPort</em> if <em>port</em> is not set.
+     * @see #getPort() for more information.
      */
     public int getPort(final int defaultPort) {
-        if (getPort() == Constants.PORT_UNCONFIGURED) {
-            return defaultPort;
-        }
-        return port;
+
+        return port == Constants.PORT_UNCONFIGURED ? defaultPort : port;
     }
 
     /**
-     * Returns if the secure port is unconfigured.
-     *
-     * @return If the secure port is unconfigured.
-     */
-    public boolean isPortUnconfigured() {
-        return getPort() == Constants.PORT_UNCONFIGURED;
-    }
-
-    /**
-     * Sets the port that this server should bind to/listen on.
+     * Sets the secure port that this server should listen on.
      * <p>
      * If the port is set to 0 (the default value), then this server will bind to an arbitrary free
      * port chosen by the operating system during startup.
@@ -112,7 +101,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Checks if this server should support insecure AMQP 1.0 ports (i.e. without TLS) at all.
+     * Checks if this server is configured to listen on an insecure port (i.e. without TLS) at all.
      * If false, it is guaranteed by the server that no opened port is insecure.
      * If true, it enables the definition of an insecure port (as the only port <u>or</u> additionally to the secure port).
      *
@@ -134,7 +123,8 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Gets the host name or literal IP address of the network interface that the insecure port of this server is bound to.
+     * Gets the host name or literal IP address of the network interface that this server's insecure port is
+     * configured to be bound to.
      *
      * @return The host name.
      */
@@ -143,20 +133,19 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Sets the host name or literal IP address of the network interface that the insecure port of this server should bind to.
+     * Sets the host name or literal IP address of the network interface that this server's insecure port should be bound to.
      * <p>
-     * The default value of this property is <em>127.0.0.1</em> (the loop back device) on IPv4 stacks.
+     * The default value of this property is {@link #LOOPBACK_DEVICE_ADDRESS} on IPv4 stacks.
      *
-     * @param address  The host name or IP address.
-     * @throws NullPointerException if host is {@code null}.
+     * @param address The host name or IP address.
+     * @throws NullPointerException if address is {@code null}.
      */
     public void setInsecurePortBindAddress(final String address) {
         this.insecurePortBindAddress = Objects.requireNonNull(address);
     }
 
     /**
-     * Gets the insecure port this server is bound to/listens on (if enabled by @see #insecurePortEnabled).
-     * <p>
+     * Gets the insecure port this server is configured to listen on.
      *
      * @return The port number.
      */
@@ -165,41 +154,35 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Gets the insecure port this server is bound to/listens on. If the port is not configured, it returns the defaultPort.
-     * <p>
-     * @see #getInsecurePort() for more information.
+     * Gets the insecure port this server is configured to listen on.
      *
-     * @param defaultPort The default port to use if it was not configured so far.
-     * @return The port number.
+     * @param defaultPort The port to use if this property has not been set explicitly.
+     * @return The configured port number or the <em>defaultPort</em> if <em>insecurePort</em> is not set.
+     * @see #getInsecurePort() for more information.
      */
     public int getInsecurePort(final int defaultPort) {
-        if (isInsecurePortUnconfigured()) {
-            return defaultPort;
+
+        return insecurePort == Constants.PORT_UNCONFIGURED ? defaultPort : insecurePort;
+    }
+
+    /**
+     * Sets the insecure port that this server should listen on.
+     * <p>
+     * If the port is set to 0 (the default value), then this server will bind to an arbitrary free
+     * port chosen by the operating system during startup.
+     * <p>
+     * Setting this property also sets the <em>insecurePortEnabled</em> property to {@code true}.
+     * 
+     * @param port The port number.
+     * @throws IllegalArgumentException if port &lt; 0 or port &gt; 65535.
+     */
+    public void setInsecurePort(final int port) {
+        if (isValidPort(port)) {
+            this.insecurePort = port;
+            setInsecurePortEnabled(true);
+        } else {
+            throw new IllegalArgumentException("invalid port number");
         }
-        return insecurePort;
-    }
-
-    /**
-     * Returns if the insecure port is unconfigured.
-     *
-     * @return If the insecure port is unconfigured.
-     */
-    public boolean isInsecurePortUnconfigured() {
-        return getInsecurePort() == Constants.PORT_UNCONFIGURED;
-    }
-
-    /**
-     * Sets the insecure port this server is bound to/listens on (if enabled by @see #insecurePortEnabled).
-     * <p>
-     *
-     * @param insecurePort The insecure port number.
-     * <p>
-     * In contrast to the secure port, there is no support for the automatic selection of a port - it needs to be set to
-     * an explicit value.
-     * @throws IllegalArgumentException if port &lt;= 0 or port &gt; 65535.
-     */
-    public void setInsecurePort(final int insecurePort) {
-        this.insecurePort = insecurePort;
     }
 
     /**
@@ -225,7 +208,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Gets the maximum time to wait for Hono to start up.
+     * Gets the maximum time to wait for the server to start up.
      *
      * @return The number of seconds to wait.
      */
@@ -234,7 +217,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Sets the maximum time to wait for Hono to start up.
+     * Sets the maximum time to wait for the server to start up.
      * <p>
      * The default value of this property is 20 (seconds).
      *
@@ -287,28 +270,28 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Checks whether Hono runs in single-tenant mode.
+     * Checks whether the server is configured to run in single-tenant mode.
      * <p>
      * In this mode clients do not need to specify a <em>tenant</em>
-     * component in resource addresses. Hono will use the
+     * component in resource addresses. The server will use the
      * {@link Constants#DEFAULT_TENANT} instead.
      *
-     * @return {@code true} if Hono runs in single-tenant mode.
+     * @return {@code true} if the server is configured to run in single-tenant mode.
      */
     public boolean isSingleTenant() {
         return singleTenant;
     }
 
     /**
-     * Sets whether Hono should support a single tenant only.
+     * Sets whether the server should support a single tenant only.
      * <p>
      * In this mode clients do not need to specify a <em>tenant</em>
-     * component in resource addresses. Hono will use the
+     * component in resource addresses. The server will use the
      * {@link Constants#DEFAULT_TENANT} instead.
      * <p>
      * The default value of this property is {@code false}.
      *
-     * @param singleTenant {@code true} if this Hono server should support a single tenant only.
+     * @param singleTenant {@code true} if the server should support a single tenant only.
      * @return This instance for setter chaining.
      */
     public HonoConfigProperties setSingleTenant(final boolean singleTenant) {
@@ -317,7 +300,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Checks whether Hono should log TCP traffic.
+     * Checks whether the server is configured to log TCP traffic.
      *
      * @return {@code true} if TCP traffic gets logged.
      */
@@ -326,7 +309,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Sets whether Hono should log TCP traffic.
+     * Sets whether the server should log TCP traffic.
      * <p>
      * The default value of this property is {@code false}.
      *
@@ -339,7 +322,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
     }
 
     /**
-     * Checks whether Hono waits for downstream connections to be established
+     * Checks whether the server waits for downstream connections to be established
      * during startup.
      * <p>
      * If this property is set to {@code true} then startup may take some time or even
@@ -347,14 +330,14 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
      * <p>
      * The default value of this property is {@code false}.
      *
-     * @return {@code true} if Hono waits for downstream connection to be established during startup.
+     * @return {@code true} if the server will wait for downstream connections to be established during startup.
      */
     public boolean isWaitForDownstreamConnectionEnabled() {
         return waitForDownstreamConnection;
     }
 
     /**
-     * Sets whether Hono should wait for downstream connections to be established
+     * Sets whether the server should wait for downstream connections to be established
      * during startup.
      * <p>
      * If this property is set to {@code true} then startup may take some time or even
@@ -362,7 +345,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
      * <p>
      * The default value of this property is {@code false}.
      *
-     * @param waitForConnection {@code true} if Hono should wait for downstream connections to be established during startup.
+     * @param waitForConnection {@code true} if the server should wait for downstream connections to be established during startup.
      * @return This instance for setter chaining.
      */
     public HonoConfigProperties setWaitForDownstreamConnectionEnabled(final boolean waitForConnection) {

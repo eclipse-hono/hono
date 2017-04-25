@@ -14,6 +14,11 @@ package org.eclipse.hono.service;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.http.ClientAuth;
+import io.vertx.core.net.KeyCertOptions;
+import io.vertx.core.net.NetServerOptions;
+import io.vertx.core.net.TrustOptions;
+
 import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
@@ -22,43 +27,65 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Objects;
 
+/**
+ * A base class for implementing services binding to a secure and/or a non-secure port.
+ *
+ */
 public abstract class AbstractServiceBase extends AbstractVerticle {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractServiceBase.class);
-
-    protected HonoConfigProperties config = new HonoConfigProperties();
-
-    protected int port         = Constants.PORT_UNCONFIGURED;
-    protected int insecurePort = Constants.PORT_UNCONFIGURED;
-
     /**
-     * Define the default value for the TLS port number in the implementing server class (e.g. 5671 for AMQPS 1.0).
-     * @return The default value for the TLS port.
+     * A logger to be shared with subclasses.
      */
-    protected abstract int getPortDefaultValue();
-    /**
-     * Define the default value for the unencrypted port number in the implementing server class (e.g. 5672 for AMQP 1.0).
-     * @return The default value for the unencrypted port.
-     */
-    protected abstract int getInsecurePortDefaultValue();
+    protected final Logger LOG = LoggerFactory.getLogger(getClass());
+
+    private HonoConfigProperties config = new HonoConfigProperties();
 
     /**
-     * Return the port number of the TLS port. If the implementing service determined the port during startup
-     * (ephemeral port configuration), return this port number.
-     * @return The port number of the TLS port.
+     * Gets the default port number on which this service listens for encrypted communication (e.g. 5671 for AMQP 1.0).
+     * 
+     * @return The port number.
+     */
+    public abstract int getPortDefaultValue();
+
+    /**
+     * Gets the default port number on which this service listens for unencrypted communication (e.g. 5672 for AMQP 1.0).
+     * 
+     * @return The port number.
+     */
+    public abstract int getInsecurePortDefaultValue();
+
+    /**
+     * Gets the secure port number that this service has bound to.
+     * <p>
+     * The port number is determined as follows:
+     * <ol>
+     * <li>if this service is already listening on a secure port, the corresponding socket's actual port number is returned, else</li>
+     * <li>if this service has been configured to listen on a secure port, the configured port number is returned, else</li>
+     * <li>{@link Constants#PORT_UNCONFIGURED} is returned.</li>
+     * </ol>
+     * 
+     * @return The port number.
      */
     public abstract int getPort();
 
     /**
-     * Return the port number of the unencrypted port. If the implementing service determined the port during startup
-     * (ephemeral port configuration), return this port number.
-     * @return The port number of the unencrypted port.
+     * Gets the insecure port number that this service has bound to.
+     * <p>
+     * The port number is determined as follows:
+     * <ol>
+     * <li>if this service is already listening on an insecure port, the corresponding socket's actual port number is returned, else</li>
+     * <li>if this service has been configured to listen on an insecure port, the configured port number is returned, else</li>
+     * <li>{@link Constants#PORT_UNCONFIGURED} is returned.</li>
+     * </ol>
+     * 
+     * @return The port number.
      */
     public abstract int getInsecurePort();
 
     /**
-     * Set the configuration for the Hono service.
-     * @param props The configuration properties.
+     * Sets the properties to use for configuring the sockets to listen on.
+     * 
+     * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
      */
     @Autowired(required = false)
@@ -67,118 +94,164 @@ public abstract class AbstractServiceBase extends AbstractVerticle {
     }
 
     /**
-     * Either one secure, one insecure or one secure AND insecure ports are supported for servers in Hono.
-     *
-     * @param portConfigurationTracker The future to continue or fail (in case of configuration errors).
-     * @throws NullPointerException if portConfigurationTracker is null.
+     * Gets the properties in use for configuring the sockets to listen on.
+     * 
+     * @return The properties.
      */
-    protected final void determinePortConfigurations(Future<Void> portConfigurationTracker) {
-
-        Objects.requireNonNull(portConfigurationTracker);
-
-        // secure port first
-        determineSecurePortConfiguration();
-        determineInsecurePortConfiguration();
-
-        if (isPortNumberUnconfigured(port) && isPortNumberUnconfigured(insecurePort)) {
-            final String message = "cannot start up Server - no listening ports found.";
-            portConfigurationTracker.fail(message);
-        } else if (isPortNumberExplicitlySet(port) && isPortNumberExplicitlySet(insecurePort) && port == insecurePort) {
-            final String message = String.format("cannot start up Server - secure and insecure ports configured to same port number %s.",
-                    port);
-            portConfigurationTracker.fail(message);
-        } else {
-            portConfigurationTracker.complete();
-        }
+    public final HonoConfigProperties getConfig() {
+        return this.config;
     }
 
-    private void determineSecurePortConfiguration() {
+    /**
+     * Verifies that this service is properly configured to bind to at least one of the secure or insecure ports.
+     *
+     * @return A future indicating the outcome of the check.
+     */
+    protected final Future<Void> checkPortConfiguration() {
+
+        Future<Void> result = Future.future();
 
         if (config.getKeyCertOptions() == null) {
             if (config.getPort() >= 0) {
                 LOG.warn("Secure port number configured, but the certificate setup is not correct. No secure port will be opened - please check your configuration!");
             }
-            return;
+            if (!config.isInsecurePortEnabled()) {
+                LOG.error("configuration must have at least one of key & certificate or insecure port set to start up");
+                result.fail("no ports configured");
+            } else {
+                result.complete();
+            }
+        } else if (config.isInsecurePortEnabled()) {
+            if (config.getPort(getPortDefaultValue()) == config.getInsecurePort(getInsecurePortDefaultValue())) {
+                LOG.error("secure and insecure ports must be configured to bind to different port numbers");
+                result.fail("secure and insecure ports configured to bind to same port number");
+            } else {
+                result.complete();
+            }
+        } else {
+            result.complete();
         }
 
-        port = config.getPort(getPortDefaultValue());
-
-        if (port == getPortDefaultValue()) {
-            LOG.info("Server uses secure standard port {}", getPortDefaultValue());
-        } else if (config.getPort() == 0) {
-            LOG.info("Server found secure port number configured for ephemeral port selection (port chosen automatically).");
-        }
+        return result;
     }
 
-    private void determineInsecurePortConfiguration() {
+    /**
+     * Determines the secure port to bind to.
+     * <p>
+     * The port is determined by invoking {@code HonoConfigProperties#getPort(int)}
+     * with the value returned by {@link #getPortDefaultValue()}.
+     * 
+     * @return The port.
+     */
+    protected final int determineSecurePort() {
 
-        if (config.isInsecurePortUnconfigured() && !config.isInsecurePortEnabled())
-            return;
+        int port = config.getPort(getPortDefaultValue());
 
-        insecurePort = config.getInsecurePort(getInsecurePortDefaultValue());
+        if (port == getPortDefaultValue()) {
+            LOG.info("Server uses secure standard port {}", port);
+        } else if (port == 0) {
+            LOG.info("Server found secure port number configured for ephemeral port selection (port chosen automatically).");
+        }
+        return port;
+    }
+
+    /**
+     * Determines the insecure port to bind to.
+     * <p>
+     * The port is determined by invoking {@code HonoConfigProperties#getInsecurePort(int)}
+     * with the value returned by {@link #getInsecurePortDefaultValue()}.
+     * 
+     * @return The port.
+     */
+    protected final int determineInsecurePort() {
+
+        int insecurePort = config.getInsecurePort(getInsecurePortDefaultValue());
 
         if (insecurePort == 0) {
             LOG.info("Server found insecure port number configured for ephemeral port selection (port chosen automatically).");
         } else if (insecurePort == getInsecurePortDefaultValue()) {
-            LOG.info("Server uses standard insecure port {}", getInsecurePortDefaultValue());
+            LOG.info("Server uses standard insecure port {}", insecurePort);
         } else if (insecurePort == getPortDefaultValue()) {
             LOG.warn("Server found insecure port number configured to standard port for secure connections {}", config.getInsecurePort());
             LOG.warn("Possibly misconfigured?");
         }
+        return insecurePort;
     }
 
     /**
-     * Gets if Hono service opens a secure port.
-     *
-     * @return The flag value for opening a secure port.
+     * Checks if this service has been configured to bind to the secure port during startup.
+     * <p>
+     * Subclasses may override this method in order to do more sophisticated checks.
+     *  
+     * @return {@code true} if <em>config</em> contains a valid key and certificate.
      */
-    public final boolean isOpenSecurePort() {
-        return (port >= 0);
+    protected boolean isSecurePortEnabled() {
+        return config.getKeyCertOptions() != null;
     }
 
     /**
-     * Gets if Hono service opens an insecure port.
+     * Checks if this service will bind to the insecure port during startup.
+     * <p>
+     * Subclasses may override this method in order to do more sophisticated checks.
      *
-     * @return The flag value for opening an insecure port.
+     * @return {@code true} if the insecure port has been enabled on <em>config</em>.
      */
-    public final boolean isOpenInsecurePort() {
-        return (insecurePort >= 0);
+    protected boolean isInsecurePortEnabled() {
+        return config.isInsecurePortEnabled();
     }
 
     /**
-     * Gets the IP address Hono is bound to.
+     * Gets the host name or IP address this server's secure port is bound to.
      *
-     * @return The IP address.
+     * @return The address.
      */
     public final String getBindAddress() {
         return config.getBindAddress();
     }
 
     /**
-     * Gets the IP address Hono's insecure port is bound to.
+     * Gets the host name or IP address this server's insecure port is bound to.
      *
-     * @return The IP address.
+     * @return The address.
      */
     public final String getInsecurePortBindAddress() {
         return config.getInsecurePortBindAddress();
     }
 
     /**
-     * Checks if the given port number represents an unconfigured port.
-     * @param portToCheck The port number to check.
-     * @return True if the port number if unconfigured.
+     * Copies TLS trust store configuration to a given set of server options.
+     * <p>
+     * The trust store configuration is taken from <em>config</em> and will
+     * be added only if the <em>ssl</em> flag is set on the given server options.
+     * 
+     * @param serverOptions The options to add configuration to.
      */
-    public static final boolean isPortNumberUnconfigured(int portToCheck) {
-        return (portToCheck == Constants.PORT_UNCONFIGURED);
+    protected final void addTlsTrustOptions(final NetServerOptions serverOptions) {
+
+        if (serverOptions.isSsl() && serverOptions.getTrustOptions() == null) {
+
+            TrustOptions trustOptions = getConfig().getTrustOptions();
+            if (trustOptions != null) {
+                serverOptions.setTrustOptions(trustOptions).setClientAuth(ClientAuth.REQUEST);
+                LOG.info("enabling TLS for client authentication");
+            }
+        }
     }
 
     /**
-     * Checks if the given port number represents an explicitly configured port.
-     * @param portToCheck The port number to check.
-     * @return True if the port number was configured explicitly.
+     * Copies TLS key & certificate configuration to a given set of server options.
+     * <p>
+     * If <em>config</em> contains key &amp; certificate configuration it is added to
+     * the given server options and the <em>ssl</em> flag is set to {@code true}.
+     * 
+     * @param serverOptions The options to add configuration to.
      */
-    public static final boolean isPortNumberExplicitlySet(int portToCheck) {
-        return (portToCheck != Constants.PORT_UNCONFIGURED && portToCheck != 0);
-    }
+    protected final void addTlsKeyCertOptions(final NetServerOptions serverOptions) {
 
+        KeyCertOptions keyCertOptions = getConfig().getKeyCertOptions();
+
+        if (keyCertOptions != null) {
+            serverOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
+        }
+    }
 }

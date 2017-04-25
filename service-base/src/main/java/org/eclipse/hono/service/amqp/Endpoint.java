@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.server;
+package org.eclipse.hono.service.amqp;
 
 import org.eclipse.hono.util.ResourceIdentifier;
 

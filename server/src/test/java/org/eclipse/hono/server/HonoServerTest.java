@@ -26,6 +26,7 @@ import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -146,7 +147,7 @@ public class HonoServerTest {
         final ProtonConnection con = newAuthenticatedConnection(Constants.SUBJECT_ANONYMOUS);
         when(con.disconnectHandler(closeHandlerCaptor.capture())).thenReturn(con);
 
-        server.handleRemoteConnectionOpen(con);
+        server.onRemoteConnectionOpen(con);
 
         // THEN a handler is registered with the connection that publishes
         // an event on the event bus when the client disconnects

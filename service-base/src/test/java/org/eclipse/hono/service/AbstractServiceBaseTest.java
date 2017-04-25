@@ -45,7 +45,8 @@ public class AbstractServiceBaseTest {
         when(vertx.eventBus()).thenReturn(eventBus);
     }
 
-    private AbstractServiceBase createServer() {
+    private AbstractServiceBase createServer(final HonoConfigProperties config) {
+
         AbstractServiceBase server = new AbstractServiceBase() {
             @Override
             public int getPortDefaultValue() {
@@ -59,14 +60,15 @@ public class AbstractServiceBaseTest {
 
             @Override
             public int getPort() {
-                return port;
+                return config.getPort(PORT_NR);
             }
 
             @Override
             public int getInsecurePort() {
-                return insecurePort;
+                return config.getInsecurePort(INSECURE_PORT_NR);
             }
         };
+        server.setConfig(config);
         return server;
     }
 
@@ -83,16 +85,14 @@ public class AbstractServiceBaseTest {
 
         // WHEN using this configuration to determine the server's port configuration
         // secure port config: no port set -> secure IANA port selected
-        Future<Void> portConfigurationTracker = Future.future();
-        AbstractServiceBase server = createServer();
-        server.setConfig(configProperties);
-        server.determinePortConfigurations(portConfigurationTracker);
+        AbstractServiceBase server = createServer(configProperties);
+        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the default secure port is selected and no insecure port will be opened
         assertTrue(portConfigurationTracker.succeeded());
-        assertTrue(server.isOpenSecurePort());
+        assertTrue(server.isSecurePortEnabled());
         assertThat(server.getPort(), is(PORT_NR));
-        assertFalse(server.isOpenInsecurePort());
+        assertFalse(server.isInsecurePortEnabled());
     }
 
     /**
@@ -109,16 +109,14 @@ public class AbstractServiceBaseTest {
 
         // WHEN using this configuration to determine the server's port configuration
         // secure port config: explicit port set -> port used
-        Future<Void> portConfigurationTracker = Future.future();
-        AbstractServiceBase server = createServer();
-        server.setConfig(configProperties);
-        server.determinePortConfigurations(portConfigurationTracker);
+        AbstractServiceBase server = createServer(configProperties);
+        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the configured port is used and no insecure port will be opened
         assertTrue(portConfigurationTracker.succeeded());
-        assertTrue(server.isOpenSecurePort());
+        assertTrue(server.isSecurePortEnabled());
         assertThat(server.getPort(), is(8989));
-        assertFalse(server.isOpenInsecurePort());
+        assertFalse(server.isInsecurePortEnabled());
     }
 
     /**
@@ -132,10 +130,8 @@ public class AbstractServiceBaseTest {
         HonoConfigProperties configProperties = new HonoConfigProperties();
 
         // WHEN using this configuration to determine the server's port configuration
-        Future<Void> portConfigurationTracker = Future.future();
-        AbstractServiceBase server = createServer();
-        server.setConfig(configProperties);
-        server.determinePortConfigurations(portConfigurationTracker);
+        AbstractServiceBase server = createServer(configProperties);
+        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the port configuration fails
         assertTrue(portConfigurationTracker.failed());
@@ -153,15 +149,13 @@ public class AbstractServiceBaseTest {
         configProperties.setInsecurePortEnabled(true);
 
         // WHEN using this configuration to determine the server's port configuration
-        Future<Void> portConfigurationTracker = Future.future();
-        AbstractServiceBase server = createServer();
-        server.setConfig(configProperties);
-        server.determinePortConfigurations(portConfigurationTracker);
+        AbstractServiceBase server = createServer(configProperties);
+        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to the default insecure port only
         assertTrue(portConfigurationTracker.succeeded());
-        assertFalse(server.isOpenSecurePort());
-        assertTrue(server.isOpenInsecurePort());
+        assertFalse(server.isSecurePortEnabled());
+        assertTrue(server.isInsecurePortEnabled());
         assertThat(server.getInsecurePort(), is(INSECURE_PORT_NR));
     }
 
@@ -178,15 +172,13 @@ public class AbstractServiceBaseTest {
         configProperties.setInsecurePort(8888);
 
         // WHEN using this configuration to determine the server's port configuration
-        Future<Void> portConfigurationTracker = Future.future();
-        AbstractServiceBase server = createServer();
-        server.setConfig(configProperties);
-        server.determinePortConfigurations(portConfigurationTracker);
+        AbstractServiceBase server = createServer(configProperties);
+        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to the configured insecure port only
         assertTrue(portConfigurationTracker.succeeded());
-        assertFalse(server.isOpenSecurePort());
-        assertTrue(server.isOpenInsecurePort());
+        assertFalse(server.isSecurePortEnabled());
+        assertTrue(server.isInsecurePortEnabled());
         assertThat(server.getInsecurePort(), is(8888));
     }
 
@@ -204,21 +196,19 @@ public class AbstractServiceBaseTest {
         configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
-        Future<Void> portConfigurationTracker = Future.future();
-        AbstractServiceBase server = createServer();
-        server.setConfig(configProperties);
-        server.determinePortConfigurations(portConfigurationTracker);
+        AbstractServiceBase server = createServer(configProperties);
+        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to both the default insecure and secure ports
         assertTrue(portConfigurationTracker.succeeded());
-        assertTrue(server.isOpenSecurePort());
+        assertTrue(server.isSecurePortEnabled());
         assertThat(server.getPort(), is(PORT_NR));
-        assertTrue(server.isOpenInsecurePort());
+        assertTrue(server.isInsecurePortEnabled());
         assertThat(server.getInsecurePort(), is(INSECURE_PORT_NR));
     }
 
     /**
-     * Verifies that a Hono server will not start
+     * Verifies that a Hono server will only bind to the secure port
      * when using a default configuration with both secure and insecure ports being enabled and
      * set to the same port number.
      */
@@ -234,16 +224,10 @@ public class AbstractServiceBaseTest {
         configProperties.setPort(8888);
 
         // WHEN using this configuration to determine the server's port configuration
-        Future<Void> portConfigurationTracker = Future.future();
-        AbstractServiceBase server = createServer();
-        server.setConfig(configProperties);
-        server.determinePortConfigurations(portConfigurationTracker);
+        AbstractServiceBase server = createServer(configProperties);
+        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN port configuration fails
         assertTrue(portConfigurationTracker.failed());
     }
-
-
-
-
 }

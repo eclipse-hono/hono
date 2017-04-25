@@ -21,6 +21,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
