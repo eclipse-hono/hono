@@ -18,7 +18,7 @@ public class NullGaugeService implements GaugeService {
     }
 
     @Override
-    public void submit(String s, double v) {
+    public void submit(final String s, final double v) {
 
     }
 }

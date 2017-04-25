@@ -18,17 +18,17 @@ public class NullCounterService implements CounterService {
     }
 
     @Override
-    public void increment(String s) {
+    public void increment(final String s) {
 
     }
 
     @Override
-    public void decrement(String s) {
+    public void decrement(final String s) {
 
     }
 
     @Override
-    public void reset(String s) {
+    public void reset(final String s) {
 
     }
 
