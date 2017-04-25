@@ -1,3 +1,17 @@
 hono:
   registration:
     filename: /home/hono/registration/device-identities.json
+  metric:
+    jvm:
+      memory: true
+      thread: true
+    reporter:
+      console:
+        active: false
+        period: 5000
+
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: true

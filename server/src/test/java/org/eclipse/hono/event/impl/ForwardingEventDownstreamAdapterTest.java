@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.event.impl;
 
-import static org.eclipse.hono.TestSupport.CLIENT_ID;
 import static org.eclipse.hono.TestSupport.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
@@ -35,8 +34,9 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
+import org.springframework.boot.actuate.metrics.CounterService;
+import org.springframework.boot.actuate.metrics.GaugeService;
 
 /**
  * Tests {@link ForwardingEventDownstreamAdapter}.

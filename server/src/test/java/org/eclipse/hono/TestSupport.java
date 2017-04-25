@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -201,6 +202,7 @@ public final class TestSupport {
         when(sender.sendQueueDrainHandler(drainHandlerCaptor.capture())).then(invocation -> {
             return sender;
         });
+        when(sender.getTarget()).thenReturn(new Target());
         return sender;
     }
 

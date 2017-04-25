@@ -30,6 +30,8 @@ import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.metrics.CounterService;
 
 /**
  * A base class for implementing Hono {@code Endpoint}s that forward messages
@@ -38,11 +40,31 @@ import io.vertx.proton.ProtonReceiver;
  */
 public abstract class MessageForwardingEndpoint extends BaseEndpoint {
 
+    private CounterService                counterService = NullCounterService.getInstance();
     private DownstreamAdapter             downstreamAdapter;
     private MessageConsumer<String>       clientDisconnectListener;
 
     protected MessageForwardingEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
+    }
+
+    /**
+     * Sets the spring boot counter service, will be based on Dropwizard Metrics, if in classpath.
+     *
+     * @param counterService The counter service.
+     */
+    @Autowired
+    public final void setCounterService(final CounterService counterService) {
+        this.counterService = counterService;
+    }
+
+    /**
+     * Gets the spring boot gauge service implementation
+     *
+     * @return The metrics service or a null implementation - never {@code null}
+     */
+    public final CounterService getCounterService() {
+        return counterService;
     }
 
     @Override
@@ -95,6 +117,7 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
                     // client has closed link -> inform TelemetryAdapter about client detach
                     onLinkDetach(link);
                     downstreamAdapter.onClientDetach(link);
+                    counterService.decrement(MetricConstants.metricNameUpstreamLinks(targetAddress.toString()));
                 }).handler((delivery, message) -> {
                     if (passesFormalVerification(targetAddress, message)) {
                         forwardMessage(link, delivery, message);
@@ -104,6 +127,7 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
                     }
                 }).open();
                 logger.debug("accepted link from telemetry client [{}]", linkId);
+                counterService.increment(MetricConstants.metricNameUpstreamLinks(targetAddress.toString()));
             } else {
                 // we cannot connect to downstream container, reject client
                 link.close(condition(AmqpError.PRECONDITION_FAILED, "no consumer available for target"));
