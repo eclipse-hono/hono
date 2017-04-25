@@ -78,11 +78,7 @@ public class ApplicationConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.server")
     public HonoConfigProperties honoServerProperties() {
-        HonoConfigProperties props = new HonoConfigProperties();
-        if (props.getPort() == 0) {
-            props.setPort(5672); // set default AMQP port
-        }
-        return props;
+        return new HonoConfigProperties();
     }
 
     /**
