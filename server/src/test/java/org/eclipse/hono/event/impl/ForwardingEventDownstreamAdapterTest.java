@@ -66,8 +66,6 @@ public class ForwardingEventDownstreamAdapterTest {
             return null;
         });
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
-        adapter.setCounterService(mock(CounterService.class));
-        adapter.setGaugeService(mock(GaugeService.class));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());
         adapter.addSender(client, sender);

@@ -58,8 +58,8 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * The Hono configuration.
      */
     protected HonoConfigProperties          honoConfig                      = new HonoConfigProperties();
-    protected GaugeService                  gaugeService;
-    protected CounterService                counterService;
+    private GaugeService                    gaugeService                    = NullGaugeService.getInstance();
+    private CounterService                  counterService                  = NullCounterService.getInstance();
     private final Map<UpstreamReceiver, ProtonSender> activeSenders         = new HashMap<>();
     private final Map<String, List<UpstreamReceiver>> sendersPerConnection  = new HashMap<>();
     private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers  = new ArrayList<>();
@@ -125,6 +125,15 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     /**
+     * Gets the spring boot gauge service implementation
+     *
+     * @return The metrics service or a null implementation - never {@code null}
+     */
+    public final GaugeService getGaugeService() {
+        return gaugeService;
+    }
+
+    /**
      * Sets the spring boot counter service, will be based on Dropwizard Metrics, if in classpath.
      *
      * @param counterService The counter service.
@@ -132,6 +141,15 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     @Autowired
     public final void setCounterService(final CounterService counterService) {
         this.counterService = counterService;
+    }
+
+    /**
+     * Gets the spring boot gauge service implementation
+     *
+     * @return The metrics service or a null implementation - never {@code null}
+     */
+    public final CounterService getCounterService() {
+        return counterService;
     }
 
     /**

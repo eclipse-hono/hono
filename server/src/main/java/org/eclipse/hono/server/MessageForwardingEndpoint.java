@@ -40,7 +40,7 @@ import org.springframework.boot.actuate.metrics.CounterService;
  */
 public abstract class MessageForwardingEndpoint extends BaseEndpoint {
 
-    protected CounterService              counterService;
+    private CounterService                counterService = NullCounterService.getInstance();
     private DownstreamAdapter             downstreamAdapter;
     private MessageConsumer<String>       clientDisconnectListener;
 
@@ -56,6 +56,15 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
     @Autowired
     public final void setCounterService(final CounterService counterService) {
         this.counterService = counterService;
+    }
+
+    /**
+     * Gets the spring boot gauge service implementation
+     *
+     * @return The metrics service or a null implementation - never {@code null}
+     */
+    public final CounterService getCounterService() {
+        return counterService;
     }
 
     @Override
