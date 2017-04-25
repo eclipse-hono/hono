@@ -71,7 +71,8 @@ public class StandaloneTelemetryApiTest {
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
-        server = new HonoServer().setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
+        server = new HonoServer();
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
         HonoConfigProperties configProperties = new HonoConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
