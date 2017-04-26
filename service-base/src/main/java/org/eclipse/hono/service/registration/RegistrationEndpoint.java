@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.registration.impl;
+package org.eclipse.hono.service.registration;
 
 import static io.vertx.proton.ProtonHelper.condition;
 import static org.eclipse.hono.util.MessageHelper.*;
@@ -22,7 +22,6 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.registration.RegistrationMessageFilter;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -40,12 +39,21 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
 /**
- * A Hono {@code Endpoint} for managing device registration information.
+ * An {@code Endpoint} for managing device registration information.
+ * <p>
+ * This endpoint implements Hono's <a href="">Device Registration API</a>.
+ * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
+ * event bus for processing. The outcome is then returned to the peer in a response message.
  */
 @Component
 @Qualifier("registration")
 public final class RegistrationEndpoint extends BaseEndpoint {
 
+    /**
+     * Creates a new registration endpoint for a vertx instance.
+     * 
+     * @param vertx The vertx instance to use.
+     */
     @Autowired
     public RegistrationEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));

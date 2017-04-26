@@ -23,7 +23,7 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.registration.RegistrationMessageFilter;
+import org.eclipse.hono.service.registration.RegistrationMessageFilter;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;

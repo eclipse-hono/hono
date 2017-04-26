@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.registration.impl;
+package org.eclipse.hono.service.registration.impl;
 
 import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.util.RegistrationConstants.*;
@@ -21,6 +21,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.hono.service.registration.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.boot.context.properties.ConfigurationProperties;

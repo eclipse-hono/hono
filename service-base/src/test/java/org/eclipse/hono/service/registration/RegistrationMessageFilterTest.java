@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.registration;
+package org.eclipse.hono.service.registration;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;

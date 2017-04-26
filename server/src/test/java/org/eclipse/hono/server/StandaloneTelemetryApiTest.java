@@ -23,7 +23,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
+import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.RegistrationConstants;

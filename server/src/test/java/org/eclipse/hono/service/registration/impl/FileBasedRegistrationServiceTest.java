@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.registration.impl;
+package org.eclipse.hono.service.registration.impl;
 
 import static java.net.HttpURLConnection.*;
 import static org.hamcrest.CoreMatchers.is;
@@ -17,6 +17,7 @@ import static org.junit.Assert.*;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 import static org.mockito.Mockito.*;
 
+import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.Before;

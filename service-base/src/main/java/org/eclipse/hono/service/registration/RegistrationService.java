@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.registration;
+package org.eclipse.hono.service.registration;
 
 import java.net.HttpURLConnection;
 

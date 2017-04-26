@@ -9,14 +9,13 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.registration.impl;
+package org.eclipse.hono.service.registration;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.net.HttpURLConnection;
 
-import org.eclipse.hono.registration.RegistrationService;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -34,8 +33,8 @@ import io.vertx.core.json.JsonObject;
 /**
  * Base class for implementing {@code RegistrationService}s.
  * <p>
- * In particular, this base class provides support for parsing incoming AMQP 1.0
- * messages and route them to specific methods corresponding to the <em>action</em>
+ * In particular, this base class provides support for parsing registration request messages
+ * received via the event bus and route them to specific methods corresponding to the <em>action</em>
  * indicated in the message.
  */
 public abstract class BaseRegistrationService extends AbstractVerticle implements RegistrationService {
