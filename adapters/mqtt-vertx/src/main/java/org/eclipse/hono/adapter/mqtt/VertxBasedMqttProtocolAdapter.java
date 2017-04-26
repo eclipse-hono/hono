@@ -18,7 +18,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +52,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
     private static final String EVENT_ENDPOINT = "event";
 
     private HonoClient hono;
-    private HonoConfigProperties config;
+    private ServiceConfigProperties config;
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier
             = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier
@@ -77,7 +77,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
      * @throws NullPointerException if properties is {@code null}.
      */
     @Autowired
-    public void setConfig(final HonoConfigProperties properties) {
+    public void setConfig(final ServiceConfigProperties properties) {
         this.config = Objects.requireNonNull(properties);
     }
 

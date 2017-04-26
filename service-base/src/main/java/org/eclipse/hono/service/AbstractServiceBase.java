@@ -19,7 +19,7 @@ import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.net.TrustOptions;
 
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,7 @@ public abstract class AbstractServiceBase extends AbstractVerticle {
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    private HonoConfigProperties config = new HonoConfigProperties();
+    private ServiceConfigProperties config = new ServiceConfigProperties();
 
     /**
      * Gets the default port number on which this service listens for encrypted communication (e.g. 5671 for AMQP 1.0).
@@ -89,7 +89,7 @@ public abstract class AbstractServiceBase extends AbstractVerticle {
      * @throws NullPointerException if props is {@code null}.
      */
     @Autowired(required = false)
-    public final void setConfig(final HonoConfigProperties props) {
+    public final void setConfig(final ServiceConfigProperties props) {
         this.config = Objects.requireNonNull(props);
     }
 
@@ -98,7 +98,7 @@ public abstract class AbstractServiceBase extends AbstractVerticle {
      * 
      * @return The properties.
      */
-    public final HonoConfigProperties getConfig() {
+    public final ServiceConfigProperties getConfig() {
         return this.config;
     }
 

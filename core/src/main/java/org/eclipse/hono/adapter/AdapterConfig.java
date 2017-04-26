@@ -12,7 +12,7 @@
 
 package org.eclipse.hono.adapter;
 
-import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -44,8 +44,8 @@ public abstract class AdapterConfig {
      */
     @ConfigurationProperties(prefix = "hono.client")
     @Bean
-    public HonoClientConfigProperties honoClientConfig() {
-        HonoClientConfigProperties config = new HonoClientConfigProperties();
+    public ClientConfigProperties honoClientConfig() {
+        ClientConfigProperties config = new ClientConfigProperties();
         customizeClientConfigProperties(config);
         return config;
     }
@@ -59,7 +59,7 @@ public abstract class AdapterConfig {
      * 
      * @param config The client configuration to customize.
      */
-    protected void customizeClientConfigProperties(final HonoClientConfigProperties config) {
+    protected void customizeClientConfigProperties(final ClientConfigProperties config) {
         // empty by default
     }
 

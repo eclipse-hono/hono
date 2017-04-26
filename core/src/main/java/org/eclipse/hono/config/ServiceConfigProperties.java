@@ -20,7 +20,7 @@ import org.eclipse.hono.util.Constants;
  * A POJO for configuring common properties of server components.
  *
  */
-public final class HonoConfigProperties extends AbstractHonoConfig {
+public final class ServiceConfigProperties extends AbstractConfig {
 
     /**
      * The loopback device address.
@@ -225,7 +225,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
      * @return This instance for setter chaining.
      * @throws IllegalArgumentException if <em>seconds</em> &lt; 1.
      */
-    public HonoConfigProperties setStartupTimeout(final int seconds) {
+    public ServiceConfigProperties setStartupTimeout(final int seconds) {
         if (seconds < 1) {
             throw new IllegalArgumentException("startup timeout must be at least 1 second");
         }
@@ -261,7 +261,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
      * @return This instance for setter chaining.
      * @throws IllegalArgumentException if the number is &lt; 0.
      */
-    public HonoConfigProperties setMaxInstances(final int maxVerticleInstances) {
+    public ServiceConfigProperties setMaxInstances(final int maxVerticleInstances) {
         if (maxVerticleInstances < 0) {
             throw new IllegalArgumentException("maxInstances must be >= 0");
         }
@@ -294,7 +294,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
      * @param singleTenant {@code true} if the server should support a single tenant only.
      * @return This instance for setter chaining.
      */
-    public HonoConfigProperties setSingleTenant(final boolean singleTenant) {
+    public ServiceConfigProperties setSingleTenant(final boolean singleTenant) {
         this.singleTenant = singleTenant;
         return this;
     }
@@ -316,7 +316,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
      * @param networkDebugLogging {@code true} if TCP traffic should be logged.
      * @return This instance for setter chaining.
      */
-    public HonoConfigProperties setNetworkDebugLoggingEnabled(final boolean networkDebugLogging) {
+    public ServiceConfigProperties setNetworkDebugLoggingEnabled(final boolean networkDebugLogging) {
         this.networkDebugLogging = networkDebugLogging;
         return this;
     }
@@ -348,7 +348,7 @@ public final class HonoConfigProperties extends AbstractHonoConfig {
      * @param waitForConnection {@code true} if the server should wait for downstream connections to be established during startup.
      * @return This instance for setter chaining.
      */
-    public HonoConfigProperties setWaitForDownstreamConnectionEnabled(final boolean waitForConnection) {
+    public ServiceConfigProperties setWaitForDownstreamConnectionEnabled(final boolean waitForConnection) {
         this.waitForDownstreamConnection = waitForConnection;
         return this;
     }

@@ -27,10 +27,10 @@ import io.vertx.core.net.PfxOptions;
 import io.vertx.core.net.TrustOptions;
 
 /**
- * A base class for managing basic configuration properties shared by client and server.
+ * A base class for managing basic configuration properties shared by clients and server components.
  *
  */
-public abstract class AbstractHonoConfig {
+public abstract class AbstractConfig {
 
     private static final Pattern PATTERN_PEM = Pattern.compile("^.*\\.[pP][eE][mM]$");
     private static final Pattern PATTERN_PKCS = Pattern.compile("^.*\\.[pP](12|[fF][xX])$");

@@ -25,7 +25,7 @@ import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,7 +69,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
 
     private HttpServer server;
     private HonoClient hono;
-    private HonoConfigProperties config;
+    private ServiceConfigProperties config;
 
     private BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier;
     private BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier;
@@ -122,7 +122,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
      * @throws NullPointerException if properties is {@code null}.
      */
     @Autowired
-    public final void setConfig(final HonoConfigProperties properties) {
+    public final void setConfig(final ServiceConfigProperties properties) {
         this.config = Objects.requireNonNull(properties);
     }
 
@@ -131,7 +131,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
      * 
      * @return The configuration properties.
      */
-    public final HonoConfigProperties getConfig() {
+    public final ServiceConfigProperties getConfig() {
         return config;
     }
 

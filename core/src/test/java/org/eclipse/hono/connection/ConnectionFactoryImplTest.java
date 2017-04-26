@@ -18,7 +18,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -53,7 +53,7 @@ public class ConnectionFactoryImplTest {
     public void testConnectInvokesHandlerOnfailureToConnect() throws InterruptedException {
 
         // GIVEN a factory configured to connect to a non-existing server
-        HonoClientConfigProperties props = new HonoClientConfigProperties();
+        ClientConfigProperties props = new ClientConfigProperties();
         props.setHost("127.0.0.1");
         props.setPort(12000); // no server running on port
         props.setAmqpHostname("hono");

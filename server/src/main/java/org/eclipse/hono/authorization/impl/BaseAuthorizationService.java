@@ -22,7 +22,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.authorization.Permission;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +44,7 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
 {
     private static final Logger LOG = LoggerFactory.getLogger(BaseAuthorizationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;
-    protected HonoConfigProperties honoConfig = new HonoConfigProperties();
+    protected ServiceConfigProperties honoConfig = new ServiceConfigProperties();
 
     /**
      * Sets the global Hono configuration properties.
@@ -53,7 +53,7 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
      * @throws NullPointerException if props is {@code null}.
      */
     @Autowired(required = false)
-    public void setHonoConfiguration(final HonoConfigProperties props) {
+    public void setHonoConfiguration(final ServiceConfigProperties props) {
         this.honoConfig = Objects.requireNonNull(props);
     }
 

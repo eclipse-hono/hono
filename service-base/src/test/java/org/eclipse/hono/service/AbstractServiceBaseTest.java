@@ -14,7 +14,7 @@ package org.eclipse.hono.service;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -45,7 +45,7 @@ public class AbstractServiceBaseTest {
         when(vertx.eventBus()).thenReturn(eventBus);
     }
 
-    private AbstractServiceBase createServer(final HonoConfigProperties config) {
+    private AbstractServiceBase createServer(final ServiceConfigProperties config) {
 
         AbstractServiceBase server = new AbstractServiceBase() {
             @Override
@@ -80,7 +80,7 @@ public class AbstractServiceBaseTest {
     public void checkSecurePortAutoSelect() {
 
         // GIVEN a configuration with a key store set
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
@@ -103,7 +103,7 @@ public class AbstractServiceBaseTest {
     public void checkSecurePortExplicitlySet() {
 
         // GIVEN a configuration with a key store and a secure port being set
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
         configProperties.setPort(8989);
 
@@ -127,7 +127,7 @@ public class AbstractServiceBaseTest {
     public void checkNoPortsSet() {
 
         // GIVEN a default configuration with no key store being set
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        ServiceConfigProperties configProperties = new ServiceConfigProperties();
 
         // WHEN using this configuration to determine the server's port configuration
         AbstractServiceBase server = createServer(configProperties);
@@ -145,7 +145,7 @@ public class AbstractServiceBaseTest {
     public void checkInsecureOnlyPort() {
 
         // GIVEN a default configuration with insecure port being enabled but no key store being set
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
 
         // WHEN using this configuration to determine the server's port configuration
@@ -167,7 +167,7 @@ public class AbstractServiceBaseTest {
     public void checkInsecureOnlyPortExplicitlySet() {
 
         // GIVEN a default configuration with insecure port being set to a specific port.
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(8888);
 
@@ -191,7 +191,7 @@ public class AbstractServiceBaseTest {
     public void checkBothPortsOpen() {
 
         // GIVEN a default configuration with insecure port being enabled and a key store being set.
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
 
@@ -217,7 +217,7 @@ public class AbstractServiceBaseTest {
 
         // GIVEN a default configuration with both the insecure port and the secure port
         // being set to the same value.
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
         configProperties.setInsecurePort(8888);

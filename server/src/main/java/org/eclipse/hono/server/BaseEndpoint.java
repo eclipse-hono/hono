@@ -20,7 +20,7 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -44,7 +44,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
     protected Vertx                             vertx;
     protected final Logger                      logger               = LoggerFactory.getLogger(getClass());
-    protected HonoConfigProperties              honoConfig           = new HonoConfigProperties();
+    protected ServiceConfigProperties              honoConfig           = new ServiceConfigProperties();
     private static final String                 STATUS_OK            = String.valueOf(HTTP_OK);
     private Map<String, UpstreamReceiverImpl>   activeClients        = new HashMap<>();
 
@@ -64,7 +64,7 @@ public abstract class BaseEndpoint implements Endpoint {
      * @throws NullPointerException if props is {@code null}.
      */
     @Autowired(required = false)
-    public final void setHonoConfiguration(final HonoConfigProperties props) {
+    public final void setHonoConfiguration(final ServiceConfigProperties props) {
         this.honoConfig = Objects.requireNonNull(props);
     }
 

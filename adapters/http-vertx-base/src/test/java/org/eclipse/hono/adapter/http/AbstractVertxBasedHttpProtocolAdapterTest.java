@@ -15,7 +15,7 @@ package org.eclipse.hono.adapter.http;
 import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -61,7 +61,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // GIVEN an adapter with a client provided http server
         HttpServer server = getHttpServer(false);
         AbstractVertxBasedHttpProtocolAdapter adapter = getAdapter(mock(Router.class), null);
-        adapter.setConfig(new HonoConfigProperties());
+        adapter.setConfig(new ServiceConfigProperties());
         adapter.setHttpServer(server);
         adapter.setHonoClient(honoClient);
 
@@ -106,7 +106,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             }
         };
 
-        adapter.setConfig(new HonoConfigProperties());
+        adapter.setConfig(new ServiceConfigProperties());
         adapter.setHttpServer(server);
         adapter.setHonoClient(honoClient);
 
@@ -148,7 +148,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             }
         };
 
-        adapter.setConfig(new HonoConfigProperties());
+        adapter.setConfig(new ServiceConfigProperties());
         adapter.setHttpServer(server);
         adapter.setHonoClient(honoClient);
 

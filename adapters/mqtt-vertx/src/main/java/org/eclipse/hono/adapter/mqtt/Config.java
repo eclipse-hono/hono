@@ -15,8 +15,8 @@ package org.eclipse.hono.adapter.mqtt;
 import org.eclipse.hono.adapter.AdapterConfig;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.config.HonoClientConfigProperties;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -31,7 +31,7 @@ import org.springframework.context.annotation.Scope;
 public class Config extends AdapterConfig {
 
     @Override
-    protected void customizeClientConfigProperties(final HonoClientConfigProperties props) {
+    protected void customizeClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName("Hono MQTT Adapter");
         }
@@ -60,8 +60,8 @@ public class Config extends AdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.mqtt")
-    public HonoConfigProperties honoServerProperties() {
-        HonoConfigProperties props = new HonoConfigProperties();
+    public ServiceConfigProperties honoServerProperties() {
+        ServiceConfigProperties props = new ServiceConfigProperties();
         if (props.getPort() == Constants.PORT_UNCONFIGURED) {
             props.setPort(1883); // set default port
         }

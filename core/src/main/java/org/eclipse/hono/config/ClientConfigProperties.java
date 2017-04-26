@@ -17,9 +17,9 @@ import java.util.Objects;
 import org.eclipse.hono.util.Constants;
 
 /**
- * Common configuration properties required for accessing a Hono server.
+ * Common configuration properties required for accessing an AMQP 1.0 container.
  */
-public final class HonoClientConfigProperties extends AbstractHonoConfig {
+public final class ClientConfigProperties extends AbstractConfig {
 
     private String name;
     private String host = "localhost";

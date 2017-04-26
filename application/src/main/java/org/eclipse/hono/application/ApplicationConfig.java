@@ -12,8 +12,8 @@
 
 package org.eclipse.hono.application;
 
-import org.eclipse.hono.config.HonoClientConfigProperties;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.server.HonoServerFactory;
@@ -62,8 +62,8 @@ public class ApplicationConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.downstream")
-    public HonoClientConfigProperties downstreamConnectionProperties() {
-        HonoClientConfigProperties props = new HonoClientConfigProperties();
+    public ClientConfigProperties downstreamConnectionProperties() {
+        ClientConfigProperties props = new ClientConfigProperties();
         if (props.getAmqpHostname() == null) {
             props.setAmqpHostname("hono-internal");
         }
@@ -77,8 +77,8 @@ public class ApplicationConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.server")
-    public HonoConfigProperties honoServerProperties() {
-        return new HonoConfigProperties();
+    public ServiceConfigProperties honoServerProperties() {
+        return new ServiceConfigProperties();
     }
 
     /**
