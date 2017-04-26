@@ -17,3 +17,10 @@ Not released yet.
   * `org.eclipse.hono.config.HonoConfigProperties` to `org.eclipse.hono.config.ServiceConfigProperties`
 
     in order to better reflect their general usability for configuring client and server components.
+
+1. Moved
+
+  * `org.eclipse.hono.server.Endpoint` to `org.eclipse.hono.service.amqp.Endpoint`
+  * `org.eclipse.hono.server.BaseEndpoint` to `org.eclipse.hono.service.amqp.BaseEndpoint`
+  * `org.eclipse.hono.server.UpstreamReceiver` to `org.eclipse.hono.service.amqp.UpstreamReceiver`
+  * `org.eclipse.hono.server.UpstreamReceiverImpl` to `org.eclipse.hono.service.amqp.UpstreamReceiverImpl`
