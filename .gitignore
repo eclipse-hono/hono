@@ -3,6 +3,7 @@
 **/*.iml
 **/bin/
 **/.vertx/
+**/.flattened-pom.xml
 
 # Eclipse files
 **/.classpath
