@@ -11,5 +11,9 @@ spec:
     port: 1883
     protocol: TCP
     targetPort: 1883
+  - name: mqtts
+    port: 8883
+    protocol: TCP
+    targetPort: 8883
   selector:
     name: ${project.artifactId}

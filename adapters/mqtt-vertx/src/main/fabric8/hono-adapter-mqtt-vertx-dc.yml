@@ -20,6 +20,9 @@ spec:
         - containerPort: 1883
           name: mqtt
           protocol: TCP
+        - containerPort: 8883
+          name: mqtts
+          protocol: TCP
         env:
         - name: HONO_CLIENT_NAME
           value: Hono MQTT Adapter
@@ -33,14 +36,23 @@ spec:
           value: secret
         - name: HONO_CLIENT_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
+        - name: HONO_CLIENT_HOSTNAME_VERIFICATION_REQUIRED
+          value: "false"
         - name: HONO_MQTT_BIND_ADDRESS
           value: 0.0.0.0
+        - name: HONO_MQTT_INSECURE_PORT_BIND_ADDRESS
+          value: 0.0.0.0
+        - name: HONO_MQTT_INSECURE_PORT_ENABLED
+          value: "true"
+        - name: HONO_MQTT_KEY_PATH
+          value: /etc/hono/certs/mqtt-adapter-key.pem
+        - name: HONO_MQTT_CERT_PATH
+          value: /etc/hono/certs/mqtt-adapter-cert.pem
         - name: HONO_MQTT_MAX_INSTANCES
           value: "1"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
-        - name: HONO_CLIENT_HOSTNAME_VERIFICATION_REQUIRED
-          value: "false"
         livenessProbe:
           tcpSocket:
-            port: mqtt
+            port: 1883
+            initialDelaySeconds: 20

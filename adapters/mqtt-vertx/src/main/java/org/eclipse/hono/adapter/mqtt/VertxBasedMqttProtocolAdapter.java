@@ -18,7 +18,8 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.AbstractServiceBase;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,8 @@ import org.springframework.stereotype.Component;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.mqtt.MqttEndpoint;
@@ -43,21 +44,54 @@ import io.vertx.proton.ProtonClientOptions;
  */
 @Component
 @Scope("prototype")
-public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
+public class VertxBasedMqttProtocolAdapter extends AbstractServiceBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedMqttProtocolAdapter.class);
 
     private static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
     private static final String TELEMETRY_ENDPOINT = "telemetry";
     private static final String EVENT_ENDPOINT = "event";
+    private static final int IANA_MQTT_PORT = 1883;
+    private static final int IANA_SECURE_MQTT_PORT = 8883;
 
     private HonoClient hono;
-    private ServiceConfigProperties config;
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier
             = (tenant, resultHandler) -> hono.getOrCreateEventSender(tenant, resultHandler);
     private final BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier
             = (tenant, resultHandler) -> hono.getOrCreateTelemetrySender(tenant, resultHandler);
     private MqttServer server;
+    private MqttServer insecureServer;
+
+    @Override
+    public int getPortDefaultValue() {
+        return IANA_SECURE_MQTT_PORT;
+    }
+
+    public int getInsecurePortDefaultValue() {
+        return IANA_MQTT_PORT;
+    }
+
+    @Override
+    public int getPort() {
+        if (server != null) {
+            return server.actualPort();
+        } else if (isSecurePortEnabled()) {
+            return getConfig().getPort(getPortDefaultValue());
+        } else {
+            return Constants.PORT_UNCONFIGURED;
+        }
+    }
+
+    @Override
+    public int getInsecurePort() {
+        if (insecureServer != null) {
+            return insecureServer.actualPort();
+        } else if (isInsecurePortEnabled()) {
+            return getConfig().getInsecurePort(getInsecurePortDefaultValue());
+        } else {
+            return Constants.PORT_UNCONFIGURED;
+        }
+    }
 
     /**
      * Sets the client to use for connecting to the Hono server.
@@ -70,42 +104,55 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
         this.hono = Objects.requireNonNull(honoClient);
     }
 
-    /**
-     * Sets configuration properties.
-     * 
-     * @param properties The configuration properties to use.
-     * @throws NullPointerException if properties is {@code null}.
-     */
-    @Autowired
-    public void setConfig(final ServiceConfigProperties properties) {
-        this.config = Objects.requireNonNull(properties);
+    private Future<MqttServer> bindSecureMqttServer() {
+
+        if (isSecurePortEnabled()) {
+            MqttServerOptions options = new MqttServerOptions();
+            options
+                .setHost(getConfig().getBindAddress())
+                .setPort(determineSecurePort())
+                .setMaxMessageSize(getConfig().getMaxPayloadSize());
+            addTlsKeyCertOptions(options);
+            addTlsTrustOptions(options);
+            return bindMqttServer(options);
+        } else {
+            return Future.succeededFuture();
+        }
     }
 
-    private void bindMqttServer(final Future<Void> startFuture) {
+    private Future<MqttServer> bindInsecureMqttServer() {
 
-        MqttServerOptions options = new MqttServerOptions();
-        options
-            .setHost(config.getBindAddress())
-            .setPort(config.getPort())
-            .setMaxMessageSize(config.getMaxPayloadSize());
-        LOG.info("limiting size of inbound message payload to {} bytes", config.getMaxPayloadSize());
+        if (isInsecurePortEnabled()) {
+            MqttServerOptions options = new MqttServerOptions();
+            options
+                .setHost(getConfig().getInsecurePortBindAddress())
+                .setPort(determineInsecurePort())
+                .setMaxMessageSize(getConfig().getMaxPayloadSize());
+            return bindMqttServer(options);
+        } else {
+            return Future.succeededFuture();
+        }
+    }
 
-        this.server = MqttServer.create(this.vertx, options);
+    private Future<MqttServer> bindMqttServer(final MqttServerOptions options) {
 
-        this.server
-                .endpointHandler(this::handleEndpointConnection)
-                .listen(done -> {
+        final Future<MqttServer> result = Future.future();
+        MqttServer server = MqttServer.create(this.vertx, options);
 
-                    if (done.succeeded()) {
-                        LOG.info("Hono MQTT adapter running on {}:{}", config.getBindAddress(), this.server.actualPort());
-                        startFuture.complete();
-                    } else {
-                        LOG.error("error while starting up Hono MQTT adapter", done.cause());
-                        startFuture.fail(done.cause());
-                    }
+        server
+            .endpointHandler(this::handleEndpointConnection)
+            .listen(done -> {
 
-                });
+                if (done.succeeded()) {
+                    LOG.info("Hono MQTT protocol adapter running on {}:{}", getConfig().getBindAddress(), server.actualPort());
+                    result.complete(server);
+                } else {
+                    LOG.error("error while starting up Hono MQTT adapter", done.cause());
+                    result.fail(done.cause());
+                }
 
+            });
+        return result;
     }
 
     private void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
@@ -121,13 +168,23 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
     }
 
     @Override
-    public void start(Future<Void> startFuture) throws Exception {
+    public void start(final Future<Void> startFuture) throws Exception {
 
         if (hono == null) {
             startFuture.fail("Hono client must be set");
         } else {
-            this.bindMqttServer(startFuture);
-            this.connectToHono(null);
+            LOG.info("limiting size of inbound message payload to {} bytes", getConfig().getMaxPayloadSize());
+            checkPortConfiguration()
+                .compose(s -> bindSecureMqttServer())
+                .compose(secureServer -> {
+                    this.server = secureServer;
+                    return bindInsecureMqttServer();
+                })
+                .compose(insecureServer -> {
+                    this.insecureServer = insecureServer;
+                    this.connectToHono(null);
+                    startFuture.complete();
+                }, startFuture);
         }
     }
 
@@ -151,13 +208,22 @@ public class VertxBasedMqttProtocolAdapter extends AbstractVerticle {
         } else {
             serverTracker.complete();
         }
-        serverTracker.compose(d -> {
-            if (this.hono != null) {
-                this.hono.shutdown(shutdownTracker.completer());
-            } else {
-                shutdownTracker.complete();
-            }
-        }, shutdownTracker);
+
+        Future<Void> insecureServerTracker = Future.future();
+        if (this.insecureServer != null) {
+            this.insecureServer.close(insecureServerTracker.completer());
+        } else {
+            insecureServerTracker.complete();
+        }
+
+        CompositeFuture.all(serverTracker, insecureServerTracker)
+            .compose(d -> {
+                if (this.hono != null) {
+                    this.hono.shutdown(shutdownTracker.completer());
+                } else {
+                    shutdownTracker.complete();
+                }
+            }, shutdownTracker);
     }
 
     private void handleEndpointConnection(final MqttEndpoint endpoint) {
