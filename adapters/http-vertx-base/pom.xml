@@ -44,6 +44,10 @@
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-base</artifactId>
+    </dependency>
   </dependencies>
 
 </project>

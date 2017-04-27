@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -38,6 +38,7 @@ import io.vertx.proton.ProtonClientOptions;
 public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     HonoClient honoClient;
+    ServiceConfigProperties config;
 
     /**
      * Creates a 
@@ -46,6 +47,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void setup() {
 
         honoClient = mock(HonoClient.class);
+        config = new ServiceConfigProperties();
+        config.setInsecurePortEnabled(true);
     }
 
     /**
@@ -61,8 +64,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // GIVEN an adapter with a client provided http server
         HttpServer server = getHttpServer(false);
         AbstractVertxBasedHttpProtocolAdapter adapter = getAdapter(mock(Router.class), null);
-        adapter.setConfig(new ServiceConfigProperties());
-        adapter.setHttpServer(server);
+        adapter.setConfig(config);
+        adapter.setInsecureHttpServer(server);
         adapter.setHonoClient(honoClient);
 
         // WHEN starting the adapter
@@ -106,8 +109,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             }
         };
 
-        adapter.setConfig(new ServiceConfigProperties());
-        adapter.setHttpServer(server);
+        adapter.setConfig(config);
+        adapter.setInsecureHttpServer(server);
         adapter.setHonoClient(honoClient);
 
         // WHEN starting the adapter
@@ -148,7 +151,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             }
         };
 
-        adapter.setConfig(new ServiceConfigProperties());
+        adapter.setConfig(config);
         adapter.setHttpServer(server);
         adapter.setHonoClient(honoClient);
 

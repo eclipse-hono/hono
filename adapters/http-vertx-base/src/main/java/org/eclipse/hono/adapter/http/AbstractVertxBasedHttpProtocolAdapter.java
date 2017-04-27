@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -25,14 +25,15 @@ import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.AbstractServiceBase;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -51,7 +52,7 @@ import io.vertx.proton.ProtonClientOptions;
  * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol. 
  * It provides access to the Telemetry and Event API. 
  */
-public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVerticle {
+public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractServiceBase {
 
     /**
      * The <em>application/json</em> content type.
@@ -68,18 +69,56 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     private String activeProfiles;
 
     private HttpServer server;
+    private HttpServer insecureServer;
     private HonoClient hono;
-    private ServiceConfigProperties config;
 
     private BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier;
     private BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier;
 
     /**
-     * Sets the http server instance to use for this adapter.
+     * @return 8443
+     */
+    @Override
+    public final int getPortDefaultValue() {
+        return 8443;
+    }
+
+    /**
+     * @return 8080
+     */
+    @Override
+    public final int getInsecurePortDefaultValue() {
+        return 8080;
+    }
+
+    @Override
+    public int getPort() {
+        if (server != null) {
+            return server.actualPort();
+        } else if (isSecurePortEnabled()) {
+            return getConfig().getPort(getPortDefaultValue());
+        } else {
+            return Constants.PORT_UNCONFIGURED;
+        }
+    }
+
+    @Override
+    public int getInsecurePort() {
+        if (insecureServer != null) {
+            return insecureServer.actualPort();
+        } else if (isInsecurePortEnabled()) {
+            return getConfig().getInsecurePort(getInsecurePortDefaultValue());
+        } else {
+            return Constants.PORT_UNCONFIGURED;
+        }
+    }
+
+    /**
+     * Sets the http server instance configured to serve requests over a TLS secured socket.
      * <p>
      * If no server is set using this method, then a server instance is created during
      * startup of this adapter based on the <em>config</em> properties and the server options
-     * returned by the <em>getHttpServerOptions</em> method.
+     * returned by {@link #getHttpServerOptions()}.
      * 
      * @param server The http server.
      * @throws NullPointerException if server is {@code null}.
@@ -92,6 +131,27 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
             throw new IllegalArgumentException("http server must not be started already");
         } else {
             this.server = server;
+        }
+    }
+
+    /**
+     * Sets the http server instance configured to serve requests over a plain socket.
+     * <p>
+     * If no server is set using this method, then a server instance is created during
+     * startup of this adapter based on the <em>config</em> properties and the server options
+     * returned by {@link #getInsecureHttpServerOptions()}.
+     * 
+     * @param server The http server.
+     * @throws NullPointerException if server is {@code null}.
+     * @throws IllegalArgumentException if the server is already started and listening on an address/port.
+     */
+    @Autowired(required = false)
+    public final void setInsecureHttpServer(final HttpServer server) {
+        Objects.requireNonNull(server);
+        if (server.actualPort() > 0) {
+            throw new IllegalArgumentException("http server must not be started already");
+        } else {
+            this.insecureServer = server;
         }
     }
 
@@ -115,26 +175,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
         return hono;
     }
 
-    /**
-     * Sets configuration properties.
-     * 
-     * @param properties The configuration properties to use.
-     * @throws NullPointerException if properties is {@code null}.
-     */
-    @Autowired
-    public final void setConfig(final ServiceConfigProperties properties) {
-        this.config = Objects.requireNonNull(properties);
-    }
-
-    /**
-     * Gets the properties of the Hono server this adapter is interacting with.
-     * 
-     * @return The configuration properties.
-     */
-    public final ServiceConfigProperties getConfig() {
-        return config;
-    }
-
     @Override
     public final void start(Future<Void> startFuture) throws Exception {
 
@@ -144,27 +184,27 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
             eventSenderSupplier = (tenant, resultHandler) -> getHonoClient().getOrCreateEventSender(tenant, resultHandler);
             telemetrySenderSupplier = (tenant, resultHandler) -> getHonoClient().getOrCreateTelemetrySender(tenant, resultHandler);
 
-            Future<Void> preStartupFuture = Future.future();
-            preStartup(preStartupFuture);
-            preStartupFuture.compose(v -> {
-                Future<Void> httpServerTracker = Future.future();
-                Router router = createRouter();
-                if (router == null) {
-                    httpServerTracker.fail("no router configured");
-                } else {
-                    addRoutes(router);
-                    bindHttpServer(router, httpServerTracker);
+            checkPortConfiguration()
+                .compose(s -> preStartup())
+                .compose(s -> {
+                    Router router = createRouter();
+                    if (router == null) {
+                        return Future.failedFuture("no router configured");
+                    } else {
+                        addRoutes(router);
+                        return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
+                    }
+                })
+                .compose(s -> {
                     connectToHono(null);
-                }
-                return httpServerTracker; 
-            }).compose(ar -> {
-                try {
-                    onStartupSuccess();
-                } catch (Exception e) {
-                    LOG.error("error in onStartupSuccess", e);
-                }
-                startFuture.complete();
-            }, startFuture);
+                    try {
+                        onStartupSuccess();
+                        startFuture.complete();
+                    } catch (Exception e) {
+                        LOG.error("error in onStartupSuccess", e);
+                        startFuture.fail(e);
+                    }
+                }, startFuture);
         }
     }
 
@@ -173,12 +213,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
      * <p>
      * May be overridden by sub-classes to provide additional startup handling.
      * 
-     * @param startFuture The future that needs to complete for the startup process to proceed. If this future
-     *                    is failed, the adapter does not start up.
+     * @return A future indicating the outcome of the operation. The start up process fails if the returned future fails.
      */
-    protected void preStartup(final Future<Void> startFuture) {
+    protected Future<Void> preStartup() {
 
-        startFuture.complete();
+        return Future.succeededFuture();
     }
 
     /**
@@ -206,8 +245,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     protected Router createRouter() {
 
         final Router router = Router.router(vertx);
-        LOG.info("limiting size of inbound request body to {} bytes", config.getMaxPayloadSize());
-        router.route().handler(BodyHandler.create().setBodyLimit(config.getMaxPayloadSize()));
+        LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
+        router.route().handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize()));
 
         String statusResourcePath = getStatusResourcePath();
         if (statusResourcePath != null) {
@@ -241,9 +280,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     protected abstract void addRoutes(final Router router);
 
     /**
-     * Gets the options to use for creating the http server.
+     * Gets the options to use for creating the TLS secured http server.
      * <p>
-     * Subclasses may override this method in order to customize the http server.
+     * Subclasses may override this method in order to customize the server.
      * <p>
      * This method returns default options with the host and port being set to the corresponding values
      * from the <em>config</em> properties and using a maximum chunk size of 4096 bytes.
@@ -253,28 +292,78 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     protected HttpServerOptions getHttpServerOptions() {
 
         HttpServerOptions options = new HttpServerOptions();
-        options.setHost(config.getBindAddress()).setPort(config.getPort()).setMaxChunkSize(4096);
+        options.setHost(getConfig().getBindAddress()).setPort(getConfig().getPort(getPortDefaultValue())).setMaxChunkSize(4096);
+        addTlsKeyCertOptions(options);
+        addTlsTrustOptions(options);
         return options;
     }
 
-    private void bindHttpServer(final Router router, final Future<Void> startFuture) {
+    /**
+     * Gets the options to use for creating the insecure http server.
+     * <p>
+     * Subclasses may override this method in order to customize the server.
+     * <p>
+     * This method returns default options with the host and port being set to the corresponding values
+     * from the <em>config</em> properties and using a maximum chunk size of 4096 bytes.
+     * 
+     * @return The http server options.
+     */
+    protected HttpServerOptions getInsecureHttpServerOptions() {
 
-        if (server == null) {
-            server = vertx.createHttpServer(getHttpServerOptions());
-        }
-        server.requestHandler(router::accept).listen(done -> {
-            if (done.succeeded()) {
-                LOG.info("adapter running on {}:{}", config.getBindAddress(), server.actualPort());
-                startFuture.complete();
-            } else {
-                LOG.error("error while starting up adapter", done.cause());
-                startFuture.fail(done.cause());
+        HttpServerOptions options = new HttpServerOptions();
+        options.setHost(getConfig().getInsecurePortBindAddress()).setPort(getConfig().getInsecurePort(getInsecurePortDefaultValue())).setMaxChunkSize(4096);
+        return options;
+    }
+
+    private Future<HttpServer> bindSecureHttpServer(final Router router) {
+
+        if (isSecurePortEnabled()) {
+            Future<HttpServer> result = Future.future();
+            final String bindAddress = server == null ? getConfig().getBindAddress() : "?";
+            if (server == null) {
+                server = vertx.createHttpServer(getHttpServerOptions());
             }
-        });
+            server.requestHandler(router::accept).listen(done -> {
+                if (done.succeeded()) {
+                    LOG.info("secure http server listening on {}:{}", bindAddress, server.actualPort());
+                    result.complete(done.result());
+                } else {
+                    LOG.error("error while starting up secure http server", done.cause());
+                    result.fail(done.cause());
+                }
+            });
+            return result;
+        } else {
+            return Future.succeededFuture();
+        }
+    }
+
+    private Future<HttpServer> bindInsecureHttpServer(final Router router) {
+
+        if (isInsecurePortEnabled()) {
+            Future<HttpServer> result = Future.future();
+            final String bindAddress = insecureServer == null ? getConfig().getInsecurePortBindAddress() : "?";
+            if (insecureServer == null) {
+                insecureServer = vertx.createHttpServer(getInsecureHttpServerOptions());
+            }
+            insecureServer.requestHandler(router::accept).listen(done -> {
+                if (done.succeeded()) {
+                    LOG.info("insecure http server listening on {}:{}", bindAddress, insecureServer.actualPort());
+                    result.complete(done.result());
+                } else {
+                    LOG.error("error while starting up insecure http server", done.cause());
+                    result.fail(done.cause());
+                }
+            });
+            return result;
+        } else {
+            return Future.succeededFuture();
+        }
     }
 
     @Override
     public final void stop(Future<Void> stopFuture) throws Exception {
+
         try {
             preShutdown();
         } catch (Exception e) {
@@ -298,17 +387,25 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
         } else {
             serverStopTracker.complete();
         }
-        serverStopTracker.compose(v -> {
-            Future<Void> honoClientStopTracker = Future.future();
-            if (hono != null) {
-                hono.shutdown(honoClientStopTracker.completer());
-            } else {
-                honoClientStopTracker.complete();
-            }
-            return honoClientStopTracker;
-        }).compose(v -> {
-            postShutdown(shutdownTracker);
-        }, shutdownTracker);
+
+        Future<Void> insecureServerStopTracker = Future.future();
+        if (insecureServer != null) {
+            insecureServer.close(insecureServerStopTracker.completer());
+        } else {
+            insecureServerStopTracker.complete();
+        }
+
+        CompositeFuture.all(serverStopTracker, insecureServerStopTracker)
+            .compose(v -> {
+                Future<Void> honoClientStopTracker = Future.future();
+                if (hono != null) {
+                    hono.shutdown(honoClientStopTracker.completer());
+                } else {
+                    honoClientStopTracker.complete();
+                }
+                return honoClientStopTracker;
+            }).compose(v -> postShutdown())
+            .compose(s -> shutdownTracker.complete(), shutdownTracker);
     }
 
     /**
@@ -323,10 +420,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
      * Invoked after the Adapter has been shutdown successfully.
      * May be overridden by sub-classes to provide further shutdown handling.
      * 
-     * @param stopFuture  a future that has to be completed when this operation is finished
+     * @return A future that has to be completed when this operation is finished.
      */
-    protected void postShutdown(final Future<Void> stopFuture) {
-        stopFuture.complete();
+    protected Future<Void> postShutdown() {
+        return Future.succeededFuture();
     }
 
     /**

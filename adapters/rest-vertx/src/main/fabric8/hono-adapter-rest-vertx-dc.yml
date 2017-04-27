@@ -20,6 +20,9 @@ spec:
         - containerPort: 8080
           name: http
           protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
         env:
         - name: HONO_CLIENT_NAME
           value: Hono REST Adapter
@@ -35,19 +38,25 @@ spec:
           value: /etc/hono/certs/trusted-certs.pem
         - name: HONO_HTTP_BIND_ADDRESS
           value: 0.0.0.0
+        - name: HONO_HTTP_INSECURE_PORT_BIND_ADDRESS
+          value: 0.0.0.0
+        - name: HONO_HTTP_INSECURE_PORT_ENABLED
+          value: "true"
+        - name: HONO_HTTP_KEY_PATH
+          value: /etc/hono/certs/rest-adapter-key.pem
+        - name: HONO_HTTP_CERT_PATH
+          value: /etc/hono/certs/rest-adapter-cert.pem
         - name: HONO_HTTP_MAX_INSTANCES
           value: "1"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: HONO_CLIENT_HOSTNAME_VERIFICATION_REQUIRED
           value: "false"
-        volumeMounts:
-        - name: ${project.artifactId}-volume
-          mountPath: /home/hono/file-uploads
         livenessProbe:
           httpGet:
             path: "/status"
-            port: http
+            port: 8080
+            initialDelaySeconds: 20
       volumes:
       - name: ${project.artifactId}-volume
         emptyDir: {}

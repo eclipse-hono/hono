@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -17,7 +17,6 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -61,11 +60,7 @@ public class Config extends AdapterConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.http")
     public ServiceConfigProperties honoServerProperties() {
-        ServiceConfigProperties props = new ServiceConfigProperties();
-        if (props.getPort() == Constants.PORT_UNCONFIGURED) {
-            props.setPort(8080); // set default port
-        }
-        return props;
+        return new ServiceConfigProperties();
     }
 
     @Bean

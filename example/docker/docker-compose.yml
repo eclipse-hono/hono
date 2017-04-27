@@ -43,6 +43,7 @@ services:
       - hono-net
     ports:
       - "8080:8080"
+      - "8443:8443"
     environment:
       - HONO_CLIENT_NAME=Hono REST Adapter
       - HONO_CLIENT_HOST=hono
@@ -51,6 +52,10 @@ services:
       - HONO_CLIENT_PASSWORD=secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_HTTP_BIND_ADDRESS=0.0.0.0
+      - HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0
+      - HONO_HTTP_INSECURE_PORT_ENABLED=true
+      - HONO_HTTP_KEY_PATH=/etc/hono/certs/rest-adapter-key.pem
+      - HONO_HTTP_CERT_PATH=/etc/hono/certs/rest-adapter-cert.pem
       - HONO_HTTP_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
 
@@ -69,9 +74,9 @@ services:
       - HONO_CLIENT_PASSWORD=secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_MQTT_BIND_ADDRESS=0.0.0.0
-      - HONO_MQTT_KEY_PATH=/etc/hono/certs/mqtt-adapter-key.pem
-      - HONO_MQTT_CERT_PATH=/etc/hono/certs/mqtt-adapter-cert.pem
       - HONO_MQTT_INSECURE_PORT_BIND_ADDRESS=0.0.0.0
       - HONO_MQTT_INSECURE_PORT_ENABLED=true
+      - HONO_MQTT_KEY_PATH=/etc/hono/certs/mqtt-adapter-key.pem
+      - HONO_MQTT_CERT_PATH=/etc/hono/certs/mqtt-adapter-cert.pem
       - HONO_MQTT_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
