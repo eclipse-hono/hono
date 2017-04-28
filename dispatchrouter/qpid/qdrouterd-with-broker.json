@@ -56,16 +56,16 @@
     "saslPassword": "artemis"
   }],
 
-  ["linkRoute", {
-    "prefix": "event.",
+  ["linkRoutePattern", {
+    "prefix": "event/",
     "dir": "in",
-    "connection": "broker"
+    "connector": "broker"
   }],
 
-  ["linkRoute", {
-    "prefix": "event.",
+  ["linkRoutePattern", {
+    "prefix": "event/",
     "dir": "out",
-    "connection": "broker"
+    "connector": "broker"
   }],
 
   ["fixedAddress", {

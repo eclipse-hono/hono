@@ -10,10 +10,17 @@ services:
     image: eclipsehono/dispatch-router:${project.version}
     networks:
       - hono-net
-    command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
+    command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd-with-broker.json
     ports:
       - "15671:5671"
       - "15672:5672"
+
+  broker:
+    image: eclipsehono/broker:${project.version}
+    networks:
+      - hono-net
+    ports:
+      - "5672:5672"
 
   hono:
     image: eclipsehono/hono-server:${project.version}
