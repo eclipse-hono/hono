@@ -17,7 +17,7 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -393,12 +393,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractVert
     protected static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds,
             final String detail, final String contentType) {
 
-        endWithStatus(
-                response,
-                HTTP_UNAVAILABLE,
-                Collections.singletonMap(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "text/plain"),
-                detail,
-                contentType);
+        Map<CharSequence, CharSequence> headers = new HashMap<>(2);
+        headers.put(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "text/plain");
+        headers.put(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
+        endWithStatus(response, HTTP_UNAVAILABLE, headers, detail, contentType);
     }
 
     /**
