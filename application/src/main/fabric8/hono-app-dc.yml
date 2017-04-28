@@ -37,8 +37,6 @@ spec:
           value: /etc/hono/certs/hono-cert.pem
         - name: HONO_SERVER_MAX_INSTANCES
           value: "1"
-        - name: HONO_AUTHORIZATION_PERMISSIONS_PATH
-          value: file:/etc/hono/permissions.json
         - name: HONO_SERVER_BIND_ADDRESS
           value: 0.0.0.0
         - name: LOGGING_CONFIG
