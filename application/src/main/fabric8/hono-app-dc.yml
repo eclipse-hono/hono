@@ -20,6 +20,9 @@ spec:
         - containerPort: 5671
           name: amqps
           protocol: TCP
+        - containerPort: 5672
+          name: amqp
+          protocol: TCP
         env:
         - name: HONO_DOWNSTREAM_HOST
           value: ${DISPATCH_ROUTER_SERVICE_HOST}
@@ -39,12 +42,14 @@ spec:
           value: "1"
         - name: HONO_SERVER_BIND_ADDRESS
           value: 0.0.0.0
+        - name: HONO_SERVER_INSECURE_PORT_ENABLED
+          value: "true"
+        - name: HONO_SERVER_INSECURE_PORT_BIND_ADDRESS
+          value: 0.0.0.0
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
         - name: SPRING_PROFILES_ACTIVE
           value: default,dev
-        - name: HONO_REGISTRATION_FILENAME
-          value: /registry/device-identities.json
         - name: HONO_DOWNSTREAM_HOSTNAME_VERIFICATION_REQUIRED
           value: "false"
         volumeMounts:
@@ -52,7 +57,7 @@ spec:
           mountPath: /registry
         livenessProbe:
           tcpSocket:
-            port: amqps
+            port: 5672
       volumes:
       - name: ${project.artifactId}-volume
         persistentVolumeClaim:
