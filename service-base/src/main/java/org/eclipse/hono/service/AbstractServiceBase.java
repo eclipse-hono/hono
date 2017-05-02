@@ -239,7 +239,7 @@ public abstract class AbstractServiceBase extends AbstractVerticle {
     }
 
     /**
-     * Copies TLS key & certificate configuration to a given set of server options.
+     * Copies TLS key &amp; certificate configuration to a given set of server options.
      * <p>
      * If <em>config</em> contains key &amp; certificate configuration it is added to
      * the given server options and the <em>ssl</em> flag is set to {@code true}.

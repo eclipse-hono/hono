@@ -41,7 +41,7 @@ import io.vertx.proton.ProtonSender;
 /**
  * An {@code Endpoint} for managing device registration information.
  * <p>
- * This endpoint implements Hono's <a href="">Device Registration API</a>.
+ * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a>.
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */
