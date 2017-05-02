@@ -213,7 +213,7 @@ The following table provides an overview of the properties shared by all request
 | *subject*        | yes       | *properties*             | UTF-8 *string* | MUST be set to the value defined by the particular operation being invoked. |
 | *correlation-id* | no        | *properties*             | *message-id*   | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
 | *message-id*     | yes       | *properties*             | UTF-8 *string* | MUST contain an identifier that uniquely identifies the message at the sender side. |
-| *reply-to*       | yes       | *properties*             | UTF-8 *string*  | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}}). |
+| *reply-to*       | yes       | *properties*             | UTF-8 *string*  | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
 
 ### Standard Response Properties
 
@@ -251,7 +251,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *type*           | *yes*     | *string*   |               | The credential type name. The value may be arbitrarily chosen by clients but SHOULD reflect the particular type of authentication mechanism the credentials are to be used with. Possible values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   |               | The identity that the device should be authenticated as. |
 | *enabled*        | *no*      | *boolean*  | *true*        | If set to *false* the credentials are not supposed to be used to authenticate devices any longer. This may e.g. be used to disable a particular mechanism for authenticating the device. **NB** It is up to the discretion of the protocol adapter to make use of this information. |
-| *secrets*        | *yes*     | *array*    |               | A list of secrets scoped to a particular time period. See [Secrets Format]({{< relref="#secrets-format" >}}) for details. |
+| *secrets*        | *yes*     | *array*    |               | A list of secrets scoped to a particular time period. See [Secrets Format]({{< relref "#secrets-format" >}}) for details. |
 
 For each set of credentials the combination of *auth-id* and *type* MUST be unique within a tenant.
 
@@ -268,7 +268,7 @@ The table below contains the properties used to define the validity period of a 
 
 ### Examples
 
-Below is an example for a payload containing [a hashed password]({{< ref "#hashed-password" >}}) for device `4711` with username `billie` using SHA512 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`). Note that the payload does not contain a `not-before` property, thus it may be used immediately up until X-mas eve 2017.
+Below is an example for a payload containing [a hashed password]({{< relref "#hashed-password" >}}) for device `4711` with username `billie` using SHA512 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`). Note that the payload does not contain a `not-before` property, thus it may be used immediately up until X-mas eve 2017.
 
 ~~~json
 {
@@ -285,7 +285,7 @@ Below is an example for a payload containing [a hashed password]({{< ref "#hashe
 }
 ~~~
 
-The next example contains two [pre-shared secrets]({{< ref "#pre-shared-key" >}}) with overlapping validity periods for device `myDevice` with PSK identity `jane`.
+The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" >}}) with overlapping validity periods for device `myDevice` with PSK identity `jane`.
 
 ~~~json
 {
@@ -375,4 +375,4 @@ Example:
 | *auth-id*        | *yes*     | *string*   | The PSK identity. |
 | *key*            | *yes*     | *string*   | The Base64 encoded bytes representing the shared (secret) key. |
 
-**NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref="#credential-verification" >}}).
+**NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
