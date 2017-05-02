@@ -114,7 +114,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
             final JsonObject body = regMsg.body();
             final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
             final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-            final String action = body.getString(RegistrationConstants.APP_PROPERTY_ACTION);
+            final String action = body.getString(RegistrationConstants.FIELD_ACTION);
 
             switch (action) {
             case ACTION_GET:
@@ -219,13 +219,13 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
      * Wraps a given device ID and registration data into a JSON structure suitable
      * to be returned to clients as the result of a registration operation.
      * 
-     * @param id The device ID.
+     * @param deviceId The device ID.
      * @param data The registration data.
      * @return The JSON structure.
      */
-    protected final static JsonObject getResultPayload(final String id, final JsonObject data) {
+    protected final static JsonObject getResultPayload(final String deviceId, final JsonObject data) {
 
-        return new JsonObject().put(FIELD_HONO_ID, id).put(FIELD_DATA, data);
+        return new JsonObject().put(FIELD_HONO_ID, deviceId).put(FIELD_DATA, data);
     }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -26,6 +26,7 @@ import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilde
 import org.eclipse.hono.service.registration.RegistrationEndpoint;
 import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.util.AggregatingInvocationResultHandler;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -185,8 +186,8 @@ public class StandaloneRegistrationApiTest {
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             JsonObject payload = s.result().getPayload();
             ctx.assertNotNull(payload);
-            ctx.assertEquals(DEVICE_1, payload.getString("id"));
-            JsonObject data = payload.getJsonObject("data");
+            ctx.assertEquals(DEVICE_1, payload.getString(RegistrationConstants.FIELD_HONO_ID));
+            JsonObject data = payload.getJsonObject(RegistrationConstants.FIELD_DATA);
             ctx.assertEquals("lwm2m", data.getString("ep"));
             ok.complete();
         });

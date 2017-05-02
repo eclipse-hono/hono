@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.util;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Objects;
@@ -26,6 +27,8 @@ import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -57,6 +60,8 @@ public final class MessageHelper {
     public static final String APP_PROPERTY_RESOURCE          = "resource";
 
     public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID          = "x-opt-app-correlation-id";
+
+    private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
 
     private MessageHelper() {
     }
@@ -113,22 +118,32 @@ public final class MessageHelper {
      * 
      * @param msg The AMQP 1.0 message to parse the body of.
      * @return The message body parsed into a JSON object or {@code null} if the message does not have a
-     *         <em>Data</em> or <em>AmqpValue</em> section or the message's content type is not
-     *         {@code application/json}.
-     * @throws DecodeException if the body of the message cannot be parsed into a JSON object.
+     *         <em>Data</em> nor an <em>AmqpValue</em> section or cannot be parsed into a JSON object.
+     * @throws NullPointerException if the message is {@code null}.
      */
     public static JsonObject getJsonPayload(final Message msg) {
+
+        Objects.requireNonNull(msg);
         JsonObject result = null;
-        if (msg.getBody() != null && msg.getContentType() != null && msg.getContentType().startsWith("application/json")) {
-            if (msg.getBody() instanceof Data) {
-                Data body = (Data) msg.getBody();
-                result = new JsonObject(new String(body.getValue().getArray()));
-            } else if (msg.getBody() instanceof AmqpValue) {
-                AmqpValue body = (AmqpValue) msg.getBody();
-                if (body.getValue() instanceof String) {
-                    result = new JsonObject((String) body.getValue());
+        if (msg.getBody() != null) {
+
+            try {
+                if (msg.getBody() instanceof Data) {
+                    Data body = (Data) msg.getBody();
+                    result = new JsonObject(new String(body.getValue().getArray(), StandardCharsets.UTF_8));
+                } else if (msg.getBody() instanceof AmqpValue) {
+                    AmqpValue body = (AmqpValue) msg.getBody();
+                    if (body.getValue() instanceof String) {
+                        result = new JsonObject((String) body.getValue());
+                    }
+                } else {
+                    LOG.debug("unsupported body type [{}]", msg.getBody().getClass().getName());
                 }
+            } catch (DecodeException e) {
+                LOG.debug("cannot parse payload", e);
             }
+        } else {
+            LOG.debug("message has no body");
         }
         return result;
     }

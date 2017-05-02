@@ -10,6 +10,8 @@ Not released yet.
 
 ### API Changes
 
+The following backwards incompatible changes have been made to existing API, code depending on these APIs needs to be updated accordingly:
+
 1. Renamed several configuration classes in order to better reflect their general usability for configuring client and server components.
 
   * renamed `org.eclipse.hono.config.AbstractHonoConfig` to `org.eclipse.hono.config.AbstractConfig`
@@ -30,3 +32,8 @@ Not released yet.
   * renamed package `org.eclipse.hono.registration` to `org.eclipse.hono.service.registration`
   * moved `org.eclipse.hono.registration.impl.RegistrationEndpoint` to `org.eclipse.hono.service.registration.RegistrationEndpoint`
   * moved `org.eclipse.hono.registration.impl.BaseRegistrationService` to `org.eclipse.hono.service.registration.BaseRegistrationService`
+
+1. Use standard AMQP 1.0 `subject` property instead of custom `action` application property in Device Registration API.
+
+1. Rename property `id` of Device Registration API's response payload to `device-id` to match the name used in Credentials API.
+

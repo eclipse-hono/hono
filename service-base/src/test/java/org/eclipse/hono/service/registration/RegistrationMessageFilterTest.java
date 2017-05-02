@@ -14,7 +14,6 @@ package org.eclipse.hono.service.registration;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
-import static org.eclipse.hono.util.RegistrationConstants.APP_PROPERTY_ACTION;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -40,10 +39,10 @@ public class RegistrationMessageFilterTest {
 
     @Test
     public void testVerifyDetectsDeviceIdMismatch() {
-        // GIVEN a valid telemetry message with device id not matching the link target
+        // GIVEN a registration message with device id not matching the link target
         final Message msg = givenAMessageHavingProperties(MY_DEVICE + "_1", ACTION_GET, MY_TENANT);
 
-        // WHEN receiving the message via a link with mismatching tenant
+        // WHEN receiving the message via a link
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
 
         // THEN message validation fails
@@ -52,10 +51,10 @@ public class RegistrationMessageFilterTest {
 
     @Test
     public void testVerifyDetectsMissingDeviceId() {
-        // GIVEN a valid telemetry message without device id
+        // GIVEN a registration message lacking the device id
         final Message msg = givenAMessageHavingProperties(null, ACTION_GET);
 
-        // WHEN receiving the message via a link with mismatching tenant
+        // WHEN receiving the message via a link
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
@@ -63,10 +62,10 @@ public class RegistrationMessageFilterTest {
     }
     @Test
     public void testVerifyDetectsMissingAction() {
-        // GIVEN a valid telemetry message without device id
+        // GIVEN a registration message lacking a valid subject
         final Message msg = givenAMessageHavingProperties(MY_DEVICE, null);
 
-        // WHEN receiving the message via a link with mismatching tenant
+        // WHEN receiving the message via a link
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
@@ -75,10 +74,10 @@ public class RegistrationMessageFilterTest {
 
     @Test
     public void testVerifySucceedsForTenantOnlyLinkTarget() {
-        // GIVEN a telemetry message for myDevice
+        // GIVEN a valid registration message for myDevice
         final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET);
 
-        // WHEN receiving the message via a link with matching target address
+        // WHEN receiving the message via a link with matching tenant-level target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation succeeds
@@ -88,10 +87,10 @@ public class RegistrationMessageFilterTest {
 
     @Test
     public void testVerifySucceedsForMatchingDevice() {
-        // GIVEN a telemetry message for myDevice
+        // GIVEN a registration message for myDevice
         final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET);
 
-        // WHEN receiving the message via a link with matching target address
+        // WHEN receiving the message via a link with matching device-level address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
 
         // THEN message validation succeeds
@@ -125,10 +124,10 @@ public class RegistrationMessageFilterTest {
 
     private Message givenAMessageHavingProperties(final String deviceId, final String action, final String tenantId) {
         final Message msg = ProtonHelper.message();
-        msg.setMessageId("msg");
+        msg.setMessageId("msg-id");
         msg.setReplyTo("reply");
+        msg.setSubject(action);
         MessageHelper.addDeviceId(msg, deviceId);
-        MessageHelper.addProperty(msg, APP_PROPERTY_ACTION, action);
         if (tenantId != null) {
             MessageHelper.addTenantId(msg, tenantId);
         }

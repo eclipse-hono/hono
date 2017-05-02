@@ -133,7 +133,7 @@ public final class TestSupport {
         final HashMap<String, String> map = new HashMap<>();
         map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(RegistrationConstants.APP_PROPERTY_ACTION, action);
+        map.put(RegistrationConstants.FIELD_ACTION, action);
         final ApplicationProperties applicationProperties = new ApplicationProperties(map);
         message.setApplicationProperties(applicationProperties);
         return message;

@@ -43,17 +43,17 @@ public final class RegistrationConstants {
     public static final String ACTION_DEREGISTER = "deregister";
     public static final String ACTION_UPDATE     = "update";
 
-    /* message fields */
+    /* message property names */
     public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
-    public static final String APP_PROPERTY_ACTION               = "action";
     public static final String APP_PROPERTY_KEY                  = "key";
     public static final String APP_PROPERTY_STATUS               = "status";
 
-    /* message payload fields */
+    /* JSON field names */
+    public static final String FIELD_ACTION                      = "action";
     public static final String FIELD_PAYLOAD                     = "payload";
     public static final String FIELD_ENABLED                     = "enabled";
     public static final String FIELD_DATA                        = "data";
-    public static final String FIELD_HONO_ID                     = "id";
+    public static final String FIELD_HONO_ID                     = "device-id";
 
 
     public static final String REGISTRATION_ENDPOINT             = "registration";
@@ -92,13 +92,15 @@ public final class RegistrationConstants {
      *  
      * @param message The AMQP 1.0 registration request message.
      * @return The registration message created from the AMQP message.
+     * @throws NullPointerException if message is {@code null}.
      * @throws DecodeException if the message contains a body that cannot be parsed into a JSON object.
      */
     public static JsonObject getRegistrationMsg(final Message message) {
+        Objects.requireNonNull(message);
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
         final String key = getKey(message);
-        final String action = getAction(message);
+        final String action = message.getSubject();
         final JsonObject payload = MessageHelper.getJsonPayload(message);
         return getRegistrationJson(action, tenantId, deviceId, key, payload);
     }
@@ -170,7 +172,7 @@ public final class RegistrationConstants {
 
     public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId, final String key, final JsonObject payload) {
         final JsonObject msg = new JsonObject();
-        msg.put(APP_PROPERTY_ACTION, action);
+        msg.put(FIELD_ACTION, action);
         msg.put(APP_PROPERTY_DEVICE_ID, deviceId);
         msg.put(APP_PROPERTY_TENANT_ID, tenantId);
         if (key != null) {
@@ -180,11 +182,6 @@ public final class RegistrationConstants {
             msg.put(FIELD_PAYLOAD, payload);
         }
         return msg;
-    }
-
-    private static String getAction(final Message msg) {
-        Objects.requireNonNull(msg);
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_ACTION, String.class);
     }
 
     private static String getKey(final Message msg) {

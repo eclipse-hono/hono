@@ -125,7 +125,7 @@ class RegistrationTestSupport {
             final String correlationId = UUID.randomUUID().toString();
             final Message message = session.createMessage();
             message.setStringProperty(APP_PROPERTY_DEVICE_ID, deviceId);
-            message.setStringProperty(APP_PROPERTY_ACTION, action);
+            message.setJMSType(action);
             message.setJMSReplyTo(reply);
             message.setJMSCorrelationID(correlationId);
 
