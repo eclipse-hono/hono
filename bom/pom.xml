@@ -52,6 +52,7 @@
     <vertx-proton.version>3.4.1</vertx-proton.version>
     <vertx-mqtt.version>3.4.1</vertx-mqtt.version>
     <jjwt.version>0.7.0</jjwt.version>
+    <grafana.version>4.2.0</grafana.version>
   </properties>
 
   <dependencyManagement>
@@ -111,6 +112,11 @@
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-jvm</artifactId>
+        <version>${dropwizard-metrics.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.dropwizard.metrics</groupId>
+        <artifactId>metrics-graphite</artifactId>
         <version>${dropwizard-metrics.version}</version>
       </dependency>
       <dependency>
