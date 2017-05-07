@@ -25,6 +25,7 @@ import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
@@ -50,9 +51,11 @@ import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol. 
- * It provides access to the Telemetry and Event API. 
+ * It provides access to the Telemetry and Event API.
+ * 
+ * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractVertxBasedHttpProtocolAdapter extends AbstractServiceBase {
+public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
 
     /**
      * The <em>application/json</em> content type.

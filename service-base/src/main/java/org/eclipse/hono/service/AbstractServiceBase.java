@@ -30,15 +30,17 @@ import java.util.Objects;
 /**
  * A base class for implementing services binding to a secure and/or a non-secure port.
  *
+ * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractServiceBase extends AbstractVerticle {
+public abstract class AbstractServiceBase<T extends ServiceConfigProperties> extends AbstractVerticle {
 
     /**
      * A logger to be shared with subclasses.
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    private ServiceConfigProperties config = new ServiceConfigProperties();
+    @SuppressWarnings("unchecked")
+    private T config = (T) new ServiceConfigProperties();
 
     /**
      * Gets the default port number on which this service listens for encrypted communication (e.g. 5671 for AMQP 1.0).
@@ -89,7 +91,7 @@ public abstract class AbstractServiceBase extends AbstractVerticle {
      * @throws NullPointerException if props is {@code null}.
      */
     @Autowired(required = false)
-    public final void setConfig(final ServiceConfigProperties props) {
+    public final void setConfig(final T props) {
         this.config = Objects.requireNonNull(props);
     }
 
@@ -98,7 +100,7 @@ public abstract class AbstractServiceBase extends AbstractVerticle {
      * 
      * @return The properties.
      */
-    public final ServiceConfigProperties getConfig() {
+    public final T getConfig() {
         return this.config;
     }
 

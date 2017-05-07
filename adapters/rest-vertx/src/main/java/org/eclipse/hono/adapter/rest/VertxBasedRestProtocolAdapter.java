@@ -20,6 +20,7 @@ import java.util.function.BiConsumer;
 
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,7 @@ import io.vertx.ext.web.RoutingContext;
  */
 @Component
 @Scope("prototype")
-public class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter {
+public class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);
 

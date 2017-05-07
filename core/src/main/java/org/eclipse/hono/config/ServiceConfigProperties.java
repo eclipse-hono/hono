@@ -20,7 +20,7 @@ import org.eclipse.hono.util.Constants;
  * A POJO for configuring common properties of server components.
  *
  */
-public final class ServiceConfigProperties extends AbstractConfig {
+public class ServiceConfigProperties extends AbstractConfig {
 
     /**
      * The loopback device address.
@@ -46,7 +46,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return The host name.
      */
-    public String getBindAddress() {
+    public final String getBindAddress() {
         return bindAddress;
     }
 
@@ -58,7 +58,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @param address  The host name or IP address.
      * @throws NullPointerException if host is {@code null}.
      */
-    public void setBindAddress(final String address) {
+    public final void setBindAddress(final String address) {
         this.bindAddress = Objects.requireNonNull(address);
     }
 
@@ -67,7 +67,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return The port number.
      */
-    public int getPort() {
+    public final int getPort() {
         return port;
     }
 
@@ -78,7 +78,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @return The configured port number or the <em>defaultPort</em> if <em>port</em> is not set.
      * @see #getPort() for more information.
      */
-    public int getPort(final int defaultPort) {
+    public final int getPort(final int defaultPort) {
 
         return port == Constants.PORT_UNCONFIGURED ? defaultPort : port;
     }
@@ -92,7 +92,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @param port The port number.
      * @throws IllegalArgumentException if port &lt; 0 or port &gt; 65535.
      */
-    public void setPort(final int port) {
+    public final void setPort(final int port) {
         if (isValidPort(port)) {
             this.port = port;
         } else {
@@ -107,7 +107,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return {@code true} if the server guarantees that no opened port is insecure.
      */
-    public boolean isInsecurePortEnabled() {
+    public final boolean isInsecurePortEnabled() {
         return insecurePortEnabled;
     }
 
@@ -118,7 +118,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @param insecurePortEnabled {@code true} if the server shall guarantee that no opened port is insecure.
      */
-    public void setInsecurePortEnabled(final boolean insecurePortEnabled) {
+    public final void setInsecurePortEnabled(final boolean insecurePortEnabled) {
         this.insecurePortEnabled = insecurePortEnabled;
     }
 
@@ -128,7 +128,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return The host name.
      */
-    public String getInsecurePortBindAddress() {
+    public final String getInsecurePortBindAddress() {
         return insecurePortBindAddress;
     }
 
@@ -140,7 +140,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @param address The host name or IP address.
      * @throws NullPointerException if address is {@code null}.
      */
-    public void setInsecurePortBindAddress(final String address) {
+    public final void setInsecurePortBindAddress(final String address) {
         this.insecurePortBindAddress = Objects.requireNonNull(address);
     }
 
@@ -149,7 +149,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return The port number.
      */
-    public int getInsecurePort() {
+    public final int getInsecurePort() {
         return insecurePort;
     }
 
@@ -160,7 +160,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @return The configured port number or the <em>defaultPort</em> if <em>insecurePort</em> is not set.
      * @see #getInsecurePort() for more information.
      */
-    public int getInsecurePort(final int defaultPort) {
+    public final int getInsecurePort(final int defaultPort) {
 
         return insecurePort == Constants.PORT_UNCONFIGURED ? defaultPort : insecurePort;
     }
@@ -176,7 +176,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @param port The port number.
      * @throws IllegalArgumentException if port &lt; 0 or port &gt; 65535.
      */
-    public void setInsecurePort(final int port) {
+    public final void setInsecurePort(final int port) {
         if (isValidPort(port)) {
             this.insecurePort = port;
             setInsecurePortEnabled(true);
@@ -191,7 +191,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @param bytes The maximum number of bytes.
      * @throws IllegalArgumentException if bytes is &lt; 128.
      */
-    public void setMaxPayloadSize(final int bytes) {
+    public final void setMaxPayloadSize(final int bytes) {
         if (bytes <= MIN_PAYLOAD_SIZE) {
             throw new IllegalArgumentException("minimum message payload size is 128 bytes");
         }
@@ -203,7 +203,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return The maximum number of bytes.
      */
-    public int getMaxPayloadSize() {
+    public final int getMaxPayloadSize() {
         return maxPayloadSize;
     }
 
@@ -212,7 +212,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return The number of seconds to wait.
      */
-    public int getStartupTimeout() {
+    public final int getStartupTimeout() {
         return startupTimeout;
     }
 
@@ -225,7 +225,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @return This instance for setter chaining.
      * @throws IllegalArgumentException if <em>seconds</em> &lt; 1.
      */
-    public ServiceConfigProperties setStartupTimeout(final int seconds) {
+    public final ServiceConfigProperties setStartupTimeout(final int seconds) {
         if (seconds < 1) {
             throw new IllegalArgumentException("startup timeout must be at least 1 second");
         }
@@ -244,7 +244,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return the number of verticles to deploy.
      */
-    public int getMaxInstances() {
+    public final int getMaxInstances() {
         if (maxInstances > 0 && maxInstances < Runtime.getRuntime().availableProcessors()) {
             return maxInstances;
         } else {
@@ -261,7 +261,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @return This instance for setter chaining.
      * @throws IllegalArgumentException if the number is &lt; 0.
      */
-    public ServiceConfigProperties setMaxInstances(final int maxVerticleInstances) {
+    public final ServiceConfigProperties setMaxInstances(final int maxVerticleInstances) {
         if (maxVerticleInstances < 0) {
             throw new IllegalArgumentException("maxInstances must be >= 0");
         }
@@ -278,7 +278,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return {@code true} if the server is configured to run in single-tenant mode.
      */
-    public boolean isSingleTenant() {
+    public final boolean isSingleTenant() {
         return singleTenant;
     }
 
@@ -294,7 +294,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @param singleTenant {@code true} if the server should support a single tenant only.
      * @return This instance for setter chaining.
      */
-    public ServiceConfigProperties setSingleTenant(final boolean singleTenant) {
+    public final ServiceConfigProperties setSingleTenant(final boolean singleTenant) {
         this.singleTenant = singleTenant;
         return this;
     }
@@ -304,7 +304,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return {@code true} if TCP traffic gets logged.
      */
-    public boolean isNetworkDebugLoggingEnabled() {
+    public final boolean isNetworkDebugLoggingEnabled() {
         return networkDebugLogging;
     }
 
@@ -316,7 +316,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @param networkDebugLogging {@code true} if TCP traffic should be logged.
      * @return This instance for setter chaining.
      */
-    public ServiceConfigProperties setNetworkDebugLoggingEnabled(final boolean networkDebugLogging) {
+    public final ServiceConfigProperties setNetworkDebugLoggingEnabled(final boolean networkDebugLogging) {
         this.networkDebugLogging = networkDebugLogging;
         return this;
     }
@@ -332,7 +332,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      *
      * @return {@code true} if the server will wait for downstream connections to be established during startup.
      */
-    public boolean isWaitForDownstreamConnectionEnabled() {
+    public final boolean isWaitForDownstreamConnectionEnabled() {
         return waitForDownstreamConnection;
     }
 
@@ -348,7 +348,7 @@ public final class ServiceConfigProperties extends AbstractConfig {
      * @param waitForConnection {@code true} if the server should wait for downstream connections to be established during startup.
      * @return This instance for setter chaining.
      */
-    public ServiceConfigProperties setWaitForDownstreamConnectionEnabled(final boolean waitForConnection) {
+    public final ServiceConfigProperties setWaitForDownstreamConnectionEnabled(final boolean waitForConnection) {
         this.waitForDownstreamConnection = waitForConnection;
         return this;
     }

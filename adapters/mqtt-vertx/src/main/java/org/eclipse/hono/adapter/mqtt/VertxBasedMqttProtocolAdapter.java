@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -44,7 +45,7 @@ import io.vertx.proton.ProtonClientOptions;
  */
 @Component
 @Scope("prototype")
-public class VertxBasedMqttProtocolAdapter extends AbstractServiceBase {
+public class VertxBasedMqttProtocolAdapter extends AbstractServiceBase<ServiceConfigProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedMqttProtocolAdapter.class);
 

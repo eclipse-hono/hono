@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -41,8 +42,9 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  * API {@link Endpoint}s. An endpoint can be used to handle messages being sent to and/or
  * received from an AMQP <em>node</em> represented by an address prefix.
  * 
+ * @param <T> The type of configuration properties this service uses.
  */
-public abstract class AmqpServiceBase extends AbstractServiceBase {
+public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
 
     // <name, node implementation>
     private final Map<String, Endpoint> endpoints = new HashMap<>();
