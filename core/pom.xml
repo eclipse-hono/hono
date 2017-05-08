@@ -98,6 +98,21 @@
      <version>${netty.version}</version>
      <scope>test</scope>
     </dependency>
+    <dependency>
+     <groupId>ch.qos.logback</groupId>
+     <artifactId>logback-classic</artifactId>
+     <scope>test</scope>
+    </dependency>
+    <dependency>
+     <groupId>io.jsonwebtoken</groupId>
+     <artifactId>jjwt</artifactId>
+    </dependency>
+    <dependency>
+     <groupId>com.fasterxml.jackson.core</groupId>
+     <artifactId>jackson-databind</artifactId>
+     <version>${jackson.version}</version>
+     <scope>runtime</scope>
+    </dependency>
   </dependencies>
 
   <build>

@@ -50,6 +50,7 @@
     <vertx-proton.version>3.4.1</vertx-proton.version>
     <vertx-mqtt.version>3.4.1</vertx-mqtt.version>
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
+    <jjwt.version>0.7.0</jjwt.version>
   </properties>
 
   <dependencyManagement>
@@ -239,6 +240,11 @@
         <groupId>org.springframework</groupId>
         <artifactId>spring-expression</artifactId>
         <version>${spring.version}</version>
+      </dependency>
+      <dependency>
+       <groupId>io.jsonwebtoken</groupId>
+       <artifactId>jjwt</artifactId>
+       <version>${jjwt.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
