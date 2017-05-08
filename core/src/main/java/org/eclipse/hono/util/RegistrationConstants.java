@@ -36,6 +36,7 @@ import io.vertx.proton.ProtonHelper;
 public final class RegistrationConstants {
 
     /* registration actions */
+    public static final String ACTION_ASSERT     = "assert";
     public static final String ACTION_REGISTER   = "register";
     public static final String ACTION_FIND       = "find";
     public static final String ACTION_GET        = "get";
@@ -50,6 +51,7 @@ public final class RegistrationConstants {
 
     /* JSON field names */
     public static final String FIELD_ACTION                      = "action";
+    public static final String FIELD_ASSERTION                   = "assertion";
     public static final String FIELD_PAYLOAD                     = "payload";
     public static final String FIELD_ENABLED                     = "enabled";
     public static final String FIELD_DATA                        = "data";
@@ -60,8 +62,8 @@ public final class RegistrationConstants {
     public static final String PATH_SEPARATOR                    = "/";
     public static final String NODE_ADDRESS_REGISTRATION_PREFIX  = REGISTRATION_ENDPOINT + PATH_SEPARATOR;
 
-    private static final List<String> ACTIONS     = Arrays.asList(ACTION_REGISTER, ACTION_FIND,
-            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE);
+    private static final List<String> ACTIONS     = Arrays.asList(ACTION_ASSERT, ACTION_REGISTER, ACTION_FIND,
+            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE, ACTION_ENABLED);
 
     /**
      * The vert.x event bus address to which inbound registration messages are published.
@@ -122,6 +124,19 @@ public final class RegistrationConstants {
             jsonObject.put(FIELD_PAYLOAD, payload);
         }
         return jsonObject;
+    }
+
+    /**
+     * Checks if a JSON message contains a given status code.
+     *  
+     * @param msg The message to check.
+     * @param expectedStatus The expected status code.
+     * @return {@code true} if the given message has a string typed <em>status</em> property and the property's value is
+     *                      is the string representation of the expected status.
+     */
+    public static boolean hasStatus(final JsonObject msg, final int expectedStatus) {
+
+        return Objects.requireNonNull(msg).getString(APP_PROPERTY_STATUS, "none").equals(Integer.toString(expectedStatus));
     }
 
     public static Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {

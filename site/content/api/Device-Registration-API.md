@@ -8,7 +8,7 @@ It can be used by *Protocol Adapters* to register devices that are not directly 
 *Solutions* and other consumers may use the API to obtain information about a single device that is registered to Hono.
 <!--more-->
 
-Note, however, that in real world applications the registration information will probably be kept and managed by an existing *system of record*, using e.g. a database for persisting the data. The Device Registration API accounts for this fact by means of defining only the [Get Registration Information]({{< relref "#get-registration-information" >}}) operation as *mandatory*, meaning that this operation is strictly required by a Hono instance for it to work properly. The remaining operations are defined as *optional* from Hono's perspective.
+Note, however, that in real world applications the registration information will probably be kept and managed by an existing *system of record*, using e.g. a database for persisting the data. The Device Registration API accounts for this fact by means of defining only the [Assert Device Registration]({{< relref "#assert-device-registration" >}}) operation as *mandatory*, i.e. this operation is strictly required by a Hono instance for it to work properly, whereas the remaining operations are defined as *optional* from a Hono perspective.
 
 The Device Registration API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
@@ -66,7 +66,7 @@ For status codes indicating an error (codes in the `400 - 499` range) the messag
 
 Clients use this command to *retrieve* information about a registered device.
 
-This operation is *mandatory* to implement.
+This operation is *optional*, implementors of this API may provide other means for retrieving registration information, e.g. a RESTful API.
 
 **Message Flow**
 
@@ -94,6 +94,46 @@ The response message's *status* property may contain the following codes:
 | :--- | :---------- |
 | *200* | OK, the payload contains the registration information for the device. |
 | *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id*. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
+## Assert Device Registration
+
+Clients use this command to get a signed *assertion* that a device is registered for a particular tenant and is enabled. The assertion is supposed to be included when [uploading telemetry data]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) or [publishing an event]({{< relref "Event-API.md#send-event" >}}) for a device so that the Telemetry or Event service implementation does not need to call out to the Device Registration service on every message in order to verify the device's registration status.
+
+This operation is *mandatory* to implement.
+
+**Message Flow**
+
+*TODO* add sequence diagram
+
+**Request Message Format**
+
+The following table provides an overview of the properties a client needs to set on a message to get registration information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name        | Mandatory | Location                 | Type     | Description |
+| :---------- | :-------: | :----------------------- | :------- | :---------- |
+| *subject*   | yes       | *properties*             | *string* | MUST be set to `assert`. |
+
+The body of the message SHOULD be empty and will be ignored if it is not.
+
+**Response Message Format**
+
+A response to an *assertion* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The body of the response message consists of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following properties:
+
+| Name             | Mandatory | Type       | Description |
+| :--------------- | :-------: | :--------- | :---------- |
+| *device-id*      | *yes*     | *string*   | The ID of the device that is subject of the assertion. |
+| *assertion*      | *yes*     | *string*   | A [JWT token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
+
+The response message's *status* property may contain the following codes:
+
+| Code | Description |
+| :--- | :---------- |
+| *200* | OK, the device is registered for the given tenant and is enabled. The payload contains the signed assertion. |
+| *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id* or the device is not enabled. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 

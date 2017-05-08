@@ -125,7 +125,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
     }
 
     @Override
-    protected void doStart(Future<Void> startFuture) throws Exception {
+    protected void doStart(Future<Void> startFuture) {
 
         if (!running) {
             if (!isModificationEnabled) {
@@ -305,6 +305,14 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
         resultHandler.handle(Future.succeededFuture(addDevice(tenantId, deviceId, data)));
     }
 
+    /**
+     * Adds a device to this registry.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to add.
+     * @param data Additional data to register with the device (may be {@code null}).
+     * @return The outcome of the operation indicating success or failure.
+     */
     public RegistrationResult addDevice(final String tenantId, final String deviceId, final JsonObject data) {
 
         JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);

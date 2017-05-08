@@ -11,17 +11,20 @@
  */
 package org.eclipse.hono.service.registration;
 
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
-import java.net.HttpURLConnection;
+import java.security.Key;
+import java.util.Objects;
 
+import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -44,6 +47,54 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     private MessageConsumer<JsonObject> registrationConsumer;
+    private long tokenExpiration = 10;
+    private RegistrationAssertionHelper assertionHelper;
+
+    /**
+     * Sets the secret to use for signing tokens asserting the
+     * registration status of devices.
+     * 
+     * @param secret The secret to use.
+     * @throws NullPointerException if secret is {@code null}.
+     */
+    public final void setSigningSecret(final String secret) {
+        assertionHelper = new RegistrationAssertionHelper(secret);
+    }
+
+    /**
+     * Sets the path to a PKCS8 PEM file containing the RSA private key to use for signing tokens
+     * asserting the registration status of devices.
+     * 
+     * @param keyPath The absolute path to the file.
+     * @throws NullPointerException if the path is {@code null}.
+     * @throws IllegalArgumentException if the public key cannot be read from the file.
+     */
+    public void setSigningKeyPath(final String keyPath) {
+        Objects.requireNonNull(keyPath);
+        Key key = KeyLoader.fromFiles(vertx, keyPath, null).getPrivateKey();
+        if (key == null) {
+            throw new IllegalArgumentException("cannot load registration service key");
+        } else {
+            assertionHelper = new RegistrationAssertionHelper(SignatureAlgorithm.RS256, key);
+        }
+    }
+
+    /**
+     * Sets the expiration period to use for the tokens asserting the
+     * registration status of devices.
+     * <p>
+     * The default value is 10 minutes.
+     * 
+     * @param minutes The number of minutes after which the tokens expire.
+     * 
+     * @throws IllegalArgumentException if minutes is &lt;= 0.
+     */
+    public final void setTokenExpiration(final long minutes) {
+        if (minutes <= 0) {
+            throw new IllegalArgumentException("token expiration must be > 0");
+        }
+        this.tokenExpiration = minutes;
+    }
 
     /**
      * Registers a Vert.x event consumer for address {@link RegistrationConstants#EVENT_BUS_ADDRESS_REGISTRATION_IN}
@@ -64,9 +115,8 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
      * </p>
      *
      * @param startFuture future to invoke once start up is complete.
-     * @throws Exception if start-up fails
      */
-    protected void doStart(final Future<Void> startFuture) throws Exception {
+    protected void doStart(final Future<Void> startFuture) {
         // should be overridden by subclasses
         startFuture.complete();
     }
@@ -117,6 +167,10 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
             final String action = body.getString(RegistrationConstants.FIELD_ACTION);
 
             switch (action) {
+            case ACTION_ASSERT:
+                log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
+                assertRegistration(tenantId, deviceId, result -> reply(regMsg, result));
+                break;
             case ACTION_GET:
                 log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
                 getDevice(tenantId, deviceId, result -> reply(regMsg, result));
@@ -159,17 +213,61 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
     /**
      * {@inheritDoc}
      * <p>
+     * Subclasses may override this method in order to implement a more sophisticated approach for asserting registration status, e.g.
+     * using cached information etc.
+     */
+    @Override
+    public void assertRegistration(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        getDevice(tenantId, deviceId, getAttempt -> {
+            if (getAttempt.failed()) {
+                resultHandler.handle(getAttempt);
+            } else {
+                final RegistrationResult result = getAttempt.result();
+                if (result.getStatus() == HTTP_NOT_FOUND) {
+                    // device is not registered with tenant
+                    resultHandler.handle(getAttempt);
+                } else if (isDeviceEnabled(result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA))){
+                    // device is registered with tenant and is enabled
+                    resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HTTP_OK, getAssertionPayload(tenantId, deviceId))));
+                } else {
+                    resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HTTP_NOT_FOUND)));
+                }
+            }
+        });
+    }
+
+    private boolean isDeviceEnabled(final JsonObject registrationData) {
+        return registrationData.getBoolean(FIELD_ENABLED, Boolean.TRUE);
+    }
+
+    /**
+     * Creates a registration assertion token for a device and wraps it in a JSON object.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The device to create the assertion token for.
+     * @return The payload.
+     */
+    protected final JsonObject getAssertionPayload(final String tenantId, final String deviceId) {
+
+        return new JsonObject()
+                .put(FIELD_HONO_ID, deviceId)
+                .put(FIELD_ASSERTION, assertionHelper.getAssertion(tenantId, deviceId, tokenExpiration));
+    }
+
+    /**
      * This default implementation simply invokes {@link RegistrationService#getDevice(String, String, Handler)}
      * with the parameters passed in to this method.
      * <p>
      * Subclasses should override this method in order to use a more efficient way of determining the device's status.
+     * @param tenantId 
+     * @param deviceId 
+     * @param resultHandler 
      */
-    @Override
     public void isEnabled(final String tenantId, final String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
         getDevice(tenantId, deviceId, getAttempt -> {
             if (getAttempt.succeeded()) {
                 RegistrationResult result = getAttempt.result();
-                if (result.getStatus() == HttpURLConnection.HTTP_OK) {
+                if (result.getStatus() == HTTP_OK) {
                     resultHandler.handle(Future.succeededFuture(RegistrationResult.from(result.getStatus(), result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA))));
                 } else {
                     resultHandler.handle(getAttempt);
@@ -185,7 +283,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
         if (result.succeeded()) {
             reply(request, result.result());
         } else {
-            request.fail(HttpURLConnection.HTTP_INTERNAL_ERROR, "cannot process registration request");
+            request.fail(HTTP_INTERNAL_ERROR, "cannot process registration request");
         }
     }
 

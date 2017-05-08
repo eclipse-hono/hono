@@ -40,16 +40,17 @@ public interface RegistrationService extends Verticle {
     void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
-     * Checks whether a device is registered and enabled.
+     * Asserts that a device is registered with a given tenant and is enabled.
      * 
      * @param tenantId The tenant the device belongs to.
-     * @param deviceId The ID of the device to check.
+     * @param deviceId The ID of the device to get the assertion for.
      * @param resultHandler The handler to invoke with the result of the operation. If a device with the
-     *         given ID is registered for the tenant, then the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
-     *         and the <em>payload</em> will contain the <em>enabled</em> property of the device.
+     *         given ID is registered for the tenant and its <em>enabled</em> property is {@code true},
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
+     *         and the <em>payload</em> will contain a JWT token asserting the registration status.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
-    void isEnabled(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
+    void assertRegistration(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Finds device registration data by a key registered for the device.

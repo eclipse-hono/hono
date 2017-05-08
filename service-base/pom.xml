@@ -15,6 +15,12 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
       <version>${vertx.version}</version>
+      <exclusions>
+       <exclusion>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+       </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -40,6 +46,20 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt</artifactId>
+      <exclusions>
+       <exclusion>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+       </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+     <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-client</artifactId>
     </dependency>
   </dependencies>
 

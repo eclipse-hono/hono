@@ -18,7 +18,7 @@ The following operations can be used by *Devices* and/or *Protocol Adapters* (to
 
 Both *Devices* as well as *Protocol Adapters* will be referred to as *clients* in the remainder of this section.
 
-### Send Events
+### Send Event
 
 **Preconditions**
 
