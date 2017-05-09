@@ -126,7 +126,7 @@ The body of the response message consists of a single *AMQP Value* section conta
 | Name             | Mandatory | Type       | Description |
 | :--------------- | :-------: | :--------- | :---------- |
 | *device-id*      | *yes*     | *string*   | The ID of the device that is subject of the assertion. |
-| *assertion*      | *yes*     | *string*   | A [JWT token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
+| *assertion*      | *yes*     | *string*   | A [JSON Web Token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
 
 The response message's *status* property may contain the following codes:
 

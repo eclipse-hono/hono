@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.tests.jms;
 
+import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -29,6 +30,8 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
 
 import org.apache.qpid.jms.JmsQueue;
+import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -90,6 +93,9 @@ public class SendReceiveIT {
         final CountDownLatch latch = new CountDownLatch(COUNT);
         final LongSummaryStatistics stats = new LongSummaryStatistics();
 
+        // get registration assertion
+        final String registrationAssertion = getRegistrationAssertion(DEVICE_ID);
+
         // prepare consumer
         final MessageConsumer messageConsumer = receiver.getTelemetryConsumer();
 
@@ -108,7 +114,7 @@ public class SendReceiveIT {
 
         IntStream.range(0, COUNT).forEach(i -> {
             try {
-                final Message message = sender.newTextMessage("msg " + i, DEVICE_ID);
+                final Message message = sender.newMessage("msg " + i, DEVICE_ID, registrationAssertion);
                 messageProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
                 if (LOG.isTraceEnabled() && i > 0 && i % 100 == 0) {
@@ -129,6 +135,9 @@ public class SendReceiveIT {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
+        // get registration assertion
+        final String registrationAssertion = getRegistrationAssertion(SPECIAL_DEVICE);
+
         final MessageProducer telemetryProducer = connector.getTelemetryProducer(SPECIAL_DEVICE_SENDER_DEST);
         final MessageConsumer messageConsumer = receiver.getTelemetryConsumer();
         messageConsumer.setMessageListener(message -> {
@@ -138,10 +147,15 @@ public class SendReceiveIT {
             latch.countDown();
         });
 
-        final Message message = sender.newTextMessage("update", SPECIAL_DEVICE);
+        final Message message = sender.newMessage("update", SPECIAL_DEVICE, registrationAssertion);
         telemetryProducer.send(message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
         assertTrue("Did not receive message within timeout.", latch.await(6, TimeUnit.SECONDS));
+    }
+
+    private String getRegistrationAssertion(final String deviceId) throws Exception {
+        RegistrationResult result = registration.assertRegistration(deviceId, HTTP_OK).get(Duration.ofSeconds(1).toMillis(), TimeUnit.MILLISECONDS);
+        return result.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
     }
 
     private String getDeviceId(final Message message) {

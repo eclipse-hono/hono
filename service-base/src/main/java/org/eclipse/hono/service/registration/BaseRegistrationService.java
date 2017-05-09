@@ -103,9 +103,13 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
      * @param startFuture future to invoke once start up is complete.
      */
     @Override
-    public final void start(final Future<Void> startFuture) throws Exception {
-        registerConsumer();
-        doStart(startFuture);
+    public final void start(final Future<Void> startFuture) {
+        if (assertionHelper == null) {
+            startFuture.fail("either signing secret or signing key path property must be set");
+        } else {
+            registerConsumer();
+            doStart(startFuture);
+        }
     }
 
     /**

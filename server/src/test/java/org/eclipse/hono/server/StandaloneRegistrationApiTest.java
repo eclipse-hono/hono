@@ -75,6 +75,7 @@ public class StandaloneRegistrationApiTest {
         server.setConfig(configProperties);
         server.addEndpoint(new RegistrationEndpoint(vertx));
         registrationAdapter = new FileBasedRegistrationService();
+        registrationAdapter.setSigningSecret("signing-secret");
 
         Future<RegistrationClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {

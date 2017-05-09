@@ -18,8 +18,6 @@ The following backwards incompatible changes have been made to existing API, cod
   * renamed `org.eclipse.hono.config.HonoClientConfigProperties` to `org.eclipse.hono.config.ClientConfigProperties`
   * renamed `org.eclipse.hono.config.HonoConfigProperties` to `org.eclipse.hono.config.ServiceConfigProperties`
 
-    
-
 1. Moved classes to be reused by other services to `hono-service-base` module.
 
   * moved `org.eclipse.hono.server.Endpoint` to `org.eclipse.hono.service.amqp.Endpoint`
@@ -37,3 +35,4 @@ The following backwards incompatible changes have been made to existing API, cod
 
 1. Rename property `id` of Device Registration API's response payload to `device-id` to match the name used in Credentials API.
 
+1. Introduce mandatory to implement [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}) operation to `Device Registration API`. This operation is used by clients to assert that a given device is enabled and is registered with a particular tenant. The assertion is issued in the form of a cryptographically signed JSON Web Token (JWT) which needs to be included in messages sent to Hono containing telemtry data or an event originating from the given device.

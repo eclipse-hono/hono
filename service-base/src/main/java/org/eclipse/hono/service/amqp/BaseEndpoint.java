@@ -12,7 +12,6 @@
 package org.eclipse.hono.service.amqp;
 
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,17 +20,13 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -41,15 +36,16 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class BaseEndpoint implements Endpoint {
 
-    protected Vertx                             vertx;
+    protected final Vertx                       vertx;
     protected final Logger                      logger               = LoggerFactory.getLogger(getClass());
-    protected ServiceConfigProperties              honoConfig           = new ServiceConfigProperties();
+    protected ServiceConfigProperties           honoConfig           = new ServiceConfigProperties();
     private static final String                 STATUS_OK            = String.valueOf(HTTP_OK);
     private Map<String, UpstreamReceiverImpl>   activeClients        = new HashMap<>();
 
     /**
+     * Creates an endpoint for a Vertx instance.
      * 
-     * @param vertx the Vertx instance to use for accessing the event bus.
+     * @param vertx The Vertx instance to use.
      * @throws NullPointerException if vertx is {@code null};
      */
     protected BaseEndpoint(final Vertx vertx) {
@@ -171,48 +167,5 @@ public abstract class BaseEndpoint implements Endpoint {
         logger.info("Endpoint [{}] does not support data retrieval, closing link.", getName());
         sender.setCondition(ProtonHelper.condition(AmqpError.NOT_IMPLEMENTED, "resource cannot be read from"));
         sender.close();
-    }
-
-    /**
-     * Checks with the registration service whether a device is registered and enabled.
-     * 
-     * @param resource The resource identifier containing the tenant and device identifier to check.
-     * @param resultHandler The result handler will be invoked with the value of the device's <em>enabled</em>
-     *                      property if the device exists, otherwise the handler will be invoked with {@code false}.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final void checkDeviceEnabled(final ResourceIdentifier resource, final Handler<AsyncResult<Boolean>> resultHandler) {
-
-        Objects.requireNonNull(resource);
-        Objects.requireNonNull(resultHandler);
-
-        final JsonObject registrationJson = RegistrationConstants
-                .getRegistrationJson(RegistrationConstants.ACTION_ENABLED, resource.getTenantId(), resource.getResourceId());
-
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationJson, response -> {
-
-            if (response.succeeded()) {
-                final io.vertx.core.eventbus.Message<Object> message = response.result();
-                if (message.body() instanceof JsonObject) {
-                    JsonObject result = (JsonObject) message.body();
-                    resultHandler.handle(Future.succeededFuture(getEnabled(result)));
-                } else {
-                    logger.error("received malformed response from registration service [type: {}]", response.result().getClass().getName());
-                    resultHandler.handle(Future.failedFuture("internal error"));
-                }
-            } else {
-                logger.error("could not retrieve device information from registration service", response.cause());
-                resultHandler.handle(Future.failedFuture(response.cause()));
-            }
-        });
-    }
-
-    private boolean getEnabled(final JsonObject registrationResponse) {
-        JsonObject payload = registrationResponse.getJsonObject(RegistrationConstants.FIELD_PAYLOAD);
-        if (payload == null) {
-            return false;
-        } else {
-            return payload.getBoolean(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
-        }
     }
 }

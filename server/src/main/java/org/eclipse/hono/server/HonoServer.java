@@ -23,6 +23,7 @@ import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.eclipse.hono.authorization.AuthorizationConstants;
 import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
@@ -48,7 +49,7 @@ import io.vertx.proton.ProtonSession;
  */
 @Component
 @Scope("prototype")
-public final class HonoServer extends AmqpServiceBase {
+public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     @Override
     protected Future<Void> preStartServers() {

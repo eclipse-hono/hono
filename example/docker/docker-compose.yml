@@ -34,12 +34,14 @@ services:
       - HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem
       - HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-cert.pem
       - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_EVENT_REGISTRATION_SERVICE_SECRET=signing-secret
       - HONO_REGISTRATION_SIGNING_SECRET=signing-secret
       - HONO_SERVER_BIND_ADDRESS=0.0.0.0
       - HONO_SERVER_KEY_PATH=/etc/hono/certs/hono-key.pem
       - HONO_SERVER_CERT_PATH=/etc/hono/certs/hono-cert.pem
       - HONO_SERVER_INSECURE_PORT_ENABLED=false
       - HONO_SERVER_MAX_INSTANCES=1
+      - HONO_TELEMETRY_REGISTRATION_SERVICE_SECRET=signing-secret
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
     volumes:

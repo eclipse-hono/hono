@@ -23,6 +23,7 @@ import org.eclipse.hono.server.MessageForwardingEndpoint;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +37,7 @@ import io.vertx.proton.ProtonQoS;
 @Component
 @Scope("prototype")
 @Qualifier("event")
+@ConfigurationProperties(prefix = "hono.event")
 public final class EventEndpoint extends MessageForwardingEndpoint {
 
     @Autowired

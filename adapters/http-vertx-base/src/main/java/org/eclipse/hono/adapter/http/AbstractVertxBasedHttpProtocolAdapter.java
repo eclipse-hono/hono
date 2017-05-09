@@ -14,6 +14,7 @@ package org.eclipse.hono.adapter.http;
 
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
@@ -21,22 +22,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 
-import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.AbstractServiceBase;
+import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -44,10 +42,11 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Cookie;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.proton.ProtonClientOptions;
+import io.vertx.ext.web.handler.CookieHandler;
 
 /**
  * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol. 
@@ -55,7 +54,7 @@ import io.vertx.proton.ProtonClientOptions;
  * 
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
+public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceConfigProperties> extends AbstractProtocolAdapterBase<T> {
 
     /**
      * The <em>application/json</em> content type.
@@ -66,6 +65,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      */
     protected static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
 
+    /**
+     * The name of the cookie used to store a device's registration assertion JWT token.
+     */
+    protected static final String COOKIE_REGISTRATION_ASSERTION = "hono.reg-assertion";
     private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
     @Value("${spring.profiles.active:}")
@@ -73,10 +76,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
 
     private HttpServer server;
     private HttpServer insecureServer;
-    private HonoClient hono;
-
-    private BiConsumer<String, Handler<AsyncResult<MessageSender>>> eventSenderSupplier;
-    private BiConsumer<String, Handler<AsyncResult<MessageSender>>> telemetrySenderSupplier;
 
     /**
      * @return 8443
@@ -158,57 +157,31 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
         }
     }
 
-    /**
-     * Sets the client to use for connecting to the Hono server.
-     * 
-     * @param honoClient The client.
-     * @throws NullPointerException if hono client is {@code null}.
-     */
-    @Autowired
-    public final void setHonoClient(final HonoClient honoClient) {
-        this.hono = Objects.requireNonNull(honoClient);
-    }
-
-    /**
-     * Gets the client for interacting with the Hono server.
-     * 
-     * @return The client.
-     */
-    public final HonoClient getHonoClient() {
-        return hono;
-    }
-
     @Override
-    public final void start(Future<Void> startFuture) throws Exception {
+    public final void doStart(Future<Void> startFuture) {
 
-        if (hono == null) {
-            startFuture.fail("Hono client must be set");
-        } else {
-            eventSenderSupplier = (tenant, resultHandler) -> getHonoClient().getOrCreateEventSender(tenant, resultHandler);
-            telemetrySenderSupplier = (tenant, resultHandler) -> getHonoClient().getOrCreateTelemetrySender(tenant, resultHandler);
-
-            checkPortConfiguration()
-                .compose(s -> preStartup())
-                .compose(s -> {
-                    Router router = createRouter();
-                    if (router == null) {
-                        return Future.failedFuture("no router configured");
-                    } else {
-                        addRoutes(router);
-                        return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
-                    }
-                })
-                .compose(s -> {
-                    connectToHono(null);
-                    try {
-                        onStartupSuccess();
-                        startFuture.complete();
-                    } catch (Exception e) {
-                        LOG.error("error in onStartupSuccess", e);
-                        startFuture.fail(e);
-                    }
-                }, startFuture);
-        }
+        checkPortConfiguration()
+            .compose(s -> preStartup())
+            .compose(s -> {
+                Router router = createRouter();
+                if (router == null) {
+                    return Future.failedFuture("no router configured");
+                } else {
+                    addRoutes(router);
+                    return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
+                }
+            })
+            .compose(s -> {
+                connectToHono(null);
+                connectToRegistration(null);
+                try {
+                    onStartupSuccess();
+                    startFuture.complete();
+                } catch (Exception e) {
+                    LOG.error("error in onStartupSuccess", e);
+                    startFuture.fail(e);
+                }
+            }, startFuture);
     }
 
     /**
@@ -237,8 +210,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * <p>
      * This method creates a router instance with the following routes:
      * <ol>
-     * <li>A default route limiting the body size of requests to the maximum payload size set in the
-     * <em>config</em> properties.</li>
+     * <li>A default route supporting HTTP Cookies, also limiting the body size of requests to the maximum
+     * payload size set in the <em>config</em> properties.</li>
      * <li>A route for retrieving this adapter's current status from the resource path returned by
      * {@link #getStatusResourcePath()} (if not {@code null}).</li>
      * </ol>
@@ -250,6 +223,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         router.route().handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize()));
+        router.route().handler(CookieHandler.create());
 
         String statusResourcePath = getStatusResourcePath();
         if (statusResourcePath != null) {
@@ -365,7 +339,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     }
 
     @Override
-    public final void stop(Future<Void> stopFuture) throws Exception {
+    public final void doStop(Future<Void> stopFuture) {
 
         try {
             preShutdown();
@@ -376,7 +350,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
         Future<Void> shutdownTracker = Future.future();
         shutdownTracker.setHandler(done -> {
             if (done.succeeded()) {
-                LOG.info("adapter has been shut down successfully");
+                LOG.info("HTTP adapter has been shut down successfully");
                 stopFuture.complete();
             } else {
                 LOG.info("error while shutting down adapter", done.cause());
@@ -401,11 +375,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
         CompositeFuture.all(serverStopTracker, insecureServerStopTracker)
             .compose(v -> {
                 Future<Void> honoClientStopTracker = Future.future();
-                if (hono != null) {
-                    hono.shutdown(honoClientStopTracker.completer());
-                } else {
-                    honoClientStopTracker.complete();
-                }
+                closeClients(honoClientStopTracker.completer());
                 return honoClientStopTracker;
             }).compose(v -> postShutdown())
             .compose(s -> shutdownTracker.complete(), shutdownTracker);
@@ -532,9 +502,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     }
 
     private void doGetStatus(final RoutingContext ctx) {
-        JsonObject result = new JsonObject(hono.getConnectionStatus());
+        JsonObject result = new JsonObject(getHonoClient().getConnectionStatus());
         result.put("active profiles", activeProfiles);
-        result.put("senders", hono.getSenderStatus());
+        result.put("senders", getHonoClient().getSenderStatus());
         adaptStatusResource(result);
         ctx.response()
             .putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON)
@@ -567,7 +537,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     /**
      * Uploads the body of an HTTP request as a telemetry message to the Hono server.
      * <p>
-     * This method simply invokes {@link #uploadTelemetryMessage(HttpServerResponse, String, String, Buffer, String)}
+     * This method simply invokes {@link #uploadTelemetryMessage(RoutingContext, String, String, Buffer, String)}
      * with objects retrieved from the routing context.
      *
      * @param ctx The context to retrieve the message payload and content type from.
@@ -578,7 +548,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     public final void uploadTelemetryMessage(final RoutingContext ctx, final String tenant, final String deviceId) {
 
         uploadTelemetryMessage(
-                Objects.requireNonNull(ctx).response(),
+                Objects.requireNonNull(ctx),
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
                 ctx.getBody(),
@@ -596,29 +566,29 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * <li>503 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of connection or credit.</li>
      * </ul>
      * 
-     * @param response The HTTP response to write the result of the operation to.
+     * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
      * @param payload The message payload to send.
      * @param contentType The content type of the message payload.
      * @throws NullPointerException if any of response, tenant or device ID is {@code null}.
      */
-    public final void uploadTelemetryMessage(final HttpServerResponse response, final String tenant, final String deviceId,
+    public final void uploadTelemetryMessage(final RoutingContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType) {
 
         doUploadMessage(
-                Objects.requireNonNull(response),
+                Objects.requireNonNull(ctx),
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
                 payload,
                 contentType,
-                telemetrySenderSupplier);
+                getTelemetrySender(tenant));
     }
 
     /**
      * Uploads the body of an HTTP request as an event message to the Hono server.
      * <p>
-     * This method simply invokes {@link #uploadEventMessage(HttpServerResponse, String, String, Buffer, String)}
+     * This method simply invokes {@link #uploadEventMessage(RoutingContext, String, String, Buffer, String)}
      * with objects retrieved from the routing context.
      *
      * @param ctx The context to retrieve the message payload and content type from.
@@ -629,7 +599,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     public final void uploadEventMessage(final RoutingContext ctx, final String tenant, final String deviceId) {
 
         uploadEventMessage(
-                Objects.requireNonNull(ctx).response(),
+                Objects.requireNonNull(ctx),
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
                 ctx.getBody(),
@@ -647,69 +617,89 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * <li>503 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of connection or credit.</li>
      * </ul>
      * 
-     * @param response The HTTP response to write the result of the operation to.
+     * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
      * @param payload The message payload to send.
      * @param contentType The content type of the message payload.
      * @throws NullPointerException if any of response, tenant or device ID is {@code null}.
      */
-    public final void uploadEventMessage(final HttpServerResponse response, final String tenant, final String deviceId,
+    public final void uploadEventMessage(final RoutingContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType) {
 
         doUploadMessage(
-                Objects.requireNonNull(response),
+                Objects.requireNonNull(ctx),
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
                 payload,
                 contentType,
-                eventSenderSupplier);
+                getEventSender(tenant));
     }
 
-    private void doUploadMessage(final HttpServerResponse response, final String tenant, final String deviceId,
-            final Buffer payload, final String contentType, final BiConsumer<String, Handler<AsyncResult<MessageSender>>> senderSupplier) {
+    private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
+            final Buffer payload, final String contentType, final Future<MessageSender> senderTracker) {
 
         if (contentType == null) {
-            badRequest(response, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
+            badRequest(ctx.response(), String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
         } else if (payload == null || payload.length() == 0) {
-            badRequest(response, "missing body");
+            badRequest(ctx.response(), "missing body");
         } else {
-            senderSupplier.accept(tenant, createAttempt -> {
-                if (createAttempt.succeeded()) {
-                    final MessageSender sender = createAttempt.result();
+            
+            final Future<String> tokenTracker = getRegistrationAssertionCookie(ctx, tenant, deviceId);
 
-                    sendToHono(response, deviceId, payload, contentType, sender);
+            CompositeFuture.all(tokenTracker, senderTracker).setHandler(s -> {
+                if (s.failed()) {
+                    if (tokenTracker.failed()) {
+                        endWithStatus(ctx.response(), HTTP_FORBIDDEN, null, null, null);
+                    } else {
+                        serviceUnavailable(ctx.response(), 5);
+                    }
                 } else {
-                    // we don't have a connection to Hono
-                    serviceUnavailable(response, 5);
+                    sendToHono(ctx.response(), deviceId, payload, contentType, tokenTracker.result(), senderTracker.result());
                 }
             });
         }
     }
 
     private void sendToHono(final HttpServerResponse response, final String deviceId, final Buffer payload,
-            final String contentType, final MessageSender sender) {
+            final String contentType, final String token, final MessageSender sender) {
 
-        boolean accepted = sender.send(deviceId, payload.getBytes(), contentType);
+        boolean accepted = sender.send(deviceId, payload.getBytes(), contentType, token);
         if (accepted) {
             response.setStatusCode(HTTP_ACCEPTED).end();
         } else {
-            // we currently have no credit for uploading data to Hono's Telemetry endpoint
             serviceUnavailable(response, 2,
                     "resource limit exceeded, please try again later",
                     "text/plain");
         }
     }
 
-    private void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
+    /**
+     * Gets a registration assertion for a device.
+     * <p>
+     * This method first tries to get the retrieve cookie {@link #COOKIE_REGISTRATION_ASSERTION} from the
+     * request. If the cookie contains a value representing a non-expired assertion, a completed future
+     * containing the cookie's value is returned.
+     * Otherwise a new assertion is retrieved from the Device Registration service. A cookie scoped to the
+     * request's path containing the assertion is then added to the response.
+     * 
+     * @param ctx The routing context to use for getting/setting the cookie.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to get the assertion for.
+     * @return A future containing the assertion.
+     */
+    protected Future<String> getRegistrationAssertionCookie(final RoutingContext ctx, final String tenantId, final String deviceId) {
 
-        ProtonClientOptions options = new ProtonClientOptions()
-                .setReconnectAttempts(-1)
-                .setReconnectInterval(200); // try to re-connect every 200 ms
-        hono.connect(options, connectAttempt -> {
-            if (connectHandler != null) {
-                connectHandler.handle(connectAttempt);
-            }
-        });
+        Cookie assertion = ctx.getCookie(COOKIE_REGISTRATION_ASSERTION);
+        if (assertion != null && !RegistrationAssertionHelper.isExpired(assertion.getValue(), 5)) {
+            return Future.succeededFuture(assertion.getValue());
+        } else {
+            return getRegistrationAssertion(tenantId, deviceId).compose(token -> {
+                Cookie newAssertion = Cookie.cookie(COOKIE_REGISTRATION_ASSERTION, token);
+                newAssertion.setPath(ctx.request().path());
+                ctx.addCookie(newAssertion);
+                return Future.succeededFuture(token);
+            });
+        }
     }
 }

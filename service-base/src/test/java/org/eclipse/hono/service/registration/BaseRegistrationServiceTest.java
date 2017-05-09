@@ -24,6 +24,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -36,6 +37,27 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class BaseRegistrationServiceTest {
 
     private static String secret = "secret";
+
+    /**
+     * Verifies that the service cannot be started without either <em>signingSecret</em> or
+     * <em>signingKeyPath</em> being set.
+     * 
+     * @param ctx The vertx unit test context.
+     */
+    @Test
+    public void testStartupFailsIfNoSigningKeyIsSet(final TestContext ctx) {
+        // GIVEN a registry without a signing key being set
+        BaseRegistrationService registrationService = getRegistrationService(HTTP_OK, BaseRegistrationService.getResultPayload("4711", new JsonObject()));
+
+        // WHEN starting the service
+        Async startupFailure = ctx.async();
+        Future<Void> startFuture = Future.future();
+        startFuture.setHandler(ctx.asyncAssertFailure(t -> startupFailure.complete()));
+        registrationService.start(startFuture);
+
+        // THEN startup fails
+        startupFailure.await(200);
+    }
 
     /**
      * Verifies that an enabled device's status can be asserted successfully.

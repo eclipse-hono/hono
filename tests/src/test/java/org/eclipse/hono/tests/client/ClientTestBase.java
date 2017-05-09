@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.tests.client;
 
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
-import static java.net.HttpURLConnection.HTTP_CREATED;
+import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.tests.IntegrationTestSupport.*;
 
 import java.net.InetAddress;
@@ -31,6 +30,7 @@ import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.Before;
@@ -48,6 +48,10 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClientOptions;
 
+/**
+ * Base class for integration tests.
+ *
+ */
 public abstract class ClientTestBase {
 
     protected static final String DEVICE_ID = "device-0";
@@ -211,7 +215,7 @@ public abstract class ClientTestBase {
                 closed.complete();
             }
         });
-        sender.send("non-existing-device", new byte[]{0x00}, "application/binary", capacityAvailable -> {});
+        sender.send("non-existing-device", new byte[]{0x00}, "application/binary", "any", capacityAvailable -> {});
         closed.await(1000);
     }
 
@@ -229,13 +233,21 @@ public abstract class ClientTestBase {
         }));
 
         sender.setDispositionHandler((id, disposition) -> accepted.countDown());
-
+        Future<RegistrationResult> tokenTracker = Future.future();
         Future<RegistrationResult> regTracker = Future.future();
         registrationClient.register(DEVICE_ID, null, regTracker.completer());
         regTracker.compose(r -> {
             if (r.getStatus() == HTTP_CREATED || r.getStatus() == HTTP_CONFLICT) {
                 // test can also commence if device already exists
                 LOGGER.debug("registration succeeded");
+                registrationClient.assertRegistration(DEVICE_ID, tokenTracker.completer());
+            } else {
+                LOGGER.debug("device registration failed with status [{}]", r);
+                tokenTracker.fail("failed to register device");
+            }
+            return tokenTracker;
+        }).compose(r -> {
+            if (r.getStatus() == HTTP_OK) {
                 createConsumer(TEST_TENANT_ID, msg -> {
                     LOGGER.trace("received {}", msg);
                     assertMessagePropertiesArePresent(ctx, msg);
@@ -243,18 +255,19 @@ public abstract class ClientTestBase {
                     received.countDown();
                 }, setupTracker.completer());
             } else {
-                LOGGER.debug("device registration failed with status [{}]", r);
-                setupTracker.fail("failed to register device");
+                setupTracker.fail("cannot assert registration status");
             }
         }, setupTracker);
 
         setup.await(1000);
 
+        final String registrationAssertion = tokenTracker.result().getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
         long start = System.currentTimeMillis();
         final AtomicInteger messagesSent = new AtomicInteger();
+
         IntStream.range(0, MSG_COUNT).forEach(i -> {
             Async latch = ctx.async();
-            sender.send(DEVICE_ID, "payload" + i, CONTENT_TYPE_TEXT_PLAIN, capacityAvailable -> {
+            sender.send(DEVICE_ID, "payload" + i, CONTENT_TYPE_TEXT_PLAIN, registrationAssertion, capacityAvailable -> {
                 latch.complete();
                 if (messagesSent.incrementAndGet() % 200 == 0) {
                     LOGGER.info("messages sent: {}", messagesSent.get());
