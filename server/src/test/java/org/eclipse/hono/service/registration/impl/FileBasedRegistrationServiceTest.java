@@ -58,6 +58,9 @@ public class FileBasedRegistrationServiceTest
       registrationService.init(vertx, ctx);
    }
 
+   /**
+    * Removes all devices from the registry.
+    */
    @After
    public void clear() {
        registrationService.clear();

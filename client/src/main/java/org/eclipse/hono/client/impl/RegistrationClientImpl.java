@@ -209,6 +209,12 @@ public final class RegistrationClientImpl extends AbstractHonoClient implements 
     }
 
     @Override
+    public void assertRegistration(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        createAndSendRequest(ACTION_ASSERT, deviceId, null, resultHandler);
+    }
+
+    @Override
     public void find(final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         final Map<String, Object> properties = new HashMap<>();

@@ -17,6 +17,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -29,8 +30,12 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 
 import org.apache.qpid.jms.JmsQueue;
+import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Support class for registration related tests.
@@ -42,7 +47,7 @@ class RegistrationTestSupport {
     private final Session session;
     private final JmsQueue destination;
     private final JmsQueue reply;
-    private final CorrelationHelper<Message, Long> c = new CorrelationHelper<>();
+    private final CorrelationHelper<Message, RegistrationResult> c = new CorrelationHelper<>();
 
     private MessageConsumer consumer;
     private MessageProducer producer;
@@ -90,24 +95,32 @@ class RegistrationTestSupport {
         consumer.receiveNoWait();
     }
 
-    private CompletableFuture<Long> register(final String deviceId) {
+    private CompletableFuture<RegistrationResult> register(final String deviceId) {
         return register(deviceId, (Integer) null);
     }
 
-    CompletableFuture<Long> register(final String deviceId, final Integer expectedStatus) {
+    CompletableFuture<RegistrationResult> register(final String deviceId, final Integer expectedStatus) {
         return send(deviceId, ACTION_REGISTER, expectedStatus);
     }
 
-    CompletableFuture<Long> deregister(final String deviceId, final Integer expectedStatus) {
+    CompletableFuture<RegistrationResult> assertRegistration(final String deviceId, final Integer expectedStatus) {
+        return send(deviceId, ACTION_ASSERT, expectedStatus);
+    }
+
+    CompletableFuture<RegistrationResult> deregister(final String deviceId, final Integer expectedStatus) {
         return send(deviceId, ACTION_DEREGISTER, expectedStatus);
     }
 
-    CompletableFuture<Long> retrieve(final String deviceId, final Integer expectedStatus) {
+    CompletableFuture<RegistrationResult> retrieve(final String deviceId, final Integer expectedStatus) {
         return send(deviceId, ACTION_GET, expectedStatus);
     }
 
-    long register(final String deviceId, final Duration timeout) throws Exception {
+    RegistrationResult register(final String deviceId, final Duration timeout) throws Exception {
         return register(deviceId).get(timeout.toMillis(), MILLISECONDS);
+    }
+
+    RegistrationResult assertRegistration(final String deviceId, final Duration timeout) throws Exception {
+        return assertRegistration(deviceId, (Integer) null).get(timeout.toMillis(), MILLISECONDS);
     }
 
     void close() throws JMSException {
@@ -119,7 +132,7 @@ class RegistrationTestSupport {
         }
     }
 
-    private CompletableFuture<Long> send(final String deviceId, final String action, final Integer expectedStatus) {
+    private CompletableFuture<RegistrationResult> send(final String deviceId, final String action, final Integer expectedStatus) {
 
         try {
             final String correlationId = UUID.randomUUID().toString();
@@ -130,10 +143,11 @@ class RegistrationTestSupport {
             message.setJMSCorrelationID(correlationId);
 
             LOGGER.debug("adding response handler for request [correlation ID: {}]", correlationId);
-            final CompletableFuture<Long> result = c.add(correlationId, response -> {
+            final CompletableFuture<RegistrationResult> result = c.add(correlationId, response -> {
+
                 final String status = getStringProperty(response, APP_PROPERTY_STATUS);
-                LOGGER.debug("received response [status: {}] for request [correlation ID: {}]", status, correlationId);
-                final long httpStatus = toLong(status, 0);
+                LOGGER.debug("received response [type: {}, status: {}] for request [correlation ID: {}]", response.getClass().getName(), status, correlationId);
+                final int httpStatus = toInt(status, 0);
                 if (status == null || status.isEmpty() || httpStatus <= 0) {
                     throw new IllegalStateException(
                             "Response to " + getMessageID(response) + " contained no valid status: " + status);
@@ -142,7 +156,18 @@ class RegistrationTestSupport {
                 if (expectedStatus != null && expectedStatus != httpStatus) {
                     throw new IllegalStateException("returned status " + httpStatus);
                 }
-                return httpStatus;
+                try {
+                    if (response.isBodyAssignableTo(String.class)) {
+                        String body = response.getBody(String.class);
+                        if (body != null) {
+                            LOGGER.debug("extracting response body");
+                            return RegistrationResult.from(httpStatus, new JsonObject(body));
+                        }
+                    }
+                } catch (JMSException | DecodeException e) {
+                    LOGGER.debug("cannot extract body from response", e);
+                }
+                return RegistrationResult.from(httpStatus);
             });
             producer.send(message);
             return result;
@@ -151,9 +176,9 @@ class RegistrationTestSupport {
         }
     }
 
-    private static long toLong( final String s, final long def ) {
+    private static int toInt( final String s, final int def ) {
         try {
-            return Long.parseLong(s);
+            return Integer.parseInt(s);
         } catch (final NumberFormatException ex ) {
             return def;
         }

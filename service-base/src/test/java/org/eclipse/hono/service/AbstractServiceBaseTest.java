@@ -45,9 +45,9 @@ public class AbstractServiceBaseTest {
         when(vertx.eventBus()).thenReturn(eventBus);
     }
 
-    private AbstractServiceBase createServer(final ServiceConfigProperties config) {
+    private AbstractServiceBase<ServiceConfigProperties> createServer(final ServiceConfigProperties config) {
 
-        AbstractServiceBase server = new AbstractServiceBase() {
+        AbstractServiceBase<ServiceConfigProperties> server = new AbstractServiceBase<ServiceConfigProperties>() {
             @Override
             public int getPortDefaultValue() {
                 return PORT_NR;
@@ -85,7 +85,7 @@ public class AbstractServiceBaseTest {
 
         // WHEN using this configuration to determine the server's port configuration
         // secure port config: no port set -> secure IANA port selected
-        AbstractServiceBase server = createServer(configProperties);
+        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
         Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the default secure port is selected and no insecure port will be opened
@@ -109,7 +109,7 @@ public class AbstractServiceBaseTest {
 
         // WHEN using this configuration to determine the server's port configuration
         // secure port config: explicit port set -> port used
-        AbstractServiceBase server = createServer(configProperties);
+        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
         Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the configured port is used and no insecure port will be opened
@@ -130,7 +130,7 @@ public class AbstractServiceBaseTest {
         ServiceConfigProperties configProperties = new ServiceConfigProperties();
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase server = createServer(configProperties);
+        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
         Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the port configuration fails
@@ -149,7 +149,7 @@ public class AbstractServiceBaseTest {
         configProperties.setInsecurePortEnabled(true);
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase server = createServer(configProperties);
+        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
         Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to the default insecure port only
@@ -172,7 +172,7 @@ public class AbstractServiceBaseTest {
         configProperties.setInsecurePort(8888);
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase server = createServer(configProperties);
+        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
         Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to the configured insecure port only
@@ -196,7 +196,7 @@ public class AbstractServiceBaseTest {
         configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase server = createServer(configProperties);
+        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
         Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to both the default insecure and secure ports
@@ -224,7 +224,7 @@ public class AbstractServiceBaseTest {
         configProperties.setPort(8888);
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase server = createServer(configProperties);
+        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
         Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN port configuration fails

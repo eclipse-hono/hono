@@ -5,6 +5,7 @@ hono:
     name: hono-server
   registration:
     saveToFile: false
+    signingSecret: signing-secret
   server:
     insecurePortEnabled: true
     insecurePortBindAddress: 0.0.0.0
