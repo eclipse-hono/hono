@@ -115,6 +115,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>registration-file,qpid,prod</SPRING_PROFILES_ACTIVE>
+                      <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                     </env>
                     <log>
                       <prefix>HONO</prefix>
@@ -131,7 +132,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <alias>qdrouter</alias>
                   <run>
                     <cmd>
-                      <shell>/usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json</shell>
+                      <shell>/usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd-with-broker.json</shell>
                     </cmd>
                     <ports>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
@@ -145,6 +146,37 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>QPID</prefix>
                       <color>blue</color>
                     </log>
+                    <!--
+                    <env>
+                       <PN_TRACE_FRM>1</PN_TRACE_FRM>
+                    </env>
+                    -->
+                  </run>
+                </image>
+                <!-- ##### ActiveMQ Artemis message broker ##### -->
+                <image>
+                  <name>eclipsehono/broker:${project.version}</name>
+                  <alias>broker</alias>
+                  <run>
+                    <ports>
+                      <port>+broker.ip:broker.amqp.port:5672</port>
+                    </ports>
+                    <network>
+                      <name>hono</name>
+                      <alias>broker</alias>
+                    </network>
+                    <log>
+                      <prefix>Artemis</prefix>
+                      <color>magenta</color>
+                    </log>
+                    <!--
+                    <env>
+                       <PN_TRACE_FRM>1</PN_TRACE_FRM>
+                    </env>
+                    -->
+                    <wait>
+                      <log>^.*Server is now live.*$</log>
+                    </wait>
                   </run>
                 </image>
               </images>
