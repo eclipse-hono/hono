@@ -1,6 +1,6 @@
 +++
 title = "Topology Options"
-weight = 510
+weight = 520
 +++
 
 This page describes the system topology of Eclipse Hono&trade; and some of the considered alternatives.
