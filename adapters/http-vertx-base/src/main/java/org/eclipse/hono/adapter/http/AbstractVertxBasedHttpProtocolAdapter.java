@@ -18,16 +18,21 @@ import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.JwtHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -688,7 +693,28 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * @param deviceId The device to get the assertion for.
      * @return A future containing the assertion.
      */
-    protected Future<String> getRegistrationAssertionCookie(final RoutingContext ctx, final String tenantId, final String deviceId) {
+    protected final Future<String> getRegistrationAssertionCookie(final RoutingContext ctx, final String tenantId,
+            final String deviceId) {
+        return getRegistrationAssertionCookie(ctx, tenantId, deviceId, null);
+    }
+
+    /**
+     * Gets a registration assertion for a device.
+     * <p>
+     * This method first tries to get the retrieve cookie {@link #COOKIE_REGISTRATION_ASSERTION} from the
+     * request. If the cookie contains a value representing a non-expired assertion, a completed future
+     * containing the cookie's value is returned.
+     * Otherwise a new assertion is retrieved from the Device Registration service. A cookie scoped to the
+     * request's path containing the assertion is then added to the response.
+     * 
+     * @param ctx The routing context to use for getting/setting the cookie.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to get the assertion for.
+     * @param cookieEnhancer A function enhancing a newly created cookie containing the registration assertion.
+     * @return A future containing the assertion.
+     */
+    protected final Future<String> getRegistrationAssertionCookie(final RoutingContext ctx, final String tenantId,
+            final String deviceId, final Function<Cookie, Cookie> cookieEnhancer) {
 
         Cookie assertion = ctx.getCookie(COOKIE_REGISTRATION_ASSERTION);
         if (assertion != null && !RegistrationAssertionHelper.isExpired(assertion.getValue(), 5)) {
@@ -696,7 +722,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
         } else {
             return getRegistrationAssertion(tenantId, deviceId).compose(token -> {
                 Cookie newAssertion = Cookie.cookie(COOKIE_REGISTRATION_ASSERTION, token);
-                newAssertion.setPath(ctx.request().path());
+                Date exp = JwtHelper.getExpiration(token);
+                newAssertion.setMaxAge(Duration.between(Instant.now(), exp.toInstant()).getSeconds());
+                if (cookieEnhancer != null) {
+                    newAssertion = cookieEnhancer.apply(newAssertion);
+                }
                 ctx.addCookie(newAssertion);
                 return Future.succeededFuture(token);
             });

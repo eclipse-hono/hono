@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -76,15 +76,47 @@ public abstract class JwtHelper {
      * 
      * @param token The token to check.
      * @param allowedClockSkewSeconds The allowed clock skew in seconds.
-     * @return {@code true} if the token is expired (including allowed skew).
+     * @return {@code true} if the token is expired according to the current system time (including allowed skew).
      */
     public static final boolean isExpired(final String token, final int allowedClockSkewSeconds) {
+        Instant now = Instant.now().minus(Duration.ofSeconds(allowedClockSkewSeconds));
+        return isExpired(token, now);
+    }
+
+    /**
+     * Checks if a token is expired.
+     * 
+     * @param token The token to check.
+     * @param now The instant of time the token's expiration time should be checked against.
+     * @return {@code true} if the token is expired according to the given instant of time.
+     * @throws NullPointerException if the token is {@code null}.
+     * @throws IllegalArgumentException if the given token contains no <em>exp</em> claim.
+     */
+    public static final boolean isExpired(final String token, final Instant now) {
+
+        if (token == null) {
+            throw new NullPointerException("token must not be null");
+        } else {
+            Date exp = getExpiration(token);
+            return exp.before(Date.from(now));
+        }
+    }
+
+    /**
+     * Gets the value of the <em>exp</em> claim of a JWT.
+     * 
+     * @param token The token.
+     * @return The expiration.
+     * @throws NullPointerException if the token is {@code null}.
+     * @throws IllegalArgumentException if the given token contains no <em>exp</em> claim.
+     */
+    public static final Date getExpiration(final String token) {
 
         if (token == null) {
             throw new NullPointerException("token must not be null");
         }
 
-        final AtomicBoolean result = new AtomicBoolean(false);
+        final AtomicReference<Date> result = new AtomicReference<Date>();
 
         try {
             Jwts.parser().setSigningKeyResolver(new SigningKeyResolverAdapter(){
@@ -93,7 +125,7 @@ public abstract class JwtHelper {
                 public Key resolveSigningKey(JwsHeader header, Claims claims) {
                     Date exp = claims.getExpiration();
                     if (exp != null) {
-                        result.set(exp.before(Date.from(Instant.now().minus(Duration.ofSeconds(allowedClockSkewSeconds)))));
+                        result.set(exp);
                     }
                     return DUMMY_KEY;
                 }
@@ -101,6 +133,11 @@ public abstract class JwtHelper {
         } catch (SignatureException e) {
             // expected since we do not know the signing key
         }
-        return result.get();
+
+        if (result.get() == null) {
+            throw new IllegalArgumentException("token contains no exp claim");
+        } else {
+            return result.get();
+        }
     }
 }
