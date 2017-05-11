@@ -71,6 +71,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     protected static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
 
     /**
+     * Default file uploads directory used by Vert.x Web
+     */
+    protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
+
+    /**
      * The name of the cookie used to store a device's registration assertion JWT token.
      */
     protected static final String COOKIE_REGISTRATION_ASSERTION = "hono.reg-assertion";
@@ -227,7 +232,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
 
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        router.route().handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize()));
+        router.route().handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize()).setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY));
         router.route().handler(CookieHandler.create());
 
         String statusResourcePath = getStatusResourcePath();
