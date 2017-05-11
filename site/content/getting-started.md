@@ -139,10 +139,10 @@ $ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}'
 or (using HTTPie):
 
 ~~~sh
-$ http PUT http://localhost:8080/registration/DEFAULT_TENANT/4711 temp:=5
+$ http PUT http://localhost:8080/telemetry/DEFAULT_TENANT/4711 temp:=5
 ~~~
 
-When you first invoke any of the two commands above after you have started up your Hono instance, you will get the following response:
+When you first invoke any of the two commands above after you have started up your Hono instance, you may get the following response:
 
 ~~~
 HTTP/1.1 503 Service Unavailable
@@ -152,7 +152,7 @@ Content-Type: text/plain
 resource limit exceeded, please try again later
 ~~~
 
-This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono server to forward the data over.
+This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono server to forward the data over. However, the REST adapter may not receive credits from the Hono Server quickly enough for the request to be served successfully.
 You can simply ignore this response and re-submit the command. You should then get a response like this:
 
 ~~~
