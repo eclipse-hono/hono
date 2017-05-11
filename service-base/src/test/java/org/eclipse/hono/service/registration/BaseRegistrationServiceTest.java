@@ -12,17 +12,23 @@
 
 package org.eclipse.hono.service.registration;
 
-import static java.net.HttpURLConnection.*;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.mockito.Mockito.mock;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -37,6 +43,18 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class BaseRegistrationServiceTest {
 
     private static String secret = "secret";
+    private Vertx vertx;
+    private SignatureSupportingConfigProperties props;
+
+    /**
+     * Initializes common properties.
+     */
+    @Before
+    public void init() {
+        vertx = mock(Vertx.class);
+        props = new SignatureSupportingConfigProperties();
+        props.setSharedSecret(secret);
+    }
 
     /**
      * Verifies that the service cannot be started without either <em>signingSecret</em> or
@@ -45,9 +63,11 @@ public class BaseRegistrationServiceTest {
      * @param ctx The vertx unit test context.
      */
     @Test
-    public void testStartupFailsIfNoSigningKeyIsSet(final TestContext ctx) {
-        // GIVEN a registry without a signing key being set
-        BaseRegistrationService registrationService = getRegistrationService(HTTP_OK, BaseRegistrationService.getResultPayload("4711", new JsonObject()));
+    public void testStartupFailsIfNoRegistrationAssertionFactoryIsSet(final TestContext ctx) {
+
+        // GIVEN a registry without an assertion factory being set
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
+                BaseRegistrationService.getResultPayload("4711", new JsonObject()));
 
         // WHEN starting the service
         Async startupFailure = ctx.async();
@@ -68,8 +88,9 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationReturnsToken(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
-        BaseRegistrationService registrationService = getRegistrationService(HTTP_OK, BaseRegistrationService.getResultPayload("4711", new JsonObject()));
-        registrationService.setSigningSecret(secret);
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
+                BaseRegistrationService.getResultPayload("4711", new JsonObject()));
+        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
@@ -91,8 +112,9 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationFailsForDisabledDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
-        RegistrationService registrationService = getRegistrationService(
-                HTTP_OK, BaseRegistrationService.getResultPayload("4711", new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false)));
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
+                BaseRegistrationService.getResultPayload("4711", new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false)));
+        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
@@ -111,7 +133,8 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationFailsForNonExistingDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
-        RegistrationService registrationService = getRegistrationService(HTTP_NOT_FOUND, null);
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_NOT_FOUND, null);
+        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
@@ -121,8 +144,9 @@ public class BaseRegistrationServiceTest {
         }));
     }
 
-    private BaseRegistrationService getRegistrationService(final int status, final JsonObject data) {
-        return new BaseRegistrationService() {
+    private BaseRegistrationService<ServiceConfigProperties> getRegistrationService(final int status, final JsonObject data) {
+
+        return new BaseRegistrationService<ServiceConfigProperties>() {
 
             @Override
             public void updateDevice(final String tenantId, final String deviceId, final JsonObject otherKeys, final Handler<AsyncResult<RegistrationResult>> resultHandler) {

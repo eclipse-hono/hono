@@ -33,12 +33,14 @@ import io.vertx.proton.ProtonSender;
 
 /**
  * Base class for Hono endpoints.
+ * 
+ * @param <T> The type of configuration properties this endpoint understands.
  */
-public abstract class BaseEndpoint implements Endpoint {
+public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements Endpoint {
 
     protected final Vertx                       vertx;
     protected final Logger                      logger               = LoggerFactory.getLogger(getClass());
-    protected ServiceConfigProperties           honoConfig           = new ServiceConfigProperties();
+    protected T                                 config               = (T) new ServiceConfigProperties();
     private static final String                 STATUS_OK            = String.valueOf(HTTP_OK);
     private Map<String, UpstreamReceiverImpl>   activeClients        = new HashMap<>();
 
@@ -53,14 +55,14 @@ public abstract class BaseEndpoint implements Endpoint {
     }
 
     /**
-     * Sets the global Hono configuration properties.
+     * Sets configuration properties.
      * 
      * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
      */
     @Autowired(required = false)
-    public final void setHonoConfiguration(final ServiceConfigProperties props) {
-        this.honoConfig = Objects.requireNonNull(props);
+    public final void setConfiguration(final T props) {
+        this.config = Objects.requireNonNull(props);
     }
 
     @Override

@@ -14,18 +14,18 @@ package org.eclipse.hono.service.registration;
 import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
-import java.security.Key;
 import java.util.Objects;
 
-import org.eclipse.hono.config.KeyLoader;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -39,73 +39,47 @@ import io.vertx.core.json.JsonObject;
  * In particular, this base class provides support for parsing registration request messages
  * received via the event bus and route them to specific methods corresponding to the <em>action</em>
  * indicated in the message.
+ * 
+ * @param <T> The type of configuration properties this service supports.
  */
-public abstract class BaseRegistrationService extends AbstractVerticle implements RegistrationService {
+public abstract class BaseRegistrationService<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> implements RegistrationService {
 
     /**
      * A logger to be shared by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     private MessageConsumer<JsonObject> registrationConsumer;
-    private long tokenExpiration = 10;
-    private RegistrationAssertionHelper assertionHelper;
+    private RegistrationAssertionHelper assertionFactory;
 
     /**
-     * Sets the secret to use for signing tokens asserting the
-     * registration status of devices.
+     * Sets the factory to use for creating tokens asserting a device's registration status.
      * 
-     * @param secret The secret to use.
-     * @throws NullPointerException if secret is {@code null}.
+     * @param assertionFactory The factory.
+     * @throws NullPointerException if factory is {@code null}.
      */
-    public final void setSigningSecret(final String secret) {
-        assertionHelper = new RegistrationAssertionHelper(secret);
+    @Autowired
+    @Qualifier("signing")
+    public final void setRegistrationAssertionFactory(final RegistrationAssertionHelper assertionFactory) {
+        this.assertionFactory = Objects.requireNonNull(assertionFactory);
     }
 
     /**
-     * Sets the path to a PKCS8 PEM file containing the RSA private key to use for signing tokens
-     * asserting the registration status of devices.
-     * 
-     * @param keyPath The absolute path to the file.
-     * @throws NullPointerException if the path is {@code null}.
-     * @throws IllegalArgumentException if the public key cannot be read from the file.
-     */
-    public void setSigningKeyPath(final String keyPath) {
-        Objects.requireNonNull(keyPath);
-        Key key = KeyLoader.fromFiles(vertx, keyPath, null).getPrivateKey();
-        if (key == null) {
-            throw new IllegalArgumentException("cannot load registration service key");
-        } else {
-            assertionHelper = new RegistrationAssertionHelper(SignatureAlgorithm.RS256, key);
-        }
-    }
-
-    /**
-     * Sets the expiration period to use for the tokens asserting the
-     * registration status of devices.
+     * Starts up this service.
      * <p>
-     * The default value is 10 minutes.
-     * 
-     * @param minutes The number of minutes after which the tokens expire.
-     * 
-     * @throws IllegalArgumentException if minutes is &lt;= 0.
-     */
-    public final void setTokenExpiration(final long minutes) {
-        if (minutes <= 0) {
-            throw new IllegalArgumentException("token expiration must be > 0");
-        }
-        this.tokenExpiration = minutes;
-    }
-
-    /**
-     * Registers a Vert.x event consumer for address {@link RegistrationConstants#EVENT_BUS_ADDRESS_REGISTRATION_IN}
-     * and then invokes {@link #doStart(Future)}.
+     * <ol>
+     * <li>Checks if <em>registrationAssertionFactory</em>is set. If not, startup fails.</li>
+     * <li>Registers an event bus consumer for address {@link RegistrationConstants#EVENT_BUS_ADDRESS_REGISTRATION_IN}
+     * listening for registration requests.</li>
+     * <li>Invokes {@link #doStart(Future)}.</li>
+     * </ol>
      *
-     * @param startFuture future to invoke once start up is complete.
+     * @param startFuture The future to complete on successful startup.
      */
     @Override
     public final void start(final Future<Void> startFuture) {
-        if (assertionHelper == null) {
-            startFuture.fail("either signing secret or signing key path property must be set");
+
+        if (assertionFactory == null) {
+            startFuture.fail("registration assertion factory must be set");
         } else {
             registerConsumer();
             doStart(startFuture);
@@ -255,7 +229,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
 
         return new JsonObject()
                 .put(FIELD_HONO_ID, deviceId)
-                .put(FIELD_ASSERTION, assertionHelper.getAssertion(tenantId, deviceId, tokenExpiration));
+                .put(FIELD_ASSERTION, assertionFactory.getAssertion(tenantId, deviceId));
     }
 
     /**

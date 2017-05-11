@@ -30,7 +30,7 @@ import java.util.function.Function;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
-import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.JwtHelper;
 import org.slf4j.Logger;
@@ -722,7 +722,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             final String deviceId, final Function<Cookie, Cookie> cookieEnhancer) {
 
         Cookie assertion = ctx.getCookie(COOKIE_REGISTRATION_ASSERTION);
-        if (assertion != null && !RegistrationAssertionHelper.isExpired(assertion.getValue(), 5)) {
+        if (assertion != null && !RegistrationAssertionHelperImpl.isExpired(assertion.getValue(), 5)) {
             return Future.succeededFuture(assertion.getValue());
         } else {
             return getRegistrationAssertion(tenantId, deviceId).compose(token -> {

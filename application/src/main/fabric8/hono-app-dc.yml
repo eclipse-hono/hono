@@ -34,10 +34,6 @@ spec:
           value: /etc/hono/certs/hono-cert.pem
         - name: HONO_DOWNSTREAM_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_EVENT_REGISTRATION_SERVICE_SECRET
-          value: signing-secret
-        - name: HONO_REGISTRATION_SIGNING_SECRET
-          value: signing-secret
         - name: HONO_SERVER_KEY_PATH
           value: /etc/hono/certs/hono-key.pem
         - name: HONO_SERVER_CERT_PATH
@@ -50,7 +46,7 @@ spec:
           value: "true"
         - name: HONO_SERVER_INSECURE_PORT_BIND_ADDRESS
           value: 0.0.0.0
-        - name: HONO_TELEMETRY_REGISTRATION_SERVICE_SECRET
+        - name: HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET
           value: signing-secret
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml

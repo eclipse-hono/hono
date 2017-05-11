@@ -11,19 +11,19 @@
  */
 package org.eclipse.hono.server;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.junit.Before;
 import org.junit.Test;
 
 import io.vertx.core.Vertx;
@@ -38,6 +38,15 @@ import io.vertx.proton.ProtonQoS;
 public class MessageForwardingEndpointTest {
 
     private Vertx vertx = Vertx.vertx();
+    private RegistrationAssertionHelper tokenValidator;
+
+    /**
+     * Initializes shared properties.
+     */
+    @Before
+    public void init() {
+        tokenValidator = mock(RegistrationAssertionHelper.class);
+    }
 
     /**
      * Verifies that a message containing a matching registration assertion is
@@ -46,16 +55,17 @@ public class MessageForwardingEndpointTest {
     @Test
     public void testForwardMessageAcceptsCorrectRegistrationAssertion() {
 
+        final String validToken = getToken("secret-one", "tenant", "4711");
         UpstreamReceiver client = mock(UpstreamReceiver.class);
         ProtonDelivery delivery = mock(ProtonDelivery.class);
         DownstreamAdapter adapter = mock(DownstreamAdapter.class);
-        MessageForwardingEndpoint endpoint = getEndpoint();
-        endpoint.setRegistrationServiceSecret("secret-one");
+        when(tokenValidator.isValid(validToken, "tenant", "4711")).thenReturn(Boolean.TRUE);
+        MessageForwardingEndpoint<ServiceConfigProperties> endpoint = getEndpoint();
+        endpoint.setRegistrationAssertionValidator(tokenValidator);
         endpoint.setDownstreamAdapter(adapter);
 
-        String invalidToken = getToken("secret-one", "tenant", "4711");
         Message msg = ProtonHelper.message();
-        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_REGISTRATION_ASSERTION, invalidToken);
+        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_REGISTRATION_ASSERTION, validToken);
         MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, "telemetry/tenant/4711");
         endpoint.forwardMessage(client, delivery, msg);
 
@@ -70,12 +80,13 @@ public class MessageForwardingEndpointTest {
     @Test
     public void testProcessMessageRejectsRegistrationAssertionForWrongTenant() {
 
+        final String invalidToken = getToken("secret", "wrong-tenant", "4711");
         UpstreamReceiver client = mock(UpstreamReceiver.class);
         ProtonDelivery delivery = mock(ProtonDelivery.class);
-        MessageForwardingEndpoint endpoint = getEndpoint();
-        endpoint.setRegistrationServiceSecret("secret");
+        when(tokenValidator.isValid(invalidToken, "wrong-tenant", "4711")).thenReturn(Boolean.FALSE);
+        MessageForwardingEndpoint<ServiceConfigProperties> endpoint = getEndpoint();
+        endpoint.setRegistrationAssertionValidator(tokenValidator);
 
-        String invalidToken = getToken("secret", "wrong-tenant", "4711");
         Message msg = ProtonHelper.message();
         MessageHelper.addRegistrationAssertion(msg, invalidToken);
         MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, "telemetry/tenant/4711");
@@ -85,9 +96,9 @@ public class MessageForwardingEndpointTest {
         verify(client).close(any(ErrorCondition.class));
     }
 
-    private MessageForwardingEndpoint getEndpoint() {
+    private MessageForwardingEndpoint<ServiceConfigProperties> getEndpoint() {
 
-        return new MessageForwardingEndpoint(vertx) {
+        return new MessageForwardingEndpoint<ServiceConfigProperties>(vertx) {
 
             @Override
             public String getName() {
@@ -108,6 +119,6 @@ public class MessageForwardingEndpointTest {
 
     private String getToken(final String secret, final String tenantId, final String deviceId) {
 
-        return new RegistrationAssertionHelper(secret).getAssertion(tenantId, deviceId, 10);
+        return RegistrationAssertionHelperImpl.forSharedSecret(secret, 10).getAssertion(tenantId, deviceId);
     }
 }

@@ -11,12 +11,10 @@
  */
 package org.eclipse.hono.util;
 
-import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -35,41 +33,6 @@ import io.jsonwebtoken.SigningKeyResolverAdapter;
 public abstract class JwtHelper {
 
     private static final Key DUMMY_KEY = new SecretKeySpec(new byte[]{ 0x00,  0x01 }, SignatureAlgorithm.HS256.getJcaName());
-    protected final SignatureAlgorithm algorithm;
-    protected final Key signingKey;
-
-    /**
-     * Creates a helper for creating registration assertions.
-     * 
-     * @param algorithm The algorithm to use for signing assertions.
-     * @param signingKey The key to use for validating the assertions' signature.
-     * @throws NullPointerException if algorithm or key are {@code null}.
-     */
-    public JwtHelper(final SignatureAlgorithm algorithm, final Key signingKey) {
-        this.algorithm = algorithm;
-        this.signingKey = signingKey;
-    }
-
-    /**
-     * Creates a helper for creating/validating <em>HS256</em> based registration assertions.
-     * 
-     * @param secret The secret to use for validating the assertion's signature.
-     * @throws NullPointerException if secret is {@code null}.
-     */
-    public JwtHelper(final String secret) {
-        this(SignatureAlgorithm.HS256, new SecretKeySpec(
-                Objects.requireNonNull(secret).getBytes(StandardCharsets.UTF_8), SignatureAlgorithm.HS256.getJcaName()));
-    }
-
-    /**
-     * Creates a helper for validating registration assertions.
-     * 
-     * @param signingKey The key to use for validating the assertion's signature.
-     * @throws NullPointerException if key is {@code null}.
-     */
-    public JwtHelper(final Key signingKey) {
-        this(null, Objects.requireNonNull(signingKey));
-    }
 
     /**
      * Checks if a token is expired.

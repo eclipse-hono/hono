@@ -15,13 +15,12 @@ import static io.vertx.proton.ProtonHelper.condition;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.eclipse.hono.util.MessageHelper.getAnnotation;
 
-import java.security.Key;
 import java.util.Objects;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.config.KeyLoader;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
 import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
@@ -29,6 +28,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.metrics.CounterService;
 
 import io.vertx.core.Future;
@@ -41,14 +41,15 @@ import io.vertx.proton.ProtonReceiver;
 /**
  * A base class for implementing Hono {@code Endpoint}s that forward messages
  * to a downstream container.
- *
+ * 
+ * @param <T> The type of configuration properties this endpoint understands.
  */
-public abstract class MessageForwardingEndpoint extends BaseEndpoint {
+public abstract class MessageForwardingEndpoint<T extends ServiceConfigProperties> extends BaseEndpoint<T> {
 
     private CounterService                counterService = NullCounterService.getInstance();
     private DownstreamAdapter             downstreamAdapter;
     private MessageConsumer<String>       clientDisconnectListener;
-    private RegistrationAssertionHelper   registrationAssertionHelper;
+    private RegistrationAssertionHelper   registrationAssertionValidator;
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -60,34 +61,16 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
     }
 
     /**
-     * Sets the HMAC secret to use for validating JWT tokens asserting a device's registration
+     * Sets the object to use for validatingJWT tokens asserting a device's registration
      * status.
      * 
-     * @param secret The secret to use.
-     * @throws NullPointerException if secret is {@code null}.
+     * @param validator The validator.
+     * @throws NullPointerException if validator is {@code null}.
      */
-    public void setRegistrationServiceSecret(final String secret) {
-        registrationAssertionHelper = new RegistrationAssertionHelper(secret);
-    }
-
-    /**
-     * Sets the path to a PEM file containing the registration service's certificate.
-     * <p>
-     * The public key contained in the certificate is used to validate tokens asserting
-     * a device's registration status.
-     * 
-     * @param certPath The absolute path to the file.
-     * @throws NullPointerException if the path is {@code null}.
-     * @throws IllegalArgumentException if the public key cannot be read from the file.
-     */
-    public void setRegistrationServiceCertPath(final String certPath) {
-        Objects.requireNonNull(certPath);
-        Key key = KeyLoader.fromFiles(vertx, null, certPath).getPublicKey();
-        if (key == null) {
-            throw new IllegalArgumentException("cannot load registration service certificate");
-        } else {
-            registrationAssertionHelper = new RegistrationAssertionHelper(key);
-        }
+    @Autowired
+    @Qualifier("validation")
+    public void setRegistrationAssertionValidator(final RegistrationAssertionHelper validator) {
+        registrationAssertionValidator = Objects.requireNonNull(validator);
     }
 
     /**
@@ -113,6 +96,8 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
     protected final void doStart(Future<Void> startFuture) {
         if (downstreamAdapter == null) {
             startFuture.fail("no downstream adapter configured on endpoint");
+        } else if (registrationAssertionValidator == null) {
+            startFuture.fail("no registration assertion validator has been set");
         } else {
             clientDisconnectListener = vertx.eventBus().consumer(
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
@@ -194,9 +179,10 @@ public abstract class MessageForwardingEndpoint extends BaseEndpoint {
     private boolean assertRegistration(final String token, final ResourceIdentifier resource) {
 
         if (token == null) {
+            logger.debug("token is null");
             return false;
         } else {
-            return registrationAssertionHelper.isValid(token, resource.getTenantId(), resource.getResourceId());
+            return registrationAssertionValidator.isValid(token, resource.getTenantId(), resource.getResourceId());
         }
     }
 

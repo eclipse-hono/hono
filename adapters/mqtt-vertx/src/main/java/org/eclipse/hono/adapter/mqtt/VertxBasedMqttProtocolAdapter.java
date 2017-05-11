@@ -19,7 +19,7 @@ import java.util.Map;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
-import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -263,7 +263,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
     private Future<String> getRegistrationAssertion(final MqttEndpoint endpoint, final ResourceIdentifier address) {
         String token = registrationAssertions.get(endpoint);
-        if (token != null && !RegistrationAssertionHelper.isExpired(token, 10)) {
+        if (token != null && !RegistrationAssertionHelperImpl.isExpired(token, 10)) {
             return Future.succeededFuture(token);
         } else {
             registrationAssertions.remove(endpoint);

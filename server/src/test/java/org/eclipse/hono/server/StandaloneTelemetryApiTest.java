@@ -24,9 +24,9 @@ import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
@@ -74,20 +74,20 @@ public class StandaloneTelemetryApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        assertionHelper = new RegistrationAssertionHelper(SIGNING_SECRET);
+        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SIGNING_SECRET, 10);
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
         server = new HonoServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
         server.setConfig(configProperties);
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
-        telemetryEndpoint.setRegistrationServiceSecret(SIGNING_SECRET);
+        telemetryEndpoint.setRegistrationAssertionValidator(assertionHelper);
         server.addEndpoint(telemetryEndpoint);
         registrationAdapter = new FileBasedRegistrationService();
-        registrationAdapter.setSigningSecret(SIGNING_SECRET);
+        registrationAdapter.setRegistrationAssertionFactory(assertionHelper);
 
         final Future<HonoClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess());
@@ -166,7 +166,8 @@ public class StandaloneTelemetryApiTest {
         });
         sender.await(1000L);
 
-        String registrationAssertion = assertionHelper.getAssertion(DEFAULT_TENANT, DEVICE_1, 10);
+        String registrationAssertion = assertionHelper.getAssertion(DEFAULT_TENANT, DEVICE_1);
+        LOG.debug("got registration assertion for device [{}]: {}", DEVICE_1, registrationAssertion);
 
         IntStream.range(0, count).forEach(i -> {
             Async waitForCredit = ctx.async();
@@ -181,7 +182,7 @@ public class StandaloneTelemetryApiTest {
     @Test(timeout = 1000l)
     public void testLinkGetsClosedWhenUploadingDataWithNonMatchingRegistrationAssertion(final TestContext ctx) throws Exception {
 
-        String assertion = assertionHelper.getAssertion(DEFAULT_TENANT, "other-device", 10);
+        String assertion = assertionHelper.getAssertion(DEFAULT_TENANT, "other-device");
 
         client.getOrCreateTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
             sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
@@ -229,7 +230,7 @@ public class StandaloneTelemetryApiTest {
     @Test(timeout = 2000l)
     public void testLinkGetsClosedWhenDeviceUploadsDataOriginatingFromOtherDevice(final TestContext ctx) throws Exception {
 
-        String registrationAssertion = assertionHelper.getAssertion(DEFAULT_TENANT, "device-1", 10);
+        String registrationAssertion = assertionHelper.getAssertion(DEFAULT_TENANT, "device-1");
 
         client.getOrCreateTelemetrySender(DEFAULT_TENANT, "device-0", ctx.asyncAssertSuccess(sender -> {
             sender.setErrorHandler(ctx.asyncAssertFailure(s -> {

@@ -11,55 +11,107 @@
  */
 package org.eclipse.hono.config;
 
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.util.Objects;
-
-import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Common properties required for creating/validating cryptographic signatures.
  *
  */
-public abstract class SignatureSupportingConfigProperties {
+public class SignatureSupportingConfigProperties {
 
-    private byte[] signingSecret;
-    protected String signatureAlgorithm;
+    private String sharedSecret;
+    private String keyPath;
+    private long tokenExpiration = 10L;
+    private String certificatePath;
 
     /**
-     * Sets the secret to use for validating creating/validating HmacSHA256 based signatures.
+     * Gets the secret used for creating and validating HMAC based signatures.
+     * 
+     * @return The secret or {@code null} if not set.
+     */
+    public final String getSharedSecret() {
+        return sharedSecret;
+    }
+
+    /**
+     * Sets the secret to use for creating and validating HMAC based signatures.
      * 
      * @param secret The shared secret.
      * @throws NullPointerException if secret is {@code null}.
      */
-    public final void setSigningSecret(final String secret) {
-        this.signingSecret = Objects.requireNonNull(secret).getBytes(StandardCharsets.UTF_8);
-        this.signatureAlgorithm = "HmacSHA256";
+    public final void setSharedSecret(final String secret) {
+        this.sharedSecret = Objects.requireNonNull(secret);
     }
 
-    protected final Key getHmacKey() {
-        if (signingSecret != null) {
-            return new SecretKeySpec(signingSecret, signatureAlgorithm);
-        } else {
-            return null;
+    /**
+     * Sets the path to the file containing the private key to be used
+     * for creating SHA256withRSA based signatures.
+     * <p>
+     * The file must be in PKCS8 PEM format.
+     * 
+     * @param keyPath The path to the PEM file.
+     * @throws NullPointerException if the path is {@code null}.
+     */
+    public final void setKeyPath(final String keyPath) {
+        this.keyPath = Objects.requireNonNull(keyPath);
+    }
+
+    /**
+     * Gets the path to the file containing the private key to be used
+     * for validating RSA based signatures.
+     * 
+     * @return The path to the file or {@code null} if not set.
+     */
+    public final String getKeyPath() {
+        return keyPath;
+    }
+
+    /**
+     * Gets the period of time after which tokens asserting the registration status of devices
+     * expire.
+     * 
+     * @return The number of minutes after which tokens expire.
+     */
+    public final long getTokenExpiration() {
+        return tokenExpiration;
+    }
+
+    /**
+     * Sets the expiration period to use for tokens asserting the
+     * registration status of devices.
+     * <p>
+     * The default value is 10 minutes.
+     * 
+     * @param minutes The number of minutes after which tokens expire.
+     * @throws IllegalArgumentException if minutes is &lt;= 0.
+     */
+    public final void setTokenExpiration(final long minutes) {
+        if (minutes <= 0) {
+            throw new IllegalArgumentException("token expiration must be > 0");
         }
+        this.tokenExpiration = minutes;
     }
 
     /**
-     * Gets the secret used for validating HMAC based signatures.
+     * Sets the path to the X.509 certificate containing the public key to be used
+     * for validating SHA256withRSA based signatures.
+     * <p>
+     * The file must be in PKCS8 PEM format.
      * 
-     * @return The secret or {@code null} if not set.
+     * @param certPath The path to the PEM file.
+     * @throws NullPointerException if the path is {@code null}.
      */
-    public final byte [] getSigningSecret() {
-        return signingSecret;
+    public final void setCertificatePath(final String certPath) {
+        this.certificatePath = Objects.requireNonNull(certPath);
     }
 
     /**
-     * Gets the algorithm to use for validating signatures.
+     * Gets the path to the X.509 certificate containing the public key to be used
+     * for validating RSA based signatures.
      * 
-     * @return The JCA algorithm name.
+     * @return The path to the file or {@code null} if not set.
      */
-    public final String getSignatureAlgorithm() {
-        return signatureAlgorithm;
+    public final String getCertificatePath() {
+        return certificatePath;
     }
 }

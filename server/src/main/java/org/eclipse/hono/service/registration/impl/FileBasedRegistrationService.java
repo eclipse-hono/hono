@@ -21,6 +21,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.registration.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -44,7 +45,7 @@ import io.vertx.core.json.JsonObject;
 @Repository
 @ConfigurationProperties(prefix = "hono.registration")
 @Profile({"default", "registration-file"})
-public class FileBasedRegistrationService extends BaseRegistrationService {
+public class FileBasedRegistrationService extends BaseRegistrationService<ServiceConfigProperties> {
 
     /**
      * The default number of devices that can be registered for each tenant.

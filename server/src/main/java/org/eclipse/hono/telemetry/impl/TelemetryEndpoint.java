@@ -15,6 +15,7 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.server.DownstreamAdapter;
+import org.eclipse.hono.server.HonoServerConfigProperties;
 import org.eclipse.hono.server.MessageForwardingEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
@@ -36,7 +37,7 @@ import io.vertx.proton.ProtonQoS;
 @Scope("prototype")
 @Qualifier("telemetry")
 @ConfigurationProperties(prefix = "hono.telemetry")
-public final class TelemetryEndpoint extends MessageForwardingEndpoint {
+public final class TelemetryEndpoint extends MessageForwardingEndpoint<HonoServerConfigProperties> {
 
     @Autowired
     public TelemetryEndpoint(final Vertx vertx) {

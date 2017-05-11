@@ -23,6 +23,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationEndpoint;
 import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.util.AggregatingInvocationResultHandler;
@@ -75,7 +76,7 @@ public class StandaloneRegistrationApiTest {
         server.setConfig(configProperties);
         server.addEndpoint(new RegistrationEndpoint(vertx));
         registrationAdapter = new FileBasedRegistrationService();
-        registrationAdapter.setSigningSecret("signing-secret");
+        registrationAdapter.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSharedSecret("signing-secret", 10));
 
         Future<RegistrationClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {

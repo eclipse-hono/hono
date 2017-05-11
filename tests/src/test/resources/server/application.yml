@@ -3,18 +3,15 @@ hono:
       permissionsPath: file:///etc/hono/permissions.json
   downstream:
     name: hono-server
-  event:
-    registrationServiceSecret: signing-secret
   registration:
     saveToFile: false
-    signingSecret: signing-secret
   server:
     insecurePortEnabled: true
     insecurePortBindAddress: 0.0.0.0
     maxInstances: 1
     waitForDownstreamConnectionEnabled: true
-  telemetry:
-    registrationServiceSecret: signing-secret
+    registrationAssertion:
+      sharedSecret: signing-secret
 
 ---
 

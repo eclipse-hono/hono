@@ -1,46 +1,28 @@
 package org.eclipse.hono.service;
 
-/**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
- *
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *    Bosch Software Innovations GmbH - initial creation
- */
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.ConfigurationSupportingVerticle;
+import org.eclipse.hono.util.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.net.TrustOptions;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.Constants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.Objects;
-
 /**
  * A base class for implementing services binding to a secure and/or a non-secure port.
  *
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractServiceBase<T extends ServiceConfigProperties> extends AbstractVerticle {
+public abstract class AbstractServiceBase<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> {
 
     /**
      * A logger to be shared with subclasses.
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
-
-    @SuppressWarnings("unchecked")
-    private T config = (T) new ServiceConfigProperties();
 
     /**
      * Gets the default port number on which this service listens for encrypted communication (e.g. 5671 for AMQP 1.0).
@@ -85,26 +67,6 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     public abstract int getInsecurePort();
 
     /**
-     * Sets the properties to use for configuring the sockets to listen on.
-     * 
-     * @param props The properties.
-     * @throws NullPointerException if props is {@code null}.
-     */
-    @Autowired(required = false)
-    public final void setConfig(final T props) {
-        this.config = Objects.requireNonNull(props);
-    }
-
-    /**
-     * Gets the properties in use for configuring the sockets to listen on.
-     * 
-     * @return The properties.
-     */
-    public final T getConfig() {
-        return this.config;
-    }
-
-    /**
      * Verifies that this service is properly configured to bind to at least one of the secure or insecure ports.
      *
      * @return A future indicating the outcome of the check.
@@ -113,18 +75,18 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
 
         Future<Void> result = Future.future();
 
-        if (config.getKeyCertOptions() == null) {
-            if (config.getPort() >= 0) {
+        if (getConfig().getKeyCertOptions() == null) {
+            if (getConfig().getPort() >= 0) {
                 LOG.warn("Secure port number configured, but the certificate setup is not correct. No secure port will be opened - please check your configuration!");
             }
-            if (!config.isInsecurePortEnabled()) {
+            if (!getConfig().isInsecurePortEnabled()) {
                 LOG.error("configuration must have at least one of key & certificate or insecure port set to start up");
                 result.fail("no ports configured");
             } else {
                 result.complete();
             }
-        } else if (config.isInsecurePortEnabled()) {
-            if (config.getPort(getPortDefaultValue()) == config.getInsecurePort(getInsecurePortDefaultValue())) {
+        } else if (getConfig().isInsecurePortEnabled()) {
+            if (getConfig().getPort(getPortDefaultValue()) == getConfig().getInsecurePort(getInsecurePortDefaultValue())) {
                 LOG.error("secure and insecure ports must be configured to bind to different port numbers");
                 result.fail("secure and insecure ports configured to bind to same port number");
             } else {
@@ -147,7 +109,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     protected final int determineSecurePort() {
 
-        int port = config.getPort(getPortDefaultValue());
+        int port = getConfig().getPort(getPortDefaultValue());
 
         if (port == getPortDefaultValue()) {
             LOG.info("Server uses secure standard port {}", port);
@@ -167,14 +129,14 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     protected final int determineInsecurePort() {
 
-        int insecurePort = config.getInsecurePort(getInsecurePortDefaultValue());
+        int insecurePort = getConfig().getInsecurePort(getInsecurePortDefaultValue());
 
         if (insecurePort == 0) {
             LOG.info("Server found insecure port number configured for ephemeral port selection (port chosen automatically).");
         } else if (insecurePort == getInsecurePortDefaultValue()) {
             LOG.info("Server uses standard insecure port {}", insecurePort);
         } else if (insecurePort == getPortDefaultValue()) {
-            LOG.warn("Server found insecure port number configured to standard port for secure connections {}", config.getInsecurePort());
+            LOG.warn("Server found insecure port number configured to standard port for secure connections {}", getConfig().getInsecurePort());
             LOG.warn("Possibly misconfigured?");
         }
         return insecurePort;
@@ -188,7 +150,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * @return {@code true} if <em>config</em> contains a valid key and certificate.
      */
     protected boolean isSecurePortEnabled() {
-        return config.getKeyCertOptions() != null;
+        return getConfig().getKeyCertOptions() != null;
     }
 
     /**
@@ -199,7 +161,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * @return {@code true} if the insecure port has been enabled on <em>config</em>.
      */
     protected boolean isInsecurePortEnabled() {
-        return config.isInsecurePortEnabled();
+        return getConfig().isInsecurePortEnabled();
     }
 
     /**
@@ -208,7 +170,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * @return The address.
      */
     public final String getBindAddress() {
-        return config.getBindAddress();
+        return getConfig().getBindAddress();
     }
 
     /**
@@ -217,7 +179,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * @return The address.
      */
     public final String getInsecurePortBindAddress() {
-        return config.getInsecurePortBindAddress();
+        return getConfig().getInsecurePortBindAddress();
     }
 
     /**

@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.service.registration;
+package org.eclipse.hono.util;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -25,13 +25,16 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 
 /**
- * Verifies behavior of {@link RegistrationAssertionHelper}.
+ * Verifies behavior of {@link JwtHelper}.
  *
  */
-public class RegistrationAssertionHelperTest {
+public class JwtHelperTest {
 
     byte[] secret = "secret".getBytes(StandardCharsets.UTF_8);
 
+    /**
+     * Verifies that an expired token is detected.
+     */
     @Test
     public void testIsExpired() {
 
@@ -40,8 +43,8 @@ public class RegistrationAssertionHelperTest {
                             .setExpiration(Date.from(Instant.now().minus(Duration.ofSeconds(10))))
                             .compact();
 
-        assertTrue(RegistrationAssertionHelper.isExpired(token, 10));
-        assertFalse(RegistrationAssertionHelper.isExpired(token, 15));
+        assertTrue(JwtHelper.isExpired(token, 10));
+        assertFalse(JwtHelper.isExpired(token, 15));
     }
 
 }
