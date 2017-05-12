@@ -158,6 +158,8 @@ You can simply ignore this response and re-submit the command. You should then g
 ~~~
 HTTP/1.1 202 Accepted
 Content-Length: 0
+Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0
+
 ~~~
 
 If you have started the consumer as described above, you should now see the telemetry message being logged to the console. You can publish more data simply by issuing additional requests.
