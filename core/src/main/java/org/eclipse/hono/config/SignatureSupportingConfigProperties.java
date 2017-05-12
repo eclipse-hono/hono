@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.config;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 /**
@@ -25,7 +26,7 @@ public class SignatureSupportingConfigProperties {
     private String certificatePath;
 
     /**
-     * Gets the secret used for creating and validating HMAC based signatures.
+     * Gets the secret used for creating and validating HmacSHA256 based signatures.
      * 
      * @return The secret or {@code null} if not set.
      */
@@ -34,13 +35,17 @@ public class SignatureSupportingConfigProperties {
     }
 
     /**
-     * Sets the secret to use for creating and validating HMAC based signatures.
+     * Sets the secret to use for creating and validating HmacSHA256 based signatures.
      * 
      * @param secret The shared secret.
      * @throws NullPointerException if secret is {@code null}.
+     * @throws IllegalArgumentException if the secret is &lt; 32 bytes.
      */
     public final void setSharedSecret(final String secret) {
-        this.sharedSecret = Objects.requireNonNull(secret);
+        if (Objects.requireNonNull(secret).getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalArgumentException("shared secret must be at least 32 bytes");
+        }
+        this.sharedSecret = secret;
     }
 
     /**
@@ -101,7 +106,7 @@ public class SignatureSupportingConfigProperties {
      * @param certPath The path to the PEM file.
      * @throws NullPointerException if the path is {@code null}.
      */
-    public final void setCertificatePath(final String certPath) {
+    public final void setCertPath(final String certPath) {
         this.certificatePath = Objects.requireNonNull(certPath);
     }
 
@@ -111,7 +116,26 @@ public class SignatureSupportingConfigProperties {
      * 
      * @return The path to the file or {@code null} if not set.
      */
-    public final String getCertificatePath() {
+    public final String getCertPath() {
         return certificatePath;
     }
+
+    /**
+     * Checks if this configuration contains enough information for creating assertions.
+     * 
+     * @return {@code true} if any of sharedSecret or keyPath is not {@code null}.
+     */
+    public boolean isAppropriateForCreating() {
+        return sharedSecret != null || keyPath != null;
+    }
+
+    /**
+     * Checks if this configuration contains enough information for validating assertions.
+     * 
+     * @return {@code true} if any of sharedSecret or certificatePath is not {@code null}.
+     */
+    public boolean isAppropriateForValidating() {
+        return sharedSecret != null || certificatePath != null;
+    }
+
 }

@@ -12,25 +12,24 @@
 
 package org.eclipse.hono.server;
 
-import java.util.Objects;
-
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 
 
 /**
- * HonoServerConfigProperties
+ * Configuration properties for a Hono server.
  *
  */
 public class HonoServerConfigProperties extends ServiceConfigProperties {
 
-    private SignatureSupportingConfigProperties registrationAssertionProperties;
+    private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
 
+    /**
+     * Gets the properties for determining key material for creating/validation registration assertion tokens.
+     * 
+     * @return The properties.
+     */
     public SignatureSupportingConfigProperties getRegistrationAssertion() {
         return registrationAssertionProperties;
-    }
-
-    public final void setRegistrationAssertion(final SignatureSupportingConfigProperties signingProps) {
-        this.registrationAssertionProperties = Objects.requireNonNull(signingProps);
     }
 }

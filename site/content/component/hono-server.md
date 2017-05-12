@@ -38,9 +38,9 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_SERVER_KEY_STORE_PATH`<br>`--hono.server.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_SERVER_KEY_PATH` and `HONO_SERVER_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_SERVER_MAX_INSTANCES`<br>`--hono.server.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
 | `HONO_SERVER_PORT`<br>`--hono.server.port` | no | `5671` | The secure port that the server should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_SERVER_REGISTRATION_ASSERTION_CERTIFICATE_PATH`<br>`--hono.server.registrationAssertion.certificatePath` | yes | - | The path to a PEM file containing the *Registration Service*'s certificate. The public key contained in the certificate is used to validate RSA based registration assertion tokens issued by the *Registration Service*. Either this variable or `HONO_SERVER_REGISTRATION_ASSERTION_SIGNING_SECRET` must be set in order for Hono being able to process telemetry data and events received from devices. |
+| `HONO_SERVER_REGISTRATION_ASSERTION_CERT_PATH`<br>`--hono.server.registrationAssertion.certPath` | yes | - | The path to a PEM file containing the *Registration Service*'s certificate. The public key contained in the certificate is used to validate RSA based registration assertion tokens issued by the *Registration Service*. Either this variable or `HONO_SERVER_REGISTRATION_ASSERTION_SIGNING_SECRET` must be set in order for Hono being able to process telemetry data and events received from devices. |
 | `HONO_SERVER_REGISTRATION_ASSERTION_KEY_PATH`<br>`--hono.server.registrationAssertion.keyPath` | yes | - | The path to a PKCS8 PEM file containing the RSA private key to use for signing tokens asserting the registration status of devices. Either this variable or `HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET` must be set in order for the file based default *Device Registration* service to start up. | 
-| `HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET`<br>`--hono.server.registrationAssertion.sharedSecret` | yes | - | The secret to use for signing and validating tokens asserting the registration status of devices using HMAC. Either this variable or `HONO_SERVER_ASSERTION_REGISTRATION_CERTIFICATE_PATH` must be set in order for Hono being able to process telemetry data and events received from devices. When using the file based *Device Registration* service then either this variable or `HONO_SERVER_REGISTRATION_ASSERTION_KEY_PATH` must be set in order for the registration service to start up.|
+| `HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET`<br>`--hono.server.registrationAssertion.sharedSecret` | yes | - | The secret to use for signing and validating tokens asserting the registration status of devices using HmacSHA256. The secret's UTF8 encoding must consist of at least 32 bytes. Either this variable or `HONO_SERVER_ASSERTION_REGISTRATION_CERT_PATH` must be set in order for Hono being able to process telemetry data and events received from devices. When using the file based *Device Registration* service then either this variable or `HONO_SERVER_REGISTRATION_ASSERTION_KEY_PATH` must be set in order for the registration service to start up. |
 | `HONO_SERVER_REGISTRATION_ASSERTION_TOKEN_EXPIRATION`<br>`--hono.server.registrationAssertion.tokenExpiration` | no | `10` | The expiration period to use for the tokens asserting the registration status of devices. |
 | `HONO_SERVER_TRUST_STORE_PASSWORD`<br>`--hono.server.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_SERVER_TRUST_STORE_PATH`<br>`--hono.server.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
@@ -107,9 +107,7 @@ The following command starts the Hono server container using the configuration f
 $ docker run -d --name hono --network hono-net -e 'HONO_DOWNSTREAM_HOST=qdrouter' -e 'HONO_DOWNSTREAM_PORT=5673' \
 > -e 'HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem' -e 'HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-cert.pem' \
 > -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' -e 'HONO_AUTHORIZATION_PERMISSIONS_PATH=file:/etc/hono/permissions.json' \
-> -e 'HONO_EVENT_REGISTRATION_SERVICE_SECRET=signing-secret' \
-> -e 'HONO_TELEMETRY_REGISTRATION_SERVICE_SECRET=signing-secret' \
-> -e 'HONO_REGISTRATION_SIGNING_SECRET=signing-secret' \
+> -e 'HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET=averylongsharedsecretforsigningassertions' \
 > -e 'HONO_SERVER_KEY_PATH=/etc/hono/certs/hono-key.pem' -e 'HONO_SERVER_CERT_PATH=/etc/hono/certs/hono-cert.pem' \
 > -e 'HONO_SERVER_INSECURE_PORT_ENABLED=true' -e 'HONO_SERVER_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
 > -p5672:5672 eclipsehono/hono-server:latest
@@ -139,9 +137,7 @@ The corresponding command to start up the server with the configuration used in 
 > --hono.downstream.port=5673,--hono.downstream.hostnameVerificationRequired=false,\
 > --hono.downstream.keyPath=../demo-certs/certs/hono-key.pem,--hono.downstream.certPath=../demo-certs/certs/hono-cert.pem,\
 > --hono.downstream.trustStorePath=../demo-certs/certs/trusted-certs.pem,\
-> --hono.event.registrationServiceSecret=signing-secret,\
-> --hono.telemetry.registrationServiceSecret=signing-secret,\
-> --hono.registration.signingSecret=signing-secret,\
+> --hono.server.registrationAssertion.sharedSecret=averylongsharedsecretforsigningassertions,\
 > --hono.server.keyPath=../demo-certs/certs/hono-key.pem,--hono.server.certPath=../demo-certs/certs/hono-cert.pem,\
 > --hono.server.trustStorePath=../demo-certs/certs/trusted-certs.pem,\
 > --hono.server.insecurePortEnabled=true,--hono.server.insecurePortBindAddress=0.0.0.0

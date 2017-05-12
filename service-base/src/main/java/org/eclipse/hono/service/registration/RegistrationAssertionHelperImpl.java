@@ -60,18 +60,22 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
      * @param config The configuration properties to determine the signing key material from.
      * @return The helper.
      * @throws NullPointerException if any of the params is {@code null}.
+     * @throws IllegalArgumentException if the key material cannot be determined from config.
      */
     public static RegistrationAssertionHelper forSigning(final Vertx vertx, final SignatureSupportingConfigProperties config) {
         Objects.requireNonNull(config);
-        if (config.getSharedSecret() == null && config.getKeyPath() == null) {
+        if (!config.isAppropriateForCreating()) {
             throw new IllegalArgumentException("configuration does not specify any signing key material");
         } else {
             RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl(vertx);
             result.tokenExpiration = config.getTokenExpiration();
             if (config.getSharedSecret() != null) {
-                result.setSharedSecret(config.getSharedSecret());
+                byte[] secret = getBytes(config.getSharedSecret());
+                result.setSharedSecret(secret);
+                LOG.info("using shared secret [{} bytes] for signing registration assertions", secret.length);
             } else if (config.getKeyPath() != null) {
                 result.setPrivateKey(config.getKeyPath());
+                LOG.info("using private key [{}] for signing registration assertions", config.getKeyPath());
             }
             return result;
         }
@@ -84,17 +88,21 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
      * @param config The configuration properties to determine the signing key material from.
      * @return The helper.
      * @throws NullPointerException if any of the params is {@code null}.
+     * @throws IllegalArgumentException if the key material cannot be determined from config.
      */
-    public static final RegistrationAssertionHelper forValidating(final Vertx vertx, final SignatureSupportingConfigProperties config) {
+    public static RegistrationAssertionHelper forValidating(final Vertx vertx, final SignatureSupportingConfigProperties config) {
         Objects.requireNonNull(config);
-        if (config.getSharedSecret() == null && config.getCertificatePath() == null) {
+        if (!config.isAppropriateForValidating()) {
             throw new IllegalArgumentException("configuration does not specify any key material for validating signatures");
         } else {
             RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl(vertx);
             if (config.getSharedSecret() != null) {
-                result.setSharedSecret(config.getSharedSecret());
-            } else if (config.getCertificatePath() != null) {
-                result.setPublicKey(config.getCertificatePath());
+                byte[] secret = getBytes(config.getSharedSecret());
+                result.setSharedSecret(secret);
+                LOG.info("using shared secret [{} bytes] for validating registration assertions", secret.length);
+            } else if (config.getCertPath() != null) {
+                result.setPublicKey(config.getCertPath());
+                LOG.info("using public key from certificate [{}] for validating registration assertions", config.getCertPath());
             }
             return result;
         }
@@ -108,12 +116,16 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
      * @return The helper.
      * @throws NullPointerException if sharedSecret is {@code null}.
      */
-    public static final RegistrationAssertionHelper forSharedSecret(final String sharedSecret, final long tokenExpiration) {
+    public static RegistrationAssertionHelper forSharedSecret(final String sharedSecret, final long tokenExpiration) {
         Objects.requireNonNull(sharedSecret);
         RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl();
-        result.setSharedSecret(sharedSecret);
+        result.setSharedSecret(getBytes(sharedSecret));
         result.tokenExpiration = tokenExpiration;
         return result;
+    }
+
+    private static byte[] getBytes(final String secret) {
+        return secret.getBytes(StandardCharsets.UTF_8);
     }
 
     /**
@@ -122,11 +134,14 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
      * 
      * @param secret The secret to use.
      * @throws NullPointerException if secret is {@code null}.
+     * @throws IllegalArgumentException if the secret is &lt; 32 bytes.
      */
-    private void setSharedSecret(final String secret) {
+    private void setSharedSecret(final byte[] secret) {
+        if (Objects.requireNonNull(secret).length < 32) {
+            throw new IllegalArgumentException("shared secret must be at least 32 bytes");
+        }
         this.algorithm = SignatureAlgorithm.HS256;
-        this.key = new SecretKeySpec(
-                Objects.requireNonNull(secret).getBytes(StandardCharsets.UTF_8), SignatureAlgorithm.HS256.getJcaName());
+        this.key = new SecretKeySpec(secret, SignatureAlgorithm.HS256.getJcaName());
     }
 
     /**

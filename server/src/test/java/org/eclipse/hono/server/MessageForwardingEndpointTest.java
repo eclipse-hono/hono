@@ -37,6 +37,7 @@ import io.vertx.proton.ProtonQoS;
  */
 public class MessageForwardingEndpointTest {
 
+    private static final String SECRET = "hfguisdauifsuifhwebfjkhsdfuigsdafigsdaozfgaDSBCMBGQ";
     private Vertx vertx = Vertx.vertx();
     private RegistrationAssertionHelper tokenValidator;
 
@@ -55,7 +56,7 @@ public class MessageForwardingEndpointTest {
     @Test
     public void testForwardMessageAcceptsCorrectRegistrationAssertion() {
 
-        final String validToken = getToken("secret-one", "tenant", "4711");
+        final String validToken = getToken(SECRET, "tenant", "4711");
         UpstreamReceiver client = mock(UpstreamReceiver.class);
         ProtonDelivery delivery = mock(ProtonDelivery.class);
         DownstreamAdapter adapter = mock(DownstreamAdapter.class);
@@ -80,10 +81,10 @@ public class MessageForwardingEndpointTest {
     @Test
     public void testProcessMessageRejectsRegistrationAssertionForWrongTenant() {
 
-        final String invalidToken = getToken("secret", "wrong-tenant", "4711");
+        final String invalidToken = getToken(SECRET, "wrong-tenant", "4711");
         UpstreamReceiver client = mock(UpstreamReceiver.class);
         ProtonDelivery delivery = mock(ProtonDelivery.class);
-        when(tokenValidator.isValid(invalidToken, "wrong-tenant", "4711")).thenReturn(Boolean.FALSE);
+        when(tokenValidator.isValid(invalidToken, "tenant", "4711")).thenReturn(Boolean.FALSE);
         MessageForwardingEndpoint<ServiceConfigProperties> endpoint = getEndpoint();
         endpoint.setRegistrationAssertionValidator(tokenValidator);
 

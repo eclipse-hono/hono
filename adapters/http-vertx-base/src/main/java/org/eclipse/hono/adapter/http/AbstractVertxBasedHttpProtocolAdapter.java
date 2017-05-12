@@ -30,7 +30,6 @@ import java.util.function.Function;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
-import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.JwtHelper;
 import org.slf4j.Logger;
@@ -660,6 +659,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             CompositeFuture.all(tokenTracker, senderTracker).setHandler(s -> {
                 if (s.failed()) {
                     if (tokenTracker.failed()) {
+                        LOG.debug("could not get registration assertion [tenant: {}, device: {}]", tenant, deviceId, s.cause());
                         endWithStatus(ctx.response(), HTTP_FORBIDDEN, null, null, null);
                     } else {
                         serviceUnavailable(ctx.response(), 5);
@@ -722,7 +722,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             final String deviceId, final Function<Cookie, Cookie> cookieEnhancer) {
 
         Cookie assertion = ctx.getCookie(COOKIE_REGISTRATION_ASSERTION);
-        if (assertion != null && !RegistrationAssertionHelperImpl.isExpired(assertion.getValue(), 5)) {
+        if (assertion != null && !JwtHelper.isExpired(assertion.getValue(), 5)) {
             return Future.succeededFuture(assertion.getValue());
         } else {
             return getRegistrationAssertion(tenantId, deviceId).compose(token -> {

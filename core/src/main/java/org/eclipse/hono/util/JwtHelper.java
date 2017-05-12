@@ -21,9 +21,9 @@ import javax.crypto.spec.SecretKeySpec;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwsHeader;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.SignatureException;
 import io.jsonwebtoken.SigningKeyResolverAdapter;
 
 /**
@@ -93,7 +93,7 @@ public abstract class JwtHelper {
                     return DUMMY_KEY;
                 }
             }).parse(token);
-        } catch (SignatureException e) {
+        } catch (JwtException e) {
             // expected since we do not know the signing key
         }
 

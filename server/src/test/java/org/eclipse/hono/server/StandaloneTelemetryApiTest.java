@@ -61,7 +61,8 @@ public class StandaloneTelemetryApiTest {
     private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
     private static final String                USER = "hono-client";
     private static final String                PWD = "secret";
-    private static final String                SIGNING_SECRET = "signing-secret";
+    private static final String                SECRET = "dajAIOFDHUIFHFSDAJKGFKSDF,SBDFAZUSDJBFFNCLDNC";
+    private static final int                   TIMEOUT = 2000; // milliseconds
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
@@ -74,7 +75,7 @@ public class StandaloneTelemetryApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SIGNING_SECRET, 10);
+        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
         server = new HonoServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
@@ -147,7 +148,7 @@ public class StandaloneTelemetryApiTest {
         }
     }
 
-    @Test(timeout = 2000l)
+    @Test(timeout = TIMEOUT)
     public void testTelemetryUploadSucceedsForRegisteredDevice(final TestContext ctx) throws Exception {
 
         LOG.debug("starting telemetry upload test");
@@ -179,7 +180,7 @@ public class StandaloneTelemetryApiTest {
 
     }
 
-    @Test(timeout = 1000l)
+    @Test(timeout = TIMEOUT)
     public void testLinkGetsClosedWhenUploadingDataWithNonMatchingRegistrationAssertion(final TestContext ctx) throws Exception {
 
         String assertion = assertionHelper.getAssertion(DEFAULT_TENANT, "other-device");
@@ -193,7 +194,7 @@ public class StandaloneTelemetryApiTest {
 
     }
 
-    @Test(timeout = 1000l)
+    @Test(timeout = TIMEOUT)
     public void testLinkGetsClosedWhenUploadingDataWithoutRegistrationAssertion(final TestContext ctx) throws Exception {
 
         Message msg = ProtonHelper.message();
@@ -212,7 +213,7 @@ public class StandaloneTelemetryApiTest {
 
     }
 
-    @Test(timeout = 1000l)
+    @Test(timeout = TIMEOUT)
     public void testLinkGetsClosedWhenUploadingMalformedTelemetryDataMessage(final TestContext ctx) throws Exception {
 
         final Message msg = ProtonHelper.message("malformed");
@@ -227,7 +228,7 @@ public class StandaloneTelemetryApiTest {
 
     }
 
-    @Test(timeout = 2000l)
+    @Test(timeout = TIMEOUT)
     public void testLinkGetsClosedWhenDeviceUploadsDataOriginatingFromOtherDevice(final TestContext ctx) throws Exception {
 
         String registrationAssertion = assertionHelper.getAssertion(DEFAULT_TENANT, "device-1");

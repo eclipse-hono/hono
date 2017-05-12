@@ -42,7 +42,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class BaseRegistrationServiceTest {
 
-    private static String secret = "secret";
+    private static String secret = "dafhkjsdahfuksahuioahgfdahsgjkhfdjkghfdkghLFJKFHUISAZFIUSDZGHSGAK";
     private Vertx vertx;
     private SignatureSupportingConfigProperties props;
 

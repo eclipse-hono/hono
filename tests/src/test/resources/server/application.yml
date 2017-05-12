@@ -11,7 +11,7 @@ hono:
     maxInstances: 1
     waitForDownstreamConnectionEnabled: true
     registrationAssertion:
-      sharedSecret: signing-secret
+      sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
 
 ---
 

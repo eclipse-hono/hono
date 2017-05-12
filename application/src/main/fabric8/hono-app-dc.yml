@@ -47,7 +47,7 @@ spec:
         - name: HONO_SERVER_INSECURE_PORT_BIND_ADDRESS
           value: 0.0.0.0
         - name: HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET
-          value: signing-secret
+          value: "g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
         - name: SPRING_PROFILES_ACTIVE

@@ -104,6 +104,10 @@ public class ApplicationConfig {
     @Bean
     @Qualifier("validation")
     public RegistrationAssertionHelper registrationAssertionValidator(final HonoServerConfigProperties honoProps) {
+        if (!honoProps.getRegistrationAssertion().isAppropriateForValidating() && honoProps.getCertPath() != null) {
+            // fall back to TLS configuration
+            honoProps.getRegistrationAssertion().setCertPath(honoProps.getCertPath());
+        }
         return RegistrationAssertionHelperImpl.forValidating(vertx, honoProps.getRegistrationAssertion());
     }
 
@@ -116,6 +120,10 @@ public class ApplicationConfig {
     @Bean
     @Qualifier("signing")
     public RegistrationAssertionHelper registrationAssertionFactory(final HonoServerConfigProperties honoProps) {
+        if (!honoProps.getRegistrationAssertion().isAppropriateForCreating() && honoProps.getKeyPath() != null) {
+            // fall back to TLS configuration
+            honoProps.getRegistrationAssertion().setKeyPath(honoProps.getKeyPath());
+        }
         return RegistrationAssertionHelperImpl.forSigning(vertx, honoProps.getRegistrationAssertion());
     }
 }

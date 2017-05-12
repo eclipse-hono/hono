@@ -30,7 +30,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
  */
 public class JwtHelperTest {
 
-    byte[] secret = "secret".getBytes(StandardCharsets.UTF_8);
+    byte[] secret = "usadfigdfkbsakgjhfuigagasfsdafgsgdfzugzufrwebf".getBytes(StandardCharsets.UTF_8);
 
     /**
      * Verifies that an expired token is detected.
