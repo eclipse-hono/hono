@@ -57,6 +57,3 @@ spec:
             path: "/status"
             port: 8080
             initialDelaySeconds: 20
-      volumes:
-      - name: ${project.artifactId}-volume
-        emptyDir: {}
