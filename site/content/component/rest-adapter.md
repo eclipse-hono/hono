@@ -276,20 +276,37 @@ The response will look similar to this:
 
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
-* Headers:
-  * (required) `Content-Type`: the type of payload contained in the body.
-* Body:
+* Request Headers:
+  * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}))
+* Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
   * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
+* Response Headers:
+  * `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client should include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued by the *Registration Service*.
 
 **Example**
 
 Upload a JSON string for device `4711`:
 
-    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
-    $ http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+    $ curl -i -X PUT -H 'Content-Type: application/json' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+
+Response:
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+    Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0
+
+Subsequent request:
+
+    $ curl -i -X PUT -H 'Content-Type: application/json' \
+    $ -H 'Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0' \
+    $ --data-binary '{"temp": 10}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
 
 ## Using the Event API
 
@@ -297,17 +314,34 @@ Upload a JSON string for device `4711`:
 
 * URI: `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
-* Headers:
-  * (required) `Content-Type` - the type of payload contained in the body.
-* Body:
+* Request Headers:
+  * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}))
+* Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
   * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
+* Response Headers:
+  * `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client should include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued by the *Registration Service*.
 
 **Example**
 
 Upload a JSON string for device `4711`:
 
-    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
-    $ http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+    $ curl -i -X PUT -H 'Content-Type: application/json' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+
+Response:
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+    Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0
+
+Subsequent request:
+
+    $ curl -i -X PUT -H 'Content-Type: application/json' \
+    $ -H 'Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0' \
+    $ --data-binary '{"temp": 10}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
