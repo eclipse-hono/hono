@@ -19,15 +19,12 @@ services:
       - INFLUXDB_ADMIN_ENABLED=true
 
   grafana:
-    image: eclipsehono/grafana:${grafana.version}
+    image: eclipsehono/grafana:${project.version}
     command: ./bin/grafana-server
     networks:
       - hono-net
     ports:
       - "3000:3000"
-    environment:
-      - GF_INSTALL_PLUGINS=mtanda-histogram-panel
-      - GF_DATABASE_PATH=/etc/hono/data/grafana.db
 
   qdrouter:
     image: eclipsehono/dispatch-router:${project.version}

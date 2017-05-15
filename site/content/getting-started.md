@@ -188,4 +188,4 @@ In order to start up the instance again:
 
 ## View metrics
 
-Open [http://localhost:3000/dashboard/db/hono?orgId=1]() in a browser. Login is admin/admin.
+Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in a browser. Login is `admin/admin`.

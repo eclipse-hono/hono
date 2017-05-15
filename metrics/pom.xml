@@ -51,7 +51,7 @@
               <images>
                 <image>
                   <alias>grafana</alias>
-                  <name>eclipsehono/grafana:${grafana.version}</name>
+                  <name>eclipsehono/grafana:${project.version}</name>
                   <build>
                     <from>grafana/grafana:${grafana.version}</from>
                     <ports>
@@ -59,13 +59,13 @@
                     </ports>
                     <assembly>
                       <mode>dir</mode>
-                      <basedir>/etc/hono</basedir>
+                      <basedir>/var/lib/grafana</basedir>
                       <inline>
                         <id>config</id>
                         <fileSets>
                           <fileSet>
                             <directory>${project.basedir}/grafana</directory>
-                            <outputDirectory>data</outputDirectory>
+                            <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>grafana.db</include>
                             </includes>
