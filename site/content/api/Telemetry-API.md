@@ -15,13 +15,14 @@ The following operations can be used by *Devices* and/or *Protocol Adapters* (to
 
 Both *Devices* as well as *Protocol Adapters* will be referred to as *clients* in the remainder of this section.
 
-### Upload Telemetry Data
+## Upload Telemetry Data
 
 **Preconditions**
 
 1. Client has established an AMQP connection with Hono.
-2. Client has established an AMQP link in role *sender* with Hono using target address `telemetry/${tenant_id}` where `tenant_id` is the ID of the tenant that the client wants to upload telemetry data for. 
-3. The device for which the client wants to upload telemetry data has been registered (see [Device Registration API](../Device-Registration-API)).
+1. Client has established an AMQP link in role *sender* with Hono using target address `telemetry/${tenant_id}` where `tenant_id` is the ID of the tenant that the client wants to upload telemetry data for. 
+1. The device for which the client wants to upload telemetry data has been registered (see [Device Registration API]({{< relref "Device-Registration-API.md" >}})).
+1. Client has obtained a *registration assertion* for the device from the Device Registration service by means of the [assert Device Registration operation]({{< relref "Device-Registration-API.md#assert-device-registration" >}}).
 
 The client indicates its preferred message delivery mode by means of the `snd-settle-mode` and `rcv-settle-mode` fields of its `attach` frame during link establishment. Hono will receive messages using a delivery mode according to the following table:
 
@@ -46,17 +47,18 @@ Note that the sequence diagram is based on the [Hybrid Connection Model]({{< rel
    1. *Telemetry* endpoint successfully verifies that the adapter has permission to upload telemetry data for `TENANT` using *Authorization* service.
    1. *Telemetry* endpoint opens downstream link to *Dispatch Router* for telemetry data.
 1. *Protocol Adapter* sends telemetry data for device `4711`.
-   1. *Telemetry* endpoint successfully verifies that device `4711` of `TENANT` exists and is enabled using *Device Registration* service.
+   1. *Telemetry* endpoint successfully verifies that device `4711` of `TENANT` exists and is enabled by means of validating the *registration assertion* included in the message (see [Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})).
    1. *Telemetry* endpoint forwards data to *Dispatch Router*.
 
 **Message Format**
 
 The following table provides an overview of the properties a client needs to set on an *Upload Telemetry Data* message.
 
-| Name           | Mandatory | Location     | Type      | Description |
-| :------------- | :-------: | :----------- | :-------- | :---------- |
-| *content-type* | yes       | *properties* | *symbol*  | SHOULD be set to *application/octet-stream* if the message payload is to be considered *opaque* binary data. In most cases though, the client should be able to set a more specific content type indicating the type and characteristics of the data contained in the payload, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. |
-| *device_id*    | yes       | *application-properties* | UTF-8 *string* | MUST contain the ID of the device the data in the payload has been reported by. |
+| Name           | Mandatory | Location                 | Type      | Description |
+| :------------- | :-------: | :----------------------- | :-------- | :---------- |
+| *content-type* | yes       | *properties*             | *symbol*  | SHOULD be set to *application/octet-stream* if the message payload is to be considered *opaque* binary data. In most cases though, the client should be able to set a more specific content type indicating the type and characteristics of the data contained in the payload, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. |
+| *device_id*    | yes       | *application-properties* | *string*  | MUST contain the ID of the device the data in the payload has been reported by. |
+| *assertion*    | yes       | *application-properties* | *string*  | A [JSON Web Token](https://jwt.io/introduction/) issued by the [Device Registration service]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}) asserting the device's registration status. |
 
 The body of the message MUST consist of a single AMQP *Data* section containing the telemetry data. The format and encoding of the data MUST be indicated by the *content-type* and (optional) *content-encoding* properties of the message.
 
@@ -68,7 +70,7 @@ Whenever a client sends a telemetry message that cannot be processed, e.g. becau
 
 # Northbound Operations
 
-### Receive Telemetry Data
+## Receive Telemetry Data
 
 Hono delivers messages containing telemetry data reported by a particular device in the same order that they have been received in (using the *Upload Telemetry Data* operation defined above).
 Hono MAY drop telemetry messages that it cannot deliver to any consumers. Reasons for this include that there are no consumers connected to Hono or the existing consumers are not able to process the messages from Hono fast enough.
@@ -103,4 +105,4 @@ The *Business Application* can only consume telemetry messages that have been up
 
 **Message Format**
 
-The format of the messages containing the telemetry data is the same as for the *Upload Telemetry Data* operation.
+The format of the messages containing the telemetry data is the same as for the [Upload Telemetry Data operation]({{< relref "#upload-telemetry-data" >}}).

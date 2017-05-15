@@ -18,12 +18,14 @@ The following operations can be used by *Devices* and/or *Protocol Adapters* (to
 
 Both *Devices* as well as *Protocol Adapters* will be referred to as *clients* in the remainder of this section.
 
-### Send Event
+## Send Event
 
 **Preconditions**
 
 1. Client has established an AMQP connection with Hono.
-2. Client has established an AMQP link in role *sender* with Hono using target address `event/${tenant_id}` where `tenant_id` is the ID of the tenant that the client wants to upload event messages for. 
+1. Client has established an AMQP link in role *sender* with Hono using target address `event/${tenant_id}` where `tenant_id` is the ID of the tenant that the client wants to upload event messages for. 
+1. The device for which the client wants to send an event has been registered (see [Device Registration API]({{< relref "Device-Registration-API.md" >}})).
+1. Client has obtained a *registration assertion* for the device from the Device Registration service by means of the [assert Device Registration operation]({{< relref "Device-Registration-API.md#assert-device-registration" >}}).
 
 The client indicates its preferred message delivery mode by means of the `snd-settle-mode` and `rcv-settle-mode` fields of its `attach` frame during link establishment. Hono will receive messages using a delivery mode according to the following table:
 
@@ -35,15 +37,15 @@ All other combinations are not supported by Hono and result in a termination of 
 
 **Message Flow**
 
-See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for a description of the message flow.
+See [Telemetry API]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) for a description of the message flow.
 
 **Message Format**
 
-See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of message format. 
+See [Telemetry API]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) for definition of message format.
 
 # Northbound Operations
 
-### Receive Events
+## Receive Events
 
 Hono delivers messages containing event messages reported by a particular device in the same order that they have been received in (using the *Events* operation defined above).
 Hono supports multiple non-competing *Business Application* consumers of event messages for a given tenant. Hono allows each *Business Application* to have multiple competing consumers for event messages for a given tenant to share the load of processing the messages.
