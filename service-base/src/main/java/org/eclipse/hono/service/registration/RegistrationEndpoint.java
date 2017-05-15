@@ -122,15 +122,6 @@ public final class RegistrationEndpoint extends BaseEndpoint {
         }
     }
 
-    private void onLinkDetach(final ProtonReceiver client) {
-        onLinkDetach(client, null);
-    }
-
-    private void onLinkDetach(final ProtonReceiver client, final ErrorCondition condition) {
-        logger.debug("closing receiver for client [{}]", getLinkName(client));
-        client.close();
-    }
-
     private void processRequest(final Message msg) {
 
         final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
