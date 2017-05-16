@@ -22,11 +22,12 @@ public class MetricConstants {
     }
 
     public static String metricNameProcessedMessages(String address) {
-        return "histogram.hono.server.messages." + address + ".processed";
+        // prefix "meter" is used by spring boot actuator together with dropwizard metrics
+        return "meter.hono.server.messages." + address + ".processed";
     }
 
     public static String metricNameDiscardedMessages(String address) {
-        return "histogram.hono.server.messages." + address + ".discarded";
+        return "hono.server.messages." + address + ".discarded";
     }
 
 }

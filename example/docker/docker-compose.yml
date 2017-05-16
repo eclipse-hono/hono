@@ -6,6 +6,26 @@ networks:
 
 services:
 
+  influxdb:
+    image: influxdb:1.2.2
+    networks:
+      - hono-net
+    ports:
+      - "8086:8086"
+      - "8083:8083"
+      - "2003:2003"
+    environment:
+      - INFLUXDB_GRAPHITE_ENABLED=true
+      - INFLUXDB_ADMIN_ENABLED=true
+
+  grafana:
+    image: eclipsehono/grafana:${project.version}
+    command: ./bin/grafana-server
+    networks:
+      - hono-net
+    ports:
+      - "3000:3000"
+
   qdrouter:
     image: eclipsehono/dispatch-router:${project.version}
     networks:
@@ -14,6 +34,7 @@ services:
     ports:
       - "15671:5671"
       - "15672:5672"
+      - "15673:5673"
 
   broker:
     image: eclipsehono/broker:${project.version}

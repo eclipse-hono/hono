@@ -3,6 +3,8 @@ package org.eclipse.hono.application;
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.graphite.Graphite;
+import com.codahale.metrics.graphite.GraphiteReporter;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import org.slf4j.Logger;
@@ -13,6 +15,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -51,4 +54,20 @@ public class MetricsConfig {
         return consoleReporter;
     }
 
+    @Bean
+    @Autowired
+    @ConditionalOnProperty(prefix = "hono.metric.reporter.graphite", name = "active", havingValue = "true")
+    public GraphiteReporter graphiteReporter(MetricRegistry metricRegistry,
+                                             @Value("${hono.metric.reporter.graphite.period:5000}") Long period,
+                                             @Value("${hono.metric.reporter.graphite.host:localhost}") String host,
+                                             @Value("${hono.metric.reporter.graphite.port:2003}") Integer port) {
+        final Graphite graphite = new Graphite(new InetSocketAddress(host, port));
+        final GraphiteReporter reporter = GraphiteReporter.forRegistry(metricRegistry)
+                .convertRatesTo(TimeUnit.SECONDS)
+                .convertDurationsTo(TimeUnit.MILLISECONDS)
+                .filter(MetricFilter.ALL)
+                .build(graphite);
+        reporter.start(period, TimeUnit.MILLISECONDS);
+        return reporter;
+    }
 }

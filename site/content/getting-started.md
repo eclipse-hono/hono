@@ -185,3 +185,7 @@ In order to start up the instance again:
 ~~~sh
 ~/hono/example/target/hono$ docker stack deploy -c docker-compose.yml hono
 ~~~
+
+## View metrics
+
+Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in a browser. Login is `admin/admin`.
