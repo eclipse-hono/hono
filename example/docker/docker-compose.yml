@@ -34,7 +34,6 @@ services:
     ports:
       - "15671:5671"
       - "15672:5672"
-      - "15673:5673"
 
   broker:
     image: eclipsehono/broker:${project.version}
