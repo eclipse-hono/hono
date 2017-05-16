@@ -45,13 +45,19 @@ The easiest way to start the server components is by deploying them as a *stack*
 
 This will create and start up Docker Swarm *services* for all components that together comprise a Hono instance, in particular the following services are started:
 
-{{< figure src="../Hono_instance.png" title="Hono instance containers">}}
+{{< figure src="../Hono_instance.svg" title="Hono instance containers">}}
 
-* A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
-* A *Hono Server* instance that protocol adapters connect to in order to forward data from devices.
-* A *REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
-* An *MQTT Adapter* instance that exposes Hono's Telemetry API as an MQTT topic hierarchy.
-
+* Hono Instance
+  * A *Hono Server* instance that protocol adapters connect to in order to forward data from devices.
+  * A *REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
+  * An *MQTT Adapter* instance that exposes Hono's Telemetry API as an MQTT topic hierarchy.
+* AMQP Network
+  * A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
+  * An *Artemis* instance that is the default persistence store for events.
+* Monitoring Infrastructure
+  * An *InfluxDB* instance to store metrics data from the Hono Server.
+  * A *Grafana* instance to show a default dashboard with the Hono Server metrics.
+ 
 ## Starting a Consumer
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
