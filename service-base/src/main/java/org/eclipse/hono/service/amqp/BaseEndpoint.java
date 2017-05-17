@@ -20,6 +20,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,6 +127,30 @@ public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements
         }
         client.close(error);
         removeClientLink(client.getLinkId());
+    }
+
+    /**
+     * Closes the link to a proton based receiver client.
+     *
+     * @param client The client to detach.
+     */
+    protected void onLinkDetach(final ProtonReceiver client) {
+        onLinkDetach(client, null);
+    }
+
+    /**
+     * Closes the link to a proton based receiver client.
+     *
+     * @param client The client to detach.
+     * @param error The error condition to convey to the client when closing the link.
+     */
+    protected void onLinkDetach(final ProtonReceiver client, final ErrorCondition error) {
+        if (error == null) {
+            logger.debug("closing proton receiver for client [{}]", MessageHelper.getLinkName(client));
+        } else {
+            logger.debug("closing proton receiver for client [{}]: {}", MessageHelper.getLinkName(client), error.getDescription());
+        }
+        client.close();
     }
 
     /**
