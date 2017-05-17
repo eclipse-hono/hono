@@ -124,7 +124,7 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
             }
                 break;
             default:
-                log.info("subject [{}] not supported", subject);
+                log.info("operation [{}] not supported", subject);
                 reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
             }
         } catch (ClassCastException e) {
@@ -180,9 +180,9 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
         return new JsonObject().
                 put(FIELD_DEVICE_ID, deviceId).
                 put(FIELD_TYPE, type).
-                put(FIELD_AUTH_ID,authId).
-                put(FIELD_ENABLED,Boolean.valueOf(enabled)).
-                put(FIELD_SECRETS,secrets);
+                put(FIELD_AUTH_ID, authId).
+                put(FIELD_ENABLED, Boolean.valueOf(enabled)).
+                put(FIELD_SECRETS, secrets);
     }
 
 }

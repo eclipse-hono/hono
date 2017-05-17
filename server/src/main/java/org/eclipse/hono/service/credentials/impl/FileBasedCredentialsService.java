@@ -66,7 +66,7 @@ public class FileBasedCredentialsService extends BaseCredentialsService {
      * @param filename The name of the file to persist to (can be a relative or absolute path).
      * @throws IllegalStateException if this registry is already running.
      */
-    public void setFilename(final String filename) {
+    public final void setFilename(final String filename) {
         if (running) {
             throw new IllegalStateException("credentials registry already started");
         }
@@ -82,7 +82,7 @@ public class FileBasedCredentialsService extends BaseCredentialsService {
      * @param enabled {@code true} if credentials registry content should be persisted.
      * @throws IllegalStateException if this credentials registry is already running.
      */
-    public void setSaveToFile(final boolean enabled) {
+    public final void setSaveToFile(final boolean enabled) {
         if (running) {
             throw new IllegalStateException("credentials registry already started");
         }
@@ -91,7 +91,7 @@ public class FileBasedCredentialsService extends BaseCredentialsService {
 
 
     @Override
-    protected void doStart(Future<Void> startFuture) throws Exception {
+    protected void doStart(final Future<Void> startFuture) throws Exception {
 
         if (!running) {
             if (filename != null) {
@@ -110,7 +110,7 @@ public class FileBasedCredentialsService extends BaseCredentialsService {
         startFuture.complete();
     }
 
-    private void loadCredentialsData() {
+    protected void loadCredentialsData() {
         if (filename != null) {
             final FileSystem fs = vertx.fileSystem();
             log.debug("trying to load credentials information from file {}", filename);
@@ -149,7 +149,7 @@ public class FileBasedCredentialsService extends BaseCredentialsService {
     }
 
     @Override
-    protected void doStop(Future<Void> stopFuture) {
+    protected void doStop(final Future<Void> stopFuture) {
 
         if (running) {
             Future<Void> stopTracker = Future.future();
@@ -168,7 +168,7 @@ public class FileBasedCredentialsService extends BaseCredentialsService {
         }
     }
 
-    private void saveToFile(final Future<Void> writeResult) {
+    protected void saveToFile(final Future<Void> writeResult) {
 
         if (!dirty) {
             log.trace("credentials registry does not need to be persisted");
@@ -207,33 +207,33 @@ public class FileBasedCredentialsService extends BaseCredentialsService {
     }
 
     @Override
-    public void getCredentials(String tenantId, String type, String authId, Handler<AsyncResult<CredentialsResult>> resultHandler) {
+    public final void getCredentials(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
         CredentialsResult credentialsResult = getCredentialsResult(tenantId, authId, type);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
     @Override
-    public void addCredentials(String tenantId, JsonObject otherKeys, Handler<AsyncResult<CredentialsResult>> resultHandler) {
+    public void addCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
         // TODO: implement
-        CredentialsResult credentialsResult =  CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
+        CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
     @Override
-    public void updateCredentials(String tenantId, JsonObject otherKeys, Handler<AsyncResult<CredentialsResult>> resultHandler) {
+    public void updateCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
         // TODO: implement
-        CredentialsResult credentialsResult =  CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
+        CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
     @Override
-    public void removeCredentials(String tenantId, String deviceId, String type, String authId, Handler<AsyncResult<CredentialsResult>> resultHandler) {
+    public void removeCredentials(final String tenantId, final String deviceId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
         // TODO: implement
-        CredentialsResult credentialsResult =  CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
+        CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
-    CredentialsResult getCredentialsResult(final String tenantId, final String authId, final String type) {
+    protected CredentialsResult getCredentialsResult(final String tenantId, final String authId, final String type) {
         JsonObject data = getCredentials(tenantId, authId, type);
         if (data != null) {
             JsonObject resultPayload = getResultPayload(
@@ -257,24 +257,25 @@ public class FileBasedCredentialsService extends BaseCredentialsService {
         final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
         if (credentialsForTenant != null) {
             JsonArray authIdCredentials = credentialsForTenant.get(authId);
-            if (authIdCredentials == null)
+            if (authIdCredentials == null) {
                 return null;
+            }
 
-                for (Object authIdCredentialEntry : authIdCredentials) {
-                    JsonObject authIdCredential = (JsonObject) authIdCredentialEntry;
-                    // return the first matching type entry for this authId
-                    if (type.equals(authIdCredential.getString(FIELD_TYPE))) {
-                        return authIdCredential;
-                    }
+            for (Object authIdCredentialEntry : authIdCredentials) {
+                JsonObject authIdCredential = (JsonObject) authIdCredentialEntry;
+                // return the first matching type entry for this authId
+                if (type.equals(authIdCredential.getString(FIELD_TYPE))) {
+                    return authIdCredential;
                 }
+            }
         }
         return null;
     }
 
     /**
-     * Removes all devices from the registry.
+     * Removes all credentials from the registry.
      */
-    public void clear() {
+    public final void clear() {
         dirty = true;
         credentials.clear();
     }
