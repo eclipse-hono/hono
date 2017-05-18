@@ -8,12 +8,7 @@
     <relativePath>../bom</relativePath>
   </parent>
 
-    <artifactId>broker</artifactId>
-
-
-    <properties>
-        <artemis.version>2.1.0-SNAPSHOT</artemis.version>
-    </properties>
+  <artifactId>broker</artifactId>
 
   <dependencies>
     <dependency>

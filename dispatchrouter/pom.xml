@@ -94,7 +94,7 @@
               <images>
                 <image>
                   <build>
-                    <from>enmasseproject/qdrouterd:0.8.0</from>
+                    <from>enmasseproject/qdrouterd:0.10.0</from>
                     <ports>
                       <port>5671</port>
                       <port>5672</port>
