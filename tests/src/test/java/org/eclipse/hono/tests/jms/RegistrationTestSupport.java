@@ -15,6 +15,7 @@ package org.eclipse.hono.tests.jms;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_STATUS;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.nio.charset.StandardCharsets;

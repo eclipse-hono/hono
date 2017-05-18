@@ -13,6 +13,7 @@
 package org.eclipse.hono.client.impl;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_STATUS;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.HashMap;
@@ -111,7 +112,7 @@ public final class RegistrationClientImpl extends AbstractHonoClient implements 
     private static RegistrationResult getRegistrationResult(final Message message) {
         final String status = MessageHelper.getApplicationProperty(
                                                 message.getApplicationProperties(),
-                                                RegistrationConstants.APP_PROPERTY_STATUS,
+                                                APP_PROPERTY_STATUS,
                                                 String.class);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
         return RegistrationResult.from(Integer.valueOf(status), payload);
