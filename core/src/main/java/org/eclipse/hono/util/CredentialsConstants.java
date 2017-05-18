@@ -20,7 +20,7 @@ import org.apache.qpid.proton.message.Message;
 
 import java.util.*;
 
-import static org.eclipse.hono.util.MessageHelper.decodeIdFromJson;
+import static org.eclipse.hono.util.MessageHelper.*;
 
 /**
  * Constants &amp; utility methods used throughout the Credentials API.
@@ -32,11 +32,6 @@ public final class CredentialsConstants {
     public static final String OPERATION_ADD                     = "add";
     public static final String OPERATION_UPDATE                  = "update";
     public static final String OPERATION_REMOVE                  = "remove";
-
-    /* message fields */
-    public static final String SYS_PROPERTY_SUBJECT              = "subject";
-    public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
-    public static final String APP_PROPERTY_STATUS               = "status";
 
     /* message payload fields */
     public static final String FIELD_PAYLOAD                     = "payload";
@@ -106,8 +101,8 @@ public final class CredentialsConstants {
     public static Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
         final String tenantId = message.body().getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = message.body().getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String status = message.body().getString(RegistrationConstants.APP_PROPERTY_STATUS);
-        final JsonObject correlationIdJson = message.body().getJsonObject(RegistrationConstants.APP_PROPERTY_CORRELATION_ID);
+        final String status = message.body().getString(APP_PROPERTY_STATUS);
+        final JsonObject correlationIdJson = message.body().getJsonObject(APP_PROPERTY_CORRELATION_ID);
         final Object correlationId = decodeIdFromJson(correlationIdJson);
         final boolean isApplCorrelationId = message.body().getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
         return getAmqpReply(status, correlationId, tenantId, deviceId, isApplCorrelationId, message.body().getJsonObject(FIELD_PAYLOAD));

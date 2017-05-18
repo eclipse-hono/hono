@@ -13,5 +13,10 @@
       "hono-client": [ "READ", "WRITE" ],
       "rest-adapter": [ "READ", "WRITE" ],
       "mqtt-adapter": [ "READ", "WRITE" ]
+  },
+  "credentials/DEFAULT_TENANT": {
+    "hono-client": [ "READ", "WRITE" ],
+    "rest-adapter": [ "READ", "WRITE" ],
+    "mqtt-adapter": [ "READ", "WRITE" ]
   }
 }

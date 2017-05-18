@@ -45,9 +45,7 @@ public final class RegistrationConstants {
     public static final String ACTION_UPDATE     = "update";
 
     /* message property names */
-    public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
     public static final String APP_PROPERTY_KEY                  = "key";
-    public static final String APP_PROPERTY_STATUS               = "status";
 
     /* JSON field names */
     public static final String FIELD_ACTION                      = "action";
@@ -142,8 +140,8 @@ public final class RegistrationConstants {
     public static Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
         final String tenantId = message.body().getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = message.body().getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String status = message.body().getString(RegistrationConstants.APP_PROPERTY_STATUS);
-        final JsonObject correlationIdJson = message.body().getJsonObject(RegistrationConstants.APP_PROPERTY_CORRELATION_ID);
+        final String status = message.body().getString(APP_PROPERTY_STATUS);
+        final JsonObject correlationIdJson = message.body().getJsonObject(APP_PROPERTY_CORRELATION_ID);
         final Object correlationId = decodeIdFromJson(correlationIdJson);
         final boolean isApplCorrelationId = message.body().getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
         return getAmqpReply(status, correlationId, tenantId, deviceId, isApplCorrelationId, message.body().getJsonObject(FIELD_PAYLOAD));

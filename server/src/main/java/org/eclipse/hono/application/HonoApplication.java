@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -25,6 +25,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerFactory;
 import org.eclipse.hono.service.authorization.AuthorizationService;
+import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,7 @@ public class HonoApplication {
     private ServiceConfigProperties honoConfig;
     private Vertx vertx;
     private RegistrationService registrationService;
+    private CredentialsService credentialsService;
     private AuthenticationService authenticationService;
     private AuthorizationService authorizationService;
     private HonoServerFactory serverFactory;
@@ -77,6 +79,18 @@ public class HonoApplication {
 
     public final Vertx getVertx() {
         return vertx;
+    }
+
+    /**
+     * @param credentialsService the credentialsService to set
+     */
+    @Autowired
+    public final void setCredentialsService(final CredentialsService credentialsService) {
+        this.credentialsService = credentialsService;
+    }
+
+    public final CredentialsService getCredentialsService() {
+        return credentialsService;
     }
 
     /**
@@ -171,6 +185,7 @@ public class HonoApplication {
         CompositeFuture.all(
                 deployAuthenticationService(), // we only need 1 authentication service
                 deployAuthorizationService(), // we only need 1 authorization service
+                deployCredentialsService(),
                 deployRegistrationService()).setHandler(ar -> {
             if (ar.succeeded()) {
                 deployServer(firstInstance, instanceCount, started);
@@ -212,6 +227,13 @@ public class HonoApplication {
         LOG.info("Starting registration service {}", registrationService);
         Future<String> result = Future.future();
         vertx.deployVerticle(registrationService, result.completer());
+        return result;
+    }
+
+    private Future<String> deployCredentialsService() {
+        LOG.info("Starting credentials service {}", credentialsService);
+        Future<String> result = Future.future();
+        vertx.deployVerticle(credentialsService, result.completer());
         return result;
     }
 
