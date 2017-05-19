@@ -21,10 +21,10 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.eclipse.hono.authentication.AuthenticationService;
-import org.eclipse.hono.authorization.AuthorizationService;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerFactory;
+import org.eclipse.hono.service.authorization.AuthorizationService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

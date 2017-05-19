@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.authorization;
+package org.eclipse.hono.service.authorization;
 
 import io.vertx.core.json.JsonObject;
 
@@ -28,7 +28,13 @@ public final class AuthorizationConstants
     public static final String PERMISSION_FIELD = "permission";
     public static final String RESOURCE_FIELD = "resource";
 
+    /**
+     * Outcome of a successful authorization check.
+     */
     public static final String ALLOWED = "allowed";
+    /**
+     * Outcome of an unsuccessful authorization check.
+     */
     public static final String DENIED = "denied";
 
     /**
