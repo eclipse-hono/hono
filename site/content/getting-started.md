@@ -68,6 +68,14 @@ You can start the client from the `example` folder as follows:
 ~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=user1@HONO,--hono.client.password=pw
 ~~~
 
+Event messages are very similar to telemetry ones, except that they use `AT LEAST ONCE` quality of service. You can receive and log event messages uploaded to Hono using the same client
+
+In order to do so, run the client from the `example` folder as follows:
+
+~~~sh
+mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=user1@HONO,--hono.client.password=pw -Drun.profiles=receiver,ssl,event
+~~~
+
 {{% warning %}}
 Replace *localhost* with the name or IP address of the host that Docker is running on.
 {{% /warning %}}
@@ -83,6 +91,21 @@ Please refer to the [REST Adapter]({{< relref "rest-adapter.md" >}}) documentati
 {{% warning %}}
 The following sections assume that the REST adapter Docker container has been started on the local machine. However, if you started the REST adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
 {{% /warning %}}
+
+### Uploading Event Data using the REST adapter
+
+In a similar way you can upload event data, using curl
+
+~~~sh
+$ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
+> http://localhost:8080/event/DEFAULT_TENANT/4711
+~~~
+
+or (using HTTPie):
+
+~~~sh
+$ http PUT http://localhost:8080/event/DEFAULT_TENANT/4711 temp:=5
+~~~
 
 ### Registering a device using the REST adapter
 
