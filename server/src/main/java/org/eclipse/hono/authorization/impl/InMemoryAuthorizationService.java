@@ -83,15 +83,9 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         requireNonNull(resource, "resources is required");
         requireNonNull(permission, "permission is required");
 
-        return hasPermissionForTenant(subject, resource, permission) || hasPermissionInternal(subject, resource, permission);
-    }
-
-    private boolean hasPermissionForTenant(final String subject, final ResourceIdentifier resource, final Permission permission) {
-        if (resource.getResourceId() != null) {
-            final ResourceIdentifier tenantResource = ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null);
-            return hasPermissionInternal(subject, tenantResource, permission);
-        }
-        return false;
+        return hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), "*", null), permission) ||
+                hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), permission) ||
+                hasPermissionInternal(subject, resource, permission);
     }
 
     private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Permission permission) {

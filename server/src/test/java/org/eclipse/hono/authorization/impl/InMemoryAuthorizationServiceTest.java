@@ -92,4 +92,12 @@ public class InMemoryAuthorizationServiceTest {
         assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.READ)).isTrue();
         assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.WRITE)).isFalse();
     }
+
+    @Test
+    public void testHasPermissionReturnsTrueForWildcardTenant() {
+
+        ResourceIdentifier allTelemetry = ResourceIdentifier.from("telemetry", "*", null);
+        underTest.addPermission("ADMIN", allTelemetry, Permission.READ);
+        assertThat(underTest.hasPermission("ADMIN", ResourceIdentifier.from("telemetry", "bumlux", "test"), Permission.READ)).isTrue();
+    }
 }
