@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -36,25 +36,34 @@ import io.vertx.proton.ProtonHelper;
 public final class RegistrationConstants {
 
     /* registration actions */
+    public static final String ACTION_ASSERT     = "assert";
     public static final String ACTION_REGISTER   = "register";
     public static final String ACTION_FIND       = "find";
     public static final String ACTION_GET        = "get";
+    public static final String ACTION_ENABLED    = "enabled";
     public static final String ACTION_DEREGISTER = "deregister";
     public static final String ACTION_UPDATE     = "update";
 
-    /* message fields */
+    /* message property names */
     public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
-    public static final String APP_PROPERTY_ACTION               = "action";
     public static final String APP_PROPERTY_KEY                  = "key";
     public static final String APP_PROPERTY_STATUS               = "status";
+
+    /* JSON field names */
+    public static final String FIELD_ACTION                      = "action";
+    public static final String FIELD_ASSERTION                   = "assertion";
     public static final String FIELD_PAYLOAD                     = "payload";
+    public static final String FIELD_ENABLED                     = "enabled";
+    public static final String FIELD_DATA                        = "data";
+    public static final String FIELD_HONO_ID                     = "device-id";
+
 
     public static final String REGISTRATION_ENDPOINT             = "registration";
     public static final String PATH_SEPARATOR                    = "/";
     public static final String NODE_ADDRESS_REGISTRATION_PREFIX  = REGISTRATION_ENDPOINT + PATH_SEPARATOR;
 
-    private static final List<String> ACTIONS     = Arrays.asList(ACTION_REGISTER, ACTION_FIND,
-            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE);
+    private static final List<String> ACTIONS     = Arrays.asList(ACTION_ASSERT, ACTION_REGISTER, ACTION_FIND,
+            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE, ACTION_ENABLED);
 
     /**
      * The vert.x event bus address to which inbound registration messages are published.
@@ -85,13 +94,15 @@ public final class RegistrationConstants {
      *  
      * @param message The AMQP 1.0 registration request message.
      * @return The registration message created from the AMQP message.
+     * @throws NullPointerException if message is {@code null}.
      * @throws DecodeException if the message contains a body that cannot be parsed into a JSON object.
      */
     public static JsonObject getRegistrationMsg(final Message message) {
+        Objects.requireNonNull(message);
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
         final String key = getKey(message);
-        final String action = getAction(message);
+        final String action = message.getSubject();
         final JsonObject payload = MessageHelper.getJsonPayload(message);
         return getRegistrationJson(action, tenantId, deviceId, key, payload);
     }
@@ -113,6 +124,19 @@ public final class RegistrationConstants {
             jsonObject.put(FIELD_PAYLOAD, payload);
         }
         return jsonObject;
+    }
+
+    /**
+     * Checks if a JSON message contains a given status code.
+     *  
+     * @param msg The message to check.
+     * @param expectedStatus The expected status code.
+     * @return {@code true} if the given message has a string typed <em>status</em> property and the property's value is
+     *                      is the string representation of the expected status.
+     */
+    public static boolean hasStatus(final JsonObject msg, final int expectedStatus) {
+
+        return Objects.requireNonNull(msg).getString(APP_PROPERTY_STATUS, "none").equals(Integer.toString(expectedStatus));
     }
 
     public static Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
@@ -163,7 +187,7 @@ public final class RegistrationConstants {
 
     public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId, final String key, final JsonObject payload) {
         final JsonObject msg = new JsonObject();
-        msg.put(APP_PROPERTY_ACTION, action);
+        msg.put(FIELD_ACTION, action);
         msg.put(APP_PROPERTY_DEVICE_ID, deviceId);
         msg.put(APP_PROPERTY_TENANT_ID, tenantId);
         if (key != null) {
@@ -173,11 +197,6 @@ public final class RegistrationConstants {
             msg.put(FIELD_PAYLOAD, payload);
         }
         return msg;
-    }
-
-    private static String getAction(final Message msg) {
-        Objects.requireNonNull(msg);
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_ACTION, String.class);
     }
 
     private static String getKey(final Message msg) {

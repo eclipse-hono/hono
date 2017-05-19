@@ -74,15 +74,15 @@ pluralizeListTitles = "false"
   weight = 400
 
 [[menu.main]]
-  name   = "Architecture"
-  identifier = "Architecture"
-  url    = "/architecture/"
-  weight = 500
-
-[[menu.main]]
   name   = "Deployment"
   identifier = "Deployment"
   url    = "/deployment/"
+  weight = 470
+
+[[menu.main]]
+  name   = "Architecture"
+  identifier = "Architecture"
+  url    = "/architecture/"
   weight = 500
 
 [blackfriday]

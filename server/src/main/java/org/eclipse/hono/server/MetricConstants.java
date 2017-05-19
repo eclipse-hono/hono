@@ -1,0 +1,33 @@
+package org.eclipse.hono.server;
+
+/**
+ * Constants/metric names
+ */
+public class MetricConstants {
+
+    public static String metricNameDownstreamConnections() {
+        return "hono.server.connections.downstream";
+    }
+
+    public static String metricNameDownstreamLinkCredits(String address) {
+        return "hono.server.link.downstream.credits." + address;
+    }
+
+    public static String metricNameDownstreamSenders(String address) {
+        return "hono.server.senders.downstream." + address;
+    }
+
+    public static String metricNameUpstreamLinks(String address) {
+        return "hono.server.receivers.upstream.links." + address;
+    }
+
+    public static String metricNameProcessedMessages(String address) {
+        // prefix "meter" is used by spring boot actuator together with dropwizard metrics
+        return "meter.hono.server.messages." + address + ".processed";
+    }
+
+    public static String metricNameDiscardedMessages(String address) {
+        return "hono.server.messages." + address + ".discarded";
+    }
+
+}

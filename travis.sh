@@ -33,7 +33,7 @@ then
   cd $TRAVIS_BUILD_DIR
 fi
 
-mvn install -Pbuild-docker-image,run-tests >> $BUILD_OUTPUT 2>&1
+mvn install -DcreateJavadoc=true -Pbuild-docker-image,run-tests >> $BUILD_OUTPUT 2>&1
 
 # The build finished without returning an error so dump a tail of the output
 dump_output

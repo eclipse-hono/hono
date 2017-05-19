@@ -12,6 +12,8 @@
 
 package org.eclipse.hono.client;
 
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.util.RegistrationResult;
 
 import io.vertx.core.AsyncResult;
@@ -29,6 +31,18 @@ import io.vertx.core.json.JsonObject;
  * </p>
  */
 public interface RegistrationClient {
+
+    /**
+     * Asserts that a device is registered with a given tenant and is enabled.
+     * 
+     * @param deviceId The ID of the device to get the assertion for.
+     * @param resultHandler The handler to invoke with the result of the operation. If a device with the
+     *         given ID is registered for the tenant and its <em>enabled</em> property is {@code true},
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
+     *         and the <em>payload</em> will contain a JWT token asserting the registration status.
+     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     */
+    void assertRegistration(String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Checks whether a given device is registered.

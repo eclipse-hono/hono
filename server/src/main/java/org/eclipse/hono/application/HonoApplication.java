@@ -22,10 +22,10 @@ import javax.annotation.PreDestroy;
 
 import org.eclipse.hono.authentication.AuthenticationService;
 import org.eclipse.hono.authorization.AuthorizationService;
-import org.eclipse.hono.config.HonoConfigProperties;
-import org.eclipse.hono.registration.RegistrationService;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerFactory;
+import org.eclipse.hono.service.registration.RegistrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +48,7 @@ public class HonoApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoApplication.class);
 
-    private HonoConfigProperties honoConfig;
+    private ServiceConfigProperties honoConfig;
     private Vertx vertx;
     private RegistrationService registrationService;
     private AuthenticationService authenticationService;
@@ -59,11 +59,11 @@ public class HonoApplication {
      * @param honoConfig the honoConfig to set
      */
     @Autowired
-    public final void setHonoConfig(final HonoConfigProperties honoConfig) {
+    public final void setHonoConfig(final ServiceConfigProperties honoConfig) {
         this.honoConfig = honoConfig;
     }
 
-    public final HonoConfigProperties getHonoConfig() {
+    public final ServiceConfigProperties getHonoConfig() {
         return honoConfig;
     }
 

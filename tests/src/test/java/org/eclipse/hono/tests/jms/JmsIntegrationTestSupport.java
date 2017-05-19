@@ -36,6 +36,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import org.apache.qpid.jms.JmsQueue;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,9 +182,10 @@ public class JmsIntegrationTestSupport {
         }
     }
 
-    Message newTextMessage(final String body, final String deviceId) throws JMSException {
+    Message newMessage(final String body, final String deviceId, final String token) throws JMSException {
         final BytesMessage message = session.createBytesMessage();
-        message.setStringProperty("device_id", deviceId);
+        message.setStringProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        message.setStringProperty(MessageHelper.APP_PROPERTY_REGISTRATION_ASSERTION, token);
         message.writeUTF(body);
         return message;
     }

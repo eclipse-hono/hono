@@ -10,6 +10,8 @@ hono:
     insecurePortBindAddress: 0.0.0.0
     maxInstances: 1
     waitForDownstreamConnectionEnabled: true
+    registrationAssertion:
+      sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
 
 ---
 
@@ -19,8 +21,8 @@ hono:
   downstream:
     host: qdrouter
     port: 5673
-    keyStorePath: /etc/hono/certs/honoKeyStore.p12
-    keyStorePassword: honokeys
+    keyPath: /etc/hono/certs/hono-key.pem
+    certPath: /etc/hono/certs/hono-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
 
 ---

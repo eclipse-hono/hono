@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -19,13 +19,16 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.metrics.CounterService;
+import org.springframework.boot.actuate.metrics.GaugeService;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.AsyncResult;
@@ -55,8 +58,9 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     /**
      * The Hono configuration.
      */
-    protected HonoConfigProperties          honoConfig                      = new HonoConfigProperties();
-
+    protected ServiceConfigProperties          honoConfig                      = new ServiceConfigProperties();
+    private GaugeService                    gaugeService                    = NullGaugeService.getInstance();
+    private CounterService                  counterService                  = NullCounterService.getInstance();
     private final Map<UpstreamReceiver, ProtonSender> activeSenders         = new HashMap<>();
     private final Map<String, List<UpstreamReceiver>> sendersPerConnection  = new HashMap<>();
     private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers  = new ArrayList<>();
@@ -87,7 +91,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @throws IllegalStateException if this adapter is already running.
      */
     @Autowired(required = false)
-    public final void setHonoConfiguration(final HonoConfigProperties props) {
+    public final void setHonoConfiguration(final ServiceConfigProperties props) {
         if (running) {
             throw new IllegalStateException("configuration can not be set on running adapter");
         } else {
@@ -109,6 +113,44 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         } else {
             this.downstreamConnectionFactory = Objects.requireNonNull(factory);
         }
+    }
+
+    /**
+     * Sets the spring boot gauge service, will be based on Dropwizard Metrics, if in classpath.
+     *
+     * @param gaugeService The gauge service.
+     */
+    @Autowired
+    public final void setGaugeService(final GaugeService gaugeService) {
+        this.gaugeService = gaugeService;
+    }
+
+    /**
+     * Gets the spring boot gauge service implementation
+     *
+     * @return The metrics service or a null implementation - never {@code null}
+     */
+    public final GaugeService getGaugeService() {
+        return gaugeService;
+    }
+
+    /**
+     * Sets the spring boot counter service, will be based on Dropwizard Metrics, if in classpath.
+     *
+     * @param counterService The counter service.
+     */
+    @Autowired
+    public final void setCounterService(final CounterService counterService) {
+        this.counterService = counterService;
+    }
+
+    /**
+     * Gets the spring boot gauge service implementation
+     *
+     * @return The metrics service or a null implementation - never {@code null}
+     */
+    public final CounterService getCounterService() {
+        return counterService;
     }
 
     /**
@@ -156,6 +198,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 final String container = downstreamConnection.getRemoteContainer();
                 logger.info("closing connection to downstream container [{}]", container);
                 downstreamConnection.closeHandler(null).disconnectHandler(null).close();
+                counterService.decrement(MetricConstants.metricNameDownstreamConnections());
             } else {
                 logger.debug("downstream connection already closed");
             }
@@ -197,6 +240,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     if (connectAttempt.succeeded()) {
                         this.downstreamConnection = connectAttempt.result();
                         connectResultHandler.handle(Future.succeededFuture(connectAttempt.result()));
+                        counterService.increment(MetricConstants.metricNameDownstreamConnections());
                     } else {
                         logger.info("failed to connect to downstream container", connectAttempt.cause());
                         connectResultHandler.handle(Future.failedFuture(connectAttempt.cause()));
@@ -207,6 +251,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose) {
         logger.info("connection to downstream container [{}] is closed", downstreamConnection.getRemoteContainer());
         downstreamConnection.close();
+        counterService.decrement(MetricConstants.metricNameDownstreamConnections());
     }
 
     /**
@@ -229,6 +274,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             activeSenders.clear();
             downstreamConnection.disconnectHandler(null);
             downstreamConnection.disconnect();
+            counterService.decrement(MetricConstants.metricNameDownstreamConnections());
 
             for (Iterator<Handler<AsyncResult<Void>>> iter = clientAttachHandlers.iterator(); iter.hasNext(); ) {
                 iter.next().handle(Future.failedFuture("connection to downstream container failed"));
@@ -308,6 +354,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         } else {
             int downstreamCredit = getAvailableDownstreamCredit(replenishedSender);
             client.replenish(downstreamCredit);
+            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()),downstreamCredit);
         }
     }
 
@@ -349,6 +396,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             sendersPerConnection.put(link.getConnectionId(), senders);
         }
         senders.add(link);
+        counterService.increment(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
     }
 
     /**
@@ -366,6 +414,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         ProtonSender downstreamSender = activeSenders.remove(link);
         if (downstreamSender != null && downstreamSender.isOpen()) {
             logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
+            counterService.decrement(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
             downstreamSender.close();
         }
     }
@@ -439,17 +488,19 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 logger.trace("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}], credit available: {}, queued: {}",
                         msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer(), sender.getCredit(), sender.getQueued());
                 forwardMessage(sender, msg, delivery);
+                counterService.increment(MetricConstants.metricNameProcessedMessages(sender.getTarget().getAddress()));
             }
         } else {
             logger.warn("downstream sender for link [{}] is not open, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
             onClientDetach(client);
+            counterService.increment(MetricConstants.metricNameDiscardedMessages(sender.getTarget().getAddress()));
         }
     }
 
     /**
      * Checks if this adapter has an open connection to the downstream container.
-     * 
+     *
      * @return {@code true} if the connection is open (and thus usable).
      */
     public final boolean isConnected() {

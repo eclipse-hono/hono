@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -21,11 +21,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.server.SenderFactory;
-import org.eclipse.hono.server.UpstreamReceiver;
+import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -132,7 +133,7 @@ public final class TestSupport {
         final HashMap<String, String> map = new HashMap<>();
         map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(RegistrationConstants.APP_PROPERTY_ACTION, action);
+        map.put(RegistrationConstants.FIELD_ACTION, action);
         final ApplicationProperties applicationProperties = new ApplicationProperties(map);
         message.setApplicationProperties(applicationProperties);
         return message;
@@ -201,6 +202,7 @@ public final class TestSupport {
         when(sender.sendQueueDrainHandler(drainHandlerCaptor.capture())).then(invocation -> {
             return sender;
         });
+        when(sender.getTarget()).thenReturn(new Target());
         return sender;
     }
 

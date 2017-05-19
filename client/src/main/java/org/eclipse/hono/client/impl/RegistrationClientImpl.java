@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -47,7 +47,7 @@ import io.vertx.proton.ProtonSender;
  * A Vertx-Proton based client for Hono's Registration API.
  *
  */
-public class RegistrationClientImpl extends AbstractHonoClient implements RegistrationClient {
+public final class RegistrationClientImpl extends AbstractHonoClient implements RegistrationClient {
 
     private static final Logger                  LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
     private static final String                  REGISTRATION_ADDRESS_TEMPLATE = "registration/%s";
@@ -154,8 +154,7 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
 
         final Map<String, Object> properties = new HashMap<>();
         properties.put(APP_PROPERTY_DEVICE_ID, deviceId);
-        properties.put(APP_PROPERTY_ACTION, action);
-        final Message request = createMessage(properties);
+        final Message request = createMessage(action, properties);
         if (payload != null) {
             request.setContentType("application/json; charset=utf-8");
             request.setBody(new AmqpValue(payload.encode()));
@@ -171,12 +170,13 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
         });
     }
 
-    private Message createMessage(final Map<String, Object> appProperties) {
+    private Message createMessage(final String action, final Map<String, Object> appProperties) {
         final Message msg = ProtonHelper.message();
         final String messageId = createMessageId();
         msg.setApplicationProperties(new ApplicationProperties(appProperties));
         msg.setReplyTo(registrationReplyToAddress);
         msg.setMessageId(messageId);
+        msg.setSubject(action);
         return msg;
     }
 
@@ -209,12 +209,17 @@ public class RegistrationClientImpl extends AbstractHonoClient implements Regist
     }
 
     @Override
+    public void assertRegistration(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        createAndSendRequest(ACTION_ASSERT, deviceId, null, resultHandler);
+    }
+
+    @Override
     public void find(final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         final Map<String, Object> properties = new HashMap<>();
         properties.put(APP_PROPERTY_DEVICE_ID, value);
-        properties.put(APP_PROPERTY_ACTION, ACTION_FIND);
         properties.put(APP_PROPERTY_KEY, key);
-        sendMessage(createMessage(properties), resultHandler);
+        sendMessage(createMessage(ACTION_FIND, properties), resultHandler);
     }
 }

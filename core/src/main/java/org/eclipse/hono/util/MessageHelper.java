@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.util;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Objects;
@@ -26,6 +27,8 @@ import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -52,11 +55,17 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_TENANT_ID          = "tenant_id";
     /**
+     * The name of the AMQP 1.0 message application property containing a JWT token asserting a device's registration status.
+     */
+    public static final String APP_PROPERTY_REGISTRATION_ASSERTION  = "reg_assertion";
+    /**
      * The name of the AMQP 1.0 message application property containing the resource a message is addressed at.
      */
     public static final String APP_PROPERTY_RESOURCE          = "resource";
 
     public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID          = "x-opt-app-correlation-id";
+
+    private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
 
     private MessageHelper() {
     }
@@ -69,6 +78,11 @@ public final class MessageHelper {
     public static String getTenantId(final Message msg) {
         Objects.requireNonNull(msg);
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID, String.class);
+    }
+
+    public static String getRegistrationAssertion(final Message msg) {
+        Objects.requireNonNull(msg);
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_REGISTRATION_ASSERTION, String.class);
     }
 
     public static String getDeviceIdAnnotation(final Message msg) {
@@ -113,24 +127,34 @@ public final class MessageHelper {
      * 
      * @param msg The AMQP 1.0 message to parse the body of.
      * @return The message body parsed into a JSON object or {@code null} if the message does not have a
-     *         <em>Data</em> or <em>AmqpValue</em> section or the message's content type is not
-     *         {@code application/json}.
-     * @throws DecodeException if the body of the message cannot be parsed into a JSON object.
+     *         <em>Data</em> nor an <em>AmqpValue</em> section.
+     * @throws NullPointerException if the message is {@code null}.
+     * @throws DecodeException if the payload cannot be parsed into a JSON object.
      */
     public static JsonObject getJsonPayload(final Message msg) {
-        JsonObject result = null;
-        if (msg.getBody() != null && msg.getContentType() != null && msg.getContentType().startsWith("application/json")) {
+
+        Objects.requireNonNull(msg);
+        if (msg.getBody() == null) {
+            LOG.debug("message has no body");
+            return null;
+        } else {
+
+            JsonObject result = null;
+
             if (msg.getBody() instanceof Data) {
                 Data body = (Data) msg.getBody();
-                result = new JsonObject(new String(body.getValue().getArray()));
+                result = new JsonObject(new String(body.getValue().getArray(), StandardCharsets.UTF_8));
             } else if (msg.getBody() instanceof AmqpValue) {
                 AmqpValue body = (AmqpValue) msg.getBody();
                 if (body.getValue() instanceof String) {
                     result = new JsonObject((String) body.getValue());
                 }
+            } else {
+                LOG.debug("unsupported body type [{}]", msg.getBody().getClass().getName());
             }
+
+            return result;
         }
-        return result;
     }
 
     public static void addTenantId(final Message msg, final String tenantId) {
@@ -139,6 +163,10 @@ public final class MessageHelper {
 
     public static void addDeviceId(final Message msg, final String deviceId) {
         addProperty(msg, APP_PROPERTY_DEVICE_ID, deviceId);
+    }
+
+    public static void addRegistrationAssertion(final Message msg, final String token) {
+        addProperty(msg, APP_PROPERTY_REGISTRATION_ASSERTION, token);
     }
 
     @SuppressWarnings("unchecked")

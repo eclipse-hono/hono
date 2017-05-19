@@ -15,7 +15,7 @@ package org.eclipse.hono.connection;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.eclipse.hono.config.HonoClientConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +39,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionFactoryImpl.class);
     private Vertx                      vertx;
-    private HonoClientConfigProperties config;
+    private ClientConfigProperties config;
 
     /**
      * Sets the Vert.x instance to use.
@@ -62,7 +62,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
      * @throws NullPointerException if the parameters are {@code null}.
      */
     @Autowired
-    public final void setClientConfig(final HonoClientConfigProperties config) {
+    public final void setClientConfig(final ClientConfigProperties config) {
         this.config = Objects.requireNonNull(config);
     }
 
@@ -190,9 +190,9 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
     public static final class ConnectionFactoryBuilder {
 
         private Vertx  vertx;
-        private final HonoClientConfigProperties properties;
+        private final ClientConfigProperties properties;
 
-        private ConnectionFactoryBuilder(final HonoClientConfigProperties properties) {
+        private ConnectionFactoryBuilder(final ClientConfigProperties properties) {
             this.properties = properties;
         }
 
@@ -202,7 +202,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
          * @return The builder.
          */
         public static ConnectionFactoryBuilder newBuilder() {
-            return new ConnectionFactoryBuilder(new HonoClientConfigProperties());
+            return new ConnectionFactoryBuilder(new ClientConfigProperties());
         }
 
         /**
@@ -211,7 +211,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
          * @param config The configuration to use.
          * @return The builder.
          */
-        public static ConnectionFactoryBuilder newBuilder(final HonoClientConfigProperties config) {
+        public static ConnectionFactoryBuilder newBuilder(final ClientConfigProperties config) {
             return new ConnectionFactoryBuilder(config);
         }
 

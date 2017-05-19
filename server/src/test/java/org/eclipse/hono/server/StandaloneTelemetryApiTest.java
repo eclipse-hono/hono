@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,19 +13,24 @@ package org.eclipse.hono.server;
 
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 
+import java.nio.charset.StandardCharsets;
 import java.util.stream.IntStream;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.authentication.impl.AcceptAllPlainAuthenticationService;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.config.HonoConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
+import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
+import org.eclipse.hono.util.MessageHelper;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -56,6 +61,8 @@ public class StandaloneTelemetryApiTest {
     private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
     private static final String                USER = "hono-client";
     private static final String                PWD = "secret";
+    private static final String                SECRET = "dajAIOFDHUIFHFSDAJKGFKSDF,SBDFAZUSDJBFFNCLDNC";
+    private static final int                   TIMEOUT = 2000; // milliseconds
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
@@ -63,20 +70,25 @@ public class StandaloneTelemetryApiTest {
     private static MessageDiscardingTelemetryDownstreamAdapter telemetryAdapter;
     private static HonoClient                  client;
     private static MessageSender               telemetrySender;
+    private static RegistrationAssertionHelper assertionHelper;
 
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
+        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
-        server = new HonoServer().setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        server = new HonoServer();
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
+        HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
-        server.setHonoConfiguration(configProperties);
+        server.setConfig(configProperties);
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
+        telemetryEndpoint.setRegistrationAssertionValidator(assertionHelper);
         server.addEndpoint(telemetryEndpoint);
         registrationAdapter = new FileBasedRegistrationService();
+        registrationAdapter.setRegistrationAssertionFactory(assertionHelper);
 
         final Future<HonoClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess());
@@ -112,13 +124,6 @@ public class StandaloneTelemetryApiTest {
 
         registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1, null);
         telemetryAdapter.setMessageConsumer(msg -> {});
-//        Async done = ctx.async();
-//        client.getOrCreateTelemetrySender(DEFAULT_TENANT, creationAttempt -> {
-//            ctx.assertTrue(creationAttempt.succeeded());
-//            telemetrySender = creationAttempt.result();
-//            done.complete();
-//        });
-//        done.await(1000L);
     }
 
     @After
@@ -143,7 +148,7 @@ public class StandaloneTelemetryApiTest {
         }
     }
 
-    @Test(timeout = 10000l)
+    @Test(timeout = TIMEOUT)
     public void testTelemetryUploadSucceedsForRegisteredDevice(final TestContext ctx) throws Exception {
 
         LOG.debug("starting telemetry upload test");
@@ -162,29 +167,53 @@ public class StandaloneTelemetryApiTest {
         });
         sender.await(1000L);
 
+        String registrationAssertion = assertionHelper.getAssertion(DEFAULT_TENANT, DEVICE_1);
+        LOG.debug("got registration assertion for device [{}]: {}", DEVICE_1, registrationAssertion);
+
         IntStream.range(0, count).forEach(i -> {
             Async waitForCredit = ctx.async();
             LOG.trace("sending message {}", i);
-            telemetrySender.send(DEVICE_1, "payload" + i, "text/plain; charset=utf-8", done -> waitForCredit.complete());
+            telemetrySender.send(DEVICE_1, "payload" + i, "text/plain; charset=utf-8", registrationAssertion, done -> waitForCredit.complete());
             LOG.trace("sender's send queue full: {}", telemetrySender.sendQueueFull());
             waitForCredit.await();
         });
 
     }
 
-    @Test(timeout = 1000l)
-    public void testLinkGetsClosedWhenUploadingDataForUnknownDevice(final TestContext ctx) throws Exception {
+    @Test(timeout = TIMEOUT)
+    public void testLinkGetsClosedWhenUploadingDataWithNonMatchingRegistrationAssertion(final TestContext ctx) throws Exception {
+
+        String assertion = assertionHelper.getAssertion(DEFAULT_TENANT, "other-device");
 
         client.getOrCreateTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
             sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
                 LOG.debug(s.getMessage());
             }));
-            sender.send("UNKNOWN", "payload", "text/plain", capacityAvailable -> {});
+            sender.send(DEVICE_1, "payload", "text/plain", assertion, capacityAvailable -> {});
         }));
 
     }
 
-    @Test(timeout = 1000l)
+    @Test(timeout = TIMEOUT)
+    public void testLinkGetsClosedWhenUploadingDataWithoutRegistrationAssertion(final TestContext ctx) throws Exception {
+
+        Message msg = ProtonHelper.message();
+        msg.setBody(new Data(new Binary("payload".getBytes(StandardCharsets.UTF_8))));
+        msg.setContentType("text/plain");
+        MessageHelper.addDeviceId(msg, DEVICE_1);
+        MessageHelper.addTenantId(msg, DEFAULT_TENANT);
+        // NO registration assertion included
+
+        client.getOrCreateTelemetrySender(DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
+            sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
+                LOG.debug(s.getMessage());
+            }));
+            sender.send(msg, capacityAvailable -> {});
+        }));
+
+    }
+
+    @Test(timeout = TIMEOUT)
     public void testLinkGetsClosedWhenUploadingMalformedTelemetryDataMessage(final TestContext ctx) throws Exception {
 
         final Message msg = ProtonHelper.message("malformed");
@@ -199,14 +228,16 @@ public class StandaloneTelemetryApiTest {
 
     }
 
-    @Test(timeout = 2000l)
+    @Test(timeout = TIMEOUT)
     public void testLinkGetsClosedWhenDeviceUploadsDataOriginatingFromOtherDevice(final TestContext ctx) throws Exception {
+
+        String registrationAssertion = assertionHelper.getAssertion(DEFAULT_TENANT, "device-1");
 
         client.getOrCreateTelemetrySender(DEFAULT_TENANT, "device-0", ctx.asyncAssertSuccess(sender -> {
             sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
                 LOG.debug(s.getMessage());
             }));
-            sender.send("device-1", "from other device", "text/plain");
+            sender.send("device-1", "from other device", "text/plain", registrationAssertion);
         }));
     }
 }

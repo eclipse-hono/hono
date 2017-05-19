@@ -106,12 +106,16 @@ public interface MessageSender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    boolean send(String deviceId, String payload, String contentType);
+    boolean send(String deviceId, String payload, String contentType, String registrationAssertion);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -130,12 +134,16 @@ public interface MessageSender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
      * @throws NullPointerException if any of device id, payload or content type is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    void send(String deviceId, String payload, String contentType, Handler<Void> capacityAvailableHandler);
+    void send(String deviceId, String payload, String contentType, String registrationAssertion, Handler<Void> capacityAvailableHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -146,11 +154,15 @@ public interface MessageSender {
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    boolean send(String deviceId, byte[] payload, String contentType);
+    boolean send(String deviceId, byte[] payload, String contentType, String registrationAssertion);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -166,11 +178,15 @@ public interface MessageSender {
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
-     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      */
-    void send(String deviceId, byte[] payload, String contentType, Handler<Void> capacityAvailableHandler);
+    void send(String deviceId, byte[] payload, String contentType, String registrationAssertion, Handler<Void> capacityAvailableHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -186,12 +202,16 @@ public interface MessageSender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
      * @throws NullPointerException if any of device id, payload or content type is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    boolean send(String deviceId, Map<String, ?> properties, String payload, String contentType);
+    boolean send(String deviceId, Map<String, ?> properties, String payload, String contentType, String registrationAssertion);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -204,11 +224,15 @@ public interface MessageSender {
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
      * @return {@code true} if this client has enough capacity to accept and send the message. If not,
      *         the message is discarded and {@code false} is returned.
-     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      */
-    boolean send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType);
+    boolean send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, String registrationAssertion);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -229,12 +253,16 @@ public interface MessageSender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
      * @throws NullPointerException if any of device id, payload or content type is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    void send(String deviceId, Map<String, ?> properties, String payload, String contentType, Handler<Void> capacityAvailableHandler);
+    void send(String deviceId, Map<String, ?> properties, String payload, String contentType, String registrationAssertion, Handler<Void> capacityAvailableHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -252,11 +280,15 @@ public interface MessageSender {
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
-     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      */
-    void send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, Handler<Void> capacityAvailableHandler);
+    void send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, String registrationAssertion, Handler<Void> capacityAvailableHandler);
 
     /**
      * Sets a callback for handling the closing of this sender due to an error condition indicated by

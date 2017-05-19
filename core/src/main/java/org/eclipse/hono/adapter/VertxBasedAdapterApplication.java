@@ -17,7 +17,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +51,7 @@ public abstract class VertxBasedAdapterApplication {
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     private Vertx vertx;
-    private HonoConfigProperties honoConfig = new HonoConfigProperties();
+    private ServiceConfigProperties honoConfig = new ServiceConfigProperties();
     private AtomicBoolean running = new AtomicBoolean();
 
     /**
@@ -66,7 +66,7 @@ public abstract class VertxBasedAdapterApplication {
      * @param honoConfig the honoConfig to set
      */
     @Autowired(required = false)
-    public final void setHonoConfig(final HonoConfigProperties honoConfig) {
+    public final void setHonoConfig(final ServiceConfigProperties honoConfig) {
         this.honoConfig = honoConfig;
     }
 

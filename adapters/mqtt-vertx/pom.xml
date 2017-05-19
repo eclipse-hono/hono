@@ -48,6 +48,10 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-demo-certs</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-base</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -113,6 +117,7 @@
                     <from>anapsix/alpine-java:8</from>
                     <ports>
                       <port>1883</port>
+                      <port>8883</port>
                     </ports>
                     <runCmds>
                       <runCmd>adduser -S -D hono nogroup</runCmd>
@@ -141,8 +146,8 @@
                             <directory>${project.basedir}/target/classes/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
+                              <include>mqtt-adapter-*.pem</include>
                               <include>trusted-certs.pem</include>
-                              <include>mqttKeyStore.p12</include>
                             </includes>
                           </fileSet>
                           <fileSet>

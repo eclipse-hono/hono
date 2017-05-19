@@ -7,9 +7,9 @@ metadata:
   name: ${project.artifactId}
 spec:
   ports:
-  - name: amqp
-    port: 5672
+  - name: amqps
+    port: 5671
     protocol: TCP
-    targetPort: 5672
+    targetPort: 5671
   selector:
     name: ${project.artifactId}

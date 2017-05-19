@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -15,12 +15,14 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.server.DownstreamAdapter;
+import org.eclipse.hono.server.HonoServerConfigProperties;
 import org.eclipse.hono.server.MessageForwardingEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.TelemetryMessageFilter;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -34,7 +36,8 @@ import io.vertx.proton.ProtonQoS;
 @Component
 @Scope("prototype")
 @Qualifier("telemetry")
-public final class TelemetryEndpoint extends MessageForwardingEndpoint {
+@ConfigurationProperties(prefix = "hono.telemetry")
+public final class TelemetryEndpoint extends MessageForwardingEndpoint<HonoServerConfigProperties> {
 
     @Autowired
     public TelemetryEndpoint(final Vertx vertx) {

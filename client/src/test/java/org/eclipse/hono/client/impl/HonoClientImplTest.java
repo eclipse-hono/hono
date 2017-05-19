@@ -12,7 +12,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -56,11 +55,13 @@ public class HonoClientImplTest {
 
     /**
      * Cleans up after test execution.
+     * 
+     * @param ctx The helper to use for running async tests.
      */
     @After
-    public void shutdown() {
+    public void shutdown(final TestContext ctx) {
         if (vertx != null) {
-            vertx.close();
+            vertx.close(ctx.asyncAssertSuccess());
         }
     }
 
@@ -122,7 +123,7 @@ public class HonoClientImplTest {
             disconnected.complete();
         }));
 
-        // WHEN the underyling connection fails
+        // WHEN the underlying connection fails
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN all creation requests are failed
@@ -151,7 +152,7 @@ public class HonoClientImplTest {
             disconnected.complete();
         }));
 
-        // WHEN the underyling connection fails
+        // WHEN the underlying connection fails
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN all creation requests are failed
@@ -180,7 +181,7 @@ public class HonoClientImplTest {
             disconnected.complete();
         }));
 
-        // WHEN the underyling connection fails
+        // WHEN the underlying connection fails
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN all creation requests are failed
@@ -213,7 +214,6 @@ public class HonoClientImplTest {
 
         // THEN the adapter tries to reconnect to the downstream container
         connectionFactory.await(1, TimeUnit.SECONDS);
-        assertTrue(client.isConnected());
     }
 
     private class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
@@ -255,7 +255,7 @@ public class HonoClientImplTest {
 
         @Override
         public int getPort() {
-            return 5672;
+            return Constants.PORT_AMQP;
         }
 
         @Override

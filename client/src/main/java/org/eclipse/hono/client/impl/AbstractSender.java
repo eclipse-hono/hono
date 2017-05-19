@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.util.MessageHelper.addDeviceId;
+import static org.eclipse.hono.util.MessageHelper.*;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -179,61 +179,69 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public final boolean send(final String deviceId, final byte[] payload, final String contentType) {
-        return send(deviceId, null, payload, contentType);
+    public final boolean send(final String deviceId, final byte[] payload, final String contentType, final String registrationAssertion) {
+        return send(deviceId, null, payload, contentType, registrationAssertion);
     }
 
     @Override
-    public final void send(final String deviceId, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
-        send(deviceId, null, payload, contentType, capacityAvailableHandler);
+    public final void send(final String deviceId, final byte[] payload, final String contentType, final String registrationAssertion,
+            final Handler<Void> capacityAvailableHandler) {
+        send(deviceId, null, payload, contentType, registrationAssertion, capacityAvailableHandler);
     }
 
     @Override
-    public final boolean send(final String deviceId, final String payload, final String contentType) {
-        return send(deviceId, null, payload, contentType);
+    public final boolean send(final String deviceId, final String payload, final String contentType, final String registrationAssertion) {
+        return send(deviceId, null, payload, contentType, registrationAssertion);
     }
 
     @Override
-    public final void send(final String deviceId, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
-        send(deviceId, null, payload, contentType, capacityAvailableHandler);
+    public final void send(final String deviceId, final String payload, final String contentType, final String registrationAssertion,
+            final Handler<Void> capacityAvailableHandler) {
+        send(deviceId, null, payload, contentType, registrationAssertion, capacityAvailableHandler);
     }
 
     @Override
-    public final boolean send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType) {
+    public final boolean send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType,
+            final String registrationAssertion) {
         Objects.requireNonNull(payload);
         final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
-        return send(deviceId, properties, payload.getBytes(charset), contentType);
+        return send(deviceId, properties, payload.getBytes(charset), contentType, registrationAssertion);
     }
 
     @Override
-    public final boolean send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
+    public final boolean send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType,
+            final String registrationAssertion) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
+        Objects.requireNonNull(registrationAssertion);
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId, contentType);
+        addProperties(msg, deviceId, contentType, registrationAssertion);
         return send(msg);
     }
 
     @Override
-    public final void send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+    public final void send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType,
+            final String registrationAssertion, final Handler<Void> capacityAvailableHandler) {
         Objects.requireNonNull(payload);
         final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
-        send(deviceId, properties, payload.getBytes(charset), contentType, capacityAvailableHandler);
+        send(deviceId, properties, payload.getBytes(charset), contentType, registrationAssertion, capacityAvailableHandler);
     }
 
     @Override
-    public final void send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType, final Handler<Void> capacityAvailableHandler) {
+    public final void send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType,
+            final String registrationAssertion, final Handler<Void> capacityAvailableHandler) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
+        Objects.requireNonNull(registrationAssertion);
         final Message msg = ProtonHelper.message();
         msg.setAddress(getTo(deviceId));
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId, contentType);
+        addProperties(msg, deviceId, contentType, registrationAssertion);
         addEndpointSpecificProperties(msg, deviceId);
         send(msg, capacityAvailableHandler);
     }
@@ -246,10 +254,11 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
      */
     protected abstract String getTo(final String deviceId);
 
-    private void addProperties(final Message msg, final String deviceId, final String contentType) {
+    private void addProperties(final Message msg, final String deviceId, final String contentType, final String registrationAssertion) {
         msg.setMessageId(String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement()));
         msg.setContentType(contentType);
         addDeviceId(msg, deviceId);
+        addRegistrationAssertion(msg, registrationAssertion);
     }
 
     /**

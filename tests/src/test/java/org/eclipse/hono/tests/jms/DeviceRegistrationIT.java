@@ -95,6 +95,14 @@ public class DeviceRegistrationIT {
     }
 
     @Test
+    public void testAssertRegistrationSucceeds() throws Exception {
+        String deviceId = UUID.randomUUID().toString();
+        registration.register(deviceId, HTTP_CREATED).get(2, TimeUnit.SECONDS);
+        registration.assertRegistration(deviceId, HTTP_OK).get(2, TimeUnit.SECONDS);
+        assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
+    }
+
+    @Test
     public void testDeregisterDeviceSucceeds() throws Exception {
         String deviceId = UUID.randomUUID().toString();
         registration.register(deviceId, HTTP_CREATED).get(2, TimeUnit.SECONDS);

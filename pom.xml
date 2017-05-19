@@ -143,9 +143,12 @@
     <module>client</module>
     <module>demo-certs</module>
     <module>dispatchrouter</module>
+    <module>metrics</module>
+    <module>broker</module>
     <module>example</module>
     <module>legal</module>
     <module>server</module>
+    <module>service-base</module>
     <module>tests</module>
     <module>site</module>
   </modules>
@@ -191,8 +194,14 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
+          <version>3.0.2</version>
           <configuration>
             <skipIfEmpty>true</skipIfEmpty>
+            <archive>
+              <manifest>
+                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+              </manifest>
+            </archive>
           </configuration>
         </plugin>
         <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->

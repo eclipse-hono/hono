@@ -45,13 +45,19 @@ The easiest way to start the server components is by deploying them as a *stack*
 
 This will create and start up Docker Swarm *services* for all components that together comprise a Hono instance, in particular the following services are started:
 
-{{< figure src="../Hono_instance.png" title="Hono instance containers">}}
+{{< figure src="../Hono_instance.svg" title="Hono instance containers">}}
 
-* A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
-* A *Hono Server* instance that protocol adapters connect to in order to forward data from devices.
-* A *REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
-* An *MQTT Adapter* instance that exposes Hono's Telemetry API as an MQTT topic hierarchy.
-
+* Hono Instance
+  * A *Hono Server* instance that protocol adapters connect to in order to forward data from devices.
+  * A *REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
+  * An *MQTT Adapter* instance that exposes Hono's Telemetry API as an MQTT topic hierarchy.
+* AMQP Network
+  * A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
+  * An *Artemis* instance that is the default persistence store for events.
+* Monitoring Infrastructure
+  * An *InfluxDB* instance to store metrics data from the Hono Server.
+  * A *Grafana* instance to show a default dashboard with the Hono Server metrics.
+ 
 ## Starting a Consumer
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
@@ -59,7 +65,7 @@ In this example we will use a simple command line client that logs all telemetry
 You can start the client from the `example` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=user1@HONO,--hono.client.password=pw
 ~~~
 
 {{% warning %}}
@@ -139,10 +145,10 @@ $ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}'
 or (using HTTPie):
 
 ~~~sh
-$ http PUT http://localhost:8080/registration/DEFAULT_TENANT/4711 temp:=5
+$ http PUT http://localhost:8080/telemetry/DEFAULT_TENANT/4711 temp:=5
 ~~~
 
-When you first invoke any of the two commands above after you have started up your Hono instance, you will get the following response:
+When you first invoke any of the two commands above after you have started up your Hono instance, you may get the following response:
 
 ~~~
 HTTP/1.1 503 Service Unavailable
@@ -152,12 +158,14 @@ Content-Type: text/plain
 resource limit exceeded, please try again later
 ~~~
 
-This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono server to forward the data over.
+This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono server to forward the data over. However, the REST adapter may not receive credits from the Hono Server quickly enough for the request to be served successfully.
 You can simply ignore this response and re-submit the command. You should then get a response like this:
 
 ~~~
 HTTP/1.1 202 Accepted
 Content-Length: 0
+Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0
+
 ~~~
 
 If you have started the consumer as described above, you should now see the telemetry message being logged to the console. You can publish more data simply by issuing additional requests.
@@ -174,7 +182,7 @@ The Hono instance's services can be stopped and removed using the following comm
 ~/hono/example/target/hono$ docker stack rm hono
 ~~~
 
-Please refer to the [Docker Swarm documenation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of services.
+Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of services.
 
 ## Restarting
 
@@ -183,3 +191,7 @@ In order to start up the instance again:
 ~~~sh
 ~/hono/example/target/hono$ docker stack deploy -c docker-compose.yml hono
 ~~~
+
+## View metrics
+
+Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in a browser. Login is `admin/admin`.

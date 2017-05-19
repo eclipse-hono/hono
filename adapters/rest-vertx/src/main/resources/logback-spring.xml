@@ -14,12 +14,12 @@
   </root>
 
   <springProfile name="dev">
-    <logger name="org.eclipse.hono.adapter.rest" level="DEBUG"/>
+    <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
   </springProfile>
 
   <springProfile name="prod">
-    <logger name="org.eclipse.hono.adapter.rest" level="INFO"/>
+    <logger name="org.eclipse.hono.adapter" level="INFO"/>
     <logger name="org.eclipse.hono.client" level="INFO"/>
   </springProfile>
 

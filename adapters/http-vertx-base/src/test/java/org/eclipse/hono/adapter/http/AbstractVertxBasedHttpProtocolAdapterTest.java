@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,10 +12,13 @@
 
 package org.eclipse.hono.adapter.http;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,12 +35,13 @@ import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedHttpProtocolAdapter}.
- *
+ * 
  */
 @RunWith(VertxUnitRunner.class)
 public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     HonoClient honoClient;
+    ServiceConfigProperties config;
 
     /**
      * Creates a 
@@ -46,6 +50,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void setup() {
 
         honoClient = mock(HonoClient.class);
+        config = new ServiceConfigProperties();
+        config.setInsecurePortEnabled(true);
     }
 
     /**
@@ -60,9 +66,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter with a client provided http server
         HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter adapter = getAdapter(mock(Router.class), null);
-        adapter.setConfig(new HonoConfigProperties());
-        adapter.setHttpServer(server);
+        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(mock(Router.class), null);
+        adapter.setConfig(config);
+        adapter.setInsecureHttpServer(server);
         adapter.setHonoClient(honoClient);
 
         // WHEN starting the adapter
@@ -94,7 +100,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         HttpServer server = getHttpServer(false);
         Async onStartupSuccess = ctx.async();
 
-        AbstractVertxBasedHttpProtocolAdapter adapter = new AbstractVertxBasedHttpProtocolAdapter() {
+        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
 
             @Override
             protected void addRoutes(final Router router) {
@@ -106,8 +112,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             }
         };
 
-        adapter.setConfig(new HonoConfigProperties());
-        adapter.setHttpServer(server);
+        adapter.setConfig(config);
+        adapter.setInsecureHttpServer(server);
         adapter.setHonoClient(honoClient);
 
         // WHEN starting the adapter
@@ -136,7 +142,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
         HttpServer server = getHttpServer(true);
 
-        AbstractVertxBasedHttpProtocolAdapter adapter = new AbstractVertxBasedHttpProtocolAdapter() {
+        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
 
             @Override
             protected void addRoutes(final Router router) {
@@ -148,7 +154,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             }
         };
 
-        adapter.setConfig(new HonoConfigProperties());
+        adapter.setConfig(config);
         adapter.setHttpServer(server);
         adapter.setHonoClient(honoClient);
 
@@ -183,9 +189,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         return server;
     }
 
-    private AbstractVertxBasedHttpProtocolAdapter getAdapter(final Router router, final Handler<Router> routeRegistrator) {
+    private AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> getAdapter(final Router router, final Handler<Router> routeRegistrator) {
 
-        return new AbstractVertxBasedHttpProtocolAdapter() {
+        return new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
 
             @Override
             protected void addRoutes(final Router router) {

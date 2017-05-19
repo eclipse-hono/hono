@@ -50,7 +50,7 @@ keyUsage = keyCertSign,cRLSign
 [ req_ext ]
 
 subjectKeyIdentifier        = hash
-keyUsage = keyAgreement,digitalSignature
+keyUsage = keyAgreement,keyEncipherment,digitalSignature
 # RFC 5280, Section 4.2.1.12 makes EKU optional
 #   CA/Browser Baseline Requirements, Appendix (B)(3)(G) makes me confused
 #   In either case, you probably only need serverAuth.

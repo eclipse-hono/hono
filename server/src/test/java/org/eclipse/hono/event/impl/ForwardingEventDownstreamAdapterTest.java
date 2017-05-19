@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.event.impl;
 
-import static org.eclipse.hono.TestSupport.CLIENT_ID;
 import static org.eclipse.hono.TestSupport.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
@@ -26,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.server.UpstreamReceiver;
+import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Test;
 
@@ -35,8 +34,9 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
+import org.springframework.boot.actuate.metrics.CounterService;
+import org.springframework.boot.actuate.metrics.GaugeService;
 
 /**
  * Tests {@link ForwardingEventDownstreamAdapter}.

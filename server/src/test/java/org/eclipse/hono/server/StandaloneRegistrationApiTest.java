@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -21,11 +21,13 @@ import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.config.HonoConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.registration.impl.FileBasedRegistrationService;
-import org.eclipse.hono.registration.impl.RegistrationEndpoint;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
+import org.eclipse.hono.service.registration.RegistrationEndpoint;
+import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.util.AggregatingInvocationResultHandler;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -56,6 +58,7 @@ public class StandaloneRegistrationApiTest {
     private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
     private static final String                USER = "hono-client";
     private static final String                PWD = "secret";
+    private static final String                SECRET = "hiusfdazuisdfibgbgabvbzusdatgfASFJSDAFJSDAOF";
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
@@ -66,13 +69,15 @@ public class StandaloneRegistrationApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        server = new HonoServer().setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
-        HonoConfigProperties configProperties = new HonoConfigProperties();
+        server = new HonoServer();
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
+        ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
-        server.setHonoConfiguration(configProperties);
+        server.setConfig(configProperties);
         server.addEndpoint(new RegistrationEndpoint(vertx));
         registrationAdapter = new FileBasedRegistrationService();
+        registrationAdapter.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10));
 
         Future<RegistrationClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {
@@ -184,8 +189,8 @@ public class StandaloneRegistrationApiTest {
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             JsonObject payload = s.result().getPayload();
             ctx.assertNotNull(payload);
-            ctx.assertEquals(DEVICE_1, payload.getString("id"));
-            JsonObject data = payload.getJsonObject("data");
+            ctx.assertEquals(DEVICE_1, payload.getString(RegistrationConstants.FIELD_HONO_ID));
+            JsonObject data = payload.getJsonObject(RegistrationConstants.FIELD_DATA);
             ctx.assertEquals("lwm2m", data.getString("ep"));
             ok.complete();
         });
@@ -202,7 +207,7 @@ public class StandaloneRegistrationApiTest {
         });
     }
 
-    @Test(timeout = 10000l)
+    @Test(timeout = TIMEOUT)
     public void testRegisterDevices(final TestContext ctx) {
 
         Future<RegistrationResult> done = Future.future();

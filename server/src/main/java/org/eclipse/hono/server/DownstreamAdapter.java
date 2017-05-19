@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,6 +13,7 @@
 package org.eclipse.hono.server;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.service.amqp.UpstreamReceiver;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
