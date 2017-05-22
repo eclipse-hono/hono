@@ -56,25 +56,20 @@
     "saslPassword": "artemis"
   }],
 
-  ["linkRoutePattern", {
+  ["linkRoute", {
     "prefix": "event/",
     "dir": "in",
-    "connector": "broker"
+    "connection": "broker"
   }],
 
-  ["linkRoutePattern", {
+  ["linkRoute", {
     "prefix": "event/",
     "dir": "out",
-    "connector": "broker"
+    "connection": "broker"
   }],
 
   ["fixedAddress", {
     "prefix": "telemetry/",
-    "fanout": "multiple"
-  }],
-
-  ["fixedAddress", {
-    "prefix": "event/",
     "fanout": "multiple"
   }],
 

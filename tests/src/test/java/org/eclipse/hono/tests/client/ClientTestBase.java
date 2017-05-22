@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -232,8 +233,15 @@ public abstract class ClientTestBase {
             setup.complete();
         }));
 
-        sender.setDispositionHandler((id, disposition) -> accepted.countDown());
+        sender.setDispositionHandler((id, disposition) -> {
+            accepted.countDown();
+            //TODO temp fix to the test, until we have a logic to resend released qos1 messages
+            if (Released.class.isInstance(disposition.getRemoteState())) {
+                received.countDown();
+            }
+        });
         Future<RegistrationResult> tokenTracker = Future.future();
+
         Future<RegistrationResult> regTracker = Future.future();
         registrationClient.register(DEVICE_ID, null, regTracker.completer());
         regTracker.compose(r -> {
