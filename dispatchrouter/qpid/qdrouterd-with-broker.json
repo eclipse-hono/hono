@@ -68,9 +68,9 @@
     "connection": "broker"
   }],
 
-  ["fixedAddress", {
+  ["address", {
     "prefix": "telemetry/",
-    "fanout": "multiple"
+    "distribution": "multicast"
   }],
 
   ["policy", {

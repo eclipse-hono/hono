@@ -47,14 +47,14 @@
     "saslMechanisms": "EXTERNAL"
   }],
 
-  ["fixedAddress", {
+  ["address", {
     "prefix": "telemetry/",
-    "fanout": "multiple"
+    "distribution": "multicast"
   }],
 
-  ["fixedAddress", {
+  ["address", {
     "prefix": "event/",
-    "fanout": "multiple"
+    "distribution": "multicast"
   }],
 
   ["policy", {
