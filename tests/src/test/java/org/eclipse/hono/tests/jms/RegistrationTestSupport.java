@@ -14,11 +14,8 @@
 package org.eclipse.hono.tests.jms;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_STATUS;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -31,6 +28,7 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 
 import org.apache.qpid.jms.JmsQueue;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,7 +136,7 @@ class RegistrationTestSupport {
         try {
             final String correlationId = UUID.randomUUID().toString();
             final Message message = session.createMessage();
-            message.setStringProperty(APP_PROPERTY_DEVICE_ID, deviceId);
+            message.setStringProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
             message.setJMSType(action);
             message.setJMSReplyTo(reply);
             message.setJMSCorrelationID(correlationId);
@@ -146,7 +144,7 @@ class RegistrationTestSupport {
             LOGGER.debug("adding response handler for request [correlation ID: {}]", correlationId);
             final CompletableFuture<RegistrationResult> result = c.add(correlationId, response -> {
 
-                final String status = getStringProperty(response, APP_PROPERTY_STATUS);
+                final String status = getStringProperty(response, MessageHelper.APP_PROPERTY_STATUS);
                 LOGGER.debug("received response [type: {}, status: {}] for request [correlation ID: {}]", response.getClass().getName(), status, correlationId);
                 final int httpStatus = toInt(status, 0);
                 if (status == null || status.isEmpty() || httpStatus <= 0) {

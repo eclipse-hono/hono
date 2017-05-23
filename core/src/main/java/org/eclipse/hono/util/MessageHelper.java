@@ -67,9 +67,9 @@ public final class MessageHelper {
      * The name of the AMQP 1.0 message system property 'subject'.
      */
     public static final String SYS_PROPERTY_SUBJECT              = "subject";
+    public static final String SYS_PROPERTY_CORRELATION_ID       = "correlation-id";
 
     public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID          = "x-opt-app-correlation-id";
-    public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
     public static final String APP_PROPERTY_STATUS               = "status";
 
 

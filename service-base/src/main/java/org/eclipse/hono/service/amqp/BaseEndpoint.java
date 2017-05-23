@@ -12,8 +12,6 @@
 package org.eclipse.hono.service.amqp;
 
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.util.MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_CORRELATION_ID;
 import static org.eclipse.hono.util.MessageHelper.encodeIdToJson;
 
 import java.util.HashMap;
@@ -205,10 +203,10 @@ public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements
         final boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
         logger.debug("registration request [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
         if (isApplicationCorrelationId) {
-            message.put(ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
+            message.put(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
         }
         final JsonObject correlationIdJson = encodeIdToJson(getCorrelationId(request));
-        message.put(APP_PROPERTY_CORRELATION_ID, correlationIdJson);
+        message.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationIdJson);
     }
 
     /**

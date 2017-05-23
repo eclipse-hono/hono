@@ -12,7 +12,6 @@
 package org.eclipse.hono.server;
 
 import static io.vertx.proton.ProtonHelper.condition;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.eclipse.hono.util.MessageHelper.getAnnotation;
 
 import java.util.Objects;
@@ -164,7 +163,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
 
     final void forwardMessage(final UpstreamReceiver link, final ProtonDelivery delivery, final Message msg) {
 
-        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, APP_PROPERTY_RESOURCE, String.class));
+        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, String.class));
         final String token = MessageHelper.getRegistrationAssertion(msg);
 
         if (assertRegistration(token, messageAddress)) {
