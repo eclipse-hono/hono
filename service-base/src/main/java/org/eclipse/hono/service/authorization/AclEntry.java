@@ -18,19 +18,19 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Wraps an authorization subject and a set of {@link Permission}s.
+ * Wraps an authorization subject and a set of {@link Activity}s.
  */
 public class AclEntry
 {
     private final String authSubject;
-    private final Set<Permission> permissions;
+    private final Set<Activity> permissions;
 
-    public AclEntry(final String authSubject, final Permission... permissions) {
+    public AclEntry(final String authSubject, final Activity... permissions) {
         this.authSubject = requireNonNull(authSubject);
         this.permissions = EnumSet.copyOf(Arrays.asList(permissions));
     }
 
-    public AclEntry(final String authSubject, final Set<Permission> permissions) {
+    public AclEntry(final String authSubject, final Set<Activity> permissions) {
         this.authSubject = requireNonNull(authSubject);
         this.permissions = EnumSet.copyOf(permissions);
     }
@@ -39,7 +39,7 @@ public class AclEntry
         return authSubject;
     }
 
-    public Set<Permission> getPermissions() {
+    public Set<Activity> getPermissions() {
         return permissions;
     }
 

@@ -16,17 +16,29 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import io.vertx.core.Verticle;
 
 /**
- * Provides methods to add, remove or retrieve permissions on a resource for a given subject.
+ * A service for authorizing access to Hono resources.
+ * <p>
+ * Resources can be API endpoints and operations.
  */
 public interface AuthorizationService extends Verticle {
 
     /**
-     * Checks a permission for a subject and resource.
+     * Checks if a subject is authorized to perform an activity on a given resource.
      *
-     * @param subject the authorization subject
-     * @param resource the resource on which the subject want to be authorized
-     * @param permission the requested permission
-     * @return true if the subject has the requested permission on the given resource
+     * @param subject The subject to check authorization for.
+     * @param resource The resource to authorize access to.
+     * @param intent The activity to authorize.
+     * @return {@code true} if the subject is authorized to perform the activity on the resource.
      */
-    boolean hasPermission(String subject, ResourceIdentifier resource, Permission permission);
+    boolean hasPermission(String subject, ResourceIdentifier resource, Activity intent);
+
+    /**
+     * Checks if a subject is authorized to execute an API operation on a particular resource.
+     *
+     * @param subject The subject to check authorization for.
+     * @param resource The resource that is subject to the operation to authorize.
+     * @param operation The operation to authorize.
+     * @return {@code true} if the subject is authorized to execute the operation on the resource.
+     */
+    boolean hasPermission(String subject, ResourceIdentifier resource, String operation);
 }

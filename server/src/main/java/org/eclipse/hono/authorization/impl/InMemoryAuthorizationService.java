@@ -12,7 +12,6 @@
 package org.eclipse.hono.authorization.impl;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 import java.io.FileNotFoundException;
@@ -30,7 +29,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.service.authorization.AccessControlList;
 import org.eclipse.hono.service.authorization.AclEntry;
 import org.eclipse.hono.service.authorization.BaseAuthorizationService;
-import org.eclipse.hono.service.authorization.Permission;
+import org.eclipse.hono.service.authorization.Activity;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +52,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     static final Resource DEFAULT_PERMISSIONS_RESOURCE = new ClassPathResource("permissions.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryAuthorizationService.class);
     // holds mapping resource -> acl
-    private static final ConcurrentMap<ResourceIdentifier, AccessControlList> resources = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<ResourceEntry, AccessControlList> resources = new ConcurrentHashMap<>();
     private Resource permissionsResource = DEFAULT_PERMISSIONS_RESOURCE;
 
     /**
@@ -79,51 +78,72 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     @Override
-    public boolean hasPermission(final String subject, final ResourceIdentifier resource, final Permission permission) {
-        requireNonNull(subject, "subject is required");
-        requireNonNull(resource, "resources is required");
-        requireNonNull(permission, "permission is required");
+    public boolean hasPermission(final String subject, final ResourceIdentifier resource, final Activity intent) {
 
-        return hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), "*", null), permission) ||
-                hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), permission) ||
-                hasPermissionInternal(subject, resource, permission);
+        Objects.requireNonNull(subject);
+        Objects.requireNonNull(resource);
+        Objects.requireNonNull(intent);
+
+        return hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), "*", null), intent) ||
+                hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), intent) ||
+                hasPermissionInternal(subject, resource, intent);
     }
 
-    private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Permission permission) {
+    private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Activity permission) {
+
+        return hasPermissionInternal(subject, new ResourceEntry(resource, null), permission);
+    }
+
+    @Override
+    public boolean hasPermission(final String subject, final ResourceIdentifier resource, final String operation) {
+
+        Objects.requireNonNull(subject);
+        Objects.requireNonNull(resource);
+        Objects.requireNonNull(operation);
+
+        return hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), "*", null), operation, Activity.EXECUTE) ||
+                hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), operation, Activity.EXECUTE) ||
+                hasPermissionInternal(subject, resource, operation, Activity.EXECUTE);
+    }
+
+    private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final String operation, final Activity permission) {
+
+        return hasPermissionInternal(subject, new ResourceEntry(resource, operation), permission) ||
+                hasPermissionInternal(subject, new ResourceEntry(resource, "*"), permission);
+    }
+
+    private boolean hasPermissionInternal(final String subject, final ResourceEntry resource, final Activity permission) {
+        LOGGER.debug("checking [subject: {}, resource: {}, permission: {}]", subject, resource, permission);
         return ofNullable(resources.get(resource)).map(acl -> acl.hasPermission(subject, permission)).orElse(false);
     }
 
-    public void addPermission(final String subject, final ResourceIdentifier resource, final Permission first,
-            final Permission... rest) {
-        requireNonNull(first, "permission is required");
-        final EnumSet<Permission> permissions = EnumSet.of(first, rest);
+    void addPermission(final String subject, final ResourceIdentifier resource, final Activity first, final Activity... rest) {
+        Objects.requireNonNull(first, "permission is required");
+        final EnumSet<Activity> permissions = EnumSet.of(first, rest);
+        addPermission(subject, new ResourceEntry(resource), permissions);
+    }
+
+    void addPermission(final String subject, final ResourceIdentifier resource, final String operation, final Activity first, final Activity... rest) {
+        Objects.requireNonNull(first, "permission is required");
+        final EnumSet<Activity> permissions = EnumSet.of(first, rest);
+        addPermission(subject, new ResourceEntry(resource, operation), permissions);
+    }
+
+    void addPermission(final String subject, final ResourceEntry resource, final Activity first,
+            final Activity... rest) {
+        Objects.requireNonNull(first, "permission is required");
+        final EnumSet<Activity> permissions = EnumSet.of(first, rest);
         addPermission(subject, resource, permissions);
     }
 
-    public void addPermission(final String subject, final ResourceIdentifier resource, final Set<Permission> permissions) {
-        requireNonNull(subject, "subject is required");
-        requireNonNull(resource, "resource is required");
-        requireNonNull(permissions, "permission is required");
+    void addPermission(final String subject, final ResourceEntry resource, final Set<Activity> permissions) {
+        Objects.requireNonNull(subject);
+        Objects.requireNonNull(resource);
+        Objects.requireNonNull(permissions);
 
-        LOGGER.trace("adding permission {} for subject {} on resource {}.", permissions, subject, resource);
+        LOGGER.trace("adding permissions {} for subject {} on resource [address: {}, operation: {}]", permissions, subject, resource.getResource(), resource.getOperation());
         resources.computeIfAbsent(resource, key -> new AccessControlList())
                 .setAclEntry(new AclEntry(subject, permissions));
-    }
-
-    public void removePermission(final String subject, final ResourceIdentifier resource, final Permission first,
-            final Permission... rest) {
-        requireNonNull(subject, "subject is required");
-        requireNonNull(resource, "resource is required");
-        requireNonNull(first, "permission is required");
-
-        final EnumSet<Permission> permissions = EnumSet.of(first, rest);
-        LOGGER.trace("removing permission {} for subject {} on resource {}.", first, subject, resource);
-        resources.computeIfPresent(resource, (key, value) -> {
-            ofNullable(value.getAclEntry(subject))
-                    .map(AclEntry::getPermissions)
-                    .ifPresent(p -> p.removeAll(permissions));
-            return value;
-        });
     }
 
     void loadPermissions() throws IOException {
@@ -153,32 +173,134 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
 
     private void parsePermissions(final JsonObject permissionsObject) {
         permissionsObject
-        .stream().filter(resources -> resources.getValue() instanceof JsonObject)
-        .forEach(resources -> {
-            final ResourceIdentifier resourceIdentifier = getResourceIdentifier(resources);
-            final JsonObject subjects = (JsonObject) resources.getValue();
+        .stream().filter(entry -> entry.getValue() instanceof JsonObject)
+        .forEach(resourceSpec -> {
+            final ResourceEntry resourceEntry = getResourceEntry(resourceSpec);
+            final JsonObject subjects = (JsonObject) resourceSpec.getValue();
             subjects
-                    .stream().filter(subject -> subject.getValue() instanceof JsonArray)
-                    .forEach(subject -> {
-                        final JsonArray permissions = (JsonArray) subject.getValue();
-                        addPermission(subject.getKey(), resourceIdentifier, toSet(permissions));
-                    });
+            .stream().filter(subject -> subject.getValue() instanceof JsonArray)
+            .forEach(subject -> {
+                final JsonArray permissions = (JsonArray) subject.getValue();
+                addPermission(subject.getKey(), resourceEntry, toSet(permissions));
+            });
         });
     }
 
-    private ResourceIdentifier getResourceIdentifier(final Map.Entry<String, Object> resources) {
+    private ResourceEntry getResourceEntry(final Map.Entry<String, Object> resourceSpec) {
+
+        String resource = resourceSpec.getKey();
+        String op = null;
+        int separatorIdx = resourceSpec.getKey().lastIndexOf(":");
+        if (separatorIdx != -1) {
+            resource = resourceSpec.getKey().substring(0, separatorIdx);
+            op = resourceSpec.getKey().substring(separatorIdx + 1);
+        }
+
         if (getConfig().isSingleTenant()) {
-            return ResourceIdentifier.fromStringAssumingDefaultTenant(resources.getKey());
+            return new ResourceEntry(ResourceIdentifier.fromStringAssumingDefaultTenant(resource), op);
         } else {
-            return ResourceIdentifier.fromString(resources.getKey());
+            return new ResourceEntry(ResourceIdentifier.fromString(resource), op);
         }
     }
 
-    private Set<Permission> toSet(final JsonArray array) {
+    private Set<Activity> toSet(final JsonArray array) {
         return array.stream()
                 .filter(element -> element instanceof String)
                 .map(element -> (String) element)
-                .map(Permission::valueOf)
-                .collect(Collectors.<Permission>toSet());
+                .map(Activity::valueOf)
+                .collect(Collectors.<Activity>toSet());
+    }
+
+    private static class ResourceEntry {
+
+        final ResourceIdentifier resource;
+        final String operation;
+
+        /**
+         * Creates an entry for a resource.
+         * 
+         * @param resource
+         */
+        public ResourceEntry(final ResourceIdentifier resource) {
+            this(resource, null);
+        }
+
+        /**
+         * Creates an entry for a resource and operation.
+         * 
+         * @param resource
+         * @param operation
+         */
+        public ResourceEntry(final ResourceIdentifier resource, final String operation) {
+            this.resource = Objects.requireNonNull(resource);
+            this.operation = operation;
+        }
+
+        
+        /**
+         * @return The resource.
+         */
+        public final ResourceIdentifier getResource() {
+            return resource;
+        }
+
+        @Override
+        public String toString() {
+            return "ResourceEntry[resource: " + resource + ", operation: " + operation + "]";
+        }
+
+        /**
+         * @return The operation.
+         */
+        public final String getOperation() {
+            return operation;
+        }
+
+
+        /* (non-Javadoc)
+         * @see java.lang.Object#hashCode()
+         */
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((operation == null) ? 0 : operation.hashCode());
+            result = prime * result + ((resource == null) ? 0 : resource.hashCode());
+            return result;
+        }
+
+
+        /* (non-Javadoc)
+         * @see java.lang.Object#equals(java.lang.Object)
+         */
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            ResourceEntry other = (ResourceEntry) obj;
+            if (operation == null) {
+                if (other.operation != null) {
+                    return false;
+                }
+            } else if (!operation.equals(other.operation)) {
+                return false;
+            }
+            if (resource == null) {
+                if (other.resource != null) {
+                    return false;
+                }
+            } else if (!resource.equals(other.resource)) {
+                return false;
+            }
+            return true;
+        }
+
     }
 }

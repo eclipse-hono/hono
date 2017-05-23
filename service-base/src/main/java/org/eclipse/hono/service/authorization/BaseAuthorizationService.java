@@ -119,7 +119,7 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
         final String authSubject = body.getString(AUTH_SUBJECT_FIELD);
-        final Permission permission = Permission.valueOf(body.getString(PERMISSION_FIELD));
+        final Activity permission = Activity.valueOf(body.getString(PERMISSION_FIELD));
         final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(RESOURCE_FIELD));
 
         boolean hasPermission = hasPermission(authSubject, resource, permission);

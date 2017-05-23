@@ -13,9 +13,12 @@
       "device1-user": [ "WRITE" ]
   },
   "registration/bumlux:*": {
-      "ADMIN": [ "READ", "WRITE" ]
+      "ADMIN": [ "READ", "WRITE", "EXECUTE" ]
   },
-  "registration/DEFAULT_TENANT": {
+  "registration/DEFAULT_TENANT:*": {
       "executor": [ "READ", "WRITE" ]
+  },
+  "registration/DEFAULT_TENANT:assert": {
+      "executor": [ "EXECUTE" ]
   }
 }

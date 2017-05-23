@@ -25,7 +25,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.service.authorization.AuthorizationConstants;
-import org.eclipse.hono.service.authorization.Permission;
+import org.eclipse.hono.service.authorization.Activity;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -154,7 +154,7 @@ public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
                     handleUnknownEndpoint(con, receiver, targetResource);
                 } else {
                     final String user = getUserFromConnection(con);
-                    checkAuthorizationToAttach(user, targetResource, Permission.WRITE, isAuthorized -> {
+                    checkAuthorizationToAttach(user, targetResource, Activity.WRITE, isAuthorized -> {
                         if (isAuthorized) {
                             copyConnectionId(con.attachments(), receiver.attachments());
                             receiver.setTarget(receiver.getRemoteTarget());
@@ -221,7 +221,7 @@ public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
                 handleUnknownEndpoint(con, sender, targetResource);
             } else {
                 final String user = getUserFromConnection(con);
-                checkAuthorizationToAttach(user, targetResource, Permission.READ, isAuthorized -> {
+                checkAuthorizationToAttach(user, targetResource, Activity.READ, isAuthorized -> {
                     if (isAuthorized) {
                         copyConnectionId(con.attachments(), sender.attachments());
                         sender.setSource(sender.getRemoteSource());
@@ -238,7 +238,7 @@ public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
         }
     }
 
-    private void checkAuthorizationToAttach(final String user, final ResourceIdentifier targetResource, final Permission permission,
+    private void checkAuthorizationToAttach(final String user, final ResourceIdentifier targetResource, final Activity permission,
        final Handler<Boolean> authResultHandler) {
 
         final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(user, targetResource.toString(),
