@@ -11,8 +11,6 @@
  */
 package org.eclipse.hono.service.authorization;
 
-import java.util.Set;
-
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Verticle;
@@ -31,33 +29,4 @@ public interface AuthorizationService extends Verticle {
      * @return true if the subject has the requested permission on the given resource
      */
     boolean hasPermission(String subject, ResourceIdentifier resource, Permission permission);
-
-    /**
-     * Adds permission(s) for a subject/resource.
-     *
-     * @param subject the authorization subject
-     * @param resource the resource for which to add a permission
-     * @param first the permission to add
-     * @param rest more permission to add optionally
-     */
-    void addPermission(String subject, ResourceIdentifier resource, final Permission first, final Permission... rest);
-
-    /**
-     * Adds permission(s) for a subject/resource.
-     *
-     * @param subject the authorization subject
-     * @param resource the resource for which to add a permission
-     * @param permissions set of permissions to add
-     */
-    void addPermission(String subject, ResourceIdentifier resource, final Set<Permission> permissions);
-
-    /**
-     * Removes permission(s) for a subject/resource.
-     *
-     * @param subject the authorization subject
-     * @param resource the resource for which to remove a permission
-     * @param first the permission to remove
-     * @param rest more permission to remove optionally
-     */
-    void removePermission(String subject, ResourceIdentifier resource, final Permission first, final Permission... rest);
 }

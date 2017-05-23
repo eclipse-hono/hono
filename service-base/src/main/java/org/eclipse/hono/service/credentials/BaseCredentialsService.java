@@ -218,8 +218,12 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
     /**
      * Wraps a given device ID and registration data into a JSON structure suitable
      * to be returned to clients as the result of a registration operation.
-     * TODO: params
-
+     * 
+     * @param deviceId 
+     * @param type 
+     * @param authId 
+     * @param enabled 
+     * @param secrets 
      * @return The JSON structure.
      */
     protected final static JsonObject getResultPayload(final String deviceId, final  String type, final String authId, final boolean enabled, final JsonArray secrets) {

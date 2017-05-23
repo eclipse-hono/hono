@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.service.authorization.AccessControlList;
 import org.eclipse.hono.service.authorization.AclEntry;
+import org.eclipse.hono.service.authorization.BaseAuthorizationService;
 import org.eclipse.hono.service.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -92,7 +93,6 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         return ofNullable(resources.get(resource)).map(acl -> acl.hasPermission(subject, permission)).orElse(false);
     }
 
-    @Override
     public void addPermission(final String subject, final ResourceIdentifier resource, final Permission first,
             final Permission... rest) {
         requireNonNull(first, "permission is required");
@@ -100,7 +100,6 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         addPermission(subject, resource, permissions);
     }
 
-    @Override
     public void addPermission(final String subject, final ResourceIdentifier resource, final Set<Permission> permissions) {
         requireNonNull(subject, "subject is required");
         requireNonNull(resource, "resource is required");
@@ -111,7 +110,6 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
                 .setAclEntry(new AclEntry(subject, permissions));
     }
 
-    @Override
     public void removePermission(final String subject, final ResourceIdentifier resource, final Permission first,
             final Permission... rest) {
         requireNonNull(subject, "subject is required");
@@ -128,7 +126,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         });
     }
 
-    private void loadPermissions() throws IOException {
+    void loadPermissions() throws IOException {
         if (permissionsResource == null) {
             throw new IllegalStateException("permissions resource is not set");
         }
@@ -169,7 +167,7 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     private ResourceIdentifier getResourceIdentifier(final Map.Entry<String, Object> resources) {
-        if (honoConfig.isSingleTenant()) {
+        if (getConfig().isSingleTenant()) {
             return ResourceIdentifier.fromStringAssumingDefaultTenant(resources.getKey());
         } else {
             return ResourceIdentifier.fromString(resources.getKey());

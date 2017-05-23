@@ -13,32 +13,39 @@ package org.eclipse.hono.authorization.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.eclipse.hono.service.authorization.AuthorizationService;
 import org.eclipse.hono.service.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.core.io.ClassPathResource;
 
 /**
- * Tests verifying bahvior of {@link InMemoryAuthorizationService}.
+ * Tests verifying behavior of {@link InMemoryAuthorizationService}.
  */
 public class InMemoryAuthorizationServiceTest {
 
-    public static final ResourceIdentifier TELEMETRY = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
-    public static final ResourceIdentifier CONTROL   = ResourceIdentifier.fromStringAssumingDefaultTenant("control");
+    private static final ResourceIdentifier TELEMETRY = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
+    private static final ResourceIdentifier CONTROL   = ResourceIdentifier.fromStringAssumingDefaultTenant("control");
 
-    public static final String SUBJECT   = "subject";
-    public static final String READER    = "reader";
-    public static final String WRITER    = "writer";
+    private static final String SUBJECT   = "subject";
+    private static final String READER    = "reader";
+    private static final String WRITER    = "writer";
+    private static final String USER_ADMIN = "ADMIN";
+    private static final String PERMISSIONS_RESOURCE_PATH = "authorization-service-test-permissions.json";
 
-    private AuthorizationService underTest;
+    private InMemoryAuthorizationService underTest;
 
+    /**
+     * Loads permissions from a file.
+     * 
+     * @throws Exception if the permissions file cannot be read.
+     */
     @Before
     public void setUp() throws Exception {
-        underTest = new InMemoryAuthorizationService();
 
-        underTest.addPermission(READER, TELEMETRY, Permission.READ);
-        underTest.addPermission(WRITER, TELEMETRY, Permission.READ, Permission.WRITE);
+        underTest = new InMemoryAuthorizationService();
+        underTest.setPermissionsPath(new ClassPathResource(PERMISSIONS_RESOURCE_PATH));
+        underTest.loadPermissions();
     }
 
     @Test
@@ -52,7 +59,6 @@ public class InMemoryAuthorizationServiceTest {
 
         assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.READ)).isTrue();
         assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.WRITE)).isTrue();
-
     }
 
     @Test
@@ -61,13 +67,10 @@ public class InMemoryAuthorizationServiceTest {
         final ResourceIdentifier TENANT1 = ResourceIdentifier.fromString("telemetry/tenant1");
         final ResourceIdentifier DEVICE1 = ResourceIdentifier.fromString("telemetry/tenant1/device1");
 
-        underTest.addPermission("TENANT", TENANT1, Permission.WRITE);
-        underTest.addPermission("DEVICE", DEVICE1, Permission.WRITE);
-
-        assertThat(underTest.hasPermission("DEVICE", DEVICE1, Permission.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("TENANT", DEVICE1, Permission.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("TENANT", TENANT1, Permission.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("DEVICE", TENANT1, Permission.WRITE)).isFalse();
+        assertThat(underTest.hasPermission("device1-user", DEVICE1, Permission.WRITE)).isTrue();
+        assertThat(underTest.hasPermission("tenant1-user", DEVICE1, Permission.WRITE)).isTrue();
+        assertThat(underTest.hasPermission("tenant1-user", TENANT1, Permission.WRITE)).isTrue();
+        assertThat(underTest.hasPermission("device1-user", TENANT1, Permission.WRITE)).isFalse();
     }
 
     @Test
@@ -82,22 +85,13 @@ public class InMemoryAuthorizationServiceTest {
         assertThat(underTest.hasPermission(SUBJECT, CONTROL, Permission.WRITE)).isFalse();
     }
 
-    @Test
-    public void testRemovePermission() throws Exception {
-        assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.READ)).isTrue();
-        assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.WRITE)).isTrue();
-
-        underTest.removePermission(WRITER, TELEMETRY, Permission.WRITE);
-
-        assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.READ)).isTrue();
-        assertThat(underTest.hasPermission(WRITER, TELEMETRY, Permission.WRITE)).isFalse();
-    }
-
+    /**
+     * Verifies that a user is authorized to consume telemetry data for a specific tenant if
+     * the user has been granted to receive Telemetry data for the wildcard tenant ("*").
+     */
     @Test
     public void testHasPermissionReturnsTrueForWildcardTenant() {
 
-        ResourceIdentifier allTelemetry = ResourceIdentifier.from("telemetry", "*", null);
-        underTest.addPermission("ADMIN", allTelemetry, Permission.READ);
-        assertThat(underTest.hasPermission("ADMIN", ResourceIdentifier.from("telemetry", "bumlux", "test"), Permission.READ)).isTrue();
+        assertThat(underTest.hasPermission(USER_ADMIN, ResourceIdentifier.from("telemetry", "bumlux", "test"), Permission.READ)).isTrue();
     }
 }

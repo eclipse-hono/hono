@@ -9,15 +9,13 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.authorization.impl;
+package org.eclipse.hono.service.authorization;
 
 import static org.eclipse.hono.service.authorization.AuthorizationConstants.*;
 
 import java.util.Objects;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.authorization.AuthorizationService;
-import org.eclipse.hono.service.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,28 +30,51 @@ import io.vertx.core.json.JsonObject;
 /**
  * Base class for implementing an {@code AuthorizationService}.
  * <p>
- * Provides support for processing authorization requests via Vert.x event bus.
- * </p>
+ * Provides support for processing authorization requests received via Vert.x event bus.
+ * <p>
+ * This service expects requests as JSON messages sent to address {@link AuthorizationConstants#EVENT_BUS_ADDRESS_AUTHORIZATION_IN}.
+ * The messages must comply with the following syntax:
+ * <pre>
+ * {
+ *   "auth-subject": "client-id",
+ *   "permission": "READ",
+ *   "resource": "telemetry/DEFAULT_TENANT"
+ * }
+ * </pre>
+ * <p>
+ * The authorization result is returned as a reply to the original request message and contains a single string
+ * (either {@link AuthorizationConstants#ALLOWED} or {@link AuthorizationConstants#DENIED}) indicating the
+ * result of the authorization request.
  */
 public abstract class BaseAuthorizationService extends AbstractVerticle implements AuthorizationService
 {
     private static final Logger LOG = LoggerFactory.getLogger(BaseAuthorizationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;
-    protected ServiceConfigProperties honoConfig = new ServiceConfigProperties();
+    private ServiceConfigProperties config = new ServiceConfigProperties();
 
     /**
-     * Sets the global Hono configuration properties.
+     * Sets the service configuration properties.
      * 
      * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
      */
     @Autowired(required = false)
-    public void setHonoConfiguration(final ServiceConfigProperties props) {
-        this.honoConfig = Objects.requireNonNull(props);
+    public final void setConfig(final ServiceConfigProperties props) {
+        this.config = Objects.requireNonNull(props);
+    }
+
+    
+    /**
+     * Gets the service configuration properties.
+     * 
+     * @return The properties.
+     */
+    public final ServiceConfigProperties getConfig() {
+        return config;
     }
 
     @Override
-    public final void start(final Future<Void> startFuture) throws Exception {
+    public final void start(final Future<Void> startFuture) {
         String listenAddress = EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
         authRequestConsumer = vertx.eventBus().consumer(listenAddress);
         authRequestConsumer.handler(this::processMessage);
@@ -61,20 +82,36 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
         doStart(startFuture);
     }
 
-    protected void doStart(final Future<Void> startFuture) throws Exception
-    {
+    /**
+     * Invoked by {@link #start()} as part of the start-up of this service.
+     * <p>
+     * Subclasses should override this method to perform any work specific to the start-up of this service.
+     * <p>
+     * This default implementation simply completes the future.
+     * 
+     * @param startFuture The future to complete on successful start-up.
+     */
+    protected void doStart(final Future<Void> startFuture) {
         // should be overridden by subclasses
         startFuture.complete();
     }
 
     @Override
-    public final void stop(final Future<Void> stopFuture) throws Exception {
+    public final void stop(final Future<Void> stopFuture) {
         authRequestConsumer.unregister();
         doStop(stopFuture);
     }
 
-    protected void doStop(final Future<Void> stopFuture) throws Exception
-    {
+    /**
+     * Invoked by {@link #stop()} as part of the shut down of this service.
+     * <p>
+     * Subclasses should override this method to perform any work specific to the shut down of this service.
+     * <p>
+     * This default implementation simply completes the future.
+     *
+     * @param stopFuture the future to invoke once shutdown is complete.
+     */
+    protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
         stopFuture.complete();
     }
