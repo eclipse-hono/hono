@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -23,10 +23,9 @@ import java.util.Objects;
  * The first segment always contains the name of the <em>endpoint</em> that the
  * resource belongs to.
  * <p>
- * Within the <em>telemetry</em> and <em>registration</em> endpoints the first three
+ * Within the <em>telemetry</em> and <em>registration</em> endpoints the remaining two
  * segments have the following semantics:
  * <ol>
- * <li>the <em>endpoint</em> name</li>
  * <li>the <em>tenant ID</em></li>
  * <li>an (optional) <em>device ID</em></li>
  * </ol>
@@ -40,21 +39,14 @@ public final class ResourceIdentifier {
     private String resource;
 
     private ResourceIdentifier(final String resource, final boolean assumeDefaultTenant) {
-        String[] path = resource.split("\\/");
         if (assumeDefaultTenant) {
-            if (path.length == 0) {
-                throw new IllegalArgumentException("resource must at least contain an endpoint");
-            } else if (path.length > 2) {
-                throw new IllegalArgumentException("resource must not contain more than 2 segments");
-            } else {
-                setResourcePath(new String[]{path[0], Constants.DEFAULT_TENANT, path.length == 2 ? path[1] : null});
-            }
+            String[] path = resource.split("\\/", 2);
+            setResourcePath(new String[]{path[0], Constants.DEFAULT_TENANT, path.length == 2 ? path[1] : null});
         } else {
-            if (path.length < 2) {
-                throw new IllegalArgumentException(
-                        "resource must at least contain an endpoint and the tenantId");
-            } else if (path.length > 3) {
-                throw new IllegalArgumentException("resource must not contain more than 3 segments");
+            String[] path = resource.split("\\/", 3);
+            if (path.length == 1) {
+                // no tenant given, leave path "as is"
+                setResourcePath(new String[]{ path[0] });
             } else {
                 setResourcePath(new String[]{path[0], path[1], path.length == 3 ? path[2] : null});
             }
@@ -81,7 +73,7 @@ public final class ResourceIdentifier {
                 pathSegments.add(segment);
             }
         }
-        this.resourcePath = pathSegments.toArray(new String[0]);
+        this.resourcePath = pathSegments.toArray(new String[pathSegments.size()]);
         createStringRepresentation();
     }
 
@@ -186,36 +178,24 @@ public final class ResourceIdentifier {
     }
 
     /**
-     * @return the tenantId
+     * @return the tenantId or {@code null} if not set.
      */
     public String getTenantId() {
-        return resourcePath[IDX_TENANT_ID];
+        if (resourcePath.length > IDX_TENANT_ID) {
+            return resourcePath[IDX_TENANT_ID];
+        } else {
+            return null;
+        }
     }
 
     /**
-     * @return the resourceId
+     * @return the resourceId or {@code null} if not set.
      */
     public String getResourceId() {
         if (resourcePath.length > IDX_RESOURCE_ID) {
             return resourcePath[IDX_RESOURCE_ID];
         } else {
             return null;
-        }
-    }
-
-    public boolean matches(final String... pattern) {
-        if (resourcePath.length != pattern.length) {
-            return false;
-        } else {
-            boolean result = true;
-            for (int i = 0; i < resourcePath.length; i++) {
-                if ("*".equals(pattern[i])) {
-                    continue;
-                } else {
-                    result &= resourcePath[i].equals(pattern[i]);
-                }
-            }
-            return result;
         }
     }
 
