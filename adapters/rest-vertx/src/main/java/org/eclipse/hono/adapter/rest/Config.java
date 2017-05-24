@@ -17,6 +17,9 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.connection.ConnectionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -29,6 +32,10 @@ import org.springframework.context.annotation.Scope;
 @Configuration
 public class Config extends AdapterConfig {
 
+    @Autowired(required = false)
+    @Qualifier("registration")
+    private ConnectionFactory registrationServiceConnectionFactory;
+    
     @Override
     protected void customizeClientConfigProperties(ClientConfigProperties props) {
         if (props.getName() == null) {
@@ -52,6 +59,34 @@ public class Config extends AdapterConfig {
         return new HonoClientImpl(getVertx(), honoConnectionFactory());
     }
 
+    @Override
+    protected void customizeRegistrationServiceClientConfigProperties(ClientConfigProperties props) {
+        if (props.getName() == null) {
+            props.setName("Hono REST Adapter");
+        }
+        if (props.getAmqpHostname() == null) {
+            props.setAmqpHostname("hono-device-registry");
+        }
+    }
+
+    /**
+     * Exposes a registration service client as a Spring bean.
+     * <p>
+     * The client is configured with the properties provided by {@link #registrationServiceClientConfig()}.
+     * If no such properties are set, null is returned here.
+     *
+     * @return The client or null.
+     */
+    @Bean
+    @Qualifier("registration")
+    @Scope("prototype")
+    public HonoClient registrationServiceClient() {
+        if (registrationServiceConnectionFactory == null) {
+            return null;
+        }
+        return new HonoClientImpl(getVertx(), registrationServiceConnectionFactory);
+    }
+
     /**
      * Exposes the REST adapter's configuration properties as a Spring bean.
      * 
@@ -63,6 +98,11 @@ public class Config extends AdapterConfig {
         return new ServiceConfigProperties();
     }
 
+    /**
+     * Exposes a factory for creating REST adapter instances.
+     * 
+     * @return The factory bean.
+     */
     @Bean
     public ServiceLocatorFactoryBean serviceLocator() {
         ServiceLocatorFactoryBean bean = new ServiceLocatorFactoryBean();
