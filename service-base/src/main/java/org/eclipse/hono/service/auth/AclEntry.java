@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial API and implementation and initial documentation
  */
-package org.eclipse.hono.service.authorization;
+package org.eclipse.hono.service.auth;
 
 import static java.util.Objects.requireNonNull;
 

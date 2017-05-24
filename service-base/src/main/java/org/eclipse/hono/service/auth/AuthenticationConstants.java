@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.authentication;
+package org.eclipse.hono.service.auth;
 
 import io.vertx.core.json.JsonObject;
 

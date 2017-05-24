@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial API and implementation and initial documentation
  */
-package org.eclipse.hono.service.authorization;
+package org.eclipse.hono.service.auth;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.server;
 
-import static org.eclipse.hono.authentication.AuthenticationConstants.*;
+import static org.eclipse.hono.service.auth.AuthenticationConstants.*;
 
 import java.security.Principal;
 import java.util.Objects;

@@ -20,11 +20,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
-import org.eclipse.hono.authentication.AuthenticationService;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerFactory;
-import org.eclipse.hono.service.authorization.AuthorizationService;
+import org.eclipse.hono.service.auth.AuthenticationService;
+import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.slf4j.Logger;

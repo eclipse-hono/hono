@@ -16,7 +16,7 @@ import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 
 import java.util.stream.IntStream;
 
-import org.eclipse.hono.authentication.impl.AcceptAllPlainAuthenticationService;
+import org.eclipse.hono.authentication.impl.FileBasedAuthenticationService;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClient;
@@ -89,7 +89,7 @@ public class StandaloneRegistrationApiTest {
         Future<String> authTracker = Future.future();
 
         vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
-        vertx.deployVerticle(AcceptAllPlainAuthenticationService.class.getName(), authenticationTracker.completer());
+        vertx.deployVerticle(FileBasedAuthenticationService.class.getName(), authenticationTracker.completer());
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
 
         CompositeFuture.all(registrationTracker, authTracker)
