@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -9,102 +9,100 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.service.registration;
+package org.eclipse.hono.service.credentials;
 
-import static io.vertx.proton.ProtonHelper.condition;
-import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
-
-import java.net.HttpURLConnection;
-import java.util.Objects;
-
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonQoS;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
+import java.net.HttpURLConnection;
+import java.util.Objects;
+
+import static io.vertx.proton.ProtonHelper.condition;
+import static org.eclipse.hono.util.CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN;
 
 /**
- * An {@code Endpoint} for managing device registration information.
+ * An {@code Endpoint} for managing device credential information.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a>.
+ * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */
 @Component
-@Qualifier("registration")
-public final class RegistrationEndpoint extends BaseEndpoint {
+@Qualifier("credentials")
+public final class CredentialsEndpoint extends BaseEndpoint {
 
     /**
-     * Creates a new registration endpoint for a vertx instance.
-     * 
+     * Creates a new credentials endpoint for a vertx instance.
+     *
      * @param vertx The vertx instance to use.
      */
     @Autowired
-    public RegistrationEndpoint(final Vertx vertx) {
+    public CredentialsEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
     }
 
     @Override
     public String getName() {
-        return RegistrationConstants.REGISTRATION_ENDPOINT;
+        return CredentialsConstants.CREDENTIALS_ENDPOINT;
     }
 
     @Override
     public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
-            logger.debug("client wants to use AT MOST ONCE delivery mode for registration endpoint, this is not supported.");
+            logger.debug("client wants to use AT MOST ONCE delivery mode for credentials endpoint, this is not supported.");
             receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
             receiver.close();
         } else {
-    
-            logger.debug("establishing link for receiving registration messages from client [{}]", MessageHelper.getLinkName(receiver));
+
+            logger.debug("establishing link for receiving credentials messages from client [{}]", MessageHelper.getLinkName(receiver));
             receiver
-                .setQoS(ProtonQoS.AT_LEAST_ONCE)
-                .setAutoAccept(true) // settle received messages if the handler succeeds
-                .setPrefetch(20)
-                .handler((delivery, message) -> {
-                    if (RegistrationMessageFilter.verify(targetAddress, message)) {
-                        try {
-                            processRequest(message);
-                        } catch (DecodeException e) {
-                            MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed payload");
+                    .setQoS(ProtonQoS.AT_LEAST_ONCE)
+                    .setAutoAccept(true) // settle received messages if the handler succeeds
+                    .setPrefetch(20)
+                    .handler((delivery, message) -> {
+                        if (CredentialsMessageFilter.verify(targetAddress, message)) {
+                            try {
+                                processRequest(message);
+                            } catch (DecodeException e) {
+                                MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed payload");
+                            }
+                        } else {
+                            MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed credentials message");
+                            // we close the link if the client sends a message that does not comply with the API spec
+                            onLinkDetach(receiver, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
                         }
-                    } else {
-                        MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed registration message");
-                        // we close the link if the client sends a message that does not comply with the API spec
-                        onLinkDetach(receiver, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
-                    }
-                }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
-                .open();
+                    }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
+                    .open();
         }
     }
 
     @Override
     public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
-        /* note: we "misuse" deviceId part of the resource as reply address here */
         if (targetResource.getResourceId() == null) {
-            logger.debug("link target provided in client's link ATTACH does not match pattern \"registration/<tenant>/<reply-address>\"");
+            logger.debug("link target provided in client's link ATTACH must not be null, but must match pattern \"credentials/<tenant>/<reply-address>\" instead");
             sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),
-                    "link target must have the following format registration/<tenant>/<reply-address>"));
+                    "link target must not be null but must have the following format credentials/<tenant>/<reply-address>"));
             sender.close();
         } else {
             logger.debug("establishing sender link with client [{}]", MessageHelper.getLinkName(sender));
             final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(targetResource.toString(), message -> {
                 // TODO check for correct session here...?
                 logger.trace("forwarding reply to client: {}", message.body());
-                final Message amqpReply = RegistrationConstants.getAmqpReply(message);
+                final Message amqpReply = CredentialsConstants.getAmqpReply(message);
                 sender.send(amqpReply);
             });
 
@@ -119,22 +117,24 @@ public final class RegistrationEndpoint extends BaseEndpoint {
         }
     }
 
+
     private void processRequest(final Message msg) {
 
-        final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
+        final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg);
+
+        vertx.eventBus().send(EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg,
                 result -> {
                     JsonObject response = null;
                     if (result.succeeded()) {
                         // TODO check for correct session here...?
                         response = (JsonObject) result.result().body();
                     } else {
-                        logger.debug("failed to process request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
+                        logger.debug("failed to process credentials request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
                         // we need to inform client about failure
-                        response = RegistrationConstants.getReply(
+                        response = CredentialsConstants.getReply(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
                                 MessageHelper.getTenantIdAnnotation(msg),
-                                MessageHelper.getDeviceIdAnnotation(msg),
+                                null,
                                 null);
                     }
                     addHeadersToResponse(msg, response);

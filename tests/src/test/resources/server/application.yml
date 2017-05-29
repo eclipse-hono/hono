@@ -24,14 +24,3 @@ hono:
     keyPath: /etc/hono/certs/hono-key.pem
     certPath: /etc/hono/certs/hono-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
-
----
-
-spring:
-  profiles: activemq
-hono:
-  server:
-    pathSeparator: .
-  downstream:
-    host: activemq
-    port: 5672

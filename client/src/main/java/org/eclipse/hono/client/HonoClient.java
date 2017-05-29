@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -186,6 +186,30 @@ public interface HonoClient {
     HonoClient createRegistrationClient(
             String tenantId,
             Handler<AsyncResult<RegistrationClient>> creationHandler);
+
+    /**
+     * Gets a client for interacting with Hono's <em>Credentials</em> API.
+     *
+     * @param tenantId The tenant to manage device credentials data for.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    HonoClient getOrCreateCredentialsClient(
+            String tenantId,
+            Handler<AsyncResult<CredentialsClient>> resultHandler);
+
+    /**
+     * Creates a new client for interacting with Hono's <em>Credentials</em> API.
+     *
+     * @param tenantId The tenant to manage device credentials data for.
+     * @param creationHandler The handler to invoke with the result of the operation.
+     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    HonoClient createCredentialsClient(
+            String tenantId,
+            Handler<AsyncResult<CredentialsClient>> creationHandler);
 
     /**
      * Closes this client's connection to the Hono server.

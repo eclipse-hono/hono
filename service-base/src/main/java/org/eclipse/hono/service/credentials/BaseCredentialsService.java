@@ -109,28 +109,57 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
      */
     public final void processCredentialsMessage(final Message<JsonObject> regMsg) {
 
-        try {
-            final JsonObject body = regMsg.body();
-            final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-            final String subject = body.getString(CredentialsConstants.SYS_PROPERTY_SUBJECT);
-            JsonObject payload = getRequestPayload(body);
+        final JsonObject body = regMsg.body();
+        if (body == null) {
+            log.debug("credentials request did not contain body - not supported");
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        }
 
-            switch (subject) {
-            case OPERATION_GET: {
-                String type = payload.getString(FIELD_TYPE);
-                String authId = payload.getString(FIELD_AUTH_ID);
-                log.debug("getting credentials [{}:{}] of tenant [{}]", type, authId, tenantId);
-                getCredentials(tenantId, type, authId, result -> reply(regMsg, result));
-            }
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final String subject = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
+        final JsonObject payload = getRequestPayload(body);
+
+        if (tenantId == null) {
+            log.debug("credentials request did not contain tenantId - not supported");
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        } else if (subject == null) {
+            log.debug("credentials request did not contain subject - not supported");
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        } else if (payload == null) {
+            log.debug("credentials request contained invalid or no payload at all (expected json format) - not supported");
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        }
+
+        switch (subject) {
+            case OPERATION_GET:
+                processCredentialsMessageGetOperation(regMsg, tenantId, payload);
                 break;
             default:
-                log.info("operation [{}] not supported", subject);
+                log.debug("operation [{}] not supported", subject);
                 reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
-            }
-        } catch (ClassCastException e) {
-            log.debug("malformed request message");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
         }
+    }
+
+    private void processCredentialsMessageGetOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
+        final String type = payload.getString(FIELD_TYPE);
+        if (type == null) {
+            log.debug("credentials get request did not contain type in payload - not supported");
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        }
+
+        final String authId = payload.getString(FIELD_AUTH_ID);
+        if (authId == null) {
+            log.debug("credentials get request did not contain authId in payload - not supported");
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        }
+        log.debug("getting credentials [{}:{}] of tenant [{}]", type, authId, tenantId);
+        getCredentials(tenantId, type, authId, result -> reply(regMsg, result));
     }
 
 
@@ -158,9 +187,26 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
         request.reply(CredentialsConstants.getReply(tenantId, deviceId, result));
     }
 
+    /**
+     * Gets the payload from the request and ensures that the enabled flag is contained.
+     *
+     * @param request The request from which the payload is tried to be extracted. Must not be null.
+     * @return The payload as JsonObject (if found). Null otherwise.
+     */
     private final JsonObject getRequestPayload(final JsonObject request) {
 
-        final JsonObject payload = request.getJsonObject(CredentialsConstants.FIELD_PAYLOAD, new JsonObject());
+        if (request == null) {
+            return null;
+        }
+
+
+        Object payloadObject = request.getValue(CredentialsConstants.FIELD_PAYLOAD);
+        if (!(payloadObject instanceof JsonObject)) {
+            return null;
+        }
+        final JsonObject payload = (JsonObject) payloadObject;
+
+
         Boolean enabled = payload.getBoolean(FIELD_ENABLED);
         if (enabled == null) {
             log.debug("adding 'enabled' key to payload");
@@ -181,7 +227,7 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
                 put(FIELD_DEVICE_ID, deviceId).
                 put(FIELD_TYPE, type).
                 put(FIELD_AUTH_ID, authId).
-                put(FIELD_ENABLED, Boolean.valueOf(enabled)).
+                put(FIELD_ENABLED, enabled).
                 put(FIELD_SECRETS, secrets);
     }
 

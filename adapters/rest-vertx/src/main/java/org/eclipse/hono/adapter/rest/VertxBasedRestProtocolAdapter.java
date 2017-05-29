@@ -312,7 +312,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtoco
     private void doRegistrationAction(final RoutingContext ctx, final BiConsumer<RegistrationClient, HttpServerResponse> action) {
         final String tenant = getTenantParam(ctx);
         final HttpServerResponse resp = ctx.response();
-        getHonoClient().getOrCreateRegistrationClient(tenant, done -> {
+        getRegistrationServiceClient().getOrCreateRegistrationClient(tenant, done -> {
             if (done.succeeded()) {
                 action.accept(done.result(), resp);
             } else {

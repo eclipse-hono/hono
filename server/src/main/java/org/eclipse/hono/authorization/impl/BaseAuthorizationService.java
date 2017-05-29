@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,18 +11,13 @@
  */
 package org.eclipse.hono.authorization.impl;
 
-import static org.eclipse.hono.authorization.AuthorizationConstants.ALLOWED;
-import static org.eclipse.hono.authorization.AuthorizationConstants.AUTH_SUBJECT_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.DENIED;
-import static org.eclipse.hono.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-import static org.eclipse.hono.authorization.AuthorizationConstants.PERMISSION_FIELD;
-import static org.eclipse.hono.authorization.AuthorizationConstants.RESOURCE_FIELD;
+import static org.eclipse.hono.service.authorization.AuthorizationConstants.*;
 
 import java.util.Objects;
 
-import org.eclipse.hono.authorization.AuthorizationService;
-import org.eclipse.hono.authorization.Permission;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.authorization.AuthorizationService;
+import org.eclipse.hono.service.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

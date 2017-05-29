@@ -12,7 +12,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_DEVICE_ID;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.HashMap;
@@ -27,7 +26,6 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,7 +109,7 @@ public final class RegistrationClientImpl extends AbstractHonoClient implements 
     private static RegistrationResult getRegistrationResult(final Message message) {
         final String status = MessageHelper.getApplicationProperty(
                                                 message.getApplicationProperties(),
-                                                RegistrationConstants.APP_PROPERTY_STATUS,
+                                                MessageHelper.APP_PROPERTY_STATUS,
                                                 String.class);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
         return RegistrationResult.from(Integer.valueOf(status), payload);
@@ -153,7 +151,7 @@ public final class RegistrationClientImpl extends AbstractHonoClient implements 
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(APP_PROPERTY_DEVICE_ID, deviceId);
+        properties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         final Message request = createMessage(action, properties);
         if (payload != null) {
             request.setContentType("application/json; charset=utf-8");
@@ -218,7 +216,7 @@ public final class RegistrationClientImpl extends AbstractHonoClient implements 
     public void find(final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(APP_PROPERTY_DEVICE_ID, value);
+        properties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, value);
         properties.put(APP_PROPERTY_KEY, key);
         sendMessage(createMessage(ACTION_FIND, properties), resultHandler);
     }

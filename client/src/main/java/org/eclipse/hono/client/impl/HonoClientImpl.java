@@ -29,6 +29,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,7 @@ public final class HonoClientImpl implements HonoClient {
     private static final Logger LOG = LoggerFactory.getLogger(HonoClientImpl.class);
     private final Map<String, MessageSender> activeSenders = new ConcurrentHashMap<>();
     private final Map<String, RegistrationClient> activeRegClients = new ConcurrentHashMap<>();
+    private final Map<String, CredentialsClient> activeCredClients = new ConcurrentHashMap<>();
     private final Map<String, Boolean> senderCreationLocks = new ConcurrentHashMap<>();
     private final List<Handler<Void>> creationRequests = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
@@ -449,6 +451,53 @@ public final class HonoClientImpl implements HonoClient {
                     LOG.debug("successfully created registration client for [{}]", tenantId);
                 } else {
                     LOG.debug("failed to create registration client for [{}]", tenantId, creationAttempt.cause());
+                }
+                creationRequests.remove(connectionFailureHandler);
+                creationHandler.handle(creationAttempt);
+            });
+        }
+        return this;
+    }
+
+    /* (non-Javadoc)
+     * @see org.eclipse.hono.client.HonoClient#getOrCreateCredentialsClient(java.lang.String, io.vertx.core.Handler)
+     */
+    @Override
+    public HonoClient getOrCreateCredentialsClient(final String tenantId, final Handler<AsyncResult<CredentialsClient>> resultHandler) {
+        final CredentialsClient credClient = activeCredClients.get(tenantId);
+        if (credClient != null && credClient.isOpen()) {
+            LOG.debug("reusing existing credentials client for [{}]", tenantId);
+            resultHandler.handle(Future.succeededFuture(credClient));
+        } else {
+            createCredentialsClient(tenantId, resultHandler);
+        }
+        return this;
+    }
+
+    /* (non-Javadoc)
+     * @see org.eclipse.hono.client.HonoClient#createCredentialsClient(java.lang.String, io.vertx.core.Handler)
+     */
+    @Override
+    public HonoClient createCredentialsClient(final String tenantId, final Handler<AsyncResult<CredentialsClient>> creationHandler) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(creationHandler);
+        if (connection == null || connection.isDisconnected()) {
+            creationHandler.handle(Future.failedFuture("client is not connected to Hono (yet)"));
+        } else {
+            // register a handler to be notified if the underlying connection to the server fails
+            // so that we can fail the result handler passed in
+            final Handler<Void> connectionFailureHandler = connectionLost -> {
+                creationHandler.handle(Future.failedFuture("connection to server lost"));
+            };
+            creationRequests.add(connectionFailureHandler);
+
+            LOG.debug("creating new credentials client for [{}]", tenantId);
+            CredentialsClientImpl.create(context, connection, tenantId, creationAttempt -> {
+                if (creationAttempt.succeeded()) {
+                    activeCredClients.put(tenantId, creationAttempt.result());
+                    LOG.debug("successfully created credentials client for [{}]", tenantId);
+                } else {
+                    LOG.debug("failed to create credentials client for [{}]", tenantId, creationAttempt.cause());
                 }
                 creationRequests.remove(connectionFailureHandler);
                 creationHandler.handle(creationAttempt);

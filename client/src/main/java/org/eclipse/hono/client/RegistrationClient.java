@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -26,7 +26,7 @@ import io.vertx.core.json.JsonObject;
  * An instance of this interface is always scoped to a specific tenant.
  * </p>
  * <p>
- * See Hono's <a href="https://github.com/eclipse/hono/wiki/Device-Registration-API">
+ * See Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API">
  * Registration API specification</a> for a description of the result codes returned.
  * </p>
  */

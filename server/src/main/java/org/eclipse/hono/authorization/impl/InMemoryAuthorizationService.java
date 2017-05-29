@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -27,9 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-import org.eclipse.hono.authorization.AccessControlList;
-import org.eclipse.hono.authorization.AclEntry;
-import org.eclipse.hono.authorization.Permission;
+import org.eclipse.hono.service.authorization.AccessControlList;
+import org.eclipse.hono.service.authorization.AclEntry;
+import org.eclipse.hono.service.authorization.Permission;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,15 +83,9 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         requireNonNull(resource, "resources is required");
         requireNonNull(permission, "permission is required");
 
-        return hasPermissionForTenant(subject, resource, permission) || hasPermissionInternal(subject, resource, permission);
-    }
-
-    private boolean hasPermissionForTenant(final String subject, final ResourceIdentifier resource, final Permission permission) {
-        if (resource.getResourceId() != null) {
-            final ResourceIdentifier tenantResource = ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null);
-            return hasPermissionInternal(subject, tenantResource, permission);
-        }
-        return false;
+        return hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), "*", null), permission) ||
+                hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), permission) ||
+                hasPermissionInternal(subject, resource, permission);
     }
 
     private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Permission permission) {

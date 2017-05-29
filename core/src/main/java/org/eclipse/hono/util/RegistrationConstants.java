@@ -45,9 +45,7 @@ public final class RegistrationConstants {
     public static final String ACTION_UPDATE     = "update";
 
     /* message property names */
-    public static final String APP_PROPERTY_CORRELATION_ID       = "correlation-id";
     public static final String APP_PROPERTY_KEY                  = "key";
-    public static final String APP_PROPERTY_STATUS               = "status";
 
     /* JSON field names */
     public static final String FIELD_ACTION                      = "action";
@@ -119,7 +117,7 @@ public final class RegistrationConstants {
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        jsonObject.put(APP_PROPERTY_STATUS, Integer.toString(status));
+        jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, Integer.toString(status));
         if (payload != null) {
             jsonObject.put(FIELD_PAYLOAD, payload);
         }
@@ -136,14 +134,14 @@ public final class RegistrationConstants {
      */
     public static boolean hasStatus(final JsonObject msg, final int expectedStatus) {
 
-        return Objects.requireNonNull(msg).getString(APP_PROPERTY_STATUS, "none").equals(Integer.toString(expectedStatus));
+        return Objects.requireNonNull(msg).getString(MessageHelper.APP_PROPERTY_STATUS, "none").equals(Integer.toString(expectedStatus));
     }
 
     public static Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
         final String tenantId = message.body().getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = message.body().getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String status = message.body().getString(RegistrationConstants.APP_PROPERTY_STATUS);
-        final JsonObject correlationIdJson = message.body().getJsonObject(RegistrationConstants.APP_PROPERTY_CORRELATION_ID);
+        final String status = message.body().getString(MessageHelper.APP_PROPERTY_STATUS);
+        final JsonObject correlationIdJson = message.body().getJsonObject(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
         final Object correlationId = decodeIdFromJson(correlationIdJson);
         final boolean isApplCorrelationId = message.body().getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
         return getAmqpReply(status, correlationId, tenantId, deviceId, isApplCorrelationId, message.body().getJsonObject(FIELD_PAYLOAD));
@@ -161,7 +159,7 @@ public final class RegistrationConstants {
         final Map<String, Object> map = new HashMap<>();
         map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(APP_PROPERTY_STATUS, status);
+        map.put(MessageHelper.APP_PROPERTY_STATUS, status);
         message.setApplicationProperties(new ApplicationProperties(map));
 
         if (isApplCorrelationId) {
@@ -188,8 +186,8 @@ public final class RegistrationConstants {
     public static JsonObject getRegistrationJson(final String action, final String tenantId, final String deviceId, final String key, final JsonObject payload) {
         final JsonObject msg = new JsonObject();
         msg.put(FIELD_ACTION, action);
-        msg.put(APP_PROPERTY_DEVICE_ID, deviceId);
-        msg.put(APP_PROPERTY_TENANT_ID, tenantId);
+        msg.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        msg.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         if (key != null) {
             msg.put(APP_PROPERTY_KEY, key);
         }
