@@ -18,7 +18,6 @@ import java.util.UUID;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -38,31 +37,22 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 public class ConnectionFactoryImpl implements ConnectionFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionFactoryImpl.class);
-    private Vertx                      vertx;
-    private ClientConfigProperties config;
+    private final Vertx vertx;
+    private final ClientConfigProperties config;
 
     /**
-     * Sets the Vert.x instance to use.
-     * 
-     * @param vertx The Vert.x instance.
-     * @throws NullPointerException if the instance is {@code null}.
-     */
-    @Autowired
-    public final void setVertx(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
-    }
-
-    /**
-     * Sets the configuration parameters for connecting to the AMQP server.
+     * Constructor with the Vert.x instance to use and the configuration 
+     * parameters for connecting to the AMQP server as parameters.
      * <p>
      * The <em>name</em> property of the configuration is used as the basis
      * for the local container name which is then appended with a UUID.
-     *  
+     * 
+     * @param vertx The Vert.x instance.
      * @param config The configuration parameters.
      * @throws NullPointerException if the parameters are {@code null}.
      */
-    @Autowired
-    public final void setClientConfig(final ClientConfigProperties config) {
+    public ConnectionFactoryImpl(final Vertx vertx, final ClientConfigProperties config) {
+        this.vertx = Objects.requireNonNull(vertx);
         this.config = Objects.requireNonNull(config);
     }
 
@@ -329,10 +319,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
             if (vertx == null) {
                 vertx = Vertx.vertx();
             }
-            ConnectionFactoryImpl impl = new ConnectionFactoryImpl();
-            impl.setVertx(vertx);
-            impl.setClientConfig(properties);
-            return impl;
+            return new ConnectionFactoryImpl(vertx, properties);
         }
     }
 }
