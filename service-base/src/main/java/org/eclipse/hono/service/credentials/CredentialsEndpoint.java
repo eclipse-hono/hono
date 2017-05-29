@@ -12,26 +12,22 @@
 package org.eclipse.hono.service.credentials;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonQoS;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
-import org.apache.qpid.proton.amqp.transport.AmqpError;
-import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.service.amqp.BaseEndpoint;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.impl.RequestResponseEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import static io.vertx.proton.ProtonHelper.condition;
 import static org.eclipse.hono.util.CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN;
 
 /**
@@ -42,8 +38,10 @@ import static org.eclipse.hono.util.CredentialsConstants.EVENT_BUS_ADDRESS_CREDE
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */
 @Component
+@Scope("prototype")
 @Qualifier("credentials")
-public final class CredentialsEndpoint extends BaseEndpoint {
+@ConfigurationProperties(prefix = "hono.credentials")
+public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates a new credentials endpoint for a vertx instance.
@@ -55,70 +53,15 @@ public final class CredentialsEndpoint extends BaseEndpoint {
         super(Objects.requireNonNull(vertx));
     }
 
+
     @Override
     public String getName() {
         return CredentialsConstants.CREDENTIALS_ENDPOINT;
     }
 
-    @Override
-    public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
-        if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
-            logger.debug("client wants to use AT MOST ONCE delivery mode for credentials endpoint, this is not supported.");
-            receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
-            receiver.close();
-        } else {
-
-            logger.debug("establishing link for receiving credentials messages from client [{}]", MessageHelper.getLinkName(receiver));
-            receiver
-                    .setQoS(ProtonQoS.AT_LEAST_ONCE)
-                    .setAutoAccept(true) // settle received messages if the handler succeeds
-                    .setPrefetch(20)
-                    .handler((delivery, message) -> {
-                        if (CredentialsMessageFilter.verify(targetAddress, message)) {
-                            try {
-                                processRequest(message);
-                            } catch (DecodeException e) {
-                                MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed payload");
-                            }
-                        } else {
-                            MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed credentials message");
-                            // we close the link if the client sends a message that does not comply with the API spec
-                            onLinkDetach(receiver, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
-                        }
-                    }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
-                    .open();
-        }
-    }
 
     @Override
-    public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
-        if (targetResource.getResourceId() == null) {
-            logger.debug("link target provided in client's link ATTACH must not be null, but must match pattern \"credentials/<tenant>/<reply-address>\" instead");
-            sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),
-                    "link target must not be null but must have the following format credentials/<tenant>/<reply-address>"));
-            sender.close();
-        } else {
-            logger.debug("establishing sender link with client [{}]", MessageHelper.getLinkName(sender));
-            final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(targetResource.toString(), message -> {
-                // TODO check for correct session here...?
-                logger.trace("forwarding reply to client: {}", message.body());
-                final Message amqpReply = CredentialsConstants.getAmqpReply(message);
-                sender.send(amqpReply);
-            });
-
-            sender.closeHandler(senderClosed -> {
-                replyConsumer.unregister();
-                senderClosed.result().close();
-                final String linkName = MessageHelper.getLinkName(sender);
-                logger.debug("receiver closed link [{}], removing associated event bus consumer [{}]", linkName, replyConsumer.address());
-            });
-
-            sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
-        }
-    }
-
-
-    private void processRequest(final Message msg) {
+    protected void processRequest(final Message msg) {
 
         final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg);
 
@@ -140,5 +83,15 @@ public final class CredentialsEndpoint extends BaseEndpoint {
                     addHeadersToResponse(msg, response);
                     vertx.eventBus().send(msg.getReplyTo(), response);
                 });
+    }
+
+    @Override
+    protected boolean verifyMessage(ResourceIdentifier linkTarget, Message msg) {
+        return CredentialsMessageFilter.verify(linkTarget, msg);
+    }
+
+    @Override
+    protected Message getAmqpReply(io.vertx.core.eventbus.Message<JsonObject> message) {
+        return CredentialsConstants.getAmqpReply(message);
     }
 }
