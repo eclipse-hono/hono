@@ -91,7 +91,7 @@
               <images>
                 <image>
                   <build>
-                    <from>anapsix/alpine-java:8</from>
+                    <from>openjdk:8-jre-alpine</from>
                     <ports>
                       <port>8080</port>
                     </ports>
