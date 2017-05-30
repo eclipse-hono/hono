@@ -136,18 +136,19 @@
     <module>application</module>
     <module>auth</module>
     <module>bom</module>
+    <module>broker</module>
     <module>core</module>
     <module>client</module>
     <module>demo-certs</module>
     <module>dispatchrouter</module>
-    <module>metrics</module>
-    <module>broker</module>
     <module>example</module>
+    <module>jmeter</module>
     <module>legal</module>
+    <module>metrics</module>
     <module>server</module>
     <module>service-base</module>
-    <module>tests</module>
     <module>site</module>
+    <module>tests</module>
   </modules>
 
 
