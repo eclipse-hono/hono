@@ -52,6 +52,7 @@
     <vertx.version>3.4.1</vertx.version>
     <vertx-proton.version>3.4.1</vertx-proton.version>
     <vertx-mqtt.version>3.4.1</vertx-mqtt.version>
+    <jmeter.version>3.2</jmeter.version>
   </properties>
 
   <dependencyManagement>
@@ -238,6 +239,12 @@
        <groupId>io.jsonwebtoken</groupId>
        <artifactId>jjwt</artifactId>
        <version>${jjwt.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.jmeter</groupId>
+        <artifactId>ApacheJMeter_core</artifactId>
+        <version>${jmeter.version}</version>
+        <scope>provided</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
