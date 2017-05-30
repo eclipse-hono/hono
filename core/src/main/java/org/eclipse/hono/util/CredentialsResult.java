@@ -18,14 +18,9 @@ import io.vertx.core.json.JsonObject;
  * A container for the result returned by Hono's credentials API.
  *
  */
-public final class CredentialsResult {
-
-    private final int status;
-    private final JsonObject payload;
-
+public final class CredentialsResult extends RequestResponseResult {
     private CredentialsResult(final int status, final JsonObject payload) {
-        this.status = status;
-        this.payload = payload;
+        super(status, payload);
     }
 
     public static CredentialsResult from(final int status) {
@@ -35,19 +30,4 @@ public final class CredentialsResult {
     public static CredentialsResult from(final int status, final JsonObject payload) {
         return new CredentialsResult(status, payload);
     }
-
-    /**
-     * @return the status
-     */
-    public int getStatus() {
-        return status;
-    }
-
-    /**
-     * @return the payload
-     */
-    public JsonObject getPayload() {
-        return payload;
-    }
-
 }

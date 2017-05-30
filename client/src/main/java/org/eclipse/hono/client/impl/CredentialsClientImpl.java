@@ -22,6 +22,7 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,73 +39,33 @@ import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_STATUS;
  * A Vertx-Proton based client for Hono's Credentials API.
  *
  */
-public final class CredentialsClientImpl extends AbstractHonoClient implements CredentialsClient {
+public final class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsClient,CredentialsResult> implements CredentialsClient {
+
+    private static final String                  CREDENTIALS_NAME = "credentials";
 
     private static final Logger                  LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
-    private static final String                  CREDENTIALS_ADDRESS_TEMPLATE = "credentials/%s";
-    private static final String                  CREDENTIALS_REPLY_TO_ADDRESS_TEMPLATE = "credentials/%s/%s";
-
-    private final Map<String, Handler<AsyncResult<CredentialsResult>>> replyMap = new ConcurrentHashMap<>();
-    private final String                         credentialsReplyToAddress;
 
     private CredentialsClientImpl(final Context context, final ProtonConnection con, final String tenantId,
                                   final Handler<AsyncResult<CredentialsClient>> creationHandler) {
-
-        super(context);
-        this.credentialsReplyToAddress = String.format(
-                CREDENTIALS_REPLY_TO_ADDRESS_TEMPLATE,
-                Objects.requireNonNull(tenantId),
-                UUID.randomUUID());
-
-        final Future<ProtonSender> senderTracker = Future.future();
-        senderTracker.setHandler(r -> {
-            if (r.succeeded()) {
-                LOG.debug("credentials client created");
-                this.sender = r.result();
-                creationHandler.handle(Future.succeededFuture(this));
-            } else {
-                creationHandler.handle(Future.failedFuture(r.cause()));
-            }
-        });
-
-        final Future<ProtonReceiver> receiverTracker = Future.future();
-        context.runOnContext(create -> {
-            final ProtonReceiver receiver = con.createReceiver(credentialsReplyToAddress);
-            receiver
-                    .setAutoAccept(true)
-                    .setPrefetch(DEFAULT_SENDER_CREDITS)
-                    .handler((delivery, message) -> {
-                        final Handler<AsyncResult<CredentialsResult>> handler = replyMap.remove(message.getCorrelationId());
-                        if (handler != null) {
-                            CredentialsResult result = getCredentialsResult(message);
-                            LOG.debug("received response [correlation ID: {}, status: {}]",
-                                    message.getCorrelationId(), result.getStatus());
-                            handler.handle(Future.succeededFuture(result));
-                        } else {
-                            LOG.info("discarding unexpected response [correlation ID: {}]",
-                                    message.getCorrelationId());
-                        }
-                    }).openHandler(receiverTracker.completer())
-                    .open();
-
-            receiverTracker.compose(openReceiver -> {
-                this.receiver = openReceiver;
-                ProtonSender sender = con.createSender(String.format(CREDENTIALS_ADDRESS_TEMPLATE, tenantId));
-                sender
-                        .setQoS(ProtonQoS.AT_LEAST_ONCE)
-                        .openHandler(senderTracker.completer())
-                        .open();
-            }, senderTracker);
-        });
+        super(context,con,tenantId,creationHandler);
     }
 
-    private static CredentialsResult getCredentialsResult(final Message message) {
-        final String status = MessageHelper.getApplicationProperty(
-                                                message.getApplicationProperties(),
-                                                APP_PROPERTY_STATUS,
-                                                String.class);
-        final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return CredentialsResult.from(Integer.valueOf(status), payload);
+    @Override
+    protected String getName() {
+
+        return CREDENTIALS_NAME;
+    }
+
+    @Override
+    protected String createMessageId() {
+
+        return String.format("cred-client-%s", UUID.randomUUID());
+    }
+
+    @Override
+    protected CredentialsResult from(final int status, final JsonObject payload) {
+
+        return CredentialsResult.from(status,payload);
     }
 
     /**
@@ -123,55 +84,6 @@ public final class CredentialsClientImpl extends AbstractHonoClient implements C
                 Objects.requireNonNull(con),
                 Objects.requireNonNull(tenantId),
                 Objects.requireNonNull(creationHandler));
-    }
-
-    @Override
-    public boolean isOpen() {
-        return sender != null && sender.isOpen() && receiver != null && receiver.isOpen();
-    }
-
-
-    @Override
-    public void close(final Handler<AsyncResult<Void>> closeHandler) {
-
-        Objects.requireNonNull(closeHandler);
-        LOG.info("closing credentials client ...");
-        closeLinks(closeHandler);
-    }
-
-    private void createAndSendRequest(final String action, final JsonObject payload,
-                                      final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-
-        final Message request = createMessage(null);
-        request.setSubject(action);
-        if (payload != null) {
-            request.setContentType("application/json; charset=utf-8");
-            request.setBody(new AmqpValue(payload.encode()));
-        }
-        sendMessage(request, resultHandler);
-    }
-
-    private void sendMessage(final Message request, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-
-        context.runOnContext(req -> {
-            replyMap.put((String) request.getMessageId(), resultHandler);
-            sender.send(request);
-        });
-    }
-
-    private Message createMessage(final Map<String, Object> appProperties) {
-        final Message msg = ProtonHelper.message();
-        final String messageId = createMessageId();
-        if (appProperties != null) {
-            msg.setApplicationProperties(new ApplicationProperties(appProperties));
-        }
-        msg.setReplyTo(credentialsReplyToAddress);
-        msg.setMessageId(messageId);
-        return msg;
-    }
-
-    private String createMessageId() {
-        return String.format("cred-client-%s", UUID.randomUUID());
     }
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -18,14 +18,9 @@ import io.vertx.core.json.JsonObject;
  * A container for the result returned by Hono's registration API.
  *
  */
-public final class RegistrationResult {
-
-    private final int status;
-    private final JsonObject payload;
-
+public final class RegistrationResult extends RequestResponseResult {
     private RegistrationResult(final int status, final JsonObject payload) {
-        this.status = status;
-        this.payload = payload;
+        super(status, payload);
     }
 
     public static RegistrationResult from(final int status) {
@@ -35,19 +30,4 @@ public final class RegistrationResult {
     public static RegistrationResult from(final int status, final JsonObject payload) {
         return new RegistrationResult(status, payload);
     }
-
-    /**
-     * @return the status
-     */
-    public int getStatus() {
-        return status;
-    }
-
-    /**
-     * @return the payload
-     */
-    public JsonObject getPayload() {
-        return payload;
-    }
-
 }

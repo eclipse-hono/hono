@@ -28,7 +28,7 @@ import java.net.HttpURLConnection;
  * Credentials API specification</a> for a description of the result codes returned.
  * </p>
  */
-public interface CredentialsClient {
+public interface CredentialsClient extends RequestResponseClient {
 
     /**
      * Gets credentials data of a specific type by authId of a device.
@@ -43,21 +43,4 @@ public interface CredentialsClient {
 
      */
     void get(String type, String authId,  Handler<AsyncResult<CredentialsResult>> resultHandler);
-
-    /**
-     * Closes the AMQP link(s) with the Hono server this client is configured to use.
-     * <p>
-     * The underlying AMQP connection to the server is not affected by this operation.
-     * </p>
-     * 
-     * @param closeHandler A handler that is called back with the result of the attempt to close the links.
-     */
-    void close(Handler<AsyncResult<Void>> closeHandler);
-
-    /**
-     * Checks if this client's sender and receiver are (locally) open.
-     * 
-     * @return {@code true} if this client can be used to exchange messages with the peer.
-     */
-    boolean isOpen();
 }
