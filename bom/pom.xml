@@ -34,6 +34,7 @@
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
     <grafana.version>4.2.0</grafana.version>
     <jackson.version>2.7.4</jackson.version>
+    <java-base-image.name>openjdk:8-jre-alpine</java-base-image.name>
     <jjwt.version>0.7.0</jjwt.version>
     <junit.version>4.12</junit.version>
     <logback.version>1.1.3</logback.version>

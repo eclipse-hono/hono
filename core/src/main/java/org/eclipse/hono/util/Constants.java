@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,6 +12,9 @@
 package org.eclipse.hono.util;
 
 import java.security.Principal;
+import java.util.Objects;
+
+import org.apache.qpid.proton.engine.Record;
 
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonLink;
@@ -68,17 +71,48 @@ public final class Constants {
      */
     public static final String SUBJECT_ANONYMOUS = "ANONYMOUS";
 
+    /**
+     * The principal to use for anonymous clients.
+     */
+    public static final Principal PRINCIPAL_ANONYMOUS = new Principal() {
+
+        @Override
+        public String getName() {
+            return SUBJECT_ANONYMOUS;
+        }
+    };
+
     private Constants() {
     }
 
     /**
-     * Gets the principal representing a connection's authenticated client.
+     * Gets the principal representing an authenticated peer.
+     * 
+     * @param record The attachments to retrieve the principal from.
+     * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
+     *         if the client has not been authenticated or record is {@code null}.
+     */
+    public static Principal getClientPrincipal(final Record record) {
+
+        if (record != null) {
+            Principal client = record.get(KEY_CLIENT_PRINCIPAL, Principal.class);
+            return client == null ? Constants.PRINCIPAL_ANONYMOUS : client;
+        } else {
+            return Constants.PRINCIPAL_ANONYMOUS;
+        }
+    }
+
+    /**
+     * Gets the principal representing a connection's client.
      * 
      * @param con The connection to get the principal for.
-     * @return The principal or {@code null} if the connection's client is not authenticated.
+     * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
+     *         if the client has not been authenticated.
+     * @throws NullPointerException if con is {@code null}.
      */
     public static Principal getClientPrincipal(final ProtonConnection con) {
-        return con.attachments().get(KEY_CLIENT_PRINCIPAL, Principal.class);
+        Record attachments = Objects.requireNonNull(con).attachments();
+        return getClientPrincipal(attachments);
     }
 
     /**

@@ -31,7 +31,7 @@ public class AccessControlList
         return entries.get(subject);
     }
 
-    public boolean hasPermission(final String subject, final Permission permission) {
+    public boolean hasPermission(final String subject, final Activity permission) {
         return Optional.ofNullable(entries.get(subject)).map(entry -> entry.getPermissions().contains(permission))
                 .orElse(false);
     }

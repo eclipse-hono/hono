@@ -116,7 +116,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- Plugins versions -->
-    <docker-maven-plugin.version>0.19.0</docker-maven-plugin.version>
+    <docker-maven-plugin.version>0.21.0</docker-maven-plugin.version>
     <nexus-staging-maven-plugin.version>1.6.8</nexus-staging-maven-plugin.version>
 
     <!-- Docker configuration -->
@@ -362,7 +362,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
       <!--
           Use the Nexus Staging plugin as a full replacement for the standard

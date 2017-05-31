@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -16,6 +16,10 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
+/**
+ * Tests verifying behavior of {@link ResourceIdentifier}.
+ *
+ */
 public class ResourceIdentifierTest {
 
     @Test
@@ -30,12 +34,34 @@ public class ResourceIdentifierTest {
 
     @Test
     public void testFromStringAssumingDefaultTenantAllowsMissingDeviceId() {
-        ResourceIdentifier resourceId = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry/");
+        ResourceIdentifier resourceId = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
         assertNotNull(resourceId);
         assertThat(resourceId.getEndpoint(), is("telemetry"));
         assertThat(resourceId.getTenantId(), is(Constants.DEFAULT_TENANT));
         assertNull(resourceId.getResourceId());
         assertThat(resourceId.toString(), is("telemetry/" + Constants.DEFAULT_TENANT));
+    }
+
+    /**
+     * Verifies that a resource identifier may consist of a single segment only.
+     */
+    @Test
+    public void testFromStringSupportsSingleSegment() {
+        ResourceIdentifier resourceId = ResourceIdentifier.fromString("cbs");
+        assertThat(resourceId.getEndpoint(), is("cbs"));
+        assertNull(resourceId.getTenantId());
+        assertNull(resourceId.getResourceId());
+    }
+
+    /**
+     * Verifies that a resource identifier may consist of a single segment only.
+     */
+    @Test
+    public void testFromPathSupportsSingleSegment() {
+        ResourceIdentifier resourceId = ResourceIdentifier.fromPath(new String[]{ "cbs" });
+        assertThat(resourceId.getEndpoint(), is("cbs"));
+        assertNull(resourceId.getTenantId());
+        assertNull(resourceId.getResourceId());
     }
 
     @Test
