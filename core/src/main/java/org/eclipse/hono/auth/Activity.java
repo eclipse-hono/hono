@@ -27,5 +27,14 @@ public enum Activity
     /**
      * Permission required for executing an operation on a node.
      */
-    EXECUTE
+    EXECUTE;
+
+    /**
+     * Gets the single character representation for this activity.
+     * 
+     * @return The first character of this activity's name.
+     */
+    public char getCode() {
+        return name().charAt(0);
+    }
 }
