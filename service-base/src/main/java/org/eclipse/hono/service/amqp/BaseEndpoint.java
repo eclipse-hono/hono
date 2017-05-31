@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -138,7 +139,23 @@ public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements
      * @param client The client to detach.
      */
     protected void onLinkDetach(final ProtonReceiver client) {
-        onLinkDetach(client, null);
+        onLinkDetach(client, (ErrorCondition) null);
+    }
+
+    /**
+     * Closes a link to a proton based client.
+     *
+     * @param client The client to detach.
+     * @param error The error condition to convey to the client when closing the link.
+     */
+    protected final void onLinkDetach(final ProtonLink<?> client, final ErrorCondition error) {
+        if (error == null) {
+            logger.debug("closing link [{}]", client.getName());
+        } else {
+            logger.debug("closing link [{}]: {}", client.getName(), error.getDescription());
+            client.setCondition(error);
+        }
+        client.close();
     }
 
     /**
