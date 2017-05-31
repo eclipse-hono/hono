@@ -11,9 +11,14 @@
  */
 package org.eclipse.hono.util;
 
+
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.engine.Record;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
 
 import io.vertx.proton.ProtonConnection;
@@ -76,9 +81,37 @@ public final class Constants {
      */
     public static final HonoUser PRINCIPAL_ANONYMOUS = new HonoUser() {
 
+        private final Authorities authorities = new Authorities() {
+
+            @Override
+            public boolean isAuthorized(String endpoint, String tenant, String operation) {
+                return false;
+            }
+            
+            @Override
+            public boolean isAuthorized(String endpoint, String tenant, Activity intent) {
+                return false;
+            }
+
+            @Override
+            public Map<String, Object> asMap() {
+                return Collections.emptyMap();
+            }
+        };
+
         @Override
         public String getName() {
             return SUBJECT_ANONYMOUS;
+        }
+
+        @Override
+        public Authorities getAuthorities() {
+            return authorities;
+        }
+
+        @Override
+        public String getToken() {
+            return null;
         }
     };
 

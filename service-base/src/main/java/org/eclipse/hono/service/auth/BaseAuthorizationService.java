@@ -14,6 +14,7 @@ package org.eclipse.hono.service.auth;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -124,6 +125,16 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
             @Override
             public String getName() {
                 return authSubject;
+            }
+
+            @Override
+            public Authorities getAuthorities() {
+                return null;
+            }
+
+            @Override
+            public String getToken() {
+                return null;
             }
         };
         final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.PERMISSION_FIELD));

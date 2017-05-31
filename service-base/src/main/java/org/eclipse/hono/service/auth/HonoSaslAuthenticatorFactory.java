@@ -13,6 +13,7 @@ package org.eclipse.hono.service.auth;
 
 import java.util.Objects;
 
+import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +106,16 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
                         @Override
                         public String getName() {
                             return authorizationId;
+                        }
+
+                        @Override
+                        public Authorities getAuthorities() {
+                            return null;
+                        }
+
+                        @Override
+                        public String getToken() {
+                            return null;
                         }
                     };
                     authenticationResultHandler.handle(Future.succeededFuture(user));

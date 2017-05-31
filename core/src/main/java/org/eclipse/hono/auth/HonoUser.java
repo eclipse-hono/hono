@@ -21,4 +21,18 @@ import java.security.Principal;
  */
 public interface HonoUser extends Principal {
 
+    /**
+     * Gets this user's granted authorities.
+     * 
+     * @return The authorities.
+     */
+    Authorities getAuthorities();
+
+    /**
+     * Gets a JSON Web Token representing this user's
+     * claims.
+     * 
+     * @return The compact encoding of the token.
+     */
+    String getToken();
 }

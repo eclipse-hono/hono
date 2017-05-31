@@ -14,6 +14,7 @@ package org.eclipse.hono.authorization.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
@@ -111,6 +112,16 @@ public class InMemoryAuthorizationServiceTest {
             @Override
             public String getName() {
                 return name;
+            }
+
+            @Override
+            public Authorities getAuthorities() {
+                return null;
+            }
+
+            @Override
+            public String getToken() {
+                return null;
             }
         };
     }

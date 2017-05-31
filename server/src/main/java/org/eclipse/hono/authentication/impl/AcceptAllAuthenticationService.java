@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.authentication.impl;
 
+import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
@@ -45,6 +46,16 @@ public final class AcceptAllAuthenticationService extends AbstractHonoAuthentica
             @Override
             public String getName() {
                 return grantedAuthorizationId;
+            }
+
+            @Override
+            public Authorities getAuthorities() {
+                return null;
+            }
+
+            @Override
+            public String getToken() {
+                return null;
             }
         }));
     }

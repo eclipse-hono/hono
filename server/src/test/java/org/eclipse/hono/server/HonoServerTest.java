@@ -26,6 +26,7 @@ import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
@@ -190,6 +191,16 @@ public class HonoServerTest {
             @Override
             public String getName() {
                 return name;
+            }
+
+            @Override
+            public Authorities getAuthorities() {
+                return null;
+            }
+
+            @Override
+            public String getToken() {
+                return null;
             }
         });
         final ProtonConnection con = mock(ProtonConnection.class);
