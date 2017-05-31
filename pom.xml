@@ -262,7 +262,7 @@
           <version>2.19.1</version>
         </plugin>
         <plugin>
-          <!--
+          <!-- 
             Copy legal documents from "legal" module to "target/classes" folder
             so that we make sure to include legal docs in all modules.
            -->
@@ -328,7 +328,7 @@
         <version>1.4.1</version>
         <executions>
           <execution>
-            <!-- Make sure that only non-snapshot versions are used for the dependencies.
+            <!-- Make sure that only non-snapshot versions are used for the dependencies. 
               Only active when property 'snapshotDependencyAllowed' is false. -->
             <id>enforce-no-snapshots</id>
             <goals>
@@ -363,7 +363,7 @@
         </executions>
       </plugin>
       <plugin>
-      <!--
+        <!-- 
           Use the Nexus Staging plugin as a full replacement for the standard
           Maven Deploy plugin.
           See https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin
@@ -375,7 +375,7 @@
           makes sure that all artifacts of a multi-module project are deployed as a whole
           at the end of the build process instead of deploying each module's artifacts
           individually as part of building the module.
--->
+         -->
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
         <version>${nexus-staging-maven-plugin.version}</version>
