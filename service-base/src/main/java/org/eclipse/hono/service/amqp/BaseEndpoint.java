@@ -224,4 +224,13 @@ public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements
         }
     }
 
+    /**
+     * Verifies that a message passes <em>formal</em> checks regarding e.g.
+     * required headers, content type and payload format.
+     *
+     * @param targetAddress The address the message has been received on.
+     * @param message The message to check.
+     * @return {@code true} if the message passes all checks and can be forwarded downstream.
+     */
+    protected abstract boolean passesFormalVerification(final ResourceIdentifier targetAddress, final Message message);
 }

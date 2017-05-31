@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
 import org.eclipse.hono.service.amqp.Endpoint;
@@ -90,6 +91,11 @@ public class HonoServerTest {
             @Override
             public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
                 linkEstablished.countDown();
+            }
+
+            @Override
+            protected boolean passesFormalVerification(ResourceIdentifier targetAddress, Message message) {
+                return true;
             }
         };
         HonoServer server = createServer(telemetryEndpoint);
