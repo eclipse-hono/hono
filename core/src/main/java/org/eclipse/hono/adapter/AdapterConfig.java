@@ -34,7 +34,7 @@ public abstract class AdapterConfig {
     @Autowired(required = false)
     @Qualifier("registration")
     private ClientConfigProperties registrationServiceClientConfig;
-    
+
     /**
      * Exposes a Vert.x instance as a Spring bean.
      * 

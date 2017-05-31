@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Red Hat
+ * Copyright (c) 2016, 2017 Red Hat and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,13 +8,13 @@
  *
  * Contributors:
  *    Red Hat - initial creation
+ *    Bosch Software Innovations GmbH - extend AbtractApplication
  */
 
 package org.eclipse.hono.adapter.mqtt;
 
-import io.vertx.core.AbstractVerticle;
-import org.eclipse.hono.adapter.VertxBasedAdapterApplication;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
@@ -23,32 +23,17 @@ import org.springframework.context.annotation.Configuration;
 /**
  * The Hono MQTT adapter main application class.
  */
-@ComponentScan(basePackages = "org.eclipse.hono")
+@ComponentScan(basePackages = "org.eclipse.hono.adapter.mqtt")
 @Configuration
 @EnableAutoConfiguration
-public class Application extends VertxBasedAdapterApplication {
-
-    private static final String NAME = "MQTT";
-
-    private MqttAdapterFactory factory;
+public class Application extends AbstractApplication<VertxBasedMqttProtocolAdapter, ServiceConfigProperties> {
 
     /**
-     * @param factory the factory to set
+     * Starts the MQTT Adapter application.
+     * 
+     * @param args Command line args passed to the application.
      */
-    @Autowired
-    public final void setFactory(MqttAdapterFactory factory) {
-        this.factory = factory;
+    public static void main(final String[] args) {
+        SpringApplication.run(Application.class, args);
     }
-
-    @Override
-    protected AbstractVerticle getAdapter() {
-        return this.factory.getMqttAdapter();
-    }
-
-    @Override
-    protected String getName() {
-        return NAME;
-    }
-
-    public static void main(final String[] args) { SpringApplication.run(Application.class, args); }
 }
