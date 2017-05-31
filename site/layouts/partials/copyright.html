@@ -6,7 +6,7 @@
   </div>
   <p class="notice">
     {{ with .Site.Params.copyright }}
-    &copy; {{ $.Now.Format "2006" }} {{ . }} &ndash;
+    &copy; {{ now.Year }} {{ . }} &ndash;
     {{ end }}
     Documentation built with
     <a href="https://www.gohugo.io" target="_blank">Hugo</a>
