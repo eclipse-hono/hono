@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.eclipse.hono.auth.Activity;
+
 /**
  * Holds a list of @{@link AclEntry}s.
  */

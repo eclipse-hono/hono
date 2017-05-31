@@ -13,6 +13,8 @@ package org.eclipse.hono.service.auth;
 
 import java.util.Objects;
 
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -117,10 +119,17 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
         final String authSubject = body.getString(AuthorizationConstants.AUTH_SUBJECT_FIELD);
+        final HonoUser user = new HonoUser() {
+
+            @Override
+            public String getName() {
+                return authSubject;
+            }
+        };
         final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.PERMISSION_FIELD));
         final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(AuthorizationConstants.RESOURCE_FIELD));
 
-        boolean hasPermission = hasPermission(authSubject, resource, permission);
+        boolean hasPermission = isAuthorized(user, resource, permission);
         message.reply(hasPermission ? AuthorizationConstants.ALLOWED : AuthorizationConstants.DENIED);
         LOG.debug("subject [{}] is {}allowed to {} on resource [{}]", authSubject,
                 hasPermission ? "" : "not ", permission, resource);

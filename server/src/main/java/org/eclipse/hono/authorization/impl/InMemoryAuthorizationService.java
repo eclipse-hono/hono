@@ -26,10 +26,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.service.auth.AccessControlList;
 import org.eclipse.hono.service.auth.AclEntry;
 import org.eclipse.hono.service.auth.BaseAuthorizationService;
-import org.eclipse.hono.service.auth.Activity;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,15 +79,15 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     @Override
-    public boolean hasPermission(final String subject, final ResourceIdentifier resource, final Activity intent) {
+    public boolean isAuthorized(final HonoUser user, final ResourceIdentifier resource, final Activity intent) {
 
-        Objects.requireNonNull(subject);
+        Objects.requireNonNull(user);
         Objects.requireNonNull(resource);
         Objects.requireNonNull(intent);
 
-        return hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), "*", null), intent) ||
-                hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), intent) ||
-                hasPermissionInternal(subject, resource, intent);
+        return hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), "*", null), intent) ||
+                hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), intent) ||
+                hasPermissionInternal(user.getName(), resource, intent);
     }
 
     private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Activity permission) {
@@ -94,16 +95,19 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         return hasPermissionInternal(subject, new ResourceEntry(resource, null), permission);
     }
 
+    /* (non-Javadoc)
+     * @see org.eclipse.hono.service.auth.AuthorizationService#isAuthorized(org.eclipse.hono.auth.HonoUser, org.eclipse.hono.util.ResourceIdentifier, java.lang.String)
+     */
     @Override
-    public boolean hasPermission(final String subject, final ResourceIdentifier resource, final String operation) {
+    public boolean isAuthorized(final HonoUser user, final ResourceIdentifier resource, final String operation) {
 
-        Objects.requireNonNull(subject);
+        Objects.requireNonNull(user);
         Objects.requireNonNull(resource);
         Objects.requireNonNull(operation);
 
-        return hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), "*", null), operation, Activity.EXECUTE) ||
-                hasPermissionInternal(subject, ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), operation, Activity.EXECUTE) ||
-                hasPermissionInternal(subject, resource, operation, Activity.EXECUTE);
+        return hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), "*", null), operation, Activity.EXECUTE) ||
+                hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), operation, Activity.EXECUTE) ||
+                hasPermissionInternal(user.getName(), resource, operation, Activity.EXECUTE);
     }
 
     private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final String operation, final Activity permission) {

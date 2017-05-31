@@ -11,34 +11,36 @@
  */
 package org.eclipse.hono.service.auth;
 
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.util.ResourceIdentifier;
-
-import io.vertx.core.Verticle;
 
 /**
  * A service for authorizing access to Hono resources.
  * <p>
  * Resources can be API endpoints and operations.
  */
-public interface AuthorizationService extends Verticle {
+public interface AuthorizationService {
 
     /**
-     * Checks if a subject is authorized to perform an activity on a given resource.
+     * Checks if a user is authorized to perform an activity on a given resource.
      *
-     * @param subject The subject to check authorization for.
+     * @param user The user to check authorization for.
      * @param resource The resource to authorize access to.
      * @param intent The activity to authorize.
-     * @return {@code true} if the subject is authorized to perform the activity on the resource.
+     * @return {@code true} if the user is authorized to perform the activity on the resource.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    boolean hasPermission(String subject, ResourceIdentifier resource, Activity intent);
+    boolean isAuthorized(HonoUser user, ResourceIdentifier resource, Activity intent);
 
     /**
-     * Checks if a subject is authorized to execute an API operation on a particular resource.
+     * Checks if a user is authorized to execute an API operation on a particular resource.
      *
-     * @param subject The subject to check authorization for.
+     * @param user The user to check authorization for.
      * @param resource The resource that is subject to the operation to authorize.
      * @param operation The operation to authorize.
-     * @return {@code true} if the subject is authorized to execute the operation on the resource.
+     * @return {@code true} if the user is authorized to execute the operation on the resource.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    boolean hasPermission(String subject, ResourceIdentifier resource, String operation);
+    boolean isAuthorized(HonoUser user, ResourceIdentifier resource, String operation);
 }

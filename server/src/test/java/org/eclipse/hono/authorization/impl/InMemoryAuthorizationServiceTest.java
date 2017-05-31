@@ -13,7 +13,8 @@ package org.eclipse.hono.authorization.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.eclipse.hono.service.auth.Activity;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,14 +26,13 @@ import org.springframework.core.io.ClassPathResource;
 public class InMemoryAuthorizationServiceTest {
 
     private static final ResourceIdentifier TELEMETRY = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
-    private static final ResourceIdentifier CONTROL   = ResourceIdentifier.fromStringAssumingDefaultTenant("control");
     private static final ResourceIdentifier REGISTRATION = ResourceIdentifier.fromStringAssumingDefaultTenant("registration");
 
-    private static final String SUBJECT   = "subject";
-    private static final String READER    = "reader";
-    private static final String WRITER    = "writer";
-    private static final String EXECUTOR  = "executor";
-    private static final String USER_ADMIN = "ADMIN";
+    private static final HonoUser SUBJECT   = getUser("subject");
+    private static final HonoUser READER    = getUser("reader");
+    private static final HonoUser WRITER    = getUser("writer");
+    private static final HonoUser EXECUTOR  = getUser("executor");
+    private static final HonoUser USER_ADMIN = getUser("ADMIN");
     private static final String PERMISSIONS_RESOURCE_PATH = "authorization-service-test-permissions.json";
 
     private InMemoryAuthorizationService underTest;
@@ -53,21 +53,21 @@ public class InMemoryAuthorizationServiceTest {
     @Test
     public void testHasPermissionOnResource() {
 
-        assertThat(underTest.hasPermission(SUBJECT, TELEMETRY, Activity.READ)).isFalse();
-        assertThat(underTest.hasPermission(SUBJECT, TELEMETRY, Activity.WRITE)).isFalse();
+        assertThat(underTest.isAuthorized(SUBJECT, TELEMETRY, Activity.READ)).isFalse();
+        assertThat(underTest.isAuthorized(SUBJECT, TELEMETRY, Activity.WRITE)).isFalse();
 
-        assertThat(underTest.hasPermission(READER, TELEMETRY, Activity.READ)).isTrue();
-        assertThat(underTest.hasPermission(READER, TELEMETRY, Activity.WRITE)).isFalse();
+        assertThat(underTest.isAuthorized(READER, TELEMETRY, Activity.READ)).isTrue();
+        assertThat(underTest.isAuthorized(READER, TELEMETRY, Activity.WRITE)).isFalse();
 
-        assertThat(underTest.hasPermission(WRITER, TELEMETRY, Activity.READ)).isTrue();
-        assertThat(underTest.hasPermission(WRITER, TELEMETRY, Activity.WRITE)).isTrue();
+        assertThat(underTest.isAuthorized(WRITER, TELEMETRY, Activity.READ)).isTrue();
+        assertThat(underTest.isAuthorized(WRITER, TELEMETRY, Activity.WRITE)).isTrue();
     }
 
     @Test
     public void testHasPermissionOnOperation() {
 
-        assertThat(underTest.hasPermission(EXECUTOR, REGISTRATION, "assert")).isTrue();
-        assertThat(underTest.hasPermission(EXECUTOR, REGISTRATION, Activity.READ)).isFalse();
+        assertThat(underTest.isAuthorized(EXECUTOR, REGISTRATION, "assert")).isTrue();
+        assertThat(underTest.isAuthorized(EXECUTOR, REGISTRATION, Activity.READ)).isFalse();
     }
 
     @Test
@@ -75,23 +75,13 @@ public class InMemoryAuthorizationServiceTest {
 
         final ResourceIdentifier TENANT1 = ResourceIdentifier.fromString("telemetry/tenant1");
         final ResourceIdentifier DEVICE1 = ResourceIdentifier.fromString("telemetry/tenant1/device1");
+        final HonoUser device1User = getUser("device1-user");
+        final HonoUser tenant1User = getUser("tenant1-user");
 
-        assertThat(underTest.hasPermission("device1-user", DEVICE1, Activity.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("tenant1-user", DEVICE1, Activity.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("tenant1-user", TENANT1, Activity.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("device1-user", TENANT1, Activity.WRITE)).isFalse();
-    }
-
-    @Test
-    public void testAddPermission() {
-
-        assertThat(underTest.hasPermission(SUBJECT, CONTROL, Activity.READ)).isFalse();
-        assertThat(underTest.hasPermission(SUBJECT, CONTROL, Activity.WRITE)).isFalse();
-
-        underTest.addPermission(SUBJECT, CONTROL, Activity.READ);
-
-        assertThat(underTest.hasPermission(SUBJECT, CONTROL, Activity.READ)).isTrue();
-        assertThat(underTest.hasPermission(SUBJECT, CONTROL, Activity.WRITE)).isFalse();
+        assertThat(underTest.isAuthorized(device1User, DEVICE1, Activity.WRITE)).isTrue();
+        assertThat(underTest.isAuthorized(tenant1User, DEVICE1, Activity.WRITE)).isTrue();
+        assertThat(underTest.isAuthorized(tenant1User, TENANT1, Activity.WRITE)).isTrue();
+        assertThat(underTest.isAuthorized(device1User, TENANT1, Activity.WRITE)).isFalse();
     }
 
     /**
@@ -101,7 +91,7 @@ public class InMemoryAuthorizationServiceTest {
     @Test
     public void testHasPermissionReturnsTrueForWildcardTenantSpec() {
 
-        assertThat(underTest.hasPermission(USER_ADMIN, ResourceIdentifier.from("telemetry", "bumlux", "test"), Activity.READ)).isTrue();
+        assertThat(underTest.isAuthorized(USER_ADMIN, ResourceIdentifier.from("telemetry", "bumlux", "test"), Activity.READ)).isTrue();
     }
 
     /**
@@ -112,6 +102,16 @@ public class InMemoryAuthorizationServiceTest {
     @Test
     public void testHasPermissionReturnsTrueForWildcardOperationSpec() {
 
-        assertThat(underTest.hasPermission(USER_ADMIN, ResourceIdentifier.from("registration", "bumlux", "test"), "register")).isTrue();
+        assertThat(underTest.isAuthorized(USER_ADMIN, ResourceIdentifier.from("registration", "bumlux", "test"), "register")).isTrue();
+    }
+
+    private static HonoUser getUser(final String name) {
+        return new HonoUser() {
+
+            @Override
+            public String getName() {
+                return name;
+            }
+        };
     }
 }

@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial API and implementation and initial documentation
  */
-package org.eclipse.hono.service.auth;
+package org.eclipse.hono.auth;
 
 /**
  * Defines permissions that are required to access Hono service resources.

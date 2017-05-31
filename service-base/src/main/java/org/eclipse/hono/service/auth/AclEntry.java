@@ -17,6 +17,8 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 
+import org.eclipse.hono.auth.Activity;
+
 /**
  * Wraps an authorization subject and a set of {@link Activity}s.
  */
