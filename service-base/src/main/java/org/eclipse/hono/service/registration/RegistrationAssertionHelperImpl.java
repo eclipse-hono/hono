@@ -11,16 +11,11 @@
  */
 package org.eclipse.hono.service.registration;
 
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Objects;
 
-import javax.crypto.spec.SecretKeySpec;
-
-import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.JwtHelper;
 import org.slf4j.Logger;
@@ -28,7 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.vertx.core.Vertx;
 
 /**
@@ -38,19 +32,13 @@ import io.vertx.core.Vertx;
 public final class RegistrationAssertionHelperImpl extends JwtHelper implements RegistrationAssertionHelper {
 
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationAssertionHelperImpl.class);
-    private Vertx vertx;
-    private SignatureAlgorithm algorithm;
-    private Key key;
-    private long tokenExpiration;
 
-    /**
-     * Empty default constructor.
-     */
     private RegistrationAssertionHelperImpl() {
+        this(null);
     }
 
     private RegistrationAssertionHelperImpl(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
+        super(vertx);
     }
 
     /**
@@ -68,7 +56,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
             throw new IllegalArgumentException("configuration does not specify any signing key material");
         } else {
             RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl(vertx);
-            result.tokenExpiration = config.getTokenExpiration();
+            result.tokenExpirationMinutes = config.getTokenExpiration();
             if (config.getSharedSecret() != null) {
                 byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
@@ -120,62 +108,8 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
         Objects.requireNonNull(sharedSecret);
         RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl();
         result.setSharedSecret(getBytes(sharedSecret));
-        result.tokenExpiration = tokenExpiration;
+        result.tokenExpirationMinutes = tokenExpiration;
         return result;
-    }
-
-    private static byte[] getBytes(final String secret) {
-        return secret.getBytes(StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Sets the secret to use for signing tokens asserting the
-     * registration status of devices.
-     * 
-     * @param secret The secret to use.
-     * @throws NullPointerException if secret is {@code null}.
-     * @throws IllegalArgumentException if the secret is &lt; 32 bytes.
-     */
-    private void setSharedSecret(final byte[] secret) {
-        if (Objects.requireNonNull(secret).length < 32) {
-            throw new IllegalArgumentException("shared secret must be at least 32 bytes");
-        }
-        this.algorithm = SignatureAlgorithm.HS256;
-        this.key = new SecretKeySpec(secret, SignatureAlgorithm.HS256.getJcaName());
-    }
-
-    /**
-     * Sets the path to a PKCS8 PEM file containing the RSA private key to use for signing tokens
-     * asserting the registration status of devices.
-     * 
-     * @param keyPath The absolute path to the file.
-     * @throws NullPointerException if the path is {@code null}.
-     * @throws IllegalArgumentException if the key cannot be read from the file.
-     */
-    private void setPrivateKey(final String keyPath) {
-        Objects.requireNonNull(keyPath);
-        this.algorithm = SignatureAlgorithm.RS256;
-        this.key = KeyLoader.fromFiles(vertx, keyPath, null).getPrivateKey();
-        if (key == null) {
-            throw new IllegalArgumentException("cannot load private key");
-        }
-    }
-
-    /**
-     * Sets the path to a PEM file containing a certificate holding a public key to use for validating the
-     * signature of tokens asserting the registration status of devices.
-     * 
-     * @param keyPath The absolute path to the file.
-     * @throws NullPointerException if the path is {@code null}.
-     * @throws IllegalArgumentException if the key cannot be read from the file.
-     */
-    private void setPublicKey(final String keyPath) {
-        Objects.requireNonNull(keyPath);
-        this.algorithm = SignatureAlgorithm.RS256;
-        this.key = KeyLoader.fromFiles(vertx, null, keyPath).getPublicKey();
-        if (key == null) {
-            throw new IllegalArgumentException("cannot load private key");
-        }
     }
 
     @Override
@@ -188,7 +122,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
         return Jwts.builder().signWith(algorithm, key)
                 .setSubject(deviceId)
                 .claim("ten", tenantId)
-                .setExpiration(Date.from(Instant.now().plus(tokenExpiration, ChronoUnit.MINUTES)))
+                .setExpiration(Date.from(Instant.now().plus(tokenExpirationMinutes, ChronoUnit.MINUTES)))
                 .compact();
     }
 

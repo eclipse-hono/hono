@@ -46,5 +46,4 @@ public class JwtHelperTest {
         assertTrue(JwtHelper.isExpired(token, 10));
         assertFalse(JwtHelper.isExpired(token, 15));
     }
-
 }
