@@ -15,7 +15,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.impl.RequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -86,7 +86,7 @@ public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceCo
     }
 
     @Override
-    protected boolean verifyMessage(ResourceIdentifier linkTarget, Message msg) {
+    protected boolean passesFormalVerification(ResourceIdentifier linkTarget, Message msg) {
         return CredentialsMessageFilter.verify(linkTarget, msg);
     }
 

@@ -18,7 +18,7 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.impl.RequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -84,7 +84,7 @@ public final class RegistrationEndpoint extends RequestResponseEndpoint<ServiceC
     }
 
     @Override
-    protected boolean verifyMessage(ResourceIdentifier linkTarget, Message msg) {
+    protected boolean passesFormalVerification(ResourceIdentifier linkTarget, Message msg) {
         return RegistrationMessageFilter.verify(linkTarget, msg);
     }
 

@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.service.impl;
+package org.eclipse.hono.service.amqp;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -21,7 +21,6 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.amqp.BaseEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -35,9 +34,9 @@ import static io.vertx.proton.ProtonHelper.condition;
  * It is used e.g. in the implementation of the device registration and the credentials API endpoints.
  */
 public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties> extends BaseEndpoint<T> {
-    public static final int REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS = 20;
+    private static final int REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS = 20;
 
-    private int prefetchReceiver = REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS;
+    private int receiverLinkCredit = REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS;
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -50,15 +49,6 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     }
 
     /**
-     * Checks whether a given message contains all required properties.
-     *
-     * @param linkTarget The resource path to check the message's properties against for consistency.
-     * @param msg The AMQP 1.0 message to perform the checks on.
-     * @return {@code true} if the message passes all checks.
-     */
-    protected abstract boolean verifyMessage(final ResourceIdentifier linkTarget, final Message msg);
-
-    /**
      * Process the received AMQP message.
      *
      * @param message The Message to process.
@@ -69,27 +59,43 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * Construct an AMQP reply message that is send back to the caller.
      *
      * @param message The Message as JsonObject from which a reply message is constructed.
+     * @return Message The reply message that shall be sent to the client.
      */
     protected abstract Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message);
 
     /**
-     * Gets the credits this endpoint grants.
+     * Gets the number of message credits this endpoint grants as a receiver.
      *
-     * @return The amount of credits granted.
+     * @return The number of credits granted.
      */
-    public final int getPrefetchReceiver() {
-        return prefetchReceiver;
+    public final int getReceiverLinkCredit() {
+        return receiverLinkCredit;
     }
 
     /**
-     * Set the credits this endpoint shall grant.
+     * Sets the number of message credits this endpoint grants as a receiver.
+     * They are replenished automatically after messages are processed.
+
+     * @param receiverLinkCredit The number of credits to grant.
      */
-    protected final void setPrefetchReceiver(final int prefetchReceiver) {
-        this.prefetchReceiver = prefetchReceiver;
+    protected final void setReceiverLinkCredit(final int receiverLinkCredit) {
+        this.receiverLinkCredit = receiverLinkCredit;
     }
 
+    /**
+     * Configure and check the receiver link of the endpoint.
+     * The remote link of the receiver must not demand the AT_MOST_ONCE QoS (not supported).
+     * The receiver link itself is configured with the AT_LEAST_ONCE QoS and grants the configured credits ({@link #setReceiverLinkCredit(int)})
+     * with autoAcknowledge.
+     * <p/>
+     * Incoming messages are verified by the abstract method {@link #passesFormalVerification(ResourceIdentifier, Message)} and is then processed by
+     * the abstract method {@link #processRequest}. Both methods are endpoint specific and need to be implemented by the subclass.
+     *
+     * @param receiver The ProtonReceiver that has already been created for this endpoint.
+     * @param targetAddress The resource identifier for this endpoint (see {@link ResourceIdentifier} for details).
+     */
     @Override
-    public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
+    public final void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             logger.debug("client wants to use AT MOST ONCE delivery mode for {} endpoint, this is not supported.",getName());
             receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
@@ -100,9 +106,9 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             receiver
                     .setQoS(ProtonQoS.AT_LEAST_ONCE)
                     .setAutoAccept(true) // settle received messages if the handler succeeds
-                    .setPrefetch(prefetchReceiver)
+                    .setPrefetch(receiverLinkCredit)
                     .handler((delivery, message) -> {
-                        if (verifyMessage(targetAddress, message)) {
+                        if (passesFormalVerification(targetAddress, message)) {
                             try {
                                 processRequest(message);
                             } catch (DecodeException e) {
@@ -118,8 +124,20 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         }
     }
 
+    /**
+     * Configure and check the sender link of the endpoint.
+     * The sender link is used for the response to a received request and is driven by the vertx event bus.
+     * It listens to the provided resource identifier of the endpoint as vertx event address and then sends the
+     * constructed response.
+     * Since the response is endpoint specific, it is an abstract method {@link #getAmqpReply(io.vertx.core.eventbus.Message)} and needs to be implemented
+     * by the subclass.
+     *
+     * @param sender The ProtonSender that has already been created for this endpoint.
+     * @param targetResource The resource identifier for the responses of this endpoint (see {@link ResourceIdentifier} for details).
+     *                      Note that the reply address is different for each client and is passed in during link creation.
+     */
     @Override
-    public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
+    public final void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
         if (targetResource.getResourceId() == null) {
             logger.debug("link target provided in client's link ATTACH must not be null, but must match pattern \"{}/<tenant>/<reply-address>\" instead",getName());
             sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),
