@@ -87,7 +87,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * The remote link of the receiver must not demand the AT_MOST_ONCE QoS (not supported).
      * The receiver link itself is configured with the AT_LEAST_ONCE QoS and grants the configured credits ({@link #setReceiverLinkCredit(int)})
      * with autoAcknowledge.
-     * <p/>
+     * <p>
      * Incoming messages are verified by the abstract method {@link #passesFormalVerification(ResourceIdentifier, Message)} and is then processed by
      * the abstract method {@link #processRequest}. Both methods are endpoint specific and need to be implemented by the subclass.
      *
