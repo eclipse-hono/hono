@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -10,6 +10,9 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 package org.eclipse.hono.service.auth;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.vertx.core.json.JsonObject;
 
@@ -27,17 +30,17 @@ public final class AuthenticationConstants
      */
     public static final String FIELD_AUTHORIZATION_ID   = "authorization-id";
     /**
-     * The name of the field containing a description of an error occurring during authentication.
-     */
-    public static final String FIELD_ERROR              = "error";
-    /**
      * The name of the field containing the SASL mechanism used for authentication.
      */
     public static final String FIELD_MECHANISM          = "mechanism";
     /**
-     * The name of the field containing the client's SASL <em>response</em> to be evaluated.
+     * The name of the field containing the SASL response the client has provided.
      */
-    public static final String FIELD_RESPONSE           = "response";
+    public static final String FIELD_SASL_RESPONSE      = "sasl-response";
+    /**
+     * The name of the field containing the Subject DN of the certificate the client has used for EXTERNAL auth.
+     */
+    public static final String FIELD_SUBJECT_DN         = "subject-dn";
     /**
      * The PLAIN SASL mechanism name.
      */
@@ -56,6 +59,8 @@ public final class AuthenticationConstants
      */
     public static final int    ERROR_CODE_AUTHENTICATION_FAILED = 10;
 
+    private static final Pattern PATTERN_CN = Pattern.compile("^CN=(.+?)(?:,\\s*[A-Z]{1,2}=.+|$)");
+
     private AuthenticationConstants() {
     }
 
@@ -69,6 +74,21 @@ public final class AuthenticationConstants
     public static JsonObject getAuthenticationRequest(final String mechanism, final byte[] response) {
         return new JsonObject()
                 .put(FIELD_MECHANISM, mechanism)
-                .put(FIELD_RESPONSE, response);
+                .put(FIELD_SASL_RESPONSE, response);
+    }
+
+    /**
+     * Extracts the <em>Common Name (CN)</em> from a subject Distinguished Name (DN).
+     * 
+     * @param subject The distinguished name.
+     * @return The common name or {@code null} if the subject does not contain a CN.
+     */
+    public static String getCommonName(final String subject) {
+        Matcher matcher = PATTERN_CN.matcher(subject);
+        if (matcher.matches()) {
+            return matcher.group(1); // return CN field value
+        } else {
+            return null;
+        }
     }
 }

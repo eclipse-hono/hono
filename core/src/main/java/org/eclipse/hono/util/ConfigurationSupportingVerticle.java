@@ -14,7 +14,7 @@ package org.eclipse.hono.util;
 
 import java.util.Objects;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.AbstractConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AbstractVerticle;
@@ -28,10 +28,9 @@ import io.vertx.core.AbstractVerticle;
  * @param <T> The type of configuration properties this service supports.
  *
  */
-public abstract class ConfigurationSupportingVerticle<T extends ServiceConfigProperties> extends AbstractVerticle {
+public abstract class ConfigurationSupportingVerticle<T extends AbstractConfig> extends AbstractVerticle {
 
-    @SuppressWarnings("unchecked")
-    private T config = (T) new ServiceConfigProperties();
+    private T config;
 
     /**
      * Sets the properties to use for configuring the sockets to listen on.
@@ -47,7 +46,7 @@ public abstract class ConfigurationSupportingVerticle<T extends ServiceConfigPro
     /**
      * Gets the properties in use for configuring the sockets to listen on.
      * 
-     * @return The properties.
+     * @return The properties or {@code null} if not set.
      */
     public final T getConfig() {
         return this.config;

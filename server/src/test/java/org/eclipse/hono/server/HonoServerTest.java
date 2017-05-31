@@ -26,6 +26,7 @@ import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.service.auth.AuthorizationConstants;
@@ -69,6 +70,7 @@ public class HonoServerTest {
     private HonoServer createServer(final Endpoint telemetryEndpoint) {
 
         HonoServer server = new HonoServer();
+        server.setConfig(new ServiceConfigProperties());
         if (telemetryEndpoint != null) {
             server.addEndpoint(telemetryEndpoint);
         }

@@ -11,31 +11,44 @@
  */
 package org.eclipse.hono.service.auth;
 
+import static org.eclipse.hono.service.auth.AuthenticationConstants.ERROR_CODE_AUTHENTICATION_FAILED;
+import static org.eclipse.hono.service.auth.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
+
+import org.eclipse.hono.config.AbstractConfig;
+import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing an {@code AuthenticationService}.
+ * Base class for implementing an authentication service that can be deployed to a Vert.x container.
  * <p>
  * Provides support for receiving and processing authentication requests received via Vert.x event bus.
+ * <p>
+ * This class registers a listener for address {@link AuthenticationConstants#EVENT_BUS_ADDRESS_AUTHENTICATION_IN}.
+ * Messages are expected to be {@code JsonObject} typed. Apart from that this class makes no assumption regarding
+ * the content of the message. The listener simply invokes the {@link #authenticate(JsonObject, io.vertx.core.Handler)}
+ * method with the received message. If the handler succeeds, the result is sent back via the event bus as a reply
+ * to the original authentication request. Otherwise, a failure reply is sent using error code
+ * {@link AuthenticationConstants#ERROR_CODE_AUTHENTICATION_FAILED}.
+ * 
+ * @param <T> The type of configuration properties this service supports.
  */
-public abstract class BaseAuthenticationService extends AbstractVerticle implements AuthenticationService
-{
+public abstract class BaseAuthenticationService<T extends AbstractConfig> extends ConfigurationSupportingVerticle<T> implements AuthenticationService {
+
     private static final Logger LOG = LoggerFactory.getLogger(BaseAuthenticationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;
 
     @Override
     public final void start(final Future<Void> startFuture) {
-        String listenAddress = AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
+        String listenAddress = EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
         authRequestConsumer = vertx.eventBus().consumer(listenAddress);
         authRequestConsumer.handler(this::processMessage);
-        LOG.info("listening on event bus [address: {}] for incoming authentication messages", listenAddress);
+        LOG.info("listening on event bus [address: {}] for authentication requests", listenAddress);
         doStart(startFuture);
     }
 
@@ -75,28 +88,13 @@ public abstract class BaseAuthenticationService extends AbstractVerticle impleme
 
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
-        final String mechanism = body.getString(AuthenticationConstants.FIELD_MECHANISM);
-        if (!isSupported(mechanism)) {
-            replyWithError(message, AuthenticationConstants.ERROR_CODE_UNSUPPORTED_MECHANISM, "unsupported SASL mechanism");
-        } else {
-            final byte[] response = body.getBinary(AuthenticationConstants.FIELD_RESPONSE);
-            LOG.debug("received authentication request [mechanism: {}, response: {}]", mechanism, response != null ? "*****" : "empty");
-
-            validateResponse(mechanism, response, validation -> {
-                if (validation.succeeded()) {
-                    replyWithAuthorizationId(message, validation.result());
-                } else {
-                    replyWithError(message, AuthenticationConstants.ERROR_CODE_AUTHENTICATION_FAILED, validation.cause().getMessage());
-                }
-            });
-        }
+        authenticate(body, validation -> {
+            if (validation.succeeded()) {
+                message.reply(new JsonObject().put(AuthenticationConstants.FIELD_AUTHORIZATION_ID, validation.result().getName()));
+            } else {
+                message.fail(ERROR_CODE_AUTHENTICATION_FAILED, validation.cause().getMessage());
+            }
+        });
     }
 
-    private void replyWithError(final Message<JsonObject> request, final int errorCode, final String message) {
-        request.fail(errorCode, message);
-    }
-
-    private void replyWithAuthorizationId(final Message<JsonObject> message, final String authzId) {
-        message.reply(new JsonObject().put(AuthenticationConstants.FIELD_AUTHORIZATION_ID, authzId));
-    }
 }

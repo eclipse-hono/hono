@@ -113,7 +113,6 @@ public class HonoApplication extends AbstractApplication<HonoServer, ServiceConf
     }
 
     private Future<String> deployAuthenticationService() {
-        LOG.info("Starting authentication service {}", authenticationService);
         Future<String> result = Future.future();
         if (!Verticle.class.isInstance(authenticationService)) {
             result.fail("authentication service is not a verticle");

@@ -19,12 +19,13 @@ import java.util.stream.IntStream;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.authentication.impl.FileBasedAuthenticationService;
+import org.eclipse.hono.authentication.impl.AcceptAllAuthenticationService;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
@@ -99,7 +100,7 @@ public class StandaloneTelemetryApiTest {
 
         vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
-        vertx.deployVerticle(FileBasedAuthenticationService.class.getName(), authenticationTracker.completer());
+        vertx.deployVerticle(AcceptAllAuthenticationService.class.getName(), authenticationTracker.completer());
 
         CompositeFuture.all(registrationTracker, authTracker)
         .compose(r -> {
