@@ -12,6 +12,8 @@
 package org.eclipse.hono.server;
 
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.util.stream.IntStream;
@@ -19,7 +21,8 @@ import java.util.stream.IntStream;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.authentication.impl.AcceptAllAuthenticationService;
+import org.eclipse.hono.TestSupport;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
@@ -79,7 +82,7 @@ public class StandaloneTelemetryApiTest {
         assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
         telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
         server = new HonoServer();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
         HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
@@ -95,15 +98,12 @@ public class StandaloneTelemetryApiTest {
         setupTracker.setHandler(ctx.asyncAssertSuccess());
 
         Future<String> registrationTracker = Future.future();
-        Future<String> authenticationTracker = Future.future();
         Future<String> authTracker = Future.future();
 
         vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
-        vertx.deployVerticle(AcceptAllAuthenticationService.class.getName(), authenticationTracker.completer());
 
-        CompositeFuture.all(registrationTracker, authTracker)
-        .compose(r -> {
+        CompositeFuture.all(registrationTracker, authTracker).compose(r -> {
             Future<String> serverTracker = Future.future();
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
@@ -118,6 +118,18 @@ public class StandaloneTelemetryApiTest {
                     .build());
             client.connect(new ProtonClientOptions(), setupTracker.completer());
         }, setupTracker);
+    }
+
+    /**
+     * Creates a Hono user containing all authorities required for running this test class.
+     * 
+     * @return The user.
+     */
+    private static HonoUser createUser() {
+
+        HonoUser user = mock(HonoUser.class);
+        when(user.getName()).thenReturn(USER);
+        return user;
     }
 
     @Before

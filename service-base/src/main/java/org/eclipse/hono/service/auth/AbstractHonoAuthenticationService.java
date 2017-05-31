@@ -22,6 +22,8 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.AbstractConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -41,6 +43,28 @@ public abstract class AbstractHonoAuthenticationService<T extends AbstractConfig
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+    private AuthTokenHelper tokenFactory;
+
+    /**
+     * Sets the factory to use for creating tokens asserting a clients identity and authorities.
+     * 
+     * @param tokenFactory The factory.
+     * @throws NullPointerException if factory is {@code null}.
+     */
+    @Autowired
+    @Qualifier("signing")
+    public final void setTokenFactory(final AuthTokenHelper tokenFactory) {
+        this.tokenFactory = Objects.requireNonNull(tokenFactory);
+    }
+
+    /**
+     * Gets the factory used for creating tokens asserting a clients identity and authorities.
+     * 
+     * @return The factory or {@code null} if not set.
+     */
+    public final AuthTokenHelper getTokenFactory() {
+        return tokenFactory;
+    }
 
     /**
      * The authentication request is required to contain the SASL mechanism in property {@link AuthenticationConstants#FIELD_MECHANISM}
@@ -61,34 +85,38 @@ public abstract class AbstractHonoAuthenticationService<T extends AbstractConfig
     @Override
     public final void authenticate(final JsonObject authRequest, final Handler<AsyncResult<HonoUser>> resultHandler) {
 
-        final String mechanism = Objects.requireNonNull(authRequest).getString(AuthenticationConstants.FIELD_MECHANISM);
-        log.debug("received authentication request [mechanism: {}]", mechanism);
-
-        if (AuthenticationConstants.MECHANISM_PLAIN.equals(mechanism)) {
-
-            byte[] saslResponse = authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE, new byte[0]);
-
-            try {
-                String[] fields = readFields(saslResponse);
-                String authzid = fields[0];
-                String authcid = fields[1];
-                String pwd = fields[2];
-                log.debug("processing PLAIN authentication request [authzid: {}, authcid: {}, pwd: *****]", authzid, authcid);
-                verifyPlain(authzid, authcid, pwd, resultHandler);
-            } catch (CredentialException e) {
-                // response did not contain expected values
-                resultHandler.handle(Future.failedFuture(e));
-            }
-
-        } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(mechanism)) {
-
-            final String authzid = new String(authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE), StandardCharsets.UTF_8);
-            final String subject = authRequest.getString(AuthenticationConstants.FIELD_SUBJECT_DN);
-            log.debug("processing EXTERNAL authentication request [Subject DN: {}]", subject);
-            verifyExternal(authzid, subject, resultHandler);
-
+        if (tokenFactory == null) {
+            resultHandler.handle(Future.failedFuture("cannot create tokens, no token factory available"));
         } else {
-            resultHandler.handle(Future.failedFuture("unsupported SASL mechanism"));
+            final String mechanism = Objects.requireNonNull(authRequest).getString(AuthenticationConstants.FIELD_MECHANISM);
+            log.debug("received authentication request [mechanism: {}]", mechanism);
+
+            if (AuthenticationConstants.MECHANISM_PLAIN.equals(mechanism)) {
+
+                byte[] saslResponse = authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE, new byte[0]);
+
+                try {
+                    String[] fields = readFields(saslResponse);
+                    String authzid = fields[0];
+                    String authcid = fields[1];
+                    String pwd = fields[2];
+                    log.debug("processing PLAIN authentication request [authzid: {}, authcid: {}, pwd: *****]", authzid, authcid);
+                    verifyPlain(authzid, authcid, pwd, resultHandler);
+                } catch (CredentialException e) {
+                    // response did not contain expected values
+                    resultHandler.handle(Future.failedFuture(e));
+                }
+
+            } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(mechanism)) {
+
+                final String authzid = new String(authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE), StandardCharsets.UTF_8);
+                final String subject = authRequest.getString(AuthenticationConstants.FIELD_SUBJECT_DN);
+                log.debug("processing EXTERNAL authentication request [Subject DN: {}]", subject);
+                verifyExternal(authzid, subject, resultHandler);
+
+            } else {
+                resultHandler.handle(Future.failedFuture("unsupported SASL mechanism"));
+            }
         }
     }
 
@@ -128,7 +156,7 @@ public abstract class AbstractHonoAuthenticationService<T extends AbstractConfig
      * @param authcid The username.
      * @param password The password.
      * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
-     *                                    the result contains the granted {@link AuthenticationConstants#FIELD_AUTHORIZATION_ID}.
+     *                                    the result contains the authenticated user..
      */
     public abstract void verifyPlain(final String authzid, final String authcid, final String password,
             final Handler<AsyncResult<HonoUser>> authenticationResultHandler);
@@ -141,7 +169,7 @@ public abstract class AbstractHonoAuthenticationService<T extends AbstractConfig
      * @param authzid The identity the client wants to act as. If {@code null} the granted authorization identity is derived from the subject DN.
      * @param subjectDn The Subject DN.
      * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
-     *                                    the result contains the granted {@link AuthenticationConstants#FIELD_AUTHORIZATION_ID}.
+     *                                    the result contains the authenticated user..
      */
     public abstract void verifyExternal(final String authzid, final String subjectDn, final Handler<AsyncResult<HonoUser>> authenticationResultHandler);
 

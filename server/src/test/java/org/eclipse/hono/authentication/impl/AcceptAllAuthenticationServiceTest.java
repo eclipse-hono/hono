@@ -15,7 +15,8 @@ package org.eclipse.hono.authentication.impl;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-import org.junit.Before;
+import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -29,11 +30,13 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class AcceptAllAuthenticationServiceTest {
 
-    AcceptAllAuthenticationService authService;
+    private static final String SECRET = "shfjksgdhfuiasgihgfahgjkhsfdghgsfdkghsfdghsfdgisfdhguisdhg";
+    private static AcceptAllAuthenticationService authService;
 
-    @Before
-    public void setUp() {
+    @BeforeClass
+    public static void setUp() {
         authService = new AcceptAllAuthenticationService();
+        authService.setTokenFactory(AuthTokenHelperImpl.forSharedSecret(SECRET, 5));
     }
 
     @Test
@@ -49,6 +52,15 @@ public class AcceptAllAuthenticationServiceTest {
 
         authService.verifyPlain("userB", "userA", "pwd", ctx.asyncAssertSuccess(user -> {
             assertThat(user.getName(), is("userB"));
+        })); 
+    }
+
+    @Test
+    public void testAuthenticatedUserContainsToken(final TestContext ctx) {
+
+        authService.verifyPlain("userB", "userA", "pwd", ctx.asyncAssertSuccess(user -> {
+            assertThat(user.getName(), is("userB"));
+            assertNotNull(user.getToken());
         })); 
     }
 }

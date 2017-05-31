@@ -13,10 +13,13 @@ package org.eclipse.hono.server;
 
 import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.stream.IntStream;
 
-import org.eclipse.hono.authentication.impl.AcceptAllAuthenticationService;
+import org.eclipse.hono.TestSupport;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClient;
@@ -70,7 +73,7 @@ public class StandaloneRegistrationApiTest {
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
         server = new HonoServer();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
         HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
@@ -85,15 +88,12 @@ public class StandaloneRegistrationApiTest {
         }));
 
         Future<String> registrationTracker = Future.future();
-        Future<String> authenticationTracker = Future.future();
         Future<String> authTracker = Future.future();
 
         vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
-        vertx.deployVerticle(AcceptAllAuthenticationService.class.getName(), authenticationTracker.completer());
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
 
-        CompositeFuture.all(registrationTracker, authTracker)
-        .compose(r -> {
+        CompositeFuture.all(registrationTracker, authTracker).compose(r -> {
             Future<String> serverTracker = Future.future();
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
@@ -113,6 +113,18 @@ public class StandaloneRegistrationApiTest {
         }).compose(c -> {
             c.createRegistrationClient(DEFAULT_TENANT, setupTracker.completer());
         }, setupTracker);
+    }
+
+    /**
+     * Creates a Hono user containing all authorities required for running this test class.
+     * 
+     * @return The user.
+     */
+    private static HonoUser createUser() {
+
+        HonoUser user = mock(HonoUser.class);
+        when(user.getName()).thenReturn(USER);
+        return user;
     }
 
     @After

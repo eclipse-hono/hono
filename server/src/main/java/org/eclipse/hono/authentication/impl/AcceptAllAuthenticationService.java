@@ -12,6 +12,7 @@
 package org.eclipse.hono.authentication.impl;
 
 import org.eclipse.hono.auth.Authorities;
+import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
@@ -41,6 +42,8 @@ public final class AcceptAllAuthenticationService extends AbstractHonoAuthentica
     }
 
     private void handleSuccess(final String grantedAuthorizationId, Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
+
+        final String token = getTokenFactory().createToken(grantedAuthorizationId, new AuthoritiesImpl());
         authenticationResultHandler.handle(Future.succeededFuture(new HonoUser() {
 
             @Override
@@ -55,7 +58,7 @@ public final class AcceptAllAuthenticationService extends AbstractHonoAuthentica
 
             @Override
             public String getToken() {
-                return null;
+                return token;
             }
         }));
     }
