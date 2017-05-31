@@ -114,7 +114,7 @@
               <images>
                 <image>
                   <build>
-                    <from>openjdk:8-jre-alpine</from>
+                    <from>${java-base-image.name}</from>
                     <ports>
                       <port>1883</port>
                       <port>8883</port>
