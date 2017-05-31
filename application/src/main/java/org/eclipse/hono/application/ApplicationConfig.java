@@ -88,12 +88,11 @@ public class ApplicationConfig {
      * Exposes a factory for connections to the downstream AMQP container
      * as a Spring bean.
      * 
-     * @param config configuration properties
      * @return The connection factory.
      */
     @Bean
-    public ConnectionFactory downstreamConnectionFactory(final ClientConfigProperties config) {
-        return new ConnectionFactoryImpl(vertx, config);
+    public ConnectionFactory downstreamConnectionFactory() {
+        return new ConnectionFactoryImpl();
     }
 
     /**

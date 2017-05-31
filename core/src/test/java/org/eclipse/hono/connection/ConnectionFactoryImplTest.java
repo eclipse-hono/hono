@@ -34,11 +34,14 @@ import io.vertx.proton.ProtonConnection;
  */
 public class ConnectionFactoryImplTest {
 
+    ConnectionFactoryImpl factory;
     Vertx vertx;
 
     @Before
     public void setup() {
         vertx = Vertx.vertx();
+        factory = new ConnectionFactoryImpl();
+        factory.setVertx(vertx);
     }
 
     /**
@@ -55,7 +58,7 @@ public class ConnectionFactoryImplTest {
         props.setPort(12000); // no server running on port
         props.setAmqpHostname("hono");
         props.setName("client");
-        ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
+        factory.setClientConfig(props);
 
         // WHEN trying to connect to the server
         final CountDownLatch latch = new CountDownLatch(1);
