@@ -13,7 +13,6 @@ package org.eclipse.hono.server;
 
 import static io.vertx.proton.ProtonHelper.condition;
 import static org.apache.qpid.proton.amqp.transport.AmqpError.UNAUTHORIZED_ACCESS;
-import static org.eclipse.hono.service.auth.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
 
 import java.security.Principal;
 import java.util.UUID;
@@ -22,10 +21,10 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
-import org.eclipse.hono.service.auth.AuthorizationConstants;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -35,8 +34,6 @@ import org.springframework.stereotype.Component;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -153,9 +150,9 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
                 if (endpoint == null) {
                     handleUnknownEndpoint(con, receiver, targetResource);
                 } else {
-                    final String user = getUserFromConnection(con);
-                    checkAuthorizationToAttach(user, targetResource, Activity.WRITE, isAuthorized -> {
-                        if (isAuthorized) {
+                    final HonoUser user = Constants.getClientPrincipal(con);
+                    getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).setHandler(authAttempt -> {
+                        if (authAttempt.succeeded() && authAttempt.result()) {
                             copyConnectionId(con.attachments(), receiver.attachments());
                             receiver.setTarget(receiver.getRemoteTarget());
                             endpoint.onLinkAttach(receiver, targetResource);
@@ -220,9 +217,9 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
             if (endpoint == null) {
                 handleUnknownEndpoint(con, sender, targetResource);
             } else {
-                final String user = getUserFromConnection(con);
-                checkAuthorizationToAttach(user, targetResource, Activity.READ, isAuthorized -> {
-                    if (isAuthorized) {
+                final HonoUser user = Constants.getClientPrincipal(con);
+                getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).setHandler(authAttempt -> {
+                    if (authAttempt.succeeded() && authAttempt.result()) {
                         copyConnectionId(con.attachments(), sender.attachments());
                         sender.setSource(sender.getRemoteSource());
                         endpoint.onLinkAttach(sender, targetResource);
@@ -236,25 +233,5 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
             LOG.debug("client has provided invalid resource identifier as target address", e);
             sender.close();
         }
-    }
-
-    private void checkAuthorizationToAttach(final String user, final ResourceIdentifier targetResource, final Activity permission,
-       final Handler<Boolean> authResultHandler) {
-
-        final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(user, targetResource.toString(),
-           permission.toString());
-        vertx.eventBus().send(
-           EVENT_BUS_ADDRESS_AUTHORIZATION_IN,
-           authRequest,
-           res -> authResultHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
-    }
-
-    /**
-     * Gets the event bus address this Hono server uses for authorizing client requests.
-     *
-     * @return the address.
-     */
-    String getAuthServiceAddress() {
-        return EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
     }
 }

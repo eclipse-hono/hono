@@ -15,6 +15,8 @@ import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.vertx.core.Future;
+
 /**
  * A service for authorizing access to Hono resources.
  * <p>
@@ -31,7 +33,7 @@ public interface AuthorizationService {
      * @return {@code true} if the user is authorized to perform the activity on the resource.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    boolean isAuthorized(HonoUser user, ResourceIdentifier resource, Activity intent);
+    Future<Boolean> isAuthorized(HonoUser user, ResourceIdentifier resource, Activity intent);
 
     /**
      * Checks if a user is authorized to execute an API operation on a particular resource.
@@ -42,5 +44,5 @@ public interface AuthorizationService {
      * @return {@code true} if the user is authorized to execute the operation on the resource.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    boolean isAuthorized(HonoUser user, ResourceIdentifier resource, String operation);
+    Future<Boolean> isAuthorized(HonoUser user, ResourceIdentifier resource, String operation);
 }

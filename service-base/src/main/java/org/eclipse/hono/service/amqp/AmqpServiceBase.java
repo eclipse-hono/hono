@@ -23,6 +23,8 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
+import org.eclipse.hono.service.auth.AuthorizationService;
+import org.eclipse.hono.service.auth.EventBusBasedAuthorizationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +53,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     private ProtonServer server;
     private ProtonServer insecureServer;
     private ProtonSaslAuthenticatorFactory saslAuthenticatorFactory;
+    private AuthorizationService authorizationService;
 
     /**
      * Gets the default port number of the secure AMQP port.
@@ -131,9 +134,31 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         this.saslAuthenticatorFactory = Objects.requireNonNull(factory);
     }
 
+    /**
+     * Sets the object to use for authorizing access to resources and operations.
+     * 
+     * @param authService The authorization service to use.
+     * @throws NullPointerException if the service is {@code null}.
+     */
+    public final void setAuthorizationService(final AuthorizationService authService) {
+        this.authorizationService = authService;
+    }
+
+    /**
+     * Gets the object used for authorizing access to resources and operations.
+     * 
+     * @return The authorization service to use.
+     */
+    protected final AuthorizationService getAuthorizationService() {
+        return authorizationService;
+    }
+
     @Override
     public void start(final Future<Void> startupHandler) {
 
+        if (authorizationService == null) {
+            authorizationService = new EventBusBasedAuthorizationService(vertx);
+        }
         preStartServers()
             .compose(s -> checkPortConfiguration())
             .compose(s -> startEndpoints())
@@ -232,7 +257,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         }
     }
 
-    private ProtonServer createProtonServer(ProtonServerOptions options) {
+    private ProtonServer createProtonServer(final ProtonServerOptions options) {
         return ProtonServer.create(vertx, options)
                 .saslAuthenticatorFactory(saslAuthenticatorFactory);
     }

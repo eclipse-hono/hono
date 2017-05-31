@@ -140,9 +140,14 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
         final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.PERMISSION_FIELD));
         final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(AuthorizationConstants.RESOURCE_FIELD));
 
-        boolean hasPermission = isAuthorized(user, resource, permission);
-        message.reply(hasPermission ? AuthorizationConstants.ALLOWED : AuthorizationConstants.DENIED);
-        LOG.debug("subject [{}] is {}allowed to {} on resource [{}]", authSubject,
-                hasPermission ? "" : "not ", permission, resource);
+        isAuthorized(user, resource, permission).setHandler(authAttempt -> {
+            boolean hasPermission = false;
+            if (authAttempt.succeeded()) {
+                hasPermission = authAttempt.result();
+            }
+            LOG.debug("subject [{}] is {}allowed to {} on resource [{}]", authSubject,
+                    hasPermission ? "" : "not ", permission, resource);
+            message.reply(hasPermission ? AuthorizationConstants.ALLOWED : AuthorizationConstants.DENIED);
+        });
     }
 }

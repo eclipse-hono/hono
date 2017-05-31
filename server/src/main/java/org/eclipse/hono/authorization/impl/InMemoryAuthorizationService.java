@@ -79,15 +79,17 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
     }
 
     @Override
-    public boolean isAuthorized(final HonoUser user, final ResourceIdentifier resource, final Activity intent) {
+    public Future<Boolean> isAuthorized(final HonoUser user, final ResourceIdentifier resource, final Activity intent) {
 
         Objects.requireNonNull(user);
         Objects.requireNonNull(resource);
         Objects.requireNonNull(intent);
 
-        return hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), "*", null), intent) ||
+        Future<Boolean> result = Future.future();
+        result.complete(hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), "*", null), intent) ||
                 hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), intent) ||
-                hasPermissionInternal(user.getName(), resource, intent);
+                hasPermissionInternal(user.getName(), resource, intent));
+        return result;
     }
 
     private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final Activity permission) {
@@ -95,19 +97,18 @@ public final class InMemoryAuthorizationService extends BaseAuthorizationService
         return hasPermissionInternal(subject, new ResourceEntry(resource, null), permission);
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.service.auth.AuthorizationService#isAuthorized(org.eclipse.hono.auth.HonoUser, org.eclipse.hono.util.ResourceIdentifier, java.lang.String)
-     */
     @Override
-    public boolean isAuthorized(final HonoUser user, final ResourceIdentifier resource, final String operation) {
+    public Future<Boolean> isAuthorized(final HonoUser user, final ResourceIdentifier resource, final String operation) {
 
         Objects.requireNonNull(user);
         Objects.requireNonNull(resource);
         Objects.requireNonNull(operation);
 
-        return hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), "*", null), operation, Activity.EXECUTE) ||
+        Future<Boolean> result = Future.future();
+        result.complete(hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), "*", null), operation, Activity.EXECUTE) ||
                 hasPermissionInternal(user.getName(), ResourceIdentifier.from(resource.getEndpoint(), resource.getTenantId(), null), operation, Activity.EXECUTE) ||
-                hasPermissionInternal(user.getName(), resource, operation, Activity.EXECUTE);
+                hasPermissionInternal(user.getName(), resource, operation, Activity.EXECUTE));
+        return result;
     }
 
     private boolean hasPermissionInternal(final String subject, final ResourceIdentifier resource, final String operation, final Activity permission) {
