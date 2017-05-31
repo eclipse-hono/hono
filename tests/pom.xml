@@ -123,6 +123,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <log>^.*(startup completed successfully)$</log>
+                      <time>20000</time>
                     </wait>
                   </run>
                 </image>
@@ -166,7 +167,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <alias>broker</alias>
                     </network>
                     <log>
-                      <prefix>Artemis</prefix>
+                      <prefix>ARTEMIS</prefix>
                       <color>magenta</color>
                     </log>
                     <!--
