@@ -24,6 +24,7 @@ import javax.security.cert.X509Certificate;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -159,7 +160,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
     }
 
     private void addPrincipal(final String authzId) {
-        addPrincipal(new Principal() {
+        addPrincipal(new HonoUser() {
 
             @Override
             public String getName() {
@@ -168,10 +169,10 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
         });
     }
 
-    private void addPrincipal(final Principal authzId) {
+    private void addPrincipal(final HonoUser authzId) {
 
         succeeded = true;
-        protonConnection.attachments().set(Constants.KEY_CLIENT_PRINCIPAL, Principal.class, authzId);
+        protonConnection.attachments().set(Constants.KEY_CLIENT_PRINCIPAL, HonoUser.class, authzId);
         LOG.debug("authentication of client [authorization ID: {}] succeeded", authzId.getName());
         sasl.done(SaslOutcome.PN_SASL_OK);
     }

@@ -11,10 +11,10 @@
  */
 package org.eclipse.hono.util;
 
-import java.security.Principal;
 import java.util.Objects;
 
 import org.apache.qpid.proton.engine.Record;
+import org.eclipse.hono.auth.HonoUser;
 
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonLink;
@@ -74,7 +74,7 @@ public final class Constants {
     /**
      * The principal to use for anonymous clients.
      */
-    public static final Principal PRINCIPAL_ANONYMOUS = new Principal() {
+    public static final HonoUser PRINCIPAL_ANONYMOUS = new HonoUser() {
 
         @Override
         public String getName() {
@@ -92,10 +92,10 @@ public final class Constants {
      * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
      *         if the client has not been authenticated or record is {@code null}.
      */
-    public static Principal getClientPrincipal(final Record record) {
+    public static HonoUser getClientPrincipal(final Record record) {
 
         if (record != null) {
-            Principal client = record.get(KEY_CLIENT_PRINCIPAL, Principal.class);
+            HonoUser client = record.get(KEY_CLIENT_PRINCIPAL, HonoUser.class);
             return client == null ? Constants.PRINCIPAL_ANONYMOUS : client;
         } else {
             return Constants.PRINCIPAL_ANONYMOUS;
@@ -110,7 +110,7 @@ public final class Constants {
      *         if the client has not been authenticated.
      * @throws NullPointerException if con is {@code null}.
      */
-    public static Principal getClientPrincipal(final ProtonConnection con) {
+    public static HonoUser getClientPrincipal(final ProtonConnection con) {
         Record attachments = Objects.requireNonNull(con).attachments();
         return getClientPrincipal(attachments);
     }
