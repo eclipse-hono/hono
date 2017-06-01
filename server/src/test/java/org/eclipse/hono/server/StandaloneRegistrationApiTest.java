@@ -201,7 +201,7 @@ public class StandaloneRegistrationApiTest {
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             JsonObject payload = s.result().getPayload();
             ctx.assertNotNull(payload);
-            ctx.assertEquals(DEVICE_1, payload.getString(RegistrationConstants.FIELD_HONO_ID));
+            ctx.assertEquals(DEVICE_1, payload.getString(RegistrationConstants.FIELD_DEVICE_ID));
             JsonObject data = payload.getJsonObject(RegistrationConstants.FIELD_DATA);
             ctx.assertEquals("lwm2m", data.getString("ep"));
             ok.complete();

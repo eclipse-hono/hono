@@ -162,7 +162,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
                            Map<String, JsonObject> deviceMap = new HashMap<>();
                            for (Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
                                JsonObject device = (JsonObject) deviceObj;
-                               deviceMap.put(device.getString(FIELD_HONO_ID), device.getJsonObject(FIELD_DATA));
+                               deviceMap.put(device.getString(FIELD_DEVICE_ID), device.getJsonObject(FIELD_DATA));
                                deviceCount.incrementAndGet();
                            }
                            identities.put(tenantId, deviceMap);
@@ -216,7 +216,7 @@ public class FileBasedRegistrationService extends BaseRegistrationService {
             for (Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
                 devices.add(
                         new JsonObject()
-                            .put(FIELD_HONO_ID, deviceEntry.getKey())
+                            .put(FIELD_DEVICE_ID, deviceEntry.getKey())
                             .put(FIELD_DATA, deviceEntry.getValue()));
                 idCount.incrementAndGet();
             }

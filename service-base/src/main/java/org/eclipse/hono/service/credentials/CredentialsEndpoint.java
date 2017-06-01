@@ -74,7 +74,7 @@ public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceCo
                     } else {
                         logger.debug("failed to process credentials request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
                         // we need to inform client about failure
-                        response = CredentialsConstants.getReply(
+                        response = CredentialsConstants.getServiceReplyAsJson(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
                                 MessageHelper.getTenantIdAnnotation(msg),
                                 null,
@@ -92,6 +92,6 @@ public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceCo
 
     @Override
     protected Message getAmqpReply(io.vertx.core.eventbus.Message<JsonObject> message) {
-        return CredentialsConstants.getAmqpReply(message);
+        return CredentialsConstants.getAmqpReply(CredentialsConstants.CREDENTIALS_ENDPOINT, message.body());
     }
 }

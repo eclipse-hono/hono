@@ -51,15 +51,17 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     /**
      * Process the received AMQP message.
      *
-     * @param message The Message to process.
+     * @param message The Message to process. Must not be null.
+     * @throws NullPointerException If message is null.
      */
     protected abstract void processRequest(final Message message);
 
     /**
      * Construct an AMQP reply message that is send back to the caller.
      *
-     * @param message The Message as JsonObject from which a reply message is constructed.
+     * @param message The Message as JsonObject from which a reply message is constructed. Must not be null.
      * @return Message The reply message that shall be sent to the client.
+     * @throws NullPointerException If message is null.
      */
     protected abstract Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message);
 

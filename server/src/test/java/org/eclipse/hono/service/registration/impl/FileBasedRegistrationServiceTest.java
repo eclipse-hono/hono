@@ -17,7 +17,6 @@ import static org.junit.Assert.*;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 import static org.mockito.Mockito.*;
 
-import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.Before;
@@ -124,36 +123,36 @@ public class FileBasedRegistrationServiceTest
 
    @Test
    public void testGetUnknownDeviceReturnsNotFound() {
-       processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_NOT_FOUND, TENANT, DEVICE));
+       processMessageAndExpectResponse(mockMsg(ACTION_GET), getServiceReplyAsJson(HTTP_NOT_FOUND, TENANT, DEVICE));
    }
 
    @Test
    public void testDeregisterUnknownDeviceReturnsNotFound() {
-       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getReply(HTTP_NOT_FOUND, TENANT, DEVICE));
+       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getServiceReplyAsJson(HTTP_NOT_FOUND, TENANT, DEVICE));
    }
 
    @Test
    public void testProcessRegisterMessageDetectsUnsupportedAction() {
-       processMessageAndExpectResponse(mockMsg("bumlux"), getReply(HTTP_BAD_REQUEST, TENANT, DEVICE));
+       processMessageAndExpectResponse(mockMsg("bumlux"), getServiceReplyAsJson(HTTP_BAD_REQUEST, TENANT, DEVICE));
    }
 
    @Test
    public void testDuplicateRegistrationFails() {
-       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER),getReply(HTTP_CREATED, TENANT, DEVICE));
-       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getReply(HTTP_CONFLICT, TENANT, DEVICE));
+       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CREATED, TENANT, DEVICE));
+       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CONFLICT, TENANT, DEVICE));
    }
 
    @Test
    public void testGetSucceedsForRegisteredDevice() {
-       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER),getReply(HTTP_CREATED, TENANT, DEVICE));
-       processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_OK, TENANT, DEVICE, expectedMessage(DEVICE)));
+       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CREATED, TENANT, DEVICE));
+       processMessageAndExpectResponse(mockMsg(ACTION_GET), getServiceReplyAsJson(HTTP_OK, TENANT, DEVICE, expectedMessage(DEVICE)));
    }
 
    @Test
    public void testGetFailsForDeregisteredDevice() {
-       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER),getReply(HTTP_CREATED, TENANT, DEVICE));
-       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getReply(HTTP_OK, TENANT, DEVICE, expectedMessage(DEVICE)));
-       processMessageAndExpectResponse(mockMsg(ACTION_GET), getReply(HTTP_NOT_FOUND, TENANT, DEVICE));
+       processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CREATED, TENANT, DEVICE));
+       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getServiceReplyAsJson(HTTP_OK, TENANT, DEVICE, expectedMessage(DEVICE)));
+       processMessageAndExpectResponse(mockMsg(ACTION_GET), getServiceReplyAsJson(HTTP_NOT_FOUND, TENANT, DEVICE));
    }
 
    @Test
@@ -195,7 +194,7 @@ public class FileBasedRegistrationServiceTest
 
    private static JsonObject expectedMessage(final String id) {
        return new JsonObject()
-               .put(FIELD_HONO_ID, id)
+               .put(FIELD_DEVICE_ID, id)
                .put(FIELD_DATA, new JsonObject().put(FIELD_ENABLED, Boolean.TRUE));
    }
 
@@ -205,7 +204,7 @@ public class FileBasedRegistrationServiceTest
 
    @SuppressWarnings("unchecked")
    private static Message<JsonObject> mockMsg(final String action, final String tenant) {
-       final JsonObject registrationJson = getRegistrationJson(action, tenant, DEVICE);
+       final JsonObject registrationJson = getServiceRequestAsJson(action, tenant, DEVICE);
        final Message<JsonObject> message = mock(Message.class);
        when(message.body()).thenReturn(registrationJson);
        return message;
