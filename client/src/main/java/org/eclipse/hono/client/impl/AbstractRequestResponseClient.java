@@ -35,11 +35,14 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * A Vertx-Proton based parent class for the implementation of API clients that follow the request response pattern.
  * The class is a generic that expects two classes:
- * - C : denotes the concrete interface for the API
- * - R : denotes the concrete result container class of the API
- * Both classes have their own parent and need to be subclassed.
  *
- * The subclasses only need to implement some abstract helper methods (see the method descriptions) and their own
+ * @param <C> denotes the concrete interface for the API
+ * @param <R> denotes the concrete result container class of the API
+ *
+ * <p>
+ * Both type parameter classes have their own parent and need to be subclassed.
+ *
+ * A subclass of this class only needs to implement some abstract helper methods (see the method descriptions) and their own
  * API specific methods. This allows for implementation classes that focus on the API specific code.
  */
 public abstract class AbstractRequestResponseClient<C extends RequestResponseClient,R extends RequestResponseResult>
@@ -48,36 +51,39 @@ public abstract class AbstractRequestResponseClient<C extends RequestResponseCli
     private static final Logger           LOG = LoggerFactory.getLogger(AbstractRequestResponseClient.class);
     protected final AtomicLong            messageCounter  = new AtomicLong();
     private final String                  requestResponseAddressTemplate;
-    private final String                  requestResponseReplyToAddressTemplate;;
+    private final String                  requestResponseReplyToAddressTemplate;
 
     protected final Map<String, Handler<AsyncResult<R>>> replyMap = new ConcurrentHashMap<>();
     protected final String                replyToAddress;
 
     /**
      * Get the name of the endpoint that this client targets at.
+     *
      * @return The name of the endpoint for this client.
      */
     protected abstract String getName();
 
     /**
      * Build a unique messageId for a request that serves as an identifier for a new message.
+     *
      * @return The unique messageId;
      */
     protected abstract String createMessageId();
 
     /**
-     * Construct a result object that contains the answer for a message.
+     * Creates a result object from the status and payload of a response received from the endpoint.
+     *
      * @param status The status of the response.
      * @param payload The json payload of the response.
      * @return The result object.
      */
-    protected abstract R from(final int status, final JsonObject payload);
+    protected abstract R getResult(final int status, final JsonObject payload);
 
-        /**
-         * Creates a client for a vert.x context.
-         *
-         * @param context The context to run all interactions with the server on.
-         */
+    /**
+     * Creates a client for a vert.x context.
+     *
+     * @param context The context to run all interactions with the server on.
+     */
     protected AbstractRequestResponseClient(final Context context, final ProtonConnection con, final String tenantId,
                                             final Handler<AsyncResult<C>> creationHandler) {
 
@@ -134,6 +140,8 @@ public abstract class AbstractRequestResponseClient<C extends RequestResponseCli
     /**
      * Build a Proton message with a provided subject (serving as the operation that shall be invoked).
      * The message can be extended by arbitrary application properties passed in.
+     * <p>
+     * To enable specific message properties that are not considered here, the method can be overridden by subclasses.
      *
      * @param subject The subject system property of the message.
      * @param appProperties The map containing arbitrary application properties.
@@ -157,7 +165,7 @@ public abstract class AbstractRequestResponseClient<C extends RequestResponseCli
                 MessageHelper.APP_PROPERTY_STATUS,
                 String.class);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return from(Integer.valueOf(status), payload);
+        return getResult(Integer.valueOf(status), payload);
     }
 
     protected final void createAndSendRequest(final String action, final JsonObject payload,
@@ -184,10 +192,12 @@ public abstract class AbstractRequestResponseClient<C extends RequestResponseCli
         });
     }
 
+    @Override
     public final boolean isOpen() {
         return sender != null && sender.isOpen() && receiver != null && receiver.isOpen();
     }
 
+    @Override
     public final void close(final Handler<AsyncResult<Void>> closeHandler) {
 
         Objects.requireNonNull(closeHandler);

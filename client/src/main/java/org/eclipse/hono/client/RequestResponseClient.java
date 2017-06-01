@@ -14,6 +14,9 @@ package org.eclipse.hono.client;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
+/**
+ * Interface for common methods that all clients that follow the request response pattern need to implement.
+ */
 public interface RequestResponseClient {
     /**
      * Closes the AMQP link(s) with the Hono server this client is configured to use.

@@ -63,7 +63,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
     }
 
     @Override
-    protected RegistrationResult from(final int status, final JsonObject payload) {
+    protected RegistrationResult getResult(final int status, final JsonObject payload) {
 
         return RegistrationResult.from(status,payload);
     }

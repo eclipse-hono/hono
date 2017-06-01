@@ -47,7 +47,7 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
 
     private CredentialsClientImpl(final Context context, final ProtonConnection con, final String tenantId,
                                   final Handler<AsyncResult<CredentialsClient>> creationHandler) {
-        super(context,con,tenantId,creationHandler);
+        super(context, con, tenantId, creationHandler);
     }
 
     @Override
@@ -63,9 +63,9 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
     }
 
     @Override
-    protected CredentialsResult from(final int status, final JsonObject payload) {
+    protected CredentialsResult getResult(final int status, final JsonObject payload) {
 
-        return CredentialsResult.from(status,payload);
+        return CredentialsResult.from(status, payload);
     }
 
     /**
