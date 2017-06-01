@@ -74,6 +74,16 @@
       </param>
       <param>
         <option name="enabled" value="true" />
+        <option name="name" value="hono.server.registrationAssertion.sharedSecret" />
+        <option name="value" value="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.metric.reporter.graphite.active" />
+        <option name="value" value="false" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
         <option name="name" value="logging.config" />
         <option name="value" value="classpath:logback-spring.xml" />
       </param>
