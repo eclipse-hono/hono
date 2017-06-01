@@ -11,15 +11,11 @@
  */
 package org.eclipse.hono.server;
 
-import static io.vertx.proton.ProtonHelper.condition;
-import static org.apache.qpid.proton.amqp.transport.AmqpError.UNAUTHORIZED_ACCESS;
-
 import java.security.Principal;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
-import org.apache.qpid.proton.engine.Record;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -35,6 +31,7 @@ import org.springframework.stereotype.Component;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonSession;
@@ -140,7 +137,7 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
         if (receiver.getRemoteTarget().getAddress() == null) {
             LOG.debug("client [{}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link",
                     con.getRemoteContainer());
-            receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
+            receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
         } else {
             LOG.debug("client [{}] wants to open a link for sending messages [address: {}]",
                     con.getRemoteContainer(), receiver.getRemoteTarget());
@@ -153,12 +150,12 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
                     final HonoUser user = Constants.getClientPrincipal(con);
                     getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).setHandler(authAttempt -> {
                         if (authAttempt.succeeded() && authAttempt.result()) {
-                            copyConnectionId(con.attachments(), receiver.attachments());
+                            Constants.copyProperties(con, receiver);
                             receiver.setTarget(receiver.getRemoteTarget());
                             endpoint.onLinkAttach(receiver, targetResource);
                         } else {
                             final String message = String.format("subject [%s] is not authorized to WRITE to [%s]", user, targetResource);
-                            receiver.setCondition(condition(UNAUTHORIZED_ACCESS.toString(), message)).close();
+                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), message)).close();
                         }
                     });
                 }
@@ -177,10 +174,6 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
                     conId);
         }
-    }
-
-    private static void copyConnectionId(final Record source, final Record target) {
-        target.set(Constants.KEY_CONNECTION_ID, String.class, source.get(Constants.KEY_CONNECTION_ID, String.class));
     }
 
     /**
@@ -220,12 +213,12 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
                 final HonoUser user = Constants.getClientPrincipal(con);
                 getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).setHandler(authAttempt -> {
                     if (authAttempt.succeeded() && authAttempt.result()) {
-                        copyConnectionId(con.attachments(), sender.attachments());
+                        Constants.copyProperties(con, sender);
                         sender.setSource(sender.getRemoteSource());
                         endpoint.onLinkAttach(sender, targetResource);
                     } else {
                         final String message = String.format("subject [%s] is not authorized to READ from [%s]", user, targetResource);
-                        sender.setCondition(condition(UNAUTHORIZED_ACCESS.toString(), message)).close();
+                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), message)).close();
                     }
                 });
             }

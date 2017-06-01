@@ -11,7 +11,6 @@
  */
 package org.eclipse.hono.util;
 
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -149,6 +148,25 @@ public final class Constants {
     }
 
     /**
+     * Copies properties from a connection's attachments to a link's attachments.
+     * <p>
+     * The properties copied are
+     * <ul>
+     * <li>{@link #KEY_CLIENT_PRINCIPAL}</li>
+     * <li>{@link #KEY_CONNECTION_ID}</li>
+     * </ul>
+     * 
+     * @param source The connection.
+     * @param target The link.
+     */
+    public static void copyProperties(final ProtonConnection source, final ProtonLink<?> target) {
+        Objects.requireNonNull(source);
+        Objects.requireNonNull(target);
+        target.attachments().set(Constants.KEY_CLIENT_PRINCIPAL, HonoUser.class, getClientPrincipal(source));
+        target.attachments().set(Constants.KEY_CONNECTION_ID, String.class, getConnectionId(source));
+    }
+
+    /**
      * Gets the (surrogate) identifier of the AMQP connection that a link is part of.
      * 
      * @param link The link to determine the connection id for.
@@ -157,6 +175,17 @@ public final class Constants {
      */
     public static String getConnectionId(final ProtonLink<?> link) {
         return link.attachments().get(KEY_CONNECTION_ID, String.class);
+    }
+
+    /**
+     * Gets the (surrogate) identifier of an AMQP connection.
+     * 
+     * @param connection The connection to determine the connection id for.
+     * @return The identifier retrieved from the connection's <em>attachments</em> using key {@link #KEY_CONNECTION_ID}
+     *         or {@code null} if the attachments do not contain a value for that a key.
+     */
+    public static String getConnectionId(final ProtonConnection connection) {
+        return connection.attachments().get(KEY_CONNECTION_ID, String.class);
     }
 
     /**
