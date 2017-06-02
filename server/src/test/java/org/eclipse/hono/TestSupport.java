@@ -238,6 +238,14 @@ public final class TestSupport {
             public void connect(ProtonClientOptions options, Handler<AsyncResult<ProtonConnection>> closeHandler,
                     Handler<ProtonConnection> disconnectHandler,
                     Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+                connect(options, null, null, closeHandler, disconnectHandler, connectionResultHandler);
+            }
+
+            @Override
+            public void connect(ProtonClientOptions options, final String username, final String password,
+                    Handler<AsyncResult<ProtonConnection>> closeHandler,
+                    Handler<ProtonConnection> disconnectHandler,
+                    Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
                 if (failToCreate) {
                     connectionResultHandler.handle(Future.failedFuture("remote host unreachable"));

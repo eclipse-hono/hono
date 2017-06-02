@@ -237,6 +237,17 @@ public class HonoClientImplTest {
                 final Handler<AsyncResult<ProtonConnection>> closeHandler,
                 final Handler<ProtonConnection> disconnectHandler,
                 final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+            connect(options, null, null, closeHandler, disconnectHandler, connectionResultHandler);
+        }
+
+        @Override
+        public void connect(
+                final ProtonClientOptions options,
+                final String username,
+                final String password,
+                final Handler<AsyncResult<ProtonConnection>> closeHandler,
+                final Handler<ProtonConnection> disconnectHandler,
+                final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
             expectedConnectionAttemps.countDown();
             this.disconnectHandler = disconnectHandler;
