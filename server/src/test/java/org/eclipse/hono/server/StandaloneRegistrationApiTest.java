@@ -21,7 +21,6 @@ import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -72,7 +71,7 @@ public class StandaloneRegistrationApiTest {
 
         server = new HonoServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
         server.setConfig(configProperties);

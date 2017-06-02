@@ -70,7 +70,7 @@ public class HonoServerTest {
     private HonoServer createServer(final Endpoint telemetryEndpoint) {
 
         HonoServer server = new HonoServer();
-        server.setConfig(new ServiceConfigProperties());
+        server.setConfig(new HonoServerConfigProperties());
         if (telemetryEndpoint != null) {
             server.addEndpoint(telemetryEndpoint);
         }

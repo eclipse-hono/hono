@@ -49,7 +49,7 @@ import io.vertx.proton.ProtonSession;
  */
 @Component
 @Scope("prototype")
-public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
+public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties> {
 
     @Override
     protected Future<Void> preStartServers() {
