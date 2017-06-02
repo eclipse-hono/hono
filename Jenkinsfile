@@ -4,6 +4,8 @@ node {
 
     def mvnHome = tool 'mvn3.3.9'
     env.JAVA_HOME = tool 'jdk8u74'
+    env.DOCKER_HOST = 'tcp://10.56.22.164:2376'
+    env.DOCKER_TLS_VERIFY = '1'
 
     def startTime = new Date()
     def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd")
@@ -15,20 +17,36 @@ node {
     }
 
     stage('Deploy') {
-        withCredentials([usernamePassword(credentialsId: 'Technical_Bitbucket_User_ID', passwordVariable: 'USER_PW', usernameVariable: 'USER_ID')]) {
+        withCredentials([usernamePassword(credentialsId: 'Technical_Bitbucket_User_ID', usernameVariable: 'USER_ID', passwordVariable: 'USER_PW')]) {
             configFileProvider(
                     [configFile(fileId: 'd61408c0-d8e7-43c0-bf1b-4ba9f11f7736', variable: 'MAVEN_SETTINGS')]) {
                 sh "git config user.email '<Jenkinscommituser.IoTHub@bosch-si.com>'"
                 sh "git config user.name '${USER_ID}'"
                 sh "git config remote.origin.url 'https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git'"
                 sh "git remote set-url origin 'https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git'"
-                sh "${mvnHome}/bin/mvn -s ${MAVEN_SETTINGS} clean deploy -Pbuild-docker-image,run-tests scm:tag -Drevision=${buildVersion} -DskipStaging=true -DconnectionUrl='scm:git:https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git' -Ddocker.host.name=sazvl0062.saz.bosch-si.com -Ddocker.host=tcp://10.56.22.164:2376"
+                sh "${mvnHome}/bin/mvn -B -s ${MAVEN_SETTINGS} clean deploy -Pbuild-docker-image,run-tests scm:tag -Drevision=${buildVersion} -DskipStaging=true -DconnectionUrl='scm:git:https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git' -Ddocker.host.name=sazvl0062.saz.bosch-si.com"
 
                 // deploy documentation to nginx via shared directory
                 sh "rm -rf /home/jenkins-slave/docker-share/hono-site"
                 sh "mkdir -p /home/jenkins-slave/docker-share/hono-site"
                 sh "cp -R site/target/* /home/jenkins-slave/docker-share/hono-site"
             }
+        }
+    }
+    stage('Push to Docker Hub') {
+        withCredentials([usernamePassword(credentialsId: 'cred-dockerhub-iothubtech', usernameVariable: 'DOCKERHUB_USER_ID', passwordVariable: 'DOCKERHUB_USER_PW')]) {
+            // rename/tag images
+            sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:${buildVersion}"
+            sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
+            sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
+            sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:latest"
+
+            // push to dockerhub
+            sh "docker login -u $DOCKERHUB_USER_ID -p $DOCKERHUB_USER_PW"
+            sh "docker push bsinno/hono-adapter-rest-vertx:${buildVersion}"
+            sh "docker push bsinno/hono-adapter-rest-vertx:latest"
+            sh "docker push bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
+            sh "docker push bsinno/hono-adapter-mqtt-vertx:latest"
         }
     }
 }
