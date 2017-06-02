@@ -167,20 +167,22 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
         Objects.requireNonNull(firstServiceInstance);
         final Future<Void> result = Future.future();
         @SuppressWarnings("rawtypes")
-        List<Future> deploymentTracker = new ArrayList<>();
-        if (Verticle.class.isInstance(firstServiceInstance)) {
+        final List<Future> deploymentTracker = new ArrayList<>();
+        if (!Verticle.class.isInstance(firstServiceInstance)) {
+            result.fail("service class is not a Verticle");
+        } else {
             customizeServiceInstance(firstServiceInstance);
             final Future<String> deployTracker = Future.future();
             vertx.deployVerticle((Verticle) firstServiceInstance, deployTracker.completer());
             deploymentTracker.add(deployTracker);
 
             for (int i = 0; i < maxInstances; i++) {
-                S serviceInstance = serviceFactory.getObject();
+                final S serviceInstance = serviceFactory.getObject();
                 log.debug("created new instance of service: " + serviceInstance);
                 if (Verticle.class.isInstance(serviceInstance)) {
                     customizeServiceInstance(serviceInstance);
                     final Future<String> tracker = Future.future();
-                    vertx.deployVerticle((Verticle) serviceInstance, deployTracker.completer());
+                    vertx.deployVerticle((Verticle) serviceInstance, tracker.completer());
                     deploymentTracker.add(tracker);
                 }
             }
@@ -192,8 +194,6 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
                     result.fail(s.cause());
                 }
             });
-        } else {
-            result.fail("service class is not a Verticle");
         }
 
         return result;
@@ -222,23 +222,23 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
             preShutdown();
             final CountDownLatch latch = new CountDownLatch(1);
             if (vertx != null) {
-                log.debug("shutting down Hono server...");
+                log.debug("shutting down application...");
                 vertx.close(r -> {
                     if (r.failed()) {
-                        log.error("could not shut down Hono cleanly", r.cause());
+                        log.error("could not shut down application cleanly", r.cause());
                     }
                     latch.countDown();
                 });
             }
             if (latch.await(maxWaitTime, TimeUnit.SECONDS)) {
-                log.info("Hono server has been shut down successfully");
+                log.info("application has been shut down successfully");
                 shutdownHandler.handle(Boolean.TRUE);
             } else {
-                log.error("shut down of Hono server timed out, aborting...");
+                log.error("shut down timed out, aborting...");
                 shutdownHandler.handle(Boolean.FALSE);
             }
         } catch (InterruptedException e) {
-            log.error("shut down of Hono server has been interrupted, aborting...");
+            log.error("shut down has been interrupted, aborting...");
             Thread.currentThread().interrupt();
             shutdownHandler.handle(Boolean.FALSE);
         }
