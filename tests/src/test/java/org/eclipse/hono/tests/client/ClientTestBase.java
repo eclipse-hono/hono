@@ -310,13 +310,8 @@ public abstract class ClientTestBase {
 
     private void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
         ctx.assertNotNull(MessageHelper.getDeviceId(msg));
-        if (!Boolean.getBoolean("use.qos1")) {
-            // Dispatch Router version < 0.8.0 does not support forwarding of
-            // message annotations over linkRoutes
-            // see https://issues.apache.org/jira/browse/DISPATCH-566
-            ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
-            ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
-        }
+        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
+        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
     }
 
     protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
