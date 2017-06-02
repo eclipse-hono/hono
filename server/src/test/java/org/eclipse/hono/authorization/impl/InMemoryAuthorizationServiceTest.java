@@ -13,7 +13,7 @@ package org.eclipse.hono.authorization.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.eclipse.hono.service.authorization.Activity;
+import org.eclipse.hono.service.auth.Activity;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;

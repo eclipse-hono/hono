@@ -25,13 +25,13 @@ import org.junit.Test;
  * Test cases verifying behavior of {@code AcceptAllPlainAuthenticationService}.
  *
  */
-public class AcceptAllPlainAuthenticationServiceTest {
+public class FileBasedAuthenticationServiceTest {
 
-    AcceptAllPlainAuthenticationService authService;
+    FileBasedAuthenticationService authService;
 
     @Before
     public void setUp() {
-        authService = new AcceptAllPlainAuthenticationService();
+        authService = new FileBasedAuthenticationService();
     }
 
     /**

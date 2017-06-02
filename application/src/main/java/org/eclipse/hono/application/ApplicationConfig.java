@@ -15,12 +15,12 @@ package org.eclipse.hono.application;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerConfigProperties;
-import org.eclipse.hono.server.HonoServerFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
+import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,15 +46,15 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes the {@link HonoServerFactory} as a Spring bean.
+     * Exposes a factory for {@code HonoServer} instances as a Spring bean.
      * 
-     * @return A Spring service locator for the factory.
+     * @return The factory.
      */
     @Bean
-    public ServiceLocatorFactoryBean honoServerFactoryLocator() {
-        ServiceLocatorFactoryBean bean = new ServiceLocatorFactoryBean();
-        bean.setServiceLocatorInterface(HonoServerFactory.class);
-        return bean;
+    public ObjectFactoryCreatingFactoryBean honoServerFactory() {
+        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        factory.setTargetBeanName(HonoServer.class.getName());
+        return factory;
     }
 
     /**

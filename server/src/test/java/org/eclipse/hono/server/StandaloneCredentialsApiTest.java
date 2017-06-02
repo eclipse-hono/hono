@@ -18,7 +18,8 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
-import org.eclipse.hono.authentication.impl.AcceptAllPlainAuthenticationService;
+
+import org.eclipse.hono.authentication.impl.FileBasedAuthenticationService;
 import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
@@ -91,7 +92,7 @@ public class StandaloneCredentialsApiTest {
         Future<String> authTracker = Future.future();
 
         vertx.deployVerticle(credentialsAdapter, credentialsTracker.completer());
-        vertx.deployVerticle(AcceptAllPlainAuthenticationService.class.getName(), authenticationTracker.completer());
+        vertx.deployVerticle(FileBasedAuthenticationService.class.getName(), authenticationTracker.completer());
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
 
         CompositeFuture.all(credentialsTracker, authTracker)

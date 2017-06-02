@@ -26,10 +26,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-import org.eclipse.hono.service.authorization.AccessControlList;
-import org.eclipse.hono.service.authorization.AclEntry;
-import org.eclipse.hono.service.authorization.BaseAuthorizationService;
-import org.eclipse.hono.service.authorization.Activity;
+import org.eclipse.hono.service.auth.AccessControlList;
+import org.eclipse.hono.service.auth.AclEntry;
+import org.eclipse.hono.service.auth.BaseAuthorizationService;
+import org.eclipse.hono.service.auth.Activity;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

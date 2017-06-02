@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.authentication.impl;
+package org.eclipse.hono.service.auth;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -17,7 +17,6 @@ import java.util.List;
 
 import javax.security.auth.login.CredentialException;
 
-import org.eclipse.hono.authentication.AuthenticationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +29,7 @@ import io.vertx.core.buffer.Buffer;
  * A base class for implementing <a href="https://tools.ietf.org/html/rfc4616">PLAIN SASL</a>
  * based authentication.
  */
-public abstract class AbstractPlainAuthenticationService extends BaseAuthenticationService {
+public abstract class AbstractHonoAuthenticationService extends BaseAuthenticationService {
 
     /**
      * A logger to be used by subclasses.
@@ -102,6 +101,6 @@ public abstract class AbstractPlainAuthenticationService extends BaseAuthenticat
      * @param authenticationResultHandler The handler to invoke with the authentication result. If authentication succeeds,
      *                                    the result contains the authorization ID granted to the client.
      */
-    abstract void verify(final String authzid, final String authcid, final String password,
+    public abstract void verify(final String authzid, final String authcid, final String password,
             final Handler<AsyncResult<String>> authenticationResultHandler);
 }

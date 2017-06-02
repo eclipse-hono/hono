@@ -20,7 +20,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.config.ServiceLocatorFactoryBean;
+import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,9 +35,9 @@ public class Config extends AdapterConfig {
     @Autowired(required = false)
     @Qualifier("registration")
     private ConnectionFactory registrationServiceConnectionFactory;
-    
+
     @Override
-    protected void customizeClientConfigProperties(ClientConfigProperties props) {
+    protected void customizeClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName("Hono REST Adapter");
         }
@@ -60,7 +60,7 @@ public class Config extends AdapterConfig {
     }
 
     @Override
-    protected void customizeRegistrationServiceClientConfigProperties(ClientConfigProperties props) {
+    protected void customizeRegistrationServiceClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName("Hono REST Adapter");
         }
@@ -104,9 +104,9 @@ public class Config extends AdapterConfig {
      * @return The factory bean.
      */
     @Bean
-    public ServiceLocatorFactoryBean serviceLocator() {
-        ServiceLocatorFactoryBean bean = new ServiceLocatorFactoryBean();
-        bean.setServiceLocatorInterface(RestAdapterFactory.class);
-        return bean;
+    public ObjectFactoryCreatingFactoryBean serviceFactory() {
+        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        factory.setTargetBeanName(VertxBasedRestProtocolAdapter.class.getName());
+        return factory;
     }
 }

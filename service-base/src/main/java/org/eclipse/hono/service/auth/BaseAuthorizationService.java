@@ -9,9 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.service.authorization;
-
-import static org.eclipse.hono.service.authorization.AuthorizationConstants.*;
+package org.eclipse.hono.service.auth;
 
 import java.util.Objects;
 
@@ -75,7 +73,7 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
 
     @Override
     public final void start(final Future<Void> startFuture) {
-        String listenAddress = EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
+        String listenAddress = AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
         authRequestConsumer = vertx.eventBus().consumer(listenAddress);
         authRequestConsumer.handler(this::processMessage);
         LOG.info("listening on event bus [address: {}] for incoming auth messages", listenAddress);
@@ -118,12 +116,12 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
 
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
-        final String authSubject = body.getString(AUTH_SUBJECT_FIELD);
-        final Activity permission = Activity.valueOf(body.getString(PERMISSION_FIELD));
-        final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(RESOURCE_FIELD));
+        final String authSubject = body.getString(AuthorizationConstants.AUTH_SUBJECT_FIELD);
+        final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.PERMISSION_FIELD));
+        final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(AuthorizationConstants.RESOURCE_FIELD));
 
         boolean hasPermission = hasPermission(authSubject, resource, permission);
-        message.reply(hasPermission ? ALLOWED : DENIED);
+        message.reply(hasPermission ? AuthorizationConstants.ALLOWED : AuthorizationConstants.DENIED);
         LOG.debug("subject [{}] is {}allowed to {} on resource [{}]", authSubject,
                 hasPermission ? "" : "not ", permission, resource);
     }

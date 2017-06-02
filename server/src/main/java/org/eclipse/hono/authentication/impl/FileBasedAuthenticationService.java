@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.authentication.impl;
 
+import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -23,10 +24,10 @@ import io.vertx.core.Handler;
  */
 @Component
 @Profile("!sql-auth")
-public final class AcceptAllPlainAuthenticationService extends AbstractPlainAuthenticationService {
+public final class FileBasedAuthenticationService extends AbstractHonoAuthenticationService {
 
     @Override
-    protected void verify(String authzid, String authcid, String password,
+    public void verify(String authzid, String authcid, String password,
             Handler<AsyncResult<String>> authenticationResultHandler) {
 
         authenticationResultHandler.handle(Future.succeededFuture(authzid.length() > 0 ? authzid : authcid));

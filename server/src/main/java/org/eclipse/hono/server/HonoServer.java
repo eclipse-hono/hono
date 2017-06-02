@@ -13,7 +13,7 @@ package org.eclipse.hono.server;
 
 import static io.vertx.proton.ProtonHelper.condition;
 import static org.apache.qpid.proton.amqp.transport.AmqpError.UNAUTHORIZED_ACCESS;
-import static org.eclipse.hono.service.authorization.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
+import static org.eclipse.hono.service.auth.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
 
 import java.security.Principal;
 import java.util.UUID;
@@ -24,8 +24,8 @@ import org.apache.qpid.proton.engine.Record;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
-import org.eclipse.hono.service.authorization.AuthorizationConstants;
-import org.eclipse.hono.service.authorization.Activity;
+import org.eclipse.hono.service.auth.AuthorizationConstants;
+import org.eclipse.hono.service.auth.Activity;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Red Hat
+ * Copyright (c) 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -7,15 +7,18 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    Red Hat - initial creation
+ *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.mqtt;
+package org.eclipse.hono.auth;
+
+import java.security.Principal;
+
 
 /**
- * A factory for creating {@link VertxBasedMqttProtocolAdapter} instances.
+ * A principal representing a client of a Hono service API.
+ *
  */
-public interface MqttAdapterFactory {
+public interface HonoUser extends Principal {
 
-    VertxBasedMqttProtocolAdapter getMqttAdapter();
 }

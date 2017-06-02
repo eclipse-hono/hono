@@ -23,11 +23,13 @@ import java.util.concurrent.TimeUnit;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
 import org.eclipse.hono.service.amqp.Endpoint;
-import org.eclipse.hono.service.authorization.AuthorizationConstants;
-import org.eclipse.hono.service.authorization.Activity;
+import org.eclipse.hono.service.auth.AuthorizationConstants;
+import org.eclipse.hono.service.auth.Activity;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -90,6 +92,11 @@ public class HonoServerTest {
             @Override
             public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
                 linkEstablished.countDown();
+            }
+
+            @Override
+            protected boolean passesFormalVerification(ResourceIdentifier targetAddress, Message message) {
+                return true;
             }
         };
         HonoServer server = createServer(telemetryEndpoint);
@@ -176,7 +183,7 @@ public class HonoServerTest {
     private static ProtonConnection newAuthenticatedConnection(final String name) {
         final Record attachments = new RecordImpl();
         attachments.set(Constants.KEY_CONNECTION_ID, String.class, CON_ID);
-        attachments.set(Constants.KEY_CLIENT_PRINCIPAL, Principal.class, new Principal() {
+        attachments.set(Constants.KEY_CLIENT_PRINCIPAL, HonoUser.class, new HonoUser() {
 
             @Override
             public String getName() {

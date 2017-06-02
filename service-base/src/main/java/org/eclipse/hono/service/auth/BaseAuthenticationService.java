@@ -9,11 +9,8 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.authentication.impl;
+package org.eclipse.hono.service.auth;
 
-import static org.eclipse.hono.authentication.AuthenticationConstants.*;
-
-import org.eclipse.hono.authentication.AuthenticationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +32,7 @@ public abstract class BaseAuthenticationService extends AbstractVerticle impleme
 
     @Override
     public final void start(final Future<Void> startFuture) {
-        String listenAddress = EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
+        String listenAddress = AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
         authRequestConsumer = vertx.eventBus().consumer(listenAddress);
         authRequestConsumer.handler(this::processMessage);
         LOG.info("listening on event bus [address: {}] for incoming authentication messages", listenAddress);
@@ -78,18 +75,18 @@ public abstract class BaseAuthenticationService extends AbstractVerticle impleme
 
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
-        final String mechanism = body.getString(FIELD_MECHANISM);
+        final String mechanism = body.getString(AuthenticationConstants.FIELD_MECHANISM);
         if (!isSupported(mechanism)) {
-            replyWithError(message, ERROR_CODE_UNSUPPORTED_MECHANISM, "unsupported SASL mechanism");
+            replyWithError(message, AuthenticationConstants.ERROR_CODE_UNSUPPORTED_MECHANISM, "unsupported SASL mechanism");
         } else {
-            final byte[] response = body.getBinary(FIELD_RESPONSE);
+            final byte[] response = body.getBinary(AuthenticationConstants.FIELD_RESPONSE);
             LOG.debug("received authentication request [mechanism: {}, response: {}]", mechanism, response != null ? "*****" : "empty");
 
             validateResponse(mechanism, response, validation -> {
                 if (validation.succeeded()) {
                     replyWithAuthorizationId(message, validation.result());
                 } else {
-                    replyWithError(message, ERROR_CODE_AUTHENTICATION_FAILED, validation.cause().getMessage());
+                    replyWithError(message, AuthenticationConstants.ERROR_CODE_AUTHENTICATION_FAILED, validation.cause().getMessage());
                 }
             });
         }
@@ -100,6 +97,6 @@ public abstract class BaseAuthenticationService extends AbstractVerticle impleme
     }
 
     private void replyWithAuthorizationId(final Message<JsonObject> message, final String authzId) {
-        message.reply(new JsonObject().put(FIELD_AUTHORIZATION_ID, authzId));
+        message.reply(new JsonObject().put(AuthenticationConstants.FIELD_AUTHORIZATION_ID, authzId));
     }
 }
