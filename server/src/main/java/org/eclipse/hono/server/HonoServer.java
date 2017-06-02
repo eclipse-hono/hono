@@ -18,7 +18,6 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
@@ -154,8 +153,8 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
                             receiver.setTarget(receiver.getRemoteTarget());
                             endpoint.onLinkAttach(receiver, targetResource);
                         } else {
-                            final String message = String.format("subject [%s] is not authorized to WRITE to [%s]", user, targetResource);
-                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), message)).close();
+                            LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
+                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
                         }
                     });
                 }
@@ -217,8 +216,8 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
                         sender.setSource(sender.getRemoteSource());
                         endpoint.onLinkAttach(sender, targetResource);
                     } else {
-                        final String message = String.format("subject [%s] is not authorized to READ from [%s]", user, targetResource);
-                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), message)).close();
+                        LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
+                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
                     }
                 });
             }
