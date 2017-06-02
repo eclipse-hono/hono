@@ -83,18 +83,18 @@ public final class Constants {
         private final Authorities authorities = new Authorities() {
 
             @Override
-            public boolean isAuthorized(String endpoint, String tenant, String operation) {
-                return false;
+            public Map<String, Object> asMap() {
+                return Collections.emptyMap();
             }
-            
+
             @Override
-            public boolean isAuthorized(String endpoint, String tenant, Activity intent) {
+            public boolean isAuthorized(final ResourceIdentifier resourceId, final Activity intent) {
                 return false;
             }
 
             @Override
-            public Map<String, Object> asMap() {
-                return Collections.emptyMap();
+            public boolean isAuthorized(final ResourceIdentifier resourceId, final String operation) {
+                return false;
             }
         };
 

@@ -16,6 +16,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.eclipse.hono.util.ResourceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.jsonwebtoken.Claims;
 
 /**
@@ -24,6 +28,7 @@ import io.jsonwebtoken.Claims;
  */
 public final class AuthoritiesImpl implements Authorities {
 
+    private static final Logger LOG = LoggerFactory.getLogger(AuthoritiesImpl.class);
     private static final String opTemplate = "o:%s:%s";
     private static final String resTemplate = "r:%s";
     // holds mapping resources -> activities
@@ -47,9 +52,10 @@ public final class AuthoritiesImpl implements Authorities {
         AuthoritiesImpl result = new AuthoritiesImpl();
         claims.forEach((key, value) -> {
             if ((key.startsWith("o:") || key.startsWith("r:")) && value instanceof String) {
+                LOG.debug("adding claim [key: {}, value: {}]", key, value);
                 result.authorities.put(key, (String) value);
             } else {
-                // unsupported claim
+                LOG.debug("ignoring unsupported claim [key: {}]", key);
             }
         });
         return result;
@@ -93,33 +99,57 @@ public final class AuthoritiesImpl implements Authorities {
         return this;
     }
 
+    /**
+     * Adds all authorities contained in another object to this instance.
+     * 
+     * @param authoritiesToAdd The object containing the authorities to add.
+     * @return This instance for command chaining.
+     */
     public AuthoritiesImpl addAll(final Authorities authoritiesToAdd) {
         authoritiesToAdd.asMap().entrySet().stream()
             .filter(entry -> entry.getValue() instanceof String)
-            .forEach(entry -> authorities.put(entry.getKey(), (String) entry.getValue()));
+            .forEach(entry -> {
+                String value = (String) entry.getValue();
+                LOG.debug("adding authority [key: {}, activities: {}]", entry.getKey(), value);
+                authorities.put(entry.getKey(), value);
+            });
         return this;
     }
 
     @Override
-    public boolean isAuthorized(final String endpoint, final String tenant, final Activity intent) {
+    public boolean isAuthorized(final ResourceIdentifier resource, final Activity intent) {
 
-        if (tenant == null) {
-            return isAuthorized(String.format(resTemplate, endpoint), intent);
-        } else {
-            return isAuthorized(String.format(resTemplate, endpoint + "/" + tenant), intent) ||
-                    isAuthorized(String.format(resTemplate, endpoint + "/*"), intent);
+        boolean allowed = false;
+        if (resource.getResourceId() != null) {
+            allowed = isAuthorized(String.format(resTemplate, resource.toString()), intent);
         }
+        if (!allowed && resource.getTenantId() != null) {
+            allowed = isAuthorized(String.format(resTemplate, resource.getEndpoint() + "/" + resource.getTenantId()), intent) ||
+                    isAuthorized(String.format(resTemplate, resource.getEndpoint() + "/*"), intent);
+        }
+        if (!allowed) {
+            allowed = isAuthorized(String.format(resTemplate, resource.getEndpoint()), intent) ||
+                    isAuthorized(String.format(resTemplate, "*"), intent);
+        }
+        return allowed;
     }
 
     @Override
-    public boolean isAuthorized(final String endpoint, final String tenant, final String operation) {
+    public boolean isAuthorized(final ResourceIdentifier resource, final String operation) {
 
-        if (tenant == null) {
-            return isAuthorized(String.format(opTemplate, endpoint, operation), Activity.EXECUTE);
-        } else {
-            return isAuthorized(String.format(opTemplate, endpoint + "/" + tenant, operation), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, endpoint + "/*", operation), Activity.EXECUTE);
+        boolean allowed = false;
+        if (resource.getResourceId() != null) {
+            allowed = isAuthorized(String.format(opTemplate, resource.toString(), operation), Activity.EXECUTE);
         }
+        if (!allowed && resource.getTenantId() != null) {
+            allowed = isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/" + resource.getTenantId(), operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/*", operation), Activity.EXECUTE);
+        }
+        if (!allowed) {
+            allowed = isAuthorized(String.format(opTemplate, resource.getEndpoint(), operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(opTemplate, "*", operation), Activity.EXECUTE);
+        }
+        return allowed;
     }
 
     @Override
@@ -130,11 +160,14 @@ public final class AuthoritiesImpl implements Authorities {
     }
 
     boolean isAuthorized(final String key, final Activity intent) {
+        boolean result = false;
         String grantedActivities = authorities.get(key);
         if (grantedActivities == null) {
-            return false;
+            LOG.debug("no claim for key [{}]", key);
         } else {
-            return grantedActivities.contains(String.valueOf(intent.getCode()));
+            result = grantedActivities.contains(String.valueOf(intent.getCode()));
+            LOG.debug("found claim [key: {}, activities: {}] {}matching intent [{}]", key, grantedActivities, result ? "" : "not ", intent.name());
         }
+        return result;
     }
 }
