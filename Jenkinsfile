@@ -40,6 +40,8 @@ node {
             sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
             sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
             sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:latest"
+            sh "docker tag eclipsehono/dispatch-router:${buildVersion} bsinno/iot-hub-dispatch-router:${buildVersion}"
+            sh "docker tag eclipsehono/dispatch-router:${buildVersion} bsinno/iot-hub-dispatch-router:latest"
 
             // push to dockerhub
             sh "docker login -u $DOCKERHUB_USER_ID -p $DOCKERHUB_USER_PW"
@@ -47,6 +49,8 @@ node {
             sh "docker push bsinno/hono-adapter-rest-vertx:latest"
             sh "docker push bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
             sh "docker push bsinno/hono-adapter-mqtt-vertx:latest"
+            sh "docker push bsinno/iot-hub-dispatch-router:${buildVersion}"
+            sh "docker push bsinno/iot-hub-dispatch-router:latest"
         }
     }
 }
