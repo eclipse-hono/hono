@@ -22,7 +22,7 @@ public class SignatureSupportingConfigProperties {
 
     private String sharedSecret;
     private String keyPath;
-    private long tokenExpiration = 10L;
+    private long tokenExpirationSeconds = 600L;
     private String certificatePath;
 
     /**
@@ -72,29 +72,27 @@ public class SignatureSupportingConfigProperties {
     }
 
     /**
-     * Gets the period of time after which tokens asserting the registration status of devices
-     * expire.
+     * Gets the period of time after which tokens created using this configuration should expire.
      * 
-     * @return The number of minutes after which tokens expire.
+     * @return The number of seconds after which tokens expire.
      */
     public final long getTokenExpiration() {
-        return tokenExpiration;
+        return tokenExpirationSeconds;
     }
 
     /**
-     * Sets the expiration period to use for tokens asserting the
-     * registration status of devices.
+     * Sets the period of time after which tokens created using this configuration should expire.
      * <p>
-     * The default value is 10 minutes.
+     * The default value is 600 seconds (10 minutes).
      * 
-     * @param minutes The number of minutes after which tokens expire.
-     * @throws IllegalArgumentException if minutes is &lt;= 0.
+     * @param seconds The number of seconds after which tokens expire.
+     * @throws IllegalArgumentException if seconds is &lt;= 0.
      */
-    public final void setTokenExpiration(final long minutes) {
-        if (minutes <= 0) {
+    public final void setTokenExpiration(final long seconds) {
+        if (seconds <= 0) {
             throw new IllegalArgumentException("token expiration must be > 0");
         }
-        this.tokenExpiration = minutes;
+        this.tokenExpirationSeconds = seconds;
     }
 
     /**
@@ -125,7 +123,7 @@ public class SignatureSupportingConfigProperties {
      * 
      * @return {@code true} if any of sharedSecret or keyPath is not {@code null}.
      */
-    public boolean isAppropriateForCreating() {
+    public final boolean isAppropriateForCreating() {
         return sharedSecret != null || keyPath != null;
     }
 
@@ -134,7 +132,7 @@ public class SignatureSupportingConfigProperties {
      * 
      * @return {@code true} if any of sharedSecret or certificatePath is not {@code null}.
      */
-    public boolean isAppropriateForValidating() {
+    public final boolean isAppropriateForValidating() {
         return sharedSecret != null || certificatePath != null;
     }
 

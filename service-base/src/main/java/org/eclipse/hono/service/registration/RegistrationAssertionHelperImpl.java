@@ -11,8 +11,8 @@
  */
 package org.eclipse.hono.service.registration;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Objects;
 
@@ -56,7 +56,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
             throw new IllegalArgumentException("configuration does not specify any signing key material");
         } else {
             RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl(vertx);
-            result.tokenExpirationMinutes = config.getTokenExpiration();
+            result.tokenLifetime = Duration.ofMinutes(config.getTokenExpiration());
             if (config.getSharedSecret() != null) {
                 byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
@@ -108,7 +108,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
         Objects.requireNonNull(sharedSecret);
         RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl();
         result.setSharedSecret(getBytes(sharedSecret));
-        result.tokenExpirationMinutes = tokenExpiration;
+        result.tokenLifetime = Duration.ofMinutes(tokenExpiration);
         return result;
     }
 
@@ -122,7 +122,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
         return Jwts.builder().signWith(algorithm, key)
                 .setSubject(deviceId)
                 .claim("ten", tenantId)
-                .setExpiration(Date.from(Instant.now().plus(tokenExpirationMinutes, ChronoUnit.MINUTES)))
+                .setExpiration(Date.from(Instant.now().plus(tokenLifetime)))
                 .compact();
     }
 

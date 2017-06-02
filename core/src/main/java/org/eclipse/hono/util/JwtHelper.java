@@ -34,6 +34,7 @@ public abstract class JwtHelper {
 
     private static final Key DUMMY_KEY = new SecretKeySpec(new byte[]{ 0x00,  0x01 }, SignatureAlgorithm.HS256.getJcaName());
     private final Vertx vertx;
+
     /**
      * The signature algorithm used for signing.
      */
@@ -43,9 +44,9 @@ public abstract class JwtHelper {
      */
     protected Key key;
     /**
-     * The lifetime of created tokens in minutes.
+     * The lifetime of created tokens.
      */
-    protected long tokenExpirationMinutes;
+    protected Duration tokenLifetime;
 
     /**
      * Creates a new helper for a vertx instance.
@@ -114,6 +115,19 @@ public abstract class JwtHelper {
         if (key == null) {
             throw new IllegalArgumentException("cannot load private key");
         }
+    }
+
+    /**
+     * Gets the duration being used for calculating the <em>exp</em> claim of tokens
+     * created by this class.
+     * <p>
+     * Clients should always check if a token is expired before using any information
+     * contained in the token.
+     *  
+     * @return The duration.
+     */
+    public final Duration getTokenLifetime() {
+        return tokenLifetime;
     }
 
     /**
