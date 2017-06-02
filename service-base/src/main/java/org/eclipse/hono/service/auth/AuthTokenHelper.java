@@ -46,7 +46,7 @@ public interface AuthTokenHelper {
      * <li>contains the authorization id in the <em>sub</em> claim.</li>
      * <li>contains the authorities (as returned by {@link Authorities#asMap()}) as claims.</li>
      * <li>expires after the {@linkplain #getTokenLifetime() configured expiration time}.</li>
-     * <li>contains a signature of the claims.</em>
+     * <li>contains a signature of the claims.</li>
      * </ul>
      * 
      * @param authorizationId The asserted identity.

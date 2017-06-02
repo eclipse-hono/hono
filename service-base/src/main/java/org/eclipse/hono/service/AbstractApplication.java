@@ -154,7 +154,7 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
      * <p>
      * This default implementation simply returns a succeeded future.
      * 
-     * @param maxInstances
+     * @param maxInstances The number of service verticle instances to deploy.
      * @return A future indicating success. Application start-up fails if the
      *         returned future fails.
      */

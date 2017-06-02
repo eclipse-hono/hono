@@ -219,11 +219,11 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
      * Wraps a given device ID and registration data into a JSON structure suitable
      * to be returned to clients as the result of a registration operation.
      * 
-     * @param deviceId 
-     * @param type 
-     * @param authId 
-     * @param enabled 
-     * @param secrets 
+     * @param deviceId The identifier of the device.
+     * @param type The type of credentials returned.
+     * @param authId The authentication identifier the device uses.
+     * @param enabled {@code true} if the returned credentials may be used to authenticate.
+     * @param secrets The secrets that need to be used in conjunction with the authentication identifier.
      * @return The JSON structure.
      */
     protected final static JsonObject getResultPayload(final String deviceId, final  String type, final String authId, final boolean enabled, final JsonArray secrets) {
