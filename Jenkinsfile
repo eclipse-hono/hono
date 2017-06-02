@@ -36,6 +36,8 @@ node {
     stage('Push to Docker Hub') {
         withCredentials([usernamePassword(credentialsId: 'cred-dockerhub-iothubtech', usernameVariable: 'DOCKERHUB_USER_ID', passwordVariable: 'DOCKERHUB_USER_PW')]) {
             // rename/tag images
+            sh "docker tag eclipsehono/hono-server:${buildVersion} bsinno/hono-server:${buildVersion}"
+            sh "docker tag eclipsehono/hono-server:${buildVersion} bsinno/hono-server:latest"
             sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:${buildVersion}"
             sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
             sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
@@ -45,6 +47,8 @@ node {
 
             // push to dockerhub
             sh "docker login -u $DOCKERHUB_USER_ID -p $DOCKERHUB_USER_PW"
+            sh "docker push bsinno/hono-server:${buildVersion}"
+            sh "docker push bsinno/hono-server:latest"
             sh "docker push bsinno/hono-adapter-rest-vertx:${buildVersion}"
             sh "docker push bsinno/hono-adapter-rest-vertx:latest"
             sh "docker push bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
