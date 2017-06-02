@@ -77,19 +77,49 @@ public final class AuthoritiesImpl implements Authorities {
         }
     }
 
+    /**
+     * Adds an authority to execute an operation.
+     * 
+     * @param resource The resource the operation belongs to.
+     * @param operation The operation.
+     * @return This instance for command chaining.
+     */
     public AuthoritiesImpl addOperation(final String resource, final String operation) {
         return addOperation(resource, null, operation);
     }
 
+    /**
+     * Adds an authority to execute an operation.
+     * 
+     * @param endpoint The endpoint segment of the resource the operation belongs to.
+     * @param tenant The tenant segment of the resource the operation belongs to.
+     * @param operation The operation.
+     * @return This instance for command chaining.
+     */
     public AuthoritiesImpl addOperation(final String endpoint, final String tenant, final String operation) {
         authorities.put(getOperationKey(endpoint, tenant, operation), String.valueOf(Activity.EXECUTE.getCode()));
         return this;
     }
 
+    /**
+     * Adds an authority to perform one or more activities on a resource.
+     * 
+     * @param resource The resource.
+     * @param activities The activities.
+     * @return This instance for command chaining.
+     */
     public AuthoritiesImpl addResource(final String resource, final Activity... activities) {
         return addResource(resource, null, activities);
     }
 
+    /**
+     * Adds an authority to perform one or more activities on a resource.
+     * 
+     * @param endpoint The endpoint segment of the resource.
+     * @param tenant The tenant segment of the resource.
+     * @param activities The activities.
+     * @return This instance for command chaining.
+     */
     public AuthoritiesImpl addResource(final String endpoint, final String tenant, final Activity... activities) {
         StringBuilder b = new StringBuilder();
         for (Activity a : activities) {
