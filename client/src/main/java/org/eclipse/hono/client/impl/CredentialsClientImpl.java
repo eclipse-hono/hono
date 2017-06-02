@@ -39,7 +39,7 @@ import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_STATUS;
  * A Vertx-Proton based client for Hono's Credentials API.
  *
  */
-public final class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsClient,CredentialsResult> implements CredentialsClient {
+public final class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsClient, CredentialsResult> implements CredentialsClient {
 
     private static final String                  CREDENTIALS_NAME = "credentials";
 

@@ -38,7 +38,7 @@ import io.vertx.proton.ProtonConnection;
  * A Vertx-Proton based client for Hono's Registration API.
  *
  */
-public final class RegistrationClientImpl extends AbstractRequestResponseClient<RegistrationClient,RegistrationResult> implements RegistrationClient {
+public final class RegistrationClientImpl extends AbstractRequestResponseClient<RegistrationClient, RegistrationResult> implements RegistrationClient {
 
     private static final Logger                  LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
     private static final String                  REGISTRATION_NAME = "registration";

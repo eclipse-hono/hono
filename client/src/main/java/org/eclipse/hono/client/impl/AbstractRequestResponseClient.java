@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * A subclass of this class only needs to implement some abstract helper methods (see the method descriptions) and their own
  * API specific methods. This allows for implementation classes that focus on the API specific code.
  */
-public abstract class AbstractRequestResponseClient<C extends RequestResponseClient,R extends RequestResponseResult>
+public abstract class AbstractRequestResponseClient<C extends RequestResponseClient, R extends RequestResponseResult>
         extends AbstractHonoClient implements RequestResponseClient {
 
     private static final Logger           LOG = LoggerFactory.getLogger(AbstractRequestResponseClient.class);
@@ -147,11 +147,13 @@ public abstract class AbstractRequestResponseClient<C extends RequestResponseCli
      * @param appProperties The map containing arbitrary application properties.
      *                      Maybe null if no application properties are needed.
      * @return The Proton message constructed from the provided parameters.
+     * @throws IllegalArgumentException if the application properties contain not AMQP 1.0 compatible values
+     *                  (see {@link AbstractHonoClient#setApplicationProperties(Message, Map)}
      */
     protected Message createMessage(final String subject, final Map<String, Object> appProperties) {
         final Message msg = ProtonHelper.message();
         final String messageId = createMessageId();
-        msg.setApplicationProperties(new ApplicationProperties(appProperties));
+        setApplicationProperties(msg,appProperties);
         msg.setReplyTo(replyToAddress);
         msg.setMessageId(messageId);
         msg.setSubject(subject);
@@ -184,6 +186,13 @@ public abstract class AbstractRequestResponseClient<C extends RequestResponseCli
         sendMessage(request, resultHandler);
     }
 
+    /**
+     * Send the Proton message to the endpoint link and call the resultHandler later with the result object.
+     *
+     * @param request The Proton message that was fully prepared for sending.
+     * @param resultHandler The result handler to be called with the response and the status of the request.
+     */
+    // TODO: improve so that the available credits are checked. Wait for enough credits before sending first.
     protected final void sendMessage(final Message request, final Handler<AsyncResult<R>> resultHandler) {
 
         context.runOnContext(req -> {

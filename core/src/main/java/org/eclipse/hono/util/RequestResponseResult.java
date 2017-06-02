@@ -31,14 +31,14 @@ public class RequestResponseResult {
     /**
      * @return the status
      */
-    public int getStatus() {
+    public final int getStatus() {
         return status;
     }
 
     /**
      * @return the payload
      */
-    public JsonObject getPayload() {
+    public final JsonObject getPayload() {
         return payload;
     }
 }
