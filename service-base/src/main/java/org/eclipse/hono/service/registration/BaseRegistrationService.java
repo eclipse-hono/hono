@@ -16,8 +16,6 @@ import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.Objects;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -26,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -39,10 +38,8 @@ import io.vertx.core.json.JsonObject;
  * In particular, this base class provides support for parsing registration request messages
  * received via the event bus and route them to specific methods corresponding to the <em>action</em>
  * indicated in the message.
- * 
- * @param <T> The type of configuration properties this service supports.
  */
-public abstract class BaseRegistrationService<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> implements RegistrationService {
+public abstract class BaseRegistrationService extends AbstractVerticle implements RegistrationService {
 
     /**
      * A logger to be shared by subclasses.

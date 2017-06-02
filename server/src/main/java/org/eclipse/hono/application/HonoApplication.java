@@ -11,8 +11,8 @@
  */
 package org.eclipse.hono.application;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.server.HonoServer;
+import org.eclipse.hono.server.HonoServerConfigProperties;
 import org.eclipse.hono.service.AbstractApplication;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.AuthorizationService;
@@ -35,7 +35,7 @@ import io.vertx.core.Verticle;
  * of instances to create. This may be useful for executing tests etc.
  * </p>
  */
-public class HonoApplication extends AbstractApplication<HonoServer, ServiceConfigProperties> {
+public class HonoApplication extends AbstractApplication<HonoServer, HonoServerConfigProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoApplication.class);
 
