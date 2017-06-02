@@ -30,11 +30,11 @@ import io.vertx.core.json.JsonObject;
  * Registration API specification</a> for a description of the result codes returned.
  * </p>
  */
-public interface RegistrationClient {
+public interface RegistrationClient extends RequestResponseClient {
 
     /**
      * Asserts that a device is registered with a given tenant and is enabled.
-     * 
+     *
      * @param deviceId The ID of the device to get the assertion for.
      * @param resultHandler The handler to invoke with the result of the operation. If a device with the
      *         given ID is registered for the tenant and its <em>enabled</em> property is {@code true},
@@ -46,7 +46,7 @@ public interface RegistrationClient {
 
     /**
      * Checks whether a given device is registered.
-     * 
+     *
      * @param deviceId The id of the device to check.
      * @param resultHandler The handler to invoke with the result of the operation.
      */
@@ -54,7 +54,7 @@ public interface RegistrationClient {
 
     /**
      * Finds a device registration by a key that it is registered with.
-     * 
+     *
      * @param key The name of the key to find the device registration under.
      * @param value The value that the key must match.
      * @param resultHandler The handler to invoke with the result of the operation.
@@ -67,7 +67,7 @@ public interface RegistrationClient {
      * A device needs to be (successfully) registered before a client can upload
      * telemetry data for it.
      * </p>
-     * 
+     *
      * @param deviceId The id of the device to register.
      * @param data The data to register with the device.
      * @param resultHandler The handler to invoke with the result of the operation.
@@ -80,11 +80,11 @@ public interface RegistrationClient {
      * A device needs to be (successfully) registered before a client can upload
      * telemetry data for it.
      * </p>
-     * 
+     *
      * @param deviceId The id of the device to register.
      * @param data The data to update the registration with (may be {@code null}).
      *             The original data will be <em>replaced</em> with this data, i.e.
-     *             the data will not be merged with the existing data. 
+     *             the data will not be merged with the existing data.
      * @param resultHandler The handler to invoke with the result of the operation.
      */
     void update(String deviceId, JsonObject data, Handler<AsyncResult<RegistrationResult>> resultHandler);
@@ -95,26 +95,9 @@ public interface RegistrationClient {
      * Once a device has been (successfully) deregistered, no more telemtry data can be uploaded
      * for it nor can commands be sent to it anymore.
      * </p>
-     * 
+     *
      * @param deviceId The id of the device to deregister.
      * @param resultHandler The handler to invoke with the result of the operation.
      */
     void deregister(String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
-
-    /**
-     * Closes the AMQP link(s) with the Hono server this client is configured to use.
-     * <p>
-     * The underlying AMQP connection to the server is not affected by this operation.
-     * </p>
-     * 
-     * @param closeHandler A handler that is called back with the result of the attempt to close the links.
-     */
-    void close(Handler<AsyncResult<Void>> closeHandler);
-
-    /**
-     * Checks if this client's sender and receiver are (locally) open.
-     * 
-     * @return {@code true} if this client can be used to exchange messages with the peer.
-     */
-    boolean isOpen();
 }
