@@ -15,7 +15,11 @@ package org.eclipse.hono.adapter.mqtt;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
+import io.vertx.proton.ProtonDelivery;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -290,13 +294,18 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
     private void doUploadMessage(final String tenant, final String registrationAssertion, final MqttEndpoint endpoint, final MqttPublishMessage message,
             final MessageSender sender, final Future<Void> uploadHandler) {
 
-        boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM, registrationAssertion);
-        if (accepted) {
+        boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM, registrationAssertion, (messageId, delivery) -> {
+            LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
             if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE && endpoint.isConnected()) {
-                endpoint.publishAcknowledge(message.messageId());
-                uploadHandler.complete();
+                if (Accepted.class.isInstance(delivery.getRemoteState())) {
+                    endpoint.publishAcknowledge(message.messageId());
+                    uploadHandler.complete();
+                } else {
+                    uploadHandler.fail("message not accepted by remote");
+                }
             }
-        } else {
+        });
+        if (!accepted) {
             uploadHandler.fail("no credit available for sending message");
         }
     }
