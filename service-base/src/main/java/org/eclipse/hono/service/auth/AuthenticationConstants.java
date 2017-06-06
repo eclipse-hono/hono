@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.service.auth;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -65,16 +66,17 @@ public final class AuthenticationConstants
     }
 
     /**
-     * Creates a message for processing a client's SASL <em>response</em>.
+     * Creates a message for authenticating a client using SASL.
      * 
-     * @param mechanism the SASL mechanism that the response is part of.
-     * @param response the authentication data provided by the client, encoded according to the mechanism.
+     * @param mechanism The SASL mechanism to use for authentication.
+     * @param saslResponse The SASL response containing the authentication information provided by the client.
      * @return the message to be sent to the {@code AuthenticationService}.
+     * @throws NullPointerException if any of the params is {@code null}.
      */
-    public static JsonObject getAuthenticationRequest(final String mechanism, final byte[] response) {
+    public static JsonObject getAuthenticationRequest(final String mechanism, final byte[] saslResponse) {
         return new JsonObject()
-                .put(FIELD_MECHANISM, mechanism)
-                .put(FIELD_SASL_RESPONSE, response);
+                .put(FIELD_MECHANISM, Objects.requireNonNull(mechanism))
+                .put(FIELD_SASL_RESPONSE, Objects.requireNonNull(saslResponse));
     }
 
     /**
