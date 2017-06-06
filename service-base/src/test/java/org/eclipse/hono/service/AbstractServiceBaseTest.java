@@ -48,6 +48,7 @@ public class AbstractServiceBaseTest {
     private AbstractServiceBase<ServiceConfigProperties> createServer(final ServiceConfigProperties config) {
 
         AbstractServiceBase<ServiceConfigProperties> server = new AbstractServiceBase<ServiceConfigProperties>() {
+
             @Override
             public int getPortDefaultValue() {
                 return PORT_NR;
