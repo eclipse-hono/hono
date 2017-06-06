@@ -117,6 +117,11 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
                         public String getToken() {
                             return null;
                         }
+
+                        @Override
+                        public boolean isExpired() {
+                            return false;
+                        }
                     };
                     authenticationResultHandler.handle(Future.succeededFuture(user));
                 } else {

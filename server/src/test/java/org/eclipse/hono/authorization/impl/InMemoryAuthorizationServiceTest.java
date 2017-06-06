@@ -154,6 +154,11 @@ public class InMemoryAuthorizationServiceTest {
             public String getToken() {
                 return null;
             }
+
+            @Override
+            public boolean isExpired() {
+                return false;
+            }
         };
     }
 }

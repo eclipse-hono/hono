@@ -35,4 +35,12 @@ public interface HonoUser extends Principal {
      * @return The compact encoding of the token.
      */
     String getToken();
+
+    /**
+     * Checks if the validity period of this user's asserted claims has expired.
+     * 
+     * @return {@code true} if the claims have expired and this user's <em>authorities</em>
+     *         should be considered invalid.
+     */
+    boolean isExpired();
 }

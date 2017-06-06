@@ -60,6 +60,11 @@ public final class AcceptAllAuthenticationService extends AbstractHonoAuthentica
             public String getToken() {
                 return token;
             }
+
+            @Override
+            public boolean isExpired() {
+                return false;
+            }
         }));
     }
 }

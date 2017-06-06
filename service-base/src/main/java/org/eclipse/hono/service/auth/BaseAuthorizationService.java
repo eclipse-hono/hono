@@ -136,6 +136,11 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
             public String getToken() {
                 return null;
             }
+
+            @Override
+            public boolean isExpired() {
+                return false;
+            }
         };
         final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.PERMISSION_FIELD));
         final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(AuthorizationConstants.RESOURCE_FIELD));
