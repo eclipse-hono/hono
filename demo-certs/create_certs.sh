@@ -22,6 +22,8 @@ HONO_TRUST_STORE=trustStore.jks
 HONO_TRUST_STORE_PWD=honotrust
 AUTH_SERVER_KEY_STORE=authServerKeyStore.p12
 AUTH_SERVER_KEY_STORE_PWD=authkeys
+DEVREG_SERVER_KEY_STORE=devRegServerKeyStore.p12
+DEVREG_SERVER_KEY_STORE_PWD=devregkeys
 MQTT_ADAPTER_KEY_STORE=mqttKeyStore.p12
 MQTT_ADAPTER_KEY_STORE_PWD=mqttkeys
 REST_ADAPTER_KEY_STORE=restKeyStore.p12
@@ -81,6 +83,7 @@ keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keysto
 create_cert hono $HONO_KEY_STORE $HONO_KEY_STORE_PWD
 create_cert qdrouter
 create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD
+create_cert devreg-server $DEVREG_SERVER_KEY_STORE $DEVREG_SERVER_KEY_STORE_PWD
 create_cert rest-adapter $REST_ADAPTER_KEY_STORE $REST_ADAPTER_KEY_STORE_PWD
 create_cert mqtt-adapter $MQTT_ADAPTER_KEY_STORE $MQTT_ADAPTER_KEY_STORE_PWD
 create_cert artemis $ARTEMIS_KEY_STORE $ARTEMIS_KEY_STORE_PWD
