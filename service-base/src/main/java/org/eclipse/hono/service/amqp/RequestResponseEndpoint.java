@@ -11,6 +11,19 @@
  */
 package org.eclipse.hono.service.amqp;
 
+import static io.vertx.proton.ProtonHelper.condition;
+
+import java.util.Objects;
+
+import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.codec.DecodeException;
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
@@ -18,16 +31,6 @@ import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
-import org.apache.qpid.proton.amqp.transport.AmqpError;
-import org.apache.qpid.proton.codec.DecodeException;
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.ResourceIdentifier;
-
-import java.util.Objects;
-
-import static io.vertx.proton.ProtonHelper.condition;
 
 /**
  * An abstract base class for implementing endpoints that implement a request response pattern.
@@ -53,12 +56,13 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     }
 
     /**
-     * Process the received AMQP message.
+     * Processes an AMQP message received from a client.
      *
      * @param message The Message to process. Must not be null.
+     * @param clientPrincipal The principal representing the client identity and its authorities.
      * @throws NullPointerException If message is null.
      */
-    protected abstract void processRequest(final Message message);
+    protected abstract void processRequest(final Message message, final HonoUser clientPrincipal);
 
     /**
      * Construct an AMQP reply message that is send back to the caller.
@@ -117,7 +121,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                     .handler((delivery, message) -> {
                         if (passesFormalVerification(targetAddress, message)) {
                             try {
-                                processRequest(message);
+                                processRequest(message, Constants.getClientPrincipal(con));
                             } catch (DecodeException e) {
                                 MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed payload");
                             }
