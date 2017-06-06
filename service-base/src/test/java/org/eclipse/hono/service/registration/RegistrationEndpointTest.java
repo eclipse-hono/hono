@@ -13,14 +13,11 @@
 
 package org.eclipse.hono.service.registration;
 
-import static org.eclipse.hono.util.RegistrationConstants.REGISTRATION_ENDPOINT;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,6 +26,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -39,10 +37,11 @@ import io.vertx.proton.ProtonSender;
 @RunWith(MockitoJUnitRunner.class)
 public class RegistrationEndpointTest {
 
-    private static final ResourceIdentifier resource = ResourceIdentifier.from(REGISTRATION_ENDPOINT, "tenant", null);
+    private static final ResourceIdentifier resource = ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, "tenant", null);
 
     @Mock private EventBus eventBus;
     @Mock private Vertx    vertx;
+    @Mock private ProtonConnection connection;
 
     private ProtonReceiver receiver;
     private ProtonSender sender;
@@ -64,15 +63,10 @@ public class RegistrationEndpointTest {
         endpoint = new RegistrationEndpoint(vertx);
     }
 
-    @After
-    public void tearDown() throws Exception {
-
-    }
-
     @Test
     public void testExpectAtLeastOnceQoS() {
 
-        endpoint.onLinkAttach(receiver, resource);
+        endpoint.onLinkAttach(connection, receiver, resource);
 
         verify(receiver).close();
     }
@@ -80,7 +74,7 @@ public class RegistrationEndpointTest {
     @Test
     public void testLinkClosedIfReplyAddressIsMissing() {
 
-        endpoint.onLinkAttach(sender, resource);
+        endpoint.onLinkAttach(connection, sender, resource);
 
         verify(sender).setCondition(any());
         verify(sender).close();

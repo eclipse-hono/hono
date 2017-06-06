@@ -14,6 +14,7 @@ package org.eclipse.hono.service.amqp;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -32,8 +33,11 @@ import static io.vertx.proton.ProtonHelper.condition;
  * An abstract base class for implementing endpoints that implement a request response pattern.
  * <p>
  * It is used e.g. in the implementation of the device registration and the credentials API endpoints.
+ * 
+ * @param <T> The type of configuration properties this endpoint uses.
  */
 public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties> extends BaseEndpoint<T> {
+
     private static final int REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS = 20;
 
     private int receiverLinkCredit = REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS;
@@ -93,11 +97,12 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * Incoming messages are verified by the abstract method {@link #passesFormalVerification(ResourceIdentifier, Message)} and is then processed by
      * the abstract method {@link #processRequest}. Both methods are endpoint specific and need to be implemented by the subclass.
      *
+     * @param con The AMQP connection that the link is part of.
      * @param receiver The ProtonReceiver that has already been created for this endpoint.
      * @param targetAddress The resource identifier for this endpoint (see {@link ResourceIdentifier} for details).
      */
     @Override
-    public final void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
+    public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             logger.debug("client wants to use AT MOST ONCE delivery mode for {} endpoint, this is not supported.",getName());
             receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
@@ -134,12 +139,13 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * Since the response is endpoint specific, it is an abstract method {@link #getAmqpReply(io.vertx.core.eventbus.Message)} and needs to be implemented
      * by the subclass.
      *
+     * @param con The AMQP connection that the link is part of.
      * @param sender The ProtonSender that has already been created for this endpoint.
      * @param targetResource The resource identifier for the responses of this endpoint (see {@link ResourceIdentifier} for details).
      *                      Note that the reply address is different for each client and is passed in during link creation.
      */
     @Override
-    public final void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
+    public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier targetResource) {
         if (targetResource.getResourceId() == null) {
             logger.debug("link target provided in client's link ATTACH must not be null, but must match pattern \"{}/<tenant>/<reply-address>\" instead",getName());
             sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),

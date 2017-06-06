@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -55,7 +56,7 @@ public class AuthenticationEndpoint extends BaseEndpoint<AuthenticationServerCon
     }
 
     @Override
-    public final void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
+    public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier targetResource) {
 
         if (ProtonQoS.AT_LEAST_ONCE.equals(sender.getRemoteQoS())) {
             HonoUser user = Constants.getClientPrincipal(sender.attachments());
@@ -77,8 +78,8 @@ public class AuthenticationEndpoint extends BaseEndpoint<AuthenticationServerCon
     }
 
     @Override
-    public final void onLinkAttach(ProtonReceiver receiver, ResourceIdentifier targetResource) {
-        super.onLinkAttach(receiver, targetResource);
+    public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
+        super.onLinkAttach(con, receiver, targetResource);
     }
 
     @Override

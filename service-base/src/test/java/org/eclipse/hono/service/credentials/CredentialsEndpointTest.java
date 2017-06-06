@@ -13,23 +13,23 @@
 
 package org.eclipse.hono.service.credentials;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.proton.ProtonQoS;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
+import static org.eclipse.hono.util.CredentialsConstants.CREDENTIALS_ENDPOINT;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import static org.eclipse.hono.util.CredentialsConstants.CREDENTIALS_ENDPOINT;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
  * Tests
@@ -43,6 +43,7 @@ public class CredentialsEndpointTest {
 
     @Mock private EventBus eventBus;
     @Mock private Vertx    vertx;
+    @Mock private ProtonConnection connection;
 
     private ProtonReceiver receiver;
     private ProtonSender sender;
@@ -63,16 +64,11 @@ public class CredentialsEndpointTest {
         endpoint = new CredentialsEndpoint(vertx);
     }
 
-    @After
-    public void tearDown() throws Exception {
-
-    }
-
     @Test
     public void testForbidAtMostOnceQoS() {
 
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
-        endpoint.onLinkAttach(receiver, resource);
+        endpoint.onLinkAttach(connection, receiver, resource);
 
         verify(receiver).close();
     }
@@ -81,7 +77,7 @@ public class CredentialsEndpointTest {
     public void testOpenLink() {
 
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
-        endpoint.onLinkAttach(receiver, resource);
+        endpoint.onLinkAttach(connection, receiver, resource);
 
         verify(receiver).open();
         verify(receiver,never()).close();
@@ -91,7 +87,7 @@ public class CredentialsEndpointTest {
     @Test
     public void testLinkClosedIfReplyAddressIsMissing() {
 
-        endpoint.onLinkAttach(sender, resource);
+        endpoint.onLinkAttach(connection, sender, resource);
 
         verify(sender).setCondition(any());
         verify(sender).close();
