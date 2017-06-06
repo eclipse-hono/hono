@@ -20,7 +20,7 @@ import org.eclipse.hono.config.SignatureSupportingConfigProperties;
  * Configuration properties for the {@code DelegatingAuthenticationService}.
  *
  */
-public class DelegatingAuthenticationServiceConfigProperties extends ClientConfigProperties {
+public class AuthenticationServerClientConfigProperties extends ClientConfigProperties {
 
     private final SignatureSupportingConfigProperties validation = new SignatureSupportingConfigProperties();
 

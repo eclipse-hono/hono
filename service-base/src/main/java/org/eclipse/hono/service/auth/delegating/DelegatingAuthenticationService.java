@@ -35,7 +35,7 @@ import io.vertx.core.Handler;
  */
 @Service
 @Profile("!authentication-impl")
-public class DelegatingAuthenticationService extends AbstractHonoAuthenticationService<DelegatingAuthenticationServiceConfigProperties> {
+public class DelegatingAuthenticationService extends AbstractHonoAuthenticationService<AuthenticationServerClientConfigProperties> {
 
     private AuthenticationServerClient client;
     private ConnectionFactory factory;
@@ -54,7 +54,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     @Override
     protected void doStart(final Future<Void> startFuture) {
         if (factory == null) {
-            startFuture.fail("no client for authentication server set");
+            startFuture.fail("no connection factory for authentication server set");
         } else {
             client = new AuthenticationServerClient(vertx, factory);
             startFuture.complete();

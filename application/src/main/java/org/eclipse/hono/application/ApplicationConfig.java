@@ -17,10 +17,6 @@ import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.server.DownstreamClientConfigProperties;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerConfigProperties;
-import org.eclipse.hono.service.auth.AuthTokenHelper;
-import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
-import org.eclipse.hono.service.auth.AuthenticationConstants;
-import org.eclipse.hono.service.auth.delegating.DelegatingAuthenticationServiceConfigProperties;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -130,45 +126,5 @@ public class ApplicationConfig {
             honoProps.getRegistrationAssertion().setKeyPath(honoProps.getKeyPath());
         }
         return RegistrationAssertionHelperImpl.forSigning(vertx, honoProps.getRegistrationAssertion());
-    }
-
-    /**
-     * Exposes configuration properties for using a remote {@code AuthenticationService}.
-     * 
-     * @return The properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.auth")
-    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
-    public DelegatingAuthenticationServiceConfigProperties authClientProperties() {
-        return new DelegatingAuthenticationServiceConfigProperties();
-    }
-
-    /**
-     * Exposes a factory for connections to the authentication service
-     * as a Spring bean.
-     * 
-     * @return The connection factory.
-     */
-    @Bean
-    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
-    public ConnectionFactory authServerConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx, authClientProperties());
-    }
-
-    /**
-     * Creates a helper for validating JWTs asserting a client's identity and authorities.
-     * 
-     * @param authClientProps The properties to determine the key material from.
-     * @return The bean.
-     */
-    @Bean
-    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
-    public AuthTokenHelper tokenValidator(final DelegatingAuthenticationServiceConfigProperties authClientProps) {
-        if (!authClientProps.getValidation().isAppropriateForValidating() && authClientProps.getCertPath() != null) {
-            // fall back to TLS configuration
-            authClientProps.getValidation().setCertPath(authClientProps.getCertPath());
-        }
-        return AuthTokenHelperImpl.forValidating(vertx, authClientProps.getValidation());
     }
 }

@@ -18,7 +18,7 @@ import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClient;
-import org.eclipse.hono.service.auth.delegating.DelegatingAuthenticationServiceConfigProperties;
+import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -79,7 +79,7 @@ public class StandaloneAuthServerTest {
             vertx.deployVerticle(server, ctx.asyncAssertSuccess(d -> serverTracker.complete(d)));
         }, serverTracker);
 
-        DelegatingAuthenticationServiceConfigProperties clientProps = new DelegatingAuthenticationServiceConfigProperties();
+        AuthenticationServerClientConfigProperties clientProps = new AuthenticationServerClientConfigProperties();
         clientProps.setHost("127.0.0.1");
         clientProps.setName("test-client");
         clientProps.setPort(Constants.PORT_AMQP);
