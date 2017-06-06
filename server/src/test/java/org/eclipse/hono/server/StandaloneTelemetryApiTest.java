@@ -22,8 +22,9 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -32,6 +33,7 @@ import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
+import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.MessageHelper;
@@ -44,7 +46,6 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
@@ -98,12 +99,9 @@ public class StandaloneTelemetryApiTest {
         setupTracker.setHandler(ctx.asyncAssertSuccess());
 
         Future<String> registrationTracker = Future.future();
-        Future<String> authTracker = Future.future();
-
         vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
 
-        CompositeFuture.all(registrationTracker, authTracker).compose(r -> {
+        registrationTracker.compose(r -> {
             Future<String> serverTracker = Future.future();
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
@@ -127,8 +125,10 @@ public class StandaloneTelemetryApiTest {
      */
     private static HonoUser createUser() {
 
+        AuthoritiesImpl authorities = new AuthoritiesImpl()
+                .addResource(TelemetryConstants.TELEMETRY_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE });
         HonoUser user = mock(HonoUser.class);
-        when(user.getName()).thenReturn(USER);
+        when(user.getAuthorities()).thenReturn(authorities);
         return user;
     }
 

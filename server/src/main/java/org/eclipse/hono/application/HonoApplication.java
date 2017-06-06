@@ -15,7 +15,6 @@ import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerConfigProperties;
 import org.eclipse.hono.service.AbstractApplication;
 import org.eclipse.hono.service.auth.AuthenticationService;
-import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.slf4j.Logger;
@@ -42,7 +41,6 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
     private RegistrationService registrationService;
     private CredentialsService credentialsService;
     private AuthenticationService authenticationService;
-    private AuthorizationService authorizationService;
 
     /**
      * @param credentialsService the credentialsService to set
@@ -69,14 +67,6 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
     }
 
     /**
-     * @param authorizationService the authorizationService to set
-     */
-    @Autowired
-    public final void setAuthorizationService(final AuthorizationService authorizationService) {
-        this.authorizationService = authorizationService;
-    }
-
-    /**
      * Deploys the additional service implementations that are
      * required by the HonoServer.
      * 
@@ -86,7 +76,6 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
         Future<Void> result = Future.future();
         CompositeFuture.all(
                 deployAuthenticationService(), // we only need 1 authentication service
-                deployAuthorizationService(), // we only need 1 authorization service
                 deployCredentialsService(),
                 deployRegistrationService()).setHandler(ar -> {
             if (ar.succeeded()) {
@@ -119,17 +108,6 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
         } else {
             LOG.info("Starting authentication service {}", authenticationService);
             getVertx().deployVerticle((Verticle) authenticationService, result.completer());
-        }
-        return result;
-    }
-
-    private Future<String> deployAuthorizationService() {
-        Future<String> result = Future.future();
-        if (!Verticle.class.isInstance(authorizationService)) {
-            result.fail("authorization service is not a verticle");
-        } else {
-            LOG.info("Starting authorization service {}", authorizationService);
-            getVertx().deployVerticle((Verticle) authorizationService, result.completer());
         }
         return result;
     }

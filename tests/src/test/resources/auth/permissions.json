@@ -1,0 +1,51 @@
+{
+  "roles": {
+      "DEFAULT_TENANT-manager": [
+        {
+          "resource": "registration/DEFAULT_TENANT",
+          "activities": [ "READ", "WRITE" ]
+        },
+        {
+          "resource": "telemetry/DEFAULT_TENANT",
+          "activities": [ "WRITE" ]
+        },
+        {
+          "resource": "event/DEFAULT_TENANT",
+          "activities": [ "WRITE" ]
+        }
+      ],
+      "connector": [
+        {
+          "resource": "telemetry/DEFAULT_TENANT/fluxcapacitor",
+          "activities": [ "WRITE" ]
+        }
+      ],
+      "provisioner": [
+        {
+          "resource": "registration/DEFAULT_TENANT",
+          "activities": [ "READ" ]
+        },
+        {
+          "resource": "registration/DEFAULT_TENANT/fluxcapacitor",
+          "activities": [ "WRITE" ]
+        }
+      ]
+  },
+  "users": {
+    "hono-client": {
+      "mechanism": "PLAIN",
+      "password": "secret",
+      "authorities": [ "DEFAULT_TENANT-manager" ]
+    },
+    "connector-client": {
+      "mechanism": "PLAIN",
+      "password": "connector-secret",
+      "authorities": [ "connector" ]
+    },
+    "provisioner-client": {
+      "mechanism": "PLAIN",
+      "password": "secret",
+      "authorities": [ "provisioner" ]
+    }
+  }
+}

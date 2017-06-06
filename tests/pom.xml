@@ -80,6 +80,45 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>true</startParallel>
               <images>
+                <!-- ##### Authentication server ##### -->
+                <image>
+                  <name>eclipsehono/hono-auth-test</name>
+                  <alias>auth</alias>
+                  <build>
+                    <from>eclipsehono/hono-auth:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/hono</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/src/test/resources/auth</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <network>
+                      <name>hono</name>
+                      <alias>auth</alias>
+                    </network>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>authentication-impl,prod</SPRING_PROFILES_ACTIVE>
+                    </env>
+                    <log>
+                      <prefix>AUTH</prefix>
+                      <color>cyan</color>
+                    </log>
+                  </run>
+                </image>
                 <!-- ##### Hono server ##### -->
                 <image>
                   <name>eclipsehono/hono-test-server</name>

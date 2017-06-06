@@ -29,7 +29,10 @@ import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
+import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -57,10 +60,23 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     private static final Map<String, Authorities> roles = new HashMap<>();
     private static final Map<String, JsonObject> users = new HashMap<>();
+    private AuthTokenHelper tokenFactory;
+
+    /**
+     * Sets the factory to use for creating tokens asserting a client's identity and authorities.
+     * 
+     * @param tokenFactory The factory.
+     * @throws NullPointerException if factory is {@code null}.
+     */
+    @Autowired
+    @Qualifier("signing")
+    public final void setTokenFactory(final AuthTokenHelper tokenFactory) {
+        this.tokenFactory = Objects.requireNonNull(tokenFactory);
+    }
 
     @Override
     protected void doStart(final Future<Void> startFuture) {
-        if (getTokenFactory() == null) {
+        if (tokenFactory == null) {
             startFuture.fail("token factory must be set");
         } else {
             try {
@@ -246,8 +262,8 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         }
         final Authorities grantedAuthorities = getAuthorities(effectiveUser);
         final String grantedAuthorizationId = effectiveAuthorizationId;
-        final Instant tokenExpirationTime = Instant.now().plus(getTokenFactory().getTokenLifetime());
-        final String token = getTokenFactory().createToken(grantedAuthorizationId, grantedAuthorities);
+        final Instant tokenExpirationTime = Instant.now().plus(tokenFactory.getTokenLifetime());
+        final String token = tokenFactory.createToken(grantedAuthorizationId, grantedAuthorities);
         HonoUser honoUser = new HonoUser() {
 
             @Override

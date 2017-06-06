@@ -90,7 +90,7 @@ public abstract class BaseAuthenticationService<T extends AbstractConfig> extend
         final JsonObject body = message.body();
         authenticate(body, validation -> {
             if (validation.succeeded()) {
-                message.reply(new JsonObject().put(AuthenticationConstants.FIELD_AUTHORIZATION_ID, validation.result().getName()));
+                message.reply(AuthenticationConstants.getAuthenticationReply(validation.result().getToken()));
             } else {
                 message.fail(ERROR_CODE_AUTHENTICATION_FAILED, validation.cause().getMessage());
             }

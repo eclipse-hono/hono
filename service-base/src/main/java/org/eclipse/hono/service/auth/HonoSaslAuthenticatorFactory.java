@@ -11,15 +11,22 @@
  */
 package org.eclipse.hono.service.auth;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.Authorities;
+import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -45,11 +52,12 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      * Event Bus.
      * 
      * @param vertx the Vertx environment to run the factory in.
+     * @param validator The object to use for validating auth tokens.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Autowired
-    public HonoSaslAuthenticatorFactory(final Vertx vertx) {
-        this(new EventBusAuthenticationService(vertx));
+    public HonoSaslAuthenticatorFactory(final Vertx vertx, @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final AuthTokenHelper validator) {
+        this(new EventBusAuthenticationService(vertx, validator));
     }
 
     /**
@@ -75,10 +83,11 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      */
     public static final class EventBusAuthenticationService implements AuthenticationService {
 
-        private static final int AUTH_REQUEST_TIMEOUT_MILLIS = 300;
+        private static final int AUTH_REQUEST_TIMEOUT_MILLIS = 1000;
 
         private final Logger log = LoggerFactory.getLogger(EventBusAuthenticationService.class);
         private final Vertx vertx;
+        private final AuthTokenHelper tokenValidator;
 
         /**
          * Creates a new auth service for a Vertx environment.
@@ -86,10 +95,12 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
          * 
          * 
          * @param vertx the Vertx environment to run the factory in.
+         * @param validator The object to use for validating auth tokens.
          * @throws NullPointerException if any of the parameters is {@code null}.
          */
-        public EventBusAuthenticationService(final Vertx vertx) {
+        public EventBusAuthenticationService(final Vertx vertx, final AuthTokenHelper validator) {
             this.vertx = Objects.requireNonNull(vertx);
+            this.tokenValidator = Objects.requireNonNull(validator);
         }
 
         @Override
@@ -99,35 +110,64 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
             vertx.eventBus().send(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, authRequest, options, reply -> {
                 if (reply.succeeded()) {
                     JsonObject result = (JsonObject) reply.result().body();
-                    log.debug("received result of successful authentication request: {}", result);
-                    final String authorizationId = result.getString(AuthenticationConstants.FIELD_AUTHORIZATION_ID);
-                    HonoUser user = new HonoUser() {
-
-                        @Override
-                        public String getName() {
-                            return authorizationId;
-                        }
-
-                        @Override
-                        public Authorities getAuthorities() {
-                            return null;
-                        }
-
-                        @Override
-                        public String getToken() {
-                            return null;
-                        }
-
-                        @Override
-                        public boolean isExpired() {
-                            return false;
-                        }
-                    };
-                    authenticationResultHandler.handle(Future.succeededFuture(user));
+                    String token = result.getString(AuthenticationConstants.FIELD_TOKEN);
+                    log.debug("received token [length: {}] in response to authentication request", token.length());
+                    try {
+                        Jws<Claims> expandedToken = tokenValidator.expand(result.getString(AuthenticationConstants.FIELD_TOKEN));
+                        authenticationResultHandler.handle(Future.succeededFuture(new HonoUserImpl(expandedToken, token)));
+                    } catch (JwtException e) {
+                        authenticationResultHandler.handle(Future.failedFuture(e));
+                    }
                 } else {
                     authenticationResultHandler.handle(Future.failedFuture(reply.cause()));
                 }
             });
+
+        }
+    }
+
+    /**
+     * A Hono user wrapping a JSON Web Token.
+     *
+     */
+    public static final class HonoUserImpl implements HonoUser {
+
+        private static Duration expirationLeeway = Duration.ofMinutes(2);
+        private String token;
+        private Jws<Claims> expandedToken;
+        private Authorities authorities;
+
+        private HonoUserImpl(final Jws<Claims> expandedToken, final String token) {
+            Objects.requireNonNull(expandedToken);
+            Objects.requireNonNull(token);
+            if (expandedToken.getBody() == null) {
+                throw new IllegalArgumentException("token has no claims");
+            }
+            this.token = token;
+            this.expandedToken = expandedToken;
+            this.authorities = AuthoritiesImpl.from(expandedToken.getBody());
+        }
+
+        @Override
+        public String getName() {
+            return expandedToken.getBody().getSubject();
+        }
+
+        @Override
+        public Authorities getAuthorities() {
+            return authorities;
+        }
+
+        @Override
+        public String getToken() {
+            return token;
+        }
+
+        @Override
+        public boolean isExpired() {
+            // we add some leeway to the token's expiration time to account for system clocks not being
+            // perfectly in sync
+            return !Instant.now().isBefore(expandedToken.getBody().getExpiration().toInstant().plus(expirationLeeway));
         }
     }
 }

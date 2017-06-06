@@ -12,13 +12,15 @@
 
 package org.eclipse.hono.application;
 
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.server.DownstreamClientConfigProperties;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerConfigProperties;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
+import org.eclipse.hono.service.auth.AuthenticationConstants;
+import org.eclipse.hono.service.auth.delegating.DelegatingAuthenticationServiceConfigProperties;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -67,12 +69,24 @@ public class ApplicationConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.downstream")
-    public ClientConfigProperties downstreamConnectionProperties() {
-        ClientConfigProperties props = new ClientConfigProperties();
+    public DownstreamClientConfigProperties downstreamConnectionProperties() {
+        DownstreamClientConfigProperties props = new DownstreamClientConfigProperties();
         if (props.getAmqpHostname() == null) {
             props.setAmqpHostname("hono-internal");
         }
         return props;
+    }
+
+    /**
+     * Exposes a factory for connections to the downstream AMQP container
+     * as a Spring bean.
+     * 
+     * @return The connection factory.
+     */
+    @Bean
+    @Qualifier("downstream")
+    public ConnectionFactory downstreamConnectionFactory() {
+        return new ConnectionFactoryImpl(vertx, downstreamConnectionProperties());
     }
 
     /**
@@ -87,26 +101,14 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes a factory for connections to the downstream AMQP container
-     * as a Spring bean.
-     * 
-     * @param config configuration properties
-     * @return The connection factory.
-     */
-    @Bean
-    public ConnectionFactory downstreamConnectionFactory(final ClientConfigProperties config) {
-        return new ConnectionFactoryImpl(vertx, config);
-    }
-
-    /**
      * Exposes a utility object for validating the signature of JWTs asserting a device's registration status as a Spring bean.
      * 
-     * @param honoProps The properties to determine the key material from.
      * @return The bean.
      */
     @Bean
     @Qualifier("validation")
-    public RegistrationAssertionHelper registrationAssertionValidator(final HonoServerConfigProperties honoProps) {
+    public RegistrationAssertionHelper registrationAssertionValidator() {
+        HonoServerConfigProperties honoProps = honoServerProperties();
         if (!honoProps.getRegistrationAssertion().isAppropriateForValidating() && honoProps.getCertPath() != null) {
             // fall back to TLS configuration
             honoProps.getRegistrationAssertion().setCertPath(honoProps.getCertPath());
@@ -117,12 +119,12 @@ public class ApplicationConfig {
     /**
      * Exposes a factory for JWTs asserting a device's registration status as a Spring bean.
      * 
-     * @param honoProps The properties to determine the key material from.
      * @return The bean.
      */
     @Bean
     @Qualifier("signing")
-    public RegistrationAssertionHelper registrationAssertionFactory(final HonoServerConfigProperties honoProps) {
+    public RegistrationAssertionHelper registrationAssertionFactory() {
+        HonoServerConfigProperties honoProps = honoServerProperties();
         if (!honoProps.getRegistrationAssertion().isAppropriateForCreating() && honoProps.getKeyPath() != null) {
             // fall back to TLS configuration
             honoProps.getRegistrationAssertion().setKeyPath(honoProps.getKeyPath());
@@ -131,18 +133,42 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes a factory for JWTs asserting a client's identity as a Spring bean.
+     * Exposes configuration properties for using a remote {@code AuthenticationService}.
      * 
-     * @param honoProps The properties to determine the key material from.
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.auth")
+    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
+    public DelegatingAuthenticationServiceConfigProperties authClientProperties() {
+        return new DelegatingAuthenticationServiceConfigProperties();
+    }
+
+    /**
+     * Exposes a factory for connections to the authentication service
+     * as a Spring bean.
+     * 
+     * @return The connection factory.
+     */
+    @Bean
+    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
+    public ConnectionFactory authServerConnectionFactory() {
+        return new ConnectionFactoryImpl(vertx, authClientProperties());
+    }
+
+    /**
+     * Creates a helper for validating JWTs asserting a client's identity and authorities.
+     * 
+     * @param authClientProps The properties to determine the key material from.
      * @return The bean.
      */
     @Bean
-    @Qualifier("signing")
-    public AuthTokenHelper tokenFactory(final HonoServerConfigProperties honoProps) {
-        if (!honoProps.getRegistrationAssertion().isAppropriateForCreating() && honoProps.getKeyPath() != null) {
+    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
+    public AuthTokenHelper tokenValidator(final DelegatingAuthenticationServiceConfigProperties authClientProps) {
+        if (!authClientProps.getValidation().isAppropriateForValidating() && authClientProps.getCertPath() != null) {
             // fall back to TLS configuration
-            honoProps.getRegistrationAssertion().setKeyPath(honoProps.getKeyPath());
+            authClientProps.getValidation().setCertPath(authClientProps.getCertPath());
         }
-        return AuthTokenHelperImpl.forSigning(vertx, honoProps.getRegistrationAssertion());
+        return AuthTokenHelperImpl.forValidating(vertx, authClientProps.getValidation());
     }
 }

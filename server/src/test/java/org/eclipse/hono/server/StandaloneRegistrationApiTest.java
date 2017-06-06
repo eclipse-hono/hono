@@ -19,8 +19,9 @@ import static org.mockito.Mockito.when;
 import java.util.stream.IntStream;
 
 import org.eclipse.hono.TestSupport;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -39,7 +40,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -88,12 +88,9 @@ public class StandaloneRegistrationApiTest {
         }));
 
         Future<String> registrationTracker = Future.future();
-        Future<String> authTracker = Future.future();
-
         vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
 
-        CompositeFuture.all(registrationTracker, authTracker).compose(r -> {
+        registrationTracker.compose(r -> {
             Future<String> serverTracker = Future.future();
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
@@ -122,8 +119,11 @@ public class StandaloneRegistrationApiTest {
      */
     private static HonoUser createUser() {
 
+        AuthoritiesImpl authorities = new AuthoritiesImpl()
+                .addResource(RegistrationConstants.REGISTRATION_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE })
+                .addOperation(RegistrationConstants.REGISTRATION_ENDPOINT, "*", "*");
         HonoUser user = mock(HonoUser.class);
-        when(user.getName()).thenReturn(USER);
+        when(user.getAuthorities()).thenReturn(authorities);
         return user;
     }
 
