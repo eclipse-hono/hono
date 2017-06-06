@@ -41,7 +41,7 @@ import io.vertx.core.json.JsonObject;
 @Component
 @Qualifier("registration")
 @Scope("prototype")
-@ConfigurationProperties(prefix = "hono.telemetry")
+@ConfigurationProperties(prefix = "hono.registration")
 public final class RegistrationEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
