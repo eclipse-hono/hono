@@ -19,7 +19,7 @@ import org.eclipse.hono.util.Constants;
 /**
  * Common configuration properties required for accessing an AMQP 1.0 container.
  */
-public final class ClientConfigProperties extends AbstractConfig {
+public class ClientConfigProperties extends AbstractConfig {
 
     private String name;
     private String host = "localhost";
@@ -33,7 +33,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @return The host name.
      */
-    public String getHost() {
+    public final String getHost() {
         return host;
     }
 
@@ -43,7 +43,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * @param host The host name or IP address.
      * @throws NullPointerException if host is {@code null}.
      */
-    public void setHost(final String host) {
+    public final void setHost(final String host) {
         this.host = Objects.requireNonNull(host);
     }
 
@@ -54,7 +54,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @return The port number.
      */
-    public int getPort() {
+    public final int getPort() {
         return port;
     }
 
@@ -66,7 +66,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * @param port The port number.
      * @throws IllegalArgumentException if port &lt; 1000 or port &gt; 65535.
      */
-    public void setPort(final int port) {
+    public final void setPort(final int port) {
         if (isValidPort(port)) {
             this.port = port;
         } else {
@@ -79,7 +79,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @return The user name or {@code null} if not set.
      */
-    public String getUsername() {
+    public final String getUsername() {
         return username;
     }
 
@@ -90,7 +90,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @param username The user name.
      */
-    public void setUsername(final String username) {
+    public final void setUsername(final String username) {
         this.username = username;
     }
 
@@ -99,7 +99,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @return The password or {@code null} if not set.
      */
-    public String getPassword() {
+    public final String getPassword() {
         if (password == null) {
             return null;
         } else {
@@ -114,7 +114,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @param password The password.
      */
-    public void setPassword(final String password) {
+    public final void setPassword(final String password) {
         if (password != null) {
             this.password = password.toCharArray();
         } else {
@@ -127,7 +127,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @return The name or {@code null} if no name has been set.
      */
-    public String getName() {
+    public final String getName() {
         return name;
     }
 
@@ -136,7 +136,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @param name The name to set.
      */
-    public void setName(final String name) {
+    public final void setName(final String name) {
         this.name = name;
     }
 
@@ -145,7 +145,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @return The host name or {@code null} if no host name has been set.
      */
-    public String getAmqpHostname() {
+    public final String getAmqpHostname() {
         return amqpHostname;
     }
 
@@ -154,7 +154,7 @@ public final class ClientConfigProperties extends AbstractConfig {
      * 
      * @param amqpHostname The host name to set.
      */
-    public void setAmqpHostname(String amqpHostname) {
+    public final void setAmqpHostname(String amqpHostname) {
         this.amqpHostname = amqpHostname;
     }
 }

@@ -11,21 +11,15 @@
  */
 package org.eclipse.hono.server;
 
-import static io.vertx.proton.ProtonHelper.condition;
-import static org.apache.qpid.proton.amqp.transport.AmqpError.UNAUTHORIZED_ACCESS;
-import static org.eclipse.hono.service.auth.AuthorizationConstants.EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
-
 import java.security.Principal;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
-import org.apache.qpid.proton.engine.Record;
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
-import org.eclipse.hono.service.auth.AuthorizationConstants;
-import org.eclipse.hono.service.auth.Activity;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -35,9 +29,8 @@ import org.springframework.stereotype.Component;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonSession;
@@ -49,7 +42,7 @@ import io.vertx.proton.ProtonSession;
  */
 @Component
 @Scope("prototype")
-public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
+public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties> {
 
     @Override
     protected Future<Void> preStartServers() {
@@ -143,7 +136,7 @@ public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
         if (receiver.getRemoteTarget().getAddress() == null) {
             LOG.debug("client [{}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link",
                     con.getRemoteContainer());
-            receiver.setCondition(condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
+            receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
         } else {
             LOG.debug("client [{}] wants to open a link for sending messages [address: {}]",
                     con.getRemoteContainer(), receiver.getRemoteTarget());
@@ -153,15 +146,15 @@ public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
                 if (endpoint == null) {
                     handleUnknownEndpoint(con, receiver, targetResource);
                 } else {
-                    final String user = getUserFromConnection(con);
-                    checkAuthorizationToAttach(user, targetResource, Activity.WRITE, isAuthorized -> {
-                        if (isAuthorized) {
-                            copyConnectionId(con.attachments(), receiver.attachments());
+                    final HonoUser user = Constants.getClientPrincipal(con);
+                    getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).setHandler(authAttempt -> {
+                        if (authAttempt.succeeded() && authAttempt.result()) {
+                            Constants.copyProperties(con, receiver);
                             receiver.setTarget(receiver.getRemoteTarget());
                             endpoint.onLinkAttach(receiver, targetResource);
                         } else {
-                            final String message = String.format("subject [%s] is not authorized to WRITE to [%s]", user, targetResource);
-                            receiver.setCondition(condition(UNAUTHORIZED_ACCESS.toString(), message)).close();
+                            LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
+                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
                         }
                     });
                 }
@@ -180,10 +173,6 @@ public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
                     conId);
         }
-    }
-
-    private static void copyConnectionId(final Record source, final Record target) {
-        target.set(Constants.KEY_CONNECTION_ID, String.class, source.get(Constants.KEY_CONNECTION_ID, String.class));
     }
 
     /**
@@ -220,15 +209,15 @@ public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
             if (endpoint == null) {
                 handleUnknownEndpoint(con, sender, targetResource);
             } else {
-                final String user = getUserFromConnection(con);
-                checkAuthorizationToAttach(user, targetResource, Activity.READ, isAuthorized -> {
-                    if (isAuthorized) {
-                        copyConnectionId(con.attachments(), sender.attachments());
+                final HonoUser user = Constants.getClientPrincipal(con);
+                getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).setHandler(authAttempt -> {
+                    if (authAttempt.succeeded() && authAttempt.result()) {
+                        Constants.copyProperties(con, sender);
                         sender.setSource(sender.getRemoteSource());
                         endpoint.onLinkAttach(sender, targetResource);
                     } else {
-                        final String message = String.format("subject [%s] is not authorized to READ from [%s]", user, targetResource);
-                        sender.setCondition(condition(UNAUTHORIZED_ACCESS.toString(), message)).close();
+                        LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
+                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
                     }
                 });
             }
@@ -236,25 +225,5 @@ public final class HonoServer extends AmqpServiceBase<ServiceConfigProperties> {
             LOG.debug("client has provided invalid resource identifier as target address", e);
             sender.close();
         }
-    }
-
-    private void checkAuthorizationToAttach(final String user, final ResourceIdentifier targetResource, final Activity permission,
-       final Handler<Boolean> authResultHandler) {
-
-        final JsonObject authRequest = AuthorizationConstants.getAuthorizationMsg(user, targetResource.toString(),
-           permission.toString());
-        vertx.eventBus().send(
-           EVENT_BUS_ADDRESS_AUTHORIZATION_IN,
-           authRequest,
-           res -> authResultHandler.handle(res.succeeded() && AuthorizationConstants.ALLOWED.equals(res.result().body())));
-    }
-
-    /**
-     * Gets the event bus address this Hono server uses for authorizing client requests.
-     *
-     * @return the address.
-     */
-    String getAuthServiceAddress() {
-        return EVENT_BUS_ADDRESS_AUTHORIZATION_IN;
     }
 }

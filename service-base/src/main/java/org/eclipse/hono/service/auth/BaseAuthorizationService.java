@@ -13,6 +13,9 @@ package org.eclipse.hono.service.auth;
 
 import java.util.Objects;
 
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.Authorities;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -117,12 +120,34 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
         final String authSubject = body.getString(AuthorizationConstants.AUTH_SUBJECT_FIELD);
+        final HonoUser user = new HonoUser() {
+
+            @Override
+            public String getName() {
+                return authSubject;
+            }
+
+            @Override
+            public Authorities getAuthorities() {
+                return null;
+            }
+
+            @Override
+            public String getToken() {
+                return null;
+            }
+        };
         final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.PERMISSION_FIELD));
         final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(AuthorizationConstants.RESOURCE_FIELD));
 
-        boolean hasPermission = hasPermission(authSubject, resource, permission);
-        message.reply(hasPermission ? AuthorizationConstants.ALLOWED : AuthorizationConstants.DENIED);
-        LOG.debug("subject [{}] is {}allowed to {} on resource [{}]", authSubject,
-                hasPermission ? "" : "not ", permission, resource);
+        isAuthorized(user, resource, permission).setHandler(authAttempt -> {
+            boolean hasPermission = false;
+            if (authAttempt.succeeded()) {
+                hasPermission = authAttempt.result();
+            }
+            LOG.debug("subject [{}] is {}allowed to {} on resource [{}]", authSubject,
+                    hasPermission ? "" : "not ", permission, resource);
+            message.reply(hasPermission ? AuthorizationConstants.ALLOWED : AuthorizationConstants.DENIED);
+        });
     }
 }

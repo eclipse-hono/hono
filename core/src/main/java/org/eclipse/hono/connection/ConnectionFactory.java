@@ -67,4 +67,25 @@ public interface ConnectionFactory {
             Handler<AsyncResult<ProtonConnection>> closeHandler,
             Handler<ProtonConnection> disconnectHandler,
             Handler<AsyncResult<ProtonConnection>> connectionResultHandler);
+
+    /**
+     * Connects to a server.
+     * 
+     * @param options The client options to use for connecting. If {@code null} default options will be used.
+     * @param username The username to use for authenticating to the server using SASL PLAIN.
+     * @param password The password to use for authenticating to the server using SASL PLAIN.
+     * @param closeHandler The handler to invoke when an AMQP <em>Close</em> frame is received from the server
+     *                     (may be {@code null}).
+     * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly
+     *                     (may be {@code null}).
+     * @param connectionResultHandler The callback to invoke with the outcome of the connection attempt.
+     * @throws NullPointerException if the result handler is {@code null}.
+     */
+    void connect(
+            ProtonClientOptions options,
+            String username,
+            String password,
+            Handler<AsyncResult<ProtonConnection>> closeHandler,
+            Handler<ProtonConnection> disconnectHandler,
+            Handler<AsyncResult<ProtonConnection>> connectionResultHandler);
 }

@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial API and implementation and initial documentation
  */
-package org.eclipse.hono.service.auth;
+package org.eclipse.hono.auth;
 
 /**
  * Defines permissions that are required to access Hono service resources.
@@ -27,5 +27,14 @@ public enum Activity
     /**
      * Permission required for executing an operation on a node.
      */
-    EXECUTE
+    EXECUTE;
+
+    /**
+     * Gets the single character representation for this activity.
+     * 
+     * @return The first character of this activity's name.
+     */
+    public char getCode() {
+        return name().charAt(0);
+    }
 }

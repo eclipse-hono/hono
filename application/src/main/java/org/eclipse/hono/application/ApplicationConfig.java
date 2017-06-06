@@ -17,6 +17,8 @@ import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerConfigProperties;
+import org.eclipse.hono.service.auth.AuthTokenHelper;
+import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -126,5 +128,21 @@ public class ApplicationConfig {
             honoProps.getRegistrationAssertion().setKeyPath(honoProps.getKeyPath());
         }
         return RegistrationAssertionHelperImpl.forSigning(vertx, honoProps.getRegistrationAssertion());
+    }
+
+    /**
+     * Exposes a factory for JWTs asserting a client's identity as a Spring bean.
+     * 
+     * @param honoProps The properties to determine the key material from.
+     * @return The bean.
+     */
+    @Bean
+    @Qualifier("signing")
+    public AuthTokenHelper tokenFactory(final HonoServerConfigProperties honoProps) {
+        if (!honoProps.getRegistrationAssertion().isAppropriateForCreating() && honoProps.getKeyPath() != null) {
+            // fall back to TLS configuration
+            honoProps.getRegistrationAssertion().setKeyPath(honoProps.getKeyPath());
+        }
+        return AuthTokenHelperImpl.forSigning(vertx, honoProps.getRegistrationAssertion());
     }
 }

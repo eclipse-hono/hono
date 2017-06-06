@@ -82,6 +82,17 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
             final Handler<ProtonConnection> disconnectHandler,
             final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+        connect(options, null, null, closeHandler, disconnectHandler, connectionResultHandler);
+    }
+
+    @Override
+    public void connect(
+            final ProtonClientOptions options,
+            final String username,
+            final String password,
+            final Handler<AsyncResult<ProtonConnection>> closeHandler,
+            final Handler<ProtonConnection> disconnectHandler,
+            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
         if (vertx == null) {
             throw new IllegalStateException("Vert.x instance must be set");
@@ -100,8 +111,8 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
                 clientOptions,
                 config.getHost(),
                 config.getPort(),
-                config.getUsername(),
-                config.getPassword(),
+                username == null ? config.getUsername() : username,
+                password == null ? config.getPassword() : password,
                 conAttempt -> handleConnectionAttemptResult(conAttempt, clientOptions, closeHandler, disconnectHandler, connectionResultHandler));
     }
 

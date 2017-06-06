@@ -276,25 +276,6 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         // empty
     }
 
-    private void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
-        if (properties != null) {
-
-            // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
-            for (final Map.Entry<String, ?> entry: properties.entrySet()) {
-                if (entry.getValue() instanceof  List) {
-                    throw new IllegalArgumentException(String.format("Application property %s can't be a List", entry.getKey()));
-                } else if (entry.getValue() instanceof Map) {
-                    throw new IllegalArgumentException(String.format("Application property %s can't be a Map", entry.getKey()));
-                } else if (entry.getValue().getClass().isArray()) {
-                    throw new IllegalArgumentException(String.format("Application property %s can't be an Array", entry.getKey()));
-                }
-            }
-
-            final ApplicationProperties applicationProperties = new ApplicationProperties(properties);
-            msg.setApplicationProperties(applicationProperties);
-        }
-    }
-
     private Charset getCharsetForContentType(final String contentType) {
 
         final Matcher m = CHARSET_PATTERN.matcher(contentType);

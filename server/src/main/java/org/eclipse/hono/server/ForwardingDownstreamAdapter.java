@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.util.Constants;
@@ -58,7 +57,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     /**
      * The Hono configuration.
      */
-    protected ServiceConfigProperties          honoConfig                      = new ServiceConfigProperties();
+    protected HonoServerConfigProperties    honoConfig                      = new HonoServerConfigProperties();
     private GaugeService                    gaugeService                    = NullGaugeService.getInstance();
     private CounterService                  counterService                  = NullCounterService.getInstance();
     private final Map<UpstreamReceiver, ProtonSender> activeSenders         = new HashMap<>();
@@ -91,7 +90,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @throws IllegalStateException if this adapter is already running.
      */
     @Autowired(required = false)
-    public final void setHonoConfiguration(final ServiceConfigProperties props) {
+    public final void setHonoConfiguration(final HonoServerConfigProperties props) {
         if (running) {
             throw new IllegalStateException("configuration can not be set on running adapter");
         } else {

@@ -11,7 +11,8 @@
  */
 package org.eclipse.hono;
 
-import static org.mockito.Matchers.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -24,9 +25,11 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.server.SenderFactory;
 import org.eclipse.hono.service.amqp.UpstreamReceiver;
+import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -37,6 +40,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClient;
@@ -149,6 +153,23 @@ public final class TestSupport {
     }
 
     /**
+     * Creates an authentication service that always returns a given user,
+     * regardless of the authentication request.
+     * 
+     * @param returnedUser The User to return.
+     * @return The service.
+     */
+    public static AuthenticationService createAuthenticationService(final HonoUser returnedUser) {
+        return new AuthenticationService() {
+
+            @Override
+            public void authenticate(final JsonObject authRequest, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
+                authenticationResultHandler.handle(Future.succeededFuture(returnedUser));
+            }
+        };
+    }
+
+    /**
      * Creates a new mock upstream client for the {@linkplain #CLIENT_ID default link ID}
      * and {@linkplain #CON_ID default connection ID}.
      * 
@@ -215,6 +236,14 @@ public final class TestSupport {
 
             @Override
             public void connect(ProtonClientOptions options, Handler<AsyncResult<ProtonConnection>> closeHandler,
+                    Handler<ProtonConnection> disconnectHandler,
+                    Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+                connect(options, null, null, closeHandler, disconnectHandler, connectionResultHandler);
+            }
+
+            @Override
+            public void connect(ProtonClientOptions options, final String username, final String password,
+                    Handler<AsyncResult<ProtonConnection>> closeHandler,
                     Handler<ProtonConnection> disconnectHandler,
                     Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 

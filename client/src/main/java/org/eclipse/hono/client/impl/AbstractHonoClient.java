@@ -12,8 +12,12 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,5 +106,33 @@ public abstract class AbstractHonoClient {
                 senderCloseHandler.complete();
             }
         });
+    }
+
+    /**
+     * Set the application properties for a Proton Message but do a check for all properties first if they only contain
+     * values that the AMQP 1.0 spec allows.
+     *
+     * @param msg The Proton message. Must not be null.
+     * @param properties The map containing application properties.
+     * @throws NullPointerException if the message passed in is null.
+     * @throws IllegalArgumentException if the properties contain any value that AMQP 1.0 disallows.
+     */
+    protected final void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
+        if (properties != null) {
+
+            // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
+            for (final Map.Entry<String, ?> entry: properties.entrySet()) {
+                if (entry.getValue() instanceof List) {
+                    throw new IllegalArgumentException(String.format("Application property %s can't be a List", entry.getKey()));
+                } else if (entry.getValue() instanceof Map) {
+                    throw new IllegalArgumentException(String.format("Application property %s can't be a Map", entry.getKey()));
+                } else if (entry.getValue().getClass().isArray()) {
+                    throw new IllegalArgumentException(String.format("Application property %s can't be an Array", entry.getKey()));
+                }
+            }
+
+            final ApplicationProperties applicationProperties = new ApplicationProperties(properties);
+            msg.setApplicationProperties(applicationProperties);
+        }
     }
 }

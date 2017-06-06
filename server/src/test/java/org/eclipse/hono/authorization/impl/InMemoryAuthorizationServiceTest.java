@@ -11,39 +11,43 @@
  */
 package org.eclipse.hono.authorization.impl;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import org.eclipse.hono.service.auth.Activity;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.Authorities;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.core.io.ClassPathResource;
+
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
  * Tests verifying behavior of {@link InMemoryAuthorizationService}.
  */
+@RunWith(VertxUnitRunner.class)
 public class InMemoryAuthorizationServiceTest {
 
     private static final ResourceIdentifier TELEMETRY = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
-    private static final ResourceIdentifier CONTROL   = ResourceIdentifier.fromStringAssumingDefaultTenant("control");
     private static final ResourceIdentifier REGISTRATION = ResourceIdentifier.fromStringAssumingDefaultTenant("registration");
 
-    private static final String SUBJECT   = "subject";
-    private static final String READER    = "reader";
-    private static final String WRITER    = "writer";
-    private static final String EXECUTOR  = "executor";
-    private static final String USER_ADMIN = "ADMIN";
+    private static final HonoUser SUBJECT   = getUser("subject");
+    private static final HonoUser READER    = getUser("reader");
+    private static final HonoUser WRITER    = getUser("writer");
+    private static final HonoUser EXECUTOR  = getUser("executor");
+    private static final HonoUser USER_ADMIN = getUser("ADMIN");
     private static final String PERMISSIONS_RESOURCE_PATH = "authorization-service-test-permissions.json";
 
-    private InMemoryAuthorizationService underTest;
+    private static InMemoryAuthorizationService underTest;
 
     /**
      * Loads permissions from a file.
      * 
      * @throws Exception if the permissions file cannot be read.
      */
-    @Before
-    public void setUp() throws Exception {
+    @BeforeClass
+    public static void setUp() throws Exception {
 
         underTest = new InMemoryAuthorizationService();
         underTest.setPermissionsPath(new ClassPathResource(PERMISSIONS_RESOURCE_PATH));
@@ -51,47 +55,61 @@ public class InMemoryAuthorizationServiceTest {
     }
 
     @Test
-    public void testHasPermissionOnResource() {
+    public void testHasPermissionOnResource(final TestContext ctx) {
 
-        assertThat(underTest.hasPermission(SUBJECT, TELEMETRY, Activity.READ)).isFalse();
-        assertThat(underTest.hasPermission(SUBJECT, TELEMETRY, Activity.WRITE)).isFalse();
+        underTest.isAuthorized(SUBJECT, TELEMETRY, Activity.READ).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertFalse(b);
+        }));
+        underTest.isAuthorized(SUBJECT, TELEMETRY, Activity.WRITE).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertFalse(b);
+        }));
 
-        assertThat(underTest.hasPermission(READER, TELEMETRY, Activity.READ)).isTrue();
-        assertThat(underTest.hasPermission(READER, TELEMETRY, Activity.WRITE)).isFalse();
+        underTest.isAuthorized(READER, TELEMETRY, Activity.READ).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
+        underTest.isAuthorized(READER, TELEMETRY, Activity.WRITE).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertFalse(b);
+        }));
 
-        assertThat(underTest.hasPermission(WRITER, TELEMETRY, Activity.READ)).isTrue();
-        assertThat(underTest.hasPermission(WRITER, TELEMETRY, Activity.WRITE)).isTrue();
+        underTest.isAuthorized(WRITER, TELEMETRY, Activity.READ).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
+        underTest.isAuthorized(WRITER, TELEMETRY, Activity.WRITE).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
     }
 
     @Test
-    public void testHasPermissionOnOperation() {
+    public void testHasPermissionOnOperation(final TestContext ctx) {
 
-        assertThat(underTest.hasPermission(EXECUTOR, REGISTRATION, "assert")).isTrue();
-        assertThat(underTest.hasPermission(EXECUTOR, REGISTRATION, Activity.READ)).isFalse();
+        underTest.isAuthorized(EXECUTOR, REGISTRATION, "assert").setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
+        underTest.isAuthorized(EXECUTOR, REGISTRATION, Activity.READ).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertFalse(b);
+        }));
     }
 
     @Test
-    public void testDeviceLevelPermission() {
+    public void testDeviceLevelPermission(final TestContext ctx) {
 
         final ResourceIdentifier TENANT1 = ResourceIdentifier.fromString("telemetry/tenant1");
         final ResourceIdentifier DEVICE1 = ResourceIdentifier.fromString("telemetry/tenant1/device1");
+        final HonoUser device1User = getUser("device1-user");
+        final HonoUser tenant1User = getUser("tenant1-user");
 
-        assertThat(underTest.hasPermission("device1-user", DEVICE1, Activity.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("tenant1-user", DEVICE1, Activity.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("tenant1-user", TENANT1, Activity.WRITE)).isTrue();
-        assertThat(underTest.hasPermission("device1-user", TENANT1, Activity.WRITE)).isFalse();
-    }
-
-    @Test
-    public void testAddPermission() {
-
-        assertThat(underTest.hasPermission(SUBJECT, CONTROL, Activity.READ)).isFalse();
-        assertThat(underTest.hasPermission(SUBJECT, CONTROL, Activity.WRITE)).isFalse();
-
-        underTest.addPermission(SUBJECT, CONTROL, Activity.READ);
-
-        assertThat(underTest.hasPermission(SUBJECT, CONTROL, Activity.READ)).isTrue();
-        assertThat(underTest.hasPermission(SUBJECT, CONTROL, Activity.WRITE)).isFalse();
+        underTest.isAuthorized(device1User, DEVICE1, Activity.WRITE).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
+        underTest.isAuthorized(tenant1User, DEVICE1, Activity.WRITE).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
+        underTest.isAuthorized(tenant1User, TENANT1, Activity.WRITE).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
+        underTest.isAuthorized(device1User, TENANT1, Activity.WRITE).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertFalse(b);
+        }));
     }
 
     /**
@@ -99,9 +117,11 @@ public class InMemoryAuthorizationServiceTest {
      * the user has been granted to receive Telemetry data for the wildcard tenant ("*").
      */
     @Test
-    public void testHasPermissionReturnsTrueForWildcardTenantSpec() {
+    public void testHasPermissionReturnsTrueForWildcardTenantSpec(final TestContext ctx) {
 
-        assertThat(underTest.hasPermission(USER_ADMIN, ResourceIdentifier.from("telemetry", "bumlux", "test"), Activity.READ)).isTrue();
+        underTest.isAuthorized(USER_ADMIN, ResourceIdentifier.from("telemetry", "bumlux", "test"), Activity.READ).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
     }
 
     /**
@@ -110,8 +130,30 @@ public class InMemoryAuthorizationServiceTest {
      * for the given tenant.
      */
     @Test
-    public void testHasPermissionReturnsTrueForWildcardOperationSpec() {
+    public void testHasPermissionReturnsTrueForWildcardOperationSpec(final TestContext ctx) {
 
-        assertThat(underTest.hasPermission(USER_ADMIN, ResourceIdentifier.from("registration", "bumlux", "test"), "register")).isTrue();
+        underTest.isAuthorized(USER_ADMIN, ResourceIdentifier.from("registration", "bumlux", "test"), "register").setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertTrue(b);
+        }));
+    }
+
+    private static HonoUser getUser(final String name) {
+        return new HonoUser() {
+
+            @Override
+            public String getName() {
+                return name;
+            }
+
+            @Override
+            public Authorities getAuthorities() {
+                return null;
+            }
+
+            @Override
+            public String getToken() {
+                return null;
+            }
+        };
     }
 }

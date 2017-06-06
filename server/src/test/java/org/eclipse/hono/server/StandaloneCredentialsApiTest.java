@@ -11,28 +11,11 @@
  */
 package org.eclipse.hono.server;
 
-import io.vertx.core.*;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
-
-import org.eclipse.hono.authentication.impl.FileBasedAuthenticationService;
-import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
-import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.service.credentials.CredentialsEndpoint;
-import org.eclipse.hono.service.credentials.impl.FileBasedCredentialsService;
-import org.eclipse.hono.util.CredentialsConstants;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static java.net.HttpURLConnection.*;
+import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -43,11 +26,31 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static java.net.HttpURLConnection.*;
-import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.eclipse.hono.TestSupport;
+import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
+import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
+import org.eclipse.hono.service.credentials.CredentialsEndpoint;
+import org.eclipse.hono.service.credentials.impl.FileBasedCredentialsService;
+import org.eclipse.hono.util.CredentialsConstants;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Tests validating Hono's Credentials API using a stand alone server.
@@ -74,8 +77,8 @@ public class StandaloneCredentialsApiTest {
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
         server = new HonoServer();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx));
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
+        HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
         server.setConfig(configProperties);
@@ -88,11 +91,9 @@ public class StandaloneCredentialsApiTest {
         }));
 
         Future<String> credentialsTracker = Future.future();
-        Future<String> authenticationTracker = Future.future();
         Future<String> authTracker = Future.future();
 
         vertx.deployVerticle(credentialsAdapter, credentialsTracker.completer());
-        vertx.deployVerticle(FileBasedAuthenticationService.class.getName(), authenticationTracker.completer());
         vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
 
         CompositeFuture.all(credentialsTracker, authTracker)
@@ -116,6 +117,18 @@ public class StandaloneCredentialsApiTest {
         }).compose(c -> {
             c.createCredentialsClient(DEFAULT_TENANT, setupTracker.completer());
         }, setupTracker);
+    }
+
+    /**
+     * Creates a Hono user containing all authorities required for running this test class.
+     * 
+     * @return The user.
+     */
+    private static HonoUser createUser() {
+
+        HonoUser user = mock(HonoUser.class);
+        when(user.getName()).thenReturn(USER);
+        return user;
     }
 
     @AfterClass
