@@ -8,25 +8,18 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
- */package org.eclipse.hono.util;
+ */
+package org.eclipse.hono.util;
 
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonHelper;
-import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 
 import java.util.*;
 
-import static org.eclipse.hono.util.MessageHelper.*;
-
 /**
  * Constants &amp; utility methods used throughout the Credentials API.
  */
-
-public final class CredentialsConstants {
+public final class CredentialsConstants extends RequestResponseApiConstants {
     /* registration actions */
     public static final String OPERATION_GET                     = "get";
     public static final String OPERATION_ADD                     = "add";
@@ -34,11 +27,8 @@ public final class CredentialsConstants {
     public static final String OPERATION_REMOVE                  = "remove";
 
     /* message payload fields */
-    public static final String FIELD_PAYLOAD                     = "payload";
-    public static final String FIELD_ENABLED                     = "enabled";
     public static final String FIELD_TYPE                        = "type";
     public static final String FIELD_AUTH_ID                     = "auth-id";
-    public static final String FIELD_DEVICE_ID                   = "device-id";
     public static final String FIELD_SECRETS                     = "secrets";
 
     /* secrets fields */
@@ -66,74 +56,19 @@ public final class CredentialsConstants {
         final String subject = message.getSubject();
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getCredentialsJson(subject,tenantId,payload);
+        return getServiceRequestAsJson(subject, tenantId, null, payload);
     }
 
-    public static JsonObject getCredentialsJson(final String subject, String tenantId, final JsonObject payload) {
-        final JsonObject msg = new JsonObject();
-        msg.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);
-        msg.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        if (payload != null) {
-            msg.put(FIELD_PAYLOAD, payload);
-        }
-        return msg;
-    }
-
-    public static JsonObject getReply(final String tenantId, final String deviceId, final CredentialsResult result) {
-        return getReply(result.getStatus(), tenantId, deviceId, result.getPayload());
-    }
-
-    public static JsonObject getReply(final int status, final String tenantId, final String deviceId, final JsonObject payload) {
-        final JsonObject jsonObject = new JsonObject();
-        jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        if (deviceId != null) {
-            jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        }
-        jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, Integer.toString(status));
-        if (payload != null) {
-            jsonObject.put(FIELD_PAYLOAD, payload);
-        }
-        return jsonObject;
-    }
-
-
-    // called from onLinkAttach in sender role
-    public static Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
-        final String tenantId = message.body().getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String deviceId = message.body().getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final String status = message.body().getString(MessageHelper.APP_PROPERTY_STATUS);
-        final JsonObject correlationIdJson = message.body().getJsonObject(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
-        final Object correlationId = decodeIdFromJson(correlationIdJson);
-        final boolean isApplCorrelationId = message.body().getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
-        return getAmqpReply(status, correlationId, tenantId, deviceId, isApplCorrelationId, message.body().getJsonObject(FIELD_PAYLOAD));
-    }
-
-    public static Message getAmqpReply(final String status, final Object correlationId, final String tenantId,
-                                       final String deviceId, final boolean isApplCorrelationId, final JsonObject payload) {
-
-        final ResourceIdentifier address = ResourceIdentifier.from(CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, deviceId);
-        final Message message = ProtonHelper.message();
-        message.setMessageId(UUID.randomUUID().toString());
-        message.setCorrelationId(correlationId);
-        message.setAddress(address.toString());
-
-        final Map<String, Object> map = new HashMap<>();
-        map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(MessageHelper.APP_PROPERTY_STATUS, status);
-        message.setApplicationProperties(new ApplicationProperties(map));
-
-        if (isApplCorrelationId) {
-            Map<Symbol, Object> annotations = new HashMap<>();
-            annotations.put(Symbol.valueOf(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID), isApplCorrelationId);
-            message.setMessageAnnotations(new MessageAnnotations(annotations));
-        }
-
-        if (payload != null) {
-            message.setContentType("application/json; charset=utf-8");
-            message.setBody(new AmqpValue(payload.encode()));
-        }
-        return message;
+    /**
+     * Build a Json object as a reply to a credentials request via the vert.x event bus.
+     *
+     * @param tenantId The tenant for which the message was processed.
+     * @param deviceId The device that the message relates to.
+     * @param result The {@link RegistrationResult} object with the payload for the reply object.
+     * @return JsonObject The json reply object that is to be sent back via the vert.x event bus.
+     */
+    public static JsonObject getServiceReplyAsJson(final String tenantId, final String deviceId, final CredentialsResult result) {
+        return getServiceReplyAsJson(result.getStatus(), tenantId, deviceId, result.getPayload());
     }
 
     public static boolean isValidSubject(final String subject) {
