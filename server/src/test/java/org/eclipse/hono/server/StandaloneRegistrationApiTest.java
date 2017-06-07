@@ -72,11 +72,12 @@ public class StandaloneRegistrationApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        server = new HonoServer();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
         HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
+
+        server = new HonoServer();
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
         server.setConfig(configProperties);
         server.addEndpoint(new RegistrationEndpoint(vertx));
         registrationAdapter = new FileBasedRegistrationService();
@@ -120,9 +121,11 @@ public class StandaloneRegistrationApiTest {
     private static HonoUser createUser() {
 
         AuthoritiesImpl authorities = new AuthoritiesImpl()
-                .addResource(RegistrationConstants.REGISTRATION_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE })
+                .addResource(RegistrationConstants.REGISTRATION_ENDPOINT, "*", Activity.READ, Activity.WRITE)
                 .addOperation(RegistrationConstants.REGISTRATION_ENDPOINT, "*", "*");
         HonoUser user = mock(HonoUser.class);
+        when(user.getName()).thenReturn("test-client");
+        when(user.isExpired()).thenReturn(Boolean.FALSE);
         when(user.getAuthorities()).thenReturn(authorities);
         return user;
     }
