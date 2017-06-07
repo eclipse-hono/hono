@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.service.auth;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,9 +23,20 @@ import io.vertx.core.json.JsonObject;
 public final class AuthenticationConstants
 {
     /**
+     * The name of the AMQP message application property holding the type of token contained in the body.
+     */
+    public static final String APPLICATION_PROPERTY_TYPE = "type";
+
+    /**
+     * The name of the authentication endpoint.
+     */
+    public static final String ENDPOINT_NAME_AUTHENTICATION = "cbs";
+
+    /**
      * The vert.x event bus address inbound authentication requests are published on.
      */
     public static final String EVENT_BUS_ADDRESS_AUTHENTICATION_IN = "authentication.in";
+
     /**
      * The name of the field containing the authorization ID granted as the result of a successful authentication.
      */
@@ -41,6 +53,11 @@ public final class AuthenticationConstants
      * The name of the field containing the Subject DN of the certificate the client has used for EXTERNAL auth.
      */
     public static final String FIELD_SUBJECT_DN         = "subject-dn";
+    /**
+     * The name of the field containing the JSON Web Token representing an authenticated client and its authorities.
+     */
+    public static final String FIELD_TOKEN              = "token";
+
     /**
      * The PLAIN SASL mechanism name.
      */
@@ -59,22 +76,44 @@ public final class AuthenticationConstants
      */
     public static final int    ERROR_CODE_AUTHENTICATION_FAILED = 10;
 
+    /**
+     * The qualifier to use for referring to components scoped to authentication.
+     */
+    public static final String QUALIFIER_AUTHENTICATION = "authentication";
+
+    /**
+     * The type indicating a JSON Web Token being contained in a message body.
+     */
+    public static final String TYPE_AMQP_JWT = "amqp:jwt";
+
     private static final Pattern PATTERN_CN = Pattern.compile("^CN=(.+?)(?:,\\s*[A-Z]{1,2}=.+|$)");
 
     private AuthenticationConstants() {
     }
 
     /**
-     * Creates a message for processing a client's SASL <em>response</em>.
+     * Creates a message for authenticating a client using SASL.
      * 
-     * @param mechanism the SASL mechanism that the response is part of.
-     * @param response the authentication data provided by the client, encoded according to the mechanism.
+     * @param mechanism The SASL mechanism to use for authentication.
+     * @param saslResponse The SASL response containing the authentication information provided by the client.
      * @return the message to be sent to the {@code AuthenticationService}.
+     * @throws NullPointerException if any of the params is {@code null}.
      */
-    public static JsonObject getAuthenticationRequest(final String mechanism, final byte[] response) {
+    public static JsonObject getAuthenticationRequest(final String mechanism, final byte[] saslResponse) {
         return new JsonObject()
-                .put(FIELD_MECHANISM, mechanism)
-                .put(FIELD_SASL_RESPONSE, response);
+                .put(FIELD_MECHANISM, Objects.requireNonNull(mechanism))
+                .put(FIELD_SASL_RESPONSE, Objects.requireNonNull(saslResponse));
+    }
+
+    /**
+     * Creates a message containing the JSON Web Token representing the successful authentication
+     * of a client.
+     * 
+     * @param token The token containing the client's authorization ID and authorities as claims.
+     * @return The message.
+     */
+    public static JsonObject getAuthenticationReply(final String token) {
+        return new JsonObject().put(FIELD_TOKEN, Objects.requireNonNull(token));
     }
 
     /**

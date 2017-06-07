@@ -12,8 +12,6 @@
 
 package org.eclipse.hono.service.amqp;
 
-import static io.vertx.proton.ProtonHelper.condition;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,7 +22,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.auth.AuthorizationService;
-import org.eclipse.hono.service.auth.EventBusBasedAuthorizationService;
+import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
@@ -157,7 +156,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     public void start(final Future<Void> startupHandler) {
 
         if (authorizationService == null) {
-            authorizationService = new EventBusBasedAuthorizationService(vertx);
+            authorizationService = new ClaimsBasedAuthorizationService();
         }
         preStartServers()
             .compose(s -> checkPortConfiguration())
@@ -225,6 +224,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     });
             return result;
         } else {
+            LOG.info("insecure port is not enabled");
             return Future.succeededFuture();
         }
     }
@@ -253,6 +253,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     });
             return result;
         } else {
+            LOG.info("secure port is not enabled");
             return Future.succeededFuture();
         }
     }
@@ -363,8 +364,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         LOG.info("client [{}] wants to establish link for unknown endpoint [address: {}]",
                 con.getRemoteContainer(), address);
         link.setCondition(
-                condition(AmqpError.NOT_FOUND.toString(),
-                String.format("no endpoint registered for address %s", address)));
+                ProtonHelper.condition(
+                        AmqpError.NOT_FOUND,
+                        String.format("no endpoint registered for address %s", address)));
         link.close();
     }
 

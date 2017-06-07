@@ -26,6 +26,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.metrics.CounterService;
 import org.springframework.boot.actuate.metrics.GaugeService;
 import org.springframework.stereotype.Component;
@@ -106,6 +107,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @throws IllegalStateException if this adapter is already running.
      */
     @Autowired
+    @Qualifier("downstream")
     public final void setDownstreamConnectionFactory(final ConnectionFactory factory) {
         if (running) {
             throw new IllegalStateException("downstream container host can not be set on running adapter");

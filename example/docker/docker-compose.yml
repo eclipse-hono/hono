@@ -42,6 +42,18 @@ services:
     ports:
       - "5672:5672"
 
+  auth:
+    image: eclipsehono/hono-auth:${project.version}
+    networks:
+      - hono-net
+    environment:
+      - HONO_AUTH_BIND_ADDRESS=0.0.0.0
+      - HONO_AUTH_KEY_PATH=/etc/hono/certs/auth-server-key.pem
+      - HONO_AUTH_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
+      - HONO_AUTH_MAX_INSTANCES=1
+      - LOGGING_CONFIG=classpath:logback-spring.xml
+      - SPRING_PROFILES_ACTIVE=authentication-impl,dev
+
   hono:
     image: eclipsehono/hono-server:${project.version}
     networks:
@@ -49,6 +61,10 @@ services:
     ports:
       - "5671:5671"
     environment:
+      - HONO_AUTH_HOST=auth
+      - HONO_AUTH_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
+      - HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_AUTH_NAME=hono-server
       - HONO_DOWNSTREAM_HOST=qdrouter
       - HONO_DOWNSTREAM_PORT=5673
       - HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem

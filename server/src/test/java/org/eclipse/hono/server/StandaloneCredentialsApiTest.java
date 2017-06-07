@@ -27,8 +27,9 @@ import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.TestSupport;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.authorization.impl.InMemoryAuthorizationService;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -42,7 +43,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
@@ -61,11 +61,11 @@ public class StandaloneCredentialsApiTest {
     private static final int                   TIMEOUT = 5000; // milliseconds
     private static final String                USER    = "hono-client";
     private static final String                PWD     = "secret";
-    public static final  String                CREDENTIALS_USER = "billie";
-    public static final  String                CREDENTIALS_TYPE = "hashed-password";
-    public static final  String                CREDENTIALS_USER_PASSWORD = "hono-secret";
-    public static final  String                CREDENTIALS_PASSWORD_SALT = "hono";
-    public static final  String                DEFAULT_DEVICE_ID = "4711";
+    private static final  String                CREDENTIALS_USER = "billie";
+    private static final  String                CREDENTIALS_TYPE = "hashed-password";
+    private static final  String                CREDENTIALS_USER_PASSWORD = "hono-secret";
+    private static final  String                CREDENTIALS_PASSWORD_SALT = "hono";
+    private static final  String                DEFAULT_DEVICE_ID = "4711";
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
@@ -91,13 +91,9 @@ public class StandaloneCredentialsApiTest {
         }));
 
         Future<String> credentialsTracker = Future.future();
-        Future<String> authTracker = Future.future();
-
         vertx.deployVerticle(credentialsAdapter, credentialsTracker.completer());
-        vertx.deployVerticle(InMemoryAuthorizationService.class.getName(), authTracker.completer());
 
-        CompositeFuture.all(credentialsTracker, authTracker)
-        .compose(r -> {
+        credentialsTracker.compose(r -> {
             Future<String> serverTracker = Future.future();
             vertx.deployVerticle(server, serverTracker.completer());
             return serverTracker;
@@ -126,8 +122,11 @@ public class StandaloneCredentialsApiTest {
      */
     private static HonoUser createUser() {
 
+        AuthoritiesImpl authorities = new AuthoritiesImpl()
+                .addResource(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE })
+                .addOperation(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", "*");
         HonoUser user = mock(HonoUser.class);
-        when(user.getName()).thenReturn(USER);
+        when(user.getAuthorities()).thenReturn(authorities);
         return user;
     }
 

@@ -143,6 +143,7 @@
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>hono-*.pem</include>
+                              <include>auth-server-cert.pem</include>
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>

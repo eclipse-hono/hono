@@ -41,7 +41,7 @@ import io.vertx.core.json.JsonObject;
 @Component
 @Qualifier("registration")
 @Scope("prototype")
-@ConfigurationProperties(prefix = "hono.telemetry")
+@ConfigurationProperties(prefix = "hono.registration")
 public final class RegistrationEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
@@ -72,7 +72,7 @@ public final class RegistrationEndpoint extends RequestResponseEndpoint<ServiceC
                     } else {
                         logger.debug("failed to process request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
                         // we need to inform client about failure
-                        response = RegistrationConstants.getReply(
+                        response = RegistrationConstants.getServiceReplyAsJson(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
                                 MessageHelper.getTenantIdAnnotation(msg),
                                 MessageHelper.getDeviceIdAnnotation(msg),
@@ -90,6 +90,6 @@ public final class RegistrationEndpoint extends RequestResponseEndpoint<ServiceC
 
     @Override
     protected Message getAmqpReply(io.vertx.core.eventbus.Message<JsonObject> message) {
-        return RegistrationConstants.getAmqpReply(message);
+        return RegistrationConstants.getAmqpReply(RegistrationConstants.REGISTRATION_ENDPOINT, message.body());
     }
 }

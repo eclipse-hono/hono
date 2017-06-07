@@ -41,7 +41,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class BaseRegistrationServiceTest {
 
-    private static String secret = "dafhkjsdahfuksahuioahgfdahsgjkhfdjkghfdkghLFJKFHUISAZFIUSDZGHSGAK";
+    private static String secret = "dafhkjsdahfuksahuioahgfdahsgjkhfdjkg";
     private Vertx vertx;
     private SignatureSupportingConfigProperties props;
 
@@ -75,7 +75,7 @@ public class BaseRegistrationServiceTest {
         registrationService.start(startFuture);
 
         // THEN startup fails
-        startupFailure.await(200);
+        startupFailure.await(1000);
     }
 
     /**
@@ -83,7 +83,7 @@ public class BaseRegistrationServiceTest {
      * 
      * @param ctx The vertx unit test context.
      */
-    @Test(timeout = 1000)
+    @Test(timeout = 2000)
     public void testAssertDeviceRegistrationReturnsToken(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
@@ -107,7 +107,7 @@ public class BaseRegistrationServiceTest {
      * 
      * @param ctx The vertx unit test context.
      */
-    @Test(timeout = 1000)
+    @Test(timeout = 2000)
     public void testAssertDeviceRegistrationFailsForDisabledDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
@@ -128,7 +128,7 @@ public class BaseRegistrationServiceTest {
      * 
      * @param ctx The vertx unit test context.
      */
-    @Test(timeout = 1000)
+    @Test(timeout = 2000)
     public void testAssertDeviceRegistrationFailsForNonExistingDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device

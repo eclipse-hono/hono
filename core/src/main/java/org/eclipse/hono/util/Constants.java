@@ -112,6 +112,11 @@ public final class Constants {
         public String getToken() {
             return null;
         }
+
+        @Override
+        public boolean isExpired() {
+            return false;
+        }
     };
 
     private Constants() {

@@ -55,8 +55,10 @@ import io.vertx.proton.ProtonClientOptions;
  */
 public abstract class ClientTestBase {
 
+    /**
+     * The identifier of the device used throughout the test cases.
+     */
     protected static final String DEVICE_ID = "device-0";
-    protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     // connection parameters
     private static final String DEFAULT_HOST = InetAddress.getLoopbackAddress().getHostAddress();
@@ -74,29 +76,39 @@ public abstract class ClientTestBase {
     private static final String TEST_TENANT_ID = System.getProperty(PROPERTY_TENANT, Constants.DEFAULT_TENANT);
     private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
 
-    private static Vertx vertx = Vertx.vertx();
+    private static final Vertx vertx = Vertx.vertx();
+
+    protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     protected HonoClient honoClient;
     protected HonoClient downstreamClient;
-    RegistrationClient registrationClient;
-    MessageSender sender;
-    MessageConsumer consumer;
+    private RegistrationClient registrationClient;
+    private MessageSender sender;
+    private MessageConsumer consumer;
 
+    /**
+     * Sets up the environment:
+     * <ol>
+     * <li>connect to the AMQP messaging network</li>
+     * <li>connects to the Hono Server</li>
+     * <li>creates a RegistrationClient for TEST_TENANT_ID</li>
+     * <li>creates a MessageSender for TEST_TENANT_ID</li>
+     * </ul>
+     * 
+     * @param ctx The test context
+     */
     @Before
-    public void connect(final TestContext ctx) throws Exception {
+    public void connect(final TestContext ctx) {
 
         final Async done = ctx.async();
 
-        Future<MessageSender> setupTracker = Future.future();
         Future<HonoClient> downstreamTracker = Future.future();
-        CompositeFuture.all(setupTracker, downstreamTracker).setHandler(r -> {
-            if (r.succeeded()) {
-                sender = setupTracker.result();
-                done.complete();
-            } else {
-                LOGGER.error("cannot connect to Hono", r.cause());
-            }
-        });
+        Future<MessageSender> setupTracker = Future.future();
+        CompositeFuture.all(setupTracker, downstreamTracker).setHandler(ctx.asyncAssertSuccess(s -> {
+            sender = setupTracker.result();
+            LOGGER.info("connections to Hono server and AMQP messaging network established");
+            done.complete();
+        }));
 
         downstreamClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
@@ -135,10 +147,14 @@ public abstract class ClientTestBase {
         done.await(5000);
     }
 
-    abstract void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker);
-
+    /**
+     * Deregisters the test device (DEVICE_ID) and disconnects from
+     * the Hono server and AMQP messaging network.
+     * 
+     * @param ctx The test context
+     */
     @After
-    public void deregister(final TestContext ctx) throws InterruptedException {
+    public void deregister(final TestContext ctx) {
         if (registrationClient != null) {
 
             final Async done = ctx.async();
@@ -155,7 +171,7 @@ public abstract class ClientTestBase {
         disconnect(ctx);
     }
 
-    private void disconnect(final TestContext ctx) throws InterruptedException {
+    private void disconnect(final TestContext ctx) {
 
         final Async shutdown = ctx.async();
         final Future<Void> honoTracker = Future.future();
@@ -193,6 +209,23 @@ public abstract class ClientTestBase {
 
         shutdown.await(2000);
     }
+
+    /**
+     * Creates a test specific message sender.
+     * 
+     * @param tenantId The tenant to create the sender for.
+     * @param setupTracker The handler to invoke with the result.
+     */
+    abstract void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker);
+
+    /**
+     * Creates a test specific message consumer.
+     * 
+     * @param tenantId The tenant to create the consumer for.
+     * @param messageConsumer The handler to invoke for every message received.
+     * @param setupTracker The handler to invoke with the result.
+     */
+    abstract void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker);
 
     @Test(timeout = 2000)
     public void testClosedLinkIsRemovedFromCachedSenders(final TestContext ctx) {
@@ -291,16 +324,20 @@ public abstract class ClientTestBase {
                 messagesSent.get(), MSG_COUNT - received.count(), System.currentTimeMillis() - start);
     }
 
-    abstract void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker);
-
-    @Test(timeout = 5000l)
+    /**
+     * Verifies that a client which is authorized to WRITE to resources for the DEFAULT_TENANT only,
+     * is not allowed to write to a resource concerning another tenant than the DEFAULT_TENANT.
+     * 
+     * @param ctx The test context
+     */
+    @Test(timeout = 2000l)
     public void testCreateSenderFailsForTenantWithoutAuthorization(final TestContext ctx) {
         createProducer("non-authorized", ctx.asyncAssertFailure(
                 failed -> LOGGER.debug("creation of sender failed: {}", failed.getMessage())
             ));
     }
 
-    @Test(timeout = 5000l)
+    @Test(timeout = 2000l)
     public void testCreateReceiverFailsForTenantWithoutAuthorization(final TestContext ctx) {
 
         createConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure(
@@ -310,13 +347,8 @@ public abstract class ClientTestBase {
 
     private void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
         ctx.assertNotNull(MessageHelper.getDeviceId(msg));
-        if (!Boolean.getBoolean("use.qos1")) {
-            // Dispatch Router version < 0.8.0 does not support forwarding of
-            // message annotations over linkRoutes
-            // see https://issues.apache.org/jira/browse/DISPATCH-566
-            ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
-            ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
-        }
+        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
+        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
     }
 
     protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {

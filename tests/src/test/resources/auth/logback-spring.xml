@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!-- 
+    This is the logging configuration that is used by the
+    Auth Server Docker image while executing the integration tests.
+
+    Any changes made here will be reflected on the next start
+    of the Auth Server Docker image only, i.e. the next time
+
+    mvn -Prun-tests verify
+
+    is invoked.
+   -->
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+  </root>
+
+  <springProfile name="dev">
+    <logger name="org.eclipse.hono" level="DEBUG"/>
+    <logger name="org.eclipse.hono.auth" level="DEBUG"/>
+    <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+
+    <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
+
+    <logger name="io.vertx.proton.impl" level="INFO"/>
+    <logger name="io.vertx.core.net.impl" level="INFO"/>
+  </springProfile>
+
+  <springProfile name="prod">
+    <logger name="org.eclipse.hono" level="INFO"/>
+    <logger name="org.eclipse.hono.auth" level="INFO"/>
+
+    <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>
+
+    <logger name="io.vertx.proton.impl" level="INFO"/>
+    <logger name="io.vertx.core.net.impl" level="INFO"/>
+  </springProfile>
+
+</configuration>

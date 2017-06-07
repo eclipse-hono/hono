@@ -184,7 +184,7 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
 
-        request.reply(CredentialsConstants.getReply(tenantId, deviceId, result));
+        request.reply(CredentialsConstants.getServiceReplyAsJson(tenantId, deviceId, result));
     }
 
     /**
@@ -234,5 +234,4 @@ public abstract class BaseCredentialsService extends AbstractVerticle implements
                 put(FIELD_ENABLED, enabled).
                 put(FIELD_SECRETS, secrets);
     }
-
 }

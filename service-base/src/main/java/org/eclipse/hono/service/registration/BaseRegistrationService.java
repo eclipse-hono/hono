@@ -62,7 +62,6 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
 
     /**
      * Starts up this service.
-     * <p>
      * <ol>
      * <li>Checks if <em>registrationAssertionFactory</em>is set. If not, startup fails.</li>
      * <li>Registers an event bus consumer for address {@link RegistrationConstants#EVENT_BUS_ADDRESS_REGISTRATION_IN}
@@ -139,9 +138,10 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
             final JsonObject body = regMsg.body();
             final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
             final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-            final String action = body.getString(RegistrationConstants.FIELD_ACTION);
+            final String operation = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
 
-            switch (action) {
+
+            switch (operation) {
             case ACTION_ASSERT:
                 log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
                 assertRegistration(tenantId, deviceId, result -> reply(regMsg, result));
@@ -176,7 +176,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
                 isEnabled(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
             default:
-                log.info("action [{}] not supported", action);
+                log.info("operation [{}] not supported", operation);
                 reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
             }
         } catch (ClassCastException e) {
@@ -225,7 +225,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
     protected final JsonObject getAssertionPayload(final String tenantId, final String deviceId) {
 
         return new JsonObject()
-                .put(FIELD_HONO_ID, deviceId)
+                .put(FIELD_DEVICE_ID, deviceId)
                 .put(FIELD_ASSERTION, assertionFactory.getAssertion(tenantId, deviceId));
     }
 
@@ -234,9 +234,10 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
      * with the parameters passed in to this method.
      * <p>
      * Subclasses should override this method in order to use a more efficient way of determining the device's status.
-     * @param tenantId 
-     * @param deviceId 
-     * @param resultHandler 
+
+     * @param tenantId The tenantId to which the device belongs.
+     * @param deviceId The deviceIf of the device to be checked.
+     * @param resultHandler The callback handler to which the result is reported.
      */
     public void isEnabled(final String tenantId, final String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
         getDevice(tenantId, deviceId, getAttempt -> {
@@ -274,7 +275,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
         final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
 
-        request.reply(RegistrationConstants.getReply(tenantId, deviceId, result));
+        request.reply(RegistrationConstants.getServiceReplyAsJson(tenantId, deviceId, result));
     }
 
     private final JsonObject getRequestPayload(final JsonObject request) {
@@ -298,7 +299,7 @@ public abstract class BaseRegistrationService extends AbstractVerticle implement
      */
     protected final static JsonObject getResultPayload(final String deviceId, final JsonObject data) {
 
-        return new JsonObject().put(FIELD_HONO_ID, deviceId).put(FIELD_DATA, data);
+        return new JsonObject().put(FIELD_DEVICE_ID, deviceId).put(FIELD_DATA, data);
     }
 
 }

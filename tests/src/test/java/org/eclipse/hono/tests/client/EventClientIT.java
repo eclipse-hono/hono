@@ -18,7 +18,6 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
@@ -45,9 +44,7 @@ public class EventClientIT extends ClientTestBase {
 
     @Override
     protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
-        if (Boolean.getBoolean("check.artemis.header")) {
-            // assert that the message was routed via Artemis by checking for the _AMQ_VALIDATED_USER field which is populated by Artemis
-            ctx.assertNotNull(MessageHelper.getApplicationProperty(msg.getApplicationProperties(), "_AMQ_VALIDATED_USER", String.class));
-        }
+        // assert that events are marked as "durable"
+        ctx.assertTrue(msg.isDurable());
     }
 }

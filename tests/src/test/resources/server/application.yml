@@ -1,6 +1,10 @@
 hono:
-  authorization:
-      permissionsPath: file:///etc/hono/permissions.json
+  auth:
+    host: auth
+    port: 5672
+    name: hono-server
+    validation:
+      cert-path: /etc/hono/certs/auth-server-cert.pem
   downstream:
     name: hono-server
   registration:
