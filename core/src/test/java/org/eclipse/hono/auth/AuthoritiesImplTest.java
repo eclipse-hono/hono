@@ -45,4 +45,15 @@ public class AuthoritiesImplTest {
         assertFalse(auth.isAuthorized(ResourceIdentifier.fromString("credentials/DEFAULT_TENANT"), "add"));
     }
 
+    /**
+     * Verifies that wildcard character matches any operation.
+     */
+    @Test
+    public void testIsAuthorizedConsidersWildCards() {
+
+        AuthoritiesImpl authorities = new AuthoritiesImpl()
+                .addOperation("endpoint", "*", "*");
+        assertFalse(authorities.isAuthorized(ResourceIdentifier.fromString("other-endpoint/tenant"), "get"));
+        assertTrue(authorities.isAuthorized(ResourceIdentifier.fromString("endpoint/tenant"), "get"));
+    }
 }
