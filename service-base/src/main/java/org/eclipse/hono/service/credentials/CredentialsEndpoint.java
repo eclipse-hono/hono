@@ -61,7 +61,7 @@ public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceCo
 
 
     @Override
-    protected void processRequest(final Message msg, final HonoUser clientPrincipal) {
+    public void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
         final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg);
 

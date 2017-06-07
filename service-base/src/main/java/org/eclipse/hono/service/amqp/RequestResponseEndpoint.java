@@ -16,18 +16,25 @@ import static io.vertx.proton.ProtonHelper.condition;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
-import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.auth.AuthorizationService;
+import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
+import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -44,6 +51,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     private static final int REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS = 20;
 
     private int receiverLinkCredit = REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS;
+    private AuthorizationService authorizationService = new ClaimsBasedAuthorizationService();
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -58,11 +66,13 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     /**
      * Processes an AMQP message received from a client.
      *
-     * @param message The Message to process. Must not be null.
+     * @param request The Message to process. Must not be null.
+     * @param targetAddress The address the message is sent to.
      * @param clientPrincipal The principal representing the client identity and its authorities.
-     * @throws NullPointerException If message is null.
+     * @throws DecodeException if the message's payload does not contain a valid JSON string.
+     * @throws NullPointerException if message is {@code null}.
      */
-    protected abstract void processRequest(final Message message, final HonoUser clientPrincipal);
+    public abstract void processRequest(final Message request, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal);
 
     /**
      * Construct an AMQP reply message that is send back to the caller.
@@ -87,9 +97,34 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * They are replenished automatically after messages are processed.
 
      * @param receiverLinkCredit The number of credits to grant.
+     * @throws IllegalArgumentException if the credit is &lt;= 0.
      */
-    protected final void setReceiverLinkCredit(final int receiverLinkCredit) {
+    public final void setReceiverLinkCredit(final int receiverLinkCredit) {
+        if (receiverLinkCredit <= 0) {
+            throw new IllegalArgumentException("receiver link credit must be at least 1");
+        }
         this.receiverLinkCredit = receiverLinkCredit;
+    }
+
+    /**
+     * Gets the object to use for making authorization decisions.
+     * 
+     * @return The service.
+     */
+    public final AuthorizationService getAuthorizationService() {
+        return authorizationService;
+    }
+
+    /**
+     * Sets the object to use for making authorization decisions.
+     * <p>
+     * If not set a {@link ClaimsBasedAuthorizationService} instance is used.
+     * 
+     * @param authService The service.
+     */
+    @Autowired(required = false)
+    public final void setAuthorizationService(final AuthorizationService authService) {
+        this.authorizationService = authService;
     }
 
     /**
@@ -98,8 +133,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * The receiver link itself is configured with the AT_LEAST_ONCE QoS and grants the configured credits ({@link #setReceiverLinkCredit(int)})
      * with autoAcknowledge.
      * <p>
-     * Incoming messages are verified by the abstract method {@link #passesFormalVerification(ResourceIdentifier, Message)} and is then processed by
-     * the abstract method {@link #processRequest}. Both methods are endpoint specific and need to be implemented by the subclass.
+     * Handling of received messages is delegated to {@link #handleMessage(ProtonConnection, ProtonReceiver, ResourceIdentifier, ProtonDelivery, Message)}.
      *
      * @param con The AMQP connection that the link is part of.
      * @param receiver The ProtonReceiver that has already been created for this endpoint.
@@ -119,20 +153,84 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                     .setAutoAccept(true) // settle received messages if the handler succeeds
                     .setPrefetch(receiverLinkCredit)
                     .handler((delivery, message) -> {
-                        if (passesFormalVerification(targetAddress, message)) {
-                            try {
-                                processRequest(message, Constants.getClientPrincipal(con));
-                            } catch (DecodeException e) {
-                                MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed payload");
-                            }
-                        } else {
-                            MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed message");
-                            // we close the link if the client sends a message that does not comply with the API spec
-                            onLinkDetach(receiver, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
-                        }
+                        handleMessage(con, receiver, targetAddress, delivery, message);
                     }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
                     .open();
         }
+    }
+
+    /**
+     * Handles a request message received from a client.
+     * <p>
+     * The message gets rejected if
+     * <ul>
+     * <li>the message does not pass {@linkplain #passesFormalVerification(ResourceIdentifier, Message) formal verification}
+     * or</li>
+     * <li>the client is not {@linkplain #isAuthorized(HonoUser, ResourceIdentifier, String) authorized to execute the operation}
+     * indicated by the message's <em>subject</em> or</li>
+     * <li>its payload cannot be parsed</li>
+     * </ul>
+     * 
+     * @param con The connection with the client.
+     * @param receiver The link over which the message has been received.
+     * @param targetAddress The address the message is sent to.
+     * @param delivery The message's delivery status.
+     * @param message The message.
+     */
+    protected final void handleMessage(final ProtonConnection con, final ProtonReceiver receiver,
+            final ResourceIdentifier targetAddress, ProtonDelivery delivery, Message message) {
+
+        Future<Void> requestTracker = Future.future();
+        requestTracker.setHandler(s -> {
+            if (s.succeeded()) {
+                ProtonHelper.accepted(delivery, true);
+            } else if (s.cause() instanceof AmqpErrorException) {
+                AmqpErrorException cause = (AmqpErrorException) s.cause();
+                MessageHelper.rejected(delivery, cause.getError().toString(), cause.getMessage());
+            } else {
+                logger.debug("error processing request [resource: {}, op: {}]: {}", targetAddress, message.getSubject(), s.cause().getMessage());
+                MessageHelper.rejected(delivery, AmqpError.INTERNAL_ERROR.toString(), "internal error");
+            }
+        });
+
+        if (passesFormalVerification(targetAddress, message)) {
+
+            final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
+            isAuthorized(clientPrincipal, targetAddress, message.getSubject()).compose(authorized -> {
+                logger.debug("client [{}] is {}authorized to {}:{}", clientPrincipal.getName(), authorized ? "" : "not ",
+                        targetAddress, message.getSubject());
+                if (authorized) {
+                    try {
+                        processRequest(message, targetAddress, Constants.getClientPrincipal(con));
+                        requestTracker.complete();
+                    } catch (DecodeException e) {
+                        requestTracker.fail(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
+                    }
+                } else {
+                    requestTracker.fail(new AmqpErrorException(AmqpError.UNAUTHORIZED_ACCESS, "unauthorized"));
+                }
+            }, requestTracker);
+        } else {
+            requestTracker.fail(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
+        }
+    }
+
+    /**
+     * Checks if the client is authorized to execute a given operation.
+     * 
+     * This method is invoked for every request message received from a client.
+     * <p>
+     * This default implementation simply delegates to {@link AuthorizationService#isAuthorized(HonoUser, ResourceIdentifier, String)}.
+     * <p>
+     * Subclasses may override this method in order to do more sophisticated checks.
+     * 
+     * @param clientPrincipal The client.
+     * @param resource The resource the operation belongs to.
+     * @param operation The operation.
+     * @return The outcome of the check.
+     */
+    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final String operation) {
+        return getAuthorizationService().isAuthorized(clientPrincipal, resource, operation);
     }
 
     /**
@@ -145,19 +243,19 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      *
      * @param con The AMQP connection that the link is part of.
      * @param sender The ProtonSender that has already been created for this endpoint.
-     * @param targetResource The resource identifier for the responses of this endpoint (see {@link ResourceIdentifier} for details).
+     * @param replyToAddress The resource identifier for the responses of this endpoint (see {@link ResourceIdentifier} for details).
      *                      Note that the reply address is different for each client and is passed in during link creation.
      */
     @Override
-    public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier targetResource) {
-        if (targetResource.getResourceId() == null) {
-            logger.debug("link target provided in client's link ATTACH must not be null, but must match pattern \"{}/<tenant>/<reply-address>\" instead",getName());
+    public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier replyToAddress) {
+        if (replyToAddress.getResourceId() == null) {
+            logger.debug("link target provided in client's link ATTACH must not be null, but must match pattern \"{}/<tenant>/<reply-address>\" instead", getName());
             sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),
-                    String.format("link target must not be null but must have the following format %s/<tenant>/<reply-address>",getName())));
+                    String.format("link target must not be null but must have the following format %s/<tenant>/<reply-address>", getName())));
             sender.close();
         } else {
             logger.debug("establishing sender link with client [{}]", MessageHelper.getLinkName(sender));
-            final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(targetResource.toString(), message -> {
+            final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(replyToAddress.toString(), message -> {
                 // TODO check for correct session here...?
                 logger.trace("forwarding reply to client: {}", message.body());
                 final Message amqpReply = getAmqpReply(message);
