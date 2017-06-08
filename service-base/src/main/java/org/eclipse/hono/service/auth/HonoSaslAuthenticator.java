@@ -105,10 +105,18 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             Future<HonoUser> authTracker = Future.future();
             authTracker.setHandler(s -> {
                 if (s.succeeded()) {
-                    addUser(s.result());
+
+                    HonoUser user = s.result();
+                    LOG.debug("authentication of client [authorization ID: {}] succeeded", user.getName());
+                    protonConnection.attachments().set(Constants.KEY_CLIENT_PRINCIPAL, HonoUser.class, user);
+                    succeeded = true;
+                    sasl.done(SaslOutcome.PN_SASL_OK);
+
                 } else {
+
                     LOG.debug("authentication failed: " + s.cause().getMessage());
                     sasl.done(SaslOutcome.PN_SASL_AUTH);
+
                 }
                 completionHandler.handle(Boolean.TRUE);
             });
@@ -133,13 +141,4 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
         }
         authenticationService.authenticate(authRequest, authResultHandler);
     }
-
-    private void addUser(final HonoUser user) {
-
-        succeeded = true;
-        protonConnection.attachments().set(Constants.KEY_CLIENT_PRINCIPAL, HonoUser.class, user);
-        LOG.debug("authentication of client [authorization ID: {}] succeeded", user.getName());
-        sasl.done(SaslOutcome.PN_SASL_OK);
-    }
-
 }
