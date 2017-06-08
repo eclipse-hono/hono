@@ -118,7 +118,7 @@ public class SimpleAuthenticationServer extends AmqpServiceBase<AuthenticationSe
                 } else {
                     Constants.copyProperties(con, sender);
                     sender.setSource(sender.getRemoteSource());
-                    endpoint.onLinkAttach(sender, targetResource);
+                    endpoint.onLinkAttach(con, sender, targetResource);
                     vertx.setTimer(5000, closeCon -> {
                         if (!con.isDisconnected()) {
                             LOG.debug("connection with client [{}] timed out after 5 seconds, closing connection", con.getRemoteContainer());

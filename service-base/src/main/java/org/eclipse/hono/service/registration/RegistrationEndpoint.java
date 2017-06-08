@@ -11,12 +11,11 @@
  */
 package org.eclipse.hono.service.registration;
 
-import static org.eclipse.hono.util.RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
-
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.MessageHelper;
@@ -60,10 +59,10 @@ public final class RegistrationEndpoint extends RequestResponseEndpoint<ServiceC
     }
 
     @Override
-    protected void processRequest(final Message msg) {
+    protected void processRequest(final Message msg, final HonoUser clientPrincipal) {
 
         final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
+        vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
                 result -> {
                     JsonObject response = null;
                     if (result.succeeded()) {

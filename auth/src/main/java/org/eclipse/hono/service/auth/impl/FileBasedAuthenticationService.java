@@ -188,7 +188,12 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
                   });
                   result.addResource(resource, activityList.toArray(new Activity[activityList.size()]));
               } else if (operation != null) {
-                  result.addOperation(resource,  operation);
+                  String[] parts = operation.split(":", 2);
+                  if (parts.length == 2) {
+                      result.addOperation(parts[0], parts[1]);
+                  } else {
+                      log.debug("ignoring malformed operation spec [{}], operation name missing", operation);
+                  }
               } else {
                   throw new IllegalArgumentException("malformed authorities");
                   }

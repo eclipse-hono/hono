@@ -169,15 +169,20 @@ public final class AuthoritiesImpl implements Authorities {
 
         boolean allowed = false;
         if (resource.getResourceId() != null) {
-            allowed = isAuthorized(String.format(opTemplate, resource.toString(), operation), Activity.EXECUTE);
+            allowed = isAuthorized(String.format(opTemplate, resource.toString(), operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(opTemplate, resource.toString(), "*"), Activity.EXECUTE);
         }
         if (!allowed && resource.getTenantId() != null) {
             allowed = isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/" + resource.getTenantId(), operation), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/*", operation), Activity.EXECUTE);
+                    isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/" + resource.getTenantId(), "*"), Activity.EXECUTE) ||
+                    isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/*", operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/*", "*"), Activity.EXECUTE);
         }
         if (!allowed) {
             allowed = isAuthorized(String.format(opTemplate, resource.getEndpoint(), operation), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, "*", operation), Activity.EXECUTE);
+                    isAuthorized(String.format(opTemplate, resource.getEndpoint(), "*"), Activity.EXECUTE) ||
+                    isAuthorized(String.format(opTemplate, "*", operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(opTemplate, "*", "*"), Activity.EXECUTE);
         }
         return allowed;
     }
@@ -195,7 +200,8 @@ public final class AuthoritiesImpl implements Authorities {
         if (grantedActivities == null) {
             LOG.debug("no claim for key [{}]", key);
         } else {
-            result = grantedActivities.contains(String.valueOf(intent.getCode()));
+            result = grantedActivities.contains(String.valueOf(intent.getCode())) ||
+                    grantedActivities.equals("*");
             LOG.debug("found claim [key: {}, activities: {}] {}matching intent [{}]", key, grantedActivities, result ? "" : "not ", intent.name());
         }
         return result;

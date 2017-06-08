@@ -33,6 +33,7 @@ import org.springframework.boot.actuate.metrics.CounterService;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -132,7 +133,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
     }
 
     @Override
-    public final void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
+    public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
 
         final String linkId = UUID.randomUUID().toString();
         final UpstreamReceiver link = UpstreamReceiver.newUpstreamReceiver(linkId, receiver, getEndpointQos());

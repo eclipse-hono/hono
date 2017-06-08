@@ -13,7 +13,7 @@
 package org.eclipse.hono.service.auth.impl;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -24,6 +24,7 @@ import java.time.Duration;
 
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -151,6 +152,16 @@ public class FileBasedAuthenticationServiceTest {
         authService.verifyExternal("userB", "CN=userA", ctx.asyncAssertSuccess(res -> {
             assertThat(res.getName(), is("userA"));
             assertThat(res.getToken(), is(TOKEN));
+        }));
+    }
+
+    @Test
+    public void testVerifyPlainAddsAuthoritiesForOperations(final TestContext ctx) {
+
+        final ResourceIdentifier registration = ResourceIdentifier.fromString("registration/tenant");
+        authService.verifyPlain(null, "hono-client@HONO", "secret", ctx.asyncAssertSuccess(res -> {
+            assertTrue(res.getAuthorities().isAuthorized(registration, "assert"));
+            assertTrue(res.getAuthorities().isAuthorized(registration, "add"));
         }));
     }
 }

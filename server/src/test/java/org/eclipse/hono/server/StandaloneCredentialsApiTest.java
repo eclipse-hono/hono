@@ -76,11 +76,12 @@ public class StandaloneCredentialsApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        server = new HonoServer();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
         HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
+
+        server = new HonoServer();
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
         server.setConfig(configProperties);
         server.addEndpoint(new CredentialsEndpoint(vertx));
         credentialsAdapter = new FileBasedCredentialsService();
@@ -123,10 +124,12 @@ public class StandaloneCredentialsApiTest {
     private static HonoUser createUser() {
 
         AuthoritiesImpl authorities = new AuthoritiesImpl()
-                .addResource(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE })
+                .addResource(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", Activity.READ, Activity.WRITE)
                 .addOperation(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", "*");
         HonoUser user = mock(HonoUser.class);
+        when(user.isExpired()).thenReturn(Boolean.FALSE);
         when(user.getAuthorities()).thenReturn(authorities);
+        when(user.getName()).thenReturn("test-client");
         return user;
     }
 

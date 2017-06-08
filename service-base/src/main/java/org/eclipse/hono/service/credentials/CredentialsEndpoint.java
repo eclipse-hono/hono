@@ -11,9 +11,11 @@
  */
 package org.eclipse.hono.service.credentials;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
+import java.net.HttpURLConnection;
+import java.util.Objects;
+
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -25,10 +27,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import java.net.HttpURLConnection;
-import java.util.Objects;
-
-import static org.eclipse.hono.util.CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
  * An {@code Endpoint} for managing device credential information.
@@ -61,11 +61,11 @@ public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceCo
 
 
     @Override
-    protected void processRequest(final Message msg) {
+    protected void processRequest(final Message msg, final HonoUser clientPrincipal) {
 
         final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg);
 
-        vertx.eventBus().send(EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg,
+        vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg,
                 result -> {
                     JsonObject response = null;
                     if (result.succeeded()) {

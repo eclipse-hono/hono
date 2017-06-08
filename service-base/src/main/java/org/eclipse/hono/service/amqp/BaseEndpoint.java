@@ -11,14 +11,12 @@
  */
 package org.eclipse.hono.service.amqp;
 
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.util.MessageHelper.encodeIdToJson;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -31,6 +29,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonReceiver;
@@ -43,10 +43,19 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements Endpoint {
 
+    /**
+     * The Vert.x instance this endpoint is running on.
+     */
     protected final Vertx                       vertx;
+    /**
+     * A logger to be used by subclasses.
+     */
     protected final Logger                      logger               = LoggerFactory.getLogger(getClass());
+    /**
+     * The configuration properties for this endpoint.
+     */
+    @SuppressWarnings("unchecked")
     protected T                                 config               = (T) new ServiceConfigProperties();
-    private static final String                 STATUS_OK            = String.valueOf(HTTP_OK);
     private Map<String, UpstreamReceiverImpl>   activeClients        = new HashMap<>();
 
     /**
@@ -203,19 +212,25 @@ public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements
     }
 
     @Override
-    public void onLinkAttach(final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
+    public void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
         logger.info("Endpoint [{}] does not support data upload, closing link.", getName());
         receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_IMPLEMENTED, "resource cannot be written to"));
         receiver.close();
     }
 
     @Override
-    public void onLinkAttach(final ProtonSender sender, final ResourceIdentifier targetResource) {
+    public void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier targetResource) {
         logger.info("Endpoint [{}] does not support data retrieval, closing link.", getName());
         sender.setCondition(ProtonHelper.condition(AmqpError.NOT_IMPLEMENTED, "resource cannot be read from"));
         sender.close();
     }
 
+    /**
+     * Adds correlation id related properties on a response to be sent in reply to a request.
+     * 
+     * @param request The request to correlate to.
+     * @param message The response message.
+     */
     protected final void addHeadersToResponse(final Message request, final JsonObject message) {
         final boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
         logger.debug("registration request [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);

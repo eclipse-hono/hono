@@ -151,7 +151,7 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
                         if (authAttempt.succeeded() && authAttempt.result()) {
                             Constants.copyProperties(con, receiver);
                             receiver.setTarget(receiver.getRemoteTarget());
-                            endpoint.onLinkAttach(receiver, targetResource);
+                            endpoint.onLinkAttach(con, receiver, targetResource);
                         } else {
                             LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
                             receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
@@ -214,7 +214,7 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
                     if (authAttempt.succeeded() && authAttempt.result()) {
                         Constants.copyProperties(con, sender);
                         sender.setSource(sender.getRemoteSource());
-                        endpoint.onLinkAttach(sender, targetResource);
+                        endpoint.onLinkAttach(con, sender, targetResource);
                     } else {
                         LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
                         sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
