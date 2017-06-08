@@ -20,36 +20,56 @@
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.client.port" />
-        <option name="value" value="5672" />
+        <option name="value" value="5671" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.client.username" />
-        <option name="value" value="mqtt-adapter" />
+        <option name="value" value="mqtt-adapter@HONO" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.client.password" />
-        <option name="value" value="secret" />
+        <option name="value" value="mqtt-secret" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.client.trustStorePath" />
-        <option name="value" value="../../demo-certs/certs/trustStore.jks" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.client.trustStorePassword" />
-        <option name="value" value="honotrust" />
+        <option name="name" value="hono.client.hostnameVerificationRequired" />
+        <option name="value" value="false" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.http.bindaddress" />
+        <option name="name" value="hono.mqtt.bindAddress" />
         <option name="value" value="0.0.0.0" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.maxInstances" />
+        <option name="name" value="hono.mqtt.insecurePort.bindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.insecurePort.enabled" />
+        <option name="value" value="true" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.keyPath" />
+        <option name="value" value="../../demo-certs/certs/mqtt-adapter-key.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.certPath" />
+        <option name="value" value="../../demo-certs/certs/mqtt-adapter-cert.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.maxInstances" />
         <option name="value" value="1" />
       </param>
     </additionalParameters>

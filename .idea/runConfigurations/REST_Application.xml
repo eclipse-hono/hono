@@ -25,27 +25,22 @@
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.client.port" />
-        <option name="value" value="5672" />
+        <option name="value" value="5671" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.client.username" />
-        <option name="value" value="rest-adapter" />
+        <option name="value" value="rest-adapter@HONO" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.client.password" />
-        <option name="value" value="secret" />
+        <option name="value" value="rest-secret" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.client.trustStorePath" />
-        <option name="value" value="../../demo-certs/certs/trustStore.jks" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.client.trustStorePassword" />
-        <option name="value" value="honotrust" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
@@ -54,8 +49,28 @@
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.http.bindaddress" />
+        <option name="name" value="hono.http.bindAddress" />
         <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.insecurePort.bindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.insecurePort.enabled" />
+        <option name="value" value="true" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.keyPath" />
+        <option name="value" value="../../demo-certs/certs/rest-adapter-key.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.certPath" />
+        <option name="value" value="../../demo-certs/certs/rest-adapter-cert.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />

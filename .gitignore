@@ -13,9 +13,8 @@
 .idea/*
 !/.idea/runConfigurations
 /.idea/runConfigurations/*
+!/.idea/runConfigurations/Auth_Application.xml
 !/.idea/runConfigurations/Hono_Application.xml
-!/.idea/runConfigurations/REST_Application__Hono_in_vm_.xml
 !/.idea/runConfigurations/REST_Application.xml
-!/.idea/runConfigurations/MQTT_Application__Hono_in_VM_.xml
 !/.idea/runConfigurations/MQTT_Application.xml
 
