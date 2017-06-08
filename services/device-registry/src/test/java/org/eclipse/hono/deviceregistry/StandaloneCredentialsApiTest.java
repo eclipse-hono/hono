@@ -9,13 +9,35 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.server;
+package org.eclipse.hono.deviceregistry;
 
-import static java.net.HttpURLConnection.*;
-import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.proton.ProtonClientOptions;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.AuthoritiesImpl;
+import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.service.auth.AuthenticationService;
+import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
+
+import org.eclipse.hono.service.credentials.CredentialsEndpoint;
+import org.eclipse.hono.util.CredentialsConstants;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.core.io.ClassPathResource;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -26,31 +48,11 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.eclipse.hono.TestSupport;
-import org.eclipse.hono.auth.Activity;
-import org.eclipse.hono.auth.AuthoritiesImpl;
-import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
-import org.eclipse.hono.service.credentials.CredentialsEndpoint;
-import org.eclipse.hono.service.credentials.impl.FileBasedCredentialsService;
-import org.eclipse.hono.util.CredentialsConstants;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
+import static java.net.HttpURLConnection.*;
+import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests validating Hono's Credentials API using a stand alone server.
@@ -61,30 +63,33 @@ public class StandaloneCredentialsApiTest {
     private static final int                   TIMEOUT = 5000; // milliseconds
     private static final String                USER    = "hono-client";
     private static final String                PWD     = "secret";
-    private static final  String                CREDENTIALS_USER = "billie";
-    private static final  String                CREDENTIALS_TYPE = "hashed-password";
-    private static final  String                CREDENTIALS_USER_PASSWORD = "hono-secret";
-    private static final  String                CREDENTIALS_PASSWORD_SALT = "hono";
-    private static final  String                DEFAULT_DEVICE_ID = "4711";
+    private static final String                CREDENTIALS_USER = "billie";
+    private static final String                CREDENTIALS_TYPE = "hashed-password";
+    private static final String                CREDENTIALS_USER_PASSWORD = "hono-secret";
+    private static final String                CREDENTIALS_PASSWORD_SALT = "hono";
+    private static final String                DEFAULT_DEVICE_ID = "4711";
 
     private static Vertx                       vertx = Vertx.vertx();
-    private static HonoServer                  server;
-    private static FileBasedCredentialsService credentialsAdapter;
+    private static SimpleDeviceRegistryServer server;
+
     private static HonoClient                  client;
     private static CredentialsClient           credentialsClient;
 
     @BeforeClass
-    public static void prepareHonoServer(final TestContext ctx) throws Exception {
+    public static void prepareDeviceRegistry(final TestContext ctx) throws Exception {
 
-        HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
-        configProperties.setInsecurePortEnabled(true);
-        configProperties.setInsecurePort(0);
+        DeviceRegistryConfigProperties props = new DeviceRegistryConfigProperties();
+        props.setInsecurePortEnabled(true);
+        props.setInsecurePort(0);
 
-        server = new HonoServer();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx, TestSupport.createAuthenticationService(createUser())));
-        server.setConfig(configProperties);
+        props.setCredentialsPath(new ClassPathResource("credentials.json"));
+
+        server = new SimpleDeviceRegistryServer();
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx,createAuthenticationService(createUser())));
+        server.setConfig(props);
         server.addEndpoint(new CredentialsEndpoint(vertx));
-        credentialsAdapter = new FileBasedCredentialsService();
+        FileBasedCredentialsService deviceRegistryImpl = new FileBasedCredentialsService();
+        deviceRegistryImpl.setConfig(props);
 
         Future<CredentialsClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {
@@ -92,12 +97,11 @@ public class StandaloneCredentialsApiTest {
         }));
 
         Future<String> credentialsTracker = Future.future();
-        vertx.deployVerticle(credentialsAdapter, credentialsTracker.completer());
-
+        vertx.deployVerticle(deviceRegistryImpl,credentialsTracker.completer());
         credentialsTracker.compose(r -> {
-            Future<String> serverTracker = Future.future();
-            vertx.deployVerticle(server, serverTracker.completer());
-            return serverTracker;
+            Future<String> serviceTracker = Future.future();
+            vertx.deployVerticle(server, serviceTracker.completer());
+            return serviceTracker;
         }).compose(s -> {
             client = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                     .vertx(vertx)
@@ -124,13 +128,21 @@ public class StandaloneCredentialsApiTest {
     private static HonoUser createUser() {
 
         AuthoritiesImpl authorities = new AuthoritiesImpl()
-                .addResource(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", Activity.READ, Activity.WRITE)
+                .addResource(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE })
                 .addOperation(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", "*");
         HonoUser user = mock(HonoUser.class);
-        when(user.isExpired()).thenReturn(Boolean.FALSE);
         when(user.getAuthorities()).thenReturn(authorities);
-        when(user.getName()).thenReturn("test-client");
         return user;
+    }
+
+    public static AuthenticationService createAuthenticationService(final HonoUser returnedUser) {
+        return new AuthenticationService() {
+
+            @Override
+            public void authenticate(final JsonObject authRequest, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
+                authenticationResultHandler.handle(Future.succeededFuture(returnedUser));
+            }
+        };
     }
 
     @AfterClass
@@ -358,7 +370,7 @@ public class StandaloneCredentialsApiTest {
         assertEquals(payload.getString(CredentialsConstants.FIELD_AUTH_ID), CREDENTIALS_USER);
 
         assertTrue(payload.containsKey(CredentialsConstants.FIELD_TYPE));
-        assertEquals(payload.getString(CredentialsConstants.FIELD_TYPE),CREDENTIALS_TYPE);
+        assertEquals(payload.getString(CredentialsConstants.FIELD_TYPE), CREDENTIALS_TYPE);
     }
 
     private void checkPayloadGetCredentialsContainsDefaultDeviceIdAndIsEnabled(final JsonObject payload) {
@@ -370,7 +382,7 @@ public class StandaloneCredentialsApiTest {
         assertTrue(payload.getBoolean(CredentialsConstants.FIELD_ENABLED));
     }
 
-    private byte[] hashPassword(final String hashFunction,final String hashSalt,final String passwordToHash) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+    private byte[] hashPassword(final String hashFunction,final String hashSalt, final String passwordToHash) throws NoSuchAlgorithmException, UnsupportedEncodingException {
             MessageDigest messageDigest = MessageDigest.getInstance(hashFunction);
             messageDigest.update(hashSalt.getBytes("UTF-8"));
             byte[] theHashedPassword = messageDigest.digest(passwordToHash.getBytes());

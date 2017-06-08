@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (c) 2017 Bosch Software Innovations GmbH.
+
+    All rights reserved. This program and the accompanying materials
+    are made available under the terms of the Eclipse Public License v1.0
+    which accompanies this distribution, and is available at
+    http://www.eclipse.org/legal/epl-v10.html
+
+    Contributors:
+       Bosch Software Innovations GmbH - initial API and implementation and initial documentation
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.eclipse.hono</groupId>
+    <artifactId>hono-bom</artifactId>
+    <version>0.5-M6-SNAPSHOT</version>
+    <relativePath>../bom</relativePath>
+  </parent>
+
+  <artifactId>hono-services</artifactId>
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>device-registry</module>
+  </modules>
+
+  <name>Hono Services</name>
+  <description>Microservices that form an essential part of Hono's architecture that are intenionally not part of the Hono server process itself. They can be substituted by different implementations that stick to the defined APIs anytime.</description>
+</project>
