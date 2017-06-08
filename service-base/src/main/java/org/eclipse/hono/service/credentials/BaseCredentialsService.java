@@ -18,6 +18,8 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.eclipse.hono.config.AbstractConfig;
+import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
@@ -36,7 +38,7 @@ import static org.eclipse.hono.util.CredentialsConstants.*;
  * received via the event bus and route them to specific methods corresponding to the <em>subject</em>
  * indicated in the message.
  */
-public abstract class BaseCredentialsService extends AbstractVerticle implements CredentialsService {
+public abstract class BaseCredentialsService<T extends AbstractConfig> extends ConfigurationSupportingVerticle<T> implements CredentialsService {
 
     /**
      * A logger to be shared by subclasses.

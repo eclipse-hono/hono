@@ -39,16 +39,7 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
     private static final Logger LOG = LoggerFactory.getLogger(HonoApplication.class);
 
     private RegistrationService registrationService;
-    private CredentialsService credentialsService;
     private AuthenticationService authenticationService;
-
-    /**
-     * @param credentialsService the credentialsService to set
-     */
-    @Autowired
-    public final void setCredentialsService(final CredentialsService credentialsService) {
-        this.credentialsService = credentialsService;
-    }
 
     /**
      * @param registrationService the registrationService to set
@@ -76,7 +67,6 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
         Future<Void> result = Future.future();
         CompositeFuture.all(
                 deployAuthenticationService(), // we only need 1 authentication service
-                deployCredentialsService(),
                 deployRegistrationService()).setHandler(ar -> {
             if (ar.succeeded()) {
                 result.complete();
@@ -91,13 +81,6 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
         LOG.info("Starting registration service {}", registrationService);
         Future<String> result = Future.future();
         getVertx().deployVerticle(registrationService, result.completer());
-        return result;
-    }
-
-    private Future<String> deployCredentialsService() {
-        LOG.info("Starting credentials service {}", credentialsService);
-        Future<String> result = Future.future();
-        getVertx().deployVerticle(credentialsService, result.completer());
         return result;
     }
 
