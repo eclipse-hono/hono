@@ -54,12 +54,17 @@
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.http.insecurePort.bindAddress" />
+        <option name="name" value="hono.http.insecurePort" />
+        <option name="value" value="8080" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.insecurePortBindAddress" />
         <option name="value" value="0.0.0.0" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.http.insecurePort.enabled" />
+        <option name="name" value="hono.http.insecurePortEnabled" />
         <option name="value" value="true" />
       </param>
       <param>

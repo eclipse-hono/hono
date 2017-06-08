@@ -49,12 +49,12 @@
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.mqtt.insecurePort.bindAddress" />
+        <option name="name" value="hono.mqtt.insecurePortBindAddress" />
         <option name="value" value="0.0.0.0" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.mqtt.insecurePort.enabled" />
+        <option name="name" value="hono.mqtt.insecurePortEnabled" />
         <option name="value" value="true" />
       </param>
       <param>
