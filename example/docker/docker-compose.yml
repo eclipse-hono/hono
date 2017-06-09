@@ -62,9 +62,9 @@ services:
       - "5671:5671"
     environment:
       - HONO_AUTH_HOST=auth-server
-      - HONO_AUTH_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
       - HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_AUTH_NAME=hono-server
+      - HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
       - HONO_DOWNSTREAM_HOST=qdrouter
       - HONO_DOWNSTREAM_PORT=5673
       - HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem
