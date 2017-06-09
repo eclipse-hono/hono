@@ -37,3 +37,13 @@ Then simply run the script from the command line:
     $~/hono/demo-certs> ./create_certs.sh
 
 The script will create the `certs` subfolder (if it already exists it will be removed first) and then create all keys and certificates in that subfolder.
+
+### Reusing the already existing Certificates for the root and intermediate CA
+
+If you want to add more keys and certificates (e.g. to introduce a new microservice) you have the option to reuse the already existing certificates for the root and intermediate CA.
+
+Simply run the script with the option `-c`:
+
+    $~/hono/demo-certs> ./create_certs.sh -c
+
+With that option the certificates for all Hono components (including your potentially added new component) are (re)created, but the CA certificates remain the same.
