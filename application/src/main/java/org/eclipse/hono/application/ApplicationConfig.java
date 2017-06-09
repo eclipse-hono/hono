@@ -19,6 +19,7 @@ import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerConfigProperties;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
+import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -80,7 +81,7 @@ public class ApplicationConfig {
      * @return The connection factory.
      */
     @Bean
-    @Qualifier("downstream")
+    @Qualifier(Constants.QUALIFIER_DOWNSTREAM)
     public ConnectionFactory downstreamConnectionFactory() {
         return new ConnectionFactoryImpl(vertx, downstreamConnectionProperties());
     }

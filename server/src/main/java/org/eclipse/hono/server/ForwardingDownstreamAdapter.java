@@ -107,7 +107,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @throws IllegalStateException if this adapter is already running.
      */
     @Autowired
-    @Qualifier("downstream")
+    @Qualifier(Constants.QUALIFIER_DOWNSTREAM)
     public final void setDownstreamConnectionFactory(final ConnectionFactory factory) {
         if (running) {
             throw new IllegalStateException("downstream container host can not be set on running adapter");
