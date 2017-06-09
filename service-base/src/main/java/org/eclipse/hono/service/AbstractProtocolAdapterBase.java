@@ -70,7 +70,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
      * @param registrationServiceClient The client.
      * @throws NullPointerException if the client is {@code null}.
      */
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Autowired(required = false)
     public final void setRegistrationServiceClient(final HonoClient registrationServiceClient) {
         this.registration = Objects.requireNonNull(registrationServiceClient);
@@ -88,9 +88,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         return registration;
     }
 
-    /**
-     * 
-     */
     @Override
     public void start(final Future<Void> startFuture) {
         if (hono == null) {

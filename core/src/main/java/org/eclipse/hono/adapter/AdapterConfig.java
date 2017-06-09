@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -32,7 +33,7 @@ public abstract class AdapterConfig {
     private final Vertx vertx = Vertx.vertx();
 
     @Autowired(required = false)
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     private ClientConfigProperties registrationServiceClientConfig;
 
     /**
@@ -87,7 +88,7 @@ public abstract class AdapterConfig {
      *
      * @return The properties.
      */
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.registration")
     @ConditionalOnProperty(prefix = "hono.registration", name = "host")
     @Bean
@@ -117,7 +118,7 @@ public abstract class AdapterConfig {
      *
      * @return The connection factory or null.
      */
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Bean
     public ConnectionFactory registrationServiceConnectionFactory() {
         if (registrationServiceClientConfig == null) {
