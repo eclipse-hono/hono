@@ -57,6 +57,7 @@ public class StandaloneAuthServerTest {
 
         AuthenticationServerConfigProperties props = new AuthenticationServerConfigProperties();
         props.setInsecurePortEnabled(true);
+        props.setInsecurePort(0);
         props.getSigning().setTokenExpiration(5);
         props.getSigning().setSharedSecret(SIGNING_SECRET);
         props.setPermissionsPath(new ClassPathResource("authentication-service-test-permissions.json"));
@@ -79,15 +80,16 @@ public class StandaloneAuthServerTest {
             vertx.deployVerticle(server, ctx.asyncAssertSuccess(d -> serverTracker.complete(d)));
         }, serverTracker);
 
+        startup.await(2000);
+
         AuthenticationServerClientConfigProperties clientProps = new AuthenticationServerClientConfigProperties();
         clientProps.setHost("127.0.0.1");
         clientProps.setName("test-client");
-        clientProps.setPort(Constants.PORT_AMQP);
+        clientProps.setPort(server.getInsecurePort());
         clientProps.getValidation().setSharedSecret(SIGNING_SECRET);
 
         ConnectionFactory clientFactory = new ConnectionFactoryImpl(vertx, clientProps);
         client = new AuthenticationServerClient(vertx, clientFactory);
-        startup.await(2000);
     }
 
     /**
