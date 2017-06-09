@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -216,6 +217,25 @@ public class HonoClientImplTest {
         connectionFactory.await(1, TimeUnit.SECONDS);
     }
 
+    /**
+     * Verifies that the client adapter repeatedly tries to connect until a connection is established.
+     */
+    @Test
+    public void testConnectTriesToReconnectOnFailedConnectAttempt() {
+
+        // expect the connection factory to be invoked 3 times
+        DisconnectHandlerProvidingConnectionFactory connectionFactory = new DisconnectHandlerProvidingConnectionFactory(null, 3);
+
+        // GIVEN an client that cannot connect to the server
+        HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+
+        // WHEN trying to connect
+        client.connect(new ProtonClientOptions().setReconnectAttempts(1), attempt -> {});
+
+        // THEN the client repeatedly tries to connect
+        assertTrue(connectionFactory.await(4 * Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, TimeUnit.MILLISECONDS));
+    }
+
     private class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
 
         private Handler<ProtonConnection> disconnectHandler;
@@ -251,7 +271,11 @@ public class HonoClientImplTest {
 
             expectedConnectionAttemps.countDown();
             this.disconnectHandler = disconnectHandler;
-            connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
+            if (connectionToCreate == null) {
+                connectionResultHandler.handle(Future.failedFuture("cannot connect"));
+            } else {
+                connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
+            }
         }
 
         @Override

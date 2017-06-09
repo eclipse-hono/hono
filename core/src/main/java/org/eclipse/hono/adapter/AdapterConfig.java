@@ -24,13 +24,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.dns.AddressResolverOptions;
 
 /**
  * Minimum configuration for protocol adapters
  */
 public abstract class AdapterConfig {
 
-    private final Vertx vertx = Vertx.vertx();
+    private final Vertx vertx = Vertx.vertx(new VertxOptions().setWarningExceptionTime(1500000000).setAddressResolverOptions(
+            new AddressResolverOptions()
+            .setCacheMaxTimeToLive(0) // support DNS based service resolution
+            .setQueryTimeout(1000)));
 
     @Autowired(required = false)
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)

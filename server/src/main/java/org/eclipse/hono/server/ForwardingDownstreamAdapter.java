@@ -49,7 +49,6 @@ import io.vertx.proton.ProtonSender;
 @Component
 public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
-    private static final int RECONNECT_INTERVAL_MILLIS = 200;
 
     /**
      * A logger to be shared with subclasses.
@@ -66,6 +65,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers  = new ArrayList<>();
 
     private boolean                         running                         = false;
+    private boolean                         retryOnFailedConnectAttempt     = true;
     private final Vertx                     vertx;
     private ProtonConnection                downstreamConnection;
     private SenderFactory                   senderFactory;
@@ -172,11 +172,11 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             running = true;
             if (honoConfig.isWaitForDownstreamConnectionEnabled()) {
                 logger.info("waiting for connection to downstream container");
-                connectToDownstream(createClientOptions(), connectAttempt -> {
-                    if (connectAttempt.succeeded()) {
+                connectToDownstream(createClientOptions(), attempt -> {
+                    if (attempt.succeeded()) {
                         startFuture.complete();
                     } else {
-                        startFuture.fail(connectAttempt.cause());
+                        startFuture.fail(attempt.cause());
                     }
                 });
             } else {
@@ -223,12 +223,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     private ProtonClientOptions createClientOptions() {
         return new ProtonClientOptions()
-                .setConnectTimeout(100)
-                .setReconnectAttempts(-1).setReconnectInterval(RECONNECT_INTERVAL_MILLIS);
+                .setReconnectAttempts(-1)
+                .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
     }
 
     private void connectToDownstream(final ProtonClientOptions options) {
-        connectToDownstream(options, conAttempt -> {});
+        connectToDownstream(options, null);
     }
 
     private void connectToDownstream(final ProtonClientOptions options, final Handler<AsyncResult<ProtonConnection>> connectResultHandler) {
@@ -240,11 +240,17 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 connectAttempt -> {
                     if (connectAttempt.succeeded()) {
                         this.downstreamConnection = connectAttempt.result();
-                        connectResultHandler.handle(Future.succeededFuture(connectAttempt.result()));
                         counterService.increment(MetricConstants.metricNameDownstreamConnections());
+                        if (connectResultHandler != null) {
+                            connectResultHandler.handle(Future.succeededFuture(connectAttempt.result()));
+                        }
                     } else {
-                        logger.info("failed to connect to downstream container", connectAttempt.cause());
-                        connectResultHandler.handle(Future.failedFuture(connectAttempt.cause()));
+                        logger.info("failed to connect to downstream container: {}", connectAttempt.cause().getMessage());
+                        if (retryOnFailedConnectAttempt) {
+                            reconnect(connectResultHandler);
+                        } else if (connectResultHandler != null) {
+                            connectResultHandler.handle(Future.failedFuture(connectAttempt.cause()));
+                        }
                     }
                 });
     }
@@ -282,13 +288,18 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 iter.remove();
             }
 
-            final ProtonClientOptions clientOptions = createClientOptions();
-            if (clientOptions.getReconnectAttempts() != 0) {
-                vertx.setTimer(RECONNECT_INTERVAL_MILLIS, reconnect -> {
-                    logger.info("attempting to re-connect to downstream container");
-                    connectToDownstream(clientOptions);
-                });
-            }
+            reconnect(null);
+        }
+    }
+
+    private void reconnect(final Handler<AsyncResult<ProtonConnection>> resultHandler) {
+
+        final ProtonClientOptions clientOptions = createClientOptions();
+        if (clientOptions.getReconnectAttempts() != 0) {
+            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+                logger.info("attempting to re-connect to downstream container");
+                connectToDownstream(clientOptions, resultHandler);
+            });
         }
     }
 
@@ -316,7 +327,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 if (attempt.succeeded()) {
                     logger.info("created downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
                 } else {
-                    logger.warn("can't create downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId(), attempt.cause());
+                    logger.warn("can't create downstream sender [con: {}, link: {}]: {}", client.getConnectionId(), client.getLinkId(), attempt.cause().getMessage());
                 }
                 clientAttachHandlers.remove(resultHandler);
                 resultHandler.handle(attempt);
@@ -506,6 +517,10 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      */
     public final boolean isConnected() {
         return downstreamConnection != null && !downstreamConnection.isDisconnected();
+    }
+
+    final void disableRetryOnFailedConnectAttempt() {
+        retryOnFailedConnectAttempt = false;
     }
 
     /**

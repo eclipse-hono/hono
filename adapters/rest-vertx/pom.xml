@@ -104,9 +104,6 @@
                       <exec>
                         <arg>java</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
-                        <arg>-Dvertx.disableDnsResolver=true</arg>
-                        <arg>-Dnetworkaddress.cache.ttl=0</arg>
-                        <arg>-Dnetworkaddress.cache.negative.ttl=0</arg>
                         <arg>-jar</arg>
                         <arg>
                           /opt/hono/${project.artifactId}-${project.version}.jar

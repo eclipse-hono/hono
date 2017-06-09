@@ -29,11 +29,15 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -43,6 +47,7 @@ import io.vertx.proton.ProtonSender;
 /**
  * Verifies standard behavior of {@code ForwardingDownstreamAdapter}.
  */
+@RunWith(VertxUnitRunner.class)
 public class ForwardingDownstreamAdapterTest {
 
     private ForwardingDownstreamAdapter adapter;
@@ -52,16 +57,9 @@ public class ForwardingDownstreamAdapterTest {
     /**
      * Initializes mocks etc.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
-        vertx = mock(Vertx.class);
-        // make sure timer tasks are executed immediately
-        doAnswer(invocation -> {
-            invocation.getArgumentAt(1, Handler.class).handle(0L);
-            return null;
-            }).when(vertx).setTimer(anyLong(), any(Handler.class));
-
+        vertx = Vertx.vertx();
         connectionFactory = newMockConnectionFactory(false);
     }
 
@@ -119,10 +117,11 @@ public class ForwardingDownstreamAdapterTest {
     /**
      * Verifies that the adapter refuses to accept a link from an upstream client
      * when there is no connection to the downstream container.
-     * @throws InterruptedException 
+     * 
+     * @param ctx The Vert.x test context. 
      */
     @Test
-    public void testGetDownstreamSenderClosesLinkIfDownstreamConnectionIsBroken() throws InterruptedException {
+    public void testGetDownstreamSenderClosesLinkIfDownstreamConnectionIsBroken(final TestContext ctx) {
 
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX, "myTenant", null);
         final UpstreamReceiver client = newClient();
@@ -133,17 +132,18 @@ public class ForwardingDownstreamAdapterTest {
         // GIVEN an adapter without connection to the downstream container
         givenADownstreamAdapter();
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(true));
+        adapter.disableRetryOnFailedConnectAttempt();
         adapter.start(Future.future());
 
         // WHEN a client wants to attach to Hono for uploading telemetry data
         // THEN assert that no sender can be created
-        CountDownLatch latch = new CountDownLatch(1);
+        Async clientAttachFailure = ctx.async();
         adapter.onClientAttach(client, s -> {
             if (s.failed()) {
-                latch.countDown();
+                clientAttachFailure.complete();
             }
         });
-        assertTrue(latch.await(100, TimeUnit.MILLISECONDS));
+        clientAttachFailure.await(600);
         assertTrue(adapter.isActiveSendersEmpty());
         assertTrue(adapter.isSendersPerConnectionEmpty());
     }
@@ -238,10 +238,10 @@ public class ForwardingDownstreamAdapterTest {
      * Verifies that all requests from upstream clients to attach are failed when the connection to the
      * downstream container is lost.
      * 
-     * @throws Exception if the test fails.
+     * @param ctx The Vert.x test context.
      */
     @Test
-    public void testDownstreamDisconnectFailsClientAttachRequests() throws Exception {
+    public void testDownstreamDisconnectFailsClientAttachRequests(final TestContext ctx) {
 
         final ProtonConnection connectionToCreate = mock(ProtonConnection.class);
         when(connectionToCreate.getRemoteContainer()).thenReturn("downstream");
@@ -253,7 +253,7 @@ public class ForwardingDownstreamAdapterTest {
             Future<ProtonSender> result = Future.future();
             return result;
         };
-        final CountDownLatch disconnected = new CountDownLatch(1);
+        final Async disconnected = ctx.async();
 
         // GIVEN an adapter connected to a downstream container with a client trying to attach
         givenADownstreamAdapter(senderFactory);
@@ -272,10 +272,28 @@ public class ForwardingDownstreamAdapterTest {
         factory.getDisconnectHandler().handle(connectionToCreate);
 
         // THEN the adapter tries to reconnect to the downstream container and has closed all upstream receivers
-        assertTrue("client attach request should have failed on downstream disconnect",
-                disconnected.await(1, TimeUnit.SECONDS));
+        disconnected.await(1000);
         assertTrue(adapter.isActiveSendersEmpty());
         assertTrue(adapter.isSendersPerConnectionEmpty());
+    }
+
+    /**
+     * Verifies the adapter repreatedly tries to connect to downstream container until it succeeds.
+     */
+    @Test
+    public void testConnectToDownstreamRetriesToConnectOnFailedAttempt() {
+
+        final DisconnectHandlerProvidingConnectionFactory factory = new DisconnectHandlerProvidingConnectionFactory(null, 3);
+
+        // GIVEN an adapter
+        givenADownstreamAdapter();
+        adapter.setDownstreamConnectionFactory(factory);
+
+        // WHEN starting the adapter
+        adapter.start(Future.future());
+
+        // THEN the adapter continuously tries to connect to the downstream container
+        assertTrue(factory.await(4 * Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, TimeUnit.MILLISECONDS));
     }
 
     private void givenADownstreamAdapter() {
@@ -296,7 +314,7 @@ public class ForwardingDownstreamAdapterTest {
             }
 
             @Override
-            protected void forwardMessage(ProtonSender sender, Message msg, ProtonDelivery delivery) {
+            protected void forwardMessage(final ProtonSender sender, final Message msg, final ProtonDelivery delivery) {
                 // nothing to do
             }
         };
@@ -305,7 +323,7 @@ public class ForwardingDownstreamAdapterTest {
     private class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
 
         private Handler<ProtonConnection> disconnectHandler;
-        private CountDownLatch expectedConnectionAttemps;
+        private CountDownLatch expectedConnectionAttempts;
         private ProtonConnection connectionToCreate;
 
         public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate) {
@@ -314,7 +332,7 @@ public class ForwardingDownstreamAdapterTest {
 
         public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate, final int expectedConnectionAttempts) {
             this.connectionToCreate = conToCreate;
-            this.expectedConnectionAttemps = new CountDownLatch(expectedConnectionAttempts);
+            this.expectedConnectionAttempts = new CountDownLatch(expectedConnectionAttempts);
         }
 
         @Override
@@ -335,9 +353,15 @@ public class ForwardingDownstreamAdapterTest {
                 final Handler<ProtonConnection> disconnectHandler,
                 final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
-            expectedConnectionAttemps.countDown();
-            this.disconnectHandler = disconnectHandler;
-            connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
+            if (expectedConnectionAttempts.getCount() > 0) {
+                expectedConnectionAttempts.countDown();
+                this.disconnectHandler = disconnectHandler;
+                if (connectionToCreate == null) {
+                    connectionResultHandler.handle(Future.failedFuture("cannot connect"));
+                } else {
+                    connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
+                }
+            }
         }
 
         @Override
@@ -364,9 +388,9 @@ public class ForwardingDownstreamAdapterTest {
             return disconnectHandler;
         }
 
-        public boolean await(long timeout, TimeUnit unit) {
+        public boolean await(final long timeout, final TimeUnit unit) {
             try {
-                return expectedConnectionAttemps.await(timeout, unit);
+                return expectedConnectionAttempts.await(timeout, unit);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;

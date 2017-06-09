@@ -127,13 +127,13 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
         if (conAttempt.failed()) {
 
-            logger.warn("can't connect to AMQP 1.0 container [{}://{}:{}]: {}", clientOptions.isSsl() ? "amqps" : "amqp",
+            logger.info("can't connect to AMQP 1.0 container [{}://{}:{}]: {}", clientOptions.isSsl() ? "amqps" : "amqp",
                     config.getHost(), config.getPort(), conAttempt.cause().getMessage());
             connectionResultHandler.handle(Future.failedFuture(conAttempt.cause()));
 
         } else {
 
-            // at this point the SASL exhange has completed successfully
+            // at this point the SASL exchange has completed successfully
             logger.info("connected to AMQP 1.0 container [{}://{}:{}], opening connection ...",
                     clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort());
             ProtonConnection downstreamConnection = conAttempt.result();

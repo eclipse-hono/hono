@@ -35,6 +35,11 @@ public final class Constants {
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
 
     /**
+     * The default number of milliseconds to wait before trying to reconnect to a service.
+     */
+    public static final long DEFAULT_RECONNECT_INTERVAL_MILLIS = 500;
+
+    /**
      * The key that an authenticated client's principal is stored under in a {@code ProtonConnection}'s
      * attachments.
      */

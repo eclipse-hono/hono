@@ -22,6 +22,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.dns.AddressResolverOptions;
 
 /**
  * Spring Boot configuration for the simple authentication server application.
@@ -30,7 +32,10 @@ import io.vertx.core.Vertx;
 @Configuration
 public class ApplicationConfig {
 
-    private static final Vertx vertx = Vertx.vertx();
+    private final Vertx vertx = Vertx.vertx(new VertxOptions().setWarningExceptionTime(1500000000).setAddressResolverOptions(
+            new AddressResolverOptions()
+                .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                .setQueryTimeout(1000)));
 
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
