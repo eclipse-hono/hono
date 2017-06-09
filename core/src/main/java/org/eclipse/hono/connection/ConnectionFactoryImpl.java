@@ -102,17 +102,19 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
         Objects.requireNonNull(connectionResultHandler);
         final ProtonClientOptions clientOptions = options != null ? options : new ProtonClientOptions();
-        addOptions(clientOptions);
+        final String effectiveUsername = username == null ? config.getUsername() : username;
+        final String effectivePassword = password == null ? config.getPassword() : password;
+        addOptions(clientOptions, effectiveUsername, effectivePassword);
 
-        ProtonClient client = ProtonClient.create(vertx);
+        final ProtonClient client = ProtonClient.create(vertx);
         logger.info("connecting to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
                 config.getHost(), config.getPort());
         client.connect(
                 clientOptions,
                 config.getHost(),
                 config.getPort(),
-                username == null ? config.getUsername() : username,
-                password == null ? config.getPassword() : password,
+                effectiveUsername,
+                effectivePassword,
                 conAttempt -> handleConnectionAttemptResult(conAttempt, clientOptions, closeHandler, disconnectHandler, connectionResultHandler));
     }
 
@@ -124,10 +126,14 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
             final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
         if (conAttempt.failed()) {
-            logger.warn("can't connect to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
-                    config.getHost(), config.getPort(), conAttempt.cause());
+
+            logger.warn("can't connect to AMQP 1.0 container [{}://{}:{}]: {}", clientOptions.isSsl() ? "amqps" : "amqp",
+                    config.getHost(), config.getPort(), conAttempt.cause().getMessage());
             connectionResultHandler.handle(Future.failedFuture(conAttempt.cause()));
+
         } else {
+
+            // at this point the SASL exhange has completed successfully
             logger.info("connected to AMQP 1.0 container [{}://{}:{}], opening connection ...",
                     clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort());
             ProtonConnection downstreamConnection = conAttempt.result();
@@ -150,13 +156,14 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
         }
     }
 
-    private void addOptions(final ProtonClientOptions clientOptions) {
+    private void addOptions(final ProtonClientOptions clientOptions, final String username, final String password) {
 
-        if (config.getUsername() != null && config.getPassword() != null) {
-            clientOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
-        }
         addTlsTrustOptions(clientOptions);
-        addTlsKeyCertOptions(clientOptions);
+        if (username != null && password != null) {
+            clientOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
+        } else {
+            addTlsKeyCertOptions(clientOptions);
+        }
     }
 
     private void addTlsTrustOptions(final ProtonClientOptions clientOptions) {
