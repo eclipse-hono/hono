@@ -110,6 +110,7 @@
                   <build>
                     <from>${java-base-image.name}</from>
                     <ports>
+                      <port>5671</port>
                       <port>5672</port>
                     </ports>
                     <runCmds>
