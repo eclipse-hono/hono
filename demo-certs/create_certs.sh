@@ -12,6 +12,7 @@
  *    Bosch Software Innovations GmbH - initial creation
 
  A simple shell script for generating example certificates to be used with Hono.
+ With the option '-c' the existing root and intermediate CA certificates are used.
 '
 
 CURVE=prime256v1
@@ -30,6 +31,22 @@ REST_ADAPTER_KEY_STORE=restKeyStore.p12
 REST_ADAPTER_KEY_STORE_PWD=restkeys
 ARTEMIS_KEY_STORE=artemisKeyStore.p12
 ARTEMIS_KEY_STORE_PWD=artemiskeys
+
+function parse_options() {
+  while getopts ":c" theOptions; do
+    case $theOptions in
+      c)
+        echo "Reusing existing CA certificates."
+        REUSE_CA_CERTS=true
+        ;;
+      \?)
+        echo "Invalid arguments."
+        echo "Usage: create_certs.sh [-c]"
+        exit -1
+        ;;
+    esac
+  done
+}
 
 function to_pkcs8 {
 
@@ -54,31 +71,42 @@ function create_cert {
   fi
 }
 
-if [ -d $DIR ]
-then
-  rm -rf $DIR
+
+function create_ca_certs() {
+  echo "creating root key and certificate"
+  #openssl ecparam -name $CURVE -genkey -noout -out $DIR/root-key-orig.pem
+  openssl genrsa -out $DIR/root-key-orig.pem 4096
+  to_pkcs8 $DIR/root-key-orig.pem $DIR/root-key.pem
+  openssl req -x509 -config ca_opts -new -key $DIR/root-key.pem -out $DIR/root-cert.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=root"
+
+  echo ""
+  echo "creating CA key and certificate"
+  #openssl ecparam -name $CURVE -genkey -noout -out $DIR/ca-key-orig.pem
+  openssl genrsa -out $DIR/ca-key-orig.pem 4096
+  to_pkcs8 $DIR/ca-key-orig.pem $DIR/ca-key.pem
+  openssl req -config ca_opts -reqexts intermediate_ext -new -key $DIR/ca-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=ca" | \
+   openssl x509 -req -extfile ca_opts -extensions intermediate_ext -out $DIR/ca-cert.pem -days 365 -CA $DIR/root-cert.pem -CAkey $DIR/root-key.pem -CAcreateserial
+  cat $DIR/ca-cert.pem $DIR/root-cert.pem > $DIR/trusted-certs.pem
+
+  echo ""
+  echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificate"
+  keytool -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
+  keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
+}
+
+
+parse_options $*
+
+if [ -z "$REUSE_CA_CERTS" ];then
+  if [ -d $DIR ]
+  then
+    rm -rf $DIR
+  fi
+  mkdir $DIR
+
+  create_ca_certs
 fi
-mkdir $DIR
 
-echo "creating root key and certificate"
-#openssl ecparam -name $CURVE -genkey -noout -out $DIR/root-key-orig.pem
-openssl genrsa -out $DIR/root-key-orig.pem 4096
-to_pkcs8 $DIR/root-key-orig.pem $DIR/root-key.pem
-openssl req -x509 -config ca_opts -new -key $DIR/root-key.pem -out $DIR/root-cert.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=root"
-
-echo ""
-echo "creating CA key and certificate"
-#openssl ecparam -name $CURVE -genkey -noout -out $DIR/ca-key-orig.pem
-openssl genrsa -out $DIR/ca-key-orig.pem 4096
-to_pkcs8 $DIR/ca-key-orig.pem $DIR/ca-key.pem
-openssl req -config ca_opts -reqexts intermediate_ext -new -key $DIR/ca-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=ca" | \
- openssl x509 -req -extfile ca_opts -extensions intermediate_ext -out $DIR/ca-cert.pem -days 365 -CA $DIR/root-cert.pem -CAkey $DIR/root-key.pem -CAcreateserial
-cat $DIR/ca-cert.pem $DIR/root-cert.pem > $DIR/trusted-certs.pem
-
-echo ""
-echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificate"
-keytool -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
-keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 
 create_cert hono $HONO_KEY_STORE $HONO_KEY_STORE_PWD
 create_cert qdrouter
