@@ -83,7 +83,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- ##### Authentication server ##### -->
                 <image>
                   <name>eclipsehono/hono-auth-test</name>
-                  <alias>auth-server</alias>
                   <build>
                     <from>eclipsehono/hono-auth:${project.version}</from>
                     <assembly>
@@ -105,6 +104,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   </build>
                   <run>
                     <network>
+                      <mode>custom</mode>
                       <name>hono</name>
                       <alias>auth-server</alias>
                     </network>
@@ -126,12 +126,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
                   <name>eclipsehono/broker:${project.version}</name>
-                  <alias>broker</alias>
                   <run>
                     <ports>
                       <port>+broker.ip:broker.amqp.port:5672</port>
                     </ports>
                     <network>
+                      <mode>custom</mode>
                       <name>hono</name>
                       <alias>broker</alias>
                     </network>
@@ -152,16 +152,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- ##### Qpid Dispatch Router ##### -->
                 <image>
                   <name>eclipsehono/dispatch-router:${project.version}</name>
-                  <alias>qdrouter</alias>
                   <run>
                     <cmd>
                       <shell>/usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd-with-broker.json</shell>
                     </cmd>
                     <ports>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
-                      <port>qpid.amqp.internal.port:5673</port>
+                      <!-- port>qpid.amqp.internal.port:5673</port-->
                     </ports>
                     <network>
+                      <mode>custom</mode>
                       <name>hono</name>
                       <alias>qdrouter</alias>
                     </network>
@@ -183,7 +183,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- ##### Hono server ##### -->
                 <image>
                   <name>eclipsehono/hono-test-server</name>
-                  <alias>hono</alias>
                   <build>
                     <from>eclipsehono/hono-server:${project.version}</from>
                     <assembly>
@@ -210,6 +209,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
+                      <alias>hono</alias>
                     </network>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
