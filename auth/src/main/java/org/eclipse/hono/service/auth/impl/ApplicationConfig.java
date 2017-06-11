@@ -32,11 +32,6 @@ import io.vertx.core.dns.AddressResolverOptions;
 @Configuration
 public class ApplicationConfig {
 
-    private final Vertx vertx = Vertx.vertx(new VertxOptions().setWarningExceptionTime(1500000000).setAddressResolverOptions(
-            new AddressResolverOptions()
-                .setCacheMaxTimeToLive(0) // support DNS based service resolution
-                .setQueryTimeout(1000)));
-
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
      * 
@@ -44,7 +39,13 @@ public class ApplicationConfig {
      */
     @Bean
     public Vertx vertx() {
-        return vertx;
+        VertxOptions options = new VertxOptions()
+                .setWarningExceptionTime(1500000000)
+                .setAddressResolverOptions(new AddressResolverOptions()
+                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
+                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                        .setQueryTimeout(1000));
+        return Vertx.vertx(options);
     }
 
     /**
@@ -84,7 +85,7 @@ public class ApplicationConfig {
             // fall back to TLS configuration
             serviceProps.getSigning().setCertPath(serviceProps.getCertPath());
         }
-        return AuthTokenHelperImpl.forValidating(vertx, serviceProps.getSigning());
+        return AuthTokenHelperImpl.forValidating(vertx(), serviceProps.getSigning());
     }
 
     /**
@@ -100,7 +101,7 @@ public class ApplicationConfig {
             // fall back to TLS configuration
             serviceProps.getSigning().setKeyPath(serviceProps.getKeyPath());
         }
-        return AuthTokenHelperImpl.forSigning(vertx, serviceProps.getSigning());
+        return AuthTokenHelperImpl.forSigning(vertx(), serviceProps.getSigning());
     }
 
 }

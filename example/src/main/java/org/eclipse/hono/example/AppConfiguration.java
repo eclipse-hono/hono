@@ -32,6 +32,6 @@ public class AppConfiguration extends AdapterConfig {
      */
     @Bean
     public HonoClient honoClient() {
-        return new HonoClientImpl(getVertx(), honoConnectionFactory());
+        return new HonoClientImpl(vertx(), honoConnectionFactory());
     }
 }

@@ -32,11 +32,6 @@ import io.vertx.core.dns.AddressResolverOptions;
  */
 public abstract class AdapterConfig {
 
-    private final Vertx vertx = Vertx.vertx(new VertxOptions().setWarningExceptionTime(1500000000).setAddressResolverOptions(
-            new AddressResolverOptions()
-            .setCacheMaxTimeToLive(0) // support DNS based service resolution
-            .setQueryTimeout(1000)));
-
     @Autowired(required = false)
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     private ClientConfigProperties registrationServiceClientConfig;
@@ -47,8 +42,14 @@ public abstract class AdapterConfig {
      * @return The Vert.x instance.
      */
     @Bean
-    public Vertx getVertx() {
-        return vertx;
+    public Vertx vertx() {
+        VertxOptions options = new VertxOptions()
+                .setWarningExceptionTime(1500000000)
+                .setAddressResolverOptions(new AddressResolverOptions()
+                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
+                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                        .setQueryTimeout(1000));
+        return Vertx.vertx(options);
     }
 
     /**
@@ -85,7 +86,7 @@ public abstract class AdapterConfig {
      */
     @Bean
     public ConnectionFactory honoConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx, honoClientConfig());
+        return new ConnectionFactoryImpl(vertx(), honoClientConfig());
     }
 
     /**
@@ -129,6 +130,6 @@ public abstract class AdapterConfig {
         if (registrationServiceClientConfig == null) {
             return null;
         }
-        return new ConnectionFactoryImpl(vertx, registrationServiceClientConfig);
+        return new ConnectionFactoryImpl(vertx(), registrationServiceClientConfig);
     }
 }

@@ -57,7 +57,7 @@ public class Config extends AdapterConfig {
     @Bean
     @Scope("prototype")
     public HonoClient honoClient() {
-        return new HonoClientImpl(getVertx(), honoConnectionFactory());
+        return new HonoClientImpl(vertx(), honoConnectionFactory());
     }
 
     @Override
@@ -85,7 +85,7 @@ public class Config extends AdapterConfig {
         if (registrationServiceConnectionFactory == null) {
             return null;
         }
-        return new HonoClientImpl(getVertx(), registrationServiceConnectionFactory);
+        return new HonoClientImpl(vertx(), registrationServiceConnectionFactory);
     }
 
     /**
