@@ -1,6 +1,6 @@
 hono:
   auth:
-    host: auth
+    host: auth-server
     port: 5672
     name: hono-server
     validation:
@@ -16,6 +16,7 @@ hono:
     waitForDownstreamConnectionEnabled: true
     registrationAssertion:
       sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
+    startupTimeout: 30
 
 ---
 

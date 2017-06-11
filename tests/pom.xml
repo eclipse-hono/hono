@@ -83,7 +83,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- ##### Authentication server ##### -->
                 <image>
                   <name>eclipsehono/hono-auth-test</name>
-                  <alias>auth</alias>
+                  <alias>auth-server</alias>
                   <build>
                     <from>eclipsehono/hono-auth:${project.version}</from>
                     <assembly>
@@ -106,7 +106,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <run>
                     <network>
                       <name>hono</name>
-                      <alias>auth</alias>
+                      <alias>auth-server</alias>
                     </network>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -162,7 +162,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <log>^.*(startup completed successfully)$</log>
-                      <time>20000</time>
+                      <time>30000</time>
                     </wait>
                   </run>
                 </image>
