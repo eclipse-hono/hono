@@ -59,7 +59,7 @@ public class AuthenticationEndpoint extends BaseEndpoint<AuthenticationServerCon
     public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier targetResource) {
 
         if (ProtonQoS.AT_LEAST_ONCE.equals(sender.getRemoteQoS())) {
-            HonoUser user = Constants.getClientPrincipal(sender.attachments());
+            HonoUser user = Constants.getClientPrincipal(con);
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
             logger.debug("transferring token to client...");
             Message tokenMsg = ProtonHelper.message(user.getToken());

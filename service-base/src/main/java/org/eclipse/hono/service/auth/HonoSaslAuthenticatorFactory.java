@@ -43,6 +43,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
 
     private final AuthenticationService authenticationService;
+    private final Vertx vertx;
 
     /**
      * Creates a new factory for a Vertx environment.
@@ -57,22 +58,24 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      */
     @Autowired
     public HonoSaslAuthenticatorFactory(final Vertx vertx, @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final AuthTokenHelper validator) {
-        this(new EventBusAuthenticationService(vertx, validator));
+        this(vertx, new EventBusAuthenticationService(vertx, validator));
     }
 
     /**
      * Creates a new factory using a specific authentication service instance.
      * 
+     * @param vertx the Vertx environment to run the factory in.
      * @param authService The object to return on invocations of {@link #create()}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public HonoSaslAuthenticatorFactory(final AuthenticationService authService) {
+    public HonoSaslAuthenticatorFactory(final Vertx vertx, final AuthenticationService authService) {
+        this.vertx = Objects.requireNonNull(vertx);
         this.authenticationService = Objects.requireNonNull(authService);
     }
 
     @Override
     public ProtonSaslAuthenticator create() {
-        return new HonoSaslAuthenticator(authenticationService);
+        return new HonoSaslAuthenticator(vertx, authenticationService);
     }
 
     /**

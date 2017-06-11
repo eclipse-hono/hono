@@ -112,7 +112,7 @@ public final class AuthenticationServerClient {
                     }
                 });
 
-                vertx.setTimer(5000, timedOut -> {
+                vertx.setTimer(5000, tid -> {
                     if (!userTracker.isComplete()) {
                         userTracker.fail("time out reached while waiting for token from authentication server");
                     }

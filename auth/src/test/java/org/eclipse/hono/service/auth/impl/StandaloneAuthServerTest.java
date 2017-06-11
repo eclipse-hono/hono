@@ -19,7 +19,6 @@ import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClient;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
-import org.eclipse.hono.util.Constants;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;

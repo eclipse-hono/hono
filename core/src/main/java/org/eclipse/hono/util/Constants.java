@@ -163,11 +163,23 @@ public final class Constants {
     }
 
     /**
+     * Gets the principal representing a connection's client.
+     * 
+     * @param con The connection to get the principal for.
+     * @param principal The principal representing the authenticated client.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static void setClientPrincipal(final ProtonConnection con, final HonoUser principal) {
+        Objects.requireNonNull(principal);
+        Record attachments = Objects.requireNonNull(con).attachments();
+        attachments.set(KEY_CLIENT_PRINCIPAL, HonoUser.class, principal);
+    }
+
+    /**
      * Copies properties from a connection's attachments to a link's attachments.
      * <p>
      * The properties copied are
      * <ul>
-     * <li>{@link #KEY_CLIENT_PRINCIPAL}</li>
      * <li>{@link #KEY_CONNECTION_ID}</li>
      * </ul>
      * 
@@ -177,7 +189,6 @@ public final class Constants {
     public static void copyProperties(final ProtonConnection source, final ProtonLink<?> target) {
         Objects.requireNonNull(source);
         Objects.requireNonNull(target);
-        target.attachments().set(Constants.KEY_CLIENT_PRINCIPAL, HonoUser.class, getClientPrincipal(source));
         target.attachments().set(Constants.KEY_CONNECTION_ID, String.class, getConnectionId(source));
     }
 
