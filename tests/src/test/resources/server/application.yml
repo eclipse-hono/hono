@@ -16,7 +16,7 @@ hono:
     waitForDownstreamConnectionEnabled: true
     registrationAssertion:
       sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
-    startupTimeout: 30
+    startupTimeout: 65
 
 ---
 

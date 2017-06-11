@@ -122,7 +122,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- ##### Hono server ##### -->
                 <image>
                   <name>eclipsehono/hono-test-server</name>
-                  <alias>server</alias>
+                  <alias>hono</alias>
                   <build>
                     <from>eclipsehono/hono-server:${project.version}</from>
                     <assembly>
@@ -162,7 +162,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <log>^.*(startup completed successfully)$</log>
-                      <time>30000</time>
+                      <time>60000</time>
                     </wait>
                   </run>
                 </image>
