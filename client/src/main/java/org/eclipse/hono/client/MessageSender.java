@@ -76,6 +76,33 @@ public interface MessageSender {
      * link to the Hono server or it will be sent later after this client has been replenished
      * with more credit. In both cases the handler will be notified <em>once only</em> when this
      * sender has capacity available for accepting and sending the next message.
+     *
+     * @param message The message to send.
+     * @param capacityAvailableHandler The handler to notify when this sender can accept and send
+     *                                 another message.
+     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    void send(Message message, Handler<Void> capacityAvailableHandler, BiConsumer<Object, ProtonDelivery> dispositionHandler);
+
+    /**
+     * Sends an AMQP 1.0 message to the endpoint configured for this client.
+     *
+     * @param message The message to send.
+     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
+     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
+     *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    boolean send(Message message, BiConsumer<Object, ProtonDelivery> dispositionHandler);
+
+    /**
+     * Sends an AMQP 1.0 message to the endpoint configured for this client.
+     * <p>
+     * The message will be sent immediately if this client has enough credit available on its
+     * link to the Hono server or it will be sent later after this client has been replenished
+     * with more credit. In both cases the handler will be notified <em>once only</em> when this
+     * sender has capacity available for accepting and sending the next message.
      * 
      * @param message The message to send.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
@@ -116,6 +143,30 @@ public interface MessageSender {
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
     boolean send(String deviceId, String payload, String contentType, String registrationAssertion);
+
+    /**
+     * Sends a message for a given device to the endpoint configured for this client.
+     *
+     * @param deviceId The id of the device.
+     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
+     * @param payload The data to send.
+     *                The payload's byte representation will be contained in the message as an AMQP 1.0
+     *                <em>Data</em> section.
+     * @param contentType The content type of the payload.
+     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     *                    If the content type specifies a particular character set, this character set will be used to
+     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
+     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
+     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
+     *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
+     */
+    boolean send(String deviceId, String payload, String contentType, String registrationAssertion, BiConsumer<Object, ProtonDelivery> dispositionHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -163,6 +214,26 @@ public interface MessageSender {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     boolean send(String deviceId, byte[] payload, String contentType, String registrationAssertion);
+
+    /**
+     * Sends a message for a given device to the endpoint configured for this client.
+     *
+     * @param deviceId The id of the device.
+     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
+     * @param payload The data to send.
+     *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
+     * @param contentType The content type of the payload.
+     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
+     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
+     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
+     *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    boolean send(String deviceId, byte[] payload, String contentType, String registrationAssertion, BiConsumer<Object, ProtonDelivery> dispositionHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -221,6 +292,32 @@ public interface MessageSender {
      * @param properties The application properties.
      *                   AMQP application properties that can be used for carrying data in the message other than the payload
      * @param payload The data to send.
+     *                The payload's byte representation will be contained in the message as an AMQP 1.0
+     *                <em>Data</em> section.
+     * @param contentType The content type of the payload.
+     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     *                    If the content type specifies a particular character set, this character set will be used to
+     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
+     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
+     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
+     *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
+     */
+    boolean send(String deviceId, Map<String, ?> properties, String payload, String contentType, String registrationAssertion, BiConsumer<Object, ProtonDelivery> dispositionHandler);
+
+    /**
+     * Sends a message for a given device to the endpoint configured for this client.
+     *
+     * @param deviceId The id of the device.
+     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
+     * @param properties The application properties.
+     *                   AMQP application properties that can be used for carrying data in the message other than the payload
+     * @param payload The data to send.
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
@@ -233,6 +330,28 @@ public interface MessageSender {
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      */
     boolean send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, String registrationAssertion);
+
+    /**
+     * Sends a message for a given device to the endpoint configured for this client.
+     *
+     * @param deviceId The id of the device.
+     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
+     * @param properties The application properties.
+     *                   AMQP application properties that can be used for carrying data in the message other than the payload
+     * @param payload The data to send.
+     *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
+     * @param contentType The content type of the payload.
+     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
+     *                              this sender has been created for.
+     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              client} can be used to obtain such an assertion.
+     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
+     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
+     *         the message is discarded and {@code false} is returned.
+     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
+     */
+    boolean send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, String registrationAssertion, BiConsumer<Object, ProtonDelivery> dispositionHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -310,11 +429,11 @@ public interface MessageSender {
     void setErrorHandler(Handler<AsyncResult<Void>> errorHandler);
 
     /**
-     * Sets a callback for disposition updates for messages sent with this {@link MessageSender}.
+     * Sets the default callback for disposition updates for messages sent with this {@link MessageSender}.
      *
      * @param dispositionHandler consumer that accepts a message id and updated disposition
      */
-    void setDispositionHandler(BiConsumer<Object, ProtonDelivery> dispositionHandler);
+    void setDefaultDispositionHandler(BiConsumer<Object, ProtonDelivery> dispositionHandler);
 
     /**
      * Closes the AMQP link with the Hono server this sender is using.
