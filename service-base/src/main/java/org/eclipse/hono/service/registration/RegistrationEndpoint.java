@@ -59,9 +59,10 @@ public final class RegistrationEndpoint extends RequestResponseEndpoint<ServiceC
     }
 
     @Override
-    protected void processRequest(final Message msg, final HonoUser clientPrincipal) {
+    public void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
         final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
+
         vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
                 result -> {
                     JsonObject response = null;

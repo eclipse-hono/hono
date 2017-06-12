@@ -13,10 +13,16 @@
 
 package org.eclipse.hono.service.credentials;
 
-import static org.eclipse.hono.util.CredentialsConstants.CREDENTIALS_ENDPOINT;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.contains;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,72 +30,51 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonQoS;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
+import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonHelper;
 
 /**
- * Tests
+ * Tests verifying behavior of {@link CredentialsEndpoint}.
  */
 @RunWith(MockitoJUnitRunner.class)
 public class CredentialsEndpointTest {
-    private static final String DEFAULT_TENANT = "DEFAULT_TENANT";
-    private static final String AUTH_ID        = "billie";
 
-    private static final ResourceIdentifier resource = ResourceIdentifier.from(CREDENTIALS_ENDPOINT, DEFAULT_TENANT, null);
+    private static final ResourceIdentifier resource = ResourceIdentifier.from(CredentialsConstants.CREDENTIALS_ENDPOINT, Constants.DEFAULT_TENANT, null);
 
     @Mock private EventBus eventBus;
     @Mock private Vertx    vertx;
-    @Mock private ProtonConnection connection;
-
-    private ProtonReceiver receiver;
-    private ProtonSender sender;
-
 
     private CredentialsEndpoint endpoint;
 
+    /**
+     * Sets up the fixture.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
+
         when(vertx.eventBus()).thenReturn(eventBus);
-        receiver = mock(ProtonReceiver.class);
-        when(receiver.handler(any())).thenReturn(receiver);
-        when(receiver.closeHandler(any())).thenReturn(receiver);
-        when(receiver.setAutoAccept(any(Boolean.class))).thenReturn(receiver);
-        when(receiver.setPrefetch(any(Integer.class))).thenReturn(receiver);
-        when(receiver.setQoS(any(ProtonQoS.class))).thenReturn(receiver);
-        sender = mock(ProtonSender.class);
+
         endpoint = new CredentialsEndpoint(vertx);
     }
 
+    /**
+     * Verifies that the endpoint forwards a request message via the event bus.
+     */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testForbidAtMostOnceQoS() {
+    public void testProcessMessageSendsRequestViaEventBus() {
 
-        when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
-        endpoint.onLinkAttach(connection, receiver, resource);
+        Message msg = ProtonHelper.message();
+        msg.setSubject(CredentialsConstants.OPERATION_GET);
+        MessageHelper.addDeviceId(msg, "4711");
+        MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
+        msg.setBody(new AmqpValue(new JsonObject().put("temp", 15).encode()));
 
-        verify(receiver).close();
-    }
+        endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
-    @Test
-    public void testOpenLink() {
-
-        when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
-        endpoint.onLinkAttach(connection, receiver, resource);
-
-        verify(receiver).open();
-        verify(receiver,never()).close();
-
-    }
-
-    @Test
-    public void testLinkClosedIfReplyAddressIsMissing() {
-
-        endpoint.onLinkAttach(connection, sender, resource);
-
-        verify(sender).setCondition(any());
-        verify(sender).close();
+        verify(eventBus).send(contains(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN), any(JsonObject.class), any(Handler.class));
     }
 }

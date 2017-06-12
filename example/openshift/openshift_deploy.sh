@@ -21,6 +21,12 @@ oc create -f ../../application/target/fabric8/hono-app-pv.yml
 oc login -u developer
 oc create -f ../../application/target/fabric8/hono-app-pvc.yml
 
+echo Deploying Authentication Server ...
+oc create -f ../../auth/target/fabric8/hono-auth-svc.yml
+oc create -f ../../auth/target/fabric8/hono-auth-dc.yml
+oc create -f ../../auth/target/fabric8/hono-auth-route.yml
+echo ... done
+
 echo Deploying Qpid Dispatch Router ...
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-svc.yml
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-dc.yml

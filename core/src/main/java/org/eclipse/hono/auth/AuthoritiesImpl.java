@@ -52,10 +52,10 @@ public final class AuthoritiesImpl implements Authorities {
         AuthoritiesImpl result = new AuthoritiesImpl();
         claims.forEach((key, value) -> {
             if ((key.startsWith("o:") || key.startsWith("r:")) && value instanceof String) {
-                LOG.debug("adding claim [key: {}, value: {}]", key, value);
+                LOG.trace("adding claim [key: {}, value: {}]", key, value);
                 result.authorities.put(key, (String) value);
             } else {
-                LOG.debug("ignoring unsupported claim [key: {}]", key);
+                LOG.trace("ignoring unsupported claim [key: {}]", key);
             }
         });
         return result;
@@ -140,7 +140,7 @@ public final class AuthoritiesImpl implements Authorities {
             .filter(entry -> entry.getValue() instanceof String)
             .forEach(entry -> {
                 String value = (String) entry.getValue();
-                LOG.debug("adding authority [key: {}, activities: {}]", entry.getKey(), value);
+                LOG.trace("adding authority [key: {}, activities: {}]", entry.getKey(), value);
                 authorities.put(entry.getKey(), value);
             });
         return this;
@@ -198,11 +198,11 @@ public final class AuthoritiesImpl implements Authorities {
         boolean result = false;
         String grantedActivities = authorities.get(key);
         if (grantedActivities == null) {
-            LOG.debug("no claim for key [{}]", key);
+            LOG.trace("no claim for key [{}]", key);
         } else {
             result = grantedActivities.contains(String.valueOf(intent.getCode())) ||
                     grantedActivities.equals("*");
-            LOG.debug("found claim [key: {}, activities: {}] {}matching intent [{}]", key, grantedActivities, result ? "" : "not ", intent.name());
+            LOG.trace("found claim [key: {}, activities: {}] {}matching intent [{}]", key, grantedActivities, result ? "" : "not ", intent.name());
         }
         return result;
     }

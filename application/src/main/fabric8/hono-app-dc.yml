@@ -25,7 +25,9 @@ spec:
           protocol: TCP
         env:
         - name: HONO_AUTH_HOST
-          value: auth
+          value: ${HONO_AUTH_SERVICE_HOST}
+        - name: HONO_AUTH_PORT
+          value: ${HONO_AUTH_SERVICE_PORT_AMQPS}
         - name: HONO_AUTH_NAME
           value: hono-server
         - name: HONO_AUTH_CERT_PATH

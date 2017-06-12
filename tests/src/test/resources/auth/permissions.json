@@ -6,6 +6,10 @@
           "activities": [ "READ", "WRITE" ]
         },
         {
+          "operation": "registration/DEFAULT_TENANT:*",
+          "activities": [ "EXECUTE" ]
+        },
+        {
           "resource": "telemetry/DEFAULT_TENANT",
           "activities": [ "WRITE" ]
         },

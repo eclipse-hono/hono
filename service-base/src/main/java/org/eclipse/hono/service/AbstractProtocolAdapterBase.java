@@ -18,6 +18,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,7 +71,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
      * @param registrationServiceClient The client.
      * @throws NullPointerException if the client is {@code null}.
      */
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Autowired(required = false)
     public final void setRegistrationServiceClient(final HonoClient registrationServiceClient) {
         this.registration = Objects.requireNonNull(registrationServiceClient);
@@ -88,11 +89,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         return registration;
     }
 
-    /**
-     * 
-     */
     @Override
-    public void start(final Future<Void> startFuture) {
+    public final void start(final Future<Void> startFuture) {
         if (hono == null) {
             startFuture.fail("Hono client must be set");
         } else {
@@ -113,7 +111,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     @Override
-    public void stop(Future<Void> stopFuture) {
+    public final void stop(Future<Void> stopFuture) {
         doStop(stopFuture);
     }
 
@@ -129,44 +127,81 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         stopFuture.complete();
     }
 
-    protected void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
+    /**
+     * Connects to the Hono server using the configured client.
+     * 
+     * @param connectHandler The handler to invoke with the outcome of the connection attempt.
+     *                       If {@code null} and the connection attempt failed, this method
+     *                       tries to re-connect until a connection is established.
+     */
+    protected final void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
 
         if (hono == null) {
             if (connectHandler != null) {
                 connectHandler.handle(Future.failedFuture("Hono client not set"));
             }
-        } else {
-            ProtonClientOptions options = new ProtonClientOptions()
-                    .setReconnectAttempts(-1)
-                    .setReconnectInterval(200); // try to re-connect every 200 ms
-            this.hono.connect(options, connectAttempt -> {
-                if (connectHandler != null) {
-                    connectHandler.handle(connectAttempt);
-                }
-            });
-        }
-    }
-
-    protected void connectToRegistration(final Handler<AsyncResult<HonoClient>> connectHandler) {
-
-        if (registration == null) {
-            if (hono == null) {
-                connectHandler.handle(Future.failedFuture("Device Registration client not set"));
-            } else {
-                LOG.info("using Hono client for accessing Device Registration endpoint");
+        } else if (hono.isConnected()) {
+            LOG.debug("already connected to Hono server");
+            if (connectHandler != null) {
+                connectHandler.handle(Future.succeededFuture(hono));
             }
         } else {
-            ProtonClientOptions options = new ProtonClientOptions()
-                    .setReconnectAttempts(-1)
-                    .setReconnectInterval(200); // try to re-connect every 200 ms
-            this.registration.connect(options, connectAttempt -> {
+            hono.connect(createClientOptions(), connectAttempt -> {
                 if (connectHandler != null) {
                     connectHandler.handle(connectAttempt);
+                } else {
+                    LOG.debug("connected to Hono");
                 }
             });
         }
     }
 
+    /**
+     * Connects to the Registration Service using the configured client.
+     * <p>
+     * If the <em>registrationServiceClient</em> is not set, this method connects to the
+     * Hono server instead, assuming that the Registration Service is implemented by the Hono server.
+     * 
+     * @param connectHandler The handler to invoke with the outcome of the connection attempt.
+     *                       If {@code null} and the connection attempt failed, this method
+     *                       tries to re-connect until a connection is established.
+     */
+    protected final void connectToRegistration(final Handler<AsyncResult<HonoClient>> connectHandler) {
+
+        if (registration == null) {
+            if (hono != null) {
+                // no need to open an additional connection to Hono server
+                LOG.info("using Hono client for accessing Device Registration endpoint");
+            } else if (connectHandler != null) {
+                connectHandler.handle(Future.failedFuture("Device Registration client not set"));
+            }
+        } else if (registration.isConnected()) {
+            LOG.debug("already connected to Registration Service");
+            if (connectHandler != null) {
+                connectHandler.handle(Future.succeededFuture(registration));
+            }
+        } else {
+            registration.connect(createClientOptions(), connectAttempt -> {
+                if (connectHandler != null) {
+                    connectHandler.handle(connectAttempt);
+                } else {
+                    LOG.debug("connected to Registration Service");
+                }
+            });
+        }
+    }
+
+    private ProtonClientOptions createClientOptions() {
+        return new ProtonClientOptions()
+                .setReconnectAttempts(-1)
+                .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
+    }
+
+    /**
+     * Checks if this adapter is connected to both the Hono server and the Device Registration service.
+     * 
+     * @return {@code true} if this adapter is connected.
+     */
     protected final boolean isConnected() {
         boolean result = hono != null && hono.isConnected();
         if (registration != null) {

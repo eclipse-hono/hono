@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -23,16 +24,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.dns.AddressResolverOptions;
 
 /**
  * Minimum configuration for protocol adapters
  */
 public abstract class AdapterConfig {
 
-    private final Vertx vertx = Vertx.vertx();
-
     @Autowired(required = false)
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     private ClientConfigProperties registrationServiceClientConfig;
 
     /**
@@ -41,8 +42,14 @@ public abstract class AdapterConfig {
      * @return The Vert.x instance.
      */
     @Bean
-    public Vertx getVertx() {
-        return vertx;
+    public Vertx vertx() {
+        VertxOptions options = new VertxOptions()
+                .setWarningExceptionTime(1500000000)
+                .setAddressResolverOptions(new AddressResolverOptions()
+                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
+                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                        .setQueryTimeout(1000));
+        return Vertx.vertx(options);
     }
 
     /**
@@ -79,7 +86,7 @@ public abstract class AdapterConfig {
      */
     @Bean
     public ConnectionFactory honoConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx, honoClientConfig());
+        return new ConnectionFactoryImpl(vertx(), honoClientConfig());
     }
 
     /**
@@ -87,7 +94,7 @@ public abstract class AdapterConfig {
      *
      * @return The properties.
      */
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.registration")
     @ConditionalOnProperty(prefix = "hono.registration", name = "host")
     @Bean
@@ -117,12 +124,12 @@ public abstract class AdapterConfig {
      *
      * @return The connection factory or null.
      */
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Bean
     public ConnectionFactory registrationServiceConnectionFactory() {
         if (registrationServiceClientConfig == null) {
             return null;
         }
-        return new ConnectionFactoryImpl(vertx, registrationServiceClientConfig);
+        return new ConnectionFactoryImpl(vertx(), registrationServiceClientConfig);
     }
 }

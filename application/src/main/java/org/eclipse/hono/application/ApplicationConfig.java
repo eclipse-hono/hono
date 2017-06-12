@@ -19,6 +19,7 @@ import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerConfigProperties;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
+import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -26,14 +27,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.dns.AddressResolverOptions;
 
 /**
  * Spring bean definitions required by the Hono application.
  */
 @Configuration
 public class ApplicationConfig {
-
-    private static final Vertx vertx = Vertx.vertx();
 
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
@@ -42,7 +43,13 @@ public class ApplicationConfig {
      */
     @Bean
     public Vertx vertx() {
-        return vertx;
+        VertxOptions options = new VertxOptions()
+                .setWarningExceptionTime(1500000000)
+                .setAddressResolverOptions(new AddressResolverOptions()
+                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
+                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                        .setQueryTimeout(1000));
+        return Vertx.vertx(options);
     }
 
     /**
@@ -80,9 +87,9 @@ public class ApplicationConfig {
      * @return The connection factory.
      */
     @Bean
-    @Qualifier("downstream")
+    @Qualifier(Constants.QUALIFIER_DOWNSTREAM)
     public ConnectionFactory downstreamConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx, downstreamConnectionProperties());
+        return new ConnectionFactoryImpl(vertx(), downstreamConnectionProperties());
     }
 
     /**
@@ -109,7 +116,7 @@ public class ApplicationConfig {
             // fall back to TLS configuration
             honoProps.getRegistrationAssertion().setCertPath(honoProps.getCertPath());
         }
-        return RegistrationAssertionHelperImpl.forValidating(vertx, honoProps.getRegistrationAssertion());
+        return RegistrationAssertionHelperImpl.forValidating(vertx(), honoProps.getRegistrationAssertion());
     }
 
     /**
@@ -125,6 +132,6 @@ public class ApplicationConfig {
             // fall back to TLS configuration
             honoProps.getRegistrationAssertion().setKeyPath(honoProps.getKeyPath());
         }
-        return RegistrationAssertionHelperImpl.forSigning(vertx, honoProps.getRegistrationAssertion());
+        return RegistrationAssertionHelperImpl.forSigning(vertx(), honoProps.getRegistrationAssertion());
     }
 }

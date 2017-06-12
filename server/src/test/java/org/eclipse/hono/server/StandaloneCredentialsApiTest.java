@@ -81,7 +81,7 @@ public class StandaloneCredentialsApiTest {
         configProperties.setInsecurePort(0);
 
         server = new HonoServer();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx, TestSupport.createAuthenticationService(createUser())));
         server.setConfig(configProperties);
         server.addEndpoint(new CredentialsEndpoint(vertx));
         credentialsAdapter = new FileBasedCredentialsService();

@@ -42,7 +42,7 @@ services:
     ports:
       - "5672:5672"
 
-  auth:
+  auth-server:
     image: eclipsehono/hono-auth:${project.version}
     networks:
       - hono-net
@@ -61,10 +61,10 @@ services:
     ports:
       - "5671:5671"
     environment:
-      - HONO_AUTH_HOST=auth
-      - HONO_AUTH_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
+      - HONO_AUTH_HOST=auth-server
       - HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_AUTH_NAME=hono-server
+      - HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
       - HONO_DOWNSTREAM_HOST=qdrouter
       - HONO_DOWNSTREAM_PORT=5673
       - HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem
@@ -92,8 +92,8 @@ services:
       - HONO_CLIENT_NAME=Hono REST Adapter
       - HONO_CLIENT_HOST=hono
       - HONO_CLIENT_PORT=5671
-      - HONO_CLIENT_USERNAME=rest-adapter
-      - HONO_CLIENT_PASSWORD=secret
+      - HONO_CLIENT_USERNAME=rest-adapter@HONO
+      - HONO_CLIENT_PASSWORD=rest-secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_HTTP_BIND_ADDRESS=0.0.0.0
       - HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0
@@ -114,8 +114,8 @@ services:
       - HONO_CLIENT_NAME=Hono MQTT Adapter
       - HONO_CLIENT_HOST=hono
       - HONO_CLIENT_PORT=5671
-      - HONO_CLIENT_USERNAME=mqtt-adapter
-      - HONO_CLIENT_PASSWORD=secret
+      - HONO_CLIENT_USERNAME=mqtt-adapter@HONO
+      - HONO_CLIENT_PASSWORD=mqtt-secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_MQTT_BIND_ADDRESS=0.0.0.0
       - HONO_MQTT_INSECURE_PORT_BIND_ADDRESS=0.0.0.0

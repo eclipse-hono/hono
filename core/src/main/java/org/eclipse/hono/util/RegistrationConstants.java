@@ -86,9 +86,9 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
         final String key = getKey(message);
-        final String action = message.getSubject();
+        final String operation = message.getSubject();
         final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getServiceRequestAsJson(action, tenantId, deviceId, key, payload);
+        return getServiceRequestAsJson(operation, tenantId, deviceId, key, payload);
     }
 
     /**

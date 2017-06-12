@@ -18,6 +18,7 @@ import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
@@ -33,7 +34,7 @@ import org.springframework.context.annotation.Scope;
 public class Config extends AdapterConfig {
 
     @Autowired(required = false)
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     private ConnectionFactory registrationServiceConnectionFactory;
 
     @Override
@@ -56,7 +57,7 @@ public class Config extends AdapterConfig {
     @Bean
     @Scope("prototype")
     public HonoClient honoClient() {
-        return new HonoClientImpl(getVertx(), honoConnectionFactory());
+        return new HonoClientImpl(vertx(), honoConnectionFactory());
     }
 
     @Override
@@ -78,13 +79,13 @@ public class Config extends AdapterConfig {
      * @return The client or null.
      */
     @Bean
-    @Qualifier("registration")
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public HonoClient registrationServiceClient() {
         if (registrationServiceConnectionFactory == null) {
             return null;
         }
-        return new HonoClientImpl(getVertx(), registrationServiceConnectionFactory);
+        return new HonoClientImpl(vertx(), registrationServiceConnectionFactory);
     }
 
     /**

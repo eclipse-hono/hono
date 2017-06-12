@@ -94,7 +94,7 @@ public final class AuthenticationServerClient {
         options.addEnabledSaslMechanism(AuthenticationConstants.MECHANISM_PLAIN);
         factory.connect(options, authcid, password, null, null, conAttempt -> {
             if (conAttempt.failed()) {
-                authenticationResultHandler.handle(Future.failedFuture("cannot connect to identity server"));
+                authenticationResultHandler.handle(Future.failedFuture("cannot connect to authentication server"));
             } else {
                 final ProtonConnection openCon = conAttempt.result();
 
@@ -107,14 +107,14 @@ public final class AuthenticationServerClient {
                     }
                     ProtonConnection con = conAttempt.result();
                     if (con != null) {
-                        LOG.debug("closing connection to identity server");
+                        LOG.debug("closing connection to authentication server");
                         con.close();
                     }
                 });
 
-                vertx.setTimer(5000, timedOut -> {
+                vertx.setTimer(5000, tid -> {
                     if (!userTracker.isComplete()) {
-                        userTracker.fail("time out reached while waiting for receiver link to be established");
+                        userTracker.fail("time out reached while waiting for token from authentication server");
                     }
                 });
 
@@ -162,7 +162,7 @@ public final class AuthenticationServerClient {
                     authResult.complete(user);
 
                 } else {
-                    authResult.fail("message from identity provider contains no body");
+                    authResult.fail("message from authentication server contains no body");
                 }
 
             } else {
@@ -171,7 +171,7 @@ public final class AuthenticationServerClient {
         };
 
         openReceiver(openCon, messageHandler).compose(openReceiver -> {
-            LOG.debug("opened receiver on authentication endpoint, waiting for token ...");
+            LOG.debug("opened receiver link to authentication server, waiting for token ...");
         }, authResult);
     }
 
