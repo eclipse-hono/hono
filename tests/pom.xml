@@ -106,7 +106,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>auth-server</alias>
+                      <alias>auth-server.hono</alias>
                     </network>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -117,10 +117,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>AUTH</prefix>
                       <color>cyan</color>
                     </log>
-                    <!-- wait>
-                      <log>^.*(startup completed successfully)$</log>
-                      <time>20000</time>
-                    </wait-->
                   </run>
                 </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
@@ -133,7 +129,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>broker</alias>
+                      <alias>artemis.hono</alias>
                     </network>
                     <log>
                       <prefix>ARTEMIS</prefix>
@@ -144,9 +140,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                        <PN_TRACE_FRM>1</PN_TRACE_FRM>
                     </env>
                     -->
-                    <!-- >wait>
-                      <log>^.*Server is now live.*$</log>
-                    </wait-->
                   </run>
                 </image>
                 <!-- ##### Qpid Dispatch Router ##### -->
@@ -158,12 +151,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </cmd>
                     <ports>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
-                      <!-- port>qpid.amqp.internal.port:5673</port-->
                     </ports>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>qdrouter</alias>
+                      <alias>qdrouter.hono</alias>
                     </network>
                     <log>
                       <prefix>QPID</prefix>
@@ -174,10 +166,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                        <PN_TRACE_FRM>1</PN_TRACE_FRM>
                     </env>
                     -->
-                    <!-- >wait>
-                      <log>^.*(SERVER).*(Operational).*$</log>
-                      <time>20000</time>
-                    </wait-->
                   </run>
                 </image>
                 <!-- ##### Hono server ##### -->
@@ -209,7 +197,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono</alias>
+                      <alias>hono.hono</alias>
                     </network>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -223,7 +211,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <log>^.*(startup completed successfully)$</log>
-                      <time>40000</time>
+                      <time>30000</time>
                     </wait>
                   </run>
                 </image>

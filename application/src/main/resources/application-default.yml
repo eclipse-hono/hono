@@ -11,7 +11,7 @@ hono:
         period: 5000
       graphite:
         active: true
-        host: "influxdb"
+        host: influxdb.hono
         port: 2003
         period: 5000
 

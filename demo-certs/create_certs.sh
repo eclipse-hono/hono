@@ -45,7 +45,7 @@ function create_cert {
   openssl genrsa -out $DIR/$1-key-orig.pem 4096
   to_pkcs8 $DIR/$1-key-orig.pem $DIR/$1-key.pem
   openssl req -config ca_opts -new -key $DIR/$1-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=$1" | \
-    openssl x509 -req -extfile ca_opts -extensions req_ext -out $DIR/$1.pem -days 365 -CA $DIR/ca-cert.pem -CAkey $DIR/ca-key.pem -CAcreateserial
+    openssl x509 -req -extfile ca_opts -extensions req_ext_$1 -out $DIR/$1.pem -days 365 -CA $DIR/ca-cert.pem -CAkey $DIR/ca-key.pem -CAcreateserial
   cat $DIR/$1.pem $DIR/ca-cert.pem > $DIR/$1-cert.pem && rm $DIR/$1.pem
   if [ $2 ]
   then
@@ -56,9 +56,12 @@ function create_cert {
 
 if [ -d $DIR ]
 then
-  rm -rf $DIR
-fi
+rm $DIR/*.pem
+rm $DIR/*.p12
+rm $DIR/*.jks
+else
 mkdir $DIR
+fi
 
 echo "creating root key and certificate"
 #openssl ecparam -name $CURVE -genkey -noout -out $DIR/root-key-orig.pem
