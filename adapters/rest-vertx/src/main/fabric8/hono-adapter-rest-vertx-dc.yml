@@ -31,9 +31,9 @@ spec:
         - name: HONO_CLIENT_PORT
           value: ${HONO_APP_SERVICE_PORT}
         - name: HONO_CLIENT_USERNAME
-          value: rest-adapter
+          value: rest-adapter@HONO
         - name: HONO_CLIENT_PASSWORD
-          value: secret
+          value: rest-secret
         - name: HONO_CLIENT_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
         - name: HONO_HTTP_BIND_ADDRESS
