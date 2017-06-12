@@ -24,22 +24,22 @@ spec:
           name: amqp
           protocol: TCP
         env:
-        - name: HONO_AUTH_SERVER_KEY_PATH
+        - name: HONO_AUTH_KEY_PATH
           value: /etc/hono/certs/auth-server-key.pem
-        - name: HONO_AUTH_SERVER_CERT_PATH
+        - name: HONO_AUTH_CERT_PATH
           value: /etc/hono/certs/auth-server-cert.pem
-        - name: HONO_AUTH_SERVER_MAX_INSTANCES
+        - name: HONO_AUTH_MAX_INSTANCES
           value: "1"
-        - name: HONO_AUTH_SERVER_BIND_ADDRESS
+        - name: HONO_AUTH_BIND_ADDRESS
           value: 0.0.0.0
-        - name: HONO_AUTH_SERVER_INSECURE_PORT_ENABLED
+        - name: HONO_AUTH_INSECURE_PORT_ENABLED
           value: "true"
-        - name: HONO_AUTH_SERVER_INSECURE_PORT_BIND_ADDRESS
+        - name: HONO_AUTH_INSECURE_PORT_BIND_ADDRESS
           value: 0.0.0.0
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
         - name: SPRING_PROFILES_ACTIVE
-          value: local-auth,dev
+          value: authentication-impl,dev
         livenessProbe:
           tcpSocket:
             port: 5672
