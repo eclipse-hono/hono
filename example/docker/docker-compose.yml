@@ -82,6 +82,9 @@ services:
       - HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem
       - HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-cert.pem
       - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_METRIC_REPORTER_GRAPHITE_ACTIVE=true
+      - HONO_METRIC_REPORTER_GRAPHITE_HOST=influxdb.hono
+      - HONO_METRIC_REPORTER_GRAPHITE_PORT=2003
       - HONO_SERVER_BIND_ADDRESS=0.0.0.0
       - HONO_SERVER_KEY_PATH=/etc/hono/certs/hono-key.pem
       - HONO_SERVER_CERT_PATH=/etc/hono/certs/hono-cert.pem

@@ -36,6 +36,7 @@
     <logger name="org.eclipse.hono.telemetry.impl" level="DEBUG"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
+    <logger name="io.netty.resolver.dns" level="DEBUG"/>
 
     <logger name="io.vertx.proton.impl" level="INFO"/>
     <logger name="io.vertx.core.net.impl" level="INFO"/>
@@ -50,6 +51,7 @@
     <logger name="org.eclipse.hono.telemetry.impl" level="INFO"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>
+    <logger name="io.netty.resolver.dns" level="INFO"/>
 
     <logger name="io.vertx.proton.impl" level="INFO"/>
     <logger name="io.vertx.core.net.impl" level="INFO"/>
