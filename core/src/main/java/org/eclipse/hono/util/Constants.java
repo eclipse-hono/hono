@@ -215,6 +215,21 @@ public final class Constants {
     }
 
     /**
+     * Sets the (surrogate) identifier of an AMQP connection.
+     * <p>
+     * The identifier will be added to the connection's <em>attachments</em> under key
+     * {@link #KEY_CONNECTION_ID}.
+     * 
+     * @param connection The connection to set id for.
+     * @param id The identifier to set.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static void setConnectionId(final ProtonConnection connection, final String id) {
+        Objects.requireNonNull(connection).attachments().set(Constants.KEY_CONNECTION_ID, String.class, Objects.requireNonNull(id));
+
+    }
+
+    /**
      * Checks if a given tenant identifier is the {@code DEFAULT_TENANT}.
      * 
      * @param tenantId The identifier to check.

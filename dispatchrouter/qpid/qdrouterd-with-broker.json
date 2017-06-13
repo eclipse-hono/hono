@@ -49,7 +49,7 @@
 
   ["connector", {
     "name": "broker",
-    "host": "broker",
+    "host": "artemis.hono",
     "port": 5672,
     "role": "route-container",
     "saslUsername": "artemis",

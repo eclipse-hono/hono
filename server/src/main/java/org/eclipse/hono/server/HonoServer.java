@@ -11,7 +11,6 @@
  */
 package org.eclipse.hono.server;
 
-import java.security.Principal;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
@@ -77,10 +76,10 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
         connection.disconnectHandler(this::handleRemoteDisconnect);
         connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
         connection.openHandler(remoteOpen -> {
-            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), getUserFromConnection(connection));
+            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
             connection.open();
             // attach an ID so that we can later inform downstream components when connection is closed
-            connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
+            Constants.setConnectionId(connection, UUID.randomUUID().toString());
         });
     }
 
@@ -172,24 +171,6 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
             vertx.eventBus().publish(
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
                     conId);
-        }
-    }
-
-    /**
-     * Gets the authenticated client principal name for an AMQP connection.
-     *
-     * @param con the connection to read the user from
-     * @return the user associated with the connection or {@link Constants#SUBJECT_ANONYMOUS} if it cannot be determined.
-     */
-    private String getUserFromConnection(final ProtonConnection con) {
-
-        Principal clientId = Constants.getClientPrincipal(con);
-        if (clientId == null) {
-            LOG.warn("connection from client [{}] is not authenticated properly using SASL, falling back to default subject [{}]",
-                    con.getRemoteContainer(), Constants.SUBJECT_ANONYMOUS);
-            return Constants.SUBJECT_ANONYMOUS;
-        } else {
-            return clientId.getName();
         }
     }
 

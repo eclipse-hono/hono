@@ -51,13 +51,14 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     private static final Logger                LOG = LoggerFactory.getLogger(AbstractSender.class);
     private static final AtomicLong            MESSAGE_COUNTER = new AtomicLong();
     private static final Pattern               CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
+    private static final BiConsumer<Object, ProtonDelivery> DEFAULT_DISPOSITION_HANDLER = (messageId, delivery) -> LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
 
     protected final String                     tenantId;
     protected final String                     targetAddress;
 
     private final Handler<String>              closeHook;
     private Handler<Void>                      drainHandler;
-    private BiConsumer<Object, ProtonDelivery> dispositionHandler = (messageId, delivery) -> LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
+    private BiConsumer<Object, ProtonDelivery> defaultDispositionHandler = DEFAULT_DISPOSITION_HANDLER;
 
     AbstractSender(final ProtonSender sender, final String tenantId, final String targetAddress,
             final Context context, final Handler<String> closeHook) {
@@ -133,22 +134,23 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public final void setDispositionHandler(final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
-        this.dispositionHandler = dispositionHandler;
+    public final void setDefaultDispositionHandler(final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
+        this.defaultDispositionHandler = dispositionHandler;
     }
 
     @Override
-    public final void send(final Message rawMessage, final Handler<Void> capacityAvailableHandler) {
+    public final void send(final Message rawMessage, final Handler<Void> capacityAvailableHandler, final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         Objects.requireNonNull(rawMessage);
+        Objects.requireNonNull(dispositionHandler);
         if (capacityAvailableHandler == null) {
             context.runOnContext(send -> {
-                sendMessage(rawMessage);
+                sendMessage(rawMessage, dispositionHandler);
             });
         } else if (this.drainHandler != null) {
             throw new IllegalStateException("cannot send message while waiting for replenishment with credit");
         } else if (sender.isOpen()) {
             context.runOnContext(send -> {
-                sendMessage(rawMessage);
+                sendMessage(rawMessage, dispositionHandler);
                 if (sender.sendQueueFull()) {
                     sendQueueDrainHandler(capacityAvailableHandler);
                 } else {
@@ -161,26 +163,43 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public final boolean send(final Message rawMessage) {
+    public final boolean send(final Message rawMessage, final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         Objects.requireNonNull(rawMessage);
+        Objects.requireNonNull(dispositionHandler);
         if (sender.sendQueueFull()) {
             return false;
         } else {
             context.runOnContext(send -> {
-                sendMessage(rawMessage);
+                sendMessage(rawMessage, dispositionHandler);
             });
             return true;
         }
     }
 
-    private void sendMessage(final Message rawMessage) {
+    private void sendMessage(final Message rawMessage, final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         sender.send(rawMessage, deliveryUpdated -> dispositionHandler.accept(rawMessage.getMessageId(), deliveryUpdated));
         LOG.trace("sent message, remaining credit: {}, queued messages: {}", sender.getCredit(), sender.getQueued());
     }
 
     @Override
+    public final void send(final Message rawMessage, final Handler<Void> capacityAvailableHandler) {
+        send(rawMessage, capacityAvailableHandler, this.defaultDispositionHandler);
+    }
+
+    @Override
+    public final boolean send(final Message rawMessage) {
+        return send(rawMessage, this.defaultDispositionHandler);
+    }
+
+    @Override
     public final boolean send(final String deviceId, final byte[] payload, final String contentType, final String registrationAssertion) {
         return send(deviceId, null, payload, contentType, registrationAssertion);
+    }
+
+    @Override
+    public final boolean send(final String deviceId, final byte[] payload, final String contentType, final String registrationAssertion,
+            final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
+        return send(deviceId, null, payload, contentType, registrationAssertion, dispositionHandler);
     }
 
     @Override
@@ -192,6 +211,12 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     @Override
     public final boolean send(final String deviceId, final String payload, final String contentType, final String registrationAssertion) {
         return send(deviceId, null, payload, contentType, registrationAssertion);
+    }
+
+    @Override
+    public final boolean send(final String deviceId, final String payload, final String contentType, final String registrationAssertion,
+            final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
+        return send(deviceId, null, payload, contentType, registrationAssertion, dispositionHandler);
     }
 
     @Override
@@ -209,17 +234,32 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
+    public final boolean send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType,
+                              final String registrationAssertion, final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
+        Objects.requireNonNull(payload);
+        final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
+        return send(deviceId, properties, payload.getBytes(charset), contentType, registrationAssertion, dispositionHandler);
+    }
+
+    @Override
     public final boolean send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType,
             final String registrationAssertion) {
+        return send(deviceId, properties, payload, contentType, registrationAssertion, this.defaultDispositionHandler);
+    }
+
+    @Override
+    public final boolean send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType,
+                              final String registrationAssertion, final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
         Objects.requireNonNull(registrationAssertion);
+        Objects.requireNonNull(dispositionHandler);
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, contentType, registrationAssertion);
-        return send(msg);
+        return send(msg, dispositionHandler);
     }
 
     @Override

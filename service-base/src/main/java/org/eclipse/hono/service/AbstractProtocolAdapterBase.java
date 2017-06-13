@@ -193,7 +193,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
     private ProtonClientOptions createClientOptions() {
         return new ProtonClientOptions()
-                .setReconnectAttempts(-1)
+                .setConnectTimeout(200)
+                .setReconnectAttempts(1)
                 .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
     }
 

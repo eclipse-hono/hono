@@ -266,7 +266,7 @@ public abstract class ClientTestBase {
             setup.complete();
         }));
 
-        sender.setDispositionHandler((id, disposition) -> {
+        sender.setDefaultDispositionHandler((id, disposition) -> {
             accepted.countDown();
             //TODO temp fix to the test, until we have a logic to resend released qos1 messages
             if (Released.class.isInstance(disposition.getRemoteState())) {

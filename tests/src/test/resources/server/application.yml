@@ -1,6 +1,6 @@
 hono:
   auth:
-    host: auth-server
+    host: auth-server.hono
     port: 5672
     name: hono-server
     validation:
@@ -24,7 +24,7 @@ spring:
   profiles: qpid
 hono:
   downstream:
-    host: qdrouter
+    host: qdrouter.hono
     port: 5673
     keyPath: /etc/hono/certs/hono-key.pem
     certPath: /etc/hono/certs/hono-cert.pem

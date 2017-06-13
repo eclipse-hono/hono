@@ -10,9 +10,7 @@ hono:
         active: false
         period: 5000
       graphite:
-        active: true
-        host: "influxdb"
-        port: 2003
+        active: false
         period: 5000
 
 # disable spring boot actuator endpoints, enable metrics
