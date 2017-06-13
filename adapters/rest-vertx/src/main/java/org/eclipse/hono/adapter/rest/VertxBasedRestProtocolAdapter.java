@@ -125,7 +125,6 @@ public class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtoco
     }
 
     private void doRegisterDeviceJson(final RoutingContext ctx) {
-
         try {
             JsonObject payload = null;
             if (ctx.getBody().length() > 0) {
@@ -153,7 +152,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtoco
             } else if (!(deviceId instanceof String)) {
                 badRequest(ctx.response(), String.format("'%s' must be a string", PARAM_DEVICE_ID));
             } else {
-                LOG.debug("registering data for device: {}", payload);
+                LOG.debug("registering data for device: {}, {}", deviceId, payload);
                 doRegistrationAction(ctx, (client, response) -> {
                     client.register((String) deviceId, payload, result -> {
                         if (result.failed()) {
@@ -316,6 +315,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtoco
             if (done.succeeded()) {
                 action.accept(done.result(), resp);
             } else {
+                LOG.warn("Can't connect to Hono: {}", done.cause());
                 // we don't have a connection to Hono
                 serviceUnavailable(resp, 2);
             }
