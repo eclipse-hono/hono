@@ -66,7 +66,6 @@
       <name>Henryk Konsek</name>
       <email>hekonsek@gmail.com</email>
       <roles>
-        <role>Lead</role>
         <role>Committer</role>
       </roles>
     </developer>
@@ -105,6 +104,7 @@
       <name>Paolo Patierno</name>
       <email>ppatierno@live.com</email>
       <roles>
+        <role>Lead</role>
         <role>Committer</role>
       </roles>
     </developer>
@@ -173,6 +173,32 @@
               </image>
             </images>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>fabric8-maven-plugin</artifactId>
+          <version>3.4.1</version>
+          <configuration>
+            <mode>auto</mode>
+            <generator>
+              <excludes>
+                <exclude>java-exec</exclude>
+                <exclude>spring-boot</exclude>
+                <exclude>wildfly-swarm</exclude>
+                <exclude>vertx</exclude>
+                <exclude>karaf</exclude>
+                <exclude>webapps</exclude>
+              </excludes>
+            </generator>
+          </configuration>
+          <executions>
+            <execution>
+              <phase>package</phase>
+              <goals>
+                <goal>resource</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
