@@ -66,6 +66,6 @@ abstract class AbstractExampleClient {
     }
 
     protected final ProtonClientOptions getClientOptions() {
-        return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS).setReconnectAttempts(-1);
+        return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS).setReconnectAttempts(1);
     }
 }
