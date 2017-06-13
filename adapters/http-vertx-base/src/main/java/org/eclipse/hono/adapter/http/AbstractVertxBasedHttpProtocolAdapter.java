@@ -418,7 +418,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * @throws NullPointerException if response is {@code null}.
      */
     protected static void badRequest(final HttpServerResponse response, final String msg, final String contentType) {
-        LOG.warn("Bad request: {}", msg);
+        LOG.debug("Bad request: {}", msg);
         endWithStatus(response, HTTP_BAD_REQUEST, null, msg, contentType);
     }
 
@@ -432,7 +432,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * @throws NullPointerException if response is {@code null}.
      */
     protected static void internalServerError(final HttpServerResponse response, final String msg) {
-        LOG.warn("Internal server error: {}", msg);
+        LOG.debug("Internal server error: {}", msg);
         endWithStatus(response, HTTP_INTERNAL_ERROR, null, msg, null);
     }
 
@@ -460,7 +460,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     protected static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds,
             final String detail, final String contentType) {
 
-        LOG.warn("Service unavailable: {}", detail);
+        LOG.debug("Service unavailable: {}", detail);
         Map<CharSequence, CharSequence> headers = new HashMap<>(2);
         headers.put(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "text/plain");
         headers.put(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));

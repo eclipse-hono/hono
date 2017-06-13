@@ -315,7 +315,7 @@ public class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtoco
             if (done.succeeded()) {
                 action.accept(done.result(), resp);
             } else {
-                LOG.warn("Can't connect to Hono: {}", done.cause());
+                LOG.debug("Can't connect to Hono: {}", done.cause());
                 // we don't have a connection to Hono
                 serviceUnavailable(resp, 2);
             }
