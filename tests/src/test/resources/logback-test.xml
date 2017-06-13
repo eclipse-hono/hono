@@ -28,6 +28,7 @@
   <logger name="org.eclipse.hono.tests.client" level="INFO"/>
   <logger name="org.eclipse.hono.tests.jms" level="INFO"/>
 
+  <logger name="io.netty.resolver.dns" level="INFO"/>
   <logger name="io.vertx.proton.impl" level="INFO"/>
 
 </configuration>

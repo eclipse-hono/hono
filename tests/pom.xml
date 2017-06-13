@@ -210,7 +210,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <color>green</color>
                     </log>
                     <wait>
-                      <log>^.*(startup completed successfully)$</log>
+                      <log>^.*(Started Application in).*$</log>
                       <time>30000</time>
                     </wait>
                   </run>
