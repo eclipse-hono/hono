@@ -142,9 +142,13 @@ value of the *--hono.client.host* option to the IP address (or name) of the Dock
 
 **Example**
 
-The following command registers a device with ID `4711`.
+The following command registers a device with ID `4711`
 
     $ curl -i -X POST -d device_id=4711 -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT
+
+or equivalently using JSON
+
+    $ curl -i -X POST -d '{"device_id":"4711","ep":"IMEI4711"}' -H 'Content-Type: application/json' http://localhost:8080/registration/DEFAULT_TENANT
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:
