@@ -1,0 +1,25 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: hono
+    name: ${project.artifactId}
+  name: ${project.artifactId}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: hono
+        name: ${project.artifactId}
+    spec:
+      containers:
+      - image: eclipsehono/broker:${project.version}
+        name: ${project.artifactId}
+        ports:
+        - containerPort: 5672
+          name: amqp
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: amqp
