@@ -96,6 +96,28 @@ services:
     volumes:
       - /home/hono/registration
 
+  device-registry:
+    image: eclipsehono/hono-service-device-registry:${project.version}
+    networks:
+      hono-net:
+        aliases:
+          - device-registry.hono
+    ports:
+      - "25671:5671"
+    environment:
+      - HONO_AUTH_HOST=auth-server.hono
+      - HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_AUTH_NAME=device-registry
+      - HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
+      - HONO_DEVICE_REGISTRY_BIND_ADDRESS=0.0.0.0
+      - HONO_DEVICE_REGISTRY_KEY_PATH=/etc/hono/certs/device-registry-key.pem
+      - HONO_DEVICE_REGISTRY_CERT_PATH=/etc/hono/certs/device-registry-cert.pem
+      - HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED=false
+      - HONO_DEVICE_REGISTRY_MAX_INSTANCES=1
+      - HONO_DEVICE_REGISTRY_REGISTRATION_ASSERTION_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
+      - LOGGING_CONFIG=classpath:logback-spring.xml
+      - SPRING_PROFILES_ACTIVE=default,dev
+
   rest-adapter:
     image: eclipsehono/hono-adapter-rest-vertx:${project.version}
     networks:

@@ -13,11 +13,6 @@
 
 package org.eclipse.hono.tests.jms;
 
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
-
 import java.util.Hashtable;
 import java.util.Objects;
 
@@ -40,6 +35,8 @@ import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.eclipse.hono.tests.IntegrationTestSupport.*;
+
 /**
  * A helper for implementing integration tests for Hono using Apache Qpid JMS Client.
  *
@@ -50,6 +47,8 @@ public class JmsIntegrationTestSupport {
     public static final int    HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
     public static final String HONO_USER = "hono-client";
     public static final String HONO_PASSWORD = "secret";
+    public static final String HONO_DEVICEREGISTRY_HOST = System.getProperty(PROPERTY_DEVICEREGISTRY_HOST, "localhost");
+    public static final int    HONO_DEVICEREGISTRY_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_PORT, 16672);
     public static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, "localhost");
     public static final int    DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
     public static final String TEST_TENANT_ID = "DEFAULT_TENANT";
@@ -57,8 +56,10 @@ public class JmsIntegrationTestSupport {
     public static final String TELEMETRY_SENDER_ADDRESS = "telemetry/" + TEST_TENANT_ID;
     public static final String TELEMETRY_RECEIVER_ADDRESS = "telemetry" + PATH_SEPARATOR + TEST_TENANT_ID;
     public static final String HONO = "hono";
+    public static final String HONO_DEVICEREGISTRY = "honodr";
     public static final String DISPATCH_ROUTER = "qdr";
     public static final String AMQP_VHOST = "hono";
+    public static final String AMQP_DEVICEREGISTRY_VHOST = "deviceregistry";
 
     /* test constants */
     private static final String AMQP_URI_PATTERN = "amqp://%s:%d?jms.connectionIDPrefix=CON&amqp.vhost=%s%s";
@@ -154,6 +155,7 @@ public class JmsIntegrationTestSupport {
     private void createContext(final String username, final String password) throws NamingException {
 
         final StringBuilder honoURI = new StringBuilder(String.format(AMQP_URI_PATTERN, HONO_HOST, HONO_PORT, AMQP_VHOST, ""));
+        final StringBuilder honoDeviceRegistryURI = new StringBuilder(String.format(AMQP_URI_PATTERN, HONO_DEVICEREGISTRY_HOST, HONO_DEVICEREGISTRY_PORT, AMQP_DEVICEREGISTRY_VHOST, ""));
         final StringBuilder qdrURI = new StringBuilder(
                 String.format(
                         AMQP_URI_PATTERN,
@@ -164,12 +166,14 @@ public class JmsIntegrationTestSupport {
         if (username != null && password != null) {
             final String usernamePasswordProperty = String.format(USERNAME_PASSWORD_PATTERN, username, password);
             honoURI.append(usernamePasswordProperty);
+            honoDeviceRegistryURI.append(usernamePasswordProperty);
             qdrURI.append(usernamePasswordProperty);
         }
 
         final Hashtable<Object, Object> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
         env.put("connectionfactory." + HONO, honoURI.toString());
+        env.put("connectionfactory." + HONO_DEVICEREGISTRY, honoDeviceRegistryURI.toString());
         env.put("connectionfactory." + DISPATCH_ROUTER, qdrURI.toString());
 
         ctx = new InitialContext(env);

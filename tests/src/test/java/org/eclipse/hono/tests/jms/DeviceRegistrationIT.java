@@ -46,8 +46,8 @@ public class DeviceRegistrationIT {
     private RegistrationTestSupport registration;
 
     @BeforeClass
-    public static void connectToHono() throws JMSException, NamingException {
-        client = JmsIntegrationTestSupport.newClient("hono", HONO_USER, HONO_PASSWORD);
+    public static void connectToDeviceRegistry() throws JMSException, NamingException {
+        client = JmsIntegrationTestSupport.newClient(HONO_DEVICEREGISTRY, HONO_USER, HONO_PASSWORD);
     }
 
     @Before

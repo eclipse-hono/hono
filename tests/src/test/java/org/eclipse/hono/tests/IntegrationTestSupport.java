@@ -22,6 +22,8 @@ public final class IntegrationTestSupport {
     public static final String PROPERTY_HONO_PORT = "hono.amqp.port";
     public static final String PROPERTY_HONO_USERNAME = "hono.username";
     public static final String PROPERTY_HONO_PASSWORD = "hono.password";
+    public static final String PROPERTY_DEVICEREGISTRY_HOST = "deviceregistry.host";
+    public static final String PROPERTY_DEVICEREGISTRY_PORT = "deviceregistry.amqp.port";
     public static final String PROPERTY_DOWNSTREAM_HOST = "downstream.host";
     public static final String PROPERTY_DOWNSTREAM_PORT = "downstream.amqp.port";
     public static final String PROPERTY_DOWNSTREAM_USERNAME = "downstream.username";

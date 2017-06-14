@@ -119,6 +119,48 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                   </run>
                 </image>
+                <!-- ##### Device registry server ##### -->
+                <image>
+                  <name>eclipsehono/hono-service-device-registry</name>
+                  <build>
+                    <from>eclipsehono/hono-service-device-registry:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/hono</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/src/test/resources/deviceregistry</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <ports>
+                      <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>device-registry.hono</alias>
+                    </network>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>credentials-file,registration-file,prod</SPRING_PROFILES_ACTIVE>
+                    </env>
+                    <log>
+                      <prefix>REGISTRY</prefix>
+                      <color>yellow</color>
+                    </log>
+                  </run>
+                </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
                   <name>eclipsehono/broker:${project.version}</name>
@@ -257,6 +299,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
                 <downstream.host>${qpid.ip}</downstream.host>
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
+                <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
+                <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
               <test>*IT</test>
