@@ -67,7 +67,7 @@
             </goals>
             <configuration>
               <includeArtifactIds>hono-demo-certs</includeArtifactIds>
-              <outputDirectory>${project.build.outputDirectory}/certs</outputDirectory>
+              <outputDirectory>${project.build.directory}/certs</outputDirectory>
               <excludes>META-INF/**</excludes>
             </configuration>
           </execution>
@@ -109,7 +109,6 @@
                             <directory>${project.basedir}/qpid</directory>
                             <outputDirectory>qdrouter</outputDirectory>
                             <includes>
-                              <include>qdrouterd.json</include>
                               <include>qdrouterd-with-broker.json</include>
                             </includes>
                           </fileSet>
@@ -122,7 +121,7 @@
                             </includes>
                           </fileSet>
                           <fileSet>
-                            <directory>${project.basedir}/target/classes/certs</directory>
+                            <directory>${project.build.directory}/certs</directory>
                             <outputDirectory>certs</outputDirectory>
                             <includes>
                               <include>qdrouter-*.pem</include>
