@@ -50,8 +50,6 @@
     <spring-boot.version>1.4.5.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.4.1</vertx.version>
-    <vertx-proton.version>3.4.1</vertx-proton.version>
-    <vertx-mqtt.version>3.4.1</vertx-mqtt.version>
     <jmeter.version>3.2</jmeter.version>
   </properties>
 
@@ -76,7 +74,7 @@
       <dependency>
        <groupId>io.vertx</groupId>
        <artifactId>vertx-proton</artifactId>
-       <version>${vertx-proton.version}</version>
+       <version>${vertx.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.qpid</groupId>
@@ -251,6 +249,21 @@
         <artifactId>ApacheJMeter_core</artifactId>
         <version>${jmeter.version}</version>
         <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-mqtt-server</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-web</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-auth-common</artifactId>
+        <version>${vertx.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

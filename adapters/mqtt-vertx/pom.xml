@@ -12,7 +12,6 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-mqtt-server</artifactId>
-      <version>${vertx-mqtt.version}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
