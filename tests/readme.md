@@ -19,6 +19,7 @@ Run the tests by executing the following command from the `tests` directory (add
 This starts the following Docker containers and runs the test cases against them
 
 * hono-server
+* hono-device-registry
 * Qpid Dispatch Router
 * ActiveMQ Artemis Broker
 * test-config (a volume image that contains configuration files for the Hono server)

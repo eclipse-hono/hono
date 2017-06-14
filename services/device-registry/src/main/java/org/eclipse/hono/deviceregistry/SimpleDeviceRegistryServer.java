@@ -30,9 +30,9 @@ import java.util.UUID;
 
 
 /**
- * A server that implements Hono's Credentials and Registration APIs as the default implementation of Hono's device registry.
+ * A server that implements Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> and
+ * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> as the default implementation of Hono's device registry.
  *
- * TODO: Currently only implements the Credentials API. Registration API implementation to be added.
  * TODO: add metrics.
  */
 @Component

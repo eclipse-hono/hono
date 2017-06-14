@@ -55,7 +55,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests validating Hono's Credentials API using a stand alone server.
+ * Tests validating {@link FileBasedCredentialsService} using a stand alone server.
  */
 @RunWith(VertxUnitRunner.class)
 public class StandaloneCredentialsApiTest {

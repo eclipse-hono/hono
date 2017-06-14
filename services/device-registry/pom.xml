@@ -127,7 +127,7 @@
                       <inline>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.build.directory}}/certs</directory>
+                            <directory>${project.build.directory}/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>device-registry-*.pem</include>

@@ -14,6 +14,9 @@ package org.eclipse.hono.deviceregistry;
 
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
+import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -67,4 +70,21 @@ public class ApplicationConfig {
         DeviceRegistryConfigProperties props = new DeviceRegistryConfigProperties();
         return props;
     }
+
+    /**
+     * Exposes a factory for JWTs asserting a device's registration status as a Spring bean.
+     *
+     * @return The bean.
+     */
+    @Bean
+    @Qualifier("signing")
+    public RegistrationAssertionHelper registrationAssertionFactory() {
+        DeviceRegistryConfigProperties deviceRegistryProps = serviceProperties();
+        if (!deviceRegistryProps.getRegistrationAssertion().isAppropriateForCreating() && deviceRegistryProps.getKeyPath() != null) {
+            // fall back to TLS configuration
+            deviceRegistryProps.getRegistrationAssertion().setKeyPath(deviceRegistryProps.getKeyPath());
+        }
+        return RegistrationAssertionHelperImpl.forSigning(vertx(), deviceRegistryProps.getRegistrationAssertion());
+    }
+
 }

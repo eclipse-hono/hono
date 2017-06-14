@@ -1,0 +1,16 @@
+hono:
+  auth:
+    host: auth-server.hono
+    port: 5672
+    name: device-registry
+    validation:
+      certPath: /etc/hono/certs/auth-server-cert.pem
+  device:
+    registry:
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
+      maxInstances: 1
+      registrationAssertion:
+        sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
+      startupTimeout: 65
+

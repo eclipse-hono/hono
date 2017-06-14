@@ -15,12 +15,13 @@ package org.eclipse.hono.deviceregistry;
 import java.util.Objects;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
 
 /**
- * Configuration properties for the device registry as own server.
+ * Configuration properties for the Hono's device registry as own server.
  *
  */
 public final class DeviceRegistryConfigProperties extends ServiceConfigProperties {
@@ -28,7 +29,16 @@ public final class DeviceRegistryConfigProperties extends ServiceConfigPropertie
     private static final Resource DEFAULT_CREDENTIALS_RESOURCE = new ClassPathResource("credentials.json");
     private Resource credentialsResource = DEFAULT_CREDENTIALS_RESOURCE;
     private boolean saveToFile;
+    private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
 
+    /**
+     * Gets the properties for determining key material for creating/validation registration assertion tokens.
+     *
+     * @return The properties.
+     */
+    public SignatureSupportingConfigProperties getRegistrationAssertion() {
+        return registrationAssertionProperties;
+    }
 
     /**
      * Get the resource that the credentials should be loaded from.
@@ -37,7 +47,7 @@ public final class DeviceRegistryConfigProperties extends ServiceConfigPropertie
      * 
      * @return The resource.
      */
-    public final Resource getCredentialsPath() {
+    public Resource getCredentialsPath() {
         return credentialsResource;
     }
 
@@ -49,7 +59,7 @@ public final class DeviceRegistryConfigProperties extends ServiceConfigPropertie
      * @param credentialsResource The resource.
      * @throws NullPointerException if the resource is {@code null}.
      */
-    public final void setCredentialsPath(final Resource credentialsResource) {
+    public void setCredentialsPath(final Resource credentialsResource) {
         this.credentialsResource = Objects.requireNonNull(credentialsResource);
     }
 

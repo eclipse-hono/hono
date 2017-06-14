@@ -41,6 +41,11 @@
       "password": "secret",
       "authorities": [ "DEFAULT_TENANT-manager" ]
     },
+    "honodr-client": {
+      "mechanism": "PLAIN",
+      "password": "secret",
+      "authorities": [ "DEFAULT_TENANT-manager" ]
+    },
     "connector-client": {
       "mechanism": "PLAIN",
       "password": "connector-secret",
