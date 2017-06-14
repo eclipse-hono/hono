@@ -15,11 +15,8 @@ package org.eclipse.hono.adapter.mqtt;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
-import io.vertx.proton.ProtonDelivery;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
-import org.apache.qpid.proton.amqp.messaging.Released;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -214,41 +211,32 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
                         close(endpoint);
                     } else {
 
+                        Future<Void> messageTracker = Future.future();
+                        messageTracker.setHandler(s -> {
+                            if (s.failed()) {
+                                LOG.debug("cannot process message [client ID: {}, topic: {}, QoS: {}]: {}", endpoint.clientIdentifier(),
+                                        resource, message.qosLevel(), s.cause().getMessage());
+                                close(endpoint);
+                            } else {
+                                LOG.trace("successfully processed message [client ID: {}, topic: {}, QoS: {}]", endpoint.clientIdentifier(),
+                                        resource, message.qosLevel());
+                            }
+                        });
+
                         // check that MQTT client tries to publish on topic with device_id same as on connection
                         if (resource.getResourceId().equals(endpoint.clientIdentifier())) {
 
-                            Future<Void> tracker = Future.future();
-                            tracker.setHandler(s -> {
-                                if (s.failed()) {
-                                    LOG.debug("cannot process message from [{}]", endpoint.clientIdentifier(), s.cause());
-                                    close(endpoint);
-                                } else {
-                                    LOG.debug("successfully processed message from [{}]", endpoint.clientIdentifier());
-                                }
-                            });
-
                             Future<String> assertionTracker = getRegistrationAssertion(endpoint, resource);
-                            Future<MessageSender> senderTracker;
-                            if (resource.getEndpoint().equals(TELEMETRY_ENDPOINT)) {
-                                senderTracker = getTelemetrySender(resource.getTenantId());
-                            } else if (resource.getEndpoint().equals(EVENT_ENDPOINT)) {
-                                senderTracker= getEventSender(resource.getTenantId());
-                            } else {
-                                // MQTT client is trying to publish on a not supported endpoint
-                                LOG.debug("no such endpoint [{}]", resource.getEndpoint());
-                                senderTracker = Future.failedFuture("no such endpoint");
-                            }
+                            Future<MessageSender> senderTracker = getSenderTracker(message, resource);
 
-                            CompositeFuture.all(assertionTracker, senderTracker)
-                            .compose(ok -> {
-                                doUploadMessage(resource.getTenantId(), assertionTracker.result(), endpoint, message, senderTracker.result(), tracker);
-                            }, tracker);
+                            CompositeFuture.all(assertionTracker, senderTracker).compose(ok -> {
+                                doUploadMessage(resource.getTenantId(), assertionTracker.result(), endpoint, message, senderTracker.result(), messageTracker);
+                            }, messageTracker);
 
 
                         } else {
-                            // MQTT client is trying to publish on a different device_id used on connection (MQTT has now way for errors)
-                            LOG.debug("client [ID: {}] not authorized to publish data for device [{}]", endpoint.clientIdentifier(), resource.getResourceId());
-                            close(endpoint);
+                            // MQTT client is trying to publish on a different device_id used on connection (MQTT has no way for errors)
+                            messageTracker.fail("client not authorized");
                         }
 
                     }
@@ -262,6 +250,29 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
             });
             endpoint.accept(false);
+        }
+    }
+
+    private Future<MessageSender> getSenderTracker(final MqttPublishMessage message, final ResourceIdentifier resource) {
+
+        if (resource.getEndpoint().equals(TELEMETRY_ENDPOINT)) {
+            if (!MqttQoS.AT_MOST_ONCE.equals(message.qosLevel())) {
+                // client tries to send telemetry message using QoS 1 or 2
+                return Future.failedFuture("Only QoS 0 supported for telemetry messages");
+            } else {
+                return getTelemetrySender(resource.getTenantId());
+            }
+        } else if (resource.getEndpoint().equals(EVENT_ENDPOINT)) {
+            if (!MqttQoS.AT_LEAST_ONCE.equals(message.qosLevel())) {
+                // client tries to send event message using QoS 0 or 2
+                return Future.failedFuture("Only QoS 1 supported for event messages");
+            } else {
+                return getEventSender(resource.getTenantId());
+            }
+        } else {
+            // MQTT client is trying to publish on a not supported endpoint
+            LOG.debug("no such endpoint [{}]", resource.getEndpoint());
+            return Future.failedFuture("no such endpoint");
         }
     }
 
