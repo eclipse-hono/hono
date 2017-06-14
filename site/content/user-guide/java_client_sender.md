@@ -61,7 +61,7 @@ Add to your pom.xml:
 <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
-      <version>0.5-M4</version>
+      <version>0.5-M5</version>
 </dependency>
 ```
   
