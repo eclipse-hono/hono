@@ -1,6 +1,6 @@
 +++
 title = "Java - integrate Hono consumer"
-weight = 290
+weight = 230
 +++
 
 Simple example of a Java main program that consumes telemetry data that was sent for the default tenant (usually devices). 

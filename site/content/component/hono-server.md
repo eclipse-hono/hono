@@ -44,6 +44,16 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_SERVER_REGISTRATION_ASSERTION_TOKEN_EXPIRATION`<br>`--hono.server.registrationAssertion.tokenExpiration` | no | `10` | The expiration period to use for the tokens asserting the registration status of devices. |
 | `HONO_SERVER_TRUST_STORE_PASSWORD`<br>`--hono.server.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_SERVER_TRUST_STORE_PATH`<br>`--hono.server.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
+| `HONO_METRIC_REPORTER_GRAPHITE_ACTIVE`<br>`--hono.metric.reporter.graphite.active` | no  | `false` | Activates the metrics reporter to Graphite (or a graphite compatible system - we use InfluxDB in the `example`). |
+| `HONO_METRIC_REPORTER_GRAPHITE_HOST`<br>`--hono.metric.reporter.graphite.host` | no  | `localhost` | Sets the host, to which the metrics will be reported. |
+| `HONO_METRIC_REPORTER_GRAPHITE_PORT`<br>`--hono.metric.reporter.graphite.host` | no  | `2003` | Sets the port - 2003 ist standard for Graphite. |
+| `HONO_METRIC_REPORTER_GRAPHITE_PERIOD`<br>`--hono.metric.reporter.graphite.period` | no  | `5000` | Sets the time interval for reporting. |
+| `HONO_METRIC_REPORTER_GRAPHITE_PREFIX`<br>`--hono.metric.reporter.graphite.prefix` | no  | - | Prefix all metric names with the given string. |
+| `HONO_METRIC_REPORTER_CONSOLE_ACTIVE`<br>`--hono.metric.reporter.console.active` | no  | `false` | Activates the metrics reporter to the console/log. |
+| `HONO_METRIC_REPORTER_CONSOLE_PERIOD`<br>`--hono.metric.reporter.console.period` | no  | `5000` | Sets the time interval for reporting. |
+| `HONO_METRIC_JVM_MEMORY`<br>`--hono.metric.jvm.memory` | no  | `true` | Activates JVM memory metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.server.jvm.memory`. |
+| `HONO_METRIC_JVM_THREAD`<br>`--hono.metric.jvm.thread` | no  | `true` | Activates JVM thread metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.server.jvm.thread`.|
+| `HONO_METRIC_VERTX`<br>`--hono.metric.vertx` | no  | `true` | Activates the Vert.x metrics (from the Vert.x metrics project). The metric name is `hono.server.vertx`. |
 
 The variables only need to be set if the default value does not match your environment.
 

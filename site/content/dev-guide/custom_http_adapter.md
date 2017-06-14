@@ -1,6 +1,6 @@
 +++
 title = "Implement a Custom Hono HTTP Protocol Adapter"
-weight = 250
+weight = 260
 +++
 
 Hono comes with the Hono REST protocol adapter which you may use as a blueprint for your own HTTP protocol adapter 

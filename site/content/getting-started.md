@@ -51,6 +51,8 @@ This will create and start up Docker Swarm *services* for all components that to
   * A *Hono Server* instance that protocol adapters connect to in order to forward data from devices.
   * A *REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
   * An *MQTT Adapter* instance that exposes Hono's Telemetry API as an MQTT topic hierarchy.
+  * A *Device Registry* instance that manages device data and is used for token assertion.
+  * An *Auth Server* instance that authenticates Hono components and delivers authorization tokens.  
 * AMQP Network
   * A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
   * An *Artemis* instance that is the default persistence store for events.
