@@ -2,9 +2,8 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-bom</artifactId>
+    <artifactId>hono-services</artifactId>
     <version>0.5-M6-SNAPSHOT</version>
-    <relativePath>../../bom</relativePath>
   </parent>
   <artifactId>hono-service-device-registry</artifactId>
   <name>Hono Device Registry</name>
@@ -31,10 +30,6 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-demo-certs</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -76,7 +71,7 @@
             </goals>
             <configuration>
               <includeArtifactIds>hono-demo-certs</includeArtifactIds>
-              <outputDirectory>${project.build.outputDirectory}/certs</outputDirectory>
+              <outputDirectory>${project.build.directory}/certs</outputDirectory>
               <excludes>META-INF/**</excludes>
             </configuration>
           </execution>
@@ -132,7 +127,7 @@
                       <inline>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/target/classes/certs</directory>
+                            <directory>${project.build.directory}}/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>device-registry-*.pem</include>
@@ -141,7 +136,7 @@
                             </includes>
                           </fileSet>
                           <fileSet>
-                            <directory>${project.basedir}/target</directory>
+                            <directory>${project.build.directory}</directory>
                             <outputDirectory>opt/hono</outputDirectory>
                             <includes>
                               <include>${project.artifactId}-${project.version}.jar</include>

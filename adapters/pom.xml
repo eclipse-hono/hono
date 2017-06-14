@@ -46,34 +46,4 @@
     </dependency>
   </dependencies>
 
-  <build>
-    <plugins>
-      <plugin>
-        <!--
-          Copy legal documents from "legal" module to "target/classes" folder
-          so that we make sure to include legal docs in all modules.
-         -->
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <!--
-          Execution and configuration for copying certificates from related module
-          to "target/classes" folder so that we can include them in the image.
-         -->
-        <executions>
-          <execution>
-            <id>copy_demo_certs</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <configuration>
-              <includeArtifactIds>hono-demo-certs</includeArtifactIds>
-              <outputDirectory>${project.build.directory}/certs</outputDirectory>
-              <excludes>META-INF/**</excludes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>

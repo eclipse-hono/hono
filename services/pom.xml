@@ -32,4 +32,16 @@
 
   <name>Hono Services</name>
   <description>Microservices that form an essential part of Hono's architecture that are intenionally not part of the Hono server process itself. They can be substituted by different implementations that stick to the defined APIs anytime.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-demo-certs</artifactId>
+    </dependency>
+  </dependencies>
+
 </project>
