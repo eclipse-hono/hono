@@ -134,7 +134,7 @@
   <modules>
     <module>adapters</module>
     <module>application</module>
-    <module>auth</module>
+    
     <module>bom</module>
     <module>broker</module>
     <module>core</module>

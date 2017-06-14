@@ -2,9 +2,8 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-bom</artifactId>
+    <artifactId>hono-services</artifactId>
     <version>0.5-M6-SNAPSHOT</version>
-    <relativePath>../bom</relativePath>
   </parent>
   <artifactId>hono-auth</artifactId>
   <name>Hono Auth</name>
@@ -33,10 +32,6 @@
       <artifactId>mockito-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-demo-certs</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot</artifactId>
     </dependency>
@@ -51,10 +46,6 @@
     <dependency>
       <groupId>org.yaml</groupId>
       <artifactId>snakeyaml</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-legal</artifactId>
     </dependency>
   </dependencies>
 

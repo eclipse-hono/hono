@@ -27,11 +27,13 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>auth</module>
     <module>device-registry</module>
   </modules>
 
   <name>Hono Services</name>
-  <description>Microservices that form an essential part of Hono's architecture that are intenionally not part of the Hono server process itself. They can be substituted by different implementations that stick to the defined APIs anytime.</description>
+  <description>Micro services implementing APIs that Hono depends on only and which are therefore not part of the Hono server process itself.
+  The service components included here can be replaced by other (custom) components as long as they implement the required API(s).</description>
 
   <dependencies>
     <dependency>
