@@ -10,6 +10,7 @@
 
   <artifactId>hono-metrics</artifactId>
   <name>Metrics Docker Images</name>
+  <packaging>pom</packaging>
   <description>Docker image to visualize Hono metrics</description>
 
   <dependencies>
@@ -81,5 +82,4 @@
       </build>
     </profile>
   </profiles>
-
 </project>

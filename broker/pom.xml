@@ -9,6 +9,7 @@
   </parent>
 
   <artifactId>hono-artemis</artifactId>
+  <packaging>pom</packaging>
 
   <dependencies>
     <dependency>
@@ -114,4 +115,5 @@
       </build>
     </profile>
   </profiles>
+  <description>Module for building a Docker image for ActiveMQ Artemis using the Hono default configuration.</description>
 </project>

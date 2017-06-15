@@ -8,8 +8,9 @@
     <relativePath>../bom</relativePath>
   </parent>
 
-  <artifactId>dispatch-router</artifactId>
+  <artifactId>hono-dispatch-router</artifactId>
   <name>Qpid Dispatch Router</name>
+  <packaging>pom</packaging>
   <description>Module for building the Qpid Dispatch Router image</description>
 
   <dependencies>
@@ -84,6 +85,10 @@
           <name>docker.host</name>
         </property>
       </activation>
+      <properties>
+        <!-- do not use artifactId as repository name -->
+        <image.target>dispatch-router</image.target>
+      </properties>
       <build>
         <plugins>
           <plugin>
