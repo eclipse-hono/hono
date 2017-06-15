@@ -11,30 +11,27 @@
  *    Bosch Software Innovations GmbH
  */
 
-package org.eclipse.hono.adapter;
+package org.eclipse.hono.service;
 
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
 
 /**
- * Minimum configuration for protocol adapters
+ * Minimum Spring Boot configuration class defining beans required by protocol adapters.
  */
-public abstract class AdapterConfig {
-
-    @Autowired(required = false)
-    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    private ClientConfigProperties registrationServiceClientConfig;
+public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes a Vert.x instance as a Spring bean.
@@ -54,6 +51,8 @@ public abstract class AdapterConfig {
 
     /**
      * Exposes client configuration properties as a Spring bean.
+     * <p>
+     * Sets the <em>amqpHostname</em> to {@code hono} if not set explicitly.
      * 
      * @return The properties.
      */
@@ -61,6 +60,9 @@ public abstract class AdapterConfig {
     @Bean
     public ClientConfigProperties honoClientConfig() {
         ClientConfigProperties config = new ClientConfigProperties();
+        if (config.getAmqpHostname() == null) {
+            config.setAmqpHostname("hono");
+        }
         customizeClientConfigProperties(config);
         return config;
     }
@@ -90,16 +92,33 @@ public abstract class AdapterConfig {
     }
 
     /**
+     * Exposes a Hono client as a Spring bean.
+     * <p>
+     * The client is configured with the properties provided by {@link #honoClientConfig()}.
+     * 
+     * @return The client.
+     */
+    @Bean
+    @Scope("prototype")
+    public HonoClient honoClient() {
+        return new HonoClientImpl(vertx(), honoConnectionFactory());
+    }
+
+    /**
      * Exposes configuration properties for accessing the registration service as a Spring bean.
+     * <p>
+     * Sets the <em>amqpHostname</em> to {@code hono-device-registry} if not set explicitly.
      *
      * @return The properties.
      */
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.registration")
-    @ConditionalOnProperty(prefix = "hono.registration", name = "host")
     @Bean
     public ClientConfigProperties registrationServiceClientConfig() {
         ClientConfigProperties config = new ClientConfigProperties();
+        if (config.getAmqpHostname() == null) {
+            config.setAmqpHostname("hono-device-registry");
+        }
         customizeRegistrationServiceClientConfigProperties(config);
         return config;
     }
@@ -119,17 +138,25 @@ public abstract class AdapterConfig {
 
     /**
      * Exposes a factory for connections to the registration service 
-     * as a Spring bean. Returns null if no ClientConfigProperties for accessing the 
-     * registration service have been set.
+     * as a Spring bean.
      *
-     * @return The connection factory or null.
+     * @return The connection factory.
      */
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Bean
     public ConnectionFactory registrationServiceConnectionFactory() {
-        if (registrationServiceClientConfig == null) {
-            return null;
-        }
-        return new ConnectionFactoryImpl(vertx(), registrationServiceClientConfig);
+        return new ConnectionFactoryImpl(vertx(), registrationServiceClientConfig());
+    }
+
+    /**
+     * Exposes a client for the <em>Device Registration</em> API as a Spring bean.
+     *
+     * @return The client.
+     */
+    @Bean
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
+    @Scope("prototype")
+    public HonoClient registrationServiceClient() {
+        return new HonoClientImpl(vertx(), registrationServiceConnectionFactory());
     }
 }

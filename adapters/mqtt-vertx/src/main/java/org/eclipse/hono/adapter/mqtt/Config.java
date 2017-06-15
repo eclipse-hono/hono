@@ -13,52 +13,25 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import org.eclipse.hono.adapter.AdapterConfig;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
 
 /**
  * Configuration class
  */
 @Configuration
-public class Config extends AdapterConfig {
-
-    @Autowired(required = false)
-    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    private ConnectionFactory registrationServiceConnectionFactory;
+public class Config extends AbstractAdapterConfig {
 
     @Override
     protected void customizeClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName("Hono MQTT Adapter");
         }
-        if (props.getAmqpHostname() == null) {
-            props.setAmqpHostname("hono");
-        }
-    }
-
-    /**
-     * Exposes a Hono client as a Spring bean.
-     * <p>
-     * The client is configured with the properties provided by {@link #honoClientConfig()}.
-     * 
-     * @return The client.
-     */
-    @Bean
-    @Scope("prototype")
-    public HonoClient honoClient() {
-        return new HonoClientImpl(vertx(), honoConnectionFactory());
     }
 
     @Override
@@ -66,27 +39,6 @@ public class Config extends AdapterConfig {
         if (props.getName() == null) {
             props.setName("Hono MQTT Adapter");
         }
-        if (props.getAmqpHostname() == null) {
-            props.setAmqpHostname("hono-device-registry");
-        }
-    }
-
-    /**
-     * Exposes a registration service client as a Spring bean.
-     * <p>
-     * The client is configured with the properties provided by {@link #registrationServiceClientConfig()}.
-     * If no such properties are set, null is returned here.
-     *
-     * @return The client or null.
-     */
-    @Bean
-    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    @Scope("prototype")
-    public HonoClient registrationServiceClient() {
-        if (registrationServiceConnectionFactory == null) {
-            return null;
-        }
-        return new HonoClientImpl(vertx(), registrationServiceConnectionFactory);
     }
 
     /**
