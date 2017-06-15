@@ -51,7 +51,7 @@ services:
       - "5672:5672"
 
   auth-server:
-    image: eclipsehono/hono-auth:${project.version}
+    image: eclipsehono/hono-service-auth:${project.version}
     networks:
       hono-net:
         aliases:

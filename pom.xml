@@ -117,7 +117,7 @@
     <!-- Plugins versions -->
     <docker-maven-plugin.version>0.21.0</docker-maven-plugin.version>
 
-    <!-- Docker configuration -->
+    <!-- use artifactId as Docker image repository name -->
     <image.target>${project.artifactId}</image.target>
 
     <!-- configure timestamp format to be injected into legal docs -->
