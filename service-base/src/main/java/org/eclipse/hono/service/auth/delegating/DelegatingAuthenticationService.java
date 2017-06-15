@@ -72,4 +72,11 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
 
         client.verifyPlain(authzid, authcid, password, authenticationResultHandler);
     }
+
+    @Override
+    public String toString() {
+        return new StringBuilder(DelegatingAuthenticationService.class.getSimpleName())
+                .append("[auth-server: ").append(getConfig().getHost()).append(":").append(getConfig().getPort()).append("]")
+                .toString();
+    }
 }
