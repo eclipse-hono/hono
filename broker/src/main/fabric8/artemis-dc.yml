@@ -14,8 +14,8 @@ spec:
         name: ${project.artifactId}
     spec:
       containers:
-      - image: eclipsehono/broker:${project.version}
-        name: ${project.artifactId}
+      - image: eclipsehono/activemq-artemis:${project.version}
+        name: activemq-artemis
         ports:
         - containerPort: 5672
           name: amqp

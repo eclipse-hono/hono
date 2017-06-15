@@ -42,7 +42,7 @@ services:
       - "15672:5672"
 
   artemis:
-    image: eclipsehono/broker:${project.version}
+    image: eclipsehono/activemq-artemis:${project.version}
     networks:
       hono-net:
         aliases:

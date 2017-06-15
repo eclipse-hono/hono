@@ -163,7 +163,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
-                  <name>eclipsehono/broker:${project.version}</name>
+                  <name>eclipsehono/activemq-artemis:${project.version}</name>
                   <run>
                     <ports>
                       <port>+broker.ip:broker.amqp.port:5672</port>

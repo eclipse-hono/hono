@@ -8,7 +8,7 @@
     <relativePath>../bom</relativePath>
   </parent>
 
-  <artifactId>metrics</artifactId>
+  <artifactId>hono-metrics</artifactId>
   <name>Metrics Docker Images</name>
   <description>Docker image to visualize Hono metrics</description>
 
@@ -18,19 +18,6 @@
       <artifactId>hono-legal</artifactId>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <!--
-          Copy legal documents from "legal" module to "target/classes" folder
-          so that we make sure to include legal docs in all modules.
-         -->
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 
   <profiles>
     <profile>
@@ -89,18 +76,6 @@
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>fabric8-maven-plugin</artifactId>
-            <version>3.2.14</version>
-            <configuration>
-              <mode>openshift</mode>
-            </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>resource</goal>
-                </goals>
-              </execution>
-            </executions>
           </plugin>
         </plugins>
       </build>

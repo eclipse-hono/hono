@@ -8,7 +8,7 @@
     <relativePath>../bom</relativePath>
   </parent>
 
-  <artifactId>broker</artifactId>
+  <artifactId>hono-artemis</artifactId>
 
   <dependencies>
     <dependency>
@@ -60,6 +60,10 @@
           <name>docker.host</name>
         </property>
       </activation>
+      <properties>
+        <!-- do not use artifactId as repository name -->
+        <image.target>activemq-artemis</image.target>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -110,6 +114,4 @@
       </build>
     </profile>
   </profiles>
-
-
 </project>

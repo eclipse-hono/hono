@@ -114,10 +114,10 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <!-- Plugins versions -->
-    <docker-maven-plugin.version>0.21.0</docker-maven-plugin.version>
-
-    <!-- use artifactId as Docker image repository name -->
+    <!--
+      use artifactId as Docker image repository name by default
+      can be overridden by child projects to explicitly set name
+    -->
     <image.target>${project.artifactId}</image.target>
 
     <!-- configure timestamp format to be injected into legal docs -->
@@ -159,7 +159,7 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>${docker-maven-plugin.version}</version>
+          <version>0.21.0</version>
           <configuration>
             <images>
               <image>
