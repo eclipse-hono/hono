@@ -5,7 +5,7 @@
     <artifactId>hono-services</artifactId>
     <version>0.5-M6-SNAPSHOT</version>
   </parent>
-  <artifactId>hono-auth</artifactId>
+  <artifactId>hono-service-auth</artifactId>
   <name>Hono Auth</name>
   <description>A default identity provider for authenticating Hono components and consumers.</description>
   <dependencies>

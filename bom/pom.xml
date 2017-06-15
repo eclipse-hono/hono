@@ -152,11 +152,6 @@
       	<scope>provided</scope>
       </dependency>
       <dependency>
-      	<groupId>org.eclipse.hono</groupId>
-      	<artifactId>hono-server</artifactId>
-      	<version>${project.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-service-base</artifactId>
         <version>${project.version}</version>
