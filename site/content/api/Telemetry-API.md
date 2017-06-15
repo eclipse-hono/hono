@@ -19,34 +19,27 @@ Both *Devices* as well as *Protocol Adapters* will be referred to as *clients* i
 
 **Preconditions**
 
-1. Client has established an AMQP connection with Hono.
-1. Client has established an AMQP link in role *sender* with Hono using target address `telemetry/${tenant_id}` where `tenant_id` is the ID of the tenant that the client wants to upload telemetry data for. 
+1. Client has established an AMQP connection with Hono's Telemetry endpoint.
+1. Client has established an AMQP link in role *sender* with Telemetry endpoint using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload telemetry data for. 
 1. The device for which the client wants to upload telemetry data has been registered (see [Device Registration API]({{< relref "Device-Registration-API.md" >}})).
 1. Client has obtained a *registration assertion* for the device from the Device Registration service by means of the [assert Device Registration operation]({{< relref "Device-Registration-API.md#assert-device-registration" >}}).
 
-The client indicates its preferred message delivery mode by means of the `snd-settle-mode` and `rcv-settle-mode` fields of its `attach` frame during link establishment. Hono will receive messages using a delivery mode according to the following table:
+The client indicates its preferred message delivery mode by means of the *snd-settle-mode* and *rcv-settle-mode* fields of its *attach* frame during link establishment. Hono will receive messages using a delivery mode according to the following table:
 
 | snd-settle-mode        | rcv-settle-mode        | Delivery semantics |
 | :--------------------- | :--------------------- | :----------------- |
-| *unsettled*, *mixed*   | *first*                | Hono will acknowledge and settle received messages spontaneously. Hono will accept any re-delivered messages. |
-| *settled*              | *first*                | Hono will acknowledge and settle received messages spontaneously. This is the fastest mode of delivery. This corresponds to *AT MOST ONCE* delivery. |
+| `unsettled`, `mixed` | `first`               | Hono will acknowledge and settle received messages spontaneously. Hono will accept any re-delivered messages. |
+| `settled`             | `first`               | Hono will acknowledge and settle received messages spontaneously. This is the fastest mode of delivery. This corresponds to *AT MOST ONCE* delivery. |
 
 All other combinations are not supported by Hono and result in a termination of the link. In particular, Hono does **not** support reliable transmission of telemetry data, i.e. messages containing telemetry data MAY be lost.
 
 **Message Flow**
 
-The following sequence diagram illustrates the flow of messages involved in a *Protocol Adapter* uploading a telemetry data message to Hono.
-
-Note that the sequence diagram is based on the [Hybrid Connection Model]({{< relref "Topology-Options.md" >}}) topology option. 
+The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* uploading a telemetry data message to Hono's Telemetry endpoint. The *snd-settle-mode* being used is `settled`.
 
 ![Upload telemetry data flow](../upload-telemetry-data.png)
 
-1. *Protocol Adapter* connects to *Telemetry Endpoint*.
-   1. *Telemetry* endpoint successfully verifies credentials using *Authentication* service.
-1. *Protocol Adapter* establishes link with *Telemetry Endpoint* for sending telemetry data for tenant `TENANT`.
-   1. *Telemetry* endpoint successfully verifies that the adapter has permission to upload telemetry data for `TENANT` using *Authorization* service.
-   1. *Telemetry* endpoint opens downstream link to *Dispatch Router* for telemetry data.
-1. *Protocol Adapter* sends telemetry data for device `4711`.
+1. *MQTT Adapter* sends telemetry data for device `4711`.
    1. *Telemetry* endpoint successfully verifies that device `4711` of `TENANT` exists and is enabled by means of validating the *registration assertion* included in the message (see [Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})).
    1. *Telemetry* endpoint forwards data to *Dispatch Router*.
 
@@ -64,9 +57,11 @@ The body of the message MUST consist of a single AMQP *Data* section containing 
 
 Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers.
  
-Note that Hono does not return any *application layer* message back to the client in order to signal the outcome of the operation. Instead, Hono signals reception of the message by means of the AMQP `ACCEPTED` delivery state.
+Note that Hono does not return any *application layer* message back to the client in order to signal the outcome of the operation. Instead, Hono signals reception of the message by means of the AMQP `ACCEPTED` outcome if the message complies with the formal requirements.
 
-Whenever a client sends a telemetry message that cannot be processed, e.g. because it does not conform to the message format defined above, Hono terminates the link with the client in order to prevent further processing of such messages being re-sent by the client.
+Whenever a client sends a telemetry message that cannot be processed, e.g. because it does not conform to the message format defined above, Hono settles the message transfer using the AMQP `REJECTED` outcome. Clients should **not** try to resend such rejected messages unaltered.
+
+Note that the outcomes above will *not* be transferred back to the sender if the sender uses *snd-settle-mode* `settled` (which is recommended).
 
 # Northbound Operations
 
@@ -79,24 +74,20 @@ Hono supports multiple non-competing *Business Application* consumers of telemet
 **Preconditions**
 
 1. Client has established an AMQP connection with Hono.
-2. Client has established an AMQP link in role *receiver* with Hono using source address `telemetry/${tenant_id}` where `tenant_id` represents the ID of the tenant the client wants to retrieve telemetry data for.
+2. Client has established an AMQP link in role *receiver* with Hono using source address `telemetry/${tenant_id}` where `${tenant_id}` represents the ID of the tenant the client wants to retrieve telemetry data for.
 
-Hono supports *AT MOST ONCE* delivery of messages only. A client therefore MUST use `settled` for the `snd-settle-mode` and `first` for the `rcv-settle-mode` fields of its `attach` frame during link establishment. All other combinations are not supported by Hono and result in the termination of the link.
+Hono supports *AT MOST ONCE* delivery of messages only. A client therefore MUST use `settled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported by Hono and result in the termination of the link.
 
-A client MAY indicate to Hono during link establishment that it wants to distribute the telemetry messages received for a given tenant among multiple consumers by including a link property `subscription-name` whose value is shared by all other consumers of the tenant. Hono ensures that messages from a given device are delivered to the same consumer. Note that this also means that telemetry messages MAY not be evenly distributed among consumers, e.g. when only a single device sends data.
+A client MAY indicate to Hono during link establishment that it wants to distribute the telemetry messages received for a given tenant among multiple consumers by including a link property `subscription-name` whose value is shared by all other consumers of the tenant. Hono ensures that messages from a given device are delivered to the same consumer. Note that this also means that telemetry messages MAY not be evenly distributed among consumers, e.g. when only a single device sends data. **NB** This feature is not supported yet.
 
-In addition a client MAY include a boolean link property `ordering-required` with value `false` during link establishment in order to indicate to Hono that it does not require messages being delivered strictly in order per device but instead allows for messages being distributed evenly among the consumers. 
+In addition a client MAY include a boolean link property `ordering-required` with value `false` during link establishment in order to indicate to Hono that it does not require messages being delivered strictly in order per device but instead allows for messages being distributed evenly among the consumers. **NB** This feature is not supported yet.
 
 **Message Flow**
 
 The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving a telemetry data message from Hono.
 
-Note that the sequence diagram is based on the [Hybrid Connection Model]({{< relref "Topology-Options.md" >}}) topology option. 
-
 ![Receive Telemetry Data](../consume-telemetry-data.png)
 
-1. *Business Application* connects to *Dispatch Router*. *Dispatch Router* successfully verifies credentials.
-1. *Business Application* establishes link with *Dispatch Router* for receiving telemetry data for tenant `TENANT`. *Dispatch Router* successfully verifies that client is allowed to receive data for tenant `TENANT`.
 1. *Dispatch Router* delivers telemetry message to *Business Application*.
 
 {{% note %}}
