@@ -134,6 +134,12 @@ services:
       - HONO_CLIENT_USERNAME=rest-adapter@HONO
       - HONO_CLIENT_PASSWORD=rest-secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_REGISTRATION_NAME=Hono REST Adapter
+      - HONO_REGISTRATION_HOST=device-registry.hono
+      - HONO_REGISTRATION_PORT=5671
+      - HONO_REGISTRATION_USERNAME=rest-adapter@HONO
+      - HONO_REGISTRATION_PASSWORD=rest-secret
+      - HONO_REGISTRATION_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_HTTP_BIND_ADDRESS=0.0.0.0
       - HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0
       - HONO_HTTP_INSECURE_PORT_ENABLED=true
@@ -158,6 +164,12 @@ services:
       - HONO_CLIENT_USERNAME=mqtt-adapter@HONO
       - HONO_CLIENT_PASSWORD=mqtt-secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_REGISTRATION_NAME=Hono MQTT Adapter
+      - HONO_REGISTRATION_HOST=device-registry.hono
+      - HONO_REGISTRATION_PORT=5671
+      - HONO_REGISTRATION_USERNAME=mqtt-adapter@HONO
+      - HONO_REGISTRATION_PASSWORD=mqtt-secret
+      - HONO_REGISTRATION_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_MQTT_BIND_ADDRESS=0.0.0.0
       - HONO_MQTT_INSECURE_PORT_BIND_ADDRESS=0.0.0.0
       - HONO_MQTT_INSECURE_PORT_ENABLED=true
