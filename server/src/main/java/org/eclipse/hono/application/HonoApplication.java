@@ -15,13 +15,10 @@ import org.eclipse.hono.server.HonoServer;
 import org.eclipse.hono.server.HonoServerConfigProperties;
 import org.eclipse.hono.service.AbstractApplication;
 import org.eclipse.hono.service.auth.AuthenticationService;
-import org.eclipse.hono.service.credentials.CredentialsService;
-import org.eclipse.hono.service.registration.RegistrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Verticle;
 
@@ -38,16 +35,7 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoApplication.class);
 
-    private RegistrationService registrationService;
     private AuthenticationService authenticationService;
-
-    /**
-     * @param registrationService the registrationService to set
-     */
-    @Autowired
-    public final void setRegistrationService(final RegistrationService registrationService) {
-        this.registrationService = registrationService;
-    }
 
     /**
      * @param authenticationService the authenticationService to set
@@ -60,27 +48,21 @@ public class HonoApplication extends AbstractApplication<HonoServer, HonoServerC
     /**
      * Deploys the additional service implementations that are
      * required by the HonoServer.
-     * 
+     *
      */
     @Override
     protected Future<Void> deployRequiredVerticles(final int maxInstances) {
+
         Future<Void> result = Future.future();
-        CompositeFuture.all(
-                deployAuthenticationService(), // we only need 1 authentication service
-                deployRegistrationService()).setHandler(ar -> {
+
+        Future<String> authFuture = deployAuthenticationService();// we only need 1 authentication service
+        authFuture.setHandler(ar -> {
             if (ar.succeeded()) {
                 result.complete();
             } else {
                 result.fail(ar.cause());
             }
         });
-        return result;
-    }
-
-    private Future<String> deployRegistrationService() {
-        LOG.info("Starting registration service {}", registrationService);
-        Future<String> result = Future.future();
-        getVertx().deployVerticle(registrationService, result.completer());
         return result;
     }
 

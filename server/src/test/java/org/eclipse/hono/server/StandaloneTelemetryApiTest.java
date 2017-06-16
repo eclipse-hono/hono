@@ -32,7 +32,6 @@ import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilde
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
-import org.eclipse.hono.service.registration.impl.FileBasedRegistrationService;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
@@ -71,7 +70,6 @@ public class StandaloneTelemetryApiTest {
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
-    private static FileBasedRegistrationService registrationAdapter;
     private static MessageDiscardingTelemetryDownstreamAdapter telemetryAdapter;
     private static HonoClient                  client;
     private static MessageSender               telemetrySender;
@@ -92,20 +90,15 @@ public class StandaloneTelemetryApiTest {
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         telemetryEndpoint.setRegistrationAssertionValidator(assertionHelper);
         server.addEndpoint(telemetryEndpoint);
-        registrationAdapter = new FileBasedRegistrationService();
-        registrationAdapter.setRegistrationAssertionFactory(assertionHelper);
 
         final Future<HonoClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess());
 
-        Future<String> registrationTracker = Future.future();
-        vertx.deployVerticle(registrationAdapter, registrationTracker.completer());
+        Future<String> serverTracker = Future.future();
 
-        registrationTracker.compose(r -> {
-            Future<String> serverTracker = Future.future();
-            vertx.deployVerticle(server, serverTracker.completer());
-            return serverTracker;
-        }).compose(s -> {
+        vertx.deployVerticle(server, serverTracker.completer());
+
+        serverTracker.compose(s -> {
             client = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                     .vertx(vertx)
                     .name("test")
@@ -116,6 +109,7 @@ public class StandaloneTelemetryApiTest {
                     .build());
             client.connect(new ProtonClientOptions(), setupTracker.completer());
         }, setupTracker);
+
     }
 
     /**
@@ -135,14 +129,12 @@ public class StandaloneTelemetryApiTest {
     @Before
     public void createSender(final TestContext ctx) {
 
-        registrationAdapter.addDevice(DEFAULT_TENANT, DEVICE_1, null);
         telemetryAdapter.setMessageConsumer(msg -> {});
     }
 
     @After
     public void clearRegistry(final TestContext ctx) throws InterruptedException {
 
-        registrationAdapter.clear();
         if (telemetrySender != null && telemetrySender.isOpen()) {
             Async done = ctx.async();
             telemetrySender.close(closeAttempt -> {
