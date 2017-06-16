@@ -90,7 +90,7 @@ services:
       - HONO_SERVER_CERT_PATH=/etc/hono/certs/hono-cert.pem
       - HONO_SERVER_INSECURE_PORT_ENABLED=false
       - HONO_SERVER_MAX_INSTANCES=1
-      - HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
+      - HONO_SERVER_VALIDATION_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
     volumes:

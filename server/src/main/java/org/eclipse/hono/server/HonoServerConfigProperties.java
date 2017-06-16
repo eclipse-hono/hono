@@ -25,11 +25,11 @@ public class HonoServerConfigProperties extends ServiceConfigProperties {
     private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
 
     /**
-     * Gets the properties for determining key material for creating/validation registration assertion tokens.
+     * Gets the properties for determining key material for validating registration assertion tokens.
      * 
      * @return The properties.
      */
-    public SignatureSupportingConfigProperties getRegistrationAssertion() {
+    public SignatureSupportingConfigProperties getValidation() {
         return registrationAssertionProperties;
     }
 }

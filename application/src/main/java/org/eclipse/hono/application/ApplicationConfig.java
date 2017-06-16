@@ -130,11 +130,11 @@ public class ApplicationConfig {
     @Qualifier("validation")
     public RegistrationAssertionHelper registrationAssertionValidator() {
         HonoServerConfigProperties honoProps = honoServerProperties();
-        if (!honoProps.getRegistrationAssertion().isAppropriateForValidating() && honoProps.getCertPath() != null) {
+        if (!honoProps.getValidation().isAppropriateForValidating() && honoProps.getCertPath() != null) {
             // fall back to TLS configuration
-            honoProps.getRegistrationAssertion().setCertPath(honoProps.getCertPath());
+            honoProps.getValidation().setCertPath(honoProps.getCertPath());
         }
-        return RegistrationAssertionHelperImpl.forValidating(vertx(), honoProps.getRegistrationAssertion());
+        return RegistrationAssertionHelperImpl.forValidating(vertx(), honoProps.getValidation());
     }
 
     /**
@@ -146,10 +146,10 @@ public class ApplicationConfig {
     @Qualifier("signing")
     public RegistrationAssertionHelper registrationAssertionFactory() {
         HonoServerConfigProperties honoProps = honoServerProperties();
-        if (!honoProps.getRegistrationAssertion().isAppropriateForCreating() && honoProps.getKeyPath() != null) {
+        if (!honoProps.getValidation().isAppropriateForCreating() && honoProps.getKeyPath() != null) {
             // fall back to TLS configuration
-            honoProps.getRegistrationAssertion().setKeyPath(honoProps.getKeyPath());
+            honoProps.getValidation().setKeyPath(honoProps.getKeyPath());
         }
-        return RegistrationAssertionHelperImpl.forSigning(vertx(), honoProps.getRegistrationAssertion());
+        return RegistrationAssertionHelperImpl.forSigning(vertx(), honoProps.getValidation());
     }
 }

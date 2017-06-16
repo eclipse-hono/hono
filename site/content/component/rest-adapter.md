@@ -15,7 +15,7 @@ The following table provides an overview of the configuration variables and corr
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------ | :-------: | :------ | :---------- |
-| `HONO_CLIENT_HOST`<br>`--hono.client.host` | yes | `localhost` | The IP address or name of the Hono server host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--link` command line option to link the adapter container to the host of the *Hono Server* container on the Docker network.
+| `HONO_CLIENT_HOST`<br>`--hono.client.host` | yes | `localhost` | The IP address or name of the Hono server host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the same network the Hono server container is running on. |
 | `HONO_CLIENT_PORT`<br>`--hono.client.port` | yes | `5671` | The port that the Hono server is listening on. |
 | `HONO_CLIENT_USERNAME`<br>`--hono.client.username` | yes | - | The username to use for authenticating to the Hono server. |
 | `HONO_CLIENT_PASSWORD`<br>`--hono.client.password` | yes | - | The password to use for authenticating to the Hono server. |
@@ -32,6 +32,12 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_HTTP_MAX_INSTANCES`<br>`--hono.http.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
 | `HONO_HTTP_MAX_PAYLOAD_SIZE`<br>`--hono.http.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming HTTP request's body in bytes. Requests with a larger body size are rejected with a 413 `Request entity too large` response. |
 | `HONO_HTTP_PORT`<br>`--hono.http.port` | no | `8443` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_REGISTRATION_HOST`<br>`--hono.registration.host` | yes | `localhost` | The IP address or name of the Device Registration service. The adapter uses this service to get an assertion regarding a device's registration status, i.e. whether it is enabled and if it is registered with a particular tenant. NB: This variable needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the same network the Device Registration service container is running on. |
+| `HONO_REGISTRATION_PORT`<br>`--hono.registration.port` | yes | `5671` | The port that the Device Registration service is listening on. |
+| `HONO_REGISTRATION_USERNAME`<br>`--hono.registration.username` | yes | - | The username to use for authenticating to the Device Registration service. |
+| `HONO_REGISTRATION_PASSWORD`<br>`--hono.registration.password` | yes | - | The password to use for authenticating to the Device Registration service. |
+| `HONO_REGISTRATION_TRUST_STORE_PATH`<br>`--hono.registration.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Device Registration service. This property **must** be set if the Device Registration service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_REGISTRATION_TRUST_STORE_PASSWORD`<br>`--hono.registration.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -86,11 +92,21 @@ When running the adapter as a Docker container, the preferred way of configurati
 The following command starts the REST adapter container using the trusted certificates included in the image under path `/etc/hono/certs`.
 
 ~~~sh
-$ docker run -d --name rest-adapter --network hono-net -e 'HONO_CLIENT_HOST=hono' \
-> -e 'HONO_CLIENT_USERNAME=rest-adapter' -e 'HONO_CLIENT_PASSWORD=secret' \
+$ docker run -d --name rest-adapter --network hono-net \
+> -e 'HONO_CLIENT_HOST=hono' \
+> -e 'HONO_CLIENT_USERNAME=rest-adapter@HONO' \
+> -e 'HONO_CLIENT_PASSWORD=rest-secret' \
 > -e 'HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
-> -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> -p8080:8080 eclipsehono/hono-adapter-rest-vertx:latest
+> -e 'HONO_REGISTRATION_HOST=device-registry' \
+> -e 'HONO_REGISTRATION_USERNAME=rest-adapter@HONO' \
+> -e 'HONO_REGISTRATION_PASSWORD=rest-secret' \
+> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_HTTP_BIND_ADDRESS=0.0.0.0' \
+> -e 'HONO_HTTP_KEY_PATH=/etc/hono/certs/rest-adapter-key.pem' \
+> -e 'HONO_HTTP_CERT_PATH=/etc/hono/certs/rest-adapter-cert.pem' \
+> -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' \
+> -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
+> -p8080:8080 -p8443:8443 eclipsehono/hono-adapter-rest-vertx:latest
 ~~~
 
 {{% note %}}
@@ -113,7 +129,18 @@ In order to do so, the adapter can be started using the `spring-boot:run` maven 
 The corresponding command to start up the adapter with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/adapters/rest-vertx$ mvn spring-boot:run -Drun.arguments=--hono.client.host=hono,--hono.client.username=rest-adapter,--hono.client.password=secret,--hono.http.insecurePortEnabled=true,--hono.http.insecurePortBindAddress=0.0.0.0
+~/hono/adapters/rest-vertx$ mvn spring-boot:run -Drun.arguments=\
+> --hono.client.host=hono,\
+> --hono.client.username=rest-adapter@HONO,\
+> --hono.client.password=rest-secret,\
+> --hono.client.trustStorePath=target/certs/trusted-certs.pem \
+> --hono.registration.host=device-registry,\
+> --hono.registration.username=rest-adapter@HONO,\
+> --hono.registration.password=rest-secret,\
+> --hono.registration.trustStorePath=target/certs/trusted-certs.pem \
+> --hono.http.bindAddress=0.0.0.0 \
+> --hono.http.insecurePortEnabled=true,\
+> --hono.http.insecurePortBindAddress=0.0.0.0
 ~~~
 
 {{% note %}}
@@ -122,6 +149,7 @@ with name *hono*. However, if the Hono server has been started as a Docker conta
 likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the REST adapter
 from the Spring Boot application and want it to connect to a Hono server run as a Docker container then you need to set the
 value of the *--hono.client.host* option to the IP address (or name) of the Docker host running the Hono server container.
+The same holds true analogously for the *device-registry* address.
 {{% /note %}}
 
 ## Using the Registration API
