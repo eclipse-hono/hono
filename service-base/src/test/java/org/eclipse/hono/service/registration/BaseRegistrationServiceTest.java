@@ -16,6 +16,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.mockito.Mockito.mock;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -65,7 +66,7 @@ public class BaseRegistrationServiceTest {
     public void testStartupFailsIfNoRegistrationAssertionFactoryIsSet(final TestContext ctx) {
 
         // GIVEN a registry without an assertion factory being set
-        BaseRegistrationService registrationService = getRegistrationService(HTTP_OK,
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
                 BaseRegistrationService.getResultPayload("4711", new JsonObject()));
 
         // WHEN starting the service
@@ -87,7 +88,7 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationReturnsToken(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
-        BaseRegistrationService registrationService = getRegistrationService(HTTP_OK,
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
                 BaseRegistrationService.getResultPayload("4711", new JsonObject()));
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
@@ -111,7 +112,7 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationFailsForDisabledDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
-        BaseRegistrationService registrationService = getRegistrationService(HTTP_OK,
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
                 BaseRegistrationService.getResultPayload("4711", new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false)));
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
@@ -132,7 +133,7 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationFailsForNonExistingDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
-        BaseRegistrationService registrationService = getRegistrationService(HTTP_NOT_FOUND, null);
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_NOT_FOUND, null);
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
@@ -143,9 +144,9 @@ public class BaseRegistrationServiceTest {
         }));
     }
 
-    private BaseRegistrationService getRegistrationService(final int status, final JsonObject data) {
+    private BaseRegistrationService<ServiceConfigProperties> getRegistrationService(final int status, final JsonObject data) {
 
-        return new BaseRegistrationService() {
+        return new BaseRegistrationService<ServiceConfigProperties>() {
 
             @Override
             public void updateDevice(final String tenantId, final String deviceId, final JsonObject otherKeys, final Handler<AsyncResult<RegistrationResult>> resultHandler) {

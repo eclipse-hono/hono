@@ -42,6 +42,7 @@ public class FileBasedRegistrationServiceTest
 {
    private static final String TENANT = "tenant";
    private static final String DEVICE = "device";
+   private DeviceRegistryConfigProperties props;
    private FileBasedRegistrationService registrationService;
    Vertx vertx;
    EventBus eventBus;
@@ -53,7 +54,9 @@ public class FileBasedRegistrationServiceTest
       eventBus = mock(EventBus.class);
       when(vertx.eventBus()).thenReturn(eventBus);
 
+      props = new DeviceRegistryConfigProperties();
       registrationService = new FileBasedRegistrationService();
+      registrationService.setConfig(props);
       registrationService.init(vertx, ctx);
    }
 
@@ -72,7 +75,7 @@ public class FileBasedRegistrationServiceTest
    public void testAddDeviceFailsIfDeviceLimitIsReached() {
 
        // GIVEN a registry whose devices-per-tenant limit has been reached
-       registrationService.setMaxDevicesPerTenant(1);
+       props.setMaxDevicesPerTenant(1);
        registrationService.addDevice(TENANT, DEVICE, null);
 
        // WHEN registering an additional device for the tenant
@@ -91,7 +94,7 @@ public class FileBasedRegistrationServiceTest
 
        // GIVEN a registry that has been configured to not allow modification of entries
        // which contains a device
-       registrationService.setModificationEnabled(false);
+       props.setModificationEnabled(false);
        registrationService.addDevice(TENANT, DEVICE, null);
 
        // WHEN trying to update the device
@@ -110,7 +113,7 @@ public class FileBasedRegistrationServiceTest
 
        // GIVEN a registry that has been configured to not allow modification of entries
        // which contains a device
-       registrationService.setModificationEnabled(false);
+       props.setModificationEnabled(false);
        registrationService.addDevice(TENANT, DEVICE, null);
 
        // WHEN trying to remove the device
@@ -167,7 +170,7 @@ public class FileBasedRegistrationServiceTest
            verify(vertx, never()).setPeriodic(anyLong(), any(Handler.class));
        }));
 
-       registrationService.setSaveToFile(false);
+       props.setSaveToFile(false);
        registrationService.doStart(startupTracker);
    }
 
@@ -183,7 +186,8 @@ public class FileBasedRegistrationServiceTest
            verify(vertx, times(1)).fileSystem();
        }));
 
-       registrationService.setSaveToFile(false);
+       props.setSaveToFile(false);
+
        Future<Void> startupTracker = Future.future();
        registrationService.doStart(startupTracker);
        startupTracker.compose(started -> {

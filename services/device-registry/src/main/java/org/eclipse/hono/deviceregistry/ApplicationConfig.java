@@ -79,12 +79,12 @@ public class ApplicationConfig {
     @Bean
     @Qualifier("signing")
     public RegistrationAssertionHelper registrationAssertionFactory() {
-        DeviceRegistryConfigProperties deviceRegistryProps = serviceProperties();
-        if (!deviceRegistryProps.getRegistrationAssertion().isAppropriateForCreating() && deviceRegistryProps.getKeyPath() != null) {
+        DeviceRegistryConfigProperties serviceProps = serviceProperties();
+        if (!serviceProps.getSigning().isAppropriateForCreating() && serviceProps.getKeyPath() != null) {
             // fall back to TLS configuration
-            deviceRegistryProps.getRegistrationAssertion().setKeyPath(deviceRegistryProps.getKeyPath());
+            serviceProps.getSigning().setKeyPath(serviceProps.getKeyPath());
         }
-        return RegistrationAssertionHelperImpl.forSigning(vertx(), deviceRegistryProps.getRegistrationAssertion());
+        return RegistrationAssertionHelperImpl.forSigning(vertx(), serviceProps.getSigning());
     }
 
 }

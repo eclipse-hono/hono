@@ -10,7 +10,7 @@ hono:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
       maxInstances: 1
-      registrationAssertion:
+      signing:
         sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
       startupTimeout: 65
 
