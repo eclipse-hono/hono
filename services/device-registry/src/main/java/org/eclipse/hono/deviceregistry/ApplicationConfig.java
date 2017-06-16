@@ -14,8 +14,10 @@ package org.eclipse.hono.deviceregistry;
 
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
+import org.eclipse.hono.service.credentials.CredentialsEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
+import org.eclipse.hono.service.registration.RegistrationEndpoint;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -23,6 +25,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import io.vertx.core.Vertx;
+import org.springframework.context.annotation.Scope;
 
 /**
  * Spring Boot configuration for the simple device registry server application.
@@ -87,4 +90,29 @@ public class ApplicationConfig {
         return RegistrationAssertionHelperImpl.forSigning(vertx(), serviceProps.getSigning());
     }
 
+    /**
+     * Expose Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> endpoint as a Spring bean.
+     * <p>
+     * See {@link RegistrationEndpoint} for more details.
+     */
+    @Bean
+    @Scope("prototype")
+    @ConfigurationProperties(prefix = "hono.registration")
+    public RegistrationEndpoint registrationEndpoint(final Vertx vertx) {
+        RegistrationEndpoint registrationEndpoint = new RegistrationEndpoint(vertx);
+        return registrationEndpoint;
+    }
+
+    /**
+     * Expose Hono's <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> endpoint as a Spring bean.
+     * <p>
+     * See {@link CredentialsEndpoint} for more details.
+     */
+    @Bean
+    @Scope("prototype")
+    @ConfigurationProperties(prefix = "hono.credentials")
+    public CredentialsEndpoint credentialsEndpoint(final Vertx vertx) {
+        CredentialsEndpoint credentialsEndpoint = new CredentialsEndpoint(vertx);
+        return credentialsEndpoint;
+    }
 }

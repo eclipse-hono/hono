@@ -55,9 +55,6 @@ public final class HonoServer extends AmqpServiceBase<HonoServerConfigProperties
         if (getEndpoint(TelemetryConstants.TELEMETRY_ENDPOINT) == null) {
             LOG.warn("no Telemetry endpoint has been configured, Hono server will not support Telemetry API");
         }
-        if (getEndpoint(RegistrationConstants.REGISTRATION_ENDPOINT) == null) {
-            LOG.warn("no Registration endpoint has been configured, Hono server will not support Registration API");
-        }
     }
 
     private void logStartupMessage() {

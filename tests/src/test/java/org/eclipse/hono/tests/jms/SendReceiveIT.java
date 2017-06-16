@@ -59,6 +59,7 @@ public class SendReceiveIT {
     private JmsIntegrationTestSupport sender;
     private RegistrationTestSupport registration;
     private JmsIntegrationTestSupport connector;
+    private JmsIntegrationTestSupport registrationClient;
 
     /**
      * Connects to Hono services.
@@ -71,7 +72,8 @@ public class SendReceiveIT {
         sender = JmsIntegrationTestSupport.newClient(HONO, IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
         connector = JmsIntegrationTestSupport.newClient(HONO, "connector-client", "connector-secret");
         receiver = JmsIntegrationTestSupport.newClient(DISPATCH_ROUTER, IntegrationTestSupport.DOWNSTREAM_USER, IntegrationTestSupport.DOWNSTREAM_PWD);
-        registration = sender.getRegistrationTestSupport();
+        registrationClient = JmsIntegrationTestSupport.newClient(JmsIntegrationTestSupport.HONO_DEVICEREGISTRY, IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
+        registration = registrationClient.getRegistrationTestSupport();
 
         registration.register(DEVICE_ID, Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
         registration.register(SPECIAL_DEVICE, Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
