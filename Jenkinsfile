@@ -38,8 +38,8 @@ node {
             // rename/tag images
             sh "docker tag eclipsehono/hono-server:${buildVersion} bsinno/hono-server:${buildVersion}"
             sh "docker tag eclipsehono/hono-server:${buildVersion} bsinno/hono-server:latest"
-            sh "docker tag eclipsehono/hono-auth:${buildVersion} bsinno/hono-auth:${buildVersion}"
-            sh "docker tag eclipsehono/hono-auth:${buildVersion} bsinno/hono-auth:latest"
+            sh "docker tag eclipsehono/hono-service-auth:${buildVersion} bsinno/hono-auth:${buildVersion}"
+            sh "docker tag eclipsehono/hono-service-auth:${buildVersion} bsinno/hono-auth:latest"
             sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:${buildVersion}"
             sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
             sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
