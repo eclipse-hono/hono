@@ -75,7 +75,7 @@
               <images>
                 <image>
                   <build>
-                    <from>enmasseproject/activemq-artemis:${artemis.version}</from>
+                    <from>enmasseproject/activemq-artemis:${artemis.version}-1</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/artemis</basedir>

@@ -33,6 +33,11 @@ oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-dc.yml
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-route.yml
 echo ... done
 
+echo Deploying Apache ActiveMQ Artemis Broker ...
+oc create -f ../../broker/target/fabric8/artemis-svc.yml
+oc create -f ../../broker/target/fabric8/artemis-dc.yml
+echo ... done
+
 echo Deploying Hono Server ...
 oc create -f ../../application/target/fabric8/hono-app-svc.yml
 oc create -f ../../application/target/fabric8/hono-app-dc.yml
