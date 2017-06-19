@@ -37,13 +37,17 @@ import io.vertx.proton.ProtonConnection;
 @Profile("receiver")
 public class ExampleReceiver extends AbstractExampleClient {
 
+    private static final String PROFILE_TELEMETRY = "telemetry";
+    private static final String PROFILE_EVENT = "event";
+
     @PostConstruct
     private void start() {
 
         final Future<MessageConsumer> startupTracker = Future.future();
         startupTracker.setHandler(startup -> {
             if (startup.succeeded()) {
-                LOG.info("Receiver for tenant [{}] created successfully, hit ctrl-c to exit", tenantId);
+                String consumerType = activeProfiles.contains(PROFILE_EVENT) ? PROFILE_EVENT : PROFILE_TELEMETRY;
+                LOG.info("Receiver [tenant: {}, type: {}] created successfully, hit ctrl-c to exit", tenantId, consumerType);
             } else {
                 LOG.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
                 vertx.close();
@@ -59,14 +63,14 @@ public class ExampleReceiver extends AbstractExampleClient {
 
     private void onConnectionEstablished(Handler<AsyncResult<MessageConsumer>> handler) {
 
-        if (activeProfiles.contains("event")) {
+        if (activeProfiles.contains(PROFILE_EVENT)) {
             client.createEventConsumer(tenantId,
-                    (msg) -> handleMessage("event", msg),
+                    (msg) -> handleMessage(PROFILE_EVENT, msg),
                     handler);
         } else {
             // default is telemetry consumer
             client.createTelemetryConsumer(tenantId,
-                    msg -> handleMessage("telemetry", msg),
+                    msg -> handleMessage(PROFILE_TELEMETRY, msg),
                     handler);
         }
     }

@@ -8,7 +8,8 @@
     <relativePath>../bom</relativePath>
   </parent>
 
-  <artifactId>broker</artifactId>
+  <artifactId>hono-artemis</artifactId>
+  <packaging>pom</packaging>
 
   <dependencies>
     <dependency>
@@ -60,6 +61,10 @@
           <name>docker.host</name>
         </property>
       </activation>
+      <properties>
+        <!-- do not use artifactId as repository name -->
+        <image.target>activemq-artemis</image.target>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -102,10 +107,13 @@
               </execution>
             </executions>
           </plugin>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>fabric8-maven-plugin</artifactId>
+          </plugin>
         </plugins>
       </build>
     </profile>
   </profiles>
-
-
+  <description>Module for building a Docker image for ActiveMQ Artemis using the Hono default configuration.</description>
 </project>

@@ -1,6 +1,6 @@
 +++
 title = "Java - integrate Hono sender"
-weight = 280
+weight = 220
 +++
 
 Simple example of a Java main program that sends telemetry data to the default tenant from the registered default device. 
@@ -61,7 +61,7 @@ Add to your pom.xml:
 <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
-      <version>0.5-M4</version>
+      <version>0.5-M5</version>
 </dependency>
 ```
   

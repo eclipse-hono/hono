@@ -32,7 +32,7 @@
 			</a>
 
 			<br>
-			{{ printf "%s" .Summary | markdownify }}
+			{{ printf "%s" .Summary | markdownify }} <br><a href="{{ .Permalink }}">[...]</a>
 
 			<hr>
 			{{ end }}

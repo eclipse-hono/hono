@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,11 +12,6 @@
  */
 
 package org.eclipse.hono.tests.jms;
-
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_DOWNSTREAM_PORT;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_HOST;
-import static org.eclipse.hono.tests.IntegrationTestSupport.PROPERTY_HONO_PORT;
 
 import java.util.Hashtable;
 import java.util.Objects;
@@ -36,6 +31,8 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import org.apache.qpid.jms.JmsQueue;
+import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,27 +43,20 @@ import org.slf4j.LoggerFactory;
  */
 public class JmsIntegrationTestSupport {
 
-    public static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, "localhost");
-    public static final int    HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
-    public static final String HONO_USER = "hono-client";
-    public static final String HONO_PASSWORD = "secret";
-    public static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, "localhost");
-    public static final int    DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
-    public static final String TEST_TENANT_ID = "DEFAULT_TENANT";
-    public static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
-    public static final String TELEMETRY_SENDER_ADDRESS = "telemetry/" + TEST_TENANT_ID;
-    public static final String TELEMETRY_RECEIVER_ADDRESS = "telemetry" + PATH_SEPARATOR + TEST_TENANT_ID;
-    public static final String HONO = "hono";
-    public static final String DISPATCH_ROUTER = "qdr";
-    public static final String AMQP_VHOST = "hono";
+    static final String TEST_TENANT_ID = Constants.DEFAULT_TENANT;
+    static final String TELEMETRY_SENDER_ADDRESS = "telemetry/" + TEST_TENANT_ID;
+    static final String TELEMETRY_RECEIVER_ADDRESS = "telemetry" + IntegrationTestSupport.PATH_SEPARATOR + TEST_TENANT_ID;
+    static final String HONO = "hono";
+    static final String HONO_DEVICEREGISTRY = "honodr";
+    static final String DISPATCH_ROUTER = "qdr";
+    static final Destination TELEMETRY_SENDER_DESTINATION = new JmsQueue(TELEMETRY_SENDER_ADDRESS);
+    static final Destination TELEMETRY_RECV_DESTINATION = new JmsQueue(TELEMETRY_RECEIVER_ADDRESS);
 
-    /* test constants */
+    private static final String AMQP_VHOST = "hono";
+    private static final String AMQP_DEVICEREGISTRY_VHOST = "deviceregistry";
     private static final String AMQP_URI_PATTERN = "amqp://%s:%d?jms.connectionIDPrefix=CON&amqp.vhost=%s%s";
     private static final String USERNAME_PASSWORD_PATTERN = "&jms.username=%s&jms.password=%s";
     private static final Logger LOG = LoggerFactory.getLogger(JmsIntegrationTestSupport.class);
-
-    static final Destination TELEMETRY_SENDER_DESTINATION = new JmsQueue(TELEMETRY_SENDER_ADDRESS);
-    static final Destination TELEMETRY_RECV_DESTINATION = new JmsQueue(TELEMETRY_RECEIVER_ADDRESS);
 
     private Context ctx;
     private Connection connection;
@@ -153,23 +143,39 @@ public class JmsIntegrationTestSupport {
 
     private void createContext(final String username, final String password) throws NamingException {
 
-        final StringBuilder honoURI = new StringBuilder(String.format(AMQP_URI_PATTERN, HONO_HOST, HONO_PORT, AMQP_VHOST, ""));
+        final StringBuilder honoURI = new StringBuilder(
+                String.format(
+                        AMQP_URI_PATTERN,
+                        IntegrationTestSupport.HONO_HOST,
+                        IntegrationTestSupport.HONO_PORT,
+                        AMQP_VHOST,
+                        ""));
+        final StringBuilder honoDeviceRegistryURI = new StringBuilder(
+                String.format(
+                        AMQP_URI_PATTERN,
+                        IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
+                        IntegrationTestSupport.HONO_DEVICEREGISTRY_PORT,
+                        AMQP_DEVICEREGISTRY_VHOST,
+                        ""));
         final StringBuilder qdrURI = new StringBuilder(
                 String.format(
                         AMQP_URI_PATTERN,
-                        DOWNSTREAM_HOST, DOWNSTREAM_PORT,
+                        IntegrationTestSupport.DOWNSTREAM_HOST,
+                        IntegrationTestSupport.DOWNSTREAM_PORT,
                         AMQP_VHOST,
                         "&jms.prefetchPolicy.queuePrefetch=20&jms.presettlePolicy.presettleConsumers=true"));
 
         if (username != null && password != null) {
             final String usernamePasswordProperty = String.format(USERNAME_PASSWORD_PATTERN, username, password);
             honoURI.append(usernamePasswordProperty);
+            honoDeviceRegistryURI.append(usernamePasswordProperty);
             qdrURI.append(usernamePasswordProperty);
         }
 
         final Hashtable<Object, Object> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
         env.put("connectionfactory." + HONO, honoURI.toString());
+        env.put("connectionfactory." + HONO_DEVICEREGISTRY, honoDeviceRegistryURI.toString());
         env.put("connectionfactory." + DISPATCH_ROUTER, qdrURI.toString());
 
         ctx = new InitialContext(env);

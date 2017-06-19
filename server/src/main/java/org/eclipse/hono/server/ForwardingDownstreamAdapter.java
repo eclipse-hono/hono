@@ -489,11 +489,13 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     logger.debug("no downstream credit available for link [{}], discarding message [{}]",
                             client.getLinkId(), msg.getMessageId());
                     ProtonHelper.accepted(delivery, true);
+                    counterService.increment(MetricConstants.metricNameDiscardedMessages(sender.getTarget().getAddress()));
                 } else {
                     // sender needs to be informed that we cannot process the message
                     logger.debug("no downstream credit available for link [{}], releasing message [{}]",
                             client.getLinkId(), msg.getMessageId());
                     ProtonHelper.released(delivery, true);
+                    counterService.increment(MetricConstants.metricNameUndeliverableMessages(sender.getTarget().getAddress()));
                 }
             } else {
                 // make sure upstream client does not starve before more credits flow in from downstream container

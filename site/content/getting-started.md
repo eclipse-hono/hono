@@ -51,6 +51,8 @@ This will create and start up Docker Swarm *services* for all components that to
   * A *Hono Server* instance that protocol adapters connect to in order to forward data from devices.
   * A *REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
   * An *MQTT Adapter* instance that exposes Hono's Telemetry API as an MQTT topic hierarchy.
+  * A *Device Registry* instance that manages device data and is used for token assertion.
+  * An *Auth Server* instance that authenticates Hono components and delivers authorization tokens.  
 * AMQP Network
   * A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
   * An *Artemis* instance that is the default persistence store for events.
@@ -91,21 +93,6 @@ Please refer to the [REST Adapter]({{< relref "rest-adapter.md" >}}) documentati
 {{% warning %}}
 The following sections assume that the REST adapter Docker container has been started on the local machine. However, if you started the REST adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
 {{% /warning %}}
-
-### Uploading Event Data using the REST adapter
-
-In a similar way you can upload event data, using curl
-
-~~~sh
-$ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
-> http://localhost:8080/event/DEFAULT_TENANT/4711
-~~~
-
-or (using HTTPie):
-
-~~~sh
-$ http PUT http://localhost:8080/event/DEFAULT_TENANT/4711 temp:=5
-~~~
 
 ### Registering a device using the REST adapter
 
@@ -196,6 +183,21 @@ If you have started the consumer as described above, you should now see the tele
 If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is never persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no destination to deliver it to.
 
 Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
+
+### Uploading Event Data using the REST adapter
+
+In a similar way you can upload event data, using curl
+
+~~~sh
+$ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
+> http://localhost:8080/event/DEFAULT_TENANT/4711
+~~~
+
+or (using HTTPie):
+
+~~~sh
+$ http PUT http://localhost:8080/event/DEFAULT_TENANT/4711 temp:=5
+~~~
 
 ## Stopping Hono
 

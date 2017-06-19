@@ -14,9 +14,7 @@
 package org.eclipse.hono.tests.client;
 
 import static java.net.HttpURLConnection.*;
-import static org.eclipse.hono.tests.IntegrationTestSupport.*;
 
-import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -29,6 +27,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -60,27 +59,18 @@ public abstract class ClientTestBase {
      */
     protected static final String DEVICE_ID = "device-0";
 
-    // connection parameters
-    private static final String DEFAULT_HOST = InetAddress.getLoopbackAddress().getHostAddress();
-    private static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, DEFAULT_HOST);
-    private static final int HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, 5672);
-    private static final String HONO_USER = System.getProperty(PROPERTY_HONO_USERNAME, "hono-client");
-    private static final String HONO_PWD = System.getProperty(PROPERTY_HONO_PASSWORD, "secret");
-    private static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, DEFAULT_HOST);
-    private static final int DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, 15672);
-    private static final String DOWNSTREAM_USER = System.getProperty(PROPERTY_DOWNSTREAM_USERNAME, "user1@HONO");
-    private static final String DOWNSTREAM_PWD = System.getProperty(PROPERTY_DOWNSTREAM_PASSWORD, "pw");
-    private static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
-    // test constants
-    private static final int MSG_COUNT = Integer.getInteger("msg.count", 1000);
-    private static final String TEST_TENANT_ID = System.getProperty(PROPERTY_TENANT, Constants.DEFAULT_TENANT);
+    private static final String TEST_TENANT_ID = System.getProperty(IntegrationTestSupport.PROPERTY_TENANT, Constants.DEFAULT_TENANT);
     private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
+    private static final Vertx  vertx = Vertx.vertx();
+    private static final long   DEFAULT_TEST_TIMEOUT = 5000; // ms
 
-    private static final Vertx vertx = Vertx.vertx();
-
+    /**
+     * A logger to be used by subclasses.
+     */
     protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     protected HonoClient honoClient;
+    protected HonoClient honoDeviceRegistryClient;
     protected HonoClient downstreamClient;
     private RegistrationClient registrationClient;
     private MessageSender sender;
@@ -91,10 +81,11 @@ public abstract class ClientTestBase {
      * <ol>
      * <li>connect to the AMQP messaging network</li>
      * <li>connects to the Hono Server</li>
+     * <li>connects to the Hono Device Registry</li>
      * <li>creates a RegistrationClient for TEST_TENANT_ID</li>
      * <li>creates a MessageSender for TEST_TENANT_ID</li>
      * </ul>
-     * 
+     *
      * @param ctx The test context
      */
     @Before
@@ -103,43 +94,57 @@ public abstract class ClientTestBase {
         final Async done = ctx.async();
 
         Future<HonoClient> downstreamTracker = Future.future();
+        Future<HonoClient> honoTracker = Future.future();
         Future<MessageSender> setupTracker = Future.future();
         CompositeFuture.all(setupTracker, downstreamTracker).setHandler(ctx.asyncAssertSuccess(s -> {
             sender = setupTracker.result();
-            LOGGER.info("connections to Hono server and AMQP messaging network established");
+            LOGGER.info("connections to Hono server, Hono device registry and AMQP messaging network established");
             done.complete();
         }));
 
         downstreamClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
-                .host(DOWNSTREAM_HOST)
-                .port(DOWNSTREAM_PORT)
-                .pathSeparator(PATH_SEPARATOR)
-                .user(DOWNSTREAM_USER)
-                .password(DOWNSTREAM_PWD)
+                .host(IntegrationTestSupport.DOWNSTREAM_HOST)
+                .port(IntegrationTestSupport.DOWNSTREAM_PORT)
+                .pathSeparator(IntegrationTestSupport.PATH_SEPARATOR)
+                .user(IntegrationTestSupport.DOWNSTREAM_USER)
+                .password(IntegrationTestSupport.DOWNSTREAM_PWD)
                 .build());
         downstreamClient.connect(new ProtonClientOptions(), downstreamTracker.completer());
 
-        // step 1
-        // connect to Hono server
-        Future<HonoClient> honoTracker = Future.future();
         honoClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
-                .host(HONO_HOST)
-                .port(HONO_PORT)
-                .user(HONO_USER)
-                .password(HONO_PWD)
+                .host(IntegrationTestSupport.HONO_HOST)
+                .port(IntegrationTestSupport.HONO_PORT)
+                .user(IntegrationTestSupport.HONO_USER)
+                .password(IntegrationTestSupport.HONO_PWD)
                 .build());
+        honoDeviceRegistryClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
+                .vertx(vertx)
+                .host(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST)
+                .port(IntegrationTestSupport.HONO_DEVICEREGISTRY_PORT)
+                .user(IntegrationTestSupport.HONO_USER)
+                .password(IntegrationTestSupport.HONO_PWD)
+                .build());
+
+        // step 1
+        // connect to Hono server
         honoClient.connect(new ProtonClientOptions(), honoTracker.completer());
         honoTracker.compose(hono -> {
             // step 2
-            // create client for registering device with Hono
+            // connect to device registry
+            Future<HonoClient> deviceRegistryFuture = Future.future();
+            honoDeviceRegistryClient.connect(new ProtonClientOptions(), deviceRegistryFuture.completer());
+            return deviceRegistryFuture;
+        }).compose(honoDeviceRegistry -> {
+            // step 3
+            // create registration client
             Future<RegistrationClient> regTracker = Future.future();
-            hono.createRegistrationClient(TEST_TENANT_ID, regTracker.completer());
+            honoDeviceRegistry.createRegistrationClient(TEST_TENANT_ID, regTracker.completer());
             return regTracker;
         }).compose(regClient -> {
-            // step 3
-            // create client for sending telemetry data to Hono server
+            // step 4
+            // create producer client
             registrationClient = regClient;
             createProducer(TEST_TENANT_ID, setupTracker.completer());
         }, setupTracker);
@@ -149,8 +154,8 @@ public abstract class ClientTestBase {
 
     /**
      * Deregisters the test device (DEVICE_ID) and disconnects from
-     * the Hono server and AMQP messaging network.
-     * 
+     * the Hono server, Hono device registry and AMQP messaging network.
+     *
      * @param ctx The test context
      */
     @After
@@ -191,7 +196,11 @@ public abstract class ClientTestBase {
                 sender.close(senderTracker.completer());
                 return senderTracker;
             }).compose(r -> {
-                honoClient.shutdown(honoTracker.completer());
+                Future<Void> honoClientShutdownTracker = Future.future();
+                honoClient.shutdown(honoClientShutdownTracker.completer());
+                return honoClientShutdownTracker;
+            }).compose(r -> {
+                honoDeviceRegistryClient.shutdown(honoTracker.completer());
             }, honoTracker);
         } else {
             honoTracker.complete();
@@ -212,52 +221,48 @@ public abstract class ClientTestBase {
 
     /**
      * Creates a test specific message sender.
-     * 
-     * @param tenantId The tenant to create the sender for.
+     *
+     * @param tenantId     The tenant to create the sender for.
      * @param setupTracker The handler to invoke with the result.
      */
     abstract void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker);
 
     /**
      * Creates a test specific message consumer.
-     * 
-     * @param tenantId The tenant to create the consumer for.
+     *
+     * @param tenantId        The tenant to create the consumer for.
      * @param messageConsumer The handler to invoke for every message received.
-     * @param setupTracker The handler to invoke with the result.
+     * @param setupTracker    The handler to invoke with the result.
      */
     abstract void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker);
 
-    @Test(timeout = 2000)
+    @Test
     public void testClosedLinkIsRemovedFromCachedSenders(final TestContext ctx) {
 
         final Async setup = ctx.async();
+        createConsumer(
+                TEST_TENANT_ID,
+                msg -> LOGGER.trace("received {}", msg),
+                ctx.asyncAssertSuccess(done -> setup.complete()));
+
+        setup.await(2000);
+
         final Async closed = ctx.async();
-
-        createConsumer(TEST_TENANT_ID, msg -> {
-            LOGGER.trace("received {}", msg);
-        }, ctx.asyncAssertSuccess(done -> {
-            setup.complete();
+        sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
+            final JsonArray status = honoClient.getSenderStatus();
+            LOGGER.debug("status: {}", status.encodePrettily());
+            ctx.assertTrue(status.size() == 0);
+            closed.complete();
         }));
-
-        setup.await(1000);
-
-        sender.setErrorHandler(onClose -> {
-            if (onClose.failed()) {
-                final JsonArray status = honoClient.getSenderStatus();
-                LOGGER.debug("status: {}", status.encodePrettily());
-                ctx.assertTrue(status.size() == 0);
-                closed.complete();
-            }
-        });
         sender.send("non-existing-device", new byte[]{0x00}, "application/binary", "any", capacityAvailable -> {});
-        closed.await(1000);
+        closed.await(2000);
     }
 
     @Test
     public void testSendingMessages(final TestContext ctx) throws Exception {
 
-        final Async received = ctx.async(MSG_COUNT);
-        final Async accepted = ctx.async(MSG_COUNT);
+        final Async received = ctx.async(IntegrationTestSupport.MSG_COUNT);
+        final Async accepted = ctx.async(IntegrationTestSupport.MSG_COUNT);
         final Async setup = ctx.async();
 
         final Future<MessageConsumer> setupTracker = Future.future();
@@ -306,7 +311,7 @@ public abstract class ClientTestBase {
         long start = System.currentTimeMillis();
         final AtomicInteger messagesSent = new AtomicInteger();
 
-        IntStream.range(0, MSG_COUNT).forEach(i -> {
+        IntStream.range(0, IntegrationTestSupport.MSG_COUNT).forEach(i -> {
             Async latch = ctx.async();
             sender.send(DEVICE_ID, "payload" + i, CONTENT_TYPE_TEXT_PLAIN, registrationAssertion, capacityAvailable -> {
                 latch.complete();
@@ -317,31 +322,41 @@ public abstract class ClientTestBase {
             latch.await();
         });
 
-        long timeToWait = Math.max(5000, Math.round(MSG_COUNT * 1.2));
+        long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
         received.await(timeToWait);
         accepted.await(timeToWait);
         LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                messagesSent.get(), MSG_COUNT - received.count(), System.currentTimeMillis() - start);
+                messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.count(), System.currentTimeMillis() - start);
     }
 
     /**
      * Verifies that a client which is authorized to WRITE to resources for the DEFAULT_TENANT only,
      * is not allowed to write to a resource concerning another tenant than the DEFAULT_TENANT.
-     * 
+     *
      * @param ctx The test context
      */
-    @Test(timeout = 2000l)
+    @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testCreateSenderFailsForTenantWithoutAuthorization(final TestContext ctx) {
-        createProducer("non-authorized", ctx.asyncAssertFailure(
-                failed -> LOGGER.debug("creation of sender failed: {}", failed.getMessage())
-            ));
+
+        createProducer(
+                "non-authorized",
+                ctx.asyncAssertFailure(failed -> LOGGER.debug("creation of sender failed: {}", failed.getMessage())
+        ));
     }
 
-    @Test(timeout = 2000l)
-    public void testCreateReceiverFailsForTenantWithoutAuthorization(final TestContext ctx) {
+    /**
+     * Verifies that a client which is authorized to consume messages for the DEFAULT_TENANT only,
+     * is not allowed to consume messages for another tenant than the DEFAULT_TENANT.
+     *
+     * @param ctx The test context
+     */
+    @Test(timeout = DEFAULT_TEST_TIMEOUT)
+    public void testCreateConsumerFailsForTenantWithoutAuthorization(final TestContext ctx) {
 
-        createConsumer("non-authorized", message -> {}, ctx.asyncAssertFailure(
-                failed -> LOGGER.debug("creation of receiver failed: {}", failed.getMessage())
+        createConsumer(
+                "non-authorized",
+                message -> {},
+                ctx.asyncAssertFailure(failed -> LOGGER.debug("creation of receiver failed: {}", failed.getMessage())
         ));
     }
 

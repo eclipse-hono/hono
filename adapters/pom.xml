@@ -34,4 +34,16 @@
 
   <name>Hono Protocol Adapters</name>
   <description>An arbitrary collection of example protocol adapters for Hono. These adapters are mainly intended to be used for demonstration or PoCs. </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-demo-certs</artifactId>
+    </dependency>
+  </dependencies>
+
 </project>

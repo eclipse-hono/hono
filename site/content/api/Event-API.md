@@ -22,22 +22,16 @@ Both *Devices* as well as *Protocol Adapters* will be referred to as *clients* i
 
 **Preconditions**
 
-1. Client has established an AMQP connection with Hono.
-1. Client has established an AMQP link in role *sender* with Hono using target address `event/${tenant_id}` where `tenant_id` is the ID of the tenant that the client wants to upload event messages for. 
+1. Client has established an AMQP connection with Hono's Event endpoint.
+1. Client has established an AMQP link in role *sender* with Hono using target address `event/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload event messages for. 
 1. The device for which the client wants to send an event has been registered (see [Device Registration API]({{< relref "Device-Registration-API.md" >}})).
 1. Client has obtained a *registration assertion* for the device from the Device Registration service by means of the [assert Device Registration operation]({{< relref "Device-Registration-API.md#assert-device-registration" >}}).
 
-The client indicates its preferred message delivery mode by means of the `snd-settle-mode` and `rcv-settle-mode` fields of its `attach` frame during link establishment. Hono will receive messages using a delivery mode according to the following table:
-
-| snd-settle-mode | rcv-settle-mode | Delivery semantics |
-| :-------------- | :-------------- | :----------------- |
-| *unsettled*     | *second*        | Hono will acknowledge and settle received messages when the underlying broker accepts and settles the message i.e. Hono forwards the disposition sent from the broker. Hono will accept any re-delivered messages. (TODO: ??) |
-
-All other combinations are not supported by Hono and result in a termination of the link.
+Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client therefore MUST use `unsettled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported by Hono and result in the termination of the link.
 
 **Message Flow**
 
-See [Telemetry API]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) for a description of the message flow.
+TBD
 
 **Message Format**
 
@@ -53,13 +47,13 @@ Hono supports multiple non-competing *Business Application* consumers of event m
 **Preconditions**
 
 1. Client has established an AMQP connection with Hono.
-2. Client has established an AMQP link in role *receiver* with Hono using source address `event/${tenant_id}` where `tenant_id` represents the ID of the tenant the client wants to retrieve event messages for.
+2. Client has established an AMQP link in role *receiver* with Hono using source address `event/${tenant_id}` where `${tenant_id}` represents the ID of the tenant the client wants to retrieve event messages for.
 
-Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client therefore MUST use `unsettled` for the `snd-settle-mode` and `second` for the `rcv-settle-mode` fields of its `attach` frame during link establishment. All other combinations are not supported by Hono and result in the termination of the link.
+Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client therefore MUST use `unsettled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported by Hono and result in the termination of the link.
 
 **Message Flow**
 
-See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for a description of the message flow.
+TBD
 
 **Message Format**
 

@@ -13,17 +13,64 @@
 
 package org.eclipse.hono.example;
 
-import org.eclipse.hono.adapter.AdapterConfig;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.dns.AddressResolverOptions;
 
 /**
  * Configuration for Example application.
  */
 @Configuration
-public class AppConfiguration extends AdapterConfig {
+public class AppConfiguration {
+
+    /**
+     * Exposes a Vert.x instance as a Spring bean.
+     * 
+     * @return The Vert.x instance.
+     */
+    @Bean
+    public Vertx vertx() {
+        VertxOptions options = new VertxOptions()
+                .setWarningExceptionTime(1500000000)
+                .setAddressResolverOptions(new AddressResolverOptions()
+                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
+                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                        .setQueryTimeout(1000));
+        return Vertx.vertx(options);
+    }
+
+    /**
+     * Exposes client configuration properties as a Spring bean.
+     * 
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.client")
+    @Bean
+    public ClientConfigProperties honoClientConfig() {
+        ClientConfigProperties config = new ClientConfigProperties();
+        return config;
+    }
+
+    /**
+     * Exposes a factory for connections to the Hono server
+     * as a Spring bean.
+     * 
+     * @return The connection factory.
+     */
+    @Bean
+    public ConnectionFactory honoConnectionFactory() {
+        return new ConnectionFactoryImpl(vertx(), honoClientConfig());
+    }
+
 
     /**
      * Exposes a {@code HonoClient} as a Spring bean.

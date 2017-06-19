@@ -37,10 +37,6 @@ import io.vertx.core.json.JsonObject;
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */
-@Component
-@Scope("prototype")
-@Qualifier("credentials")
-@ConfigurationProperties(prefix = "hono.credentials")
 public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**

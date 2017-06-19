@@ -48,15 +48,6 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
       <artifactId>spring-boot-autoconfigure</artifactId>
     </dependency>
     <dependency>
-     <groupId>org.slf4j</groupId>
-     <artifactId>jul-to-slf4j</artifactId>
-     <scope>compile</scope>
-    </dependency>
-    <dependency>
-     <groupId>org.slf4j</groupId>
-     <artifactId>jcl-over-slf4j</artifactId>
-    </dependency>
-    <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
     </dependency>
@@ -67,6 +58,14 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
     <dependency>
       <groupId>org.yaml</groupId>
       <artifactId>snakeyaml</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-logging</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-demo-certs</artifactId>
     </dependency>
   </dependencies>
 
@@ -93,6 +92,24 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
          -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <!--
+              Execution and configuration for copying certificates from related module
+              to "target/classes" folder so that we can include them in the image.
+             -->
+            <id>copy_demo_certs</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeArtifactIds>hono-demo-certs</includeArtifactIds>
+              <outputDirectory>${project.build.directory}/certs</outputDirectory>
+              <excludes>META-INF/**</excludes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>

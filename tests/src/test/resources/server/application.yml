@@ -4,7 +4,7 @@ hono:
     port: 5672
     name: hono-server
     validation:
-      cert-path: /etc/hono/certs/auth-server-cert.pem
+      certPath: /etc/hono/certs/auth-server-cert.pem
   downstream:
     name: hono-server
   registration:
@@ -14,7 +14,7 @@ hono:
     insecurePortBindAddress: 0.0.0.0
     maxInstances: 1
     waitForDownstreamConnectionEnabled: true
-    registrationAssertion:
+    validation:
       sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
     startupTimeout: 65
 

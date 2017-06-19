@@ -5,6 +5,7 @@ hono:
     jvm:
       memory: true
       thread: true
+    vertx: true
     reporter:
       console:
         active: false

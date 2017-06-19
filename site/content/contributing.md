@@ -48,6 +48,7 @@ You can find all the details in the [Contributing via Git](http://wiki.eclipse.o
 1. [Fork the repository on GitHub](https://github.com/eclipse/hono#fork-destination-box)
 1. Create a new branch for your changes
 1. Make your changes
+1. Make sure your code complies with the formatting rules defined by the settings files in the `eclipse` folder.
 1. Make sure you include test cases for non-trivial features
 1. Make sure the test suite passes after your changes
 1. Commit your changes into that branch

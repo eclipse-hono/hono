@@ -1,4 +1,4 @@
-version: '3.0'
+version: '3.1'
 
 networks:
   hono-net:
@@ -42,7 +42,7 @@ services:
       - "15672:5672"
 
   artemis:
-    image: eclipsehono/broker:${project.version}
+    image: eclipsehono/activemq-artemis:${project.version}
     networks:
       hono-net:
         aliases:
@@ -51,7 +51,7 @@ services:
       - "5672:5672"
 
   auth-server:
-    image: eclipsehono/hono-auth:${project.version}
+    image: eclipsehono/hono-service-auth:${project.version}
     networks:
       hono-net:
         aliases:
@@ -90,11 +90,33 @@ services:
       - HONO_SERVER_CERT_PATH=/etc/hono/certs/hono-cert.pem
       - HONO_SERVER_INSECURE_PORT_ENABLED=false
       - HONO_SERVER_MAX_INSTANCES=1
-      - HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
+      - HONO_SERVER_VALIDATION_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
     volumes:
       - /home/hono/registration
+
+  device-registry:
+    image: eclipsehono/hono-service-device-registry:${project.version}
+    networks:
+      hono-net:
+        aliases:
+          - device-registry.hono
+    ports:
+      - "25671:5671"
+    environment:
+      - HONO_AUTH_HOST=auth-server.hono
+      - HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_AUTH_NAME=device-registry
+      - HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
+      - HONO_DEVICE_REGISTRY_BIND_ADDRESS=0.0.0.0
+      - HONO_DEVICE_REGISTRY_KEY_PATH=/etc/hono/certs/device-registry-key.pem
+      - HONO_DEVICE_REGISTRY_CERT_PATH=/etc/hono/certs/device-registry-cert.pem
+      - HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED=false
+      - HONO_DEVICE_REGISTRY_MAX_INSTANCES=1
+      - HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
+      - LOGGING_CONFIG=classpath:logback-spring.xml
+      - SPRING_PROFILES_ACTIVE=default,dev
 
   rest-adapter:
     image: eclipsehono/hono-adapter-rest-vertx:${project.version}
@@ -112,6 +134,12 @@ services:
       - HONO_CLIENT_USERNAME=rest-adapter@HONO
       - HONO_CLIENT_PASSWORD=rest-secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_REGISTRATION_NAME=Hono REST Adapter
+      - HONO_REGISTRATION_HOST=device-registry.hono
+      - HONO_REGISTRATION_PORT=5671
+      - HONO_REGISTRATION_USERNAME=rest-adapter@HONO
+      - HONO_REGISTRATION_PASSWORD=rest-secret
+      - HONO_REGISTRATION_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_HTTP_BIND_ADDRESS=0.0.0.0
       - HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0
       - HONO_HTTP_INSECURE_PORT_ENABLED=true
@@ -136,6 +164,12 @@ services:
       - HONO_CLIENT_USERNAME=mqtt-adapter@HONO
       - HONO_CLIENT_PASSWORD=mqtt-secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_REGISTRATION_NAME=Hono MQTT Adapter
+      - HONO_REGISTRATION_HOST=device-registry.hono
+      - HONO_REGISTRATION_PORT=5671
+      - HONO_REGISTRATION_USERNAME=mqtt-adapter@HONO
+      - HONO_REGISTRATION_PASSWORD=mqtt-secret
+      - HONO_REGISTRATION_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_MQTT_BIND_ADDRESS=0.0.0.0
       - HONO_MQTT_INSECURE_PORT_BIND_ADDRESS=0.0.0.0
       - HONO_MQTT_INSECURE_PORT_ENABLED=true

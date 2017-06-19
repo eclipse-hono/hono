@@ -10,9 +10,10 @@
   </parent>
   <artifactId>hono-server</artifactId>
   <name>Hono Server</name>
-  <description>The server component of Hono provides the following APIs:
+  <description>The server component of Hono implements and exposes the following APIs:
 - Telemetry
-- Registration</description>
+- Event
+- Device Registration</description>
 
   <dependencies>
     <dependency>

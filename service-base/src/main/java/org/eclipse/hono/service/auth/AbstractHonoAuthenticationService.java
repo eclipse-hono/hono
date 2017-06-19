@@ -145,4 +145,8 @@ public abstract class AbstractHonoAuthenticationService<T extends AbstractConfig
      */
     public abstract void verifyExternal(final String authzid, final String subjectDn, final Handler<AsyncResult<HonoUser>> authenticationResultHandler);
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
+    }
 }

@@ -12,7 +12,9 @@ The diagram below provides an overview of the top level *logical* components.
 
 {{< figure src="../Top-Level.jpg" >}}
 
-The *MQTT* and *Rest Potocol Adapters* use the *Hono Server* component to upload telemetry data and events provided by connected *Devices*. The Hono Server authorizes the messages sent by the protocol adapters and forwards the messages to the downstream *AMQP 1.0 Messaging Network* for delivery to consuming *Business Applications*.
+The *MQTT* and *Rest Potocol Adapters* use the *Device Registry* to assert the registration status of *Devices* connecting to the adapters. The *Device Registry* issues a token asserting the status which the protocol adapters include when forwarding telemetry data and events to the *Hono Server* component. The *Hono Server* verifies the device registration status by means of validating the token and forwards the messages to the downstream *AMQP 1.0 Messaging Network* for delivery to consuming *Business Applications*.
+
+Both *Hono Server* and *Device Registry* use the *Auth Server* to authenticate the protocol adapters during connection establishment.
 
 All interactions between the components are abased on AMQP 1.0 message exchanges as defined by the [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}), [Telemetry API]({{< relref "api/Telemetry-API.md" >}}) and [Event API]({{< relref "api/Event-API.md" >}}).
 
@@ -20,11 +22,17 @@ All interactions between the components are abased on AMQP 1.0 message exchanges
 
 The diagram below provides an overview of the *Hono Server* component's internal structure.
 
-{{< figure src="../Hono-Server.jpg" >}}
+{{< figure src="../Hono-Server.jpg" width="80%" >}}
 
-Hono Server exposes both an implementation of the Telemetry as well as the Event API. The messages received from the protocol adapters are validated by the *TelemetryEndpoint* and *EventEndpoint* correspondingly. The messages' format is checked for compliance with the APIs and the message originator's registration status is verified by means of a JSON Web Token included in the message application properties.
+Hono Server implements both the Telemetry as well as the Event API. Clients opening a connection to *HonoServer* are authenticated by means of an external service accessed via the *Auth* port. Messages received from a client are validated by the *TelemetryEndpoint* and *EventEndpoint* correspondingly. The messages' format is checked for compliance with the APIs and the message originator's registration status is verified by means of a JSON Web Token (JWT) included in the message application properties. Finally, the messages are forwarded to a downstream component by the *ForwardingTelemetryDownstreamAdapter* and *ForwardingEventDownstreamAdapter* respectively.
 
-The Hono Server also provides a *default* implementation of the Device Registration API. The Device Registration implementation stores registration information in the local file system and cannot be scaled out horizontally (across multiple instances of Hono Server). The default implementation is therefore mainly intended to be used for demonstration purposes and PoCs. In real world scenarios, the default implementation can be disabled and the Telemetry and Event endpoints can be configured to be used with a dedicated Device Registration service implementation. Such an implementation should be deployed separately and use a persistent store that can be shared by multiple instances.
+## Device Registry
+
+The diagram below provides an overview of the *Device Registry* component's internal structure.
+
+{{< figure src="../Device-Registry.jpg" width="70%" >}}
+
+The *Device Registry* component implements the [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}). Clients opening a connection to *SimpleDeviceRegistryServer* are authenticated by means of an external service accessed via the *Auth* port. The *FileBasedRegistrationService* stores all registration information in the local file system. The *Device Registry* is therefore not recommended to be used in production environments because the component cannot easily scale out horizontally. It is mainly intended to be used for demonstration purposes and PoCs. In real world scenarios, a more sophisticated implementation should be used that is designed to scale out, e.g. using a persistent store for keeping device registration information that can be shared by multiple instances.
 
 ## AMQP 1.0 Messaging Network
 
