@@ -71,6 +71,8 @@ $ oc login -u developer
 Using the `developer` user, it's now possible to deploy all the other OpenShift resources related to :
 
 * Qpid Dispatch Router (service and deployment)
+* Auth Server (service and deployment)
+* Device Registry (service and deployment)
 * Hono Server (persistent volume claim, service and deployment)
 * HTTP REST adapter (service and deployment)
 * MQTT adapter (service and deployment)
@@ -80,6 +82,20 @@ In order to start deploy the Qpid Dispath Router, the following resources needs 
 ~~~sh
 $ oc create -f <path-to-repo>/hono/dispatchrouter/target/fabric8/dispatch-router-svc.yml
 $ oc create -f <path-to-repo>/hono/dispatchrouter/target/fabric8/dispatch-router-dc.yml
+~~~
+
+Then the Auth Server.
+
+~~~sh
+$ oc create -f <path-to-repo>/hono/services/auth/target/fabric8/hono-auth-svc.yml
+$ oc create -f <path-to-repo>/hono/services/auth/target/fabric8/hono-auth-dc.yml
+~~~
+
+Then the Device Registry.
+
+~~~sh
+$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-svc.yml
+$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-dc.yml
 ~~~
 
 Then the Hono Server, which needs a _claim_ on the persistent volume already provisioned other than a _deployment_ and _service_.

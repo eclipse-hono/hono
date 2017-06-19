@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: hono
+    name: ${project.artifactId}
+  name: ${project.artifactId}
+spec:
+  ports:
+  - name: amqps
+    port: 26671
+    protocol: TCP
+    targetPort: 5671
+  - name: amqp
+    port: 26672
+    protocol: TCP
+    targetPort: 5672
+  selector:
+    name: ${project.artifactId}

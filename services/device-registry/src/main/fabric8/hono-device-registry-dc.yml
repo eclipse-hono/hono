@@ -1,0 +1,59 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: hono
+    name: ${project.artifactId}
+  name: ${project.artifactId}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: hono
+        name: ${project.artifactId}
+    spec:
+      containers:
+      - image: eclipsehono/hono-service-device-registry:${project.version}
+        name: ${project.artifactId}
+        ports:
+        - containerPort: 5671
+          name: amqps
+          protocol: TCP
+        - containerPort: 5672
+          name: amqp
+          protocol: TCP
+        env:
+        - name: HONO_AUTH_HOST
+          value: ${HONO_SERVICE_AUTH_SERVICE_HOST}
+        - name: HONO_AUTH_PORT
+          value: ${HONO_SERVICE_AUTH_SERVICE_PORT_AMQPS}
+        - name: HONO_AUTH_NAME
+          value: device-registry
+        - name: HONO_AUTH_VALIDATION_CERT_PATH
+          value: /etc/hono/certs/auth-server-cert.pem
+        - name: HONO_AUTH_TRUST_STORE_PATH
+          value: /etc/hono/certs/trusted-certs.pem
+        - name: HONO_AUTH_HOSTNAME_VERIFICATION_REQUIRED
+          value: "false"
+        - name: HONO_DEVICE_REGISTRY_KEY_PATH
+          value: /etc/hono/certs/device-registry-key.pem
+        - name: HONO_DEVICE_REGISTRY_CERT_PATH
+          value: /etc/hono/certs/device-registry-cert.pem
+        - name: HONO_DEVICE_REGISTRY_BIND_ADDRESS
+          value: 0.0.0.0
+        - name: HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED
+          value: "true"
+        - name: HONO_DEVICE_REGISTRY_INSECURE_PORT_BIND_ADDRESS
+          value: 0.0.0.0
+        - name: HONO_DEVICE_REGISTRY_MAX_INSTANCES
+          value: "1"
+        - name: HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET
+          value: "g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml
+        - name: SPRING_PROFILES_ACTIVE
+          value: default,dev
+        livenessProbe:
+          tcpSocket:
+            port: 5672
