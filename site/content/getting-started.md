@@ -70,7 +70,7 @@ You can start the client from the `example` folder as follows:
 ~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=user1@HONO,--hono.client.password=pw
 ~~~
 
-Event messages are very similar to telemetry ones, except that they use `AT LEAST ONCE` quality of service. You can receive and log event messages uploaded to Hono using the same client
+Event messages are very similar to telemetry ones, except that they use `AT LEAST ONCE` quality of service. You can receive and log event messages uploaded to Hono using the same client.
 
 In order to do so, run the client from the `example` folder as follows:
 
@@ -220,3 +220,7 @@ In order to start up the instance again:
 ## View metrics
 
 Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in a browser. Login is `admin/admin`.
+
+{{% warning %}}
+If you do not run Docker on localhost, replace *localhost* in the link with the correct name or IP address of the host that Docker is running on.
+{{% /warning %}}
