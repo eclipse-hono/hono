@@ -43,7 +43,7 @@ public class BaseMessageFilter {
      * @param msg The AMQP 1.0 message to perform the checks on.
      * @return {@code true} if the message passes all checks.
      */
-     protected static boolean verifyStandardProperties(final ResourceIdentifier linkTarget, final Message msg) {
+     protected static final boolean verifyStandardProperties(final ResourceIdentifier linkTarget, final Message msg) {
 
          final String deviceIdProperty = MessageHelper.getDeviceId(msg);
 

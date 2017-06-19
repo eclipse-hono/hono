@@ -469,7 +469,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     @Override
-    public final void processMessage(final UpstreamReceiver client, final ProtonDelivery delivery, final Message msg) {
+    public final void processMessage(final UpstreamReceiver client, final ProtonDelivery upstreamDelivery, final Message msg) {
 
         if (!running) {
             throw new IllegalStateException("adapter must be started first");
@@ -477,24 +477,24 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
         Objects.requireNonNull(client);
         Objects.requireNonNull(msg);
-        Objects.requireNonNull(delivery);
+        Objects.requireNonNull(upstreamDelivery);
         ProtonSender sender = activeSenders.get(client);
         if (sender == null) {
             logger.info("no downstream sender for link [{}] available, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
         } else if (sender.isOpen()) {
             if (sender.getCredit() <= 0) {
-                if (delivery.remotelySettled()) {
+                if (upstreamDelivery.remotelySettled()) {
                     // sender has sent the message pre-settled, i.e. we can simply discard the message
                     logger.debug("no downstream credit available for link [{}], discarding message [{}]",
                             client.getLinkId(), msg.getMessageId());
-                    ProtonHelper.accepted(delivery, true);
+                    ProtonHelper.accepted(upstreamDelivery, true);
                     counterService.increment(MetricConstants.metricNameDiscardedMessages(sender.getTarget().getAddress()));
                 } else {
                     // sender needs to be informed that we cannot process the message
                     logger.debug("no downstream credit available for link [{}], releasing message [{}]",
                             client.getLinkId(), msg.getMessageId());
-                    ProtonHelper.released(delivery, true);
+                    ProtonHelper.released(upstreamDelivery, true);
                     counterService.increment(MetricConstants.metricNameUndeliverableMessages(sender.getTarget().getAddress()));
                 }
             } else {
@@ -502,7 +502,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 client.replenish(getAvailableDownstreamCredit(sender));
                 logger.trace("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}], credit available: {}, queued: {}",
                         msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer(), sender.getCredit(), sender.getQueued());
-                forwardMessage(sender, msg, delivery);
+                forwardMessage(sender, msg, upstreamDelivery);
                 counterService.increment(MetricConstants.metricNameProcessedMessages(sender.getTarget().getAddress()));
             }
         } else {

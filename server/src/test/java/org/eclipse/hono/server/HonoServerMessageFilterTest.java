@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.telemetry;
+package org.eclipse.hono.server;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.hamcrest.CoreMatchers.is;
@@ -22,7 +22,9 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.server.HonoServerMessageFilter;
 import org.eclipse.hono.service.registration.RegistrationMessageFilter;
+import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
@@ -30,9 +32,9 @@ import org.junit.Test;
 import io.vertx.proton.ProtonHelper;
 
 /**
- * Test verifying that the filter complies with the telemetry message format specification.
+ * Test verifying that the filter complies with the Telemetry and Event API message format specification.
  */
-public class TelemetryMessageFilterTest {
+public class HonoServerMessageFilterTest {
 
     private static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
     private static final String MY_TENANT = "myTenant";
@@ -59,7 +61,7 @@ public class TelemetryMessageFilterTest {
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
-        assertFalse(TelemetryMessageFilter.verify(linkTarget, msg));
+        assertFalse(HonoServerMessageFilter.verify(linkTarget, msg));
     }
 
     @Test
@@ -71,7 +73,7 @@ public class TelemetryMessageFilterTest {
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
-        assertFalse(TelemetryMessageFilter.verify(linkTarget, msg));
+        assertFalse(HonoServerMessageFilter.verify(linkTarget, msg));
     }
 
     @Test
@@ -83,7 +85,7 @@ public class TelemetryMessageFilterTest {
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation fails
-        assertFalse(TelemetryMessageFilter.verify(linkTarget, msg));
+        assertFalse(HonoServerMessageFilter.verify(linkTarget, msg));
     }
 
     @Test
@@ -95,7 +97,7 @@ public class TelemetryMessageFilterTest {
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
 
         // THEN message validation succeeds
-        assertTrue(TelemetryMessageFilter.verify(linkTarget, msg));
+        assertTrue(HonoServerMessageFilter.verify(linkTarget, msg));
         assertMessageAnnotationsContainProperties(msg, MY_TENANT, MY_DEVICE);
     }
 
@@ -108,7 +110,7 @@ public class TelemetryMessageFilterTest {
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
 
         // THEN message validation succeeds
-        assertTrue(TelemetryMessageFilter.verify(linkTarget, msg));
+        assertTrue(HonoServerMessageFilter.verify(linkTarget, msg));
         assertMessageAnnotationsContainProperties(msg, MY_TENANT, MY_DEVICE);
     }
 

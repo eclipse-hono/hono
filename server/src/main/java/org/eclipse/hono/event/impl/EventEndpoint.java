@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -17,13 +17,13 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.event.EventConstants;
-import org.eclipse.hono.event.EventMessageFilter;
 import org.eclipse.hono.server.DownstreamAdapter;
+import org.eclipse.hono.server.HonoServerConfigProperties;
+import org.eclipse.hono.server.HonoServerMessageFilter;
 import org.eclipse.hono.server.MessageForwardingEndpoint;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -37,14 +37,26 @@ import io.vertx.proton.ProtonQoS;
 @Component
 @Scope("prototype")
 @Qualifier("event")
-@ConfigurationProperties(prefix = "hono.event")
-public final class EventEndpoint extends MessageForwardingEndpoint {
+public final class EventEndpoint extends MessageForwardingEndpoint<HonoServerConfigProperties> {
 
+    private static final ProtonQoS[] SUPPORTED_DELIVERY_MODES = new ProtonQoS[]{ ProtonQoS.AT_LEAST_ONCE };
+
+    /**
+     * Creates a new endpoint.
+     * 
+     * @param vertx The Vert.x instance to run on.
+     */
     @Autowired
     public EventEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
     }
 
+    /**
+     * Sets the adapter for sending events to the downstream AMQP 1.0 messaging network.
+     * 
+     * @param adapter The adapter.
+     * @throws NullPointerException if the adapter is {@code null}.
+     */
     @Autowired
     @Qualifier("event")
     public final void setEventAdapter(final DownstreamAdapter adapter) {
@@ -58,11 +70,16 @@ public final class EventEndpoint extends MessageForwardingEndpoint {
 
     @Override
     protected boolean passesFormalVerification(ResourceIdentifier targetAddress, Message message) {
-        return EventMessageFilter.verify(targetAddress, message);
+        return HonoServerMessageFilter.verify(targetAddress, message);
     }
 
+    /**
+     * Gets the delivery mode supported by the Event API.
+     * 
+     * @return <em>AT_LEAST_ONCE</em> delivery mode.
+     */
     @Override
-    protected ProtonQoS getEndpointQos() {
-        return ProtonQoS.AT_LEAST_ONCE;
+    protected ProtonQoS[] getEndpointQos() {
+        return SUPPORTED_DELIVERY_MODES;
     }
 }

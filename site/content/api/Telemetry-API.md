@@ -56,10 +56,10 @@ The following table provides an overview of the properties a client needs to set
 The body of the message MUST consist of a single AMQP *Data* section containing the telemetry data. The format and encoding of the data MUST be indicated by the *content-type* and (optional) *content-encoding* properties of the message.
 
 Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers.
- 
-Note that Hono does not return any *application layer* message back to the client in order to signal the outcome of the operation. Instead, Hono signals reception of the message by means of the AMQP `ACCEPTED` outcome if the message complies with the formal requirements.
 
-Whenever a client sends a telemetry message that cannot be processed, e.g. because it does not conform to the message format defined above, Hono settles the message transfer using the AMQP `REJECTED` outcome. Clients should **not** try to resend such rejected messages unaltered.
+Note that Hono does not return any *application layer* message back to the client in order to signal the outcome of the operation. Instead, Hono signals reception of the message by means of the AMQP `ACCEPTED` outcome if the message complies with the formal requirements. Note that this does **not** mean that the telemetry message has been successfully forwarded to the AMQP 1.0 messaging network.
+
+Whenever a client sends a telemetry message that cannot be processed because it does not conform to the message format defined above, Hono settles the message transfer using the AMQP `REJECTED` outcome containing an `amqp:decode-error`. Clients should **not** try to re-send such rejected messages unaltered.
 
 Note that the outcomes above will *not* be transferred back to the sender if the sender uses *snd-settle-mode* `settled` (which is recommended).
 

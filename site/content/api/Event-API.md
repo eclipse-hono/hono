@@ -37,6 +37,12 @@ TBD
 
 See [Telemetry API]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) for definition of message format.
 
+Note that Hono does not return any *application layer* message back to the client in order to signal the outcome of the operation. Instead, Hono signals reception of the message by means of the AMQP `ACCEPTED` outcome if the message complies with the formal requirements and the downstream AMQP 1.0 messaging network has also *accepted* the event. Note that it depends on the configuration of the messaging network what *accepted* actually means. By default, event messages are marked as *durable* and the messaging network will thus at least have persisted the event successfully when it signals the `ACCEPTED` outcome to Hono.
+
+Whenever a client sends an event that cannot be processed because it does not conform to the message format defined above, Hono settles the message transfer using the AMQP `REJECTED` outcome containing an `amqp:decode-error`. Clients **should not** try to re-send such rejected messages unaltered.
+
+If the event passes formal verification, the outcome signaled to the client is the one received from the downstream AMQP 1.0 messaging network. In this case, clients may try to re-send messages for which a delivery state other than `ACCEPTED` has been returned.
+
 # Northbound Operations
 
 ## Receive Events

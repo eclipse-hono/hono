@@ -112,8 +112,8 @@ public class MessageForwardingEndpointTest {
             }
 
             @Override
-            protected ProtonQoS getEndpointQos() {
-                return ProtonQoS.AT_MOST_ONCE;
+            protected ProtonQoS[] getEndpointQos() {
+                return new ProtonQoS[]{ ProtonQoS.AT_MOST_ONCE };
             }
         };
     }

@@ -32,6 +32,12 @@ public final class ErrorConditions {
     public static final ErrorCondition ERROR_NO_DOWNSTREAM_CONSUMER = new ErrorCondition(
             Symbol.valueOf("hono:no-downstream-consumer"), "no downstream consumer available for data");
 
+    /**
+     * Indicates that a client wants to use an inappropriate delivery mode.
+     */
+    public static final ErrorCondition ERROR_UNSUPPORTED_DELIVERY_MODE = new ErrorCondition(
+            Symbol.valueOf("hono:unsupported-delivery-mode"), "endpoint does not support requested delivery mode");
+
     private ErrorConditions() {
     }
 

@@ -122,6 +122,7 @@ public class StandaloneTelemetryApiTest {
         AuthoritiesImpl authorities = new AuthoritiesImpl()
                 .addResource(TelemetryConstants.TELEMETRY_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE });
         HonoUser user = mock(HonoUser.class);
+        when(user.getName()).thenReturn("test-client");
         when(user.getAuthorities()).thenReturn(authorities);
         return user;
     }
