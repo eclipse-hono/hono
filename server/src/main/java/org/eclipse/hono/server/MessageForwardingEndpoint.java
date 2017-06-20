@@ -161,7 +161,6 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
                             forwardMessage(link, delivery, message);
                         } else {
                             rejectMessage(delivery, ProtonHelper.condition(AmqpError.DECODE_ERROR, "malformed message"), link);
-                            onLinkDetach(link, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
                         }
                     }).open();
                     logger.debug("establishing link with client [{}]", con.getRemoteContainer());
@@ -184,7 +183,6 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
         } else {
             logger.debug("failed to validate device registration status");
             rejectMessage(delivery, ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, "device non-existent/disabled"), link);
-            link.close(condition(AmqpError.PRECONDITION_FAILED.toString(), "device non-existent/disabled"));
         }
     }
 
@@ -200,6 +198,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
 
     private void rejectMessage(final ProtonDelivery deliveryToReject, final ErrorCondition error, final UpstreamReceiver client) {
         MessageHelper.rejected(deliveryToReject, error);
+        client.replenish(1);
     }
 
     /**

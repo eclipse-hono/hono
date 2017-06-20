@@ -237,28 +237,6 @@ public abstract class ClientTestBase {
     abstract void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker);
 
     @Test
-    public void testClosedLinkIsRemovedFromCachedSenders(final TestContext ctx) {
-
-        final Async setup = ctx.async();
-        createConsumer(
-                TEST_TENANT_ID,
-                msg -> LOGGER.trace("received {}", msg),
-                ctx.asyncAssertSuccess(done -> setup.complete()));
-
-        setup.await(2000);
-
-        final Async closed = ctx.async();
-        sender.setErrorHandler(ctx.asyncAssertFailure(s -> {
-            final JsonArray status = honoClient.getSenderStatus();
-            LOGGER.debug("status: {}", status.encodePrettily());
-            ctx.assertTrue(status.size() == 0);
-            closed.complete();
-        }));
-        sender.send("non-existing-device", new byte[]{0x00}, "application/binary", "any", capacityAvailable -> {});
-        closed.await(2000);
-    }
-
-    @Test
     public void testSendingMessages(final TestContext ctx) throws Exception {
 
         final Async received = ctx.async(IntegrationTestSupport.MSG_COUNT);

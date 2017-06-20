@@ -16,6 +16,9 @@ import static org.mockito.Mockito.when;
 
 import java.util.stream.IntStream;
 
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.AuthoritiesImpl;
@@ -24,11 +27,11 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.event.EventConstants;
+import org.eclipse.hono.event.impl.EventEndpoint;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
-import org.eclipse.hono.telemetry.TelemetryConstants;
-import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -45,15 +48,16 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.ProtonHelper;
 
 /**
- * Stand alone integration tests for Hono's Telemetry API.
+ * Stand alone integration tests for Hono's Event API.
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class StandaloneTelemetryApiTest {
+public class StandaloneEventApiTest {
 
-    private static final Logger                LOG = LoggerFactory.getLogger(StandaloneTelemetryApiTest.class);
+    private static final Logger                LOG = LoggerFactory.getLogger(StandaloneEventApiTest.class);
     private static final String                DEVICE_PREFIX = "device";
     private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
     private static final String                USER = "hono-client";
@@ -63,26 +67,26 @@ public class StandaloneTelemetryApiTest {
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
-    private static MessageDiscardingDownstreamAdapter telemetryAdapter;
+    private static MessageDiscardingDownstreamAdapter downstreamAdapter;
     private static HonoClient                  client;
-    private static MessageSender               telemetrySender;
+    private static MessageSender               eventSender;
     private static RegistrationAssertionHelper assertionHelper;
 
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
         assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
-        telemetryAdapter = new MessageDiscardingDownstreamAdapter(vertx);
+        downstreamAdapter = new MessageDiscardingDownstreamAdapter(vertx);
         server = new HonoServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx, TestSupport.createAuthenticationService(createUser())));
         HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);
         server.setConfig(configProperties);
-        TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
-        telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
-        telemetryEndpoint.setRegistrationAssertionValidator(assertionHelper);
-        server.addEndpoint(telemetryEndpoint);
+        EventEndpoint eventEndpoint = new EventEndpoint(vertx);
+        eventEndpoint.setEventAdapter(downstreamAdapter);
+        eventEndpoint.setRegistrationAssertionValidator(assertionHelper);
+        server.addEndpoint(eventEndpoint);
 
         final Future<HonoClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess());
@@ -113,7 +117,7 @@ public class StandaloneTelemetryApiTest {
     private static HonoUser createUser() {
 
         AuthoritiesImpl authorities = new AuthoritiesImpl()
-                .addResource(TelemetryConstants.TELEMETRY_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE });
+                .addResource(EventConstants.EVENT_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE });
         HonoUser user = mock(HonoUser.class);
         when(user.getName()).thenReturn("test-client");
         when(user.getAuthorities()).thenReturn(authorities);
@@ -123,15 +127,15 @@ public class StandaloneTelemetryApiTest {
     @Before
     public void createSender(final TestContext ctx) {
 
-        telemetryAdapter.setMessageConsumer(msg -> {});
+        downstreamAdapter.setMessageConsumer(msg -> {});
     }
 
     @After
     public void clearRegistry(final TestContext ctx) throws InterruptedException {
 
-        if (telemetrySender != null && telemetrySender.isOpen()) {
+        if (eventSender != null && eventSender.isOpen()) {
             Async done = ctx.async();
-            telemetrySender.close(closeAttempt -> {
+            eventSender.close(closeAttempt -> {
                 ctx.assertTrue(closeAttempt.succeeded());
                 done.complete();
             });
@@ -147,21 +151,21 @@ public class StandaloneTelemetryApiTest {
         }
     }
 
-    @Test(timeout = TIMEOUT)
-    public void testTelemetryUploadSucceedsForRegisteredDevice(final TestContext ctx) throws Exception {
+    @Test(timeout = 5000)
+    public void testSendEventSucceedsForRegisteredDevice(final TestContext ctx) throws Exception {
 
-        LOG.debug("starting telemetry upload test");
+        LOG.debug("starting send event test");
         int count = 30;
         final Async messagesReceived = ctx.async(count);
-        telemetryAdapter.setMessageConsumer(msg -> {
+        downstreamAdapter.setMessageConsumer(msg -> {
             messagesReceived.countDown();
             LOG.debug("received message [id: {}]", msg.getMessageId());
         });
 
         Async sender = ctx.async();
-        client.getOrCreateTelemetrySender(Constants.DEFAULT_TENANT, creationAttempt -> {
+        client.getOrCreateEventSender(Constants.DEFAULT_TENANT, creationAttempt -> {
             ctx.assertTrue(creationAttempt.succeeded());
-            telemetrySender = creationAttempt.result();
+            eventSender = creationAttempt.result();
             sender.complete();
         });
         sender.await(1000L);
@@ -172,10 +176,55 @@ public class StandaloneTelemetryApiTest {
         IntStream.range(0, count).forEach(i -> {
             Async waitForCredit = ctx.async();
             LOG.trace("sending message {}", i);
-            telemetrySender.send(DEVICE_1, "payload" + i, "text/plain; charset=utf-8", registrationAssertion, done -> waitForCredit.complete());
-            LOG.trace("sender's send queue full: {}", telemetrySender.sendQueueFull());
+            eventSender.send(DEVICE_1, null, "payload" + i, "text/plain; charset=utf-8", registrationAssertion, replenished -> {
+                waitForCredit.complete();
+            }, (id, delivery) -> {
+                ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()));
+            });
+            LOG.trace("sender's send queue full: {}", eventSender.sendQueueFull());
             waitForCredit.await();
         });
 
+    }
+
+    @Test(timeout = TIMEOUT)
+    public void testEventWithNonMatchingRegistrationAssertionGetRejected(final TestContext ctx) throws Exception {
+
+        String assertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, "other-device");
+
+        client.getOrCreateEventSender(Constants.DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
+            sender.send(DEVICE_1, "payload", "text/plain", assertion, (id, delivery) -> {
+                ctx.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
+                ctx.assertTrue(sender.isOpen());
+            });
+        }));
+
+    }
+
+    @Test(timeout = TIMEOUT)
+    public void testMalformedEventGetsRejected(final TestContext ctx) throws Exception {
+
+        final Message msg = ProtonHelper.message("malformed");
+        msg.setMessageId("malformed-message");
+
+        client.getOrCreateEventSender(Constants.DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
+            sender.send(msg, (id, delivery) -> {
+                ctx.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
+                ctx.assertTrue(sender.isOpen());
+            });
+        }));
+    }
+
+    @Test(timeout = TIMEOUT)
+    public void testEventOriginatingFromOtherDeviceGetsRejected(final TestContext ctx) throws Exception {
+
+        String registrationAssertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, "device-1");
+
+        client.getOrCreateEventSender(Constants.DEFAULT_TENANT, "device-0", ctx.asyncAssertSuccess(sender -> {
+            sender.send("device-1", "from other device", "text/plain", registrationAssertion, (id, delivery) -> {
+                ctx.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
+                ctx.assertTrue(sender.isOpen());
+            });
+        }));
     }
 }
