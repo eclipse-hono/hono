@@ -40,9 +40,13 @@ public class HonoSender {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSender.class);
 
-    private ConnectionFactory  connectionFactory;
+    private ConnectionFactory  honoConnectionFactory;
     private HonoClient         honoClient;
+
+    private ConnectionFactory  registrationConnectionFactory;
+    private HonoClient         registrationHonoClient;
     private RegistrationClient registrationClient;
+
     private String             token;
     private MessageSender      messageSender;
     private Vertx              vertx = Vertx.vertx();
@@ -52,7 +56,7 @@ public class HonoSender {
         this.sampler = sampler;
 
         // hono config
-        connectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
+        honoConnectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
                 .disableHostnameVerification()
                 .host(sampler.getHost())
                 .name(sampler.getContainer())
@@ -63,12 +67,25 @@ public class HonoSender {
                 .vertx(vertx)
                 .build();
 
+        // registry config
+        registrationConnectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
+                .disableHostnameVerification()
+                .host(sampler.getRegistryHost())
+                .name(sampler.getContainer())
+                .user(sampler.getRegistryUser())
+                .password(sampler.getRegistryPwd())
+                .port(sampler.getRegistryPort())
+                .trustStorePath(sampler.getRegistryTrustStorePath())
+                .vertx(vertx)
+                .build();
+
         LOGGER.debug("create hono sender - tenant: {}  deviceId: {}",sampler.getTenant(),sampler.getDeviceId());
 
-        connect();
+        connectRegistry();
         createRegistrationClient();
         createDevice();
 
+        connect();
         updateAssertion();
         createSender();
 
@@ -77,8 +94,20 @@ public class HonoSender {
 
     private void connect() throws InterruptedException {
         final CountDownLatch connectLatch = new CountDownLatch(1);
-        honoClient = new HonoClientImpl(vertx, connectionFactory);
+        honoClient = new HonoClientImpl(vertx, honoConnectionFactory);
         honoClient.connect(new ProtonClientOptions(), connectionHandler -> {
+            if (connectionHandler.failed()) {
+                LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
+            }
+            connectLatch.countDown();
+        });
+        connectLatch.await();
+    }
+
+    private void connectRegistry() throws InterruptedException {
+        final CountDownLatch connectLatch = new CountDownLatch(1);
+        registrationHonoClient = new HonoClientImpl(vertx, registrationConnectionFactory);
+        registrationHonoClient.connect(new ProtonClientOptions(), connectionHandler -> {
             if (connectionHandler.failed()) {
                 LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
             }
@@ -89,7 +118,7 @@ public class HonoSender {
 
     private void createRegistrationClient() throws InterruptedException {
         final CountDownLatch assertionLatch = new CountDownLatch(1);
-        honoClient.getOrCreateRegistrationClient(sampler.getTenant(), resultHandler -> {
+        registrationHonoClient.getOrCreateRegistrationClient(sampler.getTenant(), resultHandler -> {
             if (resultHandler.failed()) {
                 LOGGER.error("HonoClient.getOrCreateRegistrationClient() failed", resultHandler.cause());
             } else {
@@ -235,6 +264,7 @@ public class HonoSender {
 
     public void close() throws InterruptedException {
         removeDevice();
+        registrationHonoClient.shutdown();
         honoClient.shutdown();
     }
 }

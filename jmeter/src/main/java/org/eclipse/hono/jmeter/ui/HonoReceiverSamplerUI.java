@@ -25,7 +25,8 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
     private final JCheckBox useSenderTime = new JCheckBox("Use sender time");
 
     public HonoReceiverSamplerUI() {
-        super();
+        super("Qpid Dispatch Router");
+        addDefaultOptions();
         addOption(useSenderTime);
     }
 

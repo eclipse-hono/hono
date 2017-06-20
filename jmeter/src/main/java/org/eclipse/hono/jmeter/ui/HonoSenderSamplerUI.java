@@ -24,18 +24,21 @@ import org.eclipse.hono.jmeter.HonoSenderSampler;
  */
 public class HonoSenderSamplerUI extends HonoSamplerUI {
 
-    private final JLabeledTextField deviceId                = new JLabeledTextField("DeviceID");
-    private final JCheckBox         setSenderTime           = new JCheckBox("Set sender time in property");
-    private final JCheckBox         waitForCredits          = new JCheckBox("Wait for credits");
-    private final JLabeledTextField contentType             = new JLabeledTextField("Content type");
-    private final JLabeledTextArea  data                    = new JLabeledTextArea("Message data");
-    private final JLabeledTextField waitForReceivers        = new JLabeledTextField(
+    private final JLabeledTextField      deviceId                = new JLabeledTextField("DeviceID");
+    private final JCheckBox              setSenderTime           = new JCheckBox("Set sender time in property");
+    private final JCheckBox              waitForCredits          = new JCheckBox("Wait for credits");
+    private final JLabeledTextField      contentType             = new JLabeledTextField("Content type");
+    private final JLabeledTextArea       data                    = new JLabeledTextArea("Message data");
+    private final JLabeledTextField      waitForReceivers        = new JLabeledTextField(
             "Wait on n active receivers in VM (e.g. from other threads)");
-    private final JLabeledTextField waitForReceiversTimeout = new JLabeledTextField(
+    private final JLabeledTextField      waitForReceiversTimeout = new JLabeledTextField(
             "Timeout for the wait on receivers (millis)");
+    private final HonoServerOptionsPanel registryServerOptions   = new HonoServerOptionsPanel("Hono Device Registry");
 
     public HonoSenderSamplerUI() {
-        super();
+        super("Hono Server");
+        addOption(registryServerOptions);
+        addDefaultOptions();
         addOption(deviceId);
         addOption(waitForCredits);
         addOption(setSenderTime);
@@ -68,6 +71,18 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         sampler.setWaitForReceiversTimeout(waitForReceiversTimeout.getText());
         sampler.setContentType(contentType.getText());
         sampler.setData(data.getText());
+        // registry server
+        sampler.setRegistryHost(registryServerOptions.getHost().getText());
+        int portI = 0;
+        try {
+            portI = Integer.parseInt(registryServerOptions.getPort().getText());
+        } catch (NumberFormatException e) {
+            registryServerOptions.getPort().setText("0");
+        }
+        sampler.setRegistryPort(portI);
+        sampler.setRegistryUser(registryServerOptions.getUser().getText());
+        sampler.setRegistryPwd(registryServerOptions.getPwd().getText());
+        sampler.setRegistryTrustStorePath(registryServerOptions.getTrustStorePath().getText());
     }
 
     @Override
@@ -81,6 +96,11 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         waitForCredits.setSelected(sampler.isWaitForCredits());
         contentType.setText(sampler.getContentType());
         data.setText(sampler.getData());
+        // registry server
+        registryServerOptions.getHost().setText(sampler.getRegistryHost());
+        registryServerOptions.getPort().setText(sampler.getRegistryPort() + "");
+        registryServerOptions.getUser().setText(sampler.getRegistryUser());
+        registryServerOptions.getPwd().setText(sampler.getRegistryPwd());
     }
 
     @Override
@@ -93,6 +113,8 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         waitForCredits.setSelected(true);
         waitForReceivers.setText("0");
         waitForReceiversTimeout.setText("5000");
+        // registry server
+        registryServerOptions.clearGui();
     }
 
 }
