@@ -33,7 +33,6 @@ import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.telemetry.TelemetryConstants;
-import org.eclipse.hono.telemetry.impl.MessageDiscardingTelemetryDownstreamAdapter;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.After;
@@ -70,7 +69,7 @@ public class StandaloneTelemetryApiTest {
 
     private static Vertx                       vertx = Vertx.vertx();
     private static HonoServer                  server;
-    private static MessageDiscardingTelemetryDownstreamAdapter telemetryAdapter;
+    private static MessageDiscardingDownstreamAdapter telemetryAdapter;
     private static HonoClient                  client;
     private static MessageSender               telemetrySender;
     private static RegistrationAssertionHelper assertionHelper;
@@ -79,7 +78,7 @@ public class StandaloneTelemetryApiTest {
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
         assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
-        telemetryAdapter = new MessageDiscardingTelemetryDownstreamAdapter(vertx);
+        telemetryAdapter = new MessageDiscardingDownstreamAdapter(vertx);
         server = new HonoServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx, TestSupport.createAuthenticationService(createUser())));
         HonoServerConfigProperties configProperties = new HonoServerConfigProperties();
