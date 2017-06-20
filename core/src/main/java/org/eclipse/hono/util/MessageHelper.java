@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.impl.ProtonReceiverImpl;
 import io.vertx.proton.impl.ProtonSenderImpl;
@@ -192,12 +191,10 @@ public final class MessageHelper {
      * 
      * @param delivery The message's delivery object.
      * @param error The error condition to set as the reason for rejecting the message.
-     * @param description The description of the error condition.
      */
-    public static void rejected(final ProtonDelivery delivery, final String error, final String description) {
-        final ErrorCondition errorCondition = ProtonHelper.condition(error, description);
+    public static void rejected(final ProtonDelivery delivery, final ErrorCondition error) {
         final Rejected rejected = new Rejected();
-        rejected.setError(errorCondition);
+        rejected.setError(error);
         delivery.disposition(rejected, true);
     }
 

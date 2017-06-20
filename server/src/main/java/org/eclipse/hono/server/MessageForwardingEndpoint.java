@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
@@ -36,6 +37,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
@@ -138,8 +140,8 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
     public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
 
         if (!Arrays.stream(getEndpointQos()).anyMatch(qos -> qos.equals(receiver.getRemoteQoS()))) {
-            logger.debug("client wants to use unsupported delivery mode {} for endpoint [name: {}, QoS: {}], closing link", receiver.getRemoteQoS(),
-                    getName(), getEndpointQos());
+            logger.debug("client [{}] wants to use unsupported delivery mode {} for endpoint [name: {}, QoS: {}], closing link", 
+                    con.getRemoteContainer(), receiver.getRemoteQoS(), getName(), getEndpointQos());
             receiver.setCondition(ErrorConditions.ERROR_UNSUPPORTED_DELIVERY_MODE);
             receiver.close();
         } else {
@@ -158,11 +160,11 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
                         if (passesFormalVerification(targetAddress, message)) {
                             forwardMessage(link, delivery, message);
                         } else {
-                            MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed message");
+                            rejectMessage(delivery, ProtonHelper.condition(AmqpError.DECODE_ERROR, "malformed message"), link);
                             onLinkDetach(link, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
                         }
                     }).open();
-                    logger.debug("accepted link from telemetry client [{}]", linkId);
+                    logger.debug("establishing link with client [{}]", con.getRemoteContainer());
                     counterService.increment(MetricConstants.metricNameUpstreamLinks(targetAddress.toString()));
                 } else {
                     // we cannot connect to downstream container, reject client
@@ -181,7 +183,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
             downstreamAdapter.processMessage(link, delivery, msg);
         } else {
             logger.debug("failed to validate device registration status");
-            MessageHelper.rejected(delivery, AmqpError.PRECONDITION_FAILED.toString(), "device non-existent/disabled");
+            rejectMessage(delivery, ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, "device non-existent/disabled"), link);
             link.close(condition(AmqpError.PRECONDITION_FAILED.toString(), "device non-existent/disabled"));
         }
     }
@@ -194,6 +196,10 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
         } else {
             return registrationAssertionValidator.isValid(token, resource.getTenantId(), resource.getResourceId());
         }
+    }
+
+    private void rejectMessage(final ProtonDelivery deliveryToReject, final ErrorCondition error, final UpstreamReceiver client) {
+        MessageHelper.rejected(deliveryToReject, error);
     }
 
     /**
