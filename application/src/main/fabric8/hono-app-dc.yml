@@ -25,9 +25,9 @@ spec:
           protocol: TCP
         env:
         - name: HONO_AUTH_HOST
-          value: ${HONO_AUTH_SERVICE_HOST}
+          value: ${HONO_SERVICE_AUTH_HOST}
         - name: HONO_AUTH_PORT
-          value: ${HONO_AUTH_SERVICE_PORT_AMQPS}
+          value: ${HONO_SERVICE_AUTH_PORT_AMQPS}
         - name: HONO_AUTH_NAME
           value: hono-server
         - name: HONO_AUTH_CERT_PATH
@@ -37,9 +37,9 @@ spec:
         - name: HONO_AUTH_HOSTNAME_VERIFICATION_REQUIRED
           value: "false"
         - name: HONO_DOWNSTREAM_HOST
-          value: ${DISPATCH_ROUTER_SERVICE_HOST}
+          value: ${HONO_DISPATCH_ROUTER_SERVICE_HOST}
         - name: HONO_DOWNSTREAM_PORT
-          value: ${DISPATCH_ROUTER_SERVICE_PORT_DOWNSTREAM}
+          value: ${HONO_DISPATCH_ROUTER_SERVICE_PORT_DOWNSTREAM}
         - name: HONO_DOWNSTREAM_KEY_PATH
           value: /etc/hono/certs/hono-key.pem
         - name: HONO_DOWNSTREAM_CERT_PATH
