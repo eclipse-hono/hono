@@ -36,6 +36,7 @@ public final class HonoServerMessageFilter extends BaseMessageFilter {
      * For successful verification, the message must meet the following conditions
      * <ul>
      * <li>All conditions defined by {@link #verifyStandardProperties(ResourceIdentifier, Message)}</li>
+     * <li>The message must contain a {@link MessageHelper#APP_PROPERTY_REGISTRATION_ASSERTION} application property.</li>
      * <li>The message must have its {@code content-type} property set.</li>
      * <li>The message must have a body of type AMQP {@code Data}.</li>
      * </ul>
@@ -54,7 +55,10 @@ public final class HonoServerMessageFilter extends BaseMessageFilter {
      */
      public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
 
-         if (msg.getContentType() == null) {
+         if (MessageHelper.getRegistrationAssertion(msg) == null) {
+             LOG.trace("message [{}] contains no {} application property", msg.getMessageId(), MessageHelper.APP_PROPERTY_REGISTRATION_ASSERTION);
+             return false;
+         } else if (msg.getContentType() == null) {
              LOG.trace("message [{}] has no content type", msg.getMessageId());
              return false;
          } else if (msg.getBody() == null || !(msg.getBody() instanceof Data)) {

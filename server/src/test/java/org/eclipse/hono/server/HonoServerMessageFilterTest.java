@@ -64,6 +64,22 @@ public class HonoServerMessageFilterTest {
         assertFalse(HonoServerMessageFilter.verify(linkTarget, msg));
     }
 
+    /**
+     * Verifies that the filter rejects messages lacking a registration assertion
+     * property.
+     */
+    @Test
+    public void testVerifyDetectsMissingRegistrationAssertion() {
+        // GIVEN a valid telemetry message without registration assertion
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, MY_TENANT, null, CONTENT_TYPE_OCTET_STREAM, new byte[]{ 0x00 });
+
+        // WHEN receiving the message via a link with matching tenant
+        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
+
+        // THEN message validation fails
+        assertFalse(HonoServerMessageFilter.verify(linkTarget, msg));
+    }
+
     @Test
     public void testVerifyDetectsMissingContentType() {
         // GIVEN a valid telemetry message without content type
@@ -143,10 +159,20 @@ public class HonoServerMessageFilterTest {
     }
 
     private Message givenAMessageHavingProperties(final String deviceId, final String tenantId, final String contentType, final byte[] payload) {
+        return givenAMessageHavingProperties(deviceId, tenantId, "gafhgdfgdsfgsd", contentType, payload);
+    }
+
+    private Message givenAMessageHavingProperties(final String deviceId, final String tenantId, final String registrationAssertion, 
+            final String contentType, final byte[] payload) {
+
         final Message msg = ProtonHelper.message("Hello");
+        msg.setMessageId("test-msg");
         MessageHelper.addDeviceId(msg, deviceId);
         if (tenantId != null) {
             MessageHelper.addTenantId(msg, tenantId);
+        }
+        if (registrationAssertion != null) {
+            MessageHelper.addRegistrationAssertion(msg, registrationAssertion);
         }
         if (contentType != null) {
             msg.setContentType(contentType);
