@@ -17,7 +17,6 @@ import static org.eclipse.hono.util.MessageHelper.*;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,7 +25,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
@@ -265,14 +263,28 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     @Override
     public final void send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType,
             final String registrationAssertion, final Handler<Void> capacityAvailableHandler) {
-        Objects.requireNonNull(payload);
-        final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
-        send(deviceId, properties, payload.getBytes(charset), contentType, registrationAssertion, capacityAvailableHandler);
+        send(deviceId, properties, payload, contentType, registrationAssertion, capacityAvailableHandler, defaultDispositionHandler);
     }
 
     @Override
     public final void send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType,
             final String registrationAssertion, final Handler<Void> capacityAvailableHandler) {
+        send(deviceId, properties, payload, contentType, registrationAssertion, capacityAvailableHandler, defaultDispositionHandler);
+    }
+
+    @Override
+    public void send(String deviceId, Map<String, ?> properties, String payload, String contentType,
+            String registrationAssertion, Handler<Void> capacityAvailableHandler,
+            BiConsumer<Object, ProtonDelivery> dispositionHandler) {
+        Objects.requireNonNull(payload);
+        final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
+        send(deviceId, properties, payload.getBytes(charset), contentType, registrationAssertion, capacityAvailableHandler, dispositionHandler);
+    }
+
+    @Override
+    public void send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType,
+            String registrationAssertion, Handler<Void> capacityAvailableHandler,
+            BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
@@ -283,7 +295,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, contentType, registrationAssertion);
         addEndpointSpecificProperties(msg, deviceId);
-        send(msg, capacityAvailableHandler);
+        send(msg, capacityAvailableHandler, dispositionHandler);
     }
 
     /**
