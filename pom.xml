@@ -133,7 +133,7 @@
 
   <modules>
     <module>adapters</module>
-    <module>application</module>
+    
     
     <module>bom</module>
     <module>broker</module>
@@ -145,7 +145,7 @@
     <module>jmeter</module>
     <module>legal</module>
     <module>metrics</module>
-    <module>server</module>
+    
     <module>service-base</module>
     <module>services</module>
     <module>site</module>

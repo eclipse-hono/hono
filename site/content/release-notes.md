@@ -8,6 +8,18 @@ weight = 800
 
 Not released yet.
 
+The biggest change is the fact that we have re-factored the Authorization service and the Device Registration service implementations that where originally part of the Hono Server component into their own components. The Authorization service has been re-factored into the *Auth Server* component and the Device Registration service has been re-factored into the *Device Registry* component. Consequently, the former Hono server component has been re-named to *Hono Messaging* to better reflect its sole responsibility of forwarding telemetry and event message from/to devices and the AMQP 1.0 Messaging Network.
+
+As part of the refactoring we have introduced the `services` Maven module which now contains
+
+* the *Auth Server* component in the `auth` module,
+* the *Device Registry* component in the `device-registry` module and 
+* the *Hono Messaging* component in the `messaging` module, replacing the former `application` and `hono-server` modules. 
+
+Also as part of the refactoring we have changed some Maven artifact IDs
+
+* renamed `org.eclipse.hono:hono-server` to `org.eclipse.hono:hono-service-messaging`
+
 ### API Changes
 
 The following backwards incompatible changes have been made to existing API, code depending on these APIs needs to be updated accordingly:
@@ -26,6 +38,15 @@ The following backwards incompatible changes have been made to existing API, cod
   * moved `org.eclipse.hono.server.UpstreamReceiver` to `org.eclipse.hono.service.amqp.UpstreamReceiver`
   * moved `org.eclipse.hono.server.UpstreamReceiverImpl` to `org.eclipse.hono.service.amqp.UpstreamReceiverImpl`
 
+1. Moved former *Hono Server* classes to `services/messaging` module.
+
+  * renamed package `org.eclipse.hono.server` to `org.eclipse.hono.messaging`
+  * moved `org.eclipse.hono.server.HonoServer` to `org.eclipse.hono.server.HonoMessaging`
+  * moved `org.eclipse.hono.server.HonoServerConfigProperties` to `org.eclipse.hono.server.HonoMessagingConfigProperties`
+  * moved `org.eclipse.hono.server.HonoServerMessageFilter` to `org.eclipse.hono.server.HonoMessagingMessageFilter`
+  * moved `org.eclipse.hono.application.HonoApplication` to `org.eclipse.hono.server.HonoMessagingApplication`
+  * moved `org.eclipse.hono.application.ApplicationConfig` to `org.eclipse.hono.server.HonoMessagingApplicationConfig`
+
 1. Moved Device Registration related classes to `hono-service-base` module.
 
   * renamed package `org.eclipse.hono.registration` to `org.eclipse.hono.service.registration`
@@ -34,7 +55,7 @@ The following backwards incompatible changes have been made to existing API, cod
 
 1. Use standard AMQP 1.0 `subject` property instead of custom `action` application property in Device Registration API.
 
-1. Renamed property `id` of Device Registration API's response payload to `device-id` to match the name used in Credentials API.
+1. Rename property `id` of Device Registration API's response payload to `device-id` to match the name used in Credentials API.
 
 1. Introduce mandatory to implement [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}) operation to `Device Registration API`. This operation is used by clients to assert that a given device is enabled and is registered with a particular tenant. The assertion is issued in the form of a cryptographically signed JSON Web Token (JWT) which needs to be included in messages sent to Hono containing telemetry data or an event originating from the given device.
    This also had an impact on the [*upload Telemetry Data* operation]({{< relref "api/Telemetry-API.md#upload-telemetry-data" >}}) of the Telemetry API and the [*send Event* operation]({{< relref "api/Event-API.md#send-event" >}}) of the Event API which now both require a *registration assertion* to be included in the messages containing the data to be published.

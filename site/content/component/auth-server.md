@@ -3,7 +3,7 @@ title = "Auth Server"
 weight = 305
 +++
 
-The *Auth Server* implements Hono's [Authentication API]({{< relref "api/Authentication-API.md" >}}). Other services use this component authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
+The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< relref "api/Authentication-API.md" >}}) API. Other services use this component authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
 <!--more-->
 
 This component serves as a default implementation of the *Authentication* API only. On startup, it reads in all identities and their authorities from a JSON file from the filesystem. All data is then kept in memory and there are no remote service APIs for managing the identities and their authorities.

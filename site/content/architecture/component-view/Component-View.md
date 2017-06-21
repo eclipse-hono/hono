@@ -3,7 +3,7 @@ title = "Component View"
 weight = 510
 +++
 
-This page describes the high level components constituting an Eclipse Hono instance and their relations to each other.
+This page describes the high level components constituting an Eclipse Hono&trade; instance and their relations to each other.
 <!--more-->
 
 ## Top Level
@@ -12,19 +12,19 @@ The diagram below provides an overview of the top level *logical* components.
 
 {{< figure src="../Top-Level.jpg" >}}
 
-The *MQTT* and *Rest Protocol Adapters* use the *Device Registry* to assert the registration status of *Devices* connecting to the adapters. The *Device Registry* issues a token asserting the status which the protocol adapters include when forwarding telemetry data and events to the *Hono Server* component. The *Hono Server* verifies the device registration status by means of validating the token and forwards the messages to the downstream *AMQP 1.0 Messaging Network* for delivery to consuming *Business Applications*.
+The *MQTT* and *Rest Protocol Adapters* use the *Device Registry* to assert the registration status of *Devices* connecting to the adapters. The *Device Registry* issues a token asserting the status which the protocol adapters include when forwarding telemetry data and events to the *Hono Messaging* component. The *Hono Messaging* component verifies the device registration status by means of validating the token and forwards the messages to the downstream *AMQP 1.0 Messaging Network* for delivery to *Business Applications*.
 
-Both *Hono Server* and *Device Registry* use the *Auth Server* to authenticate the protocol adapters during connection establishment.
+Both *Hono Messaging* and *Device Registry* use the *Auth Server* to authenticate the protocol adapters during connection establishment.
 
 All interactions between the components are abased on AMQP 1.0 message exchanges as defined by the [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}), [Telemetry API]({{< relref "api/Telemetry-API.md" >}}) and [Event API]({{< relref "api/Event-API.md" >}}).
 
-## Hono Server
+## Hono Messaging
 
-The diagram below provides an overview of the *Hono Server* component's internal structure.
+The diagram below provides an overview of the *Hono Messaging* component's internal structure.
 
-{{< figure src="../Hono-Server.jpg" width="80%" >}}
+{{< figure src="../Hono-Messaging.jpg" width="80%" >}}
 
-Hono Server implements both the Telemetry as well as the Event API. Clients opening a connection to *HonoServer* are authenticated by means of an external service accessed via the *Auth* port. Messages received from a client are validated by the *TelemetryEndpoint* and *EventEndpoint* correspondingly. The messages' format is checked for compliance with the APIs and the message originator's registration status is verified by means of a JSON Web Token (JWT) included in the message application properties. Finally, the messages are forwarded to a downstream component by the *ForwardingTelemetryDownstreamAdapter* and *ForwardingEventDownstreamAdapter* respectively.
+Hono Messaging implements both the Telemetry as well as the Event API. Clients opening a connection to *HonoMessaging* are authenticated by means of an implementation of the Authentication API. Messages received from a client are validated by the *TelemetryEndpoint* and *EventEndpoint* correspondingly. The messages' format is checked for compliance with the APIs and the message originator's registration status is verified by means of a JSON Web Token (JWT) included in the message application properties. Finally, the messages are forwarded to a downstream component by the *ForwardingTelemetryDownstreamAdapter* and *ForwardingEventDownstreamAdapter* respectively.
 
 ## Device Registry
 

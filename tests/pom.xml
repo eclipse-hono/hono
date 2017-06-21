@@ -20,7 +20,6 @@
 Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch Router and ActiveMQ Artemis broker).</description>
 
   <properties>
-    <image.target>hono-test-config</image.target>
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <maven.source.skip>true</maven.source.skip>
     <maven.install.skip>true</maven.install.skip>
@@ -80,7 +79,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>true</startParallel>
               <images>
-                <!-- ##### Authentication server ##### -->
+                <!-- ##### Authentication service ##### -->
                 <image>
                   <name>eclipsehono/hono-auth-test</name>
                   <build>
@@ -119,7 +118,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                   </run>
                 </image>
-                <!-- ##### Device registry server ##### -->
+                <!-- ##### Device Registration service ##### -->
                 <image>
                   <name>eclipsehono/hono-service-device-registry</name>
                   <build>
@@ -210,9 +209,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     -->
                   </run>
                 </image>
-                <!-- ##### Hono server ##### -->
+                <!-- ##### Messaging service ##### -->
                 <image>
-                  <name>eclipsehono/hono-test-server</name>
+                  <name>eclipsehono/hono-service-messaging-test</name>
                   <build>
                     <from>eclipsehono/hono-server:${project.version}</from>
                     <assembly>
@@ -222,7 +221,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/server</directory>
+                            <directory>${project.basedir}/src/test/resources/messaging</directory>
                             <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -245,14 +244,14 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
-                      <SPRING_PROFILES_ACTIVE>registration-file,credentials-file,qpid,prod</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>qpid,prod</SPRING_PROFILES_ACTIVE>
                     </env>
                     <log>
-                      <prefix>HONO</prefix>
+                      <prefix>MESSAGING</prefix>
                       <color>green</color>
                     </log>
                     <wait>
-                      <log>^.*(Started Application in).*$</log>
+                      <log>^.*(Started \w*Application in).*$</log>
                       <time>30000</time>
                     </wait>
                   </run>
