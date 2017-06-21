@@ -70,7 +70,7 @@ http://vertx.io/docs/vertx-web/java/#_capturing_path_parameters) in the Vert.x d
 The route for event data looks very similar to the route for telemetry data. It forwards the event message payload to 
 the method `uploadEventMessage()`.
 
-Refer to the [Telemtry API]({{< relref "api/Telemetry-API.md" >}}) and [Event API]({{< relref "api/Event-API.md" >}}) 
+Refer to the [Telemetry API]({{< relref "api/Telemetry-API.md" >}}) and [Event API]({{< relref "api/Event-API.md" >}}) 
 sections of this documentation for further information about the different Hono data APIs.
 
 In your own custom HTTP protocol adapter adapt the routes according to your needs. 

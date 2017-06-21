@@ -111,7 +111,7 @@ The response message's *status* property may contain the following codes:
 | Code  | Description |
 | :---- | :---------- |
 | *200* | OK, the payload contains the credentials for the authentication identifier. |
-| *404* | Not Found, there are no credentials registered matching the critera. |
+| *404* | Not Found, there are no credentials registered matching the criteria. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 

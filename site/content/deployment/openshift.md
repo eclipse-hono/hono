@@ -77,7 +77,7 @@ Using the `developer` user, it's now possible to deploy all the other OpenShift 
 * HTTP REST adapter (service and deployment)
 * MQTT adapter (service and deployment)
 
-In order to start deploy the Qpid Dispath Router, the following resources needs to be created.
+In order to start deploy the Qpid Dispatch Router, the following resources needs to be created.
 
 ~~~sh
 $ oc create -f <path-to-repo>/hono/dispatchrouter/target/fabric8/dispatch-router-svc.yml
