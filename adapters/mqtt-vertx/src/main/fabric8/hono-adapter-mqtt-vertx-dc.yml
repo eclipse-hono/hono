@@ -38,6 +38,20 @@ spec:
           value: /etc/hono/certs/trusted-certs.pem
         - name: HONO_CLIENT_HOSTNAME_VERIFICATION_REQUIRED
           value: "false"
+        - name: HONO_REGISTRATION_NAME
+          value: Hono MQTT Adapter
+        - name: HONO_REGISTRATION_HOST
+          value: ${HONO_SERVICE_DEVICE_REGISTRY_SERVICE_HOST}
+        - name: HONO_REGISTRATION_PORT
+          value: ${HONO_SERVICE_DEVICE_REGISTRY_SERVICE_PORT_AMQPS}
+        - name: HONO_REGISTRATION_USERNAME
+          value: mqtt-adapter@HONO
+        - name: HONO_REGISTRATION_PASSWORD
+          value: mqtt-secret
+        - name: HONO_REGISTRATION_TRUST_STORE_PATH
+          value: /etc/hono/certs/trusted-certs.pem
+        - name: HONO_REGISTRATION_HOSTNAME_VERIFICATION_REQUIRED
+          value: "false"
         - name: HONO_MQTT_BIND_ADDRESS
           value: 0.0.0.0
         - name: HONO_MQTT_INSECURE_PORT_BIND_ADDRESS

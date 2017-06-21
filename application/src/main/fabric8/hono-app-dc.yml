@@ -25,9 +25,9 @@ spec:
           protocol: TCP
         env:
         - name: HONO_AUTH_HOST
-          value: ${HONO_SERVICE_AUTH_HOST}
+          value: ${HONO_SERVICE_AUTH_SERVICE_HOST}
         - name: HONO_AUTH_PORT
-          value: ${HONO_SERVICE_AUTH_PORT_AMQPS}
+          value: ${HONO_SERVICE_AUTH_SERVICE_PORT_AMQPS}
         - name: HONO_AUTH_NAME
           value: hono-server
         - name: HONO_AUTH_CERT_PATH
@@ -60,7 +60,7 @@ spec:
           value: "true"
         - name: HONO_SERVER_INSECURE_PORT_BIND_ADDRESS
           value: 0.0.0.0
-        - name: HONO_SERVER_REGISTRATION_ASSERTION_SHARED_SECRET
+        - name: HONO_SERVER_VALIDATION_SHARED_SECRET
           value: "g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
