@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.impl.ProtonReceiverImpl;
 import io.vertx.proton.impl.ProtonSenderImpl;
@@ -187,15 +186,27 @@ public final class MessageHelper {
         props.getValue().put(key, value);
     }
 
-    public static void rejected(final ProtonDelivery delivery, final String error, final String description) {
-        final ErrorCondition errorCondition = ProtonHelper.condition(error, description);
+    /**
+     * Sets an AMQP 1.0 message's delivery state to <em>rejected</em>.
+     * 
+     * @param delivery The message's delivery object.
+     * @param error The error condition to set as the reason for rejecting the message.
+     */
+    public static void rejected(final ProtonDelivery delivery, final ErrorCondition error) {
         final Rejected rejected = new Rejected();
-        rejected.setError(errorCondition);
+        rejected.setError(error);
         delivery.disposition(rejected, true);
     }
 
     /**
      * Adds several AMQP 1.0 message <em>annotations</em> to the given message that are used to process/route the message.
+     * <p>
+     * In particular, the following annotations are added:
+     * <ul>
+     * <li>{@link #APP_PROPERTY_DEVICE_ID} - the ID of the device that reported the data.</li>
+     * <li>{@link #APP_PROPERTY_TENANT_ID} - the ID of the tenant as indicated by the link target's second segment.</li>
+     * <li>{@link #APP_PROPERTY_RESOURCE} - the full resource path including the endpoint, the tenant and the device ID.</li>
+     * </ul>
      *
      * @param msg the message to add the message annotations to.
      * @param resourceIdentifier the resource identifier that will be added as annotation.

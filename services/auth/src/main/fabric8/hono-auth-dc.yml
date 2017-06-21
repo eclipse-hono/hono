@@ -14,7 +14,7 @@ spec:
         name: ${project.artifactId}
     spec:
       containers:
-      - image: eclipsehono/hono-auth:${project.version}
+      - image: eclipsehono/hono-service-auth:${project.version}
         name: ${project.artifactId}
         ports:
         - containerPort: 5671

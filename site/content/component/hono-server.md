@@ -171,8 +171,11 @@ The corresponding command to start up the server with the configuration used in 
 
 {{% note %}}
 In the example above the *hono.downstream.host=qdrouter* command line option indicates that the Dispatch Router is running on a host with name *qdrouter*. However, if the Dispatch Router has been started as a Docker container then the *qdrouter* host name will most likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the Hono server from the Spring Boot application and want it to connect to a Dispatch Router run as a Docker container then you need to set the value of the *hono.downstream.host* option to the IP address (or name) of the Docker host running the Dispatch Router container. The same is true analogously for the *auth-server* address.
+
 The *hono.downstream.keyPath* option is required because the Dispatch Router requires the Hono server to authenticate by means of a client certificate during connection establishment.
+
 The *hono.downstream.hostnameVerificationRequired* parameter is necessary to prevent Hono from validating the Dispatch Router's host name by means of comparing it to the *common name* of the Dispatch Routers's certificate's subject.
+
 You may want to make logging of the Hono server a little more verbose by enabling the *dev* Spring profile.
-To do so, append *,--spring.profiles.active=dev* to the command line.
+To do so, append *-Drun.profiles=dev* to the command line.
 {{% /note %}}

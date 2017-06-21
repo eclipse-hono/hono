@@ -44,7 +44,9 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
     UpstreamReceiverImpl(final String linkId, final ProtonReceiver receiver, final ProtonQoS qos) {
         this.id = Objects.requireNonNull(linkId);
         this.link = Objects.requireNonNull(receiver);
-        this.link.setAutoAccept(false).setPrefetch(0).setQoS(qos);
+        this.link.setAutoAccept(false);
+        this.link.setPrefetch(0);
+        this.link.setQoS(qos);
     }
 
     @Override

@@ -16,13 +16,12 @@ import java.util.Objects;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.server.DownstreamAdapter;
 import org.eclipse.hono.server.HonoServerConfigProperties;
+import org.eclipse.hono.server.HonoServerMessageFilter;
 import org.eclipse.hono.server.MessageForwardingEndpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
-import org.eclipse.hono.telemetry.TelemetryMessageFilter;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -36,14 +35,26 @@ import io.vertx.proton.ProtonQoS;
 @Component
 @Scope("prototype")
 @Qualifier("telemetry")
-@ConfigurationProperties(prefix = "hono.telemetry")
 public final class TelemetryEndpoint extends MessageForwardingEndpoint<HonoServerConfigProperties> {
 
+    private static final ProtonQoS[] SUPPORTED_DELIVERY_MODES = new ProtonQoS[]{ ProtonQoS.AT_LEAST_ONCE, ProtonQoS.AT_MOST_ONCE };
+
+    /**
+     * Creates a new endpoint.
+     * 
+     * @param vertx The Vert.x instance to run on.
+     */
     @Autowired
     public TelemetryEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
     }
 
+    /**
+     * Sets the adapter for sending telemetry messages to the downstream AMQP 1.0 messaging network.
+     * 
+     * @param adapter The adapter.
+     * @throws NullPointerException if the adapter is {@code null}.
+     */
     @Autowired
     @Qualifier("telemetry")
     public final void setTelemetryAdapter(final DownstreamAdapter adapter) {
@@ -58,11 +69,16 @@ public final class TelemetryEndpoint extends MessageForwardingEndpoint<HonoServe
     @Override
     protected boolean passesFormalVerification(ResourceIdentifier targetAddress, Message message) {
 
-        return TelemetryMessageFilter.verify(targetAddress, message);
+        return HonoServerMessageFilter.verify(targetAddress, message);
     }
 
+    /**
+     * Gets the delivery modes supported by the Telemetry API.
+     * 
+     * @return <em>AT_MOST_ONCE</em> and <em>AT_LEAST_ONCE</em>.
+     */
     @Override
-    protected ProtonQoS getEndpointQos() {
-        return ProtonQoS.AT_MOST_ONCE;
+    protected ProtonQoS[] getEndpointQos() {
+        return SUPPORTED_DELIVERY_MODES;
     }
 }

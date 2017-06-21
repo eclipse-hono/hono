@@ -9,14 +9,13 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.telemetry.impl;
+package org.eclipse.hono.server;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.server.DownstreamAdapter;
 import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,9 +37,9 @@ import io.vertx.proton.ProtonHelper;
  */
 @Service
 @Profile("standalone")
-public final class MessageDiscardingTelemetryDownstreamAdapter implements DownstreamAdapter {
+public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MessageDiscardingTelemetryDownstreamAdapter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MessageDiscardingDownstreamAdapter.class);
     private static final int DEFAULT_CREDIT = 10;
     private final Vertx vertx;
     private final int pauseThreshold;
@@ -51,25 +50,25 @@ public final class MessageDiscardingTelemetryDownstreamAdapter implements Downst
     /**
      * Creates a new instance.
      * <p>
-     * Simply invokes {@link #MessageDiscardingTelemetryDownstreamAdapter(Vertx, Consumer)}
+     * Simply invokes {@link #MessageDiscardingDownstreamAdapter(Vertx, Consumer)}
      * with a {@code null} consumer.
      * 
      * @param vertx The Vert.x instance to run on.
      */
-    public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx) {
+    public MessageDiscardingDownstreamAdapter(final Vertx vertx) {
         this(vertx, null);
     }
 
     /**
      * Creates a new instance.
      * <p>
-     * Simply invokes {@link #MessageDiscardingTelemetryDownstreamAdapter(Vertx, int, long, Consumer)}
+     * Simply invokes {@link #MessageDiscardingDownstreamAdapter(Vertx, int, long, Consumer)}
      * with a zero pause threshold and period.
      * 
      * @param vertx The Vert.x instance to run on.
      * @param consumer a consumer that is invoked for every message received.
      */
-    public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx, final Consumer<Message> consumer) {
+    public MessageDiscardingDownstreamAdapter(final Vertx vertx, final Consumer<Message> consumer) {
         this(vertx, 0, 0, consumer);
     }
 
@@ -82,7 +81,7 @@ public final class MessageDiscardingTelemetryDownstreamAdapter implements Downst
      * @param pausePeriod the number of milliseconds after which the sender is resumed.
      * @param consumer a consumer that is invoked for every message received.
      */
-    public MessageDiscardingTelemetryDownstreamAdapter(final Vertx vertx, final int pauseThreshold, final long pausePeriod, final Consumer<Message> consumer) {
+    public MessageDiscardingDownstreamAdapter(final Vertx vertx, final int pauseThreshold, final long pausePeriod, final Consumer<Message> consumer) {
         this.vertx = vertx;
         this.pauseThreshold = pauseThreshold;
         this.pausePeriod = pausePeriod;

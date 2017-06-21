@@ -14,8 +14,7 @@ package org.eclipse.hono.tests.jms;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.time.Duration;
 import java.util.LongSummaryStatistics;
@@ -23,6 +22,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
+import javax.jms.CompletionListener;
 import javax.jms.DeliveryMode;
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -101,6 +101,45 @@ public class SendReceiveIT {
         }
     }
 
+    /**
+     * Verifies that the Telemetry endpoint rejects a malformed message.
+     * 
+     * @throws Exception if the test fails.
+     */
+    @Test
+    public void testMalformedTelemetryMessageGetsRejected() throws Exception {
+
+        final CountDownLatch rejected = new CountDownLatch(1);
+
+        // prepare consumer to get some credits for sending
+        final MessageConsumer messageConsumer = receiver.getTelemetryConsumer();
+        messageConsumer.setMessageListener(message -> {});
+
+        final MessageProducer messageProducer = sender.getTelemetryProducer();
+        // message lacks device ID and registration assertion
+        final Message message = sender.newMessage("body", null, null);
+        messageProducer.send(message, new CompletionListener() {
+
+            @Override
+            public void onException(final Message message, final Exception exception) {
+                LOG.debug("failed to send message as expected: {}", exception.getMessage());
+                rejected.countDown();
+            }
+
+            @Override
+            public void onCompletion(final Message message) {
+                // should not happen
+            }
+        });
+        assertTrue(rejected.await(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS));
+    }
+
+    /**
+     * Verifies that telemetry messages uploaded to the Hono server are all received
+     * by a downstream consumer.
+     * 
+     * @throws Exception if the test fails.
+     */
     @Test
     public void testTelemetryUpload() throws Exception {
 
@@ -146,6 +185,12 @@ public class SendReceiveIT {
         LOG.info("Delivery statistics: {}", stats);
     }
 
+    /**
+     * Verifies that a telemetry message sent for a specific device is received
+     * by a downstream consumer for the device's tenant.
+     * 
+     * @throws Exception if the test fails.
+     */
     @Test
     public void testSendReceiveForSpecificDeviceOnly() throws Exception {
 
@@ -158,7 +203,7 @@ public class SendReceiveIT {
         final MessageConsumer messageConsumer = receiver.getTelemetryConsumer();
         messageConsumer.setMessageListener(message -> {
             final String deviceId = getDeviceId(message);
-            LOG.debug("------> Received message for {}", deviceId);
+            LOG.debug("------> Received message for device {}", deviceId);
             assertEquals(SPECIAL_DEVICE, deviceId);
             latch.countDown();
         });
@@ -175,7 +220,7 @@ public class SendReceiveIT {
         return result.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
     }
 
-    private String getDeviceId(final Message message) {
+    private static String getDeviceId(final Message message) {
         try {
             return message.getStringProperty(MessageHelper.APP_PROPERTY_DEVICE_ID);
         } catch (final JMSException e) {
@@ -183,7 +228,7 @@ public class SendReceiveIT {
         }
     }
 
-    private void gatherStatistics(final LongSummaryStatistics stats, final Message message) {
+    private static void gatherStatistics(final LongSummaryStatistics stats, final Message message) {
         try {
             final long duration = System.currentTimeMillis() - message.getJMSTimestamp();
             stats.accept(duration);

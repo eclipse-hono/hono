@@ -22,15 +22,26 @@ oc login -u developer
 oc create -f ../../application/target/fabric8/hono-app-pvc.yml
 
 echo Deploying Authentication Server ...
-oc create -f ../../auth/target/fabric8/hono-auth-svc.yml
-oc create -f ../../auth/target/fabric8/hono-auth-dc.yml
-oc create -f ../../auth/target/fabric8/hono-auth-route.yml
+oc create -f ../../services/auth/target/fabric8/hono-auth-svc.yml
+oc create -f ../../services/auth/target/fabric8/hono-auth-dc.yml
+oc create -f ../../services/auth/target/fabric8/hono-auth-route.yml
+echo ... done
+
+echo Deploying Device Registry ...
+oc create -f ../../services/device-registry/target/fabric8/hono-device-registry-svc.yml
+oc create -f ../../services/device-registry/target/fabric8/hono-device-registry-dc.yml
+oc create -f ../../services/device-registry/target/fabric8/hono-device-registry-route.yml
 echo ... done
 
 echo Deploying Qpid Dispatch Router ...
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-svc.yml
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-dc.yml
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-route.yml
+echo ... done
+
+echo Deploying Apache ActiveMQ Artemis Broker ...
+oc create -f ../../broker/target/fabric8/artemis-svc.yml
+oc create -f ../../broker/target/fabric8/artemis-dc.yml
 echo ... done
 
 echo Deploying Hono Server ...

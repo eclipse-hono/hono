@@ -103,7 +103,7 @@ services:
         aliases:
           - device-registry.hono
     ports:
-      - "25671:5671"
+      - "26671:5671"
     environment:
       - HONO_AUTH_HOST=auth-server.hono
       - HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem

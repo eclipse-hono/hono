@@ -12,7 +12,7 @@ The diagram below provides an overview of the top level *logical* components.
 
 {{< figure src="../Top-Level.jpg" >}}
 
-The *MQTT* and *Rest Potocol Adapters* use the *Device Registry* to assert the registration status of *Devices* connecting to the adapters. The *Device Registry* issues a token asserting the status which the protocol adapters include when forwarding telemetry data and events to the *Hono Server* component. The *Hono Server* verifies the device registration status by means of validating the token and forwards the messages to the downstream *AMQP 1.0 Messaging Network* for delivery to consuming *Business Applications*.
+The *MQTT* and *Rest Protocol Adapters* use the *Device Registry* to assert the registration status of *Devices* connecting to the adapters. The *Device Registry* issues a token asserting the status which the protocol adapters include when forwarding telemetry data and events to the *Hono Server* component. The *Hono Server* verifies the device registration status by means of validating the token and forwards the messages to the downstream *AMQP 1.0 Messaging Network* for delivery to consuming *Business Applications*.
 
 Both *Hono Server* and *Device Registry* use the *Auth Server* to authenticate the protocol adapters during connection establishment.
 

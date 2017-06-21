@@ -33,7 +33,7 @@ spec:
         args:
           - /usr/sbin/qdrouterd
           - -c
-          - /etc/hono/qdrouter/qdrouterd.json
+          - /etc/hono/qdrouter/qdrouterd-with-broker.json
         livenessProbe:
           tcpSocket:
             port: amqp

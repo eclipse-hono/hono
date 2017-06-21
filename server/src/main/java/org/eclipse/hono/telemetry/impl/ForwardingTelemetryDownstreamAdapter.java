@@ -46,8 +46,8 @@ public final class ForwardingTelemetryDownstreamAdapter extends ForwardingDownst
         super(vertx, senderFactory);
     }
 
-    protected void forwardMessage(final ProtonSender sender, final Message msg, final ProtonDelivery delivery) {
-        ProtonHelper.accepted(delivery, true);
+    protected void forwardMessage(final ProtonSender sender, final Message msg, final ProtonDelivery upstreamDelivery) {
+        ProtonHelper.accepted(upstreamDelivery, true);
         sender.send(msg);
     }
 

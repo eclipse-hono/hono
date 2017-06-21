@@ -186,10 +186,10 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                 ProtonHelper.accepted(delivery, true);
             } else if (s.cause() instanceof AmqpErrorException) {
                 AmqpErrorException cause = (AmqpErrorException) s.cause();
-                MessageHelper.rejected(delivery, cause.getError().toString(), cause.getMessage());
+                MessageHelper.rejected(delivery, cause.asErrorCondition());
             } else {
                 logger.debug("error processing request [resource: {}, op: {}]: {}", targetAddress, message.getSubject(), s.cause().getMessage());
-                MessageHelper.rejected(delivery, AmqpError.INTERNAL_ERROR.toString(), "internal error");
+                MessageHelper.rejected(delivery, ProtonHelper.condition(AmqpError.INTERNAL_ERROR, "internal error"));
             }
         });
 

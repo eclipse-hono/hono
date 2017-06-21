@@ -115,6 +115,7 @@
                     <cmd>
                       <exec>
                         <arg>java</arg>
+                        <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-jar</arg>
                         <arg>
                           /opt/hono/${project.artifactId}-${project.version}.jar

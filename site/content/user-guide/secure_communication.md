@@ -118,7 +118,7 @@ When the connection between the Hono server and the Auth Server is supposed to b
 Support for TLS needs to be explicitly configured by means of command line options or environment variables.
 The Device Registry needs to be configured with a private key and a certificate for that purpose.
 
-The Device Regsitry Docker image (`eclipsehono/hono-service-device-registry`) includes the following demo keys and certificates from the `demo-certs/certs` folder.
+The Device Registry Docker image (`eclipsehono/hono-service-device-registry`) includes the following demo keys and certificates from the `demo-certs/certs` folder.
 
 | File                          | Description                                                      |
 | :---------------------------- | :--------------------------------------------------------------- |

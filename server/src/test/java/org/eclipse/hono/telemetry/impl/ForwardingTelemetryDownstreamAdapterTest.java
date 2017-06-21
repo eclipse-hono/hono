@@ -14,21 +14,27 @@ package org.eclipse.hono.telemetry.impl;
 import static org.eclipse.hono.TestSupport.*;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.*;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.event.impl.ForwardingEventDownstreamAdapter;
 import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
@@ -37,17 +43,20 @@ import io.vertx.proton.ProtonSender;
  * Verifies behavior of the {@code ForwardingTelemetryDownstreamAdapter}.
  *
  */
+@RunWith(VertxUnitRunner.class)
 public class ForwardingTelemetryDownstreamAdapterTest {
 
     private static final String TELEMETRY_MSG_CONTENT = "hello";
     private static final String DEVICE_ID = "myDevice";
     private ConnectionFactory connectionFactory;
+    private Vertx vertx;
 
     /**
      * Initializes mocks etc.
      */
     @Before
     public void setup() {
+        vertx = mock(Vertx.class);
         connectionFactory = newMockConnectionFactory(false);
     }
 
@@ -60,7 +69,6 @@ public class ForwardingTelemetryDownstreamAdapterTest {
     @Test
     public void testProcessTelemetryDataForwardsMessageToDownstreamSender() throws InterruptedException {
 
-        final Vertx vertx = mock(Vertx.class);
         final UpstreamReceiver client = newClient();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
 
@@ -84,4 +92,31 @@ public class ForwardingTelemetryDownstreamAdapterTest {
         // THEN the message has been delivered to the downstream container
         assertTrue(latch.await(1, TimeUnit.SECONDS));
     }
+
+    @Test
+    public void testProcessMessageDiscardsMessageIfNoCreditIsAvailable(final TestContext ctx) {
+
+        final UpstreamReceiver client = newClient();
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.remotelySettled()).thenReturn(Boolean.FALSE);
+
+        // GIVEN an adapter with a connection to a downstream container
+        ProtonSender sender = newMockSender(false);
+        when(sender.getCredit()).thenReturn(0);
+        ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
+        adapter.start(Future.future());
+        adapter.addSender(client, sender);
+
+        // WHEN processing an event
+        Message msg = ProtonHelper.message(TELEMETRY_MSG_CONTENT);
+        MessageHelper.addDeviceId(msg, DEVICE_ID);
+        adapter.processMessage(client, delivery, msg);
+
+        // THEN the the message is accepted
+        verify(delivery).disposition(any(Accepted.class), eq(Boolean.TRUE));
+        // but is not delivered to the downstream container
+        verify(sender, never()).send(any(Message.class), any(Handler.class));
+    }
+
 }

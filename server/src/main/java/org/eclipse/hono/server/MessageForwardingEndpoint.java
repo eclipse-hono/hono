@@ -14,10 +14,12 @@ package org.eclipse.hono.server;
 import static io.vertx.proton.ProtonHelper.condition;
 import static org.eclipse.hono.util.MessageHelper.getAnnotation;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
@@ -35,6 +37,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
@@ -123,6 +126,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
      * downstream adapter they want to forward messages to.
      * 
      * @param adapter The adapter.
+     * @throws NullPointerException if the adapter is {@code null}.
      */
     protected final void setDownstreamAdapter(final DownstreamAdapter adapter) {
         this.downstreamAdapter = Objects.requireNonNull(adapter);
@@ -135,31 +139,38 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
     @Override
     public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
 
-        final String linkId = UUID.randomUUID().toString();
-        final UpstreamReceiver link = UpstreamReceiver.newUpstreamReceiver(linkId, receiver, getEndpointQos());
+        if (!Arrays.stream(getEndpointQos()).anyMatch(qos -> qos.equals(receiver.getRemoteQoS()))) {
+            logger.debug("client [{}] wants to use unsupported delivery mode {} for endpoint [name: {}, QoS: {}], closing link", 
+                    con.getRemoteContainer(), receiver.getRemoteQoS(), getName(), getEndpointQos());
+            receiver.setCondition(ErrorConditions.ERROR_UNSUPPORTED_DELIVERY_MODE);
+            receiver.close();
+        } else {
+            receiver.setQoS(receiver.getRemoteQoS());
+            final String linkId = UUID.randomUUID().toString();
+            final UpstreamReceiver link = UpstreamReceiver.newUpstreamReceiver(linkId, receiver, receiver.getRemoteQoS());
 
-        downstreamAdapter.onClientAttach(link, s -> {
-            if (s.succeeded()) {
-                receiver.closeHandler(clientDetached -> {
-                    // client has closed link -> inform TelemetryAdapter about client detach
-                    onLinkDetach(link);
-                    downstreamAdapter.onClientDetach(link);
-                    counterService.decrement(MetricConstants.metricNameUpstreamLinks(targetAddress.toString()));
-                }).handler((delivery, message) -> {
-                    if (passesFormalVerification(targetAddress, message)) {
-                        forwardMessage(link, delivery, message);
-                    } else {
-                        MessageHelper.rejected(delivery, AmqpError.DECODE_ERROR.toString(), "malformed message");
-                        onLinkDetach(link, condition(AmqpError.DECODE_ERROR.toString(), "invalid message received"));
-                    }
-                }).open();
-                logger.debug("accepted link from telemetry client [{}]", linkId);
-                counterService.increment(MetricConstants.metricNameUpstreamLinks(targetAddress.toString()));
-            } else {
-                // we cannot connect to downstream container, reject client
-                link.close(condition(AmqpError.PRECONDITION_FAILED, "no consumer available for target"));
-            }
-        });
+            downstreamAdapter.onClientAttach(link, s -> {
+                if (s.succeeded()) {
+                    receiver.closeHandler(clientDetached -> {
+                        // client has closed link -> inform TelemetryAdapter about client detach
+                        onLinkDetach(link);
+                        downstreamAdapter.onClientDetach(link);
+                        counterService.decrement(MetricConstants.metricNameUpstreamLinks(targetAddress.toString()));
+                    }).handler((delivery, message) -> {
+                        if (passesFormalVerification(targetAddress, message)) {
+                            forwardMessage(link, delivery, message);
+                        } else {
+                            rejectMessage(delivery, ProtonHelper.condition(AmqpError.DECODE_ERROR, "malformed message"), link);
+                        }
+                    }).open();
+                    logger.debug("establishing link with client [{}]", con.getRemoteContainer());
+                    counterService.increment(MetricConstants.metricNameUpstreamLinks(targetAddress.toString()));
+                } else {
+                    // we cannot connect to downstream container, reject client
+                    link.close(condition(AmqpError.PRECONDITION_FAILED, "no consumer available for target"));
+                }
+            });
+        }
     }
 
     final void forwardMessage(final UpstreamReceiver link, final ProtonDelivery delivery, final Message msg) {
@@ -171,8 +182,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
             downstreamAdapter.processMessage(link, delivery, msg);
         } else {
             logger.debug("failed to validate device registration status");
-            MessageHelper.rejected(delivery, AmqpError.PRECONDITION_FAILED.toString(), "device non-existent/disabled");
-            link.close(condition(AmqpError.PRECONDITION_FAILED.toString(), "device non-existent/disabled"));
+            rejectMessage(delivery, ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, "device non-existent/disabled"), link);
         }
     }
 
@@ -186,10 +196,18 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
         }
     }
 
+    private void rejectMessage(final ProtonDelivery deliveryToReject, final ErrorCondition error, final UpstreamReceiver client) {
+        MessageHelper.rejected(deliveryToReject, error);
+        client.replenish(1);
+    }
+
     /**
-     * Gets the Quality-of-Service this endpoint uses for messages received from upstream clients.
+     * Gets the delivery modes this endpoint supports.
+     * <p>
+     * The {@link #onLinkAttach(ProtonConnection, ProtonReceiver, ResourceIdentifier)} method will reject a client's
+     * attempt to establish a link that does not match at least one of the delivery modes returned by this method.
      * 
-     * @return The QoS.
+     * @return The delivery modes this endpoint supports.
      */
-    protected abstract ProtonQoS getEndpointQos();
+    protected abstract ProtonQoS[] getEndpointQos();
 }

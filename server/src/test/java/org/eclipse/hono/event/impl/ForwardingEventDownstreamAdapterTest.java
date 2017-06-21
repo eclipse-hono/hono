@@ -14,43 +14,52 @@
 package org.eclipse.hono.event.impl;
 
 import static org.eclipse.hono.TestSupport.*;
-import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import static org.mockito.Mockito.*;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.util.MessageHelper;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
-import org.springframework.boot.actuate.metrics.CounterService;
-import org.springframework.boot.actuate.metrics.GaugeService;
 
 /**
  * Tests {@link ForwardingEventDownstreamAdapter}.
  */
+@RunWith(VertxUnitRunner.class)
 public class ForwardingEventDownstreamAdapterTest {
 
-    public static final Accepted ACCEPTED = new Accepted();
+    private static final Accepted ACCEPTED = new Accepted();
     private static final String EVENT_MSG_CONTENT = "the_event";
     private static final String DEVICE_ID = "theDevice";
 
-    @Test
-    public void testProcessMessageForwardsEventMessageToDownstreamSender() throws InterruptedException {
+    private Vertx vertx;
 
-        final Vertx vertx = mock(Vertx.class);
+    /**
+     * Sets up mocks.
+     * 
+     */
+    @Before
+    public void init() {
+        vertx = mock(Vertx.class);
+    }
+
+    @Test
+    public void testProcessMessageForwardsMessageToDownstreamSender(final TestContext ctx) {
+
         final UpstreamReceiver client = newClient();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final ProtonDelivery downstreamDelivery = mock(ProtonDelivery.class);
@@ -58,10 +67,10 @@ public class ForwardingEventDownstreamAdapterTest {
         when(downstreamDelivery.remotelySettled()).thenReturn(true);
 
         // GIVEN an adapter with a connection to a downstream container
-        final CountDownLatch latch = new CountDownLatch(1);
+        final Async msgSent = ctx.async();
         ProtonSender sender = newMockSender(false);
         when(sender.send(any(Message.class), any(Handler.class))).then(invocation -> {
-            latch.countDown();
+            msgSent.complete();
             invocation.getArgumentAt(1, Handler.class).handle(downstreamDelivery);
             return null;
         });
@@ -76,8 +85,34 @@ public class ForwardingEventDownstreamAdapterTest {
         adapter.processMessage(client, delivery, msg);
 
         // THEN the message has been delivered to the downstream container
-        assertTrue(latch.await(1, TimeUnit.SECONDS));
+        msgSent.await(1000);
         // and disposition was returned
-        verify(delivery).disposition(ACCEPTED, true);
+        verify(delivery).disposition(any(Accepted.class), eq(Boolean.TRUE));
+    }
+
+    @Test
+    public void testProcessMessageReleasesMessageIfNoCreditIsAvailable(final TestContext ctx) {
+
+        final UpstreamReceiver client = newClient();
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.remotelySettled()).thenReturn(Boolean.FALSE);
+
+        // GIVEN an adapter with a connection to a downstream container
+        ProtonSender sender = newMockSender(false);
+        when(sender.getCredit()).thenReturn(0);
+        ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
+        adapter.start(Future.future());
+        adapter.addSender(client, sender);
+
+        // WHEN processing an event
+        Message msg = ProtonHelper.message(EVENT_MSG_CONTENT);
+        MessageHelper.addDeviceId(msg, DEVICE_ID);
+        adapter.processMessage(client, delivery, msg);
+
+        // THEN the message is released
+        verify(delivery).disposition(any(Released.class), eq(Boolean.TRUE));
+        // and not delivered to the downstream container
+        verify(sender, never()).send(any(Message.class), any(Handler.class));
     }
 }

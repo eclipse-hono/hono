@@ -28,6 +28,12 @@
   <logger name="org.eclipse.hono.tests.client" level="INFO"/>
   <logger name="org.eclipse.hono.tests.jms" level="INFO"/>
 
+  <logger name="org.apache.qpid.jms" level="INFO"/>
+  <!-- 
+    Set the following logger to level TRACE and add a "amqp.traceFrames=true" option to the connection URI
+    in order to trace AMQP frames.
+   -->
+  <logger name="org.apache.qpid.jms.provider.amqp.FRAMES" level="INFO"/>
   <logger name="io.netty.resolver.dns" level="INFO"/>
   <logger name="io.vertx.proton.impl" level="INFO"/>
 
