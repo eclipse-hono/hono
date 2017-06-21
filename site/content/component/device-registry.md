@@ -145,7 +145,7 @@ The corresponding command to start up the server with the configuration used in 
 
 {{% note %}}
 You may want to make logging of the server a little more verbose by enabling the *dev* Spring profile.
-To do so, append *-Dspring.profiles.active=default,dev* to the command line.
+To do so, append *-Drun.profiles=default,dev* to the command line.
 
 Replace **localhost** by the name or the IP address of the auth-server you are using, if you do not start it on localhost as well.
 {{% /note %}}

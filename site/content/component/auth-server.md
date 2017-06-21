@@ -127,5 +127,5 @@ The corresponding command to start up the server with the configuration used in 
 
 {{% note %}}
 You may want to make logging of the server a little more verbose by enabling the *dev* Spring profile.
-To do so, append *-Dspring.profiles.active=authentication-impl,dev* to the command line.
+To do so, append *-Drun.profiles=authentication-impl,dev* to the command line.
 {{% /note %}}

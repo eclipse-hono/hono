@@ -177,5 +177,5 @@ The *hono.downstream.keyPath* option is required because the Dispatch Router req
 The *hono.downstream.hostnameVerificationRequired* parameter is necessary to prevent Hono from validating the Dispatch Router's host name by means of comparing it to the *common name* of the Dispatch Routers's certificate's subject.
 
 You may want to make logging of the Hono server a little more verbose by enabling the *dev* Spring profile.
-To do so, append *-Dspring.profiles.active=dev* to the command line.
+To do so, append *-Drun.profiles=dev* to the command line.
 {{% /note %}}
