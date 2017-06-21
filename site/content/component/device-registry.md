@@ -16,10 +16,10 @@ The following table provides an overview of the configuration variables and corr
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_AUTH_HOST`<br>`--hono.auth.host` | yes | `localhost` | The IP address or name of the *Auth Server* host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Hono server container to the Docker network that the *Auth Server* container is running on. |
+| `HONO_AUTH_HOST`<br>`--hono.auth.host` | yes | `localhost` | The IP address or name of the *Auth Server* host. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Device Registry container to the Docker network that the *Auth Server* container is running on. |
 | `HONO_AUTH_PORT`<br>`--hono.auth.port` | yes | `5671` | The port that the *Auth Server* is listening on for connections. |
 | `HONO_AUTH_TRUST_STORE_PASSWORD`<br>`--hono.auth.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_AUTH_TRUST_STORE_PATH`<br>`--hono.auth.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating the *Auth Server*. This property **must** be set if the *Auth Server* has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_AUTH_TRUST_STORE_PATH`<br>`--hono.auth.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Device Registry uses for authenticating the *Auth Server*. This property **must** be set if the *Auth Server* has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_AUTH_VALIDATION_CERT_PATH`<br>`--hono.auth.validation.certPath` | no  | - | The absolute path to the PEM file containing the public key that the server should use for validating tokens issued by the *Auth Server*. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHARED_SECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_AUTH_CERT_PATH` variable. If that variable is also not set, startup of the server fails. |
 | `HONO_AUTH_VALIDATION_SHARED_SECRET`<br>`--hono.auth.validation.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for validating tokens issued by the *Auth Server*. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the *Auth Server* **must** be configured with the same key. Alternatively, an asymmetric key pair can be used for validating (and signing) by setting the `HONO_AUTH_SIGNING_CERT_PATH` variable. If none of these variables is set, startup of the server fails. |
 | `HONO_DEVICE_REGISTRY_BIND_ADDRESS`<br>`--hono.device.registry.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
@@ -97,7 +97,7 @@ The server may be configured to open both a secure and a non-secure port at the 
 
 When running the server as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
 
-The following command starts a container using the configuration files included in the image under path `/etc/hono`.
+The following command starts a container using the configuration files included in the image under path `/etc/hono` and connects it to a running auth-server container.
 
 ~~~sh
 $ docker run -d --name device-registry --network hono-net \
@@ -105,7 +105,11 @@ $ docker run -d --name device-registry --network hono-net \
 > -e 'HONO_DEVICE_REGISTRY_PERMISSIONS_PATH=file:/etc/hono/permissions.json' \
 > -e 'HONO_DEVICE_REGISTRY_KEY_PATH=/etc/hono/certs/device-registry-key.pem' \
 > -e 'HONO_DEVICE_REGISTRY_CERT_PATH=/etc/hono/certs/device-registry-cert.pem' \
-> -p5671:5671 eclipsehono/hono-service-device-registry:latest
+> -e 'HONO_AUTH_HOST=<name or address of the auth-server>' \
+> -e 'HONO_AUTH_NAME=device-registry' \
+> -e 'HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem' \
+> -e 'HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -p26671:5671 eclipsehono/hono-service-device-registry:latest
 ~~~
 
 {{% note %}}
@@ -123,17 +127,25 @@ you can use as a starting point for your own configuration.
 
 ## Run the Spring Boot Application
 
-Sometimes it is helpful to run the Hono server from its jar file, e.g. in order to attach a debugger more easily or to take advantage of code replacement.
-In order to do so, the server can be started using the `spring-boot:run` maven goal from the `services/auth` folder.
+Sometimes it is helpful to run the Device Registry server from its jar file, e.g. in order to attach a debugger more easily or to take advantage of code replacement.
+In order to do so, the server can be started using the `spring-boot:run` maven goal from the `services/device-registry` folder.
 The corresponding command to start up the server with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/application$ mvn spring-boot:run -Drun.arguments=\
-> --hono.auth.keyPath=target/certs/auth-server-key.pem,--hono.auth.certPath=target/certs/auth-server-cert.pem,\
+~/hono/services/device-registry $ mvn spring-boot:run -Drun.arguments=\
+> --hono.device.registry.bindAddress=0.0.0.0,\
+> --hono.device.registry.keyPath=target/certs/device-registry-key.pem,\
+> --hono.device.registry.certPath=target/certs/device-registry-cert.pem,\
+> --hono.device.registry.trustStorePath=target/certs/trusted-certs.pem,\
+> --hono.auth.host=localhost,\
+> --hono.auth.name='device-registry',\
+> --hono.auth.validation.certPath=target/certs/auth-server-cert.pem,\
 > --hono.auth.trustStorePath=target/certs/trusted-certs.pem
 ~~~
 
 {{% note %}}
 You may want to make logging of the server a little more verbose by enabling the *dev* Spring profile.
-To do so, append *,--spring.profiles.active=authentication-impl,dev* to the command line.
+To do so, append *-Drun.profiles=default,dev* to the command line.
+
+Replace **localhost** by the name or the IP address of the auth-server you are using, if you do not start it on localhost as well.
 {{% /note %}}

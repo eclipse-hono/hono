@@ -118,7 +118,7 @@ In order to do so, the server can be started using the `spring-boot:run` maven g
 The corresponding command to start up the server with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/application$ mvn spring-boot:run -Drun.arguments=\
+~/hono/services/auth$ mvn spring-boot:run -Drun.arguments=\
 > --hono.auth.bindAddress=0.0.0.0,\
 > --hono.auth.keyPath=target/certs/auth-server-key.pem,\
 > --hono.auth.certPath=target/certs/auth-server-cert.pem,\
@@ -127,5 +127,5 @@ The corresponding command to start up the server with the configuration used in 
 
 {{% note %}}
 You may want to make logging of the server a little more verbose by enabling the *dev* Spring profile.
-To do so, append *,--spring.profiles.active=authentication-impl,dev* to the command line.
+To do so, append *-Drun.profiles=authentication-impl,dev* to the command line.
 {{% /note %}}
