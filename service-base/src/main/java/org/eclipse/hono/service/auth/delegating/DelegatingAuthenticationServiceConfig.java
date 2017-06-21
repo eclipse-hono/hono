@@ -44,7 +44,7 @@ public class DelegatingAuthenticationServiceConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.auth")
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
-    public AuthenticationServerClientConfigProperties authClientProperties() {
+    public AuthenticationServerClientConfigProperties authenticationServiceClientProperties() {
         return new AuthenticationServerClientConfigProperties();
     }
 
@@ -57,8 +57,8 @@ public class DelegatingAuthenticationServiceConfig {
      */
     @Bean
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
-    public ConnectionFactory authServerConnectionFactory(final Vertx vertx) {
-        return new ConnectionFactoryImpl(vertx, authClientProperties());
+    public ConnectionFactory authenticationServiceConnectionFactory(final Vertx vertx) {
+        return new ConnectionFactoryImpl(vertx, authenticationServiceClientProperties());
     }
 
     /**
@@ -70,7 +70,7 @@ public class DelegatingAuthenticationServiceConfig {
     @Bean
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
     public AuthTokenHelper tokenValidator(final Vertx vertx) {
-        AuthenticationServerClientConfigProperties authClientProps = authClientProperties();
+        AuthenticationServerClientConfigProperties authClientProps = authenticationServiceClientProperties();
         if (!authClientProps.getValidation().isAppropriateForValidating() && authClientProps.getCertPath() != null) {
             // fall back to TLS configuration
             authClientProps.getValidation().setCertPath(authClientProps.getCertPath());
