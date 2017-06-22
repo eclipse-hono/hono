@@ -8,7 +8,7 @@ metadata:
 spec:
   to:
     kind: Service
-    name: ${project.artifactId}
+    name: ${project.artifactId}-ext
   port:
     targetPort: 5671
   tls:

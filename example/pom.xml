@@ -115,6 +115,10 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>io.fabric8</groupId>
+        <artifactId>fabric8-maven-plugin</artifactId>
+      </plugin>
     </plugins>
   </build>
 </project>

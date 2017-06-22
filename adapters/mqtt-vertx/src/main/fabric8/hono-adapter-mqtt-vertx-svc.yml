@@ -6,14 +6,17 @@ metadata:
     name: ${project.artifactId}
   name: ${project.artifactId}
 spec:
+  type: NodePort
   ports:
   - name: mqtt
     port: 1883
     protocol: TCP
-    targetPort: 1883
+    targetPort: mqtt
+    nodePort: 31883
   - name: mqtts
     port: 8883
     protocol: TCP
-    targetPort: 8883
+    targetPort: mqtts
+    nodePort: 30883
   selector:
     name: ${project.artifactId}

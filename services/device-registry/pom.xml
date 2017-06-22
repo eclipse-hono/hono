@@ -108,10 +108,13 @@
                       <port>5672</port>
                     </ports>
                     <runCmds>
-                      <runCmd>adduser -S -D hono nogroup</runCmd>
+                      <runCmd>adduser -S -D hono nogroup &amp;&amp; mkdir /home/hono/registration &amp;&amp; chown -R hono /home/hono</runCmd>
                     </runCmds>
                     <user>hono</user>
                     <workdir>/home/hono</workdir>
+                    <volumes>
+                      <volume>/home/hono/device-registry</volume>
+                    </volumes>
                     <cmd>
                       <exec>
                         <arg>java</arg>

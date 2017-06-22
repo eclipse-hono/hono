@@ -14,7 +14,7 @@ spec:
         name: ${project.artifactId}
     spec:
       containers:
-      - image: eclipsehono/hono-service-device-registry:${project.version}
+      - image: eclipsehono/${project.artifactId}:${project.version}
         name: ${project.artifactId}
         ports:
         - containerPort: 5671
@@ -29,7 +29,7 @@ spec:
         - name: HONO_AUTH_PORT
           value: ${HONO_SERVICE_AUTH_SERVICE_PORT_AMQPS}
         - name: HONO_AUTH_NAME
-          value: device-registry
+          value: Hono Device Registry
         - name: HONO_AUTH_VALIDATION_CERT_PATH
           value: /etc/hono/certs/auth-server-cert.pem
         - name: HONO_AUTH_TRUST_STORE_PATH
@@ -54,6 +54,13 @@ spec:
           value: classpath:logback-spring.xml
         - name: SPRING_PROFILES_ACTIVE
           value: default,dev
+        volumeMounts:
+        - name: ${project.artifactId}-volume
+          mountPath: /home/hono/device-registry
         livenessProbe:
           tcpSocket:
             port: 5672
+      volumes:
+      - name: ${project.artifactId}-volume
+        persistentVolumeClaim:
+          claimName: ${project.artifactId}-pv-claim

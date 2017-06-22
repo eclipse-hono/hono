@@ -30,32 +30,32 @@ services:
     ports:
       - "3000:3000"
 
-  qdrouter:
-    image: eclipsehono/dispatch-router:${project.version}
+  hono-dispatch-router:
+    image: eclipsehono/hono-dispatch-router:${project.version}
     networks:
       hono-net:
         aliases:
-          - qdrouter.hono
+          - hono-dispatch-router.hono
     command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd-with-broker.json
     ports:
       - "15671:5671"
       - "15672:5672"
 
-  artemis:
-    image: eclipsehono/activemq-artemis:${project.version}
+  hono-artemis:
+    image: eclipsehono/hono-artemis:${project.version}
     networks:
       hono-net:
         aliases:
-          - artemis.hono
+          - hono-artemis.hono
     ports:
       - "5672:5672"
 
-  auth-server:
+  hono-service-auth:
     image: eclipsehono/hono-service-auth:${project.version}
     networks:
       hono-net:
         aliases:
-          - auth-server.hono
+          - hono-service-auth.hono
     environment:
       - HONO_AUTH_BIND_ADDRESS=0.0.0.0
       - HONO_AUTH_KEY_PATH=/etc/hono/certs/auth-server-key.pem
@@ -64,50 +64,48 @@ services:
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=authentication-impl,dev
 
-  hono:
-    image: eclipsehono/hono-server:${project.version}
+  hono-service-messaging:
+    image: eclipsehono/hono-service-messaging:${project.version}
     networks:
       hono-net:
         aliases:
-          - hono.hono
+          - hono-service-messaging.hono
     ports:
       - "5671:5671"
     environment:
-      - HONO_AUTH_HOST=auth-server.hono
+      - HONO_AUTH_HOST=hono-service-auth.hono
       - HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
-      - HONO_AUTH_NAME=hono-server
+      - HONO_AUTH_NAME=Hono Messaging
       - HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
-      - HONO_DOWNSTREAM_HOST=qdrouter.hono
+      - HONO_DOWNSTREAM_HOST=hono-dispatch-router.hono
       - HONO_DOWNSTREAM_PORT=5673
-      - HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem
-      - HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-cert.pem
+      - HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-messaging-key.pem
+      - HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-messaging-cert.pem
       - HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_MESSAGING_BIND_ADDRESS=0.0.0.0
+      - HONO_MESSAGING_KEY_PATH=/etc/hono/certs/hono-messaging-key.pem
+      - HONO_MESSAGING_CERT_PATH=/etc/hono/certs/hono-messaging-cert.pem
+      - HONO_MESSAGING_INSECURE_PORT_ENABLED=false
+      - HONO_MESSAGING_MAX_INSTANCES=1
+      - HONO_MESSAGING_VALIDATION_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
       - HONO_METRIC_REPORTER_GRAPHITE_ACTIVE=true
       - HONO_METRIC_REPORTER_GRAPHITE_HOST=influxdb.hono
       - HONO_METRIC_REPORTER_GRAPHITE_PORT=2003
-      - HONO_SERVER_BIND_ADDRESS=0.0.0.0
-      - HONO_SERVER_KEY_PATH=/etc/hono/certs/hono-key.pem
-      - HONO_SERVER_CERT_PATH=/etc/hono/certs/hono-cert.pem
-      - HONO_SERVER_INSECURE_PORT_ENABLED=false
-      - HONO_SERVER_MAX_INSTANCES=1
-      - HONO_SERVER_VALIDATION_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
-    volumes:
-      - /home/hono/registration
 
-  device-registry:
+  hono-service-device-registry:
     image: eclipsehono/hono-service-device-registry:${project.version}
     networks:
       hono-net:
         aliases:
-          - device-registry.hono
+          - hono-service-device-registry.hono
     ports:
       - "26671:5671"
     environment:
-      - HONO_AUTH_HOST=auth-server.hono
+      - HONO_AUTH_HOST=hono-service-auth.hono
       - HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
-      - HONO_AUTH_NAME=device-registry
+      - HONO_AUTH_NAME=Hono Device Registry
       - HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem
       - HONO_DEVICE_REGISTRY_BIND_ADDRESS=0.0.0.0
       - HONO_DEVICE_REGISTRY_KEY_PATH=/etc/hono/certs/device-registry-key.pem
@@ -117,25 +115,27 @@ services:
       - HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET="g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0"
       - LOGGING_CONFIG=classpath:logback-spring.xml
       - SPRING_PROFILES_ACTIVE=default,dev
+    volumes:
+      - /home/hono/registration
 
-  rest-adapter:
+  hono-adapter-rest-vertx:
     image: eclipsehono/hono-adapter-rest-vertx:${project.version}
     networks:
       hono-net:
         aliases:
-          - rest-adapter.hono
+          - hono-adapter-rest-vertx.hono
     ports:
       - "8080:8080"
       - "8443:8443"
     environment:
       - HONO_CLIENT_NAME=Hono REST Adapter
-      - HONO_CLIENT_HOST=hono.hono
+      - HONO_CLIENT_HOST=hono-service-messaging.hono
       - HONO_CLIENT_PORT=5671
       - HONO_CLIENT_USERNAME=rest-adapter@HONO
       - HONO_CLIENT_PASSWORD=rest-secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_REGISTRATION_NAME=Hono REST Adapter
-      - HONO_REGISTRATION_HOST=device-registry.hono
+      - HONO_REGISTRATION_HOST=hono-service-device-registry.hono
       - HONO_REGISTRATION_PORT=5671
       - HONO_REGISTRATION_USERNAME=rest-adapter@HONO
       - HONO_REGISTRATION_PASSWORD=rest-secret
@@ -148,24 +148,24 @@ services:
       - HONO_HTTP_MAX_INSTANCES=1
       - SPRING_PROFILES_ACTIVE=dev
 
-  mqtt-adapter:
+  hono-adapter-mqtt-vertx:
     image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
     networks:
       hono-net:
         aliases:
-          - mqtt-adapter.hono
+          - hono-adapter-mqtt-vertx.hono
     ports:
       - "1883:1883"
       - "8883:8883"
     environment:
       - HONO_CLIENT_NAME=Hono MQTT Adapter
-      - HONO_CLIENT_HOST=hono.hono
+      - HONO_CLIENT_HOST=hono-service-messaging.hono
       - HONO_CLIENT_PORT=5671
       - HONO_CLIENT_USERNAME=mqtt-adapter@HONO
       - HONO_CLIENT_PASSWORD=mqtt-secret
       - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_REGISTRATION_NAME=Hono MQTT Adapter
-      - HONO_REGISTRATION_HOST=device-registry.hono
+      - HONO_REGISTRATION_HOST=hono-service-device-registry.hono
       - HONO_REGISTRATION_PORT=5671
       - HONO_REGISTRATION_USERNAME=mqtt-adapter@HONO
       - HONO_REGISTRATION_PASSWORD=mqtt-secret

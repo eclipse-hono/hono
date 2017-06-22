@@ -15,7 +15,7 @@ fi
 
 # creating Hono persistent volume (admin needed)
 oc login -u system:admin
-oc create -f ../../services/device-registry/target/fabric8/hono-device-registry-pv.yml
+oc create -f ../target/fabric8/hono-pv.yml
 
 # starting to deploy Eclipse Hono (developer user)
 oc login -u developer
@@ -35,6 +35,7 @@ echo ... done
 
 echo Deploying Qpid Dispatch Router ...
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-svc.yml
+oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-external-svc.yml
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-dc.yml
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-route.yml
 echo ... done

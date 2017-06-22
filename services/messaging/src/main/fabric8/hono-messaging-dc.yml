@@ -14,7 +14,7 @@ spec:
         name: ${project.artifactId}
     spec:
       containers:
-      - image: eclipsehono/hono-server:${project.version}
+      - image: eclipsehono/${project.artifactId}:${project.version}
         name: ${project.artifactId}
         ports:
         - containerPort: 5671
@@ -29,7 +29,7 @@ spec:
         - name: HONO_AUTH_PORT
           value: ${HONO_SERVICE_AUTH_SERVICE_PORT_AMQPS}
         - name: HONO_AUTH_NAME
-          value: hono-service-messaging
+          value: Hono Messaging
         - name: HONO_AUTH_CERT_PATH
           value: /etc/hono/certs/auth-server-cert.pem
         - name: HONO_AUTH_TRUST_STORE_PATH
@@ -41,19 +41,19 @@ spec:
         - name: HONO_DOWNSTREAM_PORT
           value: ${HONO_DISPATCH_ROUTER_SERVICE_PORT_DOWNSTREAM}
         - name: HONO_DOWNSTREAM_NAME
-          value: hono-service-messaging
+          value: Hono Messaging
         - name: HONO_DOWNSTREAM_KEY_PATH
-          value: /etc/hono/certs/hono-key.pem
+          value: /etc/hono/certs/hono-messaging-key.pem
         - name: HONO_DOWNSTREAM_CERT_PATH
-          value: /etc/hono/certs/hono-cert.pem
+          value: /etc/hono/certs/hono-messaging-cert.pem
         - name: HONO_DOWNSTREAM_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
         - name: HONO_DOWNSTREAM_HOSTNAME_VERIFICATION_REQUIRED
           value: "false"
         - name: HONO_MESSAGING_KEY_PATH
-          value: /etc/hono/certs/hono-key.pem
+          value: /etc/hono/certs/hono-messaging-key.pem
         - name: HONO_MESSAGING_CERT_PATH
-          value: /etc/hono/certs/hono-cert.pem
+          value: /etc/hono/certs/hono-messaging-cert.pem
         - name: HONO_MESSAGING_MAX_INSTANCES
           value: "1"
         - name: HONO_MESSAGING_BIND_ADDRESS

@@ -10,6 +10,7 @@
 
   <artifactId>hono-artemis</artifactId>
   <packaging>pom</packaging>
+  <description>Module for building a Docker image for ActiveMQ Artemis using the Hono default configuration.</description>
 
   <dependencies>
     <dependency>
@@ -61,10 +62,6 @@
           <name>docker.host</name>
         </property>
       </activation>
-      <properties>
-        <!-- do not use artifactId as repository name -->
-        <image.target>activemq-artemis</image.target>
-      </properties>
       <build>
         <plugins>
           <plugin>
@@ -115,5 +112,4 @@
       </build>
     </profile>
   </profiles>
-  <description>Module for building a Docker image for ActiveMQ Artemis using the Hono default configuration.</description>
 </project>

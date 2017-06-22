@@ -14,7 +14,7 @@ spec:
         name: ${project.artifactId}
     spec:
       containers:
-      - image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
+      - image: eclipsehono/${project.artifactId}:${project.version}
         name: ${project.artifactId}
         ports:
         - containerPort: 1883
@@ -27,9 +27,9 @@ spec:
         - name: HONO_CLIENT_NAME
           value: Hono MQTT Adapter
         - name: HONO_CLIENT_HOST
-          value: ${HONO_APP_SERVICE_HOST}
+          value: ${HONO_SERVICE_MESSAGING_SERVICE_HOST}
         - name: HONO_CLIENT_PORT
-          value: ${HONO_APP_SERVICE_PORT}
+          value: ${HONO_SERVICE_MESSAGING_SERVICE_PORT}
         - name: HONO_CLIENT_USERNAME
           value: mqtt-adapter@HONO
         - name: HONO_CLIENT_PASSWORD

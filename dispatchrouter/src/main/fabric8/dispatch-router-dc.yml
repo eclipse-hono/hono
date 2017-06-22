@@ -15,7 +15,7 @@ spec:
         name: ${project.artifactId}
     spec:
       containers:
-      - image: eclipsehono/dispatch-router:${project.version}
+      - image: eclipsehono/${project.artifactId}:${project.version}
         name: ${project.artifactId}
         ports:
         - containerPort: 5671
@@ -29,7 +29,7 @@ spec:
           protocol: TCP
         env:
         - name: PN_TRACE_FRM
-          value: "1"
+          value: "0"
         args:
           - /usr/sbin/qdrouterd
           - -c

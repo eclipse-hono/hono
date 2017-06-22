@@ -11,11 +11,6 @@
   <name>Hono Messaging</name>
   <description>The Messaging service implements Hono's Telemetry and Event APIs.</description>
 
-  <properties>
-    <!-- name of Docker image -->
-    <image.target>hono-server</image.target>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -191,7 +186,7 @@
                             <directory>${project.build.directory}/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
-                              <include>hono-*.pem</include>
+                              <include>hono-messaging-*.pem</include>
                               <include>auth-server-cert.pem</include>
                               <include>trusted-certs.pem</include>
                             </includes>
