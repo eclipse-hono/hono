@@ -37,7 +37,7 @@ public class MetricConstants {
 
     public static String metricNameProcessedMessages(final String address) {
         // prefix "meter" is used by spring boot actuator together with dropwizard metrics
-        return "meter.hono.server.messages." + address + ".processed";
+        return "meter." + PREFIX + ".messages." + address + ".processed";
     }
 
     public static String metricNameDiscardedMessages(final String address) {
