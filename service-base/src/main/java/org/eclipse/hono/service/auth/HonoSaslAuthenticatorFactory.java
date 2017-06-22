@@ -86,7 +86,7 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      */
     public static final class EventBusAuthenticationService implements AuthenticationService {
 
-        private static final int AUTH_REQUEST_TIMEOUT_MILLIS = 1000;
+        private static final int AUTH_REQUEST_TIMEOUT_MILLIS = 3000;
 
         private final Logger log = LoggerFactory.getLogger(EventBusAuthenticationService.class);
         private final Vertx vertx;
