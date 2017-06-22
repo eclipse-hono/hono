@@ -34,6 +34,14 @@ spec:
           - /usr/sbin/qdrouterd
           - -c
           - /etc/hono/qdrouter/qdrouterd-with-broker.json
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          tcpSocket:
+            port: amqp
         livenessProbe:
+          periodSeconds: 9
+          timeoutSeconds: 1
           tcpSocket:
             port: amqp

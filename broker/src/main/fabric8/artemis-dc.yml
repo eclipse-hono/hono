@@ -20,6 +20,14 @@ spec:
         - containerPort: 5672
           name: amqp
           protocol: TCP
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          tcpSocket:
+            port: amqp
         livenessProbe:
+          periodSeconds: 9
+          timeoutSeconds: 1
           tcpSocket:
             port: amqp

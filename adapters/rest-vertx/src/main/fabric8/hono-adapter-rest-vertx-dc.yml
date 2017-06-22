@@ -62,8 +62,17 @@ spec:
           value: "1"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
-        livenessProbe:
+        readinessProbe:
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 1
           httpGet:
             path: "/status"
-            port: 8080
-          initialDelaySeconds: 20
+            port: http
+        livenessProbe:
+          initialDelaySeconds: 25
+          periodSeconds: 9
+          timeoutSeconds: 1
+          httpGet:
+            path: "/status"
+            port: http

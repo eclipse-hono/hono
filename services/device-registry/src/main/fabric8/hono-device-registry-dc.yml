@@ -55,9 +55,18 @@ spec:
         volumeMounts:
         - name: ${project.artifactId}-volume
           mountPath: /home/hono/device-registry
-        livenessProbe:
+        readinessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 1
           tcpSocket:
-            port: 5672
+            port: amqp
+        livenessProbe:
+          initialDelaySeconds: 25
+          periodSeconds: 9
+          timeoutSeconds: 1
+          tcpSocket:
+            port: amqp
       volumes:
       - name: ${project.artifactId}-volume
         persistentVolumeClaim:

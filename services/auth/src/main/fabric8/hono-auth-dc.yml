@@ -40,8 +40,17 @@ spec:
           value: classpath:logback-spring.xml
         - name: SPRING_PROFILES_ACTIVE
           value: authentication-impl,dev
-        livenessProbe:
+        readinessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 1
           tcpSocket:
-            port: 5672
+            port: amqp
+        livenessProbe:
+          initialDelaySeconds: 25
+          periodSeconds: 9
+          timeoutSeconds: 1
+          tcpSocket:
+            port: amqp
 
 
