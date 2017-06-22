@@ -28,13 +28,13 @@
           </elementProp>
           <elementProp name="honoTestRuntime" elementType="Argument">
             <stringProp name="Argument.name">honoTestRuntime</stringProp>
-            <stringProp name="Argument.value">10</stringProp>
+            <stringProp name="Argument.value">1</stringProp>
             <stringProp name="Argument.desc">Seconds</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="honoTestRuntimeReceiverLag" elementType="Argument">
             <stringProp name="Argument.name">honoTestRuntimeReceiverLag</stringProp>
-            <stringProp name="Argument.value">2</stringProp>
+            <stringProp name="Argument.value">1</stringProp>
             <stringProp name="Argument.desc">Seconds in addition for receiver</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
@@ -61,13 +61,12 @@
         </RunTime>
         <hashTree>
           <org.eclipse.hono.jmeter.HonoReceiverSampler guiclass="org.eclipse.hono.jmeter.ui.HonoReceiverSamplerUI" testclass="org.eclipse.hono.jmeter.HonoReceiverSampler" testname="Hono Receiver" enabled="true">
-            <stringProp name="host">127.0.0.1</stringProp>
-            <stringProp name="port">15671</stringProp>
-            <stringProp name="user">user1@HONO</stringProp>
-            <stringProp name="pwd">pw</stringProp>
+            <stringProp name="host">${__property(downstream.host)}</stringProp>
+            <stringProp name="port">${__property(downstream.amqp.port)}</stringProp>
+            <stringProp name="user">${__property(downstream.username)}</stringProp>
+            <stringProp name="pwd">${__property(downstream.password)}</stringProp>
             <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
             <stringProp name="container">receiver</stringProp>
-            <stringProp name="trustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
             <stringProp name="tenant">DEFAULT_TENANT</stringProp>
             <boolProp name="useSenderTime">true</boolProp>
             <stringProp name="endpoint">telemetry</stringProp>
@@ -100,27 +99,25 @@
         </RunTime>
         <hashTree>
           <org.eclipse.hono.jmeter.HonoSenderSampler guiclass="org.eclipse.hono.jmeter.ui.HonoSenderSamplerUI" testclass="org.eclipse.hono.jmeter.HonoSenderSampler" testname="Hono Sender" enabled="true">
-            <stringProp name="host">127.0.0.1</stringProp>
-            <stringProp name="port">5671</stringProp>
-            <stringProp name="user">rest-adapter@HONO</stringProp>
-            <stringProp name="pwd">rest-secret</stringProp>
+            <stringProp name="host">${__property(hono.host)}</stringProp>
+            <stringProp name="port">${__property(hono.amqp.port)}</stringProp>
+            <stringProp name="user">${__property(hono.username)}</stringProp>
+            <stringProp name="pwd">${__property(hono.password)}</stringProp>
             <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
             <stringProp name="container">sender</stringProp>
-            <stringProp name="trustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
             <stringProp name="deviceId">device_${__threadNum}</stringProp>
             <stringProp name="tenant">DEFAULT_TENANT</stringProp>
             <boolProp name="setSenderTime">true</boolProp>
             <stringProp name="contentType">text/plain</stringProp>
-            <stringProp name="data">something</stringProp>
+            <stringProp name="data">DEFAULT_TENANT/device_${__threadNum}/${__UUID()},</stringProp>
             <stringProp name="waitForReceivers">${honoSolutionConsumers}</stringProp>
             <stringProp name="waitForReceiversTimeout">5000</stringProp>
             <boolProp name="waitForCredits">true</boolProp>
             <stringProp name="endpoint">telemetry</stringProp>
-            <stringProp name="registryHost">127.0.0.1</stringProp>
-            <stringProp name="registryPort">26671</stringProp>
-            <stringProp name="registryUser">rest-adapter@HONO</stringProp>
-            <stringProp name="registryPwd">rest-secret</stringProp>
-            <stringProp name="registryTrustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
+            <stringProp name="registryHost">${__property(deviceregistry.host)}</stringProp>
+            <stringProp name="registryPort">${__property(deviceregistry.amqp.port)}</stringProp>
+            <stringProp name="registryUser">hono-client</stringProp>
+            <stringProp name="registryPwd">secret</stringProp>
           </org.eclipse.hono.jmeter.HonoSenderSampler>
           <hashTree/>
           <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Constant Timer" enabled="false">
@@ -135,35 +132,32 @@
         <objProp>
           <name>saveConfig</name>
           <value class="SampleSaveConfiguration">
-            <time>true</time>
-            <latency>true</latency>
-            <timestamp>true</timestamp>
+            <time>false</time>
+            <latency>false</latency>
+            <timestamp>false</timestamp>
             <success>true</success>
             <label>true</label>
-            <code>true</code>
+            <code>false</code>
             <message>true</message>
-            <threadName>true</threadName>
-            <dataType>true</dataType>
+            <threadName>false</threadName>
+            <dataType>false</dataType>
             <encoding>false</encoding>
-            <assertions>true</assertions>
-            <subresults>true</subresults>
-            <responseData>false</responseData>
-            <samplerData>false</samplerData>
-            <xml>false</xml>
-            <fieldNames>true</fieldNames>
+            <assertions>false</assertions>
+            <subresults>false</subresults>
+            <responseData>true</responseData>
+            <samplerData>true</samplerData>
+            <xml>true</xml>
+            <fieldNames>false</fieldNames>
             <responseHeaders>false</responseHeaders>
             <requestHeaders>false</requestHeaders>
             <responseDataOnError>false</responseDataOnError>
-            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
             <assertionsResultsToSave>0</assertionsResultsToSave>
             <bytes>true</bytes>
             <sentBytes>true</sentBytes>
-            <threadCounts>true</threadCounts>
-            <idleTime>true</idleTime>
-            <connectTime>true</connectTime>
           </value>
         </objProp>
-        <stringProp name="filename"></stringProp>
+        <stringProp name="filename">../results/summary.xml</stringProp>
       </ResultCollector>
       <hashTree/>
     </hashTree>

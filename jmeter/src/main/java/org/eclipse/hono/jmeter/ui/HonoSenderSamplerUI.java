@@ -73,13 +73,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         sampler.setData(data.getText());
         // registry server
         sampler.setRegistryHost(registryServerOptions.getHost().getText());
-        int portI = 0;
-        try {
-            portI = Integer.parseInt(registryServerOptions.getPort().getText());
-        } catch (NumberFormatException e) {
-            registryServerOptions.getPort().setText("0");
-        }
-        sampler.setRegistryPort(portI);
+        sampler.setRegistryPort(registryServerOptions.getPort().getText());
         sampler.setRegistryUser(registryServerOptions.getUser().getText());
         sampler.setRegistryPwd(registryServerOptions.getPwd().getText());
         sampler.setRegistryTrustStorePath(registryServerOptions.getTrustStorePath().getText());
@@ -98,7 +92,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         data.setText(sampler.getData());
         // registry server
         registryServerOptions.getHost().setText(sampler.getRegistryHost());
-        registryServerOptions.getPort().setText(sampler.getRegistryPort() + "");
+        registryServerOptions.getPort().setText(sampler.getRegistryPort());
         registryServerOptions.getUser().setText(sampler.getRegistryUser());
         registryServerOptions.getPwd().setText(sampler.getRegistryPwd());
         registryServerOptions.getTrustStorePath().setText(sampler.getRegistryTrustStorePath());
