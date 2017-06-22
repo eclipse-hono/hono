@@ -27,31 +27,27 @@ spec:
         - name: HONO_CLIENT_NAME
           value: Hono MQTT Adapter
         - name: HONO_CLIENT_HOST
-          value: ${HONO_SERVICE_MESSAGING_SERVICE_HOST}
+          value: hono-service-messaging
         - name: HONO_CLIENT_PORT
-          value: ${HONO_SERVICE_MESSAGING_SERVICE_PORT}
+          value: "5671"
         - name: HONO_CLIENT_USERNAME
           value: mqtt-adapter@HONO
         - name: HONO_CLIENT_PASSWORD
           value: mqtt-secret
         - name: HONO_CLIENT_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_CLIENT_HOSTNAME_VERIFICATION_REQUIRED
-          value: "false"
         - name: HONO_REGISTRATION_NAME
           value: Hono MQTT Adapter
         - name: HONO_REGISTRATION_HOST
-          value: ${HONO_SERVICE_DEVICE_REGISTRY_SERVICE_HOST}
+          value: hono-service-device-registry
         - name: HONO_REGISTRATION_PORT
-          value: ${HONO_SERVICE_DEVICE_REGISTRY_SERVICE_PORT_AMQPS}
+          value: "26671"
         - name: HONO_REGISTRATION_USERNAME
           value: mqtt-adapter@HONO
         - name: HONO_REGISTRATION_PASSWORD
           value: mqtt-secret
         - name: HONO_REGISTRATION_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_REGISTRATION_HOSTNAME_VERIFICATION_REQUIRED
-          value: "false"
         - name: HONO_MQTT_BIND_ADDRESS
           value: 0.0.0.0
         - name: HONO_MQTT_INSECURE_PORT_BIND_ADDRESS
