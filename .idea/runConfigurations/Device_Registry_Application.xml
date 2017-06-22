@@ -39,7 +39,7 @@
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.auth.name" />
-        <option name="value" value="hono-server" />
+        <option name="value" value="device-registry" />
       </param>
       <param>
         <option name="enabled" value="true" />
