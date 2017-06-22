@@ -101,6 +101,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         registryServerOptions.getPort().setText(sampler.getRegistryPort() + "");
         registryServerOptions.getUser().setText(sampler.getRegistryUser());
         registryServerOptions.getPwd().setText(sampler.getRegistryPwd());
+        registryServerOptions.getTrustStorePath().setText(sampler.getRegistryTrustStorePath());
     }
 
     @Override
