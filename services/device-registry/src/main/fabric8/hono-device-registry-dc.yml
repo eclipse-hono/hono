@@ -25,17 +25,15 @@ spec:
           protocol: TCP
         env:
         - name: HONO_AUTH_HOST
-          value: ${HONO_SERVICE_AUTH_SERVICE_HOST}
+          value: hono-service-auth
         - name: HONO_AUTH_PORT
-          value: ${HONO_SERVICE_AUTH_SERVICE_PORT_AMQPS}
+          value: "25671"
         - name: HONO_AUTH_NAME
           value: Hono Device Registry
         - name: HONO_AUTH_VALIDATION_CERT_PATH
           value: /etc/hono/certs/auth-server-cert.pem
         - name: HONO_AUTH_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_AUTH_HOSTNAME_VERIFICATION_REQUIRED
-          value: "false"
         - name: HONO_DEVICE_REGISTRY_KEY_PATH
           value: /etc/hono/certs/device-registry-key.pem
         - name: HONO_DEVICE_REGISTRY_CERT_PATH

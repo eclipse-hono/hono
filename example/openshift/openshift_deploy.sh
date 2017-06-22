@@ -33,6 +33,11 @@ oc create -f ../../services/device-registry/target/fabric8/hono-device-registry-
 oc create -f ../../services/device-registry/target/fabric8/hono-device-registry-route.yml
 echo ... done
 
+echo Deploying Apache ActiveMQ Artemis Broker ...
+oc create -f ../../broker/target/fabric8/artemis-svc.yml
+oc create -f ../../broker/target/fabric8/artemis-dc.yml
+echo ... done
+
 echo Deploying Qpid Dispatch Router ...
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-svc.yml
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-external-svc.yml
@@ -40,10 +45,6 @@ oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-dc.yml
 oc create -f ../../dispatchrouter/target/fabric8/dispatch-router-route.yml
 echo ... done
 
-echo Deploying Apache ActiveMQ Artemis Broker ...
-oc create -f ../../broker/target/fabric8/artemis-svc.yml
-oc create -f ../../broker/target/fabric8/artemis-dc.yml
-echo ... done
 
 echo Deploying Hono Messaging ...
 oc create -f ../../services/messaging/target/fabric8/hono-messaging-svc.yml
