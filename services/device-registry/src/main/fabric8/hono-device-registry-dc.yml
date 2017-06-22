@@ -25,9 +25,9 @@ spec:
           protocol: TCP
         env:
         - name: HONO_AUTH_HOST
-          value: hono-service-auth
+          value: hono-service-auth.hono
         - name: HONO_AUTH_PORT
-          value: "25671"
+          value: "5671"
         - name: HONO_AUTH_NAME
           value: Hono Device Registry
         - name: HONO_AUTH_VALIDATION_CERT_PATH

@@ -27,7 +27,7 @@ spec:
         - name: HONO_CLIENT_NAME
           value: Hono MQTT Adapter
         - name: HONO_CLIENT_HOST
-          value: hono-service-messaging
+          value: hono-service-messaging.hono
         - name: HONO_CLIENT_PORT
           value: "5671"
         - name: HONO_CLIENT_USERNAME
@@ -39,9 +39,9 @@ spec:
         - name: HONO_REGISTRATION_NAME
           value: Hono MQTT Adapter
         - name: HONO_REGISTRATION_HOST
-          value: hono-service-device-registry
+          value: hono-service-device-registry.hono
         - name: HONO_REGISTRATION_PORT
-          value: "26671"
+          value: "5671"
         - name: HONO_REGISTRATION_USERNAME
           value: mqtt-adapter@HONO
         - name: HONO_REGISTRATION_PASSWORD

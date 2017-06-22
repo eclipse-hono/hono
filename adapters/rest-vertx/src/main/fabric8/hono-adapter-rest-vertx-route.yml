@@ -10,6 +10,6 @@ spec:
     kind: Service
     name: ${project.artifactId}
   port:
-    targetPort: 8443
+    targetPort: https
   tls:
     termination: passthrough

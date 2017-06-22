@@ -25,9 +25,9 @@ spec:
           protocol: TCP
         env:
         - name: HONO_AUTH_HOST
-          value: hono-service-auth
+          value: hono-service-auth.hono
         - name: HONO_AUTH_PORT
-          value: "25671"
+          value: "5671"
         - name: HONO_AUTH_NAME
           value: Hono Messaging
         - name: HONO_AUTH_CERT_PATH
@@ -35,9 +35,9 @@ spec:
         - name: HONO_AUTH_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
         - name: HONO_DOWNSTREAM_HOST
-          value: ${HONO_DISPATCH_ROUTER_SERVICE_HOST}
+          value: hono-dispatch-router.hono
         - name: HONO_DOWNSTREAM_PORT
-          value: ${HONO_DISPATCH_ROUTER_SERVICE_PORT_DOWNSTREAM}
+          value: "5673"
         - name: HONO_DOWNSTREAM_NAME
           value: Hono Messaging
         - name: HONO_DOWNSTREAM_KEY_PATH
@@ -46,8 +46,6 @@ spec:
           value: /etc/hono/certs/hono-messaging-cert.pem
         - name: HONO_DOWNSTREAM_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_DOWNSTREAM_HOSTNAME_VERIFICATION_REQUIRED
-          value: "false"
         - name: HONO_MESSAGING_KEY_PATH
           value: /etc/hono/certs/hono-messaging-key.pem
         - name: HONO_MESSAGING_CERT_PATH
