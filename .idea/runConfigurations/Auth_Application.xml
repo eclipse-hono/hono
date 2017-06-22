@@ -8,7 +8,6 @@
     </extension>
     <option name="SPRING_BOOT_MAIN_CLASS" value="org.eclipse.hono.service.auth.impl.Application" />
     <option name="ACTIVE_PROFILES" value="authentication-impl,dev" />
-    <option name="VM_PARAMETERS" value="-Dvertx.disableDnsResolver=true -Dnetworkaddress.cache.ttl=0 -Dnetworkaddress.cache.negative.ttl=0" />
     <option name="WORKING_DIRECTORY" value="file://$MODULE_DIR$" />
     <option name="ALTERNATIVE_JRE_PATH" />
     <additionalParameters>
@@ -25,12 +24,12 @@
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.auth.keyPath" />
-        <option name="value" value="../demo-certs/certs/auth-server-key.pem" />
+        <option name="value" value="../../demo-certs/certs/auth-server-key.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.auth.certPath" />
-        <option name="value" value="../demo-certs/certs/auth-server-cert.pem" />
+        <option name="value" value="../../demo-certs/certs/auth-server-cert.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
@@ -43,7 +42,7 @@
         <option name="value" value="classpath:logback-spring.xml" />
       </param>
     </additionalParameters>
-    <module name="hono-auth" />
+    <module name="hono-service-auth" />
     <envs />
     <method />
   </configuration>

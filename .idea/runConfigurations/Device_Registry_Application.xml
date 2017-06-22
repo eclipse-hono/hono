@@ -1,12 +1,12 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Hono Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+  <configuration default="false" name="Device Registry Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" singleton="false">
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea">
       <pattern>
         <option name="PATTERN" value="org.eclipse.hono.application.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>
-    <option name="SPRING_BOOT_MAIN_CLASS" value="org.eclipse.hono.messaging.HonoMessagingApplication" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="org.eclipse.hono.deviceregistry.Application" />
     <option name="ACTIVE_PROFILES" value="default,dev" />
     <option name="WORKING_DIRECTORY" value="file://$MODULE_DIR$" />
     <option name="ALTERNATIVE_JRE_PATH" />
@@ -43,63 +43,33 @@
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.downstream.host" />
-        <option name="value" value="192.168.99.100" />
+        <option name="name" value="hono.device.registry.port" />
+        <option name="value" value="26671" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.downstream.port" />
-        <option name="value" value="15673" />
+        <option name="name" value="hono.device.registry.keyPath" />
+        <option name="value" value="../../demo-certs/certs/device-registry-key.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.downstream.keyPath" />
-        <option name="value" value="../../demo-certs/certs/hono-key.pem" />
+        <option name="name" value="hono.device.registry.certPath" />
+        <option name="value" value="../../demo-certs/certs/device-registry-cert.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.downstream.certPath" />
-        <option name="value" value="../../demo-certs/certs/hono-cert.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.downstream.trustStorePath" />
-        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.messaging.keyPath" />
-        <option name="value" value="../../demo-certs/certs/hono-key.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.messaging.certPath" />
-        <option name="value" value="../../demo-certs/certs/hono-cert.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.downstream.hostnameVerificationRequired" />
-        <option name="value" value="false" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.messaging.bindAddress" />
+        <option name="name" value="hono.device.registry.bindAddress" />
         <option name="value" value="0.0.0.0" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.messaging.maxInstances" />
+        <option name="name" value="hono.device.registry.maxInstances" />
         <option name="value" value="1" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.messaging.validation.sharedSecret" />
+        <option name="name" value="hono.device.registry.signing.sharedSecret" />
         <option name="value" value="DeviceRegistrySharedSecret_HasToBe32CharsOrLonger" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.metric.reporter.graphite.active" />
-        <option name="value" value="false" />
       </param>
       <param>
         <option name="enabled" value="true" />
@@ -107,7 +77,7 @@
         <option name="value" value="classpath:logback-spring.xml" />
       </param>
     </additionalParameters>
-    <module name="hono-service-messaging" />
+    <module name="hono-service-device-registry" />
     <envs />
     <method />
   </configuration>

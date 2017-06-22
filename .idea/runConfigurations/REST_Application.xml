@@ -8,7 +8,6 @@
     </extension>
     <option name="SPRING_BOOT_MAIN_CLASS" value="org.eclipse.hono.adapter.rest.Application" />
     <option name="ACTIVE_PROFILES" value="dev" />
-    <option name="VM_PARAMETERS" value="-Dvertx.disableDnsResolver=true -Dnetworkaddress.cache.ttl=0 -Dnetworkaddress.cache.negative.ttl=0" />
     <option name="WORKING_DIRECTORY" value="file://$MODULE_DIR$" />
     <option name="ALTERNATIVE_JRE_PATH" />
     <additionalParameters>
@@ -47,6 +46,44 @@
         <option name="name" value="hono.client.hostnameVerificationRequired" />
         <option name="value" value="false" />
       </param>
+
+
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.name" />
+        <option name="value" value="Hono REST Adapter" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.host" />
+        <option name="value" value="localhost" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.port" />
+        <option name="value" value="26671" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.username" />
+        <option name="value" value="rest-adapter@HONO" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.password" />
+        <option name="value" value="rest-secret" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.trustStorePath" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.hostnameVerificationRequired" />
+        <option name="value" value="false" />
+      </param>
+
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.http.bindAddress" />
