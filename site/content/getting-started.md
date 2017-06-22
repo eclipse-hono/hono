@@ -48,17 +48,17 @@ This will create and start up Docker Swarm *services* for all components that to
 {{< figure src="../Hono_instance.svg" title="Hono instance containers">}}
 
 * Hono Instance
-  * A *Hono Server* instance that protocol adapters connect to in order to forward data from devices.
-  * A *REST Adapter* instance that exposes Hono's Telemetry API as RESTful resources.
-  * An *MQTT Adapter* instance that exposes Hono's Telemetry API as an MQTT topic hierarchy.
+  * A *Hono Messaging* instance that protocol adapters connect to in order to forward data from devices.
+  * A *REST Adapter* instance that exposes Hono's Telemetry and Event APIs as RESTful resources.
+  * An *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
   * A *Device Registry* instance that manages device data and is used for token assertion.
   * An *Auth Server* instance that authenticates Hono components and delivers authorization tokens.  
 * AMQP Network
-  * A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data.
-  * An *Artemis* instance that is the default persistence store for events.
+  * A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data and events from devices.
+  * An *Artemis* instance serving as the persistence store for events.
 * Monitoring Infrastructure
   * An *InfluxDB* instance to store metrics data from the Hono Server.
-  * A *Grafana* instance to show a default dashboard with the Hono Server metrics.
+  * A *Grafana* instance providing a dashboard visualizing metrics collected from Hono components.
  
 ## Starting a Consumer
 
@@ -219,8 +219,8 @@ In order to start up the instance again:
 
 ## View metrics
 
-Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in a browser. Login is `admin/admin`.
+Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in a browser using `admin/admin` as login credentials.
 
 {{% warning %}}
-If you do not run Docker on localhost, replace *localhost* in the link with the correct name or IP address of the host that Docker is running on.
+If you do not run Docker on localhost, replace *localhost* in the link with the correct name or IP address of the Docker host that the Grafana container is running on.
 {{% /warning %}}

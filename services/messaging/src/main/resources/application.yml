@@ -1,0 +1,6 @@
+hono:
+  downstream:
+    name: hono-service-messaging
+spring:
+  profiles:
+    active: default

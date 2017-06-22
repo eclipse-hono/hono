@@ -3,9 +3,11 @@ title = "Dispatch Router"
 weight = 310
 +++
 
-The Dispatch Router component exposes the *north bound* part of Eclipse Hono&trade;'s Telemetry, Event and Registration endpoints.
-The north bound API is used by applications to consume telemetry data and events and register device identities.
+The Dispatch Router component exposes service endpoints implementing the *north bound* part of Eclipse Hono&trade;'s [Telemetry]({{< relref "api/Telemetry-API.md" >}}) and [Event]({{< relref "api/Event-API.md" >}}) APIs.
+The north bound API is used by applications to consume telemetry data and events from connected devices.
 <!--more-->
+
+The Dispatch Router, together with the *Apache Artemis* message broker serves as the default *AMQP 1.0 Messaging Network* that is used in Hono's example deployment as described in the [Getting Started Guide]({{< relref "getting-started.md" >}}).
 
 ## Configuration
 

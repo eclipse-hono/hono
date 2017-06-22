@@ -1,6 +1,0 @@
-hono:
-  downstream:
-    name: hono-server
-spring:
-  profiles:
-    active: default

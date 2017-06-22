@@ -1,0 +1,29 @@
+hono:
+  auth:
+    host: auth-server.hono
+    port: 5672
+    name: hono-service-messaging
+    validation:
+      certPath: /etc/hono/certs/auth-server-cert.pem
+  downstream:
+    name: hono-service-messaging
+  messaging:
+    insecurePortEnabled: true
+    insecurePortBindAddress: 0.0.0.0
+    maxInstances: 1
+    waitForDownstreamConnectionEnabled: true
+    validation:
+      sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
+    startupTimeout: 65
+
+---
+
+spring:
+  profiles: qpid
+hono:
+  downstream:
+    host: qdrouter.hono
+    port: 5673
+    keyPath: /etc/hono/certs/hono-key.pem
+    certPath: /etc/hono/certs/hono-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
