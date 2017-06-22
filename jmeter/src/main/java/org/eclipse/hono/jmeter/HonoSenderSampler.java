@@ -34,6 +34,12 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     private HonoSender honoSender;
 
+    private static final String REGISTRY_HOST              = "registryHost";
+    private static final String REGISTRY_USER              = "registryUser";
+    private static final String REGISTRY_PWD               = "registryPwd";
+    private static final String REGISTRY_PORT              = "registryPort";
+    private static final String REGISTRY_TRUSTSTORE_PATH   = "registryTrustStorePath";
+
     private static final String DEVICE_ID                  = "deviceId";
     private static final String SET_SENDER_TIME            = "setSenderTime";
     private static final String CONTENT_TYPE               = "contentType";
@@ -41,6 +47,46 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     private static final String WAIT_FOR_CREDITS           = "waitForCredits";
     private static final String WAIT_FOR_RECEIVERS         = "waitForReceivers";
     private static final String WAIT_FOR_RECEIVERS_TIMEOUT = "waitForReceiversTimeout";
+
+    public String getRegistryTrustStorePath() {
+        return getPropertyAsString(REGISTRY_TRUSTSTORE_PATH);
+    }
+
+    public void setRegistryTrustStorePath(final String trustStorePath) {
+        setProperty(REGISTRY_TRUSTSTORE_PATH, trustStorePath);
+    }
+
+    public String getRegistryHost() {
+        return getPropertyAsString(REGISTRY_HOST);
+    }
+
+    public void setRegistryHost(final String host) {
+        setProperty(REGISTRY_HOST, host);
+    }
+
+    public String getRegistryUser() {
+        return getPropertyAsString(REGISTRY_USER);
+    }
+
+    public void setRegistryUser(final String user) {
+        setProperty(REGISTRY_USER, user);
+    }
+
+    public String getRegistryPwd() {
+        return getPropertyAsString(REGISTRY_PWD);
+    }
+
+    public void setRegistryPwd(final String pwd) {
+        setProperty(REGISTRY_PWD, pwd);
+    }
+
+    public int getRegistryPort() {
+        return getPropertyAsInt(REGISTRY_PORT);
+    }
+
+    public void setRegistryPort(final int port) {
+        setProperty(REGISTRY_PORT, port);
+    }
 
     public String getWaitForReceivers() {
         return getPropertyAsString(WAIT_FOR_RECEIVERS);
