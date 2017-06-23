@@ -190,6 +190,47 @@ public class HonoClientImplTest {
     }
 
     /**
+     * Verifies that all sender creation locks are cleared when the connection to the server fails.
+     * 
+     * @param ctx The Vertx test context.
+     */
+    @Test
+    public void testDownstreamDisconnectClearsSenderCreationLocks(final TestContext ctx) {
+
+        final ProtonConnection connectionToCreate = mock(ProtonConnection.class);
+        when(connectionToCreate.getRemoteContainer()).thenReturn("server");
+        // expect the connection factory to be invoked twice
+        // first on initial connection
+        // second on reconnect
+        DisconnectHandlerProvidingConnectionFactory connectionFactory = new DisconnectHandlerProvidingConnectionFactory(connectionToCreate, 2);
+
+        // GIVEN a client connected to a server
+        final Async connected = ctx.async();
+        HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+        client.connect(new ProtonClientOptions().setReconnectAttempts(1), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        connected.await(200);
+
+        final Async senderCreationFailure = ctx.async();
+        // WHEN the downstream connection fails just when the client wants to open a sender link
+        client.getOrCreateSender("telemetry/tenant", creationAttemptHandler -> {
+            connectionFactory.getDisconnectHandler().handle(connectionToCreate);
+            // the creationAttempHandler will not be invoked at all
+        }, ctx.asyncAssertFailure(cause -> senderCreationFailure.complete()));
+
+        // THEN the sender creation fails,
+        senderCreationFailure.await(1000);
+        // the connection is re-established
+        connectionFactory.await(1, TimeUnit.SECONDS);
+        // and the next attempt to create a sender succeeds
+        final Async senderSupplierInvocation = ctx.async();
+        client.getOrCreateSender("telemetry/tenant", creationAttemptHandler -> {
+            senderSupplierInvocation.complete();
+            creationAttemptHandler.handle(Future.succeededFuture(mock(MessageSender.class)));
+        }, ctx.asyncAssertSuccess());
+        senderSupplierInvocation.await(1000);
+    }
+
+    /**
      * Verifies that the client tries to re-establish a lost connection to a server.
      * 
      * @param ctx The Vertx test context.
