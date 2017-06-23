@@ -85,24 +85,19 @@
       "maxConnectionsPerUser": 20,
       "maxConnectionsPerHost": 10,
       "groups": {
+        "consumers": {
+          "users": "consumer@HONO",
+          "remoteHosts": "*",
+          "maxSessions": 100,
+          "maxMessageSize": 102400,
+          "sources": "telemetry/*, event/*"
+        },
         "DEFAULT_TENANT": {
           "users": "user1@HONO",
           "remoteHosts": "*",
           "maxSessions": 100,
           "maxMessageSize": 102400,
           "sources": "telemetry/DEFAULT_TENANT, event/DEFAULT_TENANT"
-        },
-        "anotherTenant": {
-          "users": "user2@HONO",
-          "remoteHosts": "*",
-          "maxSessions": 100,
-          "maxMessageSize": 102400,
-          "sources": "telemetry/anotherTenant"
-        },
-        "anonymous" : {
-          "users": "anonymous",
-          "sources": "telemetry.*",
-          "targets": "telemetry.*"
         }
       }
   }],

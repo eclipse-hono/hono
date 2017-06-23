@@ -67,7 +67,7 @@ In this example we will use a simple command line client that logs all telemetry
 You can start the client from the `example` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=user1@HONO,--hono.client.password=pw
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
 ~~~
 
 Event messages are very similar to telemetry ones, except that they use `AT LEAST ONCE` quality of service. You can receive and log event messages uploaded to Hono using the same client.
@@ -75,7 +75,7 @@ Event messages are very similar to telemetry ones, except that they use `AT LEAS
 In order to do so, run the client from the `example` folder as follows:
 
 ~~~sh
-mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=user1@HONO,--hono.client.password=pw -Drun.profiles=receiver,ssl,event
+mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Drun.profiles=receiver,ssl,event
 ~~~
 
 {{% warning %}}
