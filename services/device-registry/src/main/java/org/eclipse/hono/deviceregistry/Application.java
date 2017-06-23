@@ -36,7 +36,7 @@ import io.vertx.core.Future;
  * and <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
  * </p>
  */
-@ComponentScan(basePackages = {"org.eclipse.hono.service","org.eclipse.hono.deviceregistry"})
+@ComponentScan(basePackages = { "org.eclipse.hono.service", "org.eclipse.hono.deviceregistry" })
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication<SimpleDeviceRegistryServer, ServiceConfigProperties> {
@@ -83,7 +83,8 @@ public class Application extends AbstractApplication<SimpleDeviceRegistryServer,
     }
 
     @Override
-    protected Future<Void> postRegisterServiceVerticles() {
+    protected Future<Void> deployRequiredVerticles(int maxInstances) {
+
         Future<Void> result = Future.future();
         CompositeFuture.all(
                 deployAuthenticationService(), // we only need 1 authentication service

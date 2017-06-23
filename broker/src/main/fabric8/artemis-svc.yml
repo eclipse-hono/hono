@@ -3,7 +3,7 @@ kind: Service
 metadata:
   labels:
     app: hono
-  name: artemis
+  name: ${project.artifactId}
 spec:
   ports:
   - name: amqp

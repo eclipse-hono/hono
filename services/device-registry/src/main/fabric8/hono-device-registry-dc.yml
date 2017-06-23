@@ -14,7 +14,7 @@ spec:
         name: ${project.artifactId}
     spec:
       containers:
-      - image: eclipsehono/hono-service-device-registry:${project.version}
+      - image: eclipsehono/${project.artifactId}:${project.version}
         name: ${project.artifactId}
         ports:
         - containerPort: 5671
@@ -25,17 +25,15 @@ spec:
           protocol: TCP
         env:
         - name: HONO_AUTH_HOST
-          value: ${HONO_SERVICE_AUTH_SERVICE_HOST}
+          value: hono-service-auth.hono
         - name: HONO_AUTH_PORT
-          value: ${HONO_SERVICE_AUTH_SERVICE_PORT_AMQPS}
+          value: "5671"
         - name: HONO_AUTH_NAME
-          value: device-registry
+          value: Hono Device Registry
         - name: HONO_AUTH_VALIDATION_CERT_PATH
           value: /etc/hono/certs/auth-server-cert.pem
         - name: HONO_AUTH_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_AUTH_HOSTNAME_VERIFICATION_REQUIRED
-          value: "false"
         - name: HONO_DEVICE_REGISTRY_KEY_PATH
           value: /etc/hono/certs/device-registry-key.pem
         - name: HONO_DEVICE_REGISTRY_CERT_PATH
@@ -54,6 +52,22 @@ spec:
           value: classpath:logback-spring.xml
         - name: SPRING_PROFILES_ACTIVE
           value: default,dev
-        livenessProbe:
+        volumeMounts:
+        - name: ${project.artifactId}-volume
+          mountPath: /home/hono/device-registry
+        readinessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 1
           tcpSocket:
-            port: 5672
+            port: amqp
+        livenessProbe:
+          initialDelaySeconds: 25
+          periodSeconds: 9
+          timeoutSeconds: 1
+          tcpSocket:
+            port: amqp
+      volumes:
+      - name: ${project.artifactId}-volume
+        persistentVolumeClaim:
+          claimName: ${project.artifactId}-pv-claim

@@ -41,7 +41,6 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
-      <version>${revision}</version>
       <exclusions>
         <exclusion>
           <groupId>org.springframework.boot</groupId>

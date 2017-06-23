@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: ${project.artifactId}-pv
+  name: hono-pv
 spec:
   capacity:
     storage: 10Mi

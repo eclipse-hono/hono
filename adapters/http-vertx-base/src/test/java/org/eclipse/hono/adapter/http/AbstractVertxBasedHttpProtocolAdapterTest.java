@@ -69,7 +69,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(mock(Router.class), null);
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
-        adapter.setHonoClient(honoClient);
+        adapter.setHonoMessagingClient(honoClient);
 
         // WHEN starting the adapter
         Async startup = ctx.async();
@@ -114,7 +114,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
-        adapter.setHonoClient(honoClient);
+        adapter.setHonoMessagingClient(honoClient);
 
         // WHEN starting the adapter
         Async startup = ctx.async();
@@ -156,7 +156,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         adapter.setConfig(config);
         adapter.setHttpServer(server);
-        adapter.setHonoClient(honoClient);
+        adapter.setHonoMessagingClient(honoClient);
 
         // WHEN starting the adapter
         Async startupFailed = ctx.async();

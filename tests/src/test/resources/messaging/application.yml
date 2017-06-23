@@ -1,12 +1,12 @@
 hono:
   auth:
-    host: auth-server.hono
+    host: hono-service-auth.hono
     port: 5672
-    name: hono-service-messaging
+    name: Hono Messaging
     validation:
       certPath: /etc/hono/certs/auth-server-cert.pem
   downstream:
-    name: hono-service-messaging
+    name: Hono Messaging
   messaging:
     insecurePortEnabled: true
     insecurePortBindAddress: 0.0.0.0
@@ -22,8 +22,8 @@ spring:
   profiles: qpid
 hono:
   downstream:
-    host: qdrouter.hono
+    host: hono-dispatch-router.hono
     port: 5673
-    keyPath: /etc/hono/certs/hono-key.pem
-    certPath: /etc/hono/certs/hono-cert.pem
+    keyPath: /etc/hono/certs/hono-messaging-key.pem
+    certPath: /etc/hono/certs/hono-messaging-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem

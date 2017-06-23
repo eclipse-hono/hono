@@ -93,7 +93,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <images>
                 <!-- ##### Authentication service ##### -->
                 <image>
-                  <name>eclipsehono/hono-auth-test</name>
+                  <name>eclipsehono/hono-service-auth-test</name>
                   <build>
                     <from>eclipsehono/hono-service-auth:${project.version}</from>
                     <assembly>
@@ -117,7 +117,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>auth-server.hono</alias>
+                      <alias>hono-service-auth.hono</alias>
                     </network>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -132,7 +132,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### Device Registration service ##### -->
                 <image>
-                  <name>eclipsehono/hono-service-device-registry</name>
+                  <name>eclipsehono/hono-service-device-registry-test</name>
                   <build>
                     <from>eclipsehono/hono-service-device-registry:${project.version}</from>
                     <assembly>
@@ -159,7 +159,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>device-registry.hono</alias>
+                      <alias>hono-service-device-registry.hono</alias>
                     </network>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -174,7 +174,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
-                  <name>eclipsehono/activemq-artemis:${project.version}</name>
+                  <name>eclipsehono/hono-artemis:${project.version}</name>
                   <run>
                     <ports>
                       <port>+broker.ip:broker.amqp.port:5672</port>
@@ -182,7 +182,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>artemis.hono</alias>
+                      <alias>hono-artemis.hono</alias>
                     </network>
                     <log>
                       <prefix>ARTEMIS</prefix>
@@ -197,7 +197,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### Qpid Dispatch Router ##### -->
                 <image>
-                  <name>eclipsehono/dispatch-router:${project.version}</name>
+                  <name>eclipsehono/hono-dispatch-router:${project.version}</name>
                   <run>
                     <cmd>
                       <shell>/usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd-with-broker.json</shell>
@@ -208,7 +208,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>qdrouter.hono</alias>
+                      <alias>hono-dispatch-router.hono</alias>
                     </network>
                     <log>
                       <prefix>QPID</prefix>
@@ -225,7 +225,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <image>
                   <name>eclipsehono/hono-service-messaging-test</name>
                   <build>
-                    <from>eclipsehono/hono-server:${project.version}</from>
+                    <from>eclipsehono/hono-service-messaging:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
@@ -250,7 +250,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono.hono</alias>
+                      <alias>hono-service-messaging.hono</alias>
                     </network>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>

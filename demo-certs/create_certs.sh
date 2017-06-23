@@ -16,8 +16,8 @@
 
 CURVE=prime256v1
 DIR=certs
-HONO_KEY_STORE=honoKeyStore.p12
-HONO_KEY_STORE_PWD=honokeys
+HONO_MESSAGING_KEY_STORE=honoKeyStore.p12
+HONO_MESSAGING_KEY_STORE_PWD=honokeys
 HONO_TRUST_STORE=trustStore.jks
 HONO_TRUST_STORE_PWD=honotrust
 AUTH_SERVER_KEY_STORE=authServerKeyStore.p12
@@ -76,6 +76,9 @@ openssl genrsa -out $DIR/ca-key-orig.pem 4096
 to_pkcs8 $DIR/ca-key-orig.pem $DIR/ca-key.pem
 openssl req -config ca_opts -reqexts intermediate_ext -new -key $DIR/ca-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=ca" | \
  openssl x509 -req -extfile ca_opts -extensions intermediate_ext -out $DIR/ca-cert.pem -days 365 -CA $DIR/root-cert.pem -CAkey $DIR/root-key.pem -CAcreateserial
+
+echo ""
+echo "creating PEM trust store ($DIR/trusted-certs.pem) containing CA certificate"
 cat $DIR/ca-cert.pem $DIR/root-cert.pem > $DIR/trusted-certs.pem
 
 echo ""
@@ -83,7 +86,7 @@ echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificat
 keytool -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 
-create_cert hono $HONO_KEY_STORE $HONO_KEY_STORE_PWD
+create_cert hono-messaging $HONO_MESSAGING_KEY_STORE $HONO_MESSAGING_KEY_STORE_PWD
 create_cert qdrouter
 create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD
 create_cert device-registry $DEVREG_SERVER_KEY_STORE $DEVREG_SERVER_KEY_STORE_PWD

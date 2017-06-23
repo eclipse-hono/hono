@@ -1,6 +1,6 @@
 hono:
   auth:
-    host: auth-server.hono
+    host: hono-service-auth.hono
     port: 5672
     name: device-registry
     validation:

@@ -10,4 +10,4 @@ spec:
     kind: Service
     name: ${project.artifactId}
   port:
-    targetPort: 8080
+    targetPort: http

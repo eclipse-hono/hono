@@ -4,12 +4,19 @@ metadata:
   labels:
     app: hono
     name: ${project.artifactId}
-  name: ${project.artifactId}
+  name: ${project.artifactId}-ext
 spec:
+  type: NodePort
   ports:
   - name: amqps
     port: 5671
     protocol: TCP
     targetPort: amqps
+    nodePort: 30671
+  - name: amqp
+    port: 5672
+    protocol: TCP
+    targetPort: amqp
+    nodePort: 30672
   selector:
-    name: ${project.artifactId}
+    capability: router

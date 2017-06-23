@@ -6,14 +6,17 @@ metadata:
     name: ${project.artifactId}
   name: ${project.artifactId}
 spec:
+  type: NodePort
   ports:
   - name: http
     port: 8080
     protocol: TCP
-    targetPort: 8080
+    targetPort: http
+    nodePort: 30080
   - name: https
     port: 8443
     protocol: TCP
-    targetPort: 8443
+    targetPort: https
+    nodePort: 30443
   selector:
     name: ${project.artifactId}

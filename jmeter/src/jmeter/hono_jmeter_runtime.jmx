@@ -117,7 +117,7 @@
             <boolProp name="waitForCredits">true</boolProp>
             <stringProp name="endpoint">telemetry</stringProp>
             <stringProp name="registryHost">127.0.0.1</stringProp>
-            <intProp name="registryPort">25671</intProp>
+            <intProp name="registryPort">26671</intProp>
             <stringProp name="registryUser">rest-adapter@HONO</stringProp>
             <stringProp name="registryPwd">rest-secret</stringProp>
             <stringProp name="registryTrustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>

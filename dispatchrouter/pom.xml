@@ -85,10 +85,6 @@
           <name>docker.host</name>
         </property>
       </activation>
-      <properties>
-        <!-- do not use artifactId as repository name -->
-        <image.target>dispatch-router</image.target>
-      </properties>
       <build>
         <plugins>
           <plugin>

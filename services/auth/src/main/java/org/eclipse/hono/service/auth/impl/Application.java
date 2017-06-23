@@ -47,12 +47,15 @@ public class Application extends AbstractApplication<SimpleAuthenticationServer,
         this.authenticationService = Objects.requireNonNull(authService);
     }
 
+    /**
+     * Deploys the (file-based) authentication service implementation.
+     * 
+     * @param maxInstances Ignored. This application always deploys a single instance of
+     *                     the authentication service.
+     */
     @Override
-    protected void customizeServiceInstance(final SimpleAuthenticationServer instance) {
-    }
+    protected Future<Void> deployRequiredVerticles(final int maxInstances) {
 
-    @Override
-    protected Future<Void> postRegisterServiceVerticles() {
         Future<Void> result = Future.future();
         if (authenticationService == null) {
             result.fail("no authentication service implementation configured");

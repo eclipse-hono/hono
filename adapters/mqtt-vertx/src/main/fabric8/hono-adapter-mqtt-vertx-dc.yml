@@ -14,7 +14,7 @@ spec:
         name: ${project.artifactId}
     spec:
       containers:
-      - image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
+      - image: eclipsehono/${project.artifactId}:${project.version}
         name: ${project.artifactId}
         ports:
         - containerPort: 1883
@@ -27,31 +27,27 @@ spec:
         - name: HONO_CLIENT_NAME
           value: Hono MQTT Adapter
         - name: HONO_CLIENT_HOST
-          value: ${HONO_APP_SERVICE_HOST}
+          value: hono-service-messaging.hono
         - name: HONO_CLIENT_PORT
-          value: ${HONO_APP_SERVICE_PORT}
+          value: "5671"
         - name: HONO_CLIENT_USERNAME
           value: mqtt-adapter@HONO
         - name: HONO_CLIENT_PASSWORD
           value: mqtt-secret
         - name: HONO_CLIENT_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_CLIENT_HOSTNAME_VERIFICATION_REQUIRED
-          value: "false"
         - name: HONO_REGISTRATION_NAME
           value: Hono MQTT Adapter
         - name: HONO_REGISTRATION_HOST
-          value: ${HONO_SERVICE_DEVICE_REGISTRY_SERVICE_HOST}
+          value: hono-service-device-registry.hono
         - name: HONO_REGISTRATION_PORT
-          value: ${HONO_SERVICE_DEVICE_REGISTRY_SERVICE_PORT_AMQPS}
+          value: "5671"
         - name: HONO_REGISTRATION_USERNAME
           value: mqtt-adapter@HONO
         - name: HONO_REGISTRATION_PASSWORD
           value: mqtt-secret
         - name: HONO_REGISTRATION_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
-        - name: HONO_REGISTRATION_HOSTNAME_VERIFICATION_REQUIRED
-          value: "false"
         - name: HONO_MQTT_BIND_ADDRESS
           value: 0.0.0.0
         - name: HONO_MQTT_INSECURE_PORT_BIND_ADDRESS
@@ -66,7 +62,15 @@ spec:
           value: "1"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
-        livenessProbe:
-          tcpSocket:
-            port: 1883
+        readinessProbe:
           initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 1
+          tcpSocket:
+            port: mqtt
+        livenessProbe:
+          initialDelaySeconds: 25
+          periodSeconds: 5
+          timeoutSeconds: 1
+          tcpSocket:
+            port: mqtt

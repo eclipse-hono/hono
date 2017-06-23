@@ -49,7 +49,7 @@
 
   ["connector", {
     "name": "broker",
-    "host": "artemis.hono",
+    "host": "hono-artemis.hono",
     "port": 5672,
     "role": "route-container",
     "saslUsername": "artemis",
@@ -114,7 +114,7 @@
       "maxConnectionsPerHost": 10,
       "groups": {
         "Hono": {
-          "users": "Eclipse IoT;Hono;hono",
+          "users": "Eclipse IoT;Hono;hono-messaging",
           "remoteHosts": "*",
           "maxSessions": 500,
           "maxMessageSize": 204800,

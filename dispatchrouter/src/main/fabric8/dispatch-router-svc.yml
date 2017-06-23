@@ -6,17 +6,9 @@ metadata:
   name: ${project.artifactId}
 spec:
   ports:
-  - name: amqps
-    port: 15671
-    protocol: TCP
-    targetPort: 5671
-  - name: amqp
-    port: 15672
-    protocol: TCP
-    targetPort: 5672
   - name: downstream
     port: 5673
     protocol: TCP
-    targetPort: 5673
+    targetPort: downstream
   selector:
     capability: router

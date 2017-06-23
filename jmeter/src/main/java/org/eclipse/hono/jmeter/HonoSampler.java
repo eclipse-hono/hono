@@ -42,12 +42,6 @@ abstract public class HonoSampler extends AbstractSampler {
     private static final String PORT                     = "port";
     private static final String TRUSTSTORE_PATH          = "trustStorePath";
 
-    private static final String REGISTRY_HOST            = "registryHost";
-    private static final String REGISTRY_USER            = "registryUser";
-    private static final String REGISTRY_PWD             = "registryPwd";
-    private static final String REGISTRY_PORT            = "registryPort";
-    private static final String REGISTRY_TRUSTSTORE_PATH = "registryTrustStorePath";
-
     private static final String CONTAINER                = "container";
     private static final String TENANT                   = "tenant";
     private static final String ENDPOINT                 = "endpoint";
@@ -91,47 +85,6 @@ abstract public class HonoSampler extends AbstractSampler {
     public void setPort(final int port) {
         setProperty(PORT, port);
     }
-
-    public String getRegistryTrustStorePath() {
-        return getPropertyAsString(TRUSTSTORE_PATH);
-    }
-
-    public void setRegistryTrustStorePath(final String trustStorePath) {
-        setProperty(REGISTRY_TRUSTSTORE_PATH, trustStorePath);
-    }
-
-    public String getRegistryHost() {
-        return getPropertyAsString(REGISTRY_HOST);
-    }
-
-    public void setRegistryHost(final String host) {
-        setProperty(REGISTRY_HOST, host);
-    }
-
-    public String getRegistryUser() {
-        return getPropertyAsString(REGISTRY_USER);
-    }
-
-    public void setRegistryUser(final String user) {
-        setProperty(REGISTRY_USER, user);
-    }
-
-    public String getRegistryPwd() {
-        return getPropertyAsString(REGISTRY_PWD);
-    }
-
-    public void setRegistryPwd(final String pwd) {
-        setProperty(REGISTRY_PWD, pwd);
-    }
-
-    public int getRegistryPort() {
-        return getPropertyAsInt(REGISTRY_PORT);
-    }
-
-    public void setRegistryPort(final int port) {
-        setProperty(REGISTRY_PORT, port);
-    }
-
 
     public String getContainer() {
         return getPropertyAsString(CONTAINER);
