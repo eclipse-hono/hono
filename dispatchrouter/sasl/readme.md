@@ -1,10 +1,8 @@
-### qdrouterd.sasldb
+# qdrouterd.sasldb
 
-Contains 4 example users:
+Contains 2 example users:
 
-| username   | password |
-|------------|----------|
-| user1@HONO | pw       |
-| user2@HONO | pw       |
-| user3@HONO | pw       |
-| user4@HONO | pw       |
+| username      | password   |
+|---------------|------------|
+| consumer@HONO | verysecret |
+| user1@HONO    | pw         |

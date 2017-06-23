@@ -115,6 +115,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+    <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
+
     <!-- Plugin versions -->
     <nexus-staging-maven-plugin.version>1.6.8</nexus-staging-maven-plugin.version>
 
@@ -324,6 +326,11 @@
               <goals>
                 <goal>repackage</goal>
               </goals>
+              <configuration>
+                <attach>false</attach>
+                <classifier>${classifier.spring.boot.artifact}</classifier>
+                <excludeArtifactIds>hono-legal,hono-demo-certs</excludeArtifactIds>
+              </configuration>
             </execution>
           </executions>
         </plugin>

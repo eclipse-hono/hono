@@ -12,10 +12,7 @@
 
 package org.eclipse.hono.adapter.http;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -40,7 +37,8 @@ import io.vertx.proton.ProtonClientOptions;
 @RunWith(VertxUnitRunner.class)
 public class AbstractVertxBasedHttpProtocolAdapterTest {
 
-    HonoClient honoClient;
+    HonoClient messagingClient;
+    HonoClient registrationClient;
     ServiceConfigProperties config;
 
     /**
@@ -49,7 +47,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @Before
     public void setup() {
 
-        honoClient = mock(HonoClient.class);
+        messagingClient = mock(HonoClient.class);
+        registrationClient = mock(HonoClient.class);
         config = new ServiceConfigProperties();
         config.setInsecurePortEnabled(true);
     }
@@ -69,22 +68,23 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(mock(Router.class), null);
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
-        adapter.setHonoMessagingClient(honoClient);
+        adapter.setHonoMessagingClient(messagingClient);
+        adapter.setRegistrationServiceClient(registrationClient);
 
         // WHEN starting the adapter
         Async startup = ctx.async();
         Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(startupAttempt -> {
-            ctx.assertTrue(startupAttempt.succeeded());
+        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
-        });
+        }));
         adapter.start(startupTracker);
 
         // THEN the client provided http server has been configured and started
         startup.await(300);
         verify(server).requestHandler(any(Handler.class));
         verify(server).listen(any(Handler.class));
-        verify(honoClient).connect(any(ProtonClientOptions.class), any(Handler.class));
+        verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class));
+        verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class));
     }
 
     /**
@@ -114,15 +114,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
-        adapter.setHonoMessagingClient(honoClient);
+        adapter.setHonoMessagingClient(messagingClient);
+        adapter.setRegistrationServiceClient(registrationClient);
 
         // WHEN starting the adapter
         Async startup = ctx.async();
         Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(startupAttempt -> {
-            ctx.assertTrue(startupAttempt.succeeded());
+        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
-        });
+        }));
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has been invoked
@@ -156,7 +156,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         adapter.setConfig(config);
         adapter.setHttpServer(server);
-        adapter.setHonoMessagingClient(honoClient);
+        adapter.setHonoMessagingClient(messagingClient);
+        adapter.setRegistrationServiceClient(registrationClient);
 
         // WHEN starting the adapter
         Async startupFailed = ctx.async();

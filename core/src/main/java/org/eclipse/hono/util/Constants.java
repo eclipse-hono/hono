@@ -81,6 +81,11 @@ public final class Constants {
     public static final String QUALIFIER_DOWNSTREAM = "downstream";
 
     /**
+     * The qualifier to use for referring to the Hono Messaging component.
+     */
+    public static final String QUALIFIER_MESSAGING = "messaging";
+
+    /**
      * The subject name to use for anonymous clients.
      */
     public static final String SUBJECT_ANONYMOUS = "ANONYMOUS";

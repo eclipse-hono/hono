@@ -24,17 +24,17 @@ spec:
           name: https
           protocol: TCP
         env:
-        - name: HONO_CLIENT_NAME
+        - name: HONO_MESSAGING_NAME
           value: Hono REST Adapter
-        - name: HONO_CLIENT_HOST
+        - name: HONO_MESSAGING_HOST
           value: hono-service-messaging.hono
-        - name: HONO_CLIENT_PORT
+        - name: HONO_MESSAGING_PORT
           value: "5671"
-        - name: HONO_CLIENT_USERNAME
+        - name: HONO_MESSAGING_USERNAME
           value: rest-adapter@HONO
-        - name: HONO_CLIENT_PASSWORD
+        - name: HONO_MESSAGING_PASSWORD
           value: rest-secret
-        - name: HONO_CLIENT_TRUST_STORE_PATH
+        - name: HONO_MESSAGING_TRUST_STORE_PATH
           value: /etc/hono/certs/trusted-certs.pem
         - name: HONO_REGISTRATION_NAME
           value: Hono REST Adapter

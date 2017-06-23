@@ -126,12 +126,12 @@ services:
       - "8080:8080"
       - "8443:8443"
     environment:
-      - HONO_CLIENT_NAME=Hono REST Adapter
-      - HONO_CLIENT_HOST=hono-service-messaging.hono
-      - HONO_CLIENT_PORT=5671
-      - HONO_CLIENT_USERNAME=rest-adapter@HONO
-      - HONO_CLIENT_PASSWORD=rest-secret
-      - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_MESSAGING_NAME=Hono REST Adapter
+      - HONO_MESSAGING_HOST=hono-service-messaging.hono
+      - HONO_MESSAGING_PORT=5671
+      - HONO_MESSAGING_USERNAME=rest-adapter@HONO
+      - HONO_MESSAGING_PASSWORD=rest-secret
+      - HONO_MESSAGING_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_REGISTRATION_NAME=Hono REST Adapter
       - HONO_REGISTRATION_HOST=hono-service-device-registry.hono
       - HONO_REGISTRATION_PORT=5671
@@ -156,12 +156,12 @@ services:
       - "1883:1883"
       - "8883:8883"
     environment:
-      - HONO_CLIENT_NAME=Hono MQTT Adapter
-      - HONO_CLIENT_HOST=hono-service-messaging.hono
-      - HONO_CLIENT_PORT=5671
-      - HONO_CLIENT_USERNAME=mqtt-adapter@HONO
-      - HONO_CLIENT_PASSWORD=mqtt-secret
-      - HONO_CLIENT_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
+      - HONO_MESSAGING_NAME=Hono MQTT Adapter
+      - HONO_MESSAGING_HOST=hono-service-messaging.hono
+      - HONO_MESSAGING_PORT=5671
+      - HONO_MESSAGING_USERNAME=mqtt-adapter@HONO
+      - HONO_MESSAGING_PASSWORD=mqtt-secret
+      - HONO_MESSAGING_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem
       - HONO_REGISTRATION_NAME=Hono MQTT Adapter
       - HONO_REGISTRATION_HOST=hono-service-device-registry.hono
       - HONO_REGISTRATION_PORT=5671

@@ -33,7 +33,7 @@ import io.vertx.proton.ProtonClientOptions;
 /**
  * A base class for implementing protocol adapters.
  * <p>
- * Provides connections to device registration and telemetry and event endpoints.
+ * Provides connections to device registration and telemetry and event service endpoints.
  * 
  * @param <T> The type of configuration properties used by this service.
  */
@@ -48,6 +48,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
      * @param honoClient The client.
      * @throws NullPointerException if hono client is {@code null}.
      */
+    @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Autowired
     public final void setHonoMessagingClient(final HonoClient honoClient) {
         this.messaging = Objects.requireNonNull(honoClient);
@@ -64,15 +65,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
     /**
      * Sets the client to use for connecting to the Device Registration service.
-     * <p>
-     * If this property is not set then the Device Registration endpoint is assumed
-     * to be exposed by the Hono server as well.
      * 
      * @param registrationServiceClient The client.
      * @throws NullPointerException if the client is {@code null}.
      */
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    @Autowired(required = false)
+    @Autowired
     public final void setRegistrationServiceClient(final HonoClient registrationServiceClient) {
         this.registration = Objects.requireNonNull(registrationServiceClient);
     }
@@ -83,9 +81,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
      * @return The client.
      */
     public final HonoClient getRegistrationServiceClient() {
-        if (registration == null) {
-            return messaging;
-        }
         return registration;
     }
 
@@ -93,6 +88,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     public final void start(final Future<Void> startFuture) {
         if (messaging == null) {
             startFuture.fail("Hono Messaging client must be set");
+        } else if (registration == null) {
+            startFuture.fail("Registration client must be set");
         } else {
             doStart(startFuture);
         }
@@ -128,13 +125,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
-     * Connects to the Hono server using the configured client.
+     * Connects to the Hono Messaging component using the configured client.
      * 
      * @param connectHandler The handler to invoke with the outcome of the connection attempt.
      *                       If {@code null} and the connection attempt failed, this method
      *                       tries to re-connect until a connection is established.
      */
-    protected final void connectToHono(final Handler<AsyncResult<HonoClient>> connectHandler) {
+    protected final void connectToMessaging(final Handler<AsyncResult<HonoClient>> connectHandler) {
 
         if (messaging == null) {
             if (connectHandler != null) {
@@ -157,22 +154,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
-     * Connects to the Registration Service using the configured client.
-     * <p>
-     * If the <em>registrationServiceClient</em> is not set, this method connects to the
-     * Hono server instead, assuming that the Registration Service is implemented by the Hono server.
+     * Connects to the Device Registration service using the configured client.
      * 
      * @param connectHandler The handler to invoke with the outcome of the connection attempt.
      *                       If {@code null} and the connection attempt failed, this method
      *                       tries to re-connect until a connection is established.
      */
-    protected final void connectToRegistration(final Handler<AsyncResult<HonoClient>> connectHandler) {
+    protected final void connectToDeviceRegistration(final Handler<AsyncResult<HonoClient>> connectHandler) {
 
         if (registration == null) {
-            if (messaging != null) {
-                // no need to open an additional connection to Hono server
-                LOG.info("using Hono Messaging client for accessing Device Registration service");
-            } else if (connectHandler != null) {
+            if (connectHandler != null) {
                 connectHandler.handle(Future.failedFuture("Device Registration client not set"));
             }
         } else if (registration.isConnected()) {

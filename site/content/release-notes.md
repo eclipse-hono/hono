@@ -20,6 +20,14 @@ Also as part of the refactoring we have changed some Maven artifact IDs
 
 * renamed `org.eclipse.hono:hono-server` to `org.eclipse.hono:hono-service-messaging`
 
+### Configuration Changes
+
+* The *Hono Messaging* and the *Device Registry* components require a connection to an *Authentication* API implementation being configured. 
+* The *Hono Messaging* component (former *Hono Server*) now uses the `HONO_MESSAGING` config variable prefix instead of the former `HONO_SERVER` prefix.
+* The protocol adapters now require two connections being configured, one to the *Hono Messaging* component (using the `HONO_MESSAGING` environment variable prefix) and another one to the *Device Registration* service implementation (using the `HONO_REGISTRATION` environment variable prefix).
+
+See component docs for details.
+
 ### API Changes
 
 The following backwards incompatible changes have been made to existing API, code depending on these APIs needs to be updated accordingly:

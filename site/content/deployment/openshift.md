@@ -44,8 +44,8 @@ $ oc new-project hono
 
 ### Preparing persistent volume
 
-In order to handle the device registry and preserve the related file when pods go down for any reason (i.e. manual scale down to zero instances, crash, ...),
-a persistent volume is needed so that can be used, through a _claim_, by the Hono Server component. In general, the persistent volume is deployed by the cluster
+In order to handle the Device Registry and preserve the related file when pods go down for any reason (i.e. manual scale down to zero instances, crash, ...),
+a persistent volume is needed so that can be used, through a _claim_, by the Device Registry. In general, the persistent volume is deployed by the cluster
 administrator but for development purposes, a local `/tmp/hono` directory can be used on your _local_ host but it needs to be created with read/write permissions in the following way :
 
 ~~~sh
@@ -57,7 +57,7 @@ After that, it's needed to log into the cluster as a system administrator in ord
 
 ~~~sh
 $ oc login -u system:admin
-$ oc create -f <path-to-repo>/hono/application/target/fabric8/hono-app-pv.yml
+$ oc create -f <path-to-repo>/example/target/fabric8/hono-pv.yml
 ~~~
 
 When the persistent volume is provisioned, come back to use the default `developer` user.
@@ -70,14 +70,22 @@ $ oc login -u developer
 
 Using the `developer` user, it's now possible to deploy all the other OpenShift resources related to :
 
+* Artemis Broker (service and deployment)
 * Qpid Dispatch Router (service and deployment)
 * Auth Server (service and deployment)
-* Device Registry (service and deployment)
-* Hono Server (persistent volume claim, service and deployment)
+* Device Registry (persistent volume claim, service and deployment)
+* Hono Messaging (service and deployment)
 * HTTP REST adapter (service and deployment)
 * MQTT adapter (service and deployment)
 
-In order to start deploy the Qpid Dispatch Router, the following resources needs to be created.
+In order to start deploy the Artemis Broker, the following resources needs to be created.
+
+~~~sh
+$ oc create -f <path-to-repo>/hono/broker/target/fabric8/artemis-svc.yml
+$ oc create -f <path-to-repo>/hono/broker/target/fabric8/artemis-dc.yml
+~~~
+
+Then the Qpid Dispatch Router.
 
 ~~~sh
 $ oc create -f <path-to-repo>/hono/dispatchrouter/target/fabric8/dispatch-router-svc.yml
@@ -91,19 +99,19 @@ $ oc create -f <path-to-repo>/hono/services/auth/target/fabric8/hono-auth-svc.ym
 $ oc create -f <path-to-repo>/hono/services/auth/target/fabric8/hono-auth-dc.yml
 ~~~
 
-Then the Device Registry.
+Then the Device Registry, which needs a _claim_ on the persistent volume already provisioned.
 
 ~~~sh
 $ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-svc.yml
+$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-pvc.yml
 $ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-dc.yml
 ~~~
 
-Then the Hono Server, which needs a _claim_ on the persistent volume already provisioned other than a _deployment_ and _service_.
+Then the Hono Messaging.
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/application/target/fabric8/hono-app-pvc.yml
-$ oc create -f <path-to-repo>/hono/application/target/fabric8/hono-app-svc.yml
-$ oc create -f <path-to-repo>/hono/application/target/fabric8/hono-app-dc.yml
+$ oc create -f <path-to-repo>/hono/services/messaging/target/fabric8/hono-messaging-svc.yml
+$ oc create -f <path-to-repo>/hono/services/messaging/target/fabric8/hono-messaging-dc.yml
 ~~~
 
 Finally, both the adapters (HTTP REST and MQTT).
