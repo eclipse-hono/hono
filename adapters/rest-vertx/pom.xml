@@ -15,19 +15,6 @@
       <artifactId>hono-adapter-http-vertx-base</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-autoconfigure</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-logging</artifactId>
-      <scope>runtime</scope>
-    </dependency>
   </dependencies>
 
   <build>
@@ -37,30 +24,8 @@
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
       <plugin>
-        <!--
-          Copy legal documents from "legal" module to "target/classes" folder
-          so that we make sure to include legal docs in all modules.
-         -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <!--
-          Execution and configuration for copying certificates from related module
-          to "target/classes" folder so that we can include them in the image.
-         -->
-        <executions>
-          <execution>
-            <id>copy_demo_certs</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <configuration>
-              <includeArtifactIds>hono-demo-certs</includeArtifactIds>
-              <outputDirectory>${project.build.directory}/certs</outputDirectory>
-              <excludes>META-INF/**</excludes>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
@@ -75,10 +40,6 @@
       </activation>
       <build>
         <plugins>
-          <plugin>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-maven-plugin</artifactId>
-          </plugin>
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
@@ -102,7 +63,7 @@
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-jar</arg>
                         <arg>
-                          /opt/hono/${project.artifactId}-${project.version}.jar
+                          /opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar
                         </arg>
                       </exec>
                     </cmd>
@@ -123,7 +84,7 @@
                             <directory>${project.build.directory}</directory>
                             <outputDirectory>opt/hono</outputDirectory>
                             <includes>
-                              <include>${project.artifactId}-${project.version}.jar</include>
+                              <include>${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</include>
                             </includes>
                           </fileSet>
                         </fileSets>

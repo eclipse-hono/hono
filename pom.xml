@@ -114,6 +114,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+    <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
     <!--
       use artifactId as Docker image repository name by default
       can be overridden by child projects to explicitly set name
@@ -318,6 +319,11 @@
               <goals>
                 <goal>repackage</goal>
               </goals>
+              <configuration>
+                <attach>false</attach>
+                <classifier>${classifier.spring.boot.artifact}</classifier>
+                <excludeArtifactIds>hono-legal,hono-demo-certs</excludeArtifactIds>
+              </configuration>
             </execution>
           </executions>
         </plugin>
