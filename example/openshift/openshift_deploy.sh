@@ -14,11 +14,11 @@ else
 fi
 
 # creating Hono persistent volume (admin needed)
-oc login -u system:admin
+oc login -u system:admin -n hono
 oc create -f ../target/fabric8/hono-pv.yml
 
 # starting to deploy Eclipse Hono (developer user)
-oc login -u developer
+oc login -u developer -n hono
 
 echo Deploying Authentication Server ...
 oc create -f ../../services/auth/target/fabric8/hono-auth-svc.yml
