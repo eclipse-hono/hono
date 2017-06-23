@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Configuration;
 public class Config extends AbstractAdapterConfig {
 
     @Override
-    protected void customizeClientConfigProperties(final ClientConfigProperties props) {
+    protected void customizeMessagingClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName("Hono REST Adapter");
         }

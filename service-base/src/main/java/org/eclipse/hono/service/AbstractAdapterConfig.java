@@ -18,6 +18,7 @@ import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -52,23 +53,24 @@ public abstract class AbstractAdapterConfig {
     /**
      * Exposes client configuration properties as a Spring bean.
      * <p>
-     * Sets the <em>amqpHostname</em> to {@code hono} if not set explicitly.
+     * Sets the <em>amqpHostname</em> to {@code hono-messaging} if not set explicitly.
      * 
      * @return The properties.
      */
+    @Qualifier(Constants.QUALIFIER_MESSAGING)
     @ConfigurationProperties(prefix = "hono.client")
     @Bean
-    public ClientConfigProperties honoClientConfig() {
+    public ClientConfigProperties messagingClientConfig() {
         ClientConfigProperties config = new ClientConfigProperties();
         if (config.getAmqpHostname() == null) {
-            config.setAmqpHostname("hono");
+            config.setAmqpHostname("hono-messaging");
         }
-        customizeClientConfigProperties(config);
+        customizeMessagingClientConfigProperties(config);
         return config;
     }
 
     /**
-     * Further customizes the client properties provided by the {@link #honoClientConfig()}
+     * Further customizes the client properties provided by the {@link #messagingClientConfig()}
      * method.
      * <p>
      * This method does nothing by default. Subclasses may override this method to set additional
@@ -76,32 +78,34 @@ public abstract class AbstractAdapterConfig {
      * 
      * @param config The client configuration to customize.
      */
-    protected void customizeClientConfigProperties(final ClientConfigProperties config) {
+    protected void customizeMessagingClientConfigProperties(final ClientConfigProperties config) {
         // empty by default
     }
 
     /**
-     * Exposes a factory for connections to the Hono server
+     * Exposes a factory for connections to the Hono Messaging component
      * as a Spring bean.
      * 
      * @return The connection factory.
      */
+    @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Bean
-    public ConnectionFactory honoConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx(), honoClientConfig());
+    public ConnectionFactory messagingConnectionFactory() {
+        return new ConnectionFactoryImpl(vertx(), messagingClientConfig());
     }
 
     /**
-     * Exposes a Hono client as a Spring bean.
+     * Exposes a client for the <em>Hono Messaging</em> component as a Spring bean.
      * <p>
-     * The client is configured with the properties provided by {@link #honoClientConfig()}.
-     * 
+     * The client is configured with the properties provided by {@link #messagingClientConfig()}.
+     *
      * @return The client.
      */
+    @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Bean
     @Scope("prototype")
-    public HonoClient honoClient() {
-        return new HonoClientImpl(vertx(), honoConnectionFactory());
+    public HonoClient messagingClient() {
+        return new HonoClientImpl(vertx(), messagingConnectionFactory());
     }
 
     /**
