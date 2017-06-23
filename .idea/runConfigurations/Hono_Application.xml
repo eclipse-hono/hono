@@ -54,12 +54,12 @@
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.downstream.keyPath" />
-        <option name="value" value="../../demo-certs/certs/hono-key.pem" />
+        <option name="value" value="../../demo-certs/certs/hono-messaging-key.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.downstream.certPath" />
-        <option name="value" value="../../demo-certs/certs/hono-cert.pem" />
+        <option name="value" value="../../demo-certs/certs/hono-messaging-cert.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
@@ -69,12 +69,12 @@
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.messaging.keyPath" />
-        <option name="value" value="../../demo-certs/certs/hono-key.pem" />
+        <option name="value" value="../../demo-certs/certs/hono-messaging-key.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.messaging.certPath" />
-        <option name="value" value="../../demo-certs/certs/hono-cert.pem" />
+        <option name="value" value="../../demo-certs/certs/hono-messaging-cert.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />

@@ -8,37 +8,37 @@
     <additionalParameters>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.client.name" />
+        <option name="name" value="hono.messaging.name" />
         <option name="value" value="Hono MQTT Adapter" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.client.host" />
+        <option name="name" value="hono.messaging.host" />
         <option name="value" value="localhost" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.client.port" />
+        <option name="name" value="hono.messaging.port" />
         <option name="value" value="5671" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.client.username" />
+        <option name="name" value="hono.messaging.username" />
         <option name="value" value="mqtt-adapter@HONO" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.client.password" />
+        <option name="name" value="hono.messaging.password" />
         <option name="value" value="mqtt-secret" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.client.trustStorePath" />
+        <option name="name" value="hono.messaging.trustStorePath" />
         <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.client.hostnameVerificationRequired" />
+        <option name="name" value="hono.messaging.hostnameVerificationRequired" />
         <option name="value" value="false" />
       </param>
       <param>
