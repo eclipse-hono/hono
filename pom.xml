@@ -115,11 +115,6 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
-    <!--
-      use artifactId as Docker image repository name by default
-      can be overridden by child projects to explicitly set name
-    -->
-    <image.target>${project.artifactId}</image.target>
 
     <!-- configure timestamp format to be injected into legal docs -->
     <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
@@ -161,20 +156,6 @@
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
           <version>0.21.0</version>
-          <configuration>
-            <images>
-              <image>
-                <name>eclipsehono/${image.target}</name>
-                <build>
-                  <tags>
-                    <tag>latest</tag>
-                    <tag>${project.version}</tag>
-                    <tag>${timestamp}</tag>
-                  </tags>
-                </build>
-              </image>
-            </images>
-          </configuration>
         </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>
@@ -182,6 +163,14 @@
           <version>3.4.1</version>
           <configuration>
             <mode>auto</mode>
+            <images>
+              <image>
+                <name>eclipsehono/%a:%l</name>
+                <build>
+                  <maintainer>The Eclipse Hono project</maintainer>
+                </build>
+              </image>
+            </images>
             <generator>
               <excludes>
                 <exclude>java-exec</exclude>
@@ -189,7 +178,7 @@
                 <exclude>wildfly-swarm</exclude>
                 <exclude>vertx</exclude>
                 <exclude>karaf</exclude>
-                <exclude>webapps</exclude>
+                <exclude>webapp</exclude>
               </excludes>
             </generator>
           </configuration>
@@ -198,6 +187,7 @@
               <phase>package</phase>
               <goals>
                 <goal>resource</goal>
+                <goal>build</goal>
               </goals>
             </execution>
           </executions>
