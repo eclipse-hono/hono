@@ -58,7 +58,7 @@ public abstract class AbstractAdapterConfig {
      * @return The properties.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
-    @ConfigurationProperties(prefix = "hono.client")
+    @ConfigurationProperties(prefix = "hono.messaging")
     @Bean
     public ClientConfigProperties messagingClientConfig() {
         ClientConfigProperties config = new ClientConfigProperties();
