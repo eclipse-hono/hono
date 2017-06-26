@@ -70,7 +70,6 @@ $ oc login -u developer
 
 Using the `developer` user, it is now possible to deploy all the other OpenShift resources related to:
 
-1. Grafana & InfluxDB
 1. Artemis Broker
 1. Qpid Dispatch Router
 1. Auth Server
@@ -79,13 +78,7 @@ Using the `developer` user, it is now possible to deploy all the other OpenShift
 1. HTTP REST adapter
 1. MQTT adapter
 
-In order to start, deploy the Grafana and InfluxDB servers:
-
-~~~sh
-$ oc create -f <path-to-repo>/hono/metrics/target/classes/META-INF/fabric8/openshift.yml
-~~~
-
-Then the Artemis Broker:
+Deploy the Artemis Broker:
 
 ~~~sh
 $ oc create -f <path-to-repo>/hono/broker/target/classes/META-INF/fabric8/openshift.yml
