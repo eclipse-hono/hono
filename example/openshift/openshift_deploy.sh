@@ -26,6 +26,11 @@ oc create -f $HONO_HOME/example/target/classes/META-INF/fabric8/openshift/hono-p
 # starting to deploy Eclipse Hono (developer user)
 oc login -u developer -n hono
 
+echo
+echo Deploying Grafana ...
+oc create -f $HONO_HOME/metrics/target/classes/META-INF/fabric8/openshift.yml
+echo ... done
+
 echo Deploying Apache ActiveMQ Artemis Broker ...
 oc create -f $HONO_HOME/broker/target/classes/META-INF/fabric8/openshift.yml
 echo ... done

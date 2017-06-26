@@ -1,0 +1,36 @@
+spec:
+  template:
+    metadata:
+      labels:
+        role: influxdb
+    spec:
+      containers:
+      - image: influxdb:${influxdb.version}
+        name: eclipsehono-influxdb
+        env:
+        - name: INFLUXDB_GRAPHITE_ENABLED
+          value: true
+        - name: INFLUXDB_ADMIN_ENABLED
+          value: true
+        ports:
+        - containerPort: "8086"
+          name: api
+          protocol: TCP
+        - containerPort: "8083"
+          name: admin
+          protocol: TCP
+        - containerPort: "2003"
+          name: graphite
+          protocol: TCP
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          tcpSocket:
+            port: 2003
+        livenessProbe:
+          initialDelaySeconds: 20
+          periodSeconds: 9
+          timeoutSeconds: 1
+          tcpSocket:
+            port: 2003

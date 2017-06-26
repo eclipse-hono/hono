@@ -1,0 +1,16 @@
+spec:
+  ports:
+  - name: graphite
+    port: 2003
+    protocol: TCP
+    targetPort: 2003
+  - name: admin
+    port: 8083
+    protocol: TCP
+    targetPort: 8083
+  - name: api
+    port: 8086
+    protocol: TCP
+    targetPort: 8086
+  selector:
+    role: influxdb

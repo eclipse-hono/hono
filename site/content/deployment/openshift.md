@@ -68,17 +68,24 @@ $ oc login -u developer
 
 ### Deploying Eclipse Hono components
 
-Using the `developer` user, it's now possible to deploy all the other OpenShift resources related to :
+Using the `developer` user, it is now possible to deploy all the other OpenShift resources related to:
 
-* Artemis Broker (service and deployment)
-* Qpid Dispatch Router (service and deployment)
-* Auth Server (service and deployment)
-* Device Registry (persistent volume claim, service and deployment)
-* Hono Messaging (service and deployment)
-* HTTP REST adapter (service and deployment)
-* MQTT adapter (service and deployment)
+1. Grafana & InfluxDB
+1. Artemis Broker
+1. Qpid Dispatch Router
+1. Auth Server
+1. Device Registry
+1. Hono Messaging
+1. HTTP REST adapter
+1. MQTT adapter
 
-In order to start deploy the Artemis Broker:
+In order to start, deploy the Grafana and InfluxDB servers:
+
+~~~sh
+$ oc create -f <path-to-repo>/hono/metrics/target/classes/META-INF/fabric8/openshift.yml
+~~~
+
+Then the Artemis Broker:
 
 ~~~sh
 $ oc create -f <path-to-repo>/hono/broker/target/classes/META-INF/fabric8/openshift.yml

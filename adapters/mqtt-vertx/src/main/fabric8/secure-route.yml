@@ -5,6 +5,6 @@ spec:
     kind: Service
     name: ${project.artifactId}
   port:
-    targetPort: 8443
+    targetPort: 8883
   tls:
     termination: passthrough

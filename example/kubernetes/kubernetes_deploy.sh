@@ -21,31 +21,46 @@ else
 fi
 
 # creating Hono persistent volume (admin needed)
+echo Creating persistent volume ...
 kubectl create -f $HONO_HOME/example/target/classes/META-INF/fabric8/kubernetes/hono-pv.yml --namespace $NS
+echo ... done
 
+echo
+echo Deploying Grafana ...
+kubectl create -f $HONO_HOME/metrics/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+echo ... done
+
+echo
 echo Deploying Artemis broker ...
 kubectl create -f $HONO_HOME/broker/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+echo ... done
 
+echo
 echo Deploying Qpid Dispatch Router ...
 kubectl create -f $HONO_HOME/dispatchrouter/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
+echo
 echo Deploying Authentication Server ...
 kubectl create -f $HONO_HOME/services/auth/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
+echo
 echo Deploying Device Registry ...
 kubectl create -f $HONO_HOME/services/device-registry/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
+echo
 echo Deploying Hono Messaging ...
 kubectl create -f $HONO_HOME/services/messaging/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
+echo
 echo Deploying HTTP REST adapter ...
 kubectl create -f $HONO_HOME/adapters/rest-vertx/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
+echo
 echo Deploying MQTT adapter ...
 kubectl create -f $HONO_HOME/adapters/mqtt-vertx/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done

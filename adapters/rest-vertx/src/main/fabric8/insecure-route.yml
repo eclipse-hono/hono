@@ -1,3 +1,5 @@
+metadata:
+  name: ${project.artifactId}
 spec:
   to:
     kind: Service
