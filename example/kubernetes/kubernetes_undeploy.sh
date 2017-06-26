@@ -4,10 +4,10 @@ NS=hono
 
 echo UNDEPLOYING ECLIPSE HONO FROM KUBERNETES
 
-kubectl delete deploy,service,pvc -l app=hono --namespace $NS
+kubectl delete deploy,service,pvc -l group=org.eclipse.hono --namespace $NS
 
 # deleting Hono Server persistent volume
-kubectl delete pv hono-pv
+kubectl delete pv hono
 
 # deleting Hono namespace
 kubectl delete namespace $NS

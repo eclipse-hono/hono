@@ -1,0 +1,17 @@
+spec:
+  template:
+    spec:
+      containers:
+      - image:
+        readinessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 1
+          tcpSocket:
+            port: 1883
+        livenessProbe:
+          initialDelaySeconds: 25
+          periodSeconds: 9
+          timeoutSeconds: 1
+          tcpSocket:
+            port: 1883

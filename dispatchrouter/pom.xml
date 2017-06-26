@@ -99,6 +99,7 @@
                     <ports>
                       <port>5671</port>
                       <port>5672</port>
+                      <port>5673</port>
                     </ports>
                     <assembly>
                       <mode>dir</mode>

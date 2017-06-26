@@ -125,6 +125,14 @@
       when doing a release build, set this property to false.
      -->
     <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
+    <!-- 
+      The default path to load the trusted CA certificates from.
+     -->
+    <hono.trustStore.path>/etc/hono/certs/trusted-certs.pem</hono.trustStore.path>
+    <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
+    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
+    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
+    <hono.auth.validation.certPath>/etc/hono/certs/auth-server-cert.pem</hono.auth.validation.certPath>
   </properties>
 
   <modules>
@@ -160,9 +168,10 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>fabric8-maven-plugin</artifactId>
-          <version>3.4.1</version>
+          <version>3.4.2</version>
           <configuration>
             <mode>auto</mode>
+            <profile>minimal</profile>
             <images>
               <image>
                 <name>eclipsehono/%a:%l</name>
@@ -181,6 +190,13 @@
                 <exclude>webapp</exclude>
               </excludes>
             </generator>
+            <enricher>
+              <includes>
+                <include>fmp-controller</include>
+                <include>fmp-ianaservice</include>
+                <include>vertx-health-check</include>
+              </includes>
+            </enricher>
           </configuration>
           <executions>
             <execution>

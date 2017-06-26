@@ -11,6 +11,11 @@
   <name>Hono Messaging</name>
   <description>The Messaging service implements Hono's Telemetry and Event APIs.</description>
 
+  <properties>
+    <hono.messaging.keyPath>/etc/hono/certs/hono-messaging-key.pem</hono.messaging.keyPath>
+    <hono.messaging.certPath>/etc/hono/certs/hono-messaging-cert.pem</hono.messaging.certPath>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -127,6 +132,29 @@
                   </build>
                 </image>
               </images>
+              <resources>
+                <env>
+                  <HONO_AUTH_HOST>${hono.auth.host}</HONO_AUTH_HOST>
+                  <HONO_AUTH_PORT>5671</HONO_AUTH_PORT>
+                  <HONO_AUTH_NAME>${project.name}</HONO_AUTH_NAME>
+                  <HONO_AUTH_VALIDATION_CERT_PATH>${hono.auth.validation.certPath}</HONO_AUTH_VALIDATION_CERT_PATH>
+                  <HONO_AUTH_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_AUTH_TRUST_STORE_PATH>
+                  <HONO_DOWNSTREAM_HOST>hono-dispatch-router.hono</HONO_DOWNSTREAM_HOST>
+                  <HONO_DOWNSTREAM_PORT>5673</HONO_DOWNSTREAM_PORT>
+                  <HONO_DOWNSTREAM_NAME>${project.name}</HONO_DOWNSTREAM_NAME>
+                  <HONO_DOWNSTREAM_KEY_PATH>${hono.messaging.keyPath}</HONO_DOWNSTREAM_KEY_PATH>
+                  <HONO_DOWNSTREAM_CERT_PATH>${hono.messaging.certPath}</HONO_DOWNSTREAM_CERT_PATH>
+                  <HONO_DOWNSTREAM_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_DOWNSTREAM_TRUST_STORE_PATH>
+                  <HONO_MESSAGING_KEY_PATH>${hono.messaging.keyPath}</HONO_MESSAGING_KEY_PATH>
+                  <HONO_MESSAGING_CERT_PATH>${hono.messaging.certPath}</HONO_MESSAGING_CERT_PATH>
+                  <HONO_MESSAGING_MAX_INSTANCES>1</HONO_MESSAGING_MAX_INSTANCES>
+                  <HONO_MESSAGING_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_BIND_ADDRESS>
+                  <HONO_MESSAGING_INSECURE_PORT_ENABLED>true</HONO_MESSAGING_INSECURE_PORT_ENABLED>
+                  <HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS>
+                  <HONO_MESSAGING_VALIDATION_SHARED_SECRET>${hono.regAssertion.sharedSecret}</HONO_MESSAGING_VALIDATION_SHARED_SECRET>
+                  <SPRING_PROFILES_ACTIVE>default,dev</SPRING_PROFILES_ACTIVE>
+                </env>
+              </resources>
             </configuration>
           </plugin>
         </plugins>

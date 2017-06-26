@@ -1,0 +1,17 @@
+spec:
+  template:
+    spec:
+      containers:
+      - image:
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          tcpSocket:
+            port: 5672
+        livenessProbe:
+          initialDelaySeconds: 20
+          periodSeconds: 9
+          timeoutSeconds: 1
+          tcpSocket:
+            port: 5672

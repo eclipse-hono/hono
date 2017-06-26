@@ -8,6 +8,7 @@
   <artifactId>hono-service-device-registry</artifactId>
   <name>Hono Device Registry</name>
   <description>A default device registry for Hono implementing the device registration and credentials API.</description>
+
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -53,7 +54,7 @@
                       <port>5672</port>
                     </ports>
                     <runCmds>
-                      <runCmd>adduser -S -D hono nogroup &amp;&amp; mkdir /home/hono/registration &amp;&amp; chown -R hono /home/hono</runCmd>
+                      <runCmd>adduser -S -D hono nogroup &amp;&amp; mkdir /home/hono/device-registry &amp;&amp; chown -R hono /home/hono</runCmd>
                     </runCmds>
                     <user>hono</user>
                     <workdir>/home/hono</workdir>
@@ -95,6 +96,23 @@
                   </build>
                 </image>
               </images>
+              <resources>
+                <env>
+                  <HONO_AUTH_HOST>${hono.auth.host}</HONO_AUTH_HOST>
+                  <HONO_AUTH_PORT>5671</HONO_AUTH_PORT>
+                  <HONO_AUTH_NAME>${project.name}</HONO_AUTH_NAME>
+                  <HONO_AUTH_VALIDATION_CERT_PATH>${hono.auth.validation.certPath}</HONO_AUTH_VALIDATION_CERT_PATH>
+                  <HONO_AUTH_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_AUTH_TRUST_STORE_PATH>
+                  <HONO_DEVICE_REGISTRY_KEY_PATH>/etc/hono/certs/device-registry-key.pem</HONO_DEVICE_REGISTRY_KEY_PATH>
+                  <HONO_DEVICE_REGISTRY_CERT_PATH>/etc/hono/certs/device-registry-cert.pem</HONO_DEVICE_REGISTRY_CERT_PATH>
+                  <HONO_DEVICE_REGISTRY_BIND_ADDRESS>0.0.0.0</HONO_DEVICE_REGISTRY_BIND_ADDRESS>
+                  <HONO_DEVICE_REGISTRY_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_DEVICE_REGISTRY_INSECURE_PORT_BIND_ADDRESS>
+                  <HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED>true</HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED>
+                  <HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET>${hono.regAssertion.sharedSecret}</HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET>
+                  <HONO_DEVICE_REGISTRY_MAX_INSTANCES>1</HONO_DEVICE_REGISTRY_MAX_INSTANCES>
+                  <SPRING_PROFILES_ACTIVE>default,dev</SPRING_PROFILES_ACTIVE>
+                </env>
+              </resources>
             </configuration>
           </plugin>
         </plugins>

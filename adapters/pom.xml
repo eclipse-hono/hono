@@ -99,6 +99,30 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>fabric8-maven-plugin</artifactId>
+          <configuration>
+            <resources>
+              <env>
+                <HONO_MESSAGING_NAME>${project.name}</HONO_MESSAGING_NAME>
+                <HONO_MESSAGING_HOST>${hono.messaging.host}</HONO_MESSAGING_HOST>
+                <HONO_MESSAGING_PORT>5671</HONO_MESSAGING_PORT>
+                <HONO_MESSAGING_USERNAME>${hono.username}</HONO_MESSAGING_USERNAME>
+                <HONO_MESSAGING_PASSWORD>${hono.password}</HONO_MESSAGING_PASSWORD>
+                <HONO_MESSAGING_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_MESSAGING_TRUST_STORE_PATH>
+                <HONO_REGISTRATION_NAME>${project.name}</HONO_REGISTRATION_NAME>
+                <HONO_REGISTRATION_HOST>${hono.registration.host}</HONO_REGISTRATION_HOST>
+                <HONO_REGISTRATION_PORT>5671</HONO_REGISTRATION_PORT>
+                <HONO_REGISTRATION_USERNAME>${hono.username}</HONO_REGISTRATION_USERNAME>
+                <HONO_REGISTRATION_PASSWORD>${hono.password}</HONO_REGISTRATION_PASSWORD>
+                <HONO_REGISTRATION_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_REGISTRATION_TRUST_STORE_PATH>
+                <LOGGING_CONFIG>classpath:logback-spring.xml</LOGGING_CONFIG>
+                <SPRING_PROFILES_ACTIVE>dev</SPRING_PROFILES_ACTIVE>
+              </env>
+            </resources>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>

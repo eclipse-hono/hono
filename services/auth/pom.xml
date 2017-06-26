@@ -47,6 +47,7 @@
             <groupId>io.fabric8</groupId>
             <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
+              <verbose>true</verbose>
               <images>
                 <image>
                   <build>
@@ -98,6 +99,17 @@
                   </build>
                 </image>
               </images>
+              <resources>
+                <env>
+                  <HONO_AUTH_KEY_PATH>/etc/hono/certs/auth-server-key.pem</HONO_AUTH_KEY_PATH>
+                  <HONO_AUTH_CERT_PATH>/etc/hono/certs/auth-server-cert.pem</HONO_AUTH_CERT_PATH>
+                  <HONO_AUTH_MAX_INSTANCES>1</HONO_AUTH_MAX_INSTANCES>
+                  <HONO_AUTH_BIND_ADDRESS>0.0.0.0</HONO_AUTH_BIND_ADDRESS>
+                  <HONO_AUTH_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_AUTH_INSECURE_PORT_BIND_ADDRESS>
+                  <HONO_AUTH_INSECURE_PORT_ENABLED>true</HONO_AUTH_INSECURE_PORT_ENABLED>
+                  <SPRING_PROFILES_ACTIVE>authentication-impl,dev</SPRING_PROFILES_ACTIVE>
+                </env>
+              </resources>
             </configuration>
             <executions>
               <execution>

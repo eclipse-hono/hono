@@ -9,11 +9,21 @@
   <artifactId>hono-adapter-rest-vertx</artifactId>
   <name>Hono REST Adapter</name>
 
+  <properties>
+    <hono.username>rest-adapter@HONO</hono.username>
+    <hono.password>rest-secret</hono.password>
+    <vertx.health.path>/status</vertx.health.path>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-adapter-http-vertx-base</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
     </dependency>
   </dependencies>
 
@@ -51,6 +61,7 @@
                     <from>${java-base-image.name}</from>
                     <ports>
                       <port>8080</port>
+                      <port>8443</port>
                     </ports>
                     <runCmds>
                       <runCmd>adduser -S -D hono nogroup</runCmd>
@@ -62,9 +73,7 @@
                         <arg>java</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-jar</arg>
-                        <arg>
-                          /opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar
-                        </arg>
+                        <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
                       </exec>
                     </cmd>
                     <assembly>
@@ -93,6 +102,16 @@
                   </build>
                 </image>
               </images>
+              <resources>
+                <env>
+                  <HONO_HTTP_BIND_ADDRESS>0.0.0.0</HONO_HTTP_BIND_ADDRESS>
+                  <HONO_HTTP_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_HTTP_INSECURE_PORT_BIND_ADDRESS>
+                  <HONO_HTTP_INSECURE_PORT_ENABLED>true</HONO_HTTP_INSECURE_PORT_ENABLED>
+                  <HONO_HTTP_KEY_PATH>/etc/hono/certs/rest-adapter-key.pem</HONO_HTTP_KEY_PATH>
+                  <HONO_HTTP_CERT_PATH>/etc/hono/certs/rest-adapter-cert.pem</HONO_HTTP_CERT_PATH>
+                  <HONO_HTTP_MAX_INSTANCES>1</HONO_HTTP_MAX_INSTANCES>
+                </env>
+              </resources>
             </configuration>
           </plugin>
         </plugins>

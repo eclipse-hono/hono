@@ -1,0 +1,20 @@
+spec:
+  template:
+    spec:
+      containers:
+      - readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          tcpSocket:
+            port: 5672
+        livenessProbe:
+          initialDelaySeconds: 20
+          periodSeconds: 9
+          timeoutSeconds: 1
+          tcpSocket:
+            port: 5672
+        command:
+        - /sbin/qdrouterd
+        - -c
+        - /etc/hono/qdrouter/qdrouterd-with-broker.json

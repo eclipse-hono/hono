@@ -57,7 +57,7 @@ After that, it's needed to log into the cluster as a system administrator in ord
 
 ~~~sh
 $ oc login -u system:admin
-$ oc create -f <path-to-repo>/example/target/fabric8/hono-pv.yml
+$ oc create -f <path-to-repo>/example/target/classes/META-INF/fabric8/openshift/hono-pv.yml
 ~~~
 
 When the persistent volume is provisioned, come back to use the default `developer` user.
@@ -78,54 +78,46 @@ Using the `developer` user, it's now possible to deploy all the other OpenShift 
 * HTTP REST adapter (service and deployment)
 * MQTT adapter (service and deployment)
 
-In order to start deploy the Artemis Broker, the following resources needs to be created.
+In order to start deploy the Artemis Broker:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/broker/target/fabric8/artemis-svc.yml
-$ oc create -f <path-to-repo>/hono/broker/target/fabric8/artemis-dc.yml
+$ oc create -f <path-to-repo>/hono/broker/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-Then the Qpid Dispatch Router.
+Then the Qpid Dispatch Router:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/dispatchrouter/target/fabric8/dispatch-router-svc.yml
-$ oc create -f <path-to-repo>/hono/dispatchrouter/target/fabric8/dispatch-router-dc.yml
+$ oc create -f <path-to-repo>/hono/dispatchrouter/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-Then the Auth Server.
+Then the Auth Server:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/services/auth/target/fabric8/hono-auth-svc.yml
-$ oc create -f <path-to-repo>/hono/services/auth/target/fabric8/hono-auth-dc.yml
+$ oc create -f <path-to-repo>/hono/services/auth/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-Then the Device Registry, which needs a _claim_ on the persistent volume already provisioned.
+Then the Device Registry:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-svc.yml
-$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-pvc.yml
-$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-dc.yml
+$ oc create -f <path-to-repo>/hono/services/device-registry/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-Then the Hono Messaging.
+Then the Hono Messaging component:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/services/messaging/target/fabric8/hono-messaging-svc.yml
-$ oc create -f <path-to-repo>/hono/services/messaging/target/fabric8/hono-messaging-dc.yml
+$ oc create -f <path-to-repo>/hono/services/messaging/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
 Finally, both the adapters (HTTP REST and MQTT).
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/adapters/rest-vertx/target/fabric8/hono-adapter-rest-vertx-svc.yml
-$ oc create -f <path-to-repo>/hono/adapters/rest-vertx/target/fabric8/hono-adapter-rest-vertx-dc.yml
-$ oc create -f <path-to-repo>/hono/adapters/mqtt-vertx/target/fabric8/hono-adapter-mqtt-vertx-svc.yml
-$ oc create -f <path-to-repo>/hono/adapters/mqtt-vertx/target/fabric8/hono-adapter-mqtt-vertx-dc.yml
+$ oc create -f <path-to-repo>/hono/adapters/rest-vertx/target/classes/META-INF/fabric8/openshift.yml
+$ oc create -f <path-to-repo>/hono/adapters/mqtt-vertx/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-In this way, all the components are accessible inside the cluster using the _service_ addresses from the clients point of view.
+In this way, all the components are accessible inside the cluster using the _service_ addresses from a client's point of view.
 
-In order to see the deployed components, you can use the OpenShift Web console that is accessible at https://localhost:8443/ using your preferred browser.
+In order to see the deployed components, you can use the [OpenShift Web console](https://localhost:8443/) using your preferred browser.
 
 In the following pictures an Eclipse Hono deployment on OpenShift is running with all the provided components.
 

@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# Absolute path to this script, e.g. /home/user/bin/foo.sh
+SCRIPT=$(readlink -f "$0")
+# Absolute path this script is in, thus /home/user/bin
+SCRIPTPATH=$(dirname "$SCRIPT")
+HONO_HOME=$SCRIPTPATH/../..
 NS=hono
 
 echo DEPLOYING ECLIPSE HONO TO KUBERNETES
@@ -16,42 +21,33 @@ else
 fi
 
 # creating Hono persistent volume (admin needed)
-kubectl create -f ../target/fabric8/hono-pv.yml --namespace $NS
+kubectl create -f $HONO_HOME/example/target/classes/META-INF/fabric8/kubernetes/hono-pv.yml --namespace $NS
+
+echo Deploying Artemis broker ...
+kubectl create -f $HONO_HOME/broker/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+
+echo Deploying Qpid Dispatch Router ...
+kubectl create -f $HONO_HOME/dispatchrouter/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+echo ... done
 
 echo Deploying Authentication Server ...
-kubectl create -f ../../services/auth/target/fabric8/hono-auth-svc.yml --namespace $NS
-kubectl create -f ../../services/auth/target/fabric8/hono-auth-dc.yml --namespace $NS
+kubectl create -f $HONO_HOME/services/auth/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo Deploying Device Registry ...
-kubectl create -f ../../services/device-registry/target/fabric8/hono-device-registry-pvc.yml --namespace $NS
-kubectl create -f ../../services/device-registry/target/fabric8/hono-device-registry-svc.yml --namespace $NS
-kubectl create -f ../../services/device-registry/target/fabric8/hono-device-registry-dc.yml --namespace $NS
-echo ... done
-
-echo Deploying Artemis broker ...
-kubectl create -f ../../broker/target/fabric8/artemis-svc.yml --namespace $NS
-kubectl create -f ../../broker/target/fabric8/artemis-dc.yml --namespace $NS
-
-echo Deploying Qpid Dispatch Router ...
-kubectl create -f ../../dispatchrouter/target/fabric8/dispatch-router-svc.yml --namespace $NS
-kubectl create -f ../../dispatchrouter/target/fabric8/dispatch-router-external-svc.yml --namespace $NS
-kubectl create -f ../../dispatchrouter/target/fabric8/dispatch-router-dc.yml --namespace $NS
+kubectl create -f $HONO_HOME/services/device-registry/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo Deploying Hono Messaging ...
-kubectl create -f ../../services/messaging/target/fabric8/hono-messaging-svc.yml --namespace $NS
-kubectl create -f ../../services/messaging/target/fabric8/hono-messaging-dc.yml --namespace $NS
+kubectl create -f $HONO_HOME/services/messaging/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo Deploying HTTP REST adapter ...
-kubectl create -f ../../adapters/rest-vertx/target/fabric8/hono-adapter-rest-vertx-svc.yml --namespace $NS
-kubectl create -f ../../adapters/rest-vertx/target/fabric8/hono-adapter-rest-vertx-dc.yml --namespace $NS
+kubectl create -f $HONO_HOME/adapters/rest-vertx/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo Deploying MQTT adapter ...
-kubectl create -f ../../adapters/mqtt-vertx/target/fabric8/hono-adapter-mqtt-vertx-svc.yml --namespace $NS
-kubectl create -f ../../adapters/mqtt-vertx/target/fabric8/hono-adapter-mqtt-vertx-dc.yml --namespace $NS
+kubectl create -f $HONO_HOME/adapters/mqtt-vertx/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED TO KUBERNETES

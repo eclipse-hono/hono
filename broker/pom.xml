@@ -72,6 +72,9 @@
                 <image>
                   <build>
                     <from>enmasseproject/activemq-artemis:${artemis.version}-1</from>
+                    <ports>
+                      <port>5672</port>
+                    </ports>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/opt/artemis</basedir>
