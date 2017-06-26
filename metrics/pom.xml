@@ -37,7 +37,6 @@
             <configuration>
               <images>
                 <image>
-                  <alias>grafana</alias>
                   <name>eclipsehono/grafana:%l</name>
                   <build>
                     <from>grafana/grafana:${grafana.version}</from>

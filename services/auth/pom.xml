@@ -47,7 +47,6 @@
             <groupId>io.fabric8</groupId>
             <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
-              <verbose>true</verbose>
               <images>
                 <image>
                   <build>

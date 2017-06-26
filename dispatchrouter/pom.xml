@@ -13,6 +13,7 @@
   <packaging>pom</packaging>
   <description>Module for building the Qpid Dispatch Router image</description>
 
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -91,7 +92,6 @@
             <groupId>io.fabric8</groupId>
             <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
-              <verbose>true</verbose>
               <images>
                 <image>
                   <build>

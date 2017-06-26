@@ -7,7 +7,7 @@ networks:
 services:
 
   influxdb:
-    image: influxdb:1.2.2
+    image: influxdb:${influxdb.version}
     networks:
       hono-net:
         aliases:

@@ -125,6 +125,11 @@
       when doing a release build, set this property to false.
      -->
     <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
+
+    <!-- 
+      Build images defined in modules with packaging type "pom".
+     -->
+    <fabric8.skip.build.pom>false</fabric8.skip.build.pom>
     <!-- 
       The default path to load the trusted CA certificates from.
      -->
@@ -170,8 +175,9 @@
           <artifactId>fabric8-maven-plugin</artifactId>
           <version>3.4.2</version>
           <configuration>
-            <mode>auto</mode>
+            <mode>kubernetes</mode>
             <profile>minimal</profile>
+            <verbose>true</verbose>
             <images>
               <image>
                 <name>eclipsehono/%a:%l</name>
@@ -200,10 +206,11 @@
           </configuration>
           <executions>
             <execution>
+              <id>fabric8</id>
               <phase>package</phase>
               <goals>
-                <goal>resource</goal>
                 <goal>build</goal>
+                <goal>resource</goal>
               </goals>
             </execution>
           </executions>

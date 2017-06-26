@@ -1,0 +1,16 @@
+spec:
+  template:
+    spec:
+      containers:
+      - readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          httpGet:
+            port: 3000
+        livenessProbe:
+          initialDelaySeconds: 20
+          periodSeconds: 9
+          timeoutSeconds: 1
+          httpGet:
+            port: 3000
