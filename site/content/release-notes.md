@@ -8,9 +8,12 @@ weight = 800
 
 ### New Features
 
+* Protocol adapters can now be configured to listen on both TLS secured and unsecured ports.
 * Initial support for reporting metrics using Spring Boot Actuator. Metrics can be reported to services understanding the *graphite* format.
 * Better support for integration with existing device registry and identity management systems by means of refactoring of *Hono server* into three micro-services (see Architectural Changes section).
-* Support Kubernetes as a deployment target.
+* Introduced a set of base classes for implementing services in general and services implemening Device Registration and Authentication API in particular.
+* Support Kubernetes as a deployment platform.
+* Overall improvement of resilience in context of connection failures.
 
 ### Bug Fixes
 
