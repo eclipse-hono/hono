@@ -48,9 +48,10 @@
   }],
 
   ["connector", {
+    "sslProfile": "external",
     "name": "broker",
     "host": "hono-artemis.hono",
-    "port": 5672,
+    "port": 5671,
     "role": "route-container",
     "saslUsername": "artemis",
     "saslPassword": "artemis"

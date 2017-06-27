@@ -80,7 +80,8 @@
       <acceptors>
 
          <!-- AMQP Acceptor.  Listens on default AMQP port for AMQP traffic.-->
-         <acceptor name="amqp">tcp://0.0.0.0:5672?protocols=AMQP</acceptor>
+         <!--<acceptor name="amqp">tcp://0.0.0.0:5672?protocols=AMQP</acceptor>-->
+         <acceptor name="amqps">tcp://0.0.0.0:5671?protocols=AMQP;sslEnabled=true;keyStorePath=${artemis.instance}/etc/artemisKeyStore.p12;keyStorePassword=artemiskeys;needClientAuth=true;trustStorePath=${artemis.instance}/etc/trustStore.jks;trustStorePassword=honotrust</acceptor>
 
       </acceptors>
 
