@@ -274,11 +274,15 @@ public class HonoClientImplTest {
 
         // WHEN trying to connect
         Async disconnectHandlerInvocation = ctx.async();
+        Async connectionEstablished = ctx.async();
         Handler<ProtonConnection> disconnectHandler = failedCon -> disconnectHandlerInvocation.complete();
-        client.connect(new ProtonClientOptions().setReconnectAttempts(1), attempt -> {}, disconnectHandler);
+        client.connect(
+                new ProtonClientOptions().setReconnectAttempts(1),
+                ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()),
+                disconnectHandler);
 
         // THEN the client repeatedly tries to connect
-        assertTrue(connectionFactory.await(4 * Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, TimeUnit.MILLISECONDS));
+        connectionEstablished.await(4 * Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
         // and sets the disconnect handler provided as a param in the connect method invocation
         connectionFactory.getDisconnectHandler().handle(con);
         disconnectHandlerInvocation.await(1000);
