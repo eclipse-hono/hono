@@ -24,8 +24,13 @@ node {
                 sh "git config user.name '${USER_ID}'"
                 sh "git config remote.origin.url 'https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git'"
                 sh "git remote set-url origin 'https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git'"
-                sh "${mvnHome}/bin/mvn -B -s ${MAVEN_SETTINGS} clean deploy -Pbuild-docker-image,run-tests scm:tag -Drevision=${buildVersion} -DskipStaging=true -DconnectionUrl='scm:git:https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git' -Ddocker.host.name=sazvl0062.saz.bosch-si.com"
-
+                withSonarQubeEnv('ECS-Sonar') {
+                    sh "${mvnHome}/bin/mvn -B -s ${MAVEN_SETTINGS} clean org.jacoco:jacoco-maven-plugin:0.7.9:prepare-agent verify \
+                        org.sonarsource.scanner.maven:sonar-maven-plugin:3.3.0.603:sonar deploy -Pbuild-docker-image,run-tests scm:tag \
+                        -Drevision=${buildVersion} -DskipStaging=true \
+                        -DconnectionUrl='scm:git:https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git' \
+                        -Ddocker.host.name=sazvl0062.saz.bosch-si.com"
+                }
                 // deploy documentation to nginx via shared directory
                 sh "rm -rf /home/jenkins-slave/docker-share/hono-site"
                 sh "mkdir -p /home/jenkins-slave/docker-share/hono-site"
