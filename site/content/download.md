@@ -22,6 +22,7 @@ $ docker stack deploy -c docker-compose.yml hono
 
 ### Older Versions
 
+* [0.5-M5 Docker Compose file](docker-compose-0.5-M5.yml)
 * [0.5-M4 Docker Compose file](docker-compose-0.5-M4.yml)
 * [0.5-M3 Docker Compose file](docker-compose-0.5-M3.yml)
 * [0.5-M2 Docker Compose file](docker-compose-0.5-M2.yml)
