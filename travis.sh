@@ -5,7 +5,7 @@ set -e
 export PING_SLEEP=30s
 export WORKDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export BUILD_OUTPUT=$WORKDIR/build.out
-export DOCKER_HOST=localhost:2376
+export DOCKER_HOST=tcp://localhost:2376
 
 touch $BUILD_OUTPUT
 
