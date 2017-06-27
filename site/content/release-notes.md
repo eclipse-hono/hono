@@ -4,11 +4,21 @@ menu = "main"
 weight = 800
 +++
 
-## 0.5-M6-SNAPSHOT
+## 0.5-M6
 
-Not released yet.
+### New Features
 
-The biggest change is the fact that we have re-factored the Authorization service and the Device Registration service implementations that where originally part of the Hono Server component into their own components. The Authorization service has been re-factored into the *Auth Server* component and the Device Registration service has been re-factored into the *Device Registry* component. Consequently, the former Hono server component has been re-named to *Hono Messaging* to better reflect its sole responsibility of forwarding telemetry and event message from/to devices and the AMQP 1.0 Messaging Network.
+* Initial support for reporting metrics using Spring Boot Actuator. Metrics can be reported to services understanding the *graphite* format.
+* Better support for integration with existing device registry and identity management systems by means of refactoring of *Hono server* into three micro-services (see Architectural Changes section).
+* Support Kubernetes as a deployment target.
+
+### Bug Fixes
+
+See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue%20milestone%3A0.5-M6%20) for the list of issues addressed by 0.5-M6.
+
+### Architectural Changes
+
+The biggest change is the fact that we have re-factored the Authorization service and the Device Registration service implementations that where originally part of the *Hono server* component into their own components. The Authorization service has been re-factored into the *Auth Server* component and the Device Registration service has been re-factored into the *Device Registry* component. Consequently, the former *Hono server* component has been re-named to *Hono Messaging* to better reflect its sole responsibility of forwarding telemetry and event messages from/to devices and the *AMQP 1.0 Messaging Network* (see [Component View]({{< relref "Component-View.md" >}}) for an overview of Hono's top level components and their relationships with each other).
 
 As part of the refactoring we have introduced the `services` Maven module which now contains
 
