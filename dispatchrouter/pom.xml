@@ -9,9 +9,9 @@
   </parent>
 
   <artifactId>hono-dispatch-router</artifactId>
-  <name>Qpid Dispatch Router</name>
+  <name>Hono Dispatch Router</name>
   <packaging>pom</packaging>
-  <description>Module for building the Qpid Dispatch Router image</description>
+  <description>Module for building the Qpid Dispatch Router image including Hono specific configuration, keys, certificates and SASL DB.</description>
 
 
   <dependencies>

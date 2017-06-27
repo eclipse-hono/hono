@@ -102,4 +102,5 @@
       </build>
     </profile>
   </profiles>
+  <name>Hono Artemis</name>
 </project>
