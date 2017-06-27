@@ -124,3 +124,15 @@ In the following pictures an Eclipse Hono deployment on OpenShift is running wit
 ![Eclipse Hono on Openshift](../openshift_01.png)
 
 ![Eclipse Hono on Openshift](../openshift_02.png)
+
+![Eclipse Hono on Openshift](../openshift_03.png)
+
+![Eclipse Hono on Openshift](../openshift_04.png)
+
+![Eclipse Hono on Openshift](../openshift_05.png)
+
+![Eclipse Hono on Openshift](../openshift_06.png)
+
+![Eclipse Hono on Openshift](../openshift_07.png)
+
+![Eclipse Hono on Openshift](../openshift_08.png)
