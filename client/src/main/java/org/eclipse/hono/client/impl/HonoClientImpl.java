@@ -168,12 +168,12 @@ public final class HonoClientImpl implements HonoClient {
 
             connectionFactory.connect(
                     clientOptions,
-                    this::onRemoteClose,
+                    remoteClose -> onRemoteClose(remoteClose, disconnectHandler),
                     failedConnection -> onRemoteDisconnect(failedConnection, disconnectHandler),
                     conAttempt -> {
                         connecting.compareAndSet(true, false);
                         if (conAttempt.failed()) {
-                            reconnect(connectionHandler);
+                            reconnect(connectionHandler, disconnectHandler);
                         } else {
                             setConnection(conAttempt.result());
                             setContext(Vertx.currentContext());
@@ -186,7 +186,7 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler) {
+    private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler, Handler<ProtonConnection> disconnectHandler) {
 
         if (clientOptions == null || clientOptions.getReconnectAttempts() == 0) {
             connectionHandler.handle(Future.failedFuture("failed to connect"));
@@ -195,18 +195,18 @@ public final class HonoClientImpl implements HonoClient {
             // give Vert.x some time to clean up NetClient
             vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, tid -> {
                 LOG.info("attempting to re-connect to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-                connect(clientOptions, connectionHandler);
+                connect(clientOptions, connectionHandler, disconnectHandler);
             });
         }
     }
 
-    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose) {
+    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose, Handler<ProtonConnection> disconnectHandler) {
         if (remoteClose.failed()) {
             LOG.info("remote server [{}:{}] closed connection with error condition: {}",
                     connectionFactory.getHost(), connectionFactory.getPort(), remoteClose.cause().getMessage());
         }
         connection.close();
-        onRemoteDisconnect(connection, null);
+        onRemoteDisconnect(connection, disconnectHandler);
     }
 
     private void onRemoteDisconnect(final ProtonConnection con, final Handler<ProtonConnection> nextHandler) {
@@ -224,7 +224,7 @@ public final class HonoClientImpl implements HonoClient {
             if (nextHandler != null) {
                 nextHandler.handle(con);
             } else {
-                reconnect(attempt -> {});
+                reconnect(attempt -> {}, failedCon -> onRemoteDisconnect(failedCon, null));
             }
         }
     }
