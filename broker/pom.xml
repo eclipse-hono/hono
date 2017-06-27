@@ -45,7 +45,7 @@
             </goals>
             <configuration>
               <includeArtifactIds>hono-demo-certs</includeArtifactIds>
-              <outputDirectory>${project.build.outputDirectory}/certs</outputDirectory>
+              <outputDirectory>${project.build.directory}/certs</outputDirectory>
               <excludes>META-INF/**</excludes>
             </configuration>
           </execution>
@@ -73,7 +73,7 @@
                   <build>
                     <from>enmasseproject/activemq-artemis:${artemis.version}-1</from>
                     <ports>
-                      <port>5672</port>
+                      <port>5671</port>
                     </ports>
                     <assembly>
                       <mode>dir</mode>
@@ -88,6 +88,14 @@
                               <include>broker.xml</include>
                               <include>artemis-users.properties</include>
                               <include>artemis-roles.properties</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>etc</outputDirectory>
+                            <includes>
+                              <include>artemisKeyStore.p12</include>
+                              <include>trustStore.jks</include>
                             </includes>
                           </fileSet>
                         </fileSets>
