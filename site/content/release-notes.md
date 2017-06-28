@@ -14,6 +14,7 @@ weight = 800
 * Introduced a set of base classes for implementing services in general and services implemening Device Registration and Authentication API in particular.
 * Support Kubernetes as a deployment platform.
 * Overall improvement of resilience in context of connection failures.
+* JMeter plugin for load tests, which includes samplers for a Hono sender (acts as an adapter) and a Hono receiver (acts as a solution/application). Also a sample plan is provided.
 
 ### Bug Fixes
 
