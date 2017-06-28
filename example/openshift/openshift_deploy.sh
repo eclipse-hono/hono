@@ -1,12 +1,13 @@
 #!/bin/sh
 
-# Absolute path to this script, e.g. /home/user/bin/foo.sh
-SCRIPT=$(readlink -f "$0")
-# Absolute path this script is in, thus /home/user/bin
-SCRIPTPATH=$(dirname "$SCRIPT")
+
+# Absolute path this script is in
+SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 HONO_HOME=$SCRIPTPATH/../..
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
+
+oc login -u developer -n hono
 
 # creating new project
 oc new-project hono --description="Open source IoT connectivity" --display-name="Eclipse Hono"
