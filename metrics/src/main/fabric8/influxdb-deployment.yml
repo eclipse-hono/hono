@@ -4,9 +4,15 @@ spec:
       labels:
         role: influxdb
     spec:
+      volumes:
+      - name: influxdb-storage
+        emptyDir: {}
       containers:
       - image: influxdb:${influxdb.version}
         name: eclipsehono-influxdb
+        volumeMounts:
+        - name: influxdb-storage
+          mountPath: /var/lib/influxdb
         env:
         - name: INFLUXDB_GRAPHITE_ENABLED
           value: true

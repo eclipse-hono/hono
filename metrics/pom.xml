@@ -40,36 +40,13 @@
                   <alias>grafana</alias>
                   <name>eclipsehono/grafana:%l</name>
                   <build>
-                    <from>grafana/grafana:${grafana.version}</from>
-                    <ports>
-                      <port>3000</port>
-                    </ports>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/var/lib/grafana</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/grafana</directory>
-                            <outputDirectory>.</outputDirectory>
-                            <includes>
-                              <include>grafana.db</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
+                    <dockerFileDir>${project.basedir}/grafana</dockerFileDir>
+                    <args>
+                      <DOWNLOAD_URL>https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_${grafana.version}_amd64.deb</DOWNLOAD_URL>
+                    </args>
                   </build>
                 </image>
               </images>
-              <resources>
-                <labels>
-                  <pod>
-                    <role>grafana</role>
-                  </pod>
-                </labels>
-              </resources>
             </configuration>
           </plugin>
         </plugins>
