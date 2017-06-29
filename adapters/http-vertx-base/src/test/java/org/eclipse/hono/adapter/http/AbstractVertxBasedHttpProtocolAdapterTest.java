@@ -83,8 +83,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         startup.await(300);
         verify(server).requestHandler(any(Handler.class));
         verify(server).listen(any(Handler.class));
-        verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class));
-        verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class));
+        verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
+        verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
     }
 
     /**
