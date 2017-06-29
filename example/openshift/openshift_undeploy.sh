@@ -10,6 +10,8 @@ oc delete project hono
 oc login -u system:admin
 oc delete pv hono
 
+oc login -u developer
+
 # deleting the directory for hosting persistent volume
 rm -rf /tmp/hono
 
