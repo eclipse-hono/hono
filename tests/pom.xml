@@ -343,6 +343,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <phase>integration-test</phase>
                 <goals>
                   <goal>jmeter</goal>
+                  <goal>results</goal>
                 </goals>
               </execution>
             </executions>
@@ -363,6 +364,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <artifact>org.eclipse.hono:hono-jmeter:0.5-M6-SNAPSHOT</artifact>
               </jmeterExtensions>
               <overrideRootLogLevel>debug</overrideRootLogLevel>
+              <ignoreResultFailures>false</ignoreResultFailures>
+              <scanResultsForFailedRequests>true</scanResultsForFailedRequests>
             </configuration>
           </plugin>
         </plugins>
