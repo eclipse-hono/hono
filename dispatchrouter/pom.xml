@@ -101,6 +101,13 @@
                       <port>5672</port>
                       <port>5673</port>
                     </ports>
+                    <cmd>
+                      <exec>
+                        <arg>/sbin/qdrouterd</arg>
+                        <arg>-c</arg>
+                        <arg>/etc/hono/qdrouter/qdrouterd-with-broker.json</arg>
+                      </exec>
+                    </cmd>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
