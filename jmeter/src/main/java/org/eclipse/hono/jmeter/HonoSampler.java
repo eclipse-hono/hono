@@ -78,11 +78,11 @@ abstract public class HonoSampler extends AbstractSampler {
         setProperty(PWD, pwd);
     }
 
-    public int getPort() {
-        return getPropertyAsInt(PORT);
+    public String getPort() {
+        return getPropertyAsString(PORT);
     }
 
-    public void setPort(final int port) {
+    public void setPort(final String port) {
         setProperty(PORT, port);
     }
 
