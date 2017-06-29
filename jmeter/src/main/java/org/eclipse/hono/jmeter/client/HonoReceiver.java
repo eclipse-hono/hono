@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.jmeter.client;
 
+import java.text.MessageFormat;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.jmeter.samplers.SampleResult;
@@ -59,7 +60,7 @@ public class HonoReceiver {
                 .name(sampler.getContainer())
                 .user(sampler.getUser())
                 .password(sampler.getPwd())
-                .port(sampler.getPort())
+                .port(Integer.parseInt(sampler.getPort()))
                 .trustStorePath(sampler.getTrustStorePath())
                 .vertx(vertx)
                 .build();
@@ -111,8 +112,7 @@ public class HonoReceiver {
             result.setResponseCode("200");
             result.setSuccessful(true);
             result.setSampleCount(messageCount);
-            result.setResponseMessage("received " + messageCount + " messages " + " with size ins bytes together: "
-                    + messageSize + " and average time of " + avgElapsed / 1000 + " millis.");
+            result.setResponseMessage(MessageFormat.format("{0},{1},{2}",messageCount,messageSize,avgElapsed / 1000));
             result.setResponseData(messages.toString().getBytes());
             result.sampleEnd();
             result.setBytes(messageSize);
@@ -163,8 +163,9 @@ public class HonoReceiver {
     public void close() {
         try {
             amqpNetworkClient.shutdown();
+            vertx.close();
         } catch (final Throwable t) {
-            LOGGER.error("unknown exception in shutdown()", t);
+            LOGGER.error("unknown exception in closing of receiver", t);
         }
     }
 }

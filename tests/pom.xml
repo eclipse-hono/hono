@@ -332,6 +332,42 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               </execution>
             </executions>
           </plugin>
+          <!-- run jmeter tests from maven -->
+          <plugin>
+            <groupId>com.lazerycode.jmeter</groupId>
+            <artifactId>jmeter-maven-plugin</artifactId>
+            <version>2.2.0</version>
+            <executions>
+              <execution>
+                <id>jmeter-integration-tests</id>
+                <phase>integration-test</phase>
+                <goals>
+                  <goal>jmeter</goal>
+                  <goal>results</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <propertiesJMeter>
+                <hono.host>${hono.ip}</hono.host>
+                <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
+                <hono.username>hono-client</hono.username>
+                <hono.password>secret</hono.password>
+                <downstream.host>${qpid.ip}</downstream.host>
+                <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
+                <downstream.username>user1@HONO</downstream.username>
+                <downstream.password>pw</downstream.password>
+                <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
+                <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
+              </propertiesJMeter>
+              <jmeterExtensions>
+                <artifact>org.eclipse.hono:hono-jmeter:0.5-M6-SNAPSHOT</artifact>
+              </jmeterExtensions>
+              <overrideRootLogLevel>debug</overrideRootLogLevel>
+              <ignoreResultFailures>false</ignoreResultFailures>
+              <scanResultsForFailedRequests>true</scanResultsForFailedRequests>
+            </configuration>
+          </plugin>
         </plugins>
       </build>
     </profile>

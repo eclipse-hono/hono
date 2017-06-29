@@ -80,11 +80,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         setProperty(REGISTRY_PWD, pwd);
     }
 
-    public int getRegistryPort() {
-        return getPropertyAsInt(REGISTRY_PORT);
+    public String getRegistryPort() {
+        return getPropertyAsString(REGISTRY_PORT);
     }
 
-    public void setRegistryPort(final int port) {
+    public void setRegistryPort(final String port) {
         setProperty(REGISTRY_PORT, port);
     }
 
