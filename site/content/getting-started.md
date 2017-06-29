@@ -20,7 +20,7 @@ In order to enable *Swarm Mode* on your *Docker Engine* run the following comman
 Please refer to the [Docker Swarm Mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
 
 {{% warning %}}
-You will need at least Docker version 1.13.0 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 1.13.1.
+You will need at least Docker Engine version 1.13.1 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 17.06.0.
 {{% /warning %}}
 
 ### Compiling
@@ -34,6 +34,10 @@ Then run the following from the project's root folder
 with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. This will build all libraries, Docker images and example code. If you are running on Linux and Docker is installed locally or you have set the `DOCKER_HOST` environment variable, you can omit the `-Ddocker.host` property definition.
 
 If you plan to build the Docker images more frequently, e.g. because you want to extend or improve the Hono code, then you should define the `docker.host` property in your Maven `settings.xml` file containing the very same value as you would use on the command line as indicated above. This way you can simply do a `mvn clean install` later on and the Docker images will be built automatically as well because the `build-docker-image` profile is activated automatically if the Maven property `docker.host` is set.
+
+{{% note %}}
+The first build might take several minutes because Docker will need to download all the base images that Hono is relying on. However, most of these will be cached by Docker so that subsequent builds will be running much faster.
+{{% /note %}}
 
 ## Starting Hono
 
