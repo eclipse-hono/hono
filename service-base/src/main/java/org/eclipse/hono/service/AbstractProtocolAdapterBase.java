@@ -14,6 +14,7 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import io.vertx.proton.ProtonConnection;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -149,8 +150,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("connected to Hono Messaging");
                 }
-            });
+            },
+            this::onDisconnectMessaging
+            );
         }
+    }
+
+    /**
+     * Attempts a reconnect for the Hono Messaging client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
+     *
+     * @param con The connection that was disonnected.
+     */
+    private void onDisconnectMessaging(final ProtonConnection con) {
+
+        vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+            LOG.info("attempting to reconnect to Hono Messaging");
+            messaging.connect(createClientOptions(), connectAttempt -> {
+                if (connectAttempt.succeeded()) {
+                    LOG.debug("reconnected to Hono Messaging");
+                } else {
+                    LOG.debug("cannot reconnect to Hono Messaging");
+                }
+            }, this::onDisconnectMessaging
+            );
+        });
     }
 
     /**
@@ -178,8 +201,31 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("connected to Device Registration service");
                 }
-            });
+            },
+            this::onDisconnectDeviceRegistry
+            );
         }
+    }
+
+    /**
+     * Attempts a reconnect for the Hono Device Registration client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
+     *
+     * @param con The connection that was disonnected.
+     */
+    private void onDisconnectDeviceRegistry(final ProtonConnection con) {
+
+        vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+            LOG.info("attempting to reconnect to Device Registration service");
+            registration.connect(createClientOptions(), connectAttempt -> {
+                if (connectAttempt.succeeded()) {
+                    LOG.debug("reconnected to Device Registration service");
+                } else {
+                    LOG.debug("cannot reconnect to Device Registration service");
+                }
+            },
+            this::onDisconnectDeviceRegistry
+            );
+        });
     }
 
     private ProtonClientOptions createClientOptions() {
