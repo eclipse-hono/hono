@@ -154,7 +154,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>credentials-file,registration-file,prod</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
