@@ -53,23 +53,24 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     /**
      * A logger to be shared with subclasses.
      */
-    protected Logger                        logger                          = LoggerFactory.getLogger(getClass());
+    protected Logger                        logger     = LoggerFactory.getLogger(getClass());
     /**
      * The Hono configuration.
      */
-    protected HonoMessagingConfigProperties    honoConfig                      = new HonoMessagingConfigProperties();
-    private GaugeService                    gaugeService                    = NullGaugeService.getInstance();
-    private CounterService                  counterService                  = NullCounterService.getInstance();
-    private final Map<UpstreamReceiver, ProtonSender> activeSenders         = new HashMap<>();
-    private final Map<String, List<UpstreamReceiver>> sendersPerConnection  = new HashMap<>();
-    private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers  = new ArrayList<>();
+    protected HonoMessagingConfigProperties honoConfig = new HonoMessagingConfigProperties();
 
-    private boolean                         running                         = false;
-    private boolean                         retryOnFailedConnectAttempt     = true;
-    private final Vertx                     vertx;
-    private ProtonConnection                downstreamConnection;
-    private SenderFactory                   senderFactory;
-    private ConnectionFactory               downstreamConnectionFactory;
+    private final Map<UpstreamReceiver, ProtonSender> activeSenders          = new HashMap<>();
+    private final Map<String, List<UpstreamReceiver>> receiversPerConnection = new HashMap<>();
+    private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers   = new ArrayList<>();
+    private final Vertx                               vertx;
+
+    private GaugeService       gaugeService                = NullGaugeService.getInstance();
+    private CounterService     counterService              = NullCounterService.getInstance();
+    private boolean            running                     = false;
+    private boolean            retryOnFailedConnectAttempt = true;
+    private ProtonConnection   downstreamConnection;
+    private SenderFactory      senderFactory;
+    private ConnectionFactory  downstreamConnectionFactory;
 
     /**
      * Creates a new adapter instance for a sender factory.
@@ -277,8 +278,10 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
             for (UpstreamReceiver client : activeSenders.keySet()) {
                 client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
+                counterService.decrement(MetricConstants.metricNameUpstreamLinks(client.getTargetAddress()));
+                counterService.decrement(MetricConstants.metricNameDownstreamSenders(client.getTargetAddress()));
             }
-            sendersPerConnection.clear();
+            receiversPerConnection.clear();
             activeSenders.clear();
             downstreamConnection.disconnectHandler(null);
             downstreamConnection.disconnect();
@@ -403,10 +406,10 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         sender.attachments().set(Constants.KEY_CONNECTION_ID, String.class, link.getConnectionId());
         sender.setAutoDrained(false); // we need to propagate drain requests upstream and wait for the result
         activeSenders.put(link, sender);
-        List<UpstreamReceiver> senders = sendersPerConnection.get(link.getConnectionId());
+        List<UpstreamReceiver> senders = receiversPerConnection.get(link.getConnectionId());
         if (senders == null) {
             senders = new ArrayList<>();
-            sendersPerConnection.put(link.getConnectionId(), senders);
+            receiversPerConnection.put(link.getConnectionId(), senders);
         }
         senders.add(link);
         counterService.increment(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
@@ -420,16 +423,11 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @param link The upstream client.
      */
     public final void removeSender(final UpstreamReceiver link) {
-        List<UpstreamReceiver> senders = sendersPerConnection.get(link.getConnectionId());
+        List<UpstreamReceiver> senders = receiversPerConnection.get(link.getConnectionId());
         if (senders != null) {
             senders.remove(link);
         }
-        ProtonSender downstreamSender = activeSenders.remove(link);
-        if (downstreamSender != null && downstreamSender.isOpen()) {
-            logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
-            counterService.decrement(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
-            downstreamSender.close();
-        }
+        closeSender(link);
     }
 
     @Override
@@ -451,11 +449,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             throw new IllegalStateException("adapter must be started first");
         }
 
-        List<UpstreamReceiver> senders = sendersPerConnection.remove(Objects.requireNonNull(connectionId));
-        if (senders != null && !senders.isEmpty()) {
-            logger.info("closing {} downstream senders for connection [id: {}]", senders.size(), connectionId);
-            for (UpstreamReceiver link : senders) {
+        List<UpstreamReceiver> upstreamReceivers = receiversPerConnection.remove(Objects.requireNonNull(connectionId));
+        if (upstreamReceivers != null && !upstreamReceivers.isEmpty()) {
+            logger.info("closing {} downstream senders for connection [id: {}]", upstreamReceivers.size(), connectionId);
+            for (UpstreamReceiver link : upstreamReceivers) {
                 closeSender(link);
+                counterService.decrement(MetricConstants.metricNameUpstreamLinks(link.getTargetAddress()));
             }
         }
     }
@@ -464,6 +463,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         ProtonSender sender = activeSenders.remove(link);
         if (sender != null && sender.isOpen()) {
             logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
+            counterService.decrement(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
             sender.close();
         }
     }
@@ -541,7 +541,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @return {@code true} if there are.
      */
     protected final boolean isSendersPerConnectionEmpty() {
-        return sendersPerConnection != null && sendersPerConnection.isEmpty();
+        return receiversPerConnection != null && receiversPerConnection.isEmpty();
     }
 
     /**
