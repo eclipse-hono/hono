@@ -16,7 +16,7 @@ between using :
 * OpenShift Origin client tools
 * Minishift
 
-### OpenShift Origin tools
+### OpenShift Origin client tools
 
 In this case, the cluster can be deployed just using the OpenShift Origin client tools that can be downloaded from the [OpenShift Origin](https://github.com/openshift/origin/releases) project repository.
 Follow [this guide](https://github.com/openshift/origin/blob/master/docs/cluster_up_down.md) for setting up a local developer instance of OpenShift,
@@ -25,8 +25,8 @@ the host Docker registry will be used for getting built images.
  
 ### Minishift
 
-Minishift is a tool that helps you run OpenShift locally by running a single-node OpenShift cluster inside a VM. Follow the [official web site](https://github.com/minishift/minishift) project
-for downloading latest release and having Minishift up and running.
+Minishift is a tool that helps you run OpenShift locally by running a single-node OpenShift cluster inside a VM. Follow [this guide](https://docs.openshift.org/latest/minishift/getting-started/index.html)
+for installing and having Minishift up and running.
 After launching Minishift and before building the Eclipse Hono images, it's necessary to execute the following command :
 
 ~~~sh
@@ -48,13 +48,13 @@ After having the OpenShift cluster up and running and the client tools in the PA
 (from the "example/openshift" directory)
 
 ~~~sh
-$ bash openshift_deploy.sh
+$ ./openshift_deploy.sh
 ~~~
 
 When you want to shutdown the Eclipse Hono instance, there is the following useful script:
 
 ~~~sh
-$ bash openshift_undeploy.sh
+$ ./openshift_undeploy.sh
 ~~~
 
 ## Step by step deployment
@@ -161,3 +161,67 @@ In the following pictures an Eclipse Hono deployment on OpenShift is running wit
 ![Eclipse Hono on Openshift](../openshift_07.png)
 
 ![Eclipse Hono on Openshift](../openshift_08.png)
+
+## Access to Hono services
+
+The OpenShift deployment provides access to Eclipse Hono by meaning of "services" and the main ones are :
+
+* hono-dispatch-router-ext : router network for the business application in order to receive data
+* hono-adapter-mqtt-vertx : MQTT protocol adapter for sending data
+* hono-adapter-rest-vertx : HTTP protocol adapter for sending data
+
+You can check these services through the `oc get services` command having the following output :
+
+~~~sh
+NAME                           CLUSTER-IP       EXTERNAL-IP   PORT(S)                         AGE
+grafana                        172.30.104.165   <nodes>       3000:31000/TCP                  2m
+hono-adapter-mqtt-vertx        172.30.3.63      <nodes>       1883:31883/TCP,8883:30883/TCP   2m
+hono-adapter-rest-vertx        172.30.205.239   <nodes>       8080:30080/TCP,8443:30443/TCP   2m
+hono-artemis                   172.30.21.155    <none>        5672/TCP                        2m
+hono-dispatch-router           172.30.140.127   <none>        5673/TCP                        2m
+hono-dispatch-router-ext       172.30.12.86     <nodes>       5671:30671/TCP,5672:30672/TCP   2m
+hono-service-auth              172.30.155.8     <none>        5671/TCP                        2m
+hono-service-device-registry   172.30.177.150   <none>        5671/TCP                        2m
+hono-service-messaging         172.30.114.146   <none>        5671/TCP                        2m
+influxdb                       172.30.203.114   <none>        2003/TCP,8083/TCP,8086/TCP      2m
+~~~
+
+Using the "OpenShift Origin client tools" way, these services are accessible using the related `CLUSTER-IP` and the "internal" ports (i.e. 8080, 5671, ...).
+
+Using the "Minishift" way, you have to use the Minishift VM IP address (that you can get with the `minishift ip` command) and the so called "node" ports (i.e. 30080, 30671, ...).
+
+### Starting a Consumer
+
+Ad described in the "Getting Started" guide, data produced by devices is usually consumed by downstream applications which connect directly to the router network service.
+You can start the client from the `example` folder as follows:
+
+~~~sh
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=<IP_ADDRESS>,--hono.client.port=<PORT>,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~~~
+
+where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the router network service as described before.
+
+### Uploading Telemetry
+
+In order to upload telemetry to Hono, the device needs to be already registered with the system. For doing that, you can use the HTTP REST protocol adapter running
+the following command (i.e. for a device with ID `4711`) :
+
+~~~sh
+$ curl -X POST -i -d 'device_id=4711' http://<IP_ADDRESS>:<PORT>/registration/DEFAULT_TENANT
+~~~
+
+where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the HTTP REST service as described before.
+After having the device registered, uploading telemetry is just a simple HTTP PUT command.
+
+~~~sh
+$ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
+> http://<IP_ADDRESS>:<PORT>/telemetry/DEFAULT_TENANT/4711
+~~~
+
+Other than using the HTTP REST protocol adapter, it's possible to upload telemetry data using the MQTT protocol adapter.
+
+~~~sh
+mosquitto_pub -h <IP_ADDRESS> -p <PORT> -i 4711 -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+~~~
+
+where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the MQTT service as described before.
