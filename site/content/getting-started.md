@@ -52,17 +52,17 @@ This will create and start up Docker Swarm *services* for all components that to
 {{< figure src="../Hono_instance.svg" title="Hono instance containers">}}
 
 * Hono Instance
-  * A *Hono Messaging* instance that protocol adapters connect to in order to forward data from devices.
   * A *REST Adapter* instance that exposes Hono's Telemetry and Event APIs as RESTful resources.
   * An *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
-  * A *Device Registry* instance that manages device data and is used for token assertion.
-  * An *Auth Server* instance that authenticates Hono components and delivers authorization tokens.  
+  * A *Hono Messaging* instance that protocol adapters connect to in order to forward data from devices.
+  * A *Device Registry* instance that manages device data and issues device registration assertions to protocol adapters.
+  * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
 * AMQP Network
   * A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data and events from devices.
   * An *Artemis* instance serving as the persistence store for events.
 * Monitoring Infrastructure
-  * An *InfluxDB* instance to store metrics data from the Hono Server.
-  * A *Grafana* instance providing a dashboard visualizing metrics collected from Hono components.
+  * An *InfluxDB* instance for storing metrics data from the Hono Messaging component.
+  * A *Grafana* instance providing a dash board visualizing the collected metrics data.
  
 ## Starting a Consumer
 
@@ -172,7 +172,7 @@ Content-Type: text/plain
 resource limit exceeded, please try again later
 ~~~
 
-This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono server to forward the data over. However, the REST adapter may not receive credits from the Hono Server quickly enough for the request to be served successfully.
+This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono Messaging component to forward the data over. However, the REST adapter may not receive credits from Hono Messaging quickly enough for the request to be served successfully.
 You can simply ignore this response and re-submit the command. You should then get a response like this:
 
 ~~~
@@ -184,7 +184,7 @@ Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9
 
 If you have started the consumer as described above, you should now see the telemetry message being logged to the console. You can publish more data simply by issuing additional requests.
 
-If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is never persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no destination to deliver it to.
+If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is *never* persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no consumer to deliver it to.
 
 Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
 
