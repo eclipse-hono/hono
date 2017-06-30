@@ -22,7 +22,6 @@ services:
 
   grafana:
     image: eclipsehono/grafana:latest
-    command: ./bin/grafana-server
     networks:
       hono-net:
         aliases:
@@ -36,7 +35,6 @@ services:
       hono-net:
         aliases:
           - hono-dispatch-router.hono
-    command: /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd-with-broker.json
     ports:
       - "15671:5671"
       - "15672:5672"
