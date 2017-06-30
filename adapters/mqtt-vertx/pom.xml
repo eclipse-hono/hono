@@ -8,6 +8,11 @@
   <artifactId>hono-adapter-mqtt-vertx</artifactId>
   <name>Hono MQTT Adapter</name>
 
+  <properties>
+    <hono.username>mqtt-adapter@HONO</hono.username>
+    <hono.password>mqtt-secret</hono.password>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -40,9 +45,8 @@
         <plugins>
           <plugin>
             <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
+            <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
-              <verbose>true</verbose>
               <images>
                 <image>
                   <build>
@@ -90,19 +94,17 @@
                   </build>
                 </image>
               </images>
+              <resources>
+                <env>
+                  <HONO_MQTT_BIND_ADDRESS>0.0.0.0</HONO_MQTT_BIND_ADDRESS>
+                  <HONO_MQTT_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_MQTT_INSECURE_PORT_BIND_ADDRESS>
+                  <HONO_MQTT_INSECURE_PORT_ENABLED>true</HONO_MQTT_INSECURE_PORT_ENABLED>
+                  <HONO_MQTT_KEY_PATH>/etc/hono/certs/mqtt-adapter-key.pem</HONO_MQTT_KEY_PATH>
+                  <HONO_MQTT_CERT_PATH>/etc/hono/certs/mqtt-adapter-cert.pem</HONO_MQTT_CERT_PATH>
+                  <HONO_MQTT_MAX_INSTANCES>1</HONO_MQTT_MAX_INSTANCES>
+                </env>
+              </resources>
             </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-maven-plugin</artifactId>
           </plugin>
         </plugins>
       </build>

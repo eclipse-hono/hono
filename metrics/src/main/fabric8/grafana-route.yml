@@ -1,0 +1,6 @@
+spec:
+  to:
+    kind: Service
+    name: grafana
+  port:
+    targetPort: 3000

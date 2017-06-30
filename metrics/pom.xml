@@ -33,50 +33,21 @@
         <plugins>
           <plugin>
             <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
+            <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
-              <verbose>true</verbose>
               <images>
                 <image>
                   <alias>grafana</alias>
-                  <name>eclipsehono/grafana:${project.version}</name>
+                  <name>eclipsehono/grafana:%l</name>
                   <build>
-                    <from>grafana/grafana:${grafana.version}</from>
-                    <ports>
-                      <port>3000</port>
-                    </ports>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/var/lib/grafana</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/grafana</directory>
-                            <outputDirectory>.</outputDirectory>
-                            <includes>
-                              <include>grafana.db</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
+                    <dockerFileDir>${project.basedir}/grafana</dockerFileDir>
+                    <args>
+                      <DOWNLOAD_URL>https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_${grafana.version}_amd64.deb</DOWNLOAD_URL>
+                    </args>
                   </build>
                 </image>
               </images>
             </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-maven-plugin</artifactId>
           </plugin>
         </plugins>
       </build>

@@ -45,13 +45,16 @@
         <plugins>
           <plugin>
             <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
+            <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
-              <verbose>true</verbose>
               <images>
                 <image>
                   <build>
                     <from>${java-base-image.name}</from>
+                    <labels>
+                      <project>Eclipse Hono</project>
+                      <implemented.api.1>Authentication</implemented.api.1>
+                    </labels>
                     <ports>
                       <port>5671</port>
                       <port>5672</port>
@@ -95,19 +98,27 @@
                   </build>
                 </image>
               </images>
+              <resources>
+                <env>
+                  <HONO_AUTH_KEY_PATH>/etc/hono/certs/auth-server-key.pem</HONO_AUTH_KEY_PATH>
+                  <HONO_AUTH_CERT_PATH>/etc/hono/certs/auth-server-cert.pem</HONO_AUTH_CERT_PATH>
+                  <HONO_AUTH_MAX_INSTANCES>1</HONO_AUTH_MAX_INSTANCES>
+                  <HONO_AUTH_BIND_ADDRESS>0.0.0.0</HONO_AUTH_BIND_ADDRESS>
+                  <HONO_AUTH_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_AUTH_INSECURE_PORT_BIND_ADDRESS>
+                  <HONO_AUTH_INSECURE_PORT_ENABLED>true</HONO_AUTH_INSECURE_PORT_ENABLED>
+                  <SPRING_PROFILES_ACTIVE>authentication-impl,dev</SPRING_PROFILES_ACTIVE>
+                </env>
+              </resources>
             </configuration>
             <executions>
               <execution>
                 <phase>package</phase>
                 <goals>
                   <goal>build</goal>
+                  <goal>resource</goal>
                 </goals>
               </execution>
             </executions>
-          </plugin>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-maven-plugin</artifactId>
           </plugin>
         </plugins>
       </build>

@@ -62,7 +62,7 @@ public class HonoSender {
                 .name(sampler.getContainer())
                 .user(sampler.getUser())
                 .password(sampler.getPwd())
-                .port(sampler.getPort())
+                .port(Integer.parseInt(sampler.getPort()))
                 .trustStorePath(sampler.getTrustStorePath())
                 .vertx(vertx)
                 .build();
@@ -74,7 +74,7 @@ public class HonoSender {
                 .name(sampler.getContainer())
                 .user(sampler.getRegistryUser())
                 .password(sampler.getRegistryPwd())
-                .port(sampler.getRegistryPort())
+                .port(Integer.parseInt(sampler.getRegistryPort()))
                 .trustStorePath(sampler.getRegistryTrustStorePath())
                 .vertx(vertx)
                 .build();
@@ -169,8 +169,8 @@ public class HonoSender {
                     properties.put("millis", System.currentTimeMillis());
                 }
                 // defaults
-                sampleResult.setResponseMessage(MessageFormat.format("Send successful for device {0} ({1}): {2}",
-                        deviceId, sampler.getTenant(), sampler.getData()));
+                sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", sampler.getEndpoint(),sampler.getTenant(), deviceId));
+                sampleResult.setResponseData(sampler.getData().getBytes());
                 sampleResult.setSentBytes(sampler.getData().getBytes().length);
                 // start sample
                 sampleResult.sampleStart();
@@ -189,7 +189,7 @@ public class HonoSender {
                             sampler.getContentType(), token);
                     if (!messageAccepted) {
                         String error = MessageFormat.format(
-                                "Client has not enough capacity - credit: {0}  device: {1}  address: {2}  thread: {3}",
+                                "ERROR: Client has not enough capacity - credit: {0}  device: {1}  address: {2}  thread: {3}",
                                 messageSender.getCredit(), deviceId, sampler.getTenant(),
                                 Thread.currentThread().getName());
                         sampleResult.setResponseMessage(error);
@@ -263,8 +263,13 @@ public class HonoSender {
     }
 
     public void close() throws InterruptedException {
-        removeDevice();
-        registrationHonoClient.shutdown();
-        honoClient.shutdown();
+        try {
+            removeDevice();
+            registrationHonoClient.shutdown();
+            honoClient.shutdown();
+            vertx.close();
+        } catch (final Throwable t) {
+            LOGGER.error("unknown exception in closing of sender", t);
+        }
     }
 }

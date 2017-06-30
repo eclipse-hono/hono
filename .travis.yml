@@ -1,9 +1,9 @@
 dist: trusty
 sudo: required
 language: java
-script: ./travis.sh
 jdk:
   - openjdk8
+script: mvn install -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Pbuild-docker-image,run-tests
 
 before_install:
 env:

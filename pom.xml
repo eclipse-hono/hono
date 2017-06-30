@@ -112,19 +112,15 @@
   </developers>
 
   <properties>
+    <!-- default when no revision property is passed in from the commandline -->
+    <revision>0-SNAPSHOT</revision>
+    <!-- Plugin versions -->
+    <nexus-staging-maven-plugin.version>1.6.8</nexus-staging-maven-plugin.version>
+      
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
-
-    <!-- Plugin versions -->
-    <nexus-staging-maven-plugin.version>1.6.8</nexus-staging-maven-plugin.version>
-
-    <!--
-      use artifactId as Docker image repository name by default
-      can be overridden by child projects to explicitly set name
-    -->
-    <image.target>${project.artifactId}</image.target>
 
     <!-- configure timestamp format to be injected into legal docs -->
     <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
@@ -135,8 +131,19 @@
       when doing a release build, set this property to false.
      -->
     <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
-    <!-- default when no revision property is passed in from the commandline -->
-    <revision>0-SNAPSHOT</revision>
+
+    <!-- 
+      Build images defined in modules with packaging type "pom".
+     -->
+    <fabric8.skip.build.pom>false</fabric8.skip.build.pom>
+    <!-- 
+      The default path to load the trusted CA certificates from.
+     -->
+    <hono.trustStore.path>/etc/hono/certs/trusted-certs.pem</hono.trustStore.path>
+    <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
+    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
+    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
+    <hono.auth.validation.certPath>/etc/hono/certs/auth-server-cert.pem</hono.auth.validation.certPath>
   </properties>
 
   <modules>
@@ -168,27 +175,23 @@
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
           <version>0.21.0</version>
-          <configuration>
-            <images>
-              <image>
-                <name>eclipsehono/${image.target}</name>
-                <build>
-                  <tags>
-                    <tag>latest</tag>
-                    <tag>${project.version}</tag>
-                    <tag>${timestamp}</tag>
-                  </tags>
-                </build>
-              </image>
-            </images>
-          </configuration>
         </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>fabric8-maven-plugin</artifactId>
-          <version>3.4.1</version>
+          <version>3.4.2</version>
           <configuration>
-            <mode>auto</mode>
+            <mode>kubernetes</mode>
+            <profile>minimal</profile>
+            <verbose>true</verbose>
+            <images>
+              <image>
+                <name>eclipsehono/%a:%l</name>
+                <build>
+                  <maintainer>The Eclipse Hono project</maintainer>
+                </build>
+              </image>
+            </images>
             <generator>
               <excludes>
                 <exclude>java-exec</exclude>
@@ -196,14 +199,23 @@
                 <exclude>wildfly-swarm</exclude>
                 <exclude>vertx</exclude>
                 <exclude>karaf</exclude>
-                <exclude>webapps</exclude>
+                <exclude>webapp</exclude>
               </excludes>
             </generator>
+            <enricher>
+              <includes>
+                <include>fmp-controller</include>
+                <include>fmp-ianaservice</include>
+                <include>vertx-health-check</include>
+              </includes>
+            </enricher>
           </configuration>
           <executions>
             <execution>
+              <id>fabric8</id>
               <phase>package</phase>
               <goals>
+                <goal>build</goal>
                 <goal>resource</goal>
               </goals>
             </execution>

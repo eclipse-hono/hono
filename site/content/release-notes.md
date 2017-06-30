@@ -4,11 +4,25 @@ menu = "main"
 weight = 800
 +++
 
-## 0.5-M6-SNAPSHOT
+## 0.5-M6
 
-Not released yet.
+### New Features
 
-The biggest change is the fact that we have re-factored the Authorization service and the Device Registration service implementations that where originally part of the Hono Server component into their own components. The Authorization service has been re-factored into the *Auth Server* component and the Device Registration service has been re-factored into the *Device Registry* component. Consequently, the former Hono server component has been re-named to *Hono Messaging* to better reflect its sole responsibility of forwarding telemetry and event message from/to devices and the AMQP 1.0 Messaging Network.
+* Protocol adapters can now be configured to listen on both TLS secured and unsecured ports.
+* Initial support for reporting metrics using Spring Boot Actuator. Metrics can be reported to services understanding the *graphite* format.
+* Better support for integration with existing device registry and identity management systems by means of refactoring of *Hono server* into three micro-services (see Architectural Changes section).
+* Introduced a set of base classes for implementing services in general and services implemening Device Registration and Authentication API in particular.
+* Support Kubernetes as a deployment platform.
+* Overall improvement of resilience in context of connection failures.
+* JMeter plugin for load tests, which includes samplers for a Hono sender (acts as an adapter) and a Hono receiver (acts as a solution/application). Also a sample plan is provided.
+
+### Bug Fixes
+
+See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue%20milestone%3A0.5-M6%20) for the list of issues addressed by 0.5-M6.
+
+### Architectural Changes
+
+The biggest change is the fact that we have re-factored the Authorization service and the Device Registration service implementations that where originally part of the *Hono server* component into their own components. The Authorization service has been re-factored into the *Auth Server* component and the Device Registration service has been re-factored into the *Device Registry* component. Consequently, the former *Hono server* component has been re-named to *Hono Messaging* to better reflect its sole responsibility of forwarding telemetry and event messages from/to devices and the *AMQP 1.0 Messaging Network* (see [Component View]({{< relref "Component-View.md" >}}) for an overview of Hono's top level components and their relationships with each other).
 
 As part of the refactoring we have introduced the `services` Maven module which now contains
 

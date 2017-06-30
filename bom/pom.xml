@@ -33,6 +33,7 @@
     <assertj-core.version>3.2.0</assertj-core.version>
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
     <grafana.version>4.2.0</grafana.version>
+    <influxdb.version>1.2.2</influxdb.version>
     <jackson.version>2.7.4</jackson.version>
     <java-base-image.name>openjdk:8-jre-alpine</java-base-image.name>
     <jjwt.version>0.7.0</jjwt.version>

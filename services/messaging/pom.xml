@@ -11,6 +11,11 @@
   <name>Hono Messaging</name>
   <description>The Messaging service implements Hono's Telemetry and Event APIs.</description>
 
+  <properties>
+    <hono.messaging.keyPath>/etc/hono/certs/hono-messaging-key.pem</hono.messaging.keyPath>
+    <hono.messaging.certPath>/etc/hono/certs/hono-messaging-cert.pem</hono.messaging.certPath>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -76,9 +81,8 @@
         <plugins>
           <plugin>
             <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
+            <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
-              <verbose>true</verbose>
               <images>
                 <image>
                   <build>
@@ -96,6 +100,8 @@
                       <exec>
                         <arg>java</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
+                        <arg>-Dnetworkaddress.cache.ttl=0</arg>
+                        <arg>-Dnetworkaddress.cache.negative.ttl=0</arg>
                         <arg>-jar</arg>
                         <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
                       </exec>
@@ -127,19 +133,33 @@
                   </build>
                 </image>
               </images>
+              <resources>
+                <env>
+                  <HONO_AUTH_HOST>${hono.auth.host}</HONO_AUTH_HOST>
+                  <HONO_AUTH_PORT>5671</HONO_AUTH_PORT>
+                  <HONO_AUTH_NAME>${project.name}</HONO_AUTH_NAME>
+                  <HONO_AUTH_VALIDATION_CERT_PATH>${hono.auth.validation.certPath}</HONO_AUTH_VALIDATION_CERT_PATH>
+                  <HONO_AUTH_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_AUTH_TRUST_STORE_PATH>
+                  <HONO_DOWNSTREAM_HOST>hono-dispatch-router.hono</HONO_DOWNSTREAM_HOST>
+                  <HONO_DOWNSTREAM_PORT>5673</HONO_DOWNSTREAM_PORT>
+                  <HONO_DOWNSTREAM_NAME>${project.name}</HONO_DOWNSTREAM_NAME>
+                  <HONO_DOWNSTREAM_KEY_PATH>${hono.messaging.keyPath}</HONO_DOWNSTREAM_KEY_PATH>
+                  <HONO_DOWNSTREAM_CERT_PATH>${hono.messaging.certPath}</HONO_DOWNSTREAM_CERT_PATH>
+                  <HONO_DOWNSTREAM_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_DOWNSTREAM_TRUST_STORE_PATH>
+                  <HONO_MESSAGING_KEY_PATH>${hono.messaging.keyPath}</HONO_MESSAGING_KEY_PATH>
+                  <HONO_MESSAGING_CERT_PATH>${hono.messaging.certPath}</HONO_MESSAGING_CERT_PATH>
+                  <HONO_MESSAGING_MAX_INSTANCES>1</HONO_MESSAGING_MAX_INSTANCES>
+                  <HONO_MESSAGING_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_BIND_ADDRESS>
+                  <HONO_MESSAGING_INSECURE_PORT_ENABLED>true</HONO_MESSAGING_INSECURE_PORT_ENABLED>
+                  <HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS>
+                  <HONO_MESSAGING_VALIDATION_SHARED_SECRET>${hono.regAssertion.sharedSecret}</HONO_MESSAGING_VALIDATION_SHARED_SECRET>
+                  <HONO_METRIC_REPORTER_GRAPHITE_ACTIVE>true</HONO_METRIC_REPORTER_GRAPHITE_ACTIVE>
+                  <HONO_METRIC_REPORTER_GRAPHITE_HOST>influxdb.hono</HONO_METRIC_REPORTER_GRAPHITE_HOST>
+                  <HONO_METRIC_REPORTER_GRAPHITE_PORT>2003</HONO_METRIC_REPORTER_GRAPHITE_PORT>
+                  <SPRING_PROFILES_ACTIVE>default,dev</SPRING_PROFILES_ACTIVE>
+                </env>
+              </resources>
             </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-maven-plugin</artifactId>
           </plugin>
         </plugins>
       </build>

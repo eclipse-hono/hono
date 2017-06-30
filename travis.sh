@@ -1,4 +1,10 @@
 #!/bin/bash
+
+#
+# For the time being, we are NOT using this script to build Hono anymore
+# instead, we are simply invoking mvn install ... from .travis.yml
+#
+
 # Abort on Error
 set -e
 

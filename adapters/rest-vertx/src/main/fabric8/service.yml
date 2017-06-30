@@ -1,0 +1,11 @@
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    nodePort: 30080
+  - port: 8443
+    protocol: TCP
+    targetPort: 8443
+    nodePort: 30443

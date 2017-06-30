@@ -65,13 +65,7 @@ abstract public class HonoSamplerUI extends AbstractSamplerGui {
         this.configureTestElement(testElement);
         HonoSampler sampler = (HonoSampler) testElement;
         sampler.setHost(honoServerOptions.getHost().getText());
-        int portI = 0;
-        try {
-            portI = Integer.parseInt(honoServerOptions.getPort().getText());
-        } catch (NumberFormatException e) {
-            honoServerOptions.getPort().setText("0");
-        }
-        sampler.setPort(portI);
+        sampler.setPort(honoServerOptions.getPort().getText());
         sampler.setUser(honoServerOptions.getUser().getText());
         sampler.setPwd(honoServerOptions.getPwd().getText());
         sampler.setEndpoint(HonoSampler.Endpoint.valueOf(endpoint.getText()));
@@ -85,7 +79,7 @@ abstract public class HonoSamplerUI extends AbstractSamplerGui {
         super.configure(element);
         HonoSampler sampler = (HonoSampler) element;
         honoServerOptions.getHost().setText(sampler.getHost());
-        honoServerOptions.getPort().setText(sampler.getPort() + "");
+        honoServerOptions.getPort().setText(sampler.getPort());
         honoServerOptions.getUser().setText(sampler.getUser());
         honoServerOptions.getPwd().setText(sampler.getPwd());
         endpoint.setText(sampler.getEndpoint());

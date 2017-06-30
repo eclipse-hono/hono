@@ -1,0 +1,11 @@
+spec:
+  type: NodePort
+  ports:
+  - port: 1883
+    protocol: TCP
+    targetPort: 1883
+    nodePort: 31883
+  - port: 8883
+    protocol: TCP
+    targetPort: 8883
+    nodePort: 30883

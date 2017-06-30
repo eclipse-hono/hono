@@ -1,0 +1,15 @@
+metadata:
+  name: ${project.artifactId}-ext
+spec:
+  type: NodePort
+  ports:
+  - name: amqp
+    port: 5671
+    protocol: TCP
+    targetPort: 5671
+    nodePort: 30671
+  - name: amqps
+    port: 5672
+    protocol: TCP
+    targetPort: 5672
+    nodePort: 30672

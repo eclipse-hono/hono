@@ -9,9 +9,10 @@
   </parent>
 
   <artifactId>hono-dispatch-router</artifactId>
-  <name>Qpid Dispatch Router</name>
+  <name>Hono Dispatch Router</name>
   <packaging>pom</packaging>
-  <description>Module for building the Qpid Dispatch Router image</description>
+  <description>Module for building the Qpid Dispatch Router image including Hono specific configuration, keys, certificates and SASL DB.</description>
+
 
   <dependencies>
     <dependency>
@@ -89,9 +90,8 @@
         <plugins>
           <plugin>
             <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
+            <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
-              <verbose>true</verbose>
               <images>
                 <image>
                   <build>
@@ -99,7 +99,15 @@
                     <ports>
                       <port>5671</port>
                       <port>5672</port>
+                      <port>5673</port>
                     </ports>
+                    <cmd>
+                      <exec>
+                        <arg>/sbin/qdrouterd</arg>
+                        <arg>-c</arg>
+                        <arg>/etc/hono/qdrouter/qdrouterd-with-broker.json</arg>
+                      </exec>
+                    </cmd>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
@@ -136,18 +144,6 @@
                 </image>
               </images>
             </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-maven-plugin</artifactId>
           </plugin>
         </plugins>
       </build>

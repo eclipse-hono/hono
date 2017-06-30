@@ -10,10 +10,35 @@ to communicate with each other.
 
 ## Prerequisites
 
-The main prerequisite for this kind of deployment is to have an available OpenShift cluster. For a local development, it's pretty simple having such cluster just
-using the OpenShift client tools that can be downloaded from the [OpenShift Origin](https://github.com/openshift/origin/releases) project repository.
+The main prerequisite for this kind of deployment is to have an available OpenShift cluster. For a local development, it's pretty simple having such cluster choosing
+between using :
+
+* OpenShift Origin client tools
+* Minishift
+
+### OpenShift Origin client tools
+
+In this case, the cluster can be deployed just using the OpenShift Origin client tools that can be downloaded from the [OpenShift Origin](https://github.com/openshift/origin/releases) project repository.
 Follow [this guide](https://github.com/openshift/origin/blob/master/docs/cluster_up_down.md) for setting up a local developer instance of OpenShift,
-for having an accessible registry for Docker and starting the cluster locally.
+for having an accessible registry for Docker and starting the cluster locally. The deployed cluster is made by only one node (the host) running inside a Docker image and
+the host Docker registry will be used for getting built images.
+ 
+### Minishift
+
+Minishift is a tool that helps you run OpenShift locally by running a single-node OpenShift cluster inside a VM. Follow [this guide](https://docs.openshift.org/latest/minishift/getting-started/index.html)
+for installing and having Minishift up and running.
+After launching Minishift and before building the Eclipse Hono images, it's necessary to execute the following command :
+
+~~~sh
+$ eval $(minishift docker-env)
+~~~
+
+In this way, the `DOCKER_HOST` environment variable is set to the Docker daemon running inside the Minishift VM. Launching the following command for building the Eclipse Hono images,
+such daemon will be used and the final images will be available inside the Minishift VM, ready for the deployment.
+
+~~~sh
+~/hono$ mvn clean install -Pbuild-docker-image
+~~~
 
 ## One _script_ deployment
 
@@ -23,13 +48,13 @@ After having the OpenShift cluster up and running and the client tools in the PA
 (from the "example/openshift" directory)
 
 ~~~sh
-$ bash openshift_deploy.sh
+$ ./openshift_deploy.sh
 ~~~
 
 When you want to shutdown the Eclipse Hono instance, there is the following useful script:
 
 ~~~sh
-$ bash openshift_undeploy.sh
+$ ./openshift_undeploy.sh
 ~~~
 
 ## Step by step deployment
@@ -57,7 +82,7 @@ After that, it's needed to log into the cluster as a system administrator in ord
 
 ~~~sh
 $ oc login -u system:admin
-$ oc create -f <path-to-repo>/example/target/fabric8/hono-pv.yml
+$ oc create -f <path-to-repo>/example/target/classes/META-INF/fabric8/openshift/hono-pv.yml
 ~~~
 
 When the persistent volume is provisioned, come back to use the default `developer` user.
@@ -68,67 +93,135 @@ $ oc login -u developer
 
 ### Deploying Eclipse Hono components
 
-Using the `developer` user, it's now possible to deploy all the other OpenShift resources related to :
+Using the `developer` user, it is now possible to deploy all the other OpenShift resources related to:
 
-* Artemis Broker (service and deployment)
-* Qpid Dispatch Router (service and deployment)
-* Auth Server (service and deployment)
-* Device Registry (persistent volume claim, service and deployment)
-* Hono Messaging (service and deployment)
-* HTTP REST adapter (service and deployment)
-* MQTT adapter (service and deployment)
+1. Artemis Broker
+1. Qpid Dispatch Router
+1. Auth Server
+1. Device Registry
+1. Hono Messaging
+1. HTTP REST adapter
+1. MQTT adapter
 
-In order to start deploy the Artemis Broker, the following resources needs to be created.
+Deploy the Artemis Broker:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/broker/target/fabric8/artemis-svc.yml
-$ oc create -f <path-to-repo>/hono/broker/target/fabric8/artemis-dc.yml
+$ oc create -f <path-to-repo>/hono/broker/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-Then the Qpid Dispatch Router.
+Then the Qpid Dispatch Router:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/dispatchrouter/target/fabric8/dispatch-router-svc.yml
-$ oc create -f <path-to-repo>/hono/dispatchrouter/target/fabric8/dispatch-router-dc.yml
+$ oc create -f <path-to-repo>/hono/dispatchrouter/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-Then the Auth Server.
+Then the Auth Server:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/services/auth/target/fabric8/hono-auth-svc.yml
-$ oc create -f <path-to-repo>/hono/services/auth/target/fabric8/hono-auth-dc.yml
+$ oc create -f <path-to-repo>/hono/services/auth/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-Then the Device Registry, which needs a _claim_ on the persistent volume already provisioned.
+Then the Device Registry:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-svc.yml
-$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-pvc.yml
-$ oc create -f <path-to-repo>/hono/services/device-registry/target/fabric8/hono-device-registry-dc.yml
+$ oc create -f <path-to-repo>/hono/services/device-registry/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-Then the Hono Messaging.
+Then the Hono Messaging component:
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/services/messaging/target/fabric8/hono-messaging-svc.yml
-$ oc create -f <path-to-repo>/hono/services/messaging/target/fabric8/hono-messaging-dc.yml
+$ oc create -f <path-to-repo>/hono/services/messaging/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
 Finally, both the adapters (HTTP REST and MQTT).
 
 ~~~sh
-$ oc create -f <path-to-repo>/hono/adapters/rest-vertx/target/fabric8/hono-adapter-rest-vertx-svc.yml
-$ oc create -f <path-to-repo>/hono/adapters/rest-vertx/target/fabric8/hono-adapter-rest-vertx-dc.yml
-$ oc create -f <path-to-repo>/hono/adapters/mqtt-vertx/target/fabric8/hono-adapter-mqtt-vertx-svc.yml
-$ oc create -f <path-to-repo>/hono/adapters/mqtt-vertx/target/fabric8/hono-adapter-mqtt-vertx-dc.yml
+$ oc create -f <path-to-repo>/hono/adapters/rest-vertx/target/classes/META-INF/fabric8/openshift.yml
+$ oc create -f <path-to-repo>/hono/adapters/mqtt-vertx/target/classes/META-INF/fabric8/openshift.yml
 ~~~
 
-In this way, all the components are accessible inside the cluster using the _service_ addresses from the clients point of view.
+In this way, all the components are accessible inside the cluster using the _service_ addresses from a client's point of view.
 
-In order to see the deployed components, you can use the OpenShift Web console that is accessible at https://localhost:8443/ using your preferred browser.
+In order to see the deployed components, you can use the [OpenShift Web console](https://localhost:8443/) using your preferred browser.
 
 In the following pictures an Eclipse Hono deployment on OpenShift is running with all the provided components.
 
 ![Eclipse Hono on Openshift](../openshift_01.png)
 
 ![Eclipse Hono on Openshift](../openshift_02.png)
+
+![Eclipse Hono on Openshift](../openshift_03.png)
+
+![Eclipse Hono on Openshift](../openshift_04.png)
+
+![Eclipse Hono on Openshift](../openshift_05.png)
+
+![Eclipse Hono on Openshift](../openshift_06.png)
+
+![Eclipse Hono on Openshift](../openshift_07.png)
+
+![Eclipse Hono on Openshift](../openshift_08.png)
+
+## Access to Hono services
+
+The OpenShift deployment provides access to Eclipse Hono by meaning of "services" and the main ones are :
+
+* hono-dispatch-router-ext : router network for the business application in order to receive data
+* hono-adapter-mqtt-vertx : MQTT protocol adapter for sending data
+* hono-adapter-rest-vertx : HTTP protocol adapter for sending data
+
+You can check these services through the `oc get services` command having the following output :
+
+~~~sh
+NAME                           CLUSTER-IP       EXTERNAL-IP   PORT(S)                         AGE
+grafana                        172.30.104.165   <nodes>       3000:31000/TCP                  2m
+hono-adapter-mqtt-vertx        172.30.3.63      <nodes>       1883:31883/TCP,8883:30883/TCP   2m
+hono-adapter-rest-vertx        172.30.205.239   <nodes>       8080:30080/TCP,8443:30443/TCP   2m
+hono-artemis                   172.30.21.155    <none>        5672/TCP                        2m
+hono-dispatch-router           172.30.140.127   <none>        5673/TCP                        2m
+hono-dispatch-router-ext       172.30.12.86     <nodes>       5671:30671/TCP,5672:30672/TCP   2m
+hono-service-auth              172.30.155.8     <none>        5671/TCP                        2m
+hono-service-device-registry   172.30.177.150   <none>        5671/TCP                        2m
+hono-service-messaging         172.30.114.146   <none>        5671/TCP                        2m
+influxdb                       172.30.203.114   <none>        2003/TCP,8083/TCP,8086/TCP      2m
+~~~
+
+Using the "OpenShift Origin client tools" way, these services are accessible using the related `CLUSTER-IP` and the "internal" ports (i.e. 8080, 5671, ...).
+
+Using the "Minishift" way, you have to use the Minishift VM IP address (that you can get with the `minishift ip` command) and the so called "node" ports (i.e. 30080, 30671, ...).
+
+### Starting a Consumer
+
+Ad described in the "Getting Started" guide, data produced by devices is usually consumed by downstream applications which connect directly to the router network service.
+You can start the client from the `example` folder as follows:
+
+~~~sh
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=<IP_ADDRESS>,--hono.client.port=<PORT>,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~~~
+
+where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the router network service as described before.
+
+### Uploading Telemetry
+
+In order to upload telemetry to Hono, the device needs to be already registered with the system. For doing that, you can use the HTTP REST protocol adapter running
+the following command (i.e. for a device with ID `4711`) :
+
+~~~sh
+$ curl -X POST -i -d 'device_id=4711' http://<IP_ADDRESS>:<PORT>/registration/DEFAULT_TENANT
+~~~
+
+where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the HTTP REST service as described before.
+After having the device registered, uploading telemetry is just a simple HTTP PUT command.
+
+~~~sh
+$ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
+> http://<IP_ADDRESS>:<PORT>/telemetry/DEFAULT_TENANT/4711
+~~~
+
+Other than using the HTTP REST protocol adapter, it's possible to upload telemetry data using the MQTT protocol adapter.
+
+~~~sh
+mosquitto_pub -h <IP_ADDRESS> -p <PORT> -i 4711 -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+~~~
+
+where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the MQTT service as described before.

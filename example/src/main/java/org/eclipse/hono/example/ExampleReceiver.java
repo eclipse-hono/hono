@@ -79,7 +79,7 @@ public class ExampleReceiver extends AbstractExampleClient {
 
         // give Vert.x some time to clean up NetClient
         vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
-            LOG.info("attempting to re-connect to Hono server");
+            LOG.info("attempting to re-connect to Hono ...");
             client.connect(getClientOptions(), connectionAttempt -> onConnectionEstablished(done -> {}), this::onDisconnect);
         });
     }

@@ -66,13 +66,15 @@
         <plugins>
           <plugin>
             <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
+            <artifactId>fabric8-maven-plugin</artifactId>
             <configuration>
-              <verbose>true</verbose>
               <images>
                 <image>
                   <build>
                     <from>enmasseproject/activemq-artemis:${artemis.version}-1</from>
+                    <ports>
+                      <port>5672</port>
+                    </ports>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/opt/artemis</basedir>
@@ -95,21 +97,10 @@
                 </image>
               </images>
             </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-maven-plugin</artifactId>
           </plugin>
         </plugins>
       </build>
     </profile>
   </profiles>
+  <name>Hono Artemis</name>
 </project>
