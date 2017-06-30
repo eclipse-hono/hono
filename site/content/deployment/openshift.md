@@ -45,7 +45,7 @@ such daemon will be used and the final images will be available inside the Minis
 In order to deploy Eclipse Hono on OpenShift, a bunch of steps are needed as explained in the next chapter. If you want to avoid to do them, a _one click_ deployment
 script is available in the repository.
 After having the OpenShift cluster up and running and the client tools in the PATH, the deployment can be executed launching the following bash script
-(from the "example/openshift" directory)
+(from the "example/target/deploy/openshift/" directory)
 
 ~~~sh
 $ ./openshift_deploy.sh
