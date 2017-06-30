@@ -10,10 +10,35 @@ to communicate with each other.
 
 ## Prerequisites
 
-The main prerequisite for this kind of deployment is to have an available OpenShift cluster. For a local development, it's pretty simple having such cluster just
-using the OpenShift client tools that can be downloaded from the [OpenShift Origin](https://github.com/openshift/origin/releases) project repository.
+The main prerequisite for this kind of deployment is to have an available OpenShift cluster. For a local development, it's pretty simple having such cluster choosing
+between using :
+
+* OpenShift Origin client tools
+* Minishift
+
+### OpenShift Origin tools
+
+In this case, the cluster can be deployed just using the OpenShift Origin client tools that can be downloaded from the [OpenShift Origin](https://github.com/openshift/origin/releases) project repository.
 Follow [this guide](https://github.com/openshift/origin/blob/master/docs/cluster_up_down.md) for setting up a local developer instance of OpenShift,
-for having an accessible registry for Docker and starting the cluster locally.
+for having an accessible registry for Docker and starting the cluster locally. The deployed cluster is made by only one node (the host) running inside a Docker image and
+the host Docker registry will be used for getting built images.
+ 
+### Minishift
+
+Minishift is a tool that helps you run OpenShift locally by running a single-node OpenShift cluster inside a VM. Follow the [official web site](https://github.com/minishift/minishift) project
+for downloading latest release and having Minishift up and running.
+After launching Minishift and before building the Eclipse Hono images, it's necessary to execute the following command :
+
+~~~sh
+$ eval $(minishift docker-env)
+~~~
+
+In this way, the `DOCKER_HOST` environment variable is set to the Docker daemon running inside the Minishift VM. Launching the following command for building the Eclipse Hono images,
+such daemon will be used and the final images will be available inside the Minishift VM, ready for the deployment.
+
+~~~sh
+~/hono$ mvn clean install -Pbuild-docker-image
+~~~
 
 ## One _script_ deployment
 
