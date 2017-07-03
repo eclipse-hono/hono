@@ -29,6 +29,9 @@
   <description>A collection of example code for sending and receiving telemetry data using HonoClient.
 Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for starting up all images constituting a Hono instance.</description>
 
+  <properties>
+    <docker.skip.build>true</docker.skip.build>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -154,55 +157,37 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>io.fabric8</groupId>
+        <artifactId>fabric8-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>eclipse-hono</id>
+            <phase>package</phase>
+            <goals>
+                <goal>single</goal>
+            </goals>
+            <configuration>
+              <attach>false</attach>
+              <descriptors>
+                <descriptor>src/main/assembly/hono.xml</descriptor>
+              </descriptors>
+              <tarLongFileMode>posix</tarLongFileMode>
+              <finalName>eclipse-hono-example-${project.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
-  <profiles>
-    <profile>
-      <id>build-docker-image</id>
-      <activation>
-        <property>
-          <name>docker.host</name>
-        </property>
-      </activation>
-      <properties>
-        <docker.skip.build>true</docker.skip.build>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-maven-plugin</artifactId>
-          </plugin>
-          <plugin>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <version>3.0.0</version>
-            <executions>
-              <execution>
-                <id>eclipse-hono</id>
-                <phase>package</phase>
-                <goals>
-                    <goal>single</goal>
-                </goals>
-                <configuration>
-                  <attach>false</attach>
-                  <descriptors>
-                    <descriptor>src/main/assembly/hono.xml</descriptor>
-                  </descriptors>
-                  <tarLongFileMode>posix</tarLongFileMode>
-                  <finalName>eclipse-hono-example-${project.version}</finalName>
-                  <appendAssemblyId>false</appendAssemblyId>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>
