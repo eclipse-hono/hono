@@ -124,6 +124,7 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
       <resource>
         <directory>${project.basedir}/src/main/deploy</directory>
         <targetPath>${project.build.directory}/deploy</targetPath>
+        <filtering>true</filtering>
       </resource>
     </resources>
     <plugins>

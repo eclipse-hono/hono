@@ -41,7 +41,7 @@ The first build might take several minutes because Docker will need to download 
 
 ## Starting Hono
 
-The easiest way to start the server components is by deploying them as a *stack*. As part of the build process, a *Docker Compose* file is generated under `example/target/deploy/docker/docker-compose.yml` which can be used to start up a Hono instance on your Docker host. Simply run the following from the `example/target/hono` directory
+The easiest way to start the server components is by deploying them as a *stack*. As part of the build process, a *Docker Compose* file is generated under `example/target/deploy/docker/docker-compose.yml` which can be used to start up a Hono instance on your Docker host. Simply run the following from the `example/target/deploy/docker` directory
 
 ~~~sh
 ~/hono/example/target/deploy/docker$ docker stack deploy -c docker-compose.yml hono

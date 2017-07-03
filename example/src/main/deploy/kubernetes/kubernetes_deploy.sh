@@ -2,7 +2,7 @@
 
 # Absolute path this script is in
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
-HONO_HOME=$SCRIPTPATH/../..
+HONO_HOME=$SCRIPTPATH/../../../..
 NS=hono
 
 echo DEPLOYING ECLIPSE HONO TO KUBERNETES

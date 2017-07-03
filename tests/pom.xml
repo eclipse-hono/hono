@@ -84,7 +84,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>eclipsehono/hono-service-auth-test</name>
                   <alias>auth</alias>
                   <build>
-                    <from>eclipsehono/hono-service-auth:latest</from>
+                    <from>eclipsehono/hono-service-auth:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
@@ -124,7 +124,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>eclipsehono/hono-service-device-registry-test</name>
                   <alias>device-registry</alias>
                   <build>
-                    <from>eclipsehono/hono-service-device-registry:latest</from>
+                    <from>eclipsehono/hono-service-device-registry:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
@@ -164,7 +164,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
-                  <name>eclipsehono/hono-artemis:latest</name>
+                  <name>eclipsehono/hono-artemis:${project.version}</name>
                   <run>
                     <ports>
                       <port>+broker.ip:broker.amqp.port:5672</port>
@@ -187,11 +187,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### Qpid Dispatch Router ##### -->
                 <image>
-                  <name>eclipsehono/hono-dispatch-router:latest</name>
+                  <name>eclipsehono/hono-dispatch-router:${project.version}</name>
                   <run>
-                    <cmd>
-                      <shell>/usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd-with-broker.json</shell>
-                    </cmd>
                     <ports>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
                     </ports>
@@ -216,7 +213,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>eclipsehono/hono-service-messaging-test</name>
                   <alias>messaging</alias>
                   <build>
-                    <from>eclipsehono/hono-service-messaging:latest</from>
+                    <from>eclipsehono/hono-service-messaging:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>

@@ -14,7 +14,7 @@ The only requirement for this guide is a working cluster of Docker Engine nodes 
 
 ## Deployment
 
-It is very easy to deploy the containers comprising a Hono instance to an existing Docker Swarm based on a [Docker *compose* file](https://docs.docker.com/compose/compose-file/). The remainder of this guide will use the example compose file created in the `example/target/hono` folder during the build process for that purpose. Once the build has finished, the process of deploying Hono to a cloud based, multi-node cluster is similar to the way described in the [Getting started guide]({{< relref "getting-started.md" >}}):
+It is very easy to deploy the containers comprising a Hono instance to an existing Docker Swarm based on a [Docker *compose* file](https://docs.docker.com/compose/compose-file/). The remainder of this guide will use the example compose file created in the `example/target/deploy/docker` folder during the build process for that purpose. Once the build has finished, the process of deploying Hono to a cloud based, multi-node cluster is similar to the way described in the [Getting started guide]({{< relref "getting-started.md" >}}):
 
 ~~~sh
 $ export DOCKER_SWARM_MANAGER=my-swarm.my-domain.com:2375
@@ -35,7 +35,7 @@ You will need at least Docker version 17.03.1 (corresponding to 1.13.1 in Docker
 
 ### Docker Secrets
 
-The `example/target/hono/docker-compose.yml` file defines infrastructure and services that comprise a full Hono *stack*.
+The `example/target/deploy/docker/docker-compose.yml` file defines infrastructure and services that comprise a full Hono *stack*.
 In particular, the stack consists of an Auth Server, a Dispatch Router, a Hono server, a REST adapter and an MQTT adapter instance.
 
 The file contains the following service definition for the Auth Server:

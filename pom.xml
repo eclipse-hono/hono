@@ -177,7 +177,7 @@
             <verbose>true</verbose>
             <images>
               <image>
-                <name>eclipsehono/%a:%l</name>
+                <name>eclipsehono/%a:%v</name>
                 <build>
                   <maintainer>The Eclipse Hono project</maintainer>
                 </build>
