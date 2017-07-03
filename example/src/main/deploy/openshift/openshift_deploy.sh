@@ -3,7 +3,7 @@
 
 # Absolute path this script is in
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
-HONO_HOME=$SCRIPTPATH/../..
+HONO_HOME=$SCRIPTPATH/../../../..
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
 

@@ -108,10 +108,10 @@ Since Docker 17.03.1, the new and preferred way to provide containers access to 
 
 ### Modifying the Compose File
 
-1. Create a copy of the default `/example/target/hono/docker-compose.yml` file.
+1. Create a copy of the default `/example/target/deploy/docker/docker-compose.yml` file.
 
        ~~~sh
-       ~/tmp$ cp $HONO/example/target/hono/docker-compose.yml ./my-docker-compose.yml
+       ~/tmp$ cp $HONO/example/target/deploy/docker/docker-compose.yml ./my-docker-compose.yml
        ~~~
 
 1. Define the custom permissions file as a secret by means of adding a `secrets` section at the beginning of the compose file:
