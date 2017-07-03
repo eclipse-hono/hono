@@ -228,3 +228,6 @@ Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in
 {{% warning %}}
 If you do not run Docker on localhost, replace *localhost* in the link with the correct name or IP address of the Docker host that the Grafana container is running on.
 {{% /warning %}}
+
+If there are more than one instance of the Hono Messaging component, the data shown in the Grafana board is not accurate, since the data is not aggregated over instances at the moment. 
+For a productive environment the instance need to be considered - e.g. by setting a different `hono.metric.reporter.graphite.prefix` for each instance and an aggregation function in the visualization.
