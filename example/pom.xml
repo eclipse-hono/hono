@@ -170,6 +170,9 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
           <name>docker.host</name>
         </property>
       </activation>
+      <properties>
+        <docker.skip.build>true</docker.skip.build>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -187,6 +190,7 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
                     <goal>single</goal>
                 </goals>
                 <configuration>
+                  <attach>false</attach>
                   <descriptors>
                     <descriptor>src/main/assembly/hono.xml</descriptor>
                   </descriptors>
