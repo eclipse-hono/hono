@@ -117,6 +117,12 @@
                 <HONO_REGISTRATION_USERNAME>${hono.username}</HONO_REGISTRATION_USERNAME>
                 <HONO_REGISTRATION_PASSWORD>${hono.password}</HONO_REGISTRATION_PASSWORD>
                 <HONO_REGISTRATION_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_REGISTRATION_TRUST_STORE_PATH>
+                <HONO_CREDENTIALS_NAME>${project.name}</HONO_CREDENTIALS_NAME>
+                <HONO_CREDENTIALS_HOST>${hono.registration.host}</HONO_CREDENTIALS_HOST>
+                <HONO_CREDENTIALS_PORT>5671</HONO_CREDENTIALS_PORT>
+                <HONO_CREDENTIALS_USERNAME>${hono.username}</HONO_CREDENTIALS_USERNAME>
+                <HONO_CREDENTIALS_PASSWORD>${hono.password}</HONO_CREDENTIALS_PASSWORD>
+                <HONO_CREDENTIALS_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_CREDENTIALS_TRUST_STORE_PATH>
                 <LOGGING_CONFIG>classpath:logback-spring.xml</LOGGING_CONFIG>
                 <SPRING_PROFILES_ACTIVE>dev</SPRING_PROFILES_ACTIVE>
               </env>

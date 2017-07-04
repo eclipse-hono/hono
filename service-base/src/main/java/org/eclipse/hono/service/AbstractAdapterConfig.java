@@ -19,8 +19,11 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
@@ -162,5 +165,66 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public HonoClient registrationServiceClient() {
         return new HonoClientImpl(vertx(), registrationServiceConnectionFactory());
+    }
+
+    /**
+     * Exposes configuration properties for accessing the credentials service as a Spring bean.
+     * <p>
+     * Sets the <em>amqpHostname</em> to {@code hono-device-registry} if not set explicitly (reflecting that Hono is
+     * providing the credentials API as part of the device registry component).
+     *
+     * @return The properties.
+     */
+    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
+    @ConfigurationProperties(prefix = "hono.credentials")
+    @Bean
+    public ClientConfigProperties credentialsServiceClientConfig() {
+        ClientConfigProperties config = new ClientConfigProperties();
+        if (config.getAmqpHostname() == null) {
+            config.setAmqpHostname("hono-device-registry");
+        }
+        customizeCredentialsServiceClientConfigProperties(config);
+        return config;
+    }
+
+    /**
+     * Further customizes the properties provided by the {@link #credentialsServiceClientConfig()}
+     * method.
+     * <p>
+     * This method does nothing by default. Subclasses may override this method to set additional
+     * properties programmatically.
+     *
+     * @param config The configuration to customize.
+     */
+    protected void customizeCredentialsServiceClientConfigProperties(final ClientConfigProperties config) {
+        // empty by default
+    }
+
+    /**
+     * Exposes a factory for connections to the credentials service
+     * as a Spring bean.
+     *
+     * @return The connection factory.
+     */
+    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
+    @Bean
+    @ConditionalOnProperty(prefix = "hono.credentials", name = "host")
+    public ConnectionFactory credentialsServiceConnectionFactory() {
+        return new ConnectionFactoryImpl(vertx(), credentialsServiceClientConfig());
+    }
+
+    /**
+     * Exposes a client for the <em>Credentials</em> API as a Spring bean.
+     * If no property {@code hono.credentials} is configured, no bean will be created
+     * (and internally the registration client bean is used instead).
+     *
+     * @return The client.
+     */
+    @Bean
+    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
+    @Scope("prototype")
+    @ConditionalOnProperty(prefix = "hono.credentials", name = "host")
+    public HonoClient credentialsServiceClient() {
+        return new HonoClientImpl(vertx(), credentialsServiceConnectionFactory());
     }
 }

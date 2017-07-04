@@ -15,11 +15,13 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import io.vertx.proton.ProtonConnection;
+import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +44,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
     private HonoClient messaging;
     private HonoClient registration;
+    private HonoClient credentials;
 
     /**
      * Sets the client to use for connecting to the Hono Messaging component.
@@ -85,6 +88,32 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         return registration;
     }
 
+    /**
+     * Sets the client to use for connecting to the Credentials API (which may be offered by the Device Registry component).
+     * If no credentials client is configured, the registration client will be used for accessing the Credentials API.
+     *
+     * @param credentialsServiceClient The client.
+     * @throws NullPointerException if the client is {@code null}.
+     */
+    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
+    @Autowired(required = false)
+    public final void setCredentialsServiceClient(final HonoClient credentialsServiceClient) {
+        this.credentials = Objects.requireNonNull(credentialsServiceClient);
+    }
+
+    /**
+     * Gets the client used for connecting to the Credentials API.
+     *
+     * @return The client.
+     */
+    public final HonoClient getCredentialsServiceClient() {
+        if (credentials == null) {
+            return registration;
+        } else {
+            return credentials;
+        }
+    }
+
     @Override
     public final void start(final Future<Void> startFuture) {
         if (messaging == null) {
@@ -92,6 +121,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         } else if (registration == null) {
             startFuture.fail("Registration client must be set");
         } else {
+            if (credentials == null) {
+                LOG.info("Credentials client not configured, using registration client instead.");
+            }
             doStart(startFuture);
         }
     }
@@ -150,8 +182,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("connected to Hono Messaging");
                 }
-            },
-            this::onDisconnectMessaging
+            }, this::onDisconnectMessaging
             );
         }
     }
@@ -171,8 +202,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("cannot reconnect to Hono Messaging");
                 }
-            }, this::onDisconnectMessaging
-            );
+            }, this::onDisconnectMessaging);
         });
     }
 
@@ -201,9 +231,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("connected to Device Registration service");
                 }
-            },
-            this::onDisconnectDeviceRegistry
-            );
+            }, this::onDisconnectDeviceRegistry);
         }
     }
 
@@ -222,9 +250,60 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("cannot reconnect to Device Registration service");
                 }
-            },
-            this::onDisconnectDeviceRegistry
-            );
+            }, this::onDisconnectDeviceRegistry);
+        });
+    }
+
+    /**
+     * Connects to the Credentials service using the configured client.
+     *
+     * @param connectHandler The handler to invoke with the outcome of the connection attempt.
+     *                       If {@code null} and the connection attempt failed, this method
+     *                       tries to re-connect until a connection is established.
+     */
+    protected final void connectToCredentialsService(final Handler<AsyncResult<HonoClient>> connectHandler) {
+
+        if (credentials == null) {
+            if (connectHandler != null) {
+                if (registration != null) {
+                    // give back registration client if credentials client is not configured
+                    connectHandler.handle(Future.succeededFuture(registration));
+                } else {
+                    connectHandler.handle(Future.failedFuture("Neither Credentials client nor Device Registration client is set"));
+                }
+            }
+        } else if (credentials.isConnected()) {
+            LOG.debug("already connected to Credentials service");
+            if (connectHandler != null) {
+                connectHandler.handle(Future.succeededFuture(credentials));
+            }
+        } else {
+            credentials.connect(createClientOptions(), connectAttempt -> {
+                if (connectHandler != null) {
+                    connectHandler.handle(connectAttempt);
+                } else {
+                    LOG.debug("connected to Credentials service");
+                }
+            }, this::onDisconnectCredentialsService);
+        }
+    }
+
+    /**
+     * Attempts a reconnect for the Hono Credentials client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
+     *
+     * @param con The connection that was disonnected.
+     */
+    private void onDisconnectCredentialsService(final ProtonConnection con) {
+
+        vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+            LOG.info("attempting to reconnect to Credentials service");
+            credentials.connect(createClientOptions(), connectAttempt -> {
+                if (connectAttempt.succeeded()) {
+                    LOG.debug("reconnected to Credentials service");
+                } else {
+                    LOG.debug("cannot reconnect to Credentials service");
+                }
+            }, this::onDisconnectCredentialsService);
         });
     }
 
@@ -243,6 +322,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     protected final boolean isConnected() {
         boolean result = messaging != null && messaging.isConnected() &&
                 registration != null && registration.isConnected();
+        if (credentials != null) {
+            result &= credentials.isConnected();
+        }
         return result;
     }
 
@@ -255,6 +337,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
         Future<Void> messagingTracker = Future.future();
         Future<Void> registrationTracker = Future.future();
+        Future<Void> credentialsTracker = Future.future();
 
         if (messaging == null) {
             messagingTracker.complete();
@@ -268,7 +351,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             registration.shutdown(registrationTracker.completer());
         }
 
-        CompositeFuture.all(messagingTracker, registrationTracker).setHandler(s -> {
+        if (credentials == null) {
+            credentialsTracker.complete();
+        } else {
+            credentials.shutdown(credentialsTracker.completer());
+        }
+
+        CompositeFuture.all(messagingTracker, registrationTracker, credentialsTracker).setHandler(s -> {
             if (closeHandler != null) {
                 if (s.succeeded()) {
                     closeHandler.handle(Future.succeededFuture());
@@ -312,6 +401,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     protected final Future<RegistrationClient> getRegistrationClient(final String tenantId) {
         Future<RegistrationClient> result = Future.future();
         getRegistrationServiceClient().getOrCreateRegistrationClient(tenantId, result.completer());
+        return result;
+    }
+
+    /**
+     * Gets a client for interacting with the Credentials service.
+     *
+     * @param tenantId The tenant that the client is scoped to.
+     * @return The client.
+     */
+    protected final Future<CredentialsClient> getCredentialsClient(final String tenantId) {
+        Future<CredentialsClient> result = Future.future();
+        getCredentialsServiceClient().getOrCreateCredentialsClient(tenantId, result.completer());
         return result;
     }
 

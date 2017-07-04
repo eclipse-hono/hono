@@ -173,6 +173,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             .compose(s -> {
                 connectToMessaging(null);
                 connectToDeviceRegistration(null);
+                connectToCredentialsService(null);
                 try {
                     onStartupSuccess();
                     startFuture.complete();
