@@ -39,6 +39,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     HonoClient messagingClient;
     HonoClient registrationClient;
+    HonoClient credentialsClient;
     ServiceConfigProperties config;
 
     /**
@@ -49,6 +50,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
+        credentialsClient = mock(HonoClient.class);
         config = new ServiceConfigProperties();
         config.setInsecurePortEnabled(true);
     }
@@ -70,6 +72,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setInsecureHttpServer(server);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationClient);
+        adapter.setCredentialsServiceClient(credentialsClient);
 
         // WHEN starting the adapter
         Async startup = ctx.async();
@@ -85,6 +88,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(server).listen(any(Handler.class));
         verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
         verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
+        verify(credentialsClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
     }
 
     /**
@@ -100,22 +104,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         HttpServer server = getHttpServer(false);
         Async onStartupSuccess = ctx.async();
 
-        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
-
-            @Override
-            protected void addRoutes(final Router router) {
-            }
-
-            @Override
-            protected void onStartupSuccess() {
-                onStartupSuccess.complete();
-            }
-        };
-
-        adapter.setConfig(config);
-        adapter.setInsecureHttpServer(server);
-        adapter.setHonoMessagingClient(messagingClient);
-        adapter.setRegistrationServiceClient(registrationClient);
+        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(server, onStartupSuccess);
+        adapter.setCredentialsServiceClient(credentialsClient);
 
         // WHEN starting the adapter
         Async startup = ctx.async();
@@ -128,6 +118,41 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the onStartupSuccess method has been invoked
         startup.await(300);
         onStartupSuccess.await(300);
+
+        ctx.assertNotEquals(adapter.getCredentialsServiceClient(), adapter.getRegistrationServiceClient());
+    }
+
+
+    /**
+     * Verifies that the <me>onStartupSuccess</em> method is invoked if the http server has been started successfully,
+     * even if there is no credentials client set.
+     * The returned credentials client must be equal to the registration client in this case.
+     *
+     * @param ctx The helper to use for running async tests on vertx.
+     * @throws Exception if the test fails.
+     */
+    @Test
+    public void testStartInvokesOnStartupSuccessWithoutExplicitCredentialsClient(final TestContext ctx) throws Exception {
+
+        // GIVEN an adapter with a client provided http server
+        HttpServer server = getHttpServer(false);
+        Async onStartupSuccess = ctx.async();
+
+        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(server, onStartupSuccess);
+
+        // WHEN starting the adapter
+        Async startup = ctx.async();
+        Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+            startup.complete();
+        }));
+        adapter.start(startupTracker);
+
+        // THEN the onStartupSuccess method has been invoked
+        startup.await(300);
+        onStartupSuccess.await(300);
+
+        ctx.assertEquals(adapter.getCredentialsServiceClient(), adapter.getRegistrationServiceClient());
     }
 
     /**
@@ -158,6 +183,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setHttpServer(server);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationClient);
+        adapter.setCredentialsServiceClient(credentialsClient);
 
         // WHEN starting the adapter
         Async startupFailed = ctx.async();
@@ -188,6 +214,25 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             return server;
         });
         return server;
+    }
+    private AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> getAdapter(final HttpServer server, final Async onStartupSuccess) {
+        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
+
+            @Override
+            protected void addRoutes(final Router router) {
+            }
+
+            @Override
+            protected void onStartupSuccess() {
+                onStartupSuccess.complete();
+            }
+        };
+
+        adapter.setConfig(config);
+        adapter.setInsecureHttpServer(server);
+        adapter.setHonoMessagingClient(messagingClient);
+        adapter.setRegistrationServiceClient(registrationClient);
+        return adapter;
     }
 
     private AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> getAdapter(final Router router, final Handler<Router> routeRegistrator) {

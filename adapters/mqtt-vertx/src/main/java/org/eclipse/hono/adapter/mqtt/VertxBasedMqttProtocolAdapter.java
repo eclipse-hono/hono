@@ -151,6 +151,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
             this.insecureServer = insecureServer;
             connectToMessaging(null);
             connectToDeviceRegistration(null);
+            connectToCredentialsService(null);
             startFuture.complete();
         }, startFuture);
     }
