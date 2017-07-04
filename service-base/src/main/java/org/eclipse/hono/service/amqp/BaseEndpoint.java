@@ -56,7 +56,7 @@ public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements
      */
     @SuppressWarnings("unchecked")
     protected T                                 config               = (T) new ServiceConfigProperties();
-    private Map<String, UpstreamReceiverImpl>   activeClients        = new HashMap<>();
+    private Map<String, UpstreamReceiver>       activeClients        = new HashMap<>();
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -187,7 +187,7 @@ public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements
      * 
      * @param link The link to register.
      */
-    protected final void registerClientLink(final UpstreamReceiverImpl link) {
+    protected final void registerClientLink(final UpstreamReceiver link) {
         activeClients.put(link.getLinkId(), link);
     }
 

@@ -1,5 +1,13 @@
 version: '3.1'
 
+# Copyright (c) 2017 Bosch Software Innovations GmbH and others.
+#
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v1.0
+# which accompanies this distribution, and is available at
+# http://www.eclipse.org/legal/epl-v10.html
+#
+
 networks:
   hono-net:
     driver: overlay
@@ -21,7 +29,7 @@ services:
       - INFLUXDB_ADMIN_ENABLED=true
 
   grafana:
-    image: eclipsehono/grafana:latest
+    image: eclipsehono/grafana:${project.version}
     networks:
       hono-net:
         aliases:
@@ -30,7 +38,7 @@ services:
       - "3000:3000"
 
   hono-dispatch-router:
-    image: eclipsehono/hono-dispatch-router:latest
+    image: eclipsehono/hono-dispatch-router:${project.version}
     networks:
       hono-net:
         aliases:
@@ -40,14 +48,14 @@ services:
       - "15672:5672"
 
   hono-artemis:
-    image: eclipsehono/hono-artemis:latest
+    image: eclipsehono/hono-artemis:${project.version}
     networks:
       hono-net:
         aliases:
           - hono-artemis.hono
 
   hono-service-auth:
-    image: eclipsehono/hono-service-auth:latest
+    image: eclipsehono/hono-service-auth:${project.version}
     networks:
       hono-net:
         aliases:
@@ -61,7 +69,7 @@ services:
       - SPRING_PROFILES_ACTIVE=authentication-impl,dev
 
   hono-service-messaging:
-    image: eclipsehono/hono-service-messaging:latest
+    image: eclipsehono/hono-service-messaging:${project.version}
     networks:
       hono-net:
         aliases:
@@ -91,7 +99,7 @@ services:
       - SPRING_PROFILES_ACTIVE=default,dev
 
   hono-service-device-registry:
-    image: eclipsehono/hono-service-device-registry:latest
+    image: eclipsehono/hono-service-device-registry:${project.version}
     networks:
       hono-net:
         aliases:
@@ -115,7 +123,7 @@ services:
       - /home/hono/registration
 
   hono-adapter-rest-vertx:
-    image: eclipsehono/hono-adapter-rest-vertx:latest
+    image: eclipsehono/hono-adapter-rest-vertx:${project.version}
     networks:
       hono-net:
         aliases:
@@ -145,7 +153,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
 
   hono-adapter-mqtt-vertx:
-    image: eclipsehono/hono-adapter-mqtt-vertx:latest
+    image: eclipsehono/hono-adapter-mqtt-vertx:${project.version}
     networks:
       hono-net:
         aliases:

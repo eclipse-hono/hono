@@ -109,7 +109,7 @@
                   <HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED>true</HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED>
                   <HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET>${hono.regAssertion.sharedSecret}</HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET>
                   <HONO_DEVICE_REGISTRY_MAX_INSTANCES>1</HONO_DEVICE_REGISTRY_MAX_INSTANCES>
-                  <SPRING_PROFILES_ACTIVE>default,dev</SPRING_PROFILES_ACTIVE>
+                  <SPRING_PROFILES_ACTIVE>dev</SPRING_PROFILES_ACTIVE>
                 </env>
               </resources>
             </configuration>

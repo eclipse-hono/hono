@@ -35,10 +35,12 @@ public final class DeviceRegistryConfigProperties extends ServiceConfigPropertie
      */
     public static final int DEFAULT_MAX_DEVICES_PER_TENANT = 100;
     private static final Resource DEFAULT_CREDENTIALS_RESOURCE = new ClassPathResource("credentials.json");
+    private static final String DEFAULT_DEVICES_FILENAME = "/home/hono/device-registry/device-identities.json";
     private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
+
     private Resource credentialsResource = DEFAULT_CREDENTIALS_RESOURCE;
     // the name of the file used to persist the registry content
-    private String filename = "device-identities.json";
+    private String filename = DEFAULT_DEVICES_FILENAME;
     private boolean saveToFile = false;
     private boolean modificationEnabled = true;
     private int maxDevicesPerTenant = DEFAULT_MAX_DEVICES_PER_TENANT;

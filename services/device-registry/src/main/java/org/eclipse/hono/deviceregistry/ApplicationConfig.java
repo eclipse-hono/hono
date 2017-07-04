@@ -23,6 +23,7 @@ import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import io.vertx.core.Vertx;
 import org.springframework.context.annotation.Scope;
@@ -92,27 +93,24 @@ public class ApplicationConfig {
 
     /**
      * Expose Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> endpoint as a Spring bean.
-     * <p>
-     * See {@link RegistrationEndpoint} for more details.
+     * 
+     * @return The endpoint.
      */
     @Bean
     @Scope("prototype")
-    @ConfigurationProperties(prefix = "hono.registration")
-    public RegistrationEndpoint registrationEndpoint(final Vertx vertx) {
-        RegistrationEndpoint registrationEndpoint = new RegistrationEndpoint(vertx);
-        return registrationEndpoint;
+    public RegistrationEndpoint registrationEndpoint() {
+        return new RegistrationEndpoint(vertx());
     }
 
     /**
      * Expose Hono's <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> endpoint as a Spring bean.
-     * <p>
-     * See {@link CredentialsEndpoint} for more details.
+     * 
+     * @return The endpoint.
      */
     @Bean
     @Scope("prototype")
-    @ConfigurationProperties(prefix = "hono.credentials")
-    public CredentialsEndpoint credentialsEndpoint(final Vertx vertx) {
-        CredentialsEndpoint credentialsEndpoint = new CredentialsEndpoint(vertx);
-        return credentialsEndpoint;
+    @Profile("credentials")
+    public CredentialsEndpoint credentialsEndpoint() {
+        return new CredentialsEndpoint(vertx());
     }
 }

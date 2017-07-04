@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.service.registration.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import io.vertx.core.AsyncResult;
@@ -43,7 +42,6 @@ import io.vertx.core.json.JsonObject;
  * devices kept in memory are written to the file.
  */
 @Repository
-@Profile({"default", "registration-file"})
 public final class FileBasedRegistrationService extends BaseRegistrationService<DeviceRegistryConfigProperties> {
 
     private static final String ARRAY_DEVICES = "devices";

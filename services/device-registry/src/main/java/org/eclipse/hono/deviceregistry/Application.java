@@ -51,7 +51,7 @@ public class Application extends AbstractApplication<SimpleDeviceRegistryServer,
      * @param credentialsService The service implementation.
      * @throws NullPointerException if service is {@code null}.
      */
-    @Autowired
+    @Autowired(required = false)
     public final void setCredentialsService(final CredentialsService credentialsService) {
         this.credentialsService = Objects.requireNonNull(credentialsService);
     }
@@ -79,11 +79,11 @@ public class Application extends AbstractApplication<SimpleDeviceRegistryServer,
     }
 
     @Override
-    protected void customizeServiceInstance(final SimpleDeviceRegistryServer instance) {
+    protected final void customizeServiceInstance(final SimpleDeviceRegistryServer instance) {
     }
 
     @Override
-    protected Future<Void> deployRequiredVerticles(int maxInstances) {
+    protected final Future<Void> deployRequiredVerticles(int maxInstances) {
 
         Future<Void> result = Future.future();
         CompositeFuture.all(
@@ -100,9 +100,13 @@ public class Application extends AbstractApplication<SimpleDeviceRegistryServer,
     }
 
     private Future<String> deployCredentialsService() {
-        log.info("Starting credentials service {}", credentialsService);
         Future<String> result = Future.future();
-        getVertx().deployVerticle(credentialsService, result.completer());
+        if (credentialsService != null) {
+            log.info("Starting credentials service {}", credentialsService);
+            getVertx().deployVerticle(credentialsService, result.completer());
+        } else {
+            result.complete();
+        }
         return result;
     }
 
