@@ -95,6 +95,7 @@ $ oc login -u developer
 
 Using the `developer` user, it is now possible to deploy all the other OpenShift resources related to:
 
+1. Grafana
 1. Artemis Broker
 1. Qpid Dispatch Router
 1. Auth Server
@@ -103,7 +104,13 @@ Using the `developer` user, it is now possible to deploy all the other OpenShift
 1. HTTP REST adapter
 1. MQTT adapter
 
-Deploy the Artemis Broker:
+Deploy Grafana (for metrics support):
+
+~~~sh
+$ oc create -f <path-to-repo>/hono/metrics/target/classes/META-INF/fabric8/openshift.yml
+~~~
+
+Then the Artemis Broker:
 
 ~~~sh
 $ oc create -f <path-to-repo>/hono/broker/target/classes/META-INF/fabric8/openshift.yml
@@ -161,6 +168,10 @@ In the following pictures an Eclipse Hono deployment on OpenShift is running wit
 ![Eclipse Hono on Openshift](../openshift_07.png)
 
 ![Eclipse Hono on Openshift](../openshift_08.png)
+
+![Eclipse Hono on Openshift](../openshift_grafana.png)
+
+![Eclipse Hono on Openshift](../openshift_influxdb.png)
 
 ## Access to Hono services
 
