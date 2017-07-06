@@ -31,6 +31,7 @@
   <properties>
     <artemis.version>2.1.0</artemis.version>
     <assertj-core.version>3.2.0</assertj-core.version>
+    <dispatch-router.image.name>enmasseproject/qdrouterd-base:0.8.0-1</dispatch-router.image.name>
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
     <grafana.version>4.2.0</grafana.version>
     <influxdb.version>1.2.2</influxdb.version>
@@ -43,7 +44,6 @@
     <netty.version>4.1.8.Final</netty.version>
     <objenesis.version>2.4</objenesis.version>
     <proton.version>0.18.0</proton.version>
-    <qpid-dispatch.version>0.8.0</qpid-dispatch.version>
     <qpid-jms.version>0.21.0</qpid-jms.version>
     <slf4j.version>1.7.24</slf4j.version>
     <snakeyaml.version>1.17</snakeyaml.version>
@@ -277,6 +277,11 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-health-check</artifactId>
         <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-dispatch-router</artifactId>
+        <version>${project.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

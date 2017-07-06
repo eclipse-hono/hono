@@ -34,4 +34,4 @@ spring:
 hono:
   client:
     hostnameVerificationRequired: false
-    trustStorePath: target/certs/trusted-certs.pem
+    trustStorePath: target/config/hono-demo-certs-jar/trusted-certs.pem

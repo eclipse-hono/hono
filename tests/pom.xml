@@ -64,6 +64,14 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-jms-client</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-dispatch-router</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-demo-certs</artifactId>
+    </dependency>
   </dependencies>
 
   <profiles>
@@ -71,6 +79,32 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <id>run-tests</id>
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <!--
+                  Execution and configuration for copying certificates from related module
+                  to "target/classes" folder so that we can include them in the image.
+                 -->
+                <id>copy_demo_certs</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeArtifactIds>hono-demo-certs,hono-dispatch-router</includeArtifactIds>
+                  <outputDirectory>${project.build.directory}/config</outputDirectory>
+                  <includes>*.pem,qpid/*,sasl/*,META-INF/fabric8/**/*</includes>
+                  <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
+                  <stripClassifier>true</stripClassifier>
+                  <stripVersion>true</stripVersion>
+                  <excludeTransitive>true</excludeTransitive>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
@@ -165,6 +199,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
                   <name>eclipsehono/hono-artemis:${project.version}</name>
+                  <alias>artemis</alias>
                   <run>
                     <ports>
                       <port>+broker.ip:broker.amqp.port:5672</port>
@@ -187,7 +222,55 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### Qpid Dispatch Router ##### -->
                 <image>
-                  <name>eclipsehono/hono-dispatch-router:${project.version}</name>
+                  <name>eclipsehono/hono-dispatch-router-test:${project.version}</name>
+                  <alias>qdrouter</alias>
+                  <build>
+                    <from>${dispatch-router.image.name}</from>
+                    <ports>
+                      <port>5671</port>
+                      <port>5672</port>
+                      <port>5673</port>
+                    </ports>
+                    <cmd>
+                      <exec>
+                        <arg>/sbin/qdrouterd</arg>
+                        <arg>-c</arg>
+                        <arg>/run/secrets/qdrouterd-with-broker.json</arg>
+                      </exec>
+                    </cmd>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/run/secrets</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/config/hono-dispatch-router-jar/qpid</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>qdrouterd-with-broker.json</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/config/hono-dispatch-router-jar/sasl</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>qdrouterd.sasldb</include>
+                              <include>qdrouter-sasl.conf</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/config/hono-demo-certs-jar</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>qdrouter-*.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
                   <run>
                     <ports>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
@@ -287,7 +370,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <goal>remove</goal>
                 </goals>
                 <configuration>
-                  <filter>auth,device-registry,messaging</filter>
+                  <filter>auth,device-registry,messaging,qdrouter</filter>
                   <removeAll>true</removeAll>
                 </configuration>
               </execution>
