@@ -203,11 +203,21 @@
           </configuration>
           <executions>
             <execution>
-              <id>fabric8</id>
+              <id>create_resources</id>
+              <!-- 
+                create Kubernetes/Openshift descriptors before the artifact is packaged so
+                that the desciptors are included in the artifact
+               -->
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>resource</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>build_images</id>
               <phase>package</phase>
               <goals>
                 <goal>build</goal>
-                <goal>resource</goal>
               </goals>
             </execution>
           </executions>

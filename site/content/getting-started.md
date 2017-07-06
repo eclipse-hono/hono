@@ -41,13 +41,16 @@ The first build might take several minutes because Docker will need to download 
 
 ## Starting Hono
 
-The easiest way to start the server components is by deploying them as a *stack*. As part of the build process, a *Docker Compose* file is generated under `example/target/deploy/docker/docker-compose.yml` which can be used to start up a Hono instance on your Docker host. Simply run the following from the `example/target/deploy/docker` directory
+As part of the build process, a set of scripts for deploying and undeploying Hono to/from a Docker Swarm is generated in the `example/target/deploy/docker` folder.
+To deploy and start Hono simply run the following from the `example/target/deploy/docker` directory
 
 ~~~sh
-~/hono/example/target/deploy/docker$ docker stack deploy -c docker-compose.yml hono
+~/hono/example/target/deploy/docker$ chmod +x swarm_*.sh
+~/hono/example/target/deploy/docker$ ./swarm_deploy.sh
 ~~~
 
-This will create and start up Docker Swarm *services* for all components that together comprise a Hono instance, in particular the following services are started:
+The first command makes the generated scripts executable. This needs to be done once after each build.
+The second command creates and starts up Docker Swarm *services* for all components that together comprise a Hono instance, in particular the following services are started:
 
 {{< figure src="../Hono_instance.svg" title="Hono instance containers">}}
 
@@ -63,7 +66,13 @@ This will create and start up Docker Swarm *services* for all components that to
 * Monitoring Infrastructure
   * An *InfluxDB* instance for storing metrics data from the Hono Messaging component.
   * A *Grafana* instance providing a dash board visualizing the collected metrics data.
- 
+
+You can list all services by executing
+
+~~~sh
+~/hono/example/target/deploy/docker$ docker service ls
+~~~
+
 ## Starting a Consumer
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
@@ -208,17 +217,17 @@ $ http PUT http://localhost:8080/event/DEFAULT_TENANT/4711 temp:=5
 The Hono instance's services can be stopped and removed using the following command:
 
 ~~~sh
-~/hono/example/target/hono$ docker stack rm hono
+~/hono/example/target/hono$ ./swarm_undeploy.sh
 ~~~
 
-Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of services.
+Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of individual services.
 
 ## Restarting
 
 In order to start up the instance again:
 
 ~~~sh
-~/hono/example/target/hono$ docker stack deploy -c docker-compose.yml hono
+~/hono/example/target/hono$ ./swarm_deploy.sh
 ~~~
 
 ## View metrics

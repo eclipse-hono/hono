@@ -27,21 +27,13 @@
 
   <name>Hono Examples</name>
   <description>A collection of example code for sending and receiving telemetry data using HonoClient.
-Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for starting up all images constituting a Hono instance.</description>
+Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kubernetes or an Openshift cluster.</description>
 
   <properties>
     <docker.skip.build>true</docker.skip.build>
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-proton</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
@@ -79,8 +71,6 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-dispatch-router</artifactId>
-      <version>${project.version}</version>
-      <type>pom</type>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -150,9 +140,13 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>hono-demo-certs</includeArtifactIds>
-              <outputDirectory>${project.build.directory}/certs</outputDirectory>
-              <excludes>META-INF/**</excludes>
+              <includeArtifactIds>hono-demo-certs,hono-dispatch-router</includeArtifactIds>
+              <outputDirectory>${project.build.directory}/config</outputDirectory>
+              <includes>*.pem,qpid/*,sasl/*,META-INF/fabric8/**/*</includes>
+              <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
+              <stripClassifier>true</stripClassifier>
+              <stripVersion>true</stripVersion>
+              <excludeTransitive>true</excludeTransitive>
             </configuration>
           </execution>
         </executions>
@@ -160,10 +154,6 @@ Also contains a sample Docker Compose file (see &quot;docker&quot; folder) for s
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>io.fabric8</groupId>
-        <artifactId>fabric8-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
