@@ -236,15 +236,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
-     * Checks if this adapter is connected to both the Hono server and the Device Registration service.
+     * Checks if this adapter is connected to both <em>Hono Messaging</em> and the Device Registration service.
      * 
      * @return {@code true} if this adapter is connected.
      */
     protected final boolean isConnected() {
-        boolean result = messaging != null && messaging.isConnected();
-        if (registration != null) {
-            result &= registration.isConnected();
-        }
+        boolean result = messaging != null && messaging.isConnected() &&
+                registration != null && registration.isConnected();
         return result;
     }
 
