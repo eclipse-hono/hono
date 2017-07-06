@@ -57,13 +57,16 @@ echo ... done
 
 echo
 echo Deploying Authentication Server ...
+docker secret create -l $NS auth-server-key.pem $CERTS/auth-server-key.pem
+docker secret create -l $NS auth-server-cert.pem $CERTS/auth-server-cert.pem
+docker secret create -l $NS hono-service-auth-config.yml $CONFIG/hono-service-auth-config.yml
 docker service create -l $NS --detach --name hono-service-auth --network $NS \
-  --env HONO_AUTH_AMQP_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_AUTH_AMQP_KEY_PATH=/etc/hono/certs/auth-server-key.pem \
-  --env HONO_AUTH_AMQP_CERT_PATH=/etc/hono/certs/auth-server-cert.pem \
-  --env HONO_AUTH_AMQP_MAX_INSTANCES=1 \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --secret auth-server-key.pem \
+  --secret auth-server-cert.pem \
+  --secret hono-service-auth-config.yml \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
+  --env LOGGING_CONFIG=classpath:logback-spring.xml \
   eclipsehono/hono-service-auth:${project.version}
 echo ... done
 

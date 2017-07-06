@@ -58,7 +58,12 @@ oc create -f $CONFIG/hono-dispatch-router-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying Authentication Server ...
-oc create -f $HONO_HOME/services/auth/target/classes/META-INF/fabric8/openshift.yml
+oc create secret generic hono-service-auth-conf \
+  --from-file=$CERTS/auth-server-key.pem \
+  --from-file=$CERTS/auth-server-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=application.yml=$CONFIG/hono-service-auth-config.yml
+oc create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying Device Registry ...

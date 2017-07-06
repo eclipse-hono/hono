@@ -59,13 +59,6 @@
         </fileSet>
 
         <fileSet>
-            <outputDirectory>services/auth/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>../services/auth/target/classes/META-INF/fabric8</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
-        <fileSet>
             <outputDirectory>services/device-registry/target/classes/META-INF/fabric8/</outputDirectory>
             <directory>../services/device-registry/target/classes/META-INF/fabric8</directory>
             <fileMode>0644</fileMode>

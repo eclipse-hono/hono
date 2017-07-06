@@ -132,6 +132,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>*</include>
                             </includes>
                           </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/config/hono-demo-certs-jar</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>auth-server-*.pem</include>
+                            </includes>
+                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>

@@ -48,7 +48,13 @@ echo ... done
 
 echo
 echo Deploying Authentication Server ...
-kubectl create -f $HONO_HOME/services/auth/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create secret generic hono-service-auth-conf \
+  --from-file=$CERTS/auth-server-key.pem \
+  --from-file=$CERTS/auth-server-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=application.yml=$CONFIG/hono-service-auth-config.yml \
+  --namespace $NS
+kubectl create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo

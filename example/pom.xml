@@ -119,6 +119,11 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
         <targetPath>${project.build.directory}/deploy</targetPath>
         <filtering>true</filtering>
       </resource>
+      <resource>
+        <directory>${project.basedir}/src/main/config</directory>
+        <targetPath>${project.build.directory}/config</targetPath>
+        <filtering>true</filtering>
+      </resource>
     </resources>
     <plugins>
       <plugin>
@@ -140,9 +145,9 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>hono-demo-certs,hono-dispatch-router</includeArtifactIds>
+              <includeArtifactIds>hono-demo-certs,hono-dispatch-router,hono-service-auth</includeArtifactIds>
               <outputDirectory>${project.build.directory}/config</outputDirectory>
-              <includes>*.pem,qpid/*,sasl/*,META-INF/fabric8/**/*</includes>
+              <includes>*.pem,qpid/*,sasl/*,META-INF/fabric8/**/*.yml</includes>
               <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
               <stripClassifier>true</stripClassifier>
               <stripVersion>true</stripVersion>

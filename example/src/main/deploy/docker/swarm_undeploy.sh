@@ -21,8 +21,13 @@ docker service rm \
   hono-adapter-mqtt-vertx \
   hono-adapter-rest-vertx \
   hono-service-messaging \
-  hono-service-device-registry \
-  hono-service-auth
+  hono-service-device-registry
+
+docker service rm hono-service-auth
+docker secret rm \
+  auth-server-key.pem \
+  auth-server-cert.pem \
+  hono-service-auth-config.yml
 
 docker service rm hono-dispatch-router
 docker secret rm \
