@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2011, 2017 Eurotech and/or its affiliates and others
+    Copyright (c) 2017 Red Hat and/or its affiliates and others.
 
     All rights reserved. This program and the accompanying materials
     are made available under the terms of the Eclipse Public License v1.0
@@ -8,8 +8,8 @@
     http://www.eclipse.org/legal/epl-v10.html
 
     Contributors:
-        Eurotech - initial API and implementation
         Red Hat Inc
+        Bosch Software Innovations GmbH
   -->
 <assembly
     xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
@@ -25,19 +25,21 @@
     <fileSets>
 
         <fileSet>
-            <outputDirectory>.</outputDirectory>
-            <directory>${project.build.directory}/hono</directory>
-        </fileSet>
-
-        <fileSet>
             <outputDirectory>example/target/deploy</outputDirectory>
             <directory>${project.build.directory}/deploy</directory>
             <fileMode>0755</fileMode>
         </fileSet>
 
         <fileSet>
+            <outputDirectory>example/target/config</outputDirectory>
+            <directory>${project.build.directory}/config</directory>
+            <fileMode>0644</fileMode>
+            <directoryMode>0755</directoryMode>
+        </fileSet>
+
+        <fileSet>
             <outputDirectory>example/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>target/classes/META-INF/fabric8/</directory>
+            <directory>${project.build.outputDirectory}/META-INF/fabric8/</directory>
             <fileMode>0644</fileMode>
             <directoryMode>0755</directoryMode>
         </fileSet>
@@ -52,13 +54,6 @@
         <fileSet>
             <outputDirectory>broker/target/classes/META-INF/fabric8/</outputDirectory>
             <directory>../broker/target/classes/META-INF/fabric8</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
-        <fileSet>
-            <outputDirectory>dispatchrouter/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>../dispatchrouter/target/classes/META-INF/fabric8</directory>
             <fileMode>0644</fileMode>
             <directoryMode>0755</directoryMode>
         </fileSet>
@@ -99,7 +94,5 @@
         </fileSet>
 
     </fileSets>
-
-
 
 </assembly>

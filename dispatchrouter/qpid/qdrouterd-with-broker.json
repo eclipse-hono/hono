@@ -4,21 +4,21 @@
     "mode": "standalone",
     "workerThreads": 4,
     "saslConfigName": "qdrouter-sasl",
-    "saslConfigPath": "/etc/hono/qdrouter/"
+    "saslConfigPath": "/run/secrets/"
   }],
 
   ["sslProfile", {
     "name": "external",
-    "certDb": "/etc/hono/certs/trusted-certs.pem",
-    "certFile": "/etc/hono/certs/qdrouter-cert.pem",
-    "keyFile": "/etc/hono/certs/qdrouter-key.pem"
+    "certDb": "/run/secrets/trusted-certs.pem",
+    "certFile": "/run/secrets/qdrouter-cert.pem",
+    "keyFile": "/run/secrets/qdrouter-key.pem"
   }],
 
   ["sslProfile", {
     "name": "internal",
-    "certDb": "/etc/hono/certs/trusted-certs.pem",
-    "certFile": "/etc/hono/certs/qdrouter-cert.pem",
-    "keyFile": "/etc/hono/certs/qdrouter-key.pem",
+    "certDb": "/run/secrets/trusted-certs.pem",
+    "certFile": "/run/secrets/qdrouter-cert.pem",
+    "keyFile": "/run/secrets/qdrouter-key.pem",
     "uidFormat": "oun"
   }],
 
