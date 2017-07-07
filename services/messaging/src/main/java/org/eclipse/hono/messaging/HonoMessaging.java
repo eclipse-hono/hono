@@ -17,6 +17,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.event.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.telemetry.TelemetryConstants;
@@ -34,9 +35,8 @@ import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonSession;
 
 /**
- * The Hono server is an AMQP 1.0 container that provides endpoints for the <em>Telemetry</em>,
- * <em>Command &amp; Control</em> and <em>Device Registration</em> APIs that <em>Protocol Adapters</em> and
- * <em>Solutions</em> use to interact with devices.
+ * Hono Messaging is an AMQP 1.0 container that provides nodes for uploading <em>Telemetry</em> and
+ * <em>Event</em> messages.
  */
 @Component
 @Scope("prototype")
@@ -52,14 +52,17 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
 
     private void checkStandardEndpointsAreRegistered() {
         if (getEndpoint(TelemetryConstants.TELEMETRY_ENDPOINT) == null) {
-            LOG.warn("no Telemetry endpoint has been configured, Hono server will not support Telemetry API");
+            LOG.warn("no Telemetry endpoint has been configured, Hono Messaging will not support Telemetry API");
+        }
+        if (getEndpoint(EventConstants.EVENT_ENDPOINT) == null) {
+            LOG.warn("no Event endpoint has been configured, Hono Messaging will not support Event API");
         }
     }
 
     private void logStartupMessage() {
         if (LOG.isWarnEnabled()) {
             StringBuilder b = new StringBuilder()
-                    .append("Hono server does not yet support limiting the incoming message size ")
+                    .append("Hono Messaging does not yet support limiting the incoming message size ")
                     .append("via the maxPayloadSize property");
             LOG.warn(b.toString());
         }
