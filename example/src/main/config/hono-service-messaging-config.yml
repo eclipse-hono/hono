@@ -1,0 +1,32 @@
+hono:
+  auth:
+    host: hono-service-auth.hono
+    port: 5671
+    keyPath: /run/secrets/hono-messaging-key.pem
+    certPath: /run/secrets/hono-messaging-cert.pem
+    trustStorePath: /run/secrets/trusted-certs.pem
+    validation:
+      certPath: /run/secrets/auth-server-cert.pem
+  downstream:
+    host: hono-dispatch-router.hono
+    port: 5673
+    keyPath: /run/secrets/hono-messaging-key.pem
+    certPath: /run/secrets/hono-messaging-cert.pem
+    trustStorePath: /run/secrets/trusted-certs.pem
+  messaging:
+    keyPath: /run/secrets/hono-messaging-key.pem
+    certPath: /run/secrets/hono-messaging-cert.pem
+    healthCheckBindAddress: 0.0.0.0
+    healthCheckPort: 8088
+    maxInstances: 1
+    bindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    insecurePortBindAddress: 0.0.0.0
+    validation:
+      sharedSecret: ${hono.regAssertion.sharedSecret}
+  metric:
+    reporter:
+      graphite:
+        active: true
+        host: influxdb.hono
+        port: 2003

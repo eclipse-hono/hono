@@ -12,6 +12,10 @@
   <properties>
     <hono.device-registry.certPath>/etc/hono/certs/device-registry-cert.pem</hono.device-registry.certPath>
     <hono.device-registry.keyPath>/etc/hono/certs/device-registry-key.pem</hono.device-registry.keyPath>
+    <!-- 
+      The shared secret to use for creating/validating registration assertions.
+     -->
+    <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
     <vertx.health.port>8088</vertx.health.port>
     <vertx.health.path>/liveness</vertx.health.path>
     <vertx.health.readiness.path>/readiness</vertx.health.readiness.path>

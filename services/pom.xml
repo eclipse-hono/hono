@@ -36,13 +36,6 @@
   <description>Micro services implementing APIs that Hono depends on only and which are therefore not part of the Hono server process itself.
   The service components included here can be replaced by other (custom) components as long as they implement the required API(s).</description>
 
-  <properties>
-    <!-- 
-      The shared secret to use for creating/validating registration assertions.
-     -->
-    <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

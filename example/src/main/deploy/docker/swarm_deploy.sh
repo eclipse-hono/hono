@@ -92,26 +92,16 @@ echo ... done
 
 echo
 echo Deploying Hono Messaging ...
+docker secret create -l $NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
+docker secret create -l $NS hono-messaging-cert.pem $CERTS/hono-messaging-cert.pem
+docker secret create -l $NS hono-service-messaging-config.yml $CONFIG/hono-service-messaging-config.yml
 docker service create -l $NS --detach --name hono-service-messaging --network $NS \
+  --secret hono-messaging-key.pem \
+  --secret hono-messaging-cert.pem \
+  --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
-  --env HONO_AUTH_HOST=hono-service-auth.hono \
-  --env HONO_AUTH_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem \
-  --env HONO_AUTH_NAME='Hono Messaging' \
-  --env HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem \
-  --env HONO_DOWNSTREAM_HOST=hono-dispatch-router.hono \
-  --env HONO_DOWNSTREAM_PORT=5673 \
-  --env HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-messaging-key.pem \
-  --env HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-messaging-cert.pem \
-  --env HONO_DOWNSTREAM_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem \
-  --env HONO_MESSAGING_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_MESSAGING_KEY_PATH=/etc/hono/certs/hono-messaging-key.pem \
-  --env HONO_MESSAGING_CERT_PATH=/etc/hono/certs/hono-messaging-cert.pem \
-  --env HONO_MESSAGING_INSECURE_PORT_ENABLED=false \
-  --env HONO_MESSAGING_MAX_INSTANCES=1 \
-  --env HONO_MESSAGING_VALIDATION_SHARED_SECRET=g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0 \
-  --env HONO_METRIC_REPORTER_GRAPHITE_ACTIVE=true \
-  --env HONO_METRIC_REPORTER_GRAPHITE_HOST=influxdb.hono \
-  --env HONO_METRIC_REPORTER_GRAPHITE_PORT=2003 \
+  --secret hono-service-messaging-config.yml \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=default,dev \
   eclipsehono/hono-service-messaging:${project.version}

@@ -66,13 +66,6 @@
         </fileSet>
 
         <fileSet>
-            <outputDirectory>services/messaging/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>../services/messaging/target/classes/META-INF/fabric8</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
-        <fileSet>
             <outputDirectory>adapters/rest-vertx/target/classes/META-INF/fabric8/</outputDirectory>
             <directory>../adapters/rest-vertx/target/classes/META-INF/fabric8</directory>
             <fileMode>0644</fileMode>

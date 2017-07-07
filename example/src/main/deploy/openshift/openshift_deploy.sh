@@ -71,7 +71,13 @@ oc create -f $HONO_HOME/services/device-registry/target/classes/META-INF/fabric8
 echo ... done
 
 echo Deploying Hono Messaging ...
-oc create -f $HONO_HOME/services/messaging/target/classes/META-INF/fabric8/openshift.yml
+oc create secret generic hono-service-messaging-conf \
+  --from-file=$CERTS/hono-messaging-key.pem \
+  --from-file=$CERTS/hono-messaging-cert.pem \
+  --from-file=$CERTS/auth-server-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=application.yml=$CONFIG/hono-service-messaging-config.yml
+oc create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying HTTP REST adapter ...

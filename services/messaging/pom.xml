@@ -12,8 +12,6 @@
   <description>The Messaging service implements Hono's Telemetry and Event APIs.</description>
 
   <properties>
-    <hono.messaging.keyPath>/etc/hono/certs/hono-messaging-key.pem</hono.messaging.keyPath>
-    <hono.messaging.certPath>/etc/hono/certs/hono-messaging-cert.pem</hono.messaging.certPath>
     <vertx.health.port>8088</vertx.health.port>
     <vertx.health.path>/liveness</vertx.health.path>
     <vertx.health.readiness.path>/readiness</vertx.health.readiness.path>
@@ -116,15 +114,6 @@
                       <inline>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
-                            <includes>
-                              <include>hono-messaging-*.pem</include>
-                              <include>auth-server-cert.pem</include>
-                              <include>trusted-certs.pem</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
                             <directory>${project.build.directory}</directory>
                             <outputDirectory>opt/hono</outputDirectory>
                             <includes>
@@ -137,36 +126,6 @@
                   </build>
                 </image>
               </images>
-              <resources>
-                <env>
-                  <HONO_AUTH_HOST>${hono.auth.host}</HONO_AUTH_HOST>
-                  <HONO_AUTH_PORT>5671</HONO_AUTH_PORT>
-                  <HONO_AUTH_NAME>${project.name}</HONO_AUTH_NAME>
-                  <HONO_AUTH_KEY_PATH>${hono.messaging.keyPath}</HONO_AUTH_KEY_PATH>
-                  <HONO_AUTH_CERT_PATH>${hono.messaging.certPath}</HONO_AUTH_CERT_PATH>
-                  <HONO_AUTH_VALIDATION_CERT_PATH>${hono.auth.validation.certPath}</HONO_AUTH_VALIDATION_CERT_PATH>
-                  <HONO_AUTH_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_AUTH_TRUST_STORE_PATH>
-                  <HONO_DOWNSTREAM_HOST>hono-dispatch-router.hono</HONO_DOWNSTREAM_HOST>
-                  <HONO_DOWNSTREAM_PORT>5673</HONO_DOWNSTREAM_PORT>
-                  <HONO_DOWNSTREAM_NAME>${project.name}</HONO_DOWNSTREAM_NAME>
-                  <HONO_DOWNSTREAM_KEY_PATH>${hono.messaging.keyPath}</HONO_DOWNSTREAM_KEY_PATH>
-                  <HONO_DOWNSTREAM_CERT_PATH>${hono.messaging.certPath}</HONO_DOWNSTREAM_CERT_PATH>
-                  <HONO_DOWNSTREAM_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_DOWNSTREAM_TRUST_STORE_PATH>
-                  <HONO_MESSAGING_KEY_PATH>${hono.messaging.keyPath}</HONO_MESSAGING_KEY_PATH>
-                  <HONO_MESSAGING_CERT_PATH>${hono.messaging.certPath}</HONO_MESSAGING_CERT_PATH>
-                  <HONO_MESSAGING_MAX_INSTANCES>1</HONO_MESSAGING_MAX_INSTANCES>
-                  <HONO_MESSAGING_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_BIND_ADDRESS>
-                  <HONO_MESSAGING_INSECURE_PORT_ENABLED>true</HONO_MESSAGING_INSECURE_PORT_ENABLED>
-                  <HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS>
-                  <HONO_MESSAGING_VALIDATION_SHARED_SECRET>${hono.regAssertion.sharedSecret}</HONO_MESSAGING_VALIDATION_SHARED_SECRET>
-                  <HONO_MESSAGING_HEALTH_CHECK_PORT>${vertx.health.port}</HONO_MESSAGING_HEALTH_CHECK_PORT>
-                  <HONO_MESSAGING_HEALTH_CHECK_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_HEALTH_CHECK_BIND_ADDRESS>
-                  <HONO_METRIC_REPORTER_GRAPHITE_ACTIVE>true</HONO_METRIC_REPORTER_GRAPHITE_ACTIVE>
-                  <HONO_METRIC_REPORTER_GRAPHITE_HOST>influxdb.hono</HONO_METRIC_REPORTER_GRAPHITE_HOST>
-                  <HONO_METRIC_REPORTER_GRAPHITE_PORT>2003</HONO_METRIC_REPORTER_GRAPHITE_PORT>
-                  <SPRING_PROFILES_ACTIVE>default,dev</SPRING_PROFILES_ACTIVE>
-                </env>
-              </resources>
             </configuration>
           </plugin>
         </plugins>
