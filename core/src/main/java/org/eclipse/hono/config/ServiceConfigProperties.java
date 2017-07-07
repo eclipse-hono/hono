@@ -39,6 +39,8 @@ public class ServiceConfigProperties extends AbstractConfig {
     private String insecurePortBindAddress = LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
     private int maxPayloadSize = 2048;
+    private int healthCheckPort = Constants.PORT_UNCONFIGURED;
+    private String healthCheckBindAddress = LOOPBACK_DEVICE_ADDRESS;
 
     /**
      * Gets the host name or literal IP address of the network interface that this server's secure port is
@@ -351,5 +353,51 @@ public class ServiceConfigProperties extends AbstractConfig {
     public final ServiceConfigProperties setWaitForDownstreamConnectionEnabled(final boolean waitForConnection) {
         this.waitForDownstreamConnection = waitForConnection;
         return this;
+    }
+
+    /**
+     * Gets the port that the HTTP server hosting the health check resource is configured to listen on.
+     *
+     * @return The port number.
+     */
+    public final int getHealthCheckPort() {
+        return healthCheckPort;
+    }
+
+    /**
+     * Sets the port that the HTTP server hosting the health check resource should listen on.
+     *
+     * @param port The port number.
+     * @throws IllegalArgumentException if the port number is &lt; 0 or &gt; 2^16 - 1
+     */
+    public final void setHealthCheckPort(final int port) {
+        if (isValidPort(port)) {
+            this.healthCheckPort = port;
+        } else {
+            throw new IllegalArgumentException("invalid port number");
+        }
+    }
+
+    /**
+     * Gets the host name or literal IP address of the network interface that the HTTP server hosting the
+     * health check resource is configured to be bound to.
+     *
+     * @return The host name.
+     */
+    public final String getHealthCheckBindAddress() {
+        return healthCheckBindAddress;
+    }
+
+    /**
+     * Sets the host name or literal IP address of the network interface that the HTTP server hosting the
+     * health check resource should be bound to.
+     * <p>
+     * The default value of this property is {@link #LOOPBACK_DEVICE_ADDRESS} on IPv4 stacks.
+     *
+     * @param address  The host name or IP address.
+     * @throws NullPointerException if host is {@code null}.
+     */
+    public final void setHealthCheckBindAddress(final String address) {
+        this.healthCheckBindAddress = Objects.requireNonNull(address);
     }
 }

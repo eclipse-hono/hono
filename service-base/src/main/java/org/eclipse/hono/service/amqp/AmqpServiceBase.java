@@ -153,18 +153,16 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     @Override
-    public void start(final Future<Void> startupHandler) {
+    public Future<Void> startInternal() {
 
         if (authorizationService == null) {
             authorizationService = new ClaimsBasedAuthorizationService();
         }
-        preStartServers()
+        return preStartServers()
             .compose(s -> checkPortConfiguration())
             .compose(s -> startEndpoints())
             .compose(s -> startSecureServer())
-            .compose(s -> startInsecureServer())
-            .compose(s -> startupHandler.complete(), startupHandler);
-
+            .compose(s -> startInsecureServer());
     }
 
     /**
@@ -297,8 +295,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     @Override
-    public final void stop(Future<Void> shutdownHandler) {
+    public final Future<Void> stopInternal() {
 
+        Future<Void> shutdownHandler = Future.future();
         Future<Void> tracker = Future.future();
         if (server != null) {
             server.close(tracker.completer());
@@ -313,6 +312,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                 shutdownHandler.complete();
             }
         }, shutdownHandler);
+        return shutdownHandler;
     }
 
     @Override

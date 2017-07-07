@@ -31,6 +31,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
@@ -115,17 +117,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     @Override
-    public final void start(final Future<Void> startFuture) {
+    public final Future<Void> startInternal() {
+        Future<Void> result = Future.future();
         if (messaging == null) {
-            startFuture.fail("Hono Messaging client must be set");
+            result.fail("Hono Messaging client must be set");
         } else if (registration == null) {
-            startFuture.fail("Registration client must be set");
+            result.fail("Device Registration client must be set");
         } else {
             if (credentials == null) {
-                LOG.info("Credentials client not configured, using registration client instead.");
+                LOG.info("Credentials client not configured, using Device Registration client instead.");
             }
-            doStart(startFuture);
+            doStart(result);
         }
+        return result;
     }
 
     /**
@@ -141,8 +145,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     @Override
-    public final void stop(Future<Void> stopFuture) {
-        doStop(stopFuture);
+    public final Future<Void> stopInternal() {
+        Future<Void> result = Future.future();
+        doStop(result);
+        return result;
     }
 
     /**
@@ -437,5 +443,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             }
         }, result);
         return result;
+    }
+
+    /**
+     * Registers a check that succeeds if this component is connected to Hono Messaging,
+     * the Device Registration and the Credentials service.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+        handler.register("connection-to-services", status -> {
+            if (isConnected()) {
+                status.complete(Status.OK());
+            } else {
+                status.complete(Status.KO());
+            }
+        });
+    }
+
+    /**
+     * Registers a check that always succeeds.
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler handler) {
+        handler.register("ping", status -> {
+            status.complete(Status.OK());
+        });
     }
 }

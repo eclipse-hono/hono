@@ -54,6 +54,7 @@
                     <ports>
                       <port>1883</port>
                       <port>8883</port>
+                      <port>${vertx.health.port}</port>
                     </ports>
                     <runCmds>
                       <runCmd>adduser -S -D hono nogroup</runCmd>
@@ -102,6 +103,8 @@
                   <HONO_MQTT_KEY_PATH>/etc/hono/certs/mqtt-adapter-key.pem</HONO_MQTT_KEY_PATH>
                   <HONO_MQTT_CERT_PATH>/etc/hono/certs/mqtt-adapter-cert.pem</HONO_MQTT_CERT_PATH>
                   <HONO_MQTT_MAX_INSTANCES>1</HONO_MQTT_MAX_INSTANCES>
+                  <HONO_MQTT_HEALTH_CHECK_PORT>${vertx.health.port}</HONO_MQTT_HEALTH_CHECK_PORT>
+                  <HONO_MQTT_HEALTH_CHECK_BIND_ADDRESS>0.0.0.0</HONO_MQTT_HEALTH_CHECK_BIND_ADDRESS>
                 </env>
               </resources>
             </configuration>

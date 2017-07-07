@@ -8,9 +8,13 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.http.ClientAuth;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.net.TrustOptions;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.web.Router;
 
 /**
  * A base class for implementing services binding to a secure and/or a non-secure port.
@@ -20,9 +24,148 @@ import io.vertx.core.net.TrustOptions;
 public abstract class AbstractServiceBase<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> {
 
     /**
+     * 
+     */
+    private static final String URI_LIVENESS_PROBE = "/liveness";
+
+    /**
+     * 
+     */
+    private static final String URI_READINESS_PROBE = "/readiness";
+
+    /**
      * A logger to be shared with subclasses.
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
+
+    private HttpServer healthCheckServer;
+
+    /**
+     * Starts up this component.
+     * <p>
+     * <ol>
+     * <li>invokes {@link #startInternal()}</li>
+     * <li>invokes <em>startHealthCheckServer</em></li>
+     * </ol>
+     * 
+     * @param startFuture Will be completed if all of the invoked methods return a succeeded Future.
+     */
+    @Override
+    public final void start(final Future<Void> startFuture) {
+        startInternal().compose(s -> startHealthCheckServer()).setHandler(startFuture.completer());
+    }
+
+    /**
+     * Subclasses should override this method to perform any work required on start-up of this protocol component.
+     * <p>
+     * This method is invoked by {@link #start()} as part of the startup process.
+     *
+     * @return A future indicating the outcome of the startup. If the returned future fails, this component will not start up.
+     */
+    protected Future<Void> startInternal() {
+        // should be overridden by subclasses
+        return Future.succeededFuture();
+    }
+
+    /**
+     * Stops this component.
+     * <p>
+     * <ol>
+     * <li>invokes <em>stopHealthCheckServer</em></li>
+     * <li>invokes {@link #stopInternal()}</li>
+     * </ol>
+     * 
+     * @param stopFuture Will be completed if all of the invoked methods return a succeeded Future.
+     */
+    @Override
+    public final void stop(Future<Void> stopFuture) {
+        stopHealthCheckServer().compose(s -> stopInternal()).setHandler(stopFuture.completer());
+    }
+
+    /**
+     * Subclasses should override this method to perform any work required before shutting down this component.
+     * <p>
+     * This method is invoked by {@link #stop()} as part of the shutdown process.
+     *
+     * @return A future indicating the outcome.
+     */
+    protected Future<Void> stopInternal() {
+        // to be overridden by subclasses
+        return Future.succeededFuture();
+    }
+
+    final Future<Void> startHealthCheckServer() {
+
+        Future<Void> result = Future.future();
+        if (getConfig() != null && getConfig().getHealthCheckPort() != Constants.PORT_UNCONFIGURED) {
+
+            HttpServerOptions options = new HttpServerOptions()
+                    .setPort(getConfig().getHealthCheckPort())
+                    .setHost(getConfig().getHealthCheckBindAddress());
+
+            Router router = Router.router(vertx);
+            registerHealthCheckResources(router);
+
+            healthCheckServer = vertx.createHttpServer(options);
+            healthCheckServer.requestHandler(router::accept).listen(startAttempt -> {
+                if (startAttempt.succeeded()) {
+                    LOG.info("readiness probe available at http://{}:{}{}", options.getHost(), options.getPort(), URI_READINESS_PROBE);
+                    LOG.info("liveness probe available at http://{}:{}{}", options.getHost(), options.getPort(), URI_LIVENESS_PROBE);
+                    result.complete();
+                } else {
+                    LOG.warn("failed to start health checks HTTP server:", startAttempt.cause().getMessage());
+                    result.fail(startAttempt.cause());
+                }
+            });
+        } else {
+            result.complete();
+        }
+        return result;
+    }
+
+    final Future<Void> stopHealthCheckServer() {
+
+        Future<Void> result = Future.future();
+        if (healthCheckServer != null) {
+            healthCheckServer.close(result.completer());
+        } else {
+            result.complete();
+        }
+        return result;
+    }
+
+    private void registerHealthCheckResources(final Router router) {
+        HealthCheckHandler readinessHandler = HealthCheckHandler.create(vertx);
+        HealthCheckHandler livenessHandler = HealthCheckHandler.create(vertx);
+        registerReadinessChecks(readinessHandler);
+        registerLivenessChecks(livenessHandler);
+        router.get(URI_READINESS_PROBE).handler(readinessHandler);
+        router.get(URI_LIVENESS_PROBE).handler(livenessHandler);
+    };
+
+    /**
+     * Registers checks to perform in order to determine whether this component is ready to serve requests.
+     * <p>
+     * An external systems management component can get the result of running these checks by means
+     * of doing a HTTP GET /readiness.
+     * 
+     * @param handler The handler to register the checks with.
+     */
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+        // empty default implementation
+    }
+
+    /**
+     * Registers checks to perform in order to determine whether this component is alive.
+     * <p>
+     * An external systems management component can get the result of running these checks by means
+     * of doing a HTTP GET /liveness.
+     * 
+     * @param handler The handler to register the checks with.
+     */
+    public void registerLivenessChecks(final HealthCheckHandler handler) {
+        // empty default implementation
+    }
 
     /**
      * Gets the default port number on which this service listens for encrypted communication (e.g. 5671 for AMQP 1.0).

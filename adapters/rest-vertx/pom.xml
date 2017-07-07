@@ -12,7 +12,6 @@
   <properties>
     <hono.username>rest-adapter@HONO</hono.username>
     <hono.password>rest-secret</hono.password>
-    <vertx.health.path>/status</vertx.health.path>
   </properties>
 
   <dependencies>
@@ -61,6 +60,7 @@
                     <ports>
                       <port>8080</port>
                       <port>8443</port>
+                      <port>${vertx.health.port}</port>
                     </ports>
                     <runCmds>
                       <runCmd>adduser -S -D hono nogroup</runCmd>
@@ -109,6 +109,8 @@
                   <HONO_HTTP_KEY_PATH>/etc/hono/certs/rest-adapter-key.pem</HONO_HTTP_KEY_PATH>
                   <HONO_HTTP_CERT_PATH>/etc/hono/certs/rest-adapter-cert.pem</HONO_HTTP_CERT_PATH>
                   <HONO_HTTP_MAX_INSTANCES>1</HONO_HTTP_MAX_INSTANCES>
+                  <HONO_HTTP_HEALTH_CHECK_PORT>${vertx.health.port}</HONO_HTTP_HEALTH_CHECK_PORT>
+                  <HONO_HTTP_HEALTH_CHECK_BIND_ADDRESS>0.0.0.0</HONO_HTTP_HEALTH_CHECK_BIND_ADDRESS>
                 </env>
               </resources>
             </configuration>
