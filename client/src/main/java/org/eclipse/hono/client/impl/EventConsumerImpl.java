@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -14,7 +14,7 @@
 package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
@@ -27,6 +27,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonReceiver;
 
 /**
@@ -56,7 +57,7 @@ public class EventConsumerImpl extends AbstractHonoClient implements MessageCons
             final Context context,
             final ProtonConnection con,
             final String tenantId,
-            final Consumer<Message> eventConsumer,
+            final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
         create(context, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, eventConsumer, creationHandler);
@@ -78,7 +79,7 @@ public class EventConsumerImpl extends AbstractHonoClient implements MessageCons
             final ProtonConnection con,
             final String tenantId,
             final String pathSeparator,
-            final Consumer<Message> eventConsumer,
+            final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
         Objects.requireNonNull(context);
@@ -102,14 +103,15 @@ public class EventConsumerImpl extends AbstractHonoClient implements MessageCons
             final ProtonConnection con,
             final String tenantId,
             final String pathSeparator,
-            final Consumer<Message> consumer) {
+            final BiConsumer<ProtonDelivery, Message> consumer) {
 
         Future<ProtonReceiver> result = Future.future();
         final String targetAddress = String.format(EVENT_ADDRESS_TEMPLATE, pathSeparator, tenantId);
 
         context.runOnContext(open -> {
             final ProtonReceiver receiver = con.createReceiver(targetAddress);
-            receiver.setAutoAccept(true).setPrefetch(DEFAULT_SENDER_CREDITS);
+            receiver.setAutoAccept(true);
+            receiver.setPrefetch(DEFAULT_SENDER_CREDITS);
             receiver.openHandler(receiverOpen -> {
                 if (receiverOpen.succeeded()) {
                     LOG.debug("event receiver for [{}] open", receiverOpen.result().getRemoteSource());
@@ -120,7 +122,7 @@ public class EventConsumerImpl extends AbstractHonoClient implements MessageCons
             });
             receiver.handler((delivery, message) -> {
                 if (consumer != null) {
-                    consumer.accept(message);
+                    consumer.accept(delivery, message);
                 }
             });
             receiver.open();

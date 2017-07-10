@@ -13,6 +13,7 @@
 package org.eclipse.hono.client;
 
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -22,6 +23,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * A factory for creating clients for Hono's arbitrary APIs.
@@ -153,6 +155,9 @@ public interface HonoClient {
 
     /**
      * Creates a new consumer of events for a tenant.
+     * <p>
+     * The events passed in to the registered eventConsumer will be settled
+     * automatically if the consumer does not throw an exception.
      * 
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
@@ -163,6 +168,24 @@ public interface HonoClient {
     HonoClient createEventConsumer(
             String tenantId,
             Consumer<Message> eventConsumer,
+            Handler<AsyncResult<MessageConsumer>> creationHandler);
+
+    /**
+     * Creates a new consumer of events for a tenant.
+     * <p>
+     * The events passed in to the registered eventConsumer will be settled
+     * automatically if the consumer does not throw an exception and does not
+     * manually handle the message disposition using the passed in delivery.
+     * 
+     * @param tenantId The tenant to consume events for.
+     * @param eventConsumer The handler to invoke with every event received.
+     * @param creationHandler The handler to invoke with the outcome of the operation.
+     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    HonoClient createEventConsumer(
+            String tenantId,
+            BiConsumer<ProtonDelivery, Message> eventConsumer,
             Handler<AsyncResult<MessageConsumer>> creationHandler);
 
     /**

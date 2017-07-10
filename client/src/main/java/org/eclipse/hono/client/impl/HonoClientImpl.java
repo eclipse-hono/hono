@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -44,6 +45,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
@@ -375,6 +377,19 @@ public final class HonoClientImpl implements HonoClient {
     public HonoClient createEventConsumer(
             final String tenantId,
             final Consumer<Message> eventConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+
+        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler);
+        return this;
+    }
+
+    /* (non-Javadoc)
+     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, java.util.function.BiConsumer, io.vertx.core.Handler)
+     */
+    @Override
+    public HonoClient createEventConsumer(
+            final String tenantId,
+            final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
         // register a handler to be notified if the underlying connection to the server fails
