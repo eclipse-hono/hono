@@ -15,6 +15,8 @@ package org.eclipse.hono.jmeter.ui;
 import javax.swing.*;
 
 import org.apache.jmeter.testelement.TestElement;
+import org.apache.jorphan.gui.JLabeledTextField;
+import org.eclipse.hono.client.impl.AbstractHonoClient;
 import org.eclipse.hono.jmeter.HonoReceiverSampler;
 
 /**
@@ -22,11 +24,13 @@ import org.eclipse.hono.jmeter.HonoReceiverSampler;
  */
 public class HonoReceiverSamplerUI extends HonoSamplerUI {
 
-    private final JCheckBox useSenderTime = new JCheckBox("Use sender time");
+    private final JCheckBox         useSenderTime = new JCheckBox("Use sender time");
+    private final JLabeledTextField prefetch      = new JLabeledTextField("Prefetch");
 
     public HonoReceiverSamplerUI() {
         super("Qpid Dispatch Router");
         addDefaultOptions();
+        addOption(prefetch);
         addOption(useSenderTime);
     }
 
@@ -46,6 +50,7 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
     public void modifyTestElement(final TestElement testElement) {
         super.modifyTestElement(testElement);
         HonoReceiverSampler sampler = (HonoReceiverSampler) testElement;
+        sampler.setPrefetch(prefetch.getText());
         sampler.setUseSenderTime(useSenderTime.isSelected());
     }
 
@@ -53,12 +58,14 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
     public void configure(final TestElement element) {
         super.configure(element);
         HonoReceiverSampler sampler = (HonoReceiverSampler) element;
+        prefetch.setText(sampler.getPrefetch());
         useSenderTime.setSelected(sampler.isUseSenderTime());
     }
 
     @Override
     public void clearGui() {
         super.clearGui();
+        prefetch.setText("50");
         useSenderTime.setSelected(false);
     }
 

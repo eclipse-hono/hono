@@ -24,6 +24,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.jmeter.HonoReceiverSampler;
 import org.eclipse.hono.jmeter.HonoSampler;
 import org.slf4j.LoggerFactory;
 
@@ -38,19 +39,19 @@ public class HonoReceiver {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HonoReceiver.class);
 
-    private ConnectionFactory amqpNetworkConnectionFactory;
-    private HonoClient        amqpNetworkClient;
-    private Vertx             vertx = Vertx.vertx();
+    private ConnectionFactory   amqpNetworkConnectionFactory;
+    private HonoClient          amqpNetworkClient;
+    private Vertx               vertx = Vertx.vertx();
 
-    private int          messageCount;
-    private long         messageSize;
-    private double       avgElapsed;
-    private StringBuffer messages = new StringBuffer();
-    private HonoSampler  sampler;
+    private int                 messageCount;
+    private long                messageSize;
+    private double              avgElapsed;
+    private StringBuffer        messages = new StringBuffer();
+    private HonoReceiverSampler sampler;
 
     private final transient Object lock = new Object();
 
-    public HonoReceiver(final HonoSampler sampler) throws InterruptedException {
+    public HonoReceiver(final HonoReceiverSampler sampler) throws InterruptedException {
         this.sampler = sampler;
 
         // amqp network config
@@ -90,14 +91,14 @@ public class HonoReceiver {
             connect();
         }
         if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
-            amqpNetworkClient.createTelemetryConsumer(sampler.getTenant(), this::messageReceived, creationHandler -> {
+            amqpNetworkClient.createTelemetryConsumer(sampler.getTenant(), Integer.parseInt(sampler.getPrefetch()), this::messageReceived, creationHandler -> {
                 if (creationHandler.failed()) {
                     LOGGER.error("HonoClient.createTelemetryConsumer() failed", creationHandler.cause());
                 }
                 receiverLatch.countDown();
             });
         } else {
-            amqpNetworkClient.createEventConsumer(sampler.getTenant(), this::messageReceived, creationHandler -> {
+            amqpNetworkClient.createEventConsumer(sampler.getTenant(), Integer.parseInt(sampler.getPrefetch()), this::messageReceived, creationHandler -> {
                 if (creationHandler.failed()) {
                     LOGGER.error("HonoClient.createEventConsumer() failed", creationHandler.cause());
                 }

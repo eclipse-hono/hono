@@ -31,14 +31,13 @@ import io.vertx.proton.ProtonReceiver;
 /**
  * A Vertx-Proton based client for consuming telemetry data from a Hono server.
  */
-public class TelemetryConsumerImpl extends AbstractHonoClient implements MessageConsumer {
+public class TelemetryConsumerImpl extends AbstractConsumer implements MessageConsumer {
 
     private static final String     TELEMETRY_ADDRESS_TEMPLATE  = "telemetry%s%s";
     private static final Logger     LOG = LoggerFactory.getLogger(TelemetryConsumerImpl.class);
 
     private TelemetryConsumerImpl(final Context context, final ProtonReceiver receiver) {
-        super(context);
-        this.receiver = receiver;
+        super(context, receiver);
     }
 
     /**
@@ -47,6 +46,8 @@ public class TelemetryConsumerImpl extends AbstractHonoClient implements Message
      * @param context The vert.x context to run all interactions with the server on.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant to consumer events for.
+     * @param prefetch the number of message credits the consumer grants and replenishes automatically as messages are
+     *                 delivered. To manage credit manually, you can instead set prefetch to 0.
      * @param telemetryConsumer The consumer to invoke with each telemetry message received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -55,10 +56,11 @@ public class TelemetryConsumerImpl extends AbstractHonoClient implements Message
             final Context context,
             final ProtonConnection con,
             final String tenantId,
+            final int prefetch,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
-        create(context, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, telemetryConsumer, creationHandler);
+        create(context, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, prefetch, telemetryConsumer, creationHandler);
     }
 
     /**
@@ -68,6 +70,8 @@ public class TelemetryConsumerImpl extends AbstractHonoClient implements Message
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant to consumer events for.
      * @param pathSeparator The address path separator character used by the server.
+     * @param prefetch the number of message credits the consumer grants and replenishes automatically as messages are
+     *                 delivered. To manage credit manually, you can instead set prefetch to 0.
      * @param telemetryConsumer The consumer to invoke with each telemetry message received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -77,6 +81,7 @@ public class TelemetryConsumerImpl extends AbstractHonoClient implements Message
             final ProtonConnection con,
             final String tenantId,
             final String pathSeparator,
+            final int prefetch,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
@@ -87,49 +92,15 @@ public class TelemetryConsumerImpl extends AbstractHonoClient implements Message
         Objects.requireNonNull(telemetryConsumer);
         Objects.requireNonNull(creationHandler);
 
-        createConsumer(context, con, tenantId, pathSeparator, telemetryConsumer).setHandler(created -> {
-            if (created.succeeded()) {
-                creationHandler.handle(Future.succeededFuture(
-                        new TelemetryConsumerImpl(context, created.result())));
-            } else {
-                creationHandler.handle(Future.failedFuture(created.cause()));
-            }
-        });
+        createConsumer(context, con, tenantId, pathSeparator, TELEMETRY_ADDRESS_TEMPLATE, prefetch,
+                (protonDelivery, message) -> telemetryConsumer.accept(message)).setHandler(created -> {
+                    if (created.succeeded()) {
+                        creationHandler.handle(Future.succeededFuture(
+                                new TelemetryConsumerImpl(context, created.result())));
+                    } else {
+                        creationHandler.handle(Future.failedFuture(created.cause()));
+                    }
+                });
     }
 
-    private static Future<ProtonReceiver> createConsumer(
-            final Context context,
-            final ProtonConnection con,
-            final String tenantId,
-            final String pathSeparator,
-            final Consumer<Message> consumer) {
-
-        Future<ProtonReceiver> result = Future.future();
-        final String targetAddress = String.format(TELEMETRY_ADDRESS_TEMPLATE, pathSeparator, tenantId);
-
-        context.runOnContext(open -> {
-            final ProtonReceiver receiver = con.createReceiver(targetAddress);
-            receiver.setAutoAccept(true).setPrefetch(DEFAULT_SENDER_CREDITS);
-            receiver.openHandler(receiverOpen -> {
-                if (receiverOpen.succeeded()) {
-                    LOG.debug("telemetry receiver for [{}] open", receiverOpen.result().getRemoteSource());
-                    result.complete(receiverOpen.result());
-                } else {
-                    result.fail(receiverOpen.cause());
-                }
-            });
-            receiver.handler((delivery, message) -> {
-                if (consumer != null) {
-                    consumer.accept(message);
-                }
-            });
-            receiver.open();
-        });
-        return result;
-    }
-
-    @Override
-    public void close(final Handler<AsyncResult<Void>> closeHandler) {
-        closeLinks(closeHandler);
-    }
 }

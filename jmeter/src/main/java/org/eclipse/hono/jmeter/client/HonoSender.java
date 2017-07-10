@@ -135,7 +135,7 @@ public class HonoSender {
             connect();
         }
         if(sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
-            honoClient.getOrCreateTelemetrySender(sampler.getTenant(), sampler.getDeviceId(), resultHandler -> {
+            honoClient.getOrCreateTelemetrySender(sampler.getTenant(), resultHandler -> {
                 if (resultHandler.failed()) {
                     LOGGER.error("HonoClient.getOrCreateTelemetrySender() failed", resultHandler.cause());
                 } else {
@@ -145,7 +145,7 @@ public class HonoSender {
             });
         }
         else {
-            honoClient.getOrCreateEventSender(sampler.getTenant(), sampler.getDeviceId(), resultHandler -> {
+            honoClient.getOrCreateEventSender(sampler.getTenant(), resultHandler -> {
                 if (resultHandler.failed()) {
                     LOGGER.error("HonoClient.getOrCreateEventSender() failed", resultHandler.cause());
                 } else {
