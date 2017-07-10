@@ -35,6 +35,8 @@ import org.springframework.boot.actuate.metrics.CounterService;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -210,4 +212,21 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
      * @return The delivery modes this endpoint supports.
      */
     protected abstract ProtonQoS[] getEndpointQos();
+
+    /**
+     * Registers a check that succeeds if this endpoint has a usable connection to its
+     * downstream container.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+        handler.register(getName() + "-endpoint-downstream-connection", status -> {
+            if (downstreamAdapter == null) {
+                status.complete(Status.KO());
+            } else if (downstreamAdapter.isConnected()) {
+                status.complete(Status.OK());
+            } else {
+                status.complete(Status.KO());
+            }
+        });
+    }
 }

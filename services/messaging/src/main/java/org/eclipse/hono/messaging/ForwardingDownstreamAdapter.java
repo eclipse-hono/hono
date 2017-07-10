@@ -518,6 +518,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      *
      * @return {@code true} if the connection is open (and thus usable).
      */
+    @Override
     public final boolean isConnected() {
         return downstreamConnection != null && !downstreamConnection.isDisconnected();
     }

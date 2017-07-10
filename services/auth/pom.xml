@@ -106,6 +106,7 @@
                   <HONO_AUTH_BIND_ADDRESS>0.0.0.0</HONO_AUTH_BIND_ADDRESS>
                   <HONO_AUTH_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_AUTH_INSECURE_PORT_BIND_ADDRESS>
                   <HONO_AUTH_INSECURE_PORT_ENABLED>true</HONO_AUTH_INSECURE_PORT_ENABLED>
+                  <HONO_AUTH_TRUST_STORE_PATH>/etc/hono/certs/trusted-certs.pem</HONO_AUTH_TRUST_STORE_PATH>
                   <SPRING_PROFILES_ACTIVE>authentication-impl,dev</SPRING_PROFILES_ACTIVE>
                 </env>
               </resources>

@@ -23,14 +23,7 @@ import io.vertx.ext.web.Router;
  */
 public abstract class AbstractServiceBase<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> {
 
-    /**
-     * 
-     */
     private static final String URI_LIVENESS_PROBE = "/liveness";
-
-    /**
-     * 
-     */
     private static final String URI_READINESS_PROBE = "/readiness";
 
     /**

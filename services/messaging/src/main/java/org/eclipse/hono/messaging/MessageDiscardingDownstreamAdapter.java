@@ -108,6 +108,11 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
     public void onClientDetach(final UpstreamReceiver client) {
     }
 
+    @Override
+    public boolean isConnected() {
+        return true;
+    }
+
     /**
      * Sets the consumer for telemetry messages received from upstream.
      * 

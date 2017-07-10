@@ -14,6 +14,9 @@
   <properties>
     <hono.messaging.keyPath>/etc/hono/certs/hono-messaging-key.pem</hono.messaging.keyPath>
     <hono.messaging.certPath>/etc/hono/certs/hono-messaging-cert.pem</hono.messaging.certPath>
+    <vertx.health.port>8088</vertx.health.port>
+    <vertx.health.path>/liveness</vertx.health.path>
+    <vertx.health.readiness.path>/readiness</vertx.health.readiness.path>
   </properties>
 
   <dependencies>
@@ -90,6 +93,7 @@
                     <ports>
                       <port>5671</port>
                       <port>5672</port>
+                      <port>${vertx.health.port}</port>
                     </ports>
                     <runCmds>
                       <runCmd>adduser -S -D hono nogroup</runCmd>
@@ -138,6 +142,8 @@
                   <HONO_AUTH_HOST>${hono.auth.host}</HONO_AUTH_HOST>
                   <HONO_AUTH_PORT>5671</HONO_AUTH_PORT>
                   <HONO_AUTH_NAME>${project.name}</HONO_AUTH_NAME>
+                  <HONO_AUTH_KEY_PATH>${hono.messaging.keyPath}</HONO_AUTH_KEY_PATH>
+                  <HONO_AUTH_CERT_PATH>${hono.messaging.certPath}</HONO_AUTH_CERT_PATH>
                   <HONO_AUTH_VALIDATION_CERT_PATH>${hono.auth.validation.certPath}</HONO_AUTH_VALIDATION_CERT_PATH>
                   <HONO_AUTH_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_AUTH_TRUST_STORE_PATH>
                   <HONO_DOWNSTREAM_HOST>hono-dispatch-router.hono</HONO_DOWNSTREAM_HOST>
@@ -153,6 +159,8 @@
                   <HONO_MESSAGING_INSECURE_PORT_ENABLED>true</HONO_MESSAGING_INSECURE_PORT_ENABLED>
                   <HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS>
                   <HONO_MESSAGING_VALIDATION_SHARED_SECRET>${hono.regAssertion.sharedSecret}</HONO_MESSAGING_VALIDATION_SHARED_SECRET>
+                  <HONO_MESSAGING_HEALTH_CHECK_PORT>${vertx.health.port}</HONO_MESSAGING_HEALTH_CHECK_PORT>
+                  <HONO_MESSAGING_HEALTH_CHECK_BIND_ADDRESS>0.0.0.0</HONO_MESSAGING_HEALTH_CHECK_BIND_ADDRESS>
                   <HONO_METRIC_REPORTER_GRAPHITE_ACTIVE>true</HONO_METRIC_REPORTER_GRAPHITE_ACTIVE>
                   <HONO_METRIC_REPORTER_GRAPHITE_HOST>influxdb.hono</HONO_METRIC_REPORTER_GRAPHITE_HOST>
                   <HONO_METRIC_REPORTER_GRAPHITE_PORT>2003</HONO_METRIC_REPORTER_GRAPHITE_PORT>

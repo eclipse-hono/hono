@@ -30,6 +30,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
@@ -265,4 +267,27 @@ public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements
      * @return {@code true} if the message passes all checks and can be forwarded downstream.
      */
     protected abstract boolean passesFormalVerification(final ResourceIdentifier targetAddress, final Message message);
+
+    /**
+     * Registers a check that always succeeds.
+     * <p>
+     * Subclasses may want to override this method in order to implement more meaningful checks.
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler handler) {
+        handler.register(getName() + "-endpoint-live", status -> {
+            status.complete(Status.OK());
+        });
+    }
+
+    /**
+     * Does not register any checks.
+     * <p>
+     * Subclasses may want to override this method in order to implement meaningful checks
+     * specific to the particular endpoint.
+     */
+    @Override
+    public void registerReadinessChecks(HealthCheckHandler handler) {
+        // empty default implementation
+    }
 }

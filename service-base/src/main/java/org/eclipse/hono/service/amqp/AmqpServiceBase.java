@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
@@ -120,6 +121,15 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected final Endpoint getEndpoint(final String endpointName) {
         return endpoints.get(endpointName);
+    }
+
+    /**
+     * Iterates over the endpoints registered with this service.
+     * 
+     * @return The endpoints.
+     */
+    protected final Iterable<Endpoint> endpoints() {
+        return endpoints.values();
     }
 
     /**
@@ -384,6 +394,42 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             return ResourceIdentifier.fromStringAssumingDefaultTenant(address);
         } else {
             return ResourceIdentifier.fromString(address);
+        }
+    }
+
+
+    /**
+     * Registers this service's endpoints' readiness checks.
+     * <p>
+     * This default implementation invokes {@link Endpoint#registerReadinessChecks(HealthCheckHandler)}
+     * for all registered endpoints.
+     * <p>
+     * Subclasses should override this method to register more specific checks.
+     * 
+     * @param handler The health check handler to register the checks with.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+
+        for (Endpoint ep : endpoints()) {
+            ep.registerReadinessChecks(handler);
+        }
+    }
+
+    /**
+     * Registers this service's endpoints' liveness checks.
+     * <p>
+     * This default implementation invokes {@link Endpoint#registerLivenessChecks(HealthCheckHandler)}
+     * for all registered endpoints.
+     * <p>
+     * Subclasses should override this method to register more specific checks.
+     * 
+     * @param handler The health check handler to register the checks with.
+     */
+    @Override
+    public void registerLivenessChecks(HealthCheckHandler handler) {
+        for (Endpoint ep : endpoints()) {
+            ep.registerLivenessChecks(handler);
         }
     }
 }
