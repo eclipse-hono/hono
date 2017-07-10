@@ -88,7 +88,7 @@ public class EventConsumerImplTest {
             return receiver;
         });
         Async consumerCreation = ctx.async();
-        EventConsumerImpl.create(vertx.getOrCreateContext(), con, "tenant", eventConsumer, ctx.asyncAssertSuccess(s -> {
+        EventConsumerImpl.create(vertx.getOrCreateContext(), con, "tenant", AbstractHonoClient.DEFAULT_SENDER_CREDITS, eventConsumer, ctx.asyncAssertSuccess(s -> {
             consumerCreation.complete();
         }));
         consumerCreation.await(500);

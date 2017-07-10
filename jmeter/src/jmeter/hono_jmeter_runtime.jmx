@@ -71,6 +71,7 @@
             <stringProp name="tenant">DEFAULT_TENANT</stringProp>
             <boolProp name="useSenderTime">true</boolProp>
             <stringProp name="endpoint">telemetry</stringProp>
+            <stringProp name="prefetch">50</stringProp>
           </org.eclipse.hono.jmeter.HonoReceiverSampler>
           <hashTree/>
           <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Constant Timer" enabled="true">
