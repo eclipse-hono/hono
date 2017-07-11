@@ -175,6 +175,24 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     public abstract int getInsecurePortDefaultValue();
 
     /**
+     * Gets the port number from a running secure server if it is listening on the corresponding socket already.
+     * <p>
+     * If no server is listening, {@link Constants#PORT_UNCONFIGURED} is returned.
+     *
+     * @return The port number.
+     */
+    protected abstract int getActualPort();
+
+    /**
+     * Gets the port number from a running insecure server if it is listening on the corresponding socket already.
+     * <p>
+     * If no server is listening, {@link Constants#PORT_UNCONFIGURED} is returned.
+     *
+     * @return The port number.
+     */
+    protected abstract int getActualInsecurePort();
+
+    /**
      * Gets the secure port number that this service has bound to.
      * <p>
      * The port number is determined as follows:
@@ -186,7 +204,15 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * 
      * @return The port number.
      */
-    public abstract int getPort();
+    public final int getPort() {
+        if (getActualPort() != Constants.PORT_UNCONFIGURED) {
+            return getActualPort();
+        } else if (isSecurePortEnabled()) {
+            return getConfig().getPort(getPortDefaultValue());
+        } else {
+            return Constants.PORT_UNCONFIGURED;
+        }
+    };
 
     /**
      * Gets the insecure port number that this service has bound to.
@@ -200,7 +226,15 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * 
      * @return The port number.
      */
-    public abstract int getInsecurePort();
+    public final int getInsecurePort() {
+        if (getActualInsecurePort() != Constants.PORT_UNCONFIGURED) {
+            return getActualInsecurePort();
+        } else if (isInsecurePortEnabled()) {
+            return getConfig().getInsecurePort(getInsecurePortDefaultValue());
+        } else {
+            return Constants.PORT_UNCONFIGURED;
+        }
+    }
 
     /**
      * Verifies that this service is properly configured to bind to at least one of the secure or insecure ports.

@@ -15,6 +15,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.Constants;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -60,13 +61,13 @@ public class AbstractServiceBaseTest {
             }
 
             @Override
-            public int getPort() {
-                return config.getPort(PORT_NR);
+            protected int getActualPort() {
+                return Constants.PORT_UNCONFIGURED;
             }
 
             @Override
-            public int getInsecurePort() {
-                return config.getInsecurePort(INSECURE_PORT_NR);
+            protected int getActualInsecurePort() {
+                return Constants.PORT_UNCONFIGURED;
             }
         };
         server.setConfig(config);
