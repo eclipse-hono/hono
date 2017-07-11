@@ -326,25 +326,13 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     @Override
-    public final int getPort() {
-        if (server != null) {
-            return server.actualPort();
-        } else if (isSecurePortEnabled()) {
-            return getConfig().getPort(getPortDefaultValue());
-        } else {
-            return Constants.PORT_UNCONFIGURED;
-        }
+    protected final int getActualPort() {
+        return (server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED);
     }
 
     @Override
-    public final int getInsecurePort() {
-        if (insecureServer != null) {
-            return insecureServer.actualPort();
-        } else if (isInsecurePortEnabled()) {
-            return getConfig().getInsecurePort(getInsecurePortDefaultValue());
-        } else {
-            return Constants.PORT_UNCONFIGURED;
-        }
+    protected final int getActualInsecurePort() {
+        return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
     }
 
     /**
