@@ -181,7 +181,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
     private void handleEndpointConnection(final MqttEndpoint endpoint) {
 
-        LOG.info("Connection request from client {}", endpoint.clientIdentifier());
+        LOG.info("connection request from client {}", endpoint.clientIdentifier());
 
         if (!isConnected()) {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
@@ -237,8 +237,14 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
                     LOG.debug("client [ID: {}] tries to publish on unsupported topic", endpoint.clientIdentifier());
                     close(endpoint);
                 }
-
             });
+
+            endpoint.closeHandler(v -> {
+                LOG.debug("client [{}] closes connection", endpoint.clientIdentifier());
+                if (registrationAssertions.remove(endpoint) != null)
+                    LOG.trace("removed registration assertion for client [{}]", endpoint.clientIdentifier());
+            });
+
             endpoint.accept(false);
         }
     }
@@ -274,8 +280,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
             registrationAssertions.remove(endpoint);
             Future<String> result = Future.future();
             getRegistrationAssertion(address.getTenantId(), address.getResourceId()).compose(t -> {
-                LOG.trace("caching registration assertion for client [{}]", endpoint.clientIdentifier());
-                registrationAssertions.put(endpoint, t);
+                // if the client closes the connection right after publishing the messages and before that
+                // the registration assertion has been returned, avoid to put it into the map
+                if (endpoint.isConnected()) {
+                    LOG.trace("caching registration assertion for client [{}]", endpoint.clientIdentifier());
+                    registrationAssertions.put(endpoint, t);
+                }
                 result.complete(t);
             }, result);
             return result;
