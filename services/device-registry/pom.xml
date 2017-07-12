@@ -9,6 +9,14 @@
   <name>Hono Device Registry</name>
   <description>A default device registry for Hono implementing the device registration and credentials API.</description>
 
+  <properties>
+    <hono.device-registry.certPath>/etc/hono/certs/device-registry-cert.pem</hono.device-registry.certPath>
+    <hono.device-registry.keyPath>/etc/hono/certs/device-registry-key.pem</hono.device-registry.keyPath>
+    <vertx.health.port>8088</vertx.health.port>
+    <vertx.health.path>/liveness</vertx.health.path>
+    <vertx.health.readiness.path>/readiness</vertx.health.readiness.path>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -51,6 +59,7 @@
                     <ports>
                       <port>5671</port>
                       <port>5672</port>
+                      <port>${vertx.health.port}</port>
                     </ports>
                     <runCmds>
                       <runCmd>adduser -S -D hono nogroup &amp;&amp; mkdir /home/hono/device-registry &amp;&amp; chown -R hono /home/hono</runCmd>
@@ -100,11 +109,15 @@
                   <HONO_AUTH_HOST>${hono.auth.host}</HONO_AUTH_HOST>
                   <HONO_AUTH_PORT>5671</HONO_AUTH_PORT>
                   <HONO_AUTH_NAME>${project.name}</HONO_AUTH_NAME>
+                  <HONO_AUTH_KEY_PATH>${hono.device-registry.keyPath}</HONO_AUTH_KEY_PATH>
+                  <HONO_AUTH_CERT_PATH>${hono.device-registry.certPath}</HONO_AUTH_CERT_PATH>
                   <HONO_AUTH_VALIDATION_CERT_PATH>${hono.auth.validation.certPath}</HONO_AUTH_VALIDATION_CERT_PATH>
                   <HONO_AUTH_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_AUTH_TRUST_STORE_PATH>
-                  <HONO_DEVICE_REGISTRY_KEY_PATH>/etc/hono/certs/device-registry-key.pem</HONO_DEVICE_REGISTRY_KEY_PATH>
-                  <HONO_DEVICE_REGISTRY_CERT_PATH>/etc/hono/certs/device-registry-cert.pem</HONO_DEVICE_REGISTRY_CERT_PATH>
+                  <HONO_DEVICE_REGISTRY_KEY_PATH>${hono.device-registry.keyPath}</HONO_DEVICE_REGISTRY_KEY_PATH>
+                  <HONO_DEVICE_REGISTRY_CERT_PATH>${hono.device-registry.certPath}</HONO_DEVICE_REGISTRY_CERT_PATH>
                   <HONO_DEVICE_REGISTRY_BIND_ADDRESS>0.0.0.0</HONO_DEVICE_REGISTRY_BIND_ADDRESS>
+                  <HONO_DEVICE_REGISTRY_HEALTH_CHECK_PORT>${vertx.health.port}</HONO_DEVICE_REGISTRY_HEALTH_CHECK_PORT>
+                  <HONO_DEVICE_REGISTRY_HEALTH_CHECK_BIND_ADDRESS>0.0.0.0</HONO_DEVICE_REGISTRY_HEALTH_CHECK_BIND_ADDRESS>
                   <HONO_DEVICE_REGISTRY_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_DEVICE_REGISTRY_INSECURE_PORT_BIND_ADDRESS>
                   <HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED>true</HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED>
                   <HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET>${hono.regAssertion.sharedSecret}</HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET>

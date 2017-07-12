@@ -66,6 +66,10 @@
     "hono-messaging": {
       "mechanism": "EXTERNAL",
       "authorities": []
+    },
+    "device-registry": {
+      "mechanism": "EXTERNAL",
+      "authorities": []
     }
   }
 }

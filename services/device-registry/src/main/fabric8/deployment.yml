@@ -9,15 +9,3 @@ spec:
       - volumeMounts:
         - name: registry
           mountPath: /home/hono/device-registry
-        readinessProbe:
-          initialDelaySeconds: 15
-          periodSeconds: 5
-          timeoutSeconds: 1
-          tcpSocket:
-            port: 5672
-        livenessProbe:
-          initialDelaySeconds: 25
-          periodSeconds: 9
-          timeoutSeconds: 1
-          tcpSocket:
-            port: 5672
