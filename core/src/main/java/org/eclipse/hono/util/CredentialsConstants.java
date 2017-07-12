@@ -40,6 +40,9 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     public static final String CREDENTIALS_ENDPOINT              = "credentials";
 
+    public static final String SECRETS_TYPE_HASHED_PASSWORD      = "hashed-password";
+    public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
+
     private static final List<String> OPERATIONS = Arrays.asList(OPERATION_GET, OPERATION_ADD, OPERATION_UPDATE, OPERATION_REMOVE);
 
     /**

@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * The Hono MQTT adapter main application class.
  */
-@ComponentScan(basePackages = "org.eclipse.hono.adapter.mqtt")
+@ComponentScan(basePackages = {"org.eclipse.hono.adapter.mqtt", "org.eclipse.hono.service.credentials"})
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication<VertxBasedMqttProtocolAdapter, ServiceConfigProperties> {

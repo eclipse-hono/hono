@@ -13,8 +13,7 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.eclipse.hono.client.MessageSender;
@@ -22,6 +21,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,7 +181,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
     private void handleEndpointConnection(final MqttEndpoint endpoint) {
 
-        LOG.info("connection request from client {}", endpoint.clientIdentifier());
+        LOG.info("Connection request from client {}", endpoint.clientIdentifier());
 
         if (!isConnected()) {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
@@ -215,20 +215,26 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
                         // check that MQTT client tries to publish on topic with device_id same as on connection
                         if (resource.getResourceId().equals(endpoint.clientIdentifier())) {
+                            // check credentials for valid authentication
+                            // TODO: how to determine the type? I would think: configurable for MQTT, hashed-password, preshared key maybe
+                            final String type = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
+                            final String user = (endpoint.auth() == null ? null : endpoint.auth().userName());
+                            final String protocolAdapterPassword = (endpoint.auth() == null ? null : endpoint.auth().password());
 
-                            Future<String> assertionTracker = getRegistrationAssertion(endpoint, resource);
-                            Future<MessageSender> senderTracker = getSenderTracker(message, resource);
+                            validateCredentialsForDevice(resource.getTenantId(), type, user, protocolAdapterPassword).compose(credResult -> {
+                                Future<Void> messageResult = Future.future();
 
-                            CompositeFuture.all(assertionTracker, senderTracker).compose(ok -> {
-                                doUploadMessage(resource.getTenantId(), assertionTracker.result(), endpoint, message, senderTracker.result(), messageTracker);
+                                Future<String> assertionTracker = getRegistrationAssertion(endpoint, resource);
+                                Future<MessageSender> senderTracker = getSenderTracker(message, resource);
+
+                                CompositeFuture.all(assertionTracker, senderTracker).compose(ok -> {
+                                    doUploadMessage(resource.getTenantId(), assertionTracker.result(), endpoint, message, senderTracker.result(), messageTracker);
+                                }, messageResult);
                             }, messageTracker);
-
-
                         } else {
                             // MQTT client is trying to publish on a different device_id used on connection (MQTT has no way for errors)
                             messageTracker.fail("client not authorized");
                         }
-
                     }
 
                 } catch (IllegalArgumentException e) {
