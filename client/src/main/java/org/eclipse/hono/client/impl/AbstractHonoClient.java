@@ -39,7 +39,7 @@ public abstract class AbstractHonoClient {
     /**
      * The number of credits to flow to senders by default.
      */
-    protected static final int    DEFAULT_SENDER_CREDITS = 50;
+    protected static final int    DEFAULT_SENDER_CREDITS = 1000;
     private static final Logger   LOG                    = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**

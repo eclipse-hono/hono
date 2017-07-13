@@ -6,6 +6,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
@@ -13,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * Abstract client for consuming messages from a Hono server.
@@ -43,27 +43,44 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
             final String tenantId,
             final String pathSeparator,
             final String address,
+            final ProtonQoS qos,
             final int prefetch,
             final BiConsumer<ProtonDelivery, Message> consumer) {
 
         Future<ProtonReceiver> result = Future.future();
         final String targetAddress = String.format(address, pathSeparator, tenantId);
+        final int threshold = prefetch >> 1;
 
         context.runOnContext(open -> {
             final ProtonReceiver receiver = con.createReceiver(targetAddress);
             receiver.setAutoAccept(true);
-            receiver.setPrefetch(prefetch);
-            receiver.openHandler(receiverOpen -> {
-                if (receiverOpen.succeeded()) {
-                    LOG.debug("{} receiver for [{}] open", address, receiverOpen.result().getRemoteSource());
-                    result.complete(receiverOpen.result());
-                } else {
-                    result.fail(receiverOpen.cause());
-                }
-            });
+            receiver.setPrefetch(0);
+            receiver.setQoS(qos);
             receiver.handler((delivery, message) -> {
                 if (consumer != null) {
                     consumer.accept(delivery, message);
+                }
+                int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]", delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                if (prefetch > 0) {
+                    // replenish sender with credits once the remaining credits fall
+                    // below threshold (prefetch / 2)
+                    if (remainingCredits < threshold) {
+                        int credits = prefetch - remainingCredits;
+                        LOG.trace("replenishing sender with {} credits ", credits);
+                        receiver.flow(credits);
+                    }
+                }
+            });
+            receiver.openHandler(receiverOpen -> {
+                if (receiverOpen.succeeded()) {
+                    LOG.debug("receiver [source: {}, qos: {}] open", receiver.getRemoteSource(), receiver.getRemoteQoS());
+                    if (prefetch > 0) {
+                        receiver.flow(prefetch);
+                    }
+                    result.complete(receiver);
+                } else {
+                    result.fail(receiverOpen.cause());
                 }
             });
             receiver.open();

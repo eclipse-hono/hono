@@ -18,14 +18,13 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.util.Constants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 /**
@@ -34,7 +33,6 @@ import io.vertx.proton.ProtonReceiver;
 public class TelemetryConsumerImpl extends AbstractConsumer implements MessageConsumer {
 
     private static final String     TELEMETRY_ADDRESS_TEMPLATE  = "telemetry%s%s";
-    private static final Logger     LOG = LoggerFactory.getLogger(TelemetryConsumerImpl.class);
 
     private TelemetryConsumerImpl(final Context context, final ProtonReceiver receiver) {
         super(context, receiver);
@@ -92,7 +90,7 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
         Objects.requireNonNull(telemetryConsumer);
         Objects.requireNonNull(creationHandler);
 
-        createConsumer(context, con, tenantId, pathSeparator, TELEMETRY_ADDRESS_TEMPLATE, prefetch,
+        createConsumer(context, con, tenantId, pathSeparator, TELEMETRY_ADDRESS_TEMPLATE, ProtonQoS.AT_MOST_ONCE, prefetch,
                 (protonDelivery, message) -> telemetryConsumer.accept(message)).setHandler(created -> {
                     if (created.succeeded()) {
                         creationHandler.handle(Future.succeededFuture(
