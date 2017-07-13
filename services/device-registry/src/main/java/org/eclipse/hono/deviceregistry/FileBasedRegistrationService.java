@@ -67,7 +67,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
                         saveToFile(Future.future());
                     });
                 } else {
-                    log.info("persistence is disabled, will not safe device identities to file");
+                    log.info("persistence is disabled, will not save device identities to file");
                 }
             }
         }

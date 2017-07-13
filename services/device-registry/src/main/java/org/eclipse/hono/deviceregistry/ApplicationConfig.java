@@ -109,7 +109,6 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    @Profile("credentials")
     public CredentialsEndpoint credentialsEndpoint() {
         return new CredentialsEndpoint(vertx());
     }
