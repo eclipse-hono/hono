@@ -78,33 +78,30 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
     }
 
     void loadCredentials() throws IOException {
-        if (getConfig().getCredentialsPath() == null) {
-            throw new IllegalStateException("credentials resource is not set");
+        if (getConfig().getCredentialsFilename() == null) {
+            throw new IllegalStateException("credentials filename is not set");
         }
-        if (getConfig().getCredentialsPath().isReadable()) {
-            log.info("loading credentials from resource {}", getConfig().getCredentialsPath().getURI().toString());
-            StringBuilder json = new StringBuilder();
-            load(getConfig().getCredentialsPath(), json);
-            parseCredentials(new JsonArray(json.toString()));
+
+        final FileSystem fs = vertx.fileSystem();
+        log.debug("trying to load credentials information from file {}", getConfig().getCredentialsFilename());
+
+        if (fs.existsBlocking(getConfig().getCredentialsFilename())) {
+            log.info("loading credentials from file {}", getConfig().getCredentialsFilename());
+            fs.readFile(getConfig().getCredentialsFilename(), readAttempt -> {
+                if (readAttempt.succeeded()) {
+                    JsonArray allObjects = new JsonArray(new String(readAttempt.result().getBytes()));
+                    parseCredentials(allObjects);
+                } else {
+                    log.warn("could not load credentials from file [{}]", getConfig().getCredentialsFilename(), readAttempt.cause());
+                }
+            });
         } else {
-            throw new FileNotFoundException(String.format("credentials resource does not exist: {}",getConfig().getCredentialsPath().getURI().toString()));
-        }
-    }
-
-    private void load(final Resource source, final StringBuilder target) throws IOException {
-
-        char[] buffer = new char[4096];
-        int bytesRead = 0;
-        try (Reader reader = new InputStreamReader(source.getInputStream(), UTF_8)) {
-            while ((bytesRead = reader.read(buffer)) > 0) {
-                target.append(buffer, 0, bytesRead);
-            }
+            log.debug("credentials file {} does not exist (yet)", getConfig().getCredentialsFilename());
         }
     }
 
     protected void parseCredentials(final JsonArray credentialsObject) {
         final AtomicInteger credentialsCount = new AtomicInteger();
-
 
         for (Object obj : credentialsObject) {
             JsonObject tenant = (JsonObject) obj;
@@ -124,7 +121,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
             }
             credentials.put(tenantId, credentialsMap);
         }
-        log.info("successfully loaded {} credentials from file [{}]", credentialsCount.get(), getConfig().getCredentialsPath().getDescription());
+        log.info("successfully loaded {} credentials from file [{}]", credentialsCount.get(), getConfig().getCredentialsFilename());
     }
 
     @Override
@@ -155,7 +152,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
         }
 
         final FileSystem fs = vertx.fileSystem();
-        String filename = getConfig().getCredentialsPath().getFilename();
+        String filename = getConfig().getCredentialsFilename();
 
         if (!fs.existsBlocking(filename)) {
             fs.createFileBlocking(filename);
@@ -174,20 +171,16 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
                             .put(FIELD_TENANT, entry.getKey())
                             .put(ARRAY_CREDENTIALS, credentialsArray));
         }
-        try {
-            fs.writeFile(getConfig().getCredentialsPath().getFile().getPath(), Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
-                if (writeAttempt.succeeded()) {
-                    dirty = false;
-                    log.trace("successfully wrote {} credentials to file {}", idCount.get(), filename);
-                    writeResult.complete();
-                } else {
-                    log.warn("could not write credentials to file {}", filename, writeAttempt.cause());
-                    writeResult.fail(writeAttempt.cause());
-                }
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        fs.writeFile(getConfig().getCredentialsFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
+            if (writeAttempt.succeeded()) {
+                dirty = false;
+                log.trace("successfully wrote {} credentials to file {}", idCount.get(), filename);
+                writeResult.complete();
+            } else {
+                log.warn("could not write credentials to file {}", filename, writeAttempt.cause());
+                writeResult.fail(writeAttempt.cause());
+            }
+        });
     }
 
     @Override
@@ -198,21 +191,21 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
 
     @Override
     public void addCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-        // TODO: implement
+        // TODO: implement as in memory version
         CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
     @Override
     public void updateCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-        // TODO: implement
+        // TODO: implement as in memory version
         CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
     @Override
     public void removeCredentials(final String tenantId, final String deviceId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-        // TODO: implement
+        // TODO: implement as in memory version
         CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
@@ -266,6 +259,6 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
 
     @Override
     public String toString() {
-        return String.format("%s[filename=%s]", FileBasedCredentialsService.class.getSimpleName(), getConfig().getCredentialsPath().getFilename());
+        return String.format("%s[filename=%s]", FileBasedCredentialsService.class.getSimpleName(), getConfig().getCredentialsFilename());
     }
 }

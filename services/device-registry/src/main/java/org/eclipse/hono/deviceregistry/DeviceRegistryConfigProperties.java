@@ -34,22 +34,22 @@ public final class DeviceRegistryConfigProperties extends ServiceConfigPropertie
      * The default number of devices that can be registered for each tenant.
      */
     public static final int DEFAULT_MAX_DEVICES_PER_TENANT = 100;
-    private static final Resource DEFAULT_CREDENTIALS_RESOURCE = new ClassPathResource("credentials.json");
     private static final String DEFAULT_DEVICES_FILENAME = "/home/hono/device-registry/device-identities.json";
+    private static final String DEFAULT_CREDENTIALS_FILENAME = "/home/hono/device-registry/credentials.json";
     private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
 
-    private Resource credentialsResource = DEFAULT_CREDENTIALS_RESOURCE;
     // the name of the file used to persist the registry content
     private String filename = DEFAULT_DEVICES_FILENAME;
+    private String credentialsFilename = DEFAULT_CREDENTIALS_FILENAME;
     private boolean saveToFile = false;
     private boolean modificationEnabled = true;
     private int maxDevicesPerTenant = DEFAULT_MAX_DEVICES_PER_TENANT;
 
     /**
-     * Gets the path to the file that the content of the registry should be persisted
+     * Gets the path to the file that the content of the device registry should be persisted to
      * periodically.
      * <p>
-     * Default value is <em>device-identities.json</em>.
+     * Default value is <em>/home/hono/device-registry/device-identities.json</em>.
      * 
      * @return The file name.
      */
@@ -58,13 +58,12 @@ public final class DeviceRegistryConfigProperties extends ServiceConfigPropertie
     }
 
     /**
-     * Sets the path to the file that the content of the registry should be persisted
+     * Sets the path to the file that the content of the device registry should be persisted to
      * periodically.
      * <p>
-     * Default value is <em>device-identities.json</em>.
+     * Default value is <em>/home/hono/device-registry/device-identities.json</em>.
      * 
      * @param filename The name of the file to persist to (can be a relative or absolute path).
-     * @throws IllegalStateException if this registry is already running.
      */
     public void setFilename(final String filename) {
         this.filename = filename;
@@ -159,26 +158,26 @@ public final class DeviceRegistryConfigProperties extends ServiceConfigPropertie
     }
 
     /**
-     * Get the resource that the credentials should be loaded from.
+     * Gets the path to the file that the credentials registry should be persisted to
+     * periodically.
      * <p>
-     * If not set the default credentials will be loaded from <em>classpath:credentials.json</em>.
-     * 
-     * @return The resource.
+     * Default value is <em>/home/hono/device-registry/credentials.json</em>.
+     *
+     * @return The file name.
      */
-    public Resource getCredentialsPath() {
-        return credentialsResource;
+    public String getCredentialsFilename() {
+        return credentialsFilename;
     }
 
     /**
-     * Set the resource that the credentials should be loaded from.
+     * Sets the path to the file that the credentials registry should be persisted to
+     * periodically.
      * <p>
-     * If not set the default credentials will be loaded from <em>classpath:credentials.json</em>.
-     * 
-     * @param credentialsResource The resource.
-     * @throws NullPointerException if the resource is {@code null}.
+     * Default value is <em>/home/hono/device-registry/credentials.json</em>.
+     *
+     * @param filename The name of the file to persist to (can be a relative or absolute path).
      */
-    public void setCredentialsPath(final Resource credentialsResource) {
-        this.credentialsResource = Objects.requireNonNull(credentialsResource);
+    public void setCredentialsFilename(final String filename) {
+        this.credentialsFilename = filename;
     }
-
 }

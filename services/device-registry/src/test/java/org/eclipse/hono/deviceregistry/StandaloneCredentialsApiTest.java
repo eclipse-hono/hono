@@ -82,7 +82,7 @@ public class StandaloneCredentialsApiTest {
         props.setInsecurePortEnabled(true);
         props.setInsecurePort(0);
 
-        props.setCredentialsPath(new ClassPathResource("credentials.json"));
+        props.setCredentialsFilename("credentials.json");
 
         server = new SimpleDeviceRegistryServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx,createAuthenticationService(createUser())));
