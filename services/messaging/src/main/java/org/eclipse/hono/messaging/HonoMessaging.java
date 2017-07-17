@@ -14,10 +14,7 @@ package org.eclipse.hono.messaging;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.apache.qpid.proton.amqp.transport.AmqpError;
-import org.apache.qpid.proton.amqp.transport.Source;
-import org.eclipse.hono.auth.Activity;
-import org.eclipse.hono.auth.HonoUser;
+import io.vertx.proton.*;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.event.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
@@ -25,7 +22,6 @@ import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
@@ -36,11 +32,6 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
-import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
-import io.vertx.proton.ProtonSession;
 
 /**
  * Hono Messaging is an AMQP 1.0 container that provides nodes for uploading <em>Telemetry</em> and
@@ -147,45 +138,6 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
         publishConnectionClosedEvent(connection);
     }
 
-    /**
-     * Handles a request from a client to establish a link for sending messages to this server.
-     *
-     * @param con the connection to the client.
-     * @param receiver the receiver created for the link.
-     */
-    void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
-        if (receiver.getRemoteTarget().getAddress() == null) {
-            LOG.debug("client [{}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link",
-                    con.getRemoteContainer());
-            receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
-        } else {
-            LOG.debug("client [{}] wants to open a link for sending messages [address: {}]",
-                    con.getRemoteContainer(), receiver.getRemoteTarget());
-            try {
-                final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
-                final Endpoint endpoint = getEndpoint(targetResource);
-                if (endpoint == null) {
-                    handleUnknownEndpoint(con, receiver, targetResource);
-                } else {
-                    final HonoUser user = Constants.getClientPrincipal(con);
-                    getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).setHandler(authAttempt -> {
-                        if (authAttempt.succeeded() && authAttempt.result()) {
-                            Constants.copyProperties(con, receiver);
-                            receiver.setTarget(receiver.getRemoteTarget());
-                            endpoint.onLinkAttach(con, receiver, targetResource);
-                        } else {
-                            LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
-                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
-                        }
-                    });
-                }
-            } catch (final IllegalArgumentException e) {
-                LOG.debug("client has provided invalid resource identifier as target address", e);
-                receiver.close();
-            }
-        }
-    }
-
     private void publishConnectionClosedEvent(final ProtonConnection con) {
 
         String conId = con.attachments().get(Constants.KEY_CONNECTION_ID, String.class);
@@ -193,40 +145,6 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
             vertx.eventBus().publish(
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
                     conId);
-        }
-    }
-
-    /**
-     * Handles a request from a client to establish a link for receiving messages from this server.
-     *
-     * @param con the connection to the client.
-     * @param sender the sender created for the link.
-     */
-    void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
-        final Source remoteSource = sender.getRemoteSource();
-        LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
-                con.getRemoteContainer(), remoteSource);
-        try {
-            final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
-            final Endpoint endpoint = getEndpoint(targetResource);
-            if (endpoint == null) {
-                handleUnknownEndpoint(con, sender, targetResource);
-            } else {
-                final HonoUser user = Constants.getClientPrincipal(con);
-                getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).setHandler(authAttempt -> {
-                    if (authAttempt.succeeded() && authAttempt.result()) {
-                        Constants.copyProperties(con, sender);
-                        sender.setSource(sender.getRemoteSource());
-                        endpoint.onLinkAttach(con, sender, targetResource);
-                    } else {
-                        LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
-                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
-                    }
-                });
-            }
-        } catch (final IllegalArgumentException e) {
-            LOG.debug("client has provided invalid resource identifier as target address", e);
-            sender.close();
         }
     }
 

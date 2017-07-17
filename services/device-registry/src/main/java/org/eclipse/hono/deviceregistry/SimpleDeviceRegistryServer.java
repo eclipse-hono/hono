@@ -13,16 +13,11 @@
 package org.eclipse.hono.deviceregistry;
 
 import io.vertx.proton.*;
-import org.apache.qpid.proton.amqp.transport.AmqpError;
-import org.apache.qpid.proton.amqp.transport.Source;
-import org.eclipse.hono.auth.Activity;
-import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
@@ -117,79 +112,6 @@ public final class SimpleDeviceRegistryServer extends AmqpServiceBase<DeviceRegi
     private void handleRemoteDisconnect(final ProtonConnection connection) {
         LOG.info("client [{}] disconnected", connection.getRemoteContainer());
         connection.disconnect();
-    }
-
-    /**
-     * Handles a request from a client to establish a link for sending messages to this server.
-     *
-     * @param con the connection to the client.
-     * @param receiver the receiver created for the link.
-     */
-    void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
-        if (receiver.getRemoteTarget().getAddress() == null) {
-            LOG.debug("client [{}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link",
-                    con.getRemoteContainer());
-            receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
-        } else {
-            LOG.debug("client [{}] wants to open a link for sending messages [address: {}]",
-                    con.getRemoteContainer(), receiver.getRemoteTarget());
-            try {
-                final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
-                final Endpoint endpoint = getEndpoint(targetResource);
-                if (endpoint == null) {
-                    handleUnknownEndpoint(con, receiver, targetResource);
-                } else {
-                    final HonoUser user = Constants.getClientPrincipal(con);
-                    getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).setHandler(authAttempt -> {
-                        if (authAttempt.succeeded() && authAttempt.result()) {
-                            Constants.copyProperties(con, receiver);
-                            receiver.setTarget(receiver.getRemoteTarget());
-                            endpoint.onLinkAttach(con, receiver, targetResource);
-                        } else {
-                            LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
-                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
-                        }
-                    });
-                }
-            } catch (final IllegalArgumentException e) {
-                LOG.debug("client has provided invalid resource identifier as target address", e);
-                receiver.close();
-            }
-        }
-    }
-
-    /**
-     * Handles a request from a client to establish a link for receiving messages from this server.
-     *
-     * @param con the connection to the client.
-     * @param sender the sender created for the link.
-     */
-    void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
-        final Source remoteSource = sender.getRemoteSource();
-        LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
-                con.getRemoteContainer(), remoteSource);
-        try {
-            final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
-            final Endpoint endpoint = getEndpoint(targetResource);
-            if (endpoint == null) {
-                handleUnknownEndpoint(con, sender, targetResource);
-            } else {
-                final HonoUser user = Constants.getClientPrincipal(con);
-                getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).setHandler(authAttempt -> {
-                    if (authAttempt.succeeded() && authAttempt.result()) {
-                        Constants.copyProperties(con, sender);
-                        sender.setSource(sender.getRemoteSource());
-                        endpoint.onLinkAttach(con, sender, targetResource);
-                    } else {
-                        LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
-                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
-                    }
-                });
-            }
-        } catch (final IllegalArgumentException e) {
-            LOG.debug("client has provided invalid resource identifier as target address", e);
-            sender.close();
-        }
     }
 
     @Override
