@@ -99,7 +99,7 @@ public class SimpleAuthenticationServer extends AmqpServiceBase<AuthenticationSe
      * @param con the connection to the client.
      * @param sender the sender created for the link.
      */
-    void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
+    protected void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
 
         final Source remoteSource = sender.getRemoteSource();
         LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
