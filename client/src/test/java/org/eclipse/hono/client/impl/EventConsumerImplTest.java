@@ -35,6 +35,7 @@ import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonMessageHandler;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 
@@ -81,6 +82,7 @@ public class EventConsumerImplTest {
         when(source.toString()).thenReturn("event/tenant");
         ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteSource()).thenReturn(source);
+        when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
         ProtonConnection con = mock(ProtonConnection.class);
         when(con.createReceiver(anyString())).thenReturn(receiver);
         when(receiver.openHandler(any(Handler.class))).thenAnswer(invocation -> {

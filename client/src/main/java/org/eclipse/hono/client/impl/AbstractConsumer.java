@@ -75,6 +75,9 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
             receiver.openHandler(receiverOpen -> {
                 if (receiverOpen.succeeded()) {
                     LOG.debug("receiver [source: {}, qos: {}] open", receiver.getRemoteSource(), receiver.getRemoteQoS());
+                    if (qos.equals(ProtonQoS.AT_LEAST_ONCE) && !qos.equals(receiver.getRemoteQoS())) {
+                        LOG.info("remote container uses other QoS than requested [requested: {}, in use: {}]", qos, receiver.getRemoteQoS());
+                    }
                     if (prefetch > 0) {
                         receiver.flow(prefetch);
                     }
