@@ -46,7 +46,6 @@ public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends
      * the Authentication service.
      *
      * @param factory The factory.
-     * @throws NullPointerException if factory is {@code null}.
      */
     @Autowired
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
@@ -54,12 +53,25 @@ public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends
         authenticationService = Objects.requireNonNull(factory);
     }
 
+    /**
+     * Configures the AMQP connection for the secure port and provides a basic connection handling.
+     * Subclasses may override this method to set custom handlers.
+     *
+     * @param connection The AMQP connection that the frame is supposed to establish.
+     */
     @Override
     protected void onRemoteConnectionOpen(final ProtonConnection connection) {
         connection.setContainer(String.format("Hono-DeviceRegistry-%s:%d", getBindAddress(), getPort()));
         setRemoteConnectionOpenHandler(connection);
     }
 
+    /**
+     * Configures the AMQP connection for the insecure port and provides a basic connection handling.
+     * Subclasses may override this method to set custom handlers.
+     *
+     * @param connection The AMQP connection that the frame is supposed to establish.
+     * @throws NullPointerException if connection is {@code null}.
+     */
     @Override
     protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
         connection.setContainer(String.format("Hono-DeviceRegistry-%s:%d", getInsecurePortBindAddress(), getInsecurePort()));
@@ -110,6 +122,16 @@ public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends
         connection.disconnect();
     }
 
+    /**
+     * Registers this service's endpoints' readiness checks.
+     * <p>
+     * This invokes {@link Endpoint#registerReadinessChecks(HealthCheckHandler)} for all registered endpoints
+     * and it checks if the <em>Authentication Service</em> is connected.
+     * <p>
+     * Subclasses should override this method to register more specific checks.
+     *
+     * @param handler The health check handler to register the checks with.
+     */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
         for (Endpoint ep : endpoints()) {
