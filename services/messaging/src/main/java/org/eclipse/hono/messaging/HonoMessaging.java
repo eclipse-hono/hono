@@ -11,27 +11,15 @@
  */
 package org.eclipse.hono.messaging;
 
-import java.util.Objects;
-import java.util.UUID;
-
 import io.vertx.proton.*;
-import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.event.EventConstants;
-import org.eclipse.hono.service.amqp.AmqpServiceBase;
-import org.eclipse.hono.service.amqp.Endpoint;
-import org.eclipse.hono.service.auth.AuthenticationConstants;
+import org.eclipse.hono.service.amqp.AmqpAuthConnectedServiceBase;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.healthchecks.HealthCheckHandler;
-import io.vertx.ext.healthchecks.Status;
 
 /**
  * Hono Messaging is an AMQP 1.0 container that provides nodes for uploading <em>Telemetry</em> and
@@ -39,21 +27,11 @@ import io.vertx.ext.healthchecks.Status;
  */
 @Component
 @Scope("prototype")
-public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProperties> {
+public final class HonoMessaging extends AmqpAuthConnectedServiceBase<HonoMessagingConfigProperties> {
 
-    private ConnectionFactory authenticationService;
-
-    /**
-     * Sets the factory to use for creating an AMQP 1.0 connection to
-     * the Authentication service.
-     * 
-     * @param factory The factory.
-     * @throws NullPointerException if factory is {@code null}.
-     */
-    @Autowired
-    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
-    public void setAuthenticationServiceConnectionFactory(final ConnectionFactory factory) {
-        authenticationService = Objects.requireNonNull(factory);
+    @Override
+    protected String getServiceName() {
+        return "Hono";
     }
 
     @Override
@@ -82,64 +60,8 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
         }
     }
 
-    private void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
-        connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
-        connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
-        connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
-        connection.disconnectHandler(this::handleRemoteDisconnect);
-        connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
-        connection.openHandler(remoteOpen -> {
-            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
-            connection.open();
-            // attach an ID so that we can later inform downstream components when connection is closed
-            Constants.setConnectionId(connection, UUID.randomUUID().toString());
-        });
-    }
-
-    protected void onRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-%s:%d", getBindAddress(), getPort()));
-        setRemoteConnectionOpenHandler(connection);
-    }
-
-    protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-%s:%d", getInsecurePortBindAddress(), getInsecurePort()));
-        setRemoteConnectionOpenHandler(connection);
-    }
-
-    private void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.info("opening new session with client [name: {}, session window size: {}]", con.getRemoteContainer(), getConfig().getMaxSessionWindow());
-        session.setIncomingCapacity(getConfig().getMaxSessionWindow());
-        session.closeHandler(sessionResult -> {
-            if (sessionResult.succeeded()) {
-                sessionResult.result().close();
-            }
-        }).open();
-    }
-
-    /**
-     * Invoked when a client closes the connection with this server.
-     *
-     * @param con The connection to close.
-     * @param res The client's close frame.
-     */
-    private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
-        if (res.succeeded()) {
-            LOG.info("client [{}] closed connection", con.getRemoteContainer());
-        } else {
-            LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
-        }
-        con.close();
-        con.disconnect();
-        publishConnectionClosedEvent(con);
-    }
-
-    private void handleRemoteDisconnect(final ProtonConnection connection) {
-        LOG.info("client [{}] disconnected", connection.getRemoteContainer());
-        connection.disconnect();
-        publishConnectionClosedEvent(connection);
-    }
-
-    private void publishConnectionClosedEvent(final ProtonConnection con) {
+    @Override
+    protected void publishConnectionClosedEvent(final ProtonConnection con) {
 
         String conId = con.attachments().get(Constants.KEY_CONNECTION_ID, String.class);
         if (conId != null) {
@@ -147,27 +69,5 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
                     conId);
         }
-    }
-
-    @Override
-    public void registerReadinessChecks(final HealthCheckHandler handler) {
-        for (Endpoint ep : endpoints()) {
-            ep.registerReadinessChecks(handler);
-        }
-        handler.register("authentication-service-connection", status -> {
-            if (authenticationService == null) {
-                status.complete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
-            } else {
-                LOG.debug("checking connection to Authentication service");
-                authenticationService.connect(null, null, null, s -> {
-                    if (s.succeeded()) {
-                        s.result().close();
-                        status.complete(Status.OK());
-                    } else {
-                        status.complete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
-                    }
-                });
-            }
-        });
     }
 }

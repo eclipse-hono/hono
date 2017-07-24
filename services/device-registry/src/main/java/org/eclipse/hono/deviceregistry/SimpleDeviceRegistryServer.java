@@ -12,16 +12,23 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import org.eclipse.hono.service.registration.BaseDeviceRegistryServer;
+import org.eclipse.hono.service.amqp.AmqpAuthConnectedServiceBase;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 
 /**
  * Spring component that serves as the default implementation of Hono's device registry.
+ * <p>
+ * It implements Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> and
+ * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
  */
 @Component
 @Scope("prototype")
-public final class SimpleDeviceRegistryServer extends BaseDeviceRegistryServer<DeviceRegistryConfigProperties> {
+public final class SimpleDeviceRegistryServer extends AmqpAuthConnectedServiceBase<DeviceRegistryConfigProperties> {
 
+    @Override
+    protected String getServiceName() {
+        return "Hono-DeviceRegistry";
+    }
 }

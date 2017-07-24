@@ -38,13 +38,18 @@ import io.vertx.proton.ProtonSession;
 public class SimpleAuthenticationServer extends AmqpServiceBase<AuthenticationServerConfigProperties> {
 
     @Override
+    protected String getServiceName() {
+        return "Hono-Auth";
+    }
+
+    @Override
     protected void onRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-Auth-%s:%d", getBindAddress(), getPort()));
+        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getBindAddress(), getPort()));
         setRemoteConnectionOpenHandler(connection);
     }
 
     protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-Auth-%s:%d", getInsecurePortBindAddress(), getInsecurePort()));
+        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getInsecurePortBindAddress(), getInsecurePort()));
         setRemoteConnectionOpenHandler(connection);
     };
 

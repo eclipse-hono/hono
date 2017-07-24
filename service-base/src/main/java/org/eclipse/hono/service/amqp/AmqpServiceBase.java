@@ -55,6 +55,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     private AuthorizationService authorizationService;
 
     /**
+     * Gets the name of the service, that may be used for the container name on amqp connections e.g.
+     * @return The name of the service.
+     */
+    protected abstract String getServiceName();
+
+    /**
      * Gets the default port number of the secure AMQP port.
      * 
      * @return {@link Constants#PORT_AMQPS}

@@ -66,6 +66,11 @@ public class AmqpServiceBaseTest {
 
         AmqpServiceBase<ServiceConfigProperties> server = new AmqpServiceBase<ServiceConfigProperties>() {
             @Override
+            protected String getServiceName() {
+                return "AmqpServiceBase";
+            }
+
+            @Override
             protected void onRemoteConnectionOpen(ProtonConnection connection) {
             }
 

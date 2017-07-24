@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.service.registration;
+package org.eclipse.hono.service.amqp;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.json.JsonObject;
@@ -32,20 +32,26 @@ import java.util.UUID;
 
 
 /**
- * A server that implements Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> and
- * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> as the default implementation of Hono's device registry.
+ * A base class for implementing services using AMQP 1.0 as the transport protocol that is prepared for using the
+ * authentication service.
+ * <p>
+ * This class provides implementations for the AMQP connection and session lifecycle methods that can be overridden
+ * by the subclass. See the single method descriptions for details.
  *
+ * @param <T> The type of configuration properties this service uses.
+
  * TODO: add metrics.
- * TODO: refactor this into a more generic server class (eliminate device registry specific parts).
  */
-public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends AmqpServiceBase<T> {
-    private ConnectionFactory authenticationService;
+public abstract class AmqpAuthConnectedServiceBase<T extends ServiceConfigProperties> extends AmqpServiceBase<T> {
+    
+    protected ConnectionFactory authenticationService;
 
     /**
      * Sets the factory to use for creating an AMQP 1.0 connection to
      * the Authentication service.
      *
      * @param factory The factory.
+     * @throws NullPointerException if factory is {@code null}.
      */
     @Autowired
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
@@ -61,7 +67,7 @@ public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends
      */
     @Override
     protected void onRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-DeviceRegistry-%s:%d", getBindAddress(), getPort()));
+        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getBindAddress(), getPort()));
         setRemoteConnectionOpenHandler(connection);
     }
 
@@ -74,7 +80,7 @@ public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends
      */
     @Override
     protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-DeviceRegistry-%s:%d", getInsecurePortBindAddress(), getInsecurePort()));
+        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getInsecurePortBindAddress(), getInsecurePort()));
         setRemoteConnectionOpenHandler(connection);
     }
 
@@ -92,7 +98,15 @@ public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends
         });
     }
 
-    private void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
+    /**
+     * Invoked when a client initiates a session (which is then opened in this method).
+     * <p>
+     * Subclasses should override this method if other behaviour shall be implemented on session open.
+     *
+     * @param con The connection of the session.
+     * @param session The session that is initiated.
+     */
+    protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
         LOG.info("opening new session with client [{}]", con.getRemoteContainer());
         session.closeHandler(sessionResult -> {
             if (sessionResult.succeeded()) {
@@ -102,12 +116,24 @@ public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends
     }
 
     /**
+     * Is called whenever a proton connection was closed. The implementation is intentionally empty.
+     * <p>
+     * Subclasses should override this method to publish this as an event on the vertx bus if desired. 
+     * 
+     * @param con The connection that was closed.
+     */
+    protected void publishConnectionClosedEvent(final ProtonConnection con) {
+    }
+    
+    /**
      * Invoked when a client closes the connection with this server.
+     * <p>
+     * The implementation closes and disconnects the connection.
      *
      * @param con The connection to close.
      * @param res The client's close frame.
      */
-    private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
+    protected void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
         if (res.succeeded()) {
             LOG.info("client [{}] closed connection", con.getRemoteContainer());
         } else {
@@ -115,11 +141,18 @@ public class BaseDeviceRegistryServer<T extends ServiceConfigProperties> extends
         }
         con.close();
         con.disconnect();
+        publishConnectionClosedEvent(con);
     }
 
-    private void handleRemoteDisconnect(final ProtonConnection connection) {
-        LOG.info("client [{}] disconnected", connection.getRemoteContainer());
-        connection.disconnect();
+    /**
+     * Invoked when the client's transport connection is disconnected from this server.
+     *
+     * @param con The connection that was disconnected.
+     */
+    protected void handleRemoteDisconnect(final ProtonConnection con) {
+        LOG.info("client [{}] disconnected", con.getRemoteContainer());
+        con.disconnect();
+        publishConnectionClosedEvent(con);
     }
 
     /**

@@ -69,16 +69,11 @@ public class HonoMessagingTest {
         // GIVEN a Hono server
         HonoMessaging server = createServer(null);
 
-        // WHEN a client connects to the server
-        ArgumentCaptor<Handler> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        // WHEN the server's publish close event method is called
         final ProtonConnection con = newConnection(Constants.PRINCIPAL_ANONYMOUS);
-        when(con.disconnectHandler(closeHandlerCaptor.capture())).thenReturn(con);
+        server.publishConnectionClosedEvent(con);
 
-        server.onRemoteConnectionOpen(con);
-
-        // THEN a handler is registered with the connection that publishes
-        // an event on the event bus when the client disconnects
-        closeHandlerCaptor.getValue().handle(con);
+        // THEN an appropriate closed event is published on the event bus
         verify(eventBus).publish(Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED, CON_ID);
     }
 
