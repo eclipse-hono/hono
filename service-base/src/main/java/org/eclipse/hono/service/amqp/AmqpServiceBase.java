@@ -12,12 +12,9 @@
 
 package org.eclipse.hono.service.amqp;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.proton.*;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
@@ -342,17 +339,30 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Invoked when an AMQP <em>open</em> frame is received on the secure port.
-     * 
+     * <p>
+     * Configures the AMQP connection for the secure port and provides a basic connection handling.
+     * Subclasses may override this method to set custom handlers.
+     *
      * @param connection The AMQP connection that the frame is supposed to establish.
      */
-    protected abstract void onRemoteConnectionOpen(final ProtonConnection connection);
+    protected void onRemoteConnectionOpen(final ProtonConnection connection) {
+        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getBindAddress(), getPort()));
+        setRemoteConnectionOpenHandler(connection);
+    }
 
     /**
      * Invoked when an AMQP <em>open</em> frame is received on the insecure port.
-     * 
+     * <p>
+     * Configures the AMQP connection for the insecure port and provides a basic connection handling.
+     * Subclasses may override this method to set custom handlers.
+     *
      * @param connection The AMQP connection that the frame is supposed to establish.
+     * @throws NullPointerException if connection is {@code null}.
      */
-    protected abstract void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection);
+    protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
+        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getInsecurePortBindAddress(), getInsecurePort()));
+        setRemoteConnectionOpenHandler(connection);
+    }
 
     /**
      * Closes a link for an unknown target address.
@@ -462,6 +472,77 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             LOG.debug("client has provided invalid resource identifier as target address", e);
             sender.close();
         }
+    }
+
+    private void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
+        connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
+        connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
+        connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
+        connection.disconnectHandler(this::handleRemoteDisconnect);
+        connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
+        connection.openHandler(remoteOpen -> {
+            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
+            connection.open();
+            // attach an ID so that we can later inform downstream components when connection is closed
+            connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
+        });
+    }
+
+    /**
+     * Invoked when a client initiates a session (which is then opened in this method).
+     * <p>
+     * Subclasses should override this method if other behaviour shall be implemented on session open.
+     *
+     * @param con The connection of the session.
+     * @param session The session that is initiated.
+     */
+    protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
+        LOG.info("opening new session with client [{}]", con.getRemoteContainer());
+        session.closeHandler(sessionResult -> {
+            if (sessionResult.succeeded()) {
+                sessionResult.result().close();
+            }
+        }).open();
+    }
+
+    /**
+     * Is called whenever a proton connection was closed. The implementation is intentionally empty.
+     * <p>
+     * Subclasses should override this method to publish this as an event on the vertx bus if desired.
+     *
+     * @param con The connection that was closed.
+     */
+    protected void publishConnectionClosedEvent(final ProtonConnection con) {
+    }
+
+    /**
+     * Invoked when a client closes the connection with this server.
+     * <p>
+     * The implementation closes and disconnects the connection.
+     *
+     * @param con The connection to close.
+     * @param res The client's close frame.
+     */
+    protected void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
+        if (res.succeeded()) {
+            LOG.info("client [{}] closed connection", con.getRemoteContainer());
+        } else {
+            LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
+        }
+        con.close();
+        con.disconnect();
+        publishConnectionClosedEvent(con);
+    }
+
+    /**
+     * Invoked when the client's transport connection is disconnected from this server.
+     *
+     * @param con The connection that was disconnected.
+     */
+    protected void handleRemoteDisconnect(final ProtonConnection con) {
+        LOG.info("client [{}] disconnected", con.getRemoteContainer());
+        con.disconnect();
+        publishConnectionClosedEvent(con);
     }
 
     /**

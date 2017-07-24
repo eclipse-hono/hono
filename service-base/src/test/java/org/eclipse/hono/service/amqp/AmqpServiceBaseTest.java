@@ -14,6 +14,7 @@ package org.eclipse.hono.service.amqp;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.proton.ProtonConnection;
@@ -31,6 +32,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.concurrent.CountDownLatch;
@@ -51,6 +53,8 @@ public class AmqpServiceBaseTest {
 
     private Vertx vertx;
     private EventBus eventBus;
+    private boolean publishCalled = false;
+
 
     /**
      * Sets up common mock objects used by the test cases.
@@ -63,6 +67,7 @@ public class AmqpServiceBaseTest {
     }
 
     private AmqpServiceBase<ServiceConfigProperties> createServer(final Endpoint amqpEndpoint) {
+        publishCalled = false;
 
         AmqpServiceBase<ServiceConfigProperties> server = new AmqpServiceBase<ServiceConfigProperties>() {
             @Override
@@ -71,11 +76,8 @@ public class AmqpServiceBaseTest {
             }
 
             @Override
-            protected void onRemoteConnectionOpen(ProtonConnection connection) {
-            }
-
-            @Override
-            protected void onRemoteConnectionOpenInsecurePort(ProtonConnection connection) {
+            protected void publishConnectionClosedEvent(ProtonConnection con) {
+                publishCalled = true;
             }
         };
         server.setConfig(new ServiceConfigProperties());
@@ -151,6 +153,27 @@ public class AmqpServiceBaseTest {
 
         // THEN the server closes the link with the client
         assertTrue(linkClosed.await(1, TimeUnit.SECONDS));
+    }
+
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public void testServerCallsPublishEvemtOnClientDisconnect() {
+
+        // GIVEN a server
+        AmqpServiceBase<ServiceConfigProperties> server = createServer(null);
+
+        // WHEN a client connects to the server
+        ArgumentCaptor<Handler> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ProtonConnection con = newConnection(Constants.PRINCIPAL_ANONYMOUS);
+        when(con.disconnectHandler(closeHandlerCaptor.capture())).thenReturn(con);
+
+        server.onRemoteConnectionOpen(con);
+
+        // THEN a handler is registered with the connection that publishes
+        // an event on the event bus when the client disconnects
+        closeHandlerCaptor.getValue().handle(con);
+
+        assertTrue(publishCalled);
     }
 
     private static Target getTarget(final ResourceIdentifier targetAddress) {

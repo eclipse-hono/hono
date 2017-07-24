@@ -42,12 +42,6 @@ public class SimpleAuthenticationServer extends AmqpServiceBase<AuthenticationSe
         return "Hono-Auth";
     }
 
-    @Override
-    protected void onRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getBindAddress(), getPort()));
-        setRemoteConnectionOpenHandler(connection);
-    }
-
     protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
         connection.setContainer(String.format("%s-%s:%d", getServiceName(), getInsecurePortBindAddress(), getInsecurePort()));
         setRemoteConnectionOpenHandler(connection);
@@ -66,36 +60,6 @@ public class SimpleAuthenticationServer extends AmqpServiceBase<AuthenticationSe
             LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
             connection.open();
         });
-    }
-
-    private void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.info("opening new session with client [{}]", con.getRemoteContainer());
-        session.closeHandler(sessionResult -> {
-            if (sessionResult.succeeded()) {
-                sessionResult.result().close();
-            }
-        }).open();
-    }
-
-    /**
-     * Invoked when a client closes the connection with this server.
-     *
-     * @param con The connection to close.
-     * @param res The client's close frame.
-     */
-    private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
-        if (res.succeeded()) {
-            LOG.info("client [{}] closed connection", con.getRemoteContainer());
-        } else {
-            LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
-        }
-        con.close();
-        con.disconnect();
-    }
-
-    private void handleRemoteDisconnect(final ProtonConnection connection) {
-        LOG.info("client [{}] disconnected", connection.getRemoteContainer());
-        connection.disconnect();
     }
 
     /**
