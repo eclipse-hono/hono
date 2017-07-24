@@ -26,7 +26,9 @@ import org.slf4j.LoggerFactory;
  *
  * However, access to class fields must be synchronized.
  */
-abstract public class HonoSampler extends AbstractSampler {
+public abstract class HonoSampler extends AbstractSampler {
+
+    private static final long serialVersionUID = 1L;
 
     public enum Endpoint {
         telemetry, event

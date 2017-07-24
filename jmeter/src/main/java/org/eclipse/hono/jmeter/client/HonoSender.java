@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,10 +12,15 @@
 
 package org.eclipse.hono.jmeter.client;
 
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.jmeter.samplers.SampleResult;
 import org.eclipse.hono.client.HonoClient;
@@ -29,16 +34,21 @@ import org.eclipse.hono.jmeter.HonoSenderSampler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
- * Sender, which connects to directly to Hono; asynchronous API needs to be used synchronous for JMeters threading model
+ * A wrapper around a {@code HonoClient} mapping the client's asynchronous API to the blocking
+ * threading model used by JMeter.
  */
 public class HonoSender {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSender.class);
+    private static final int MAX_MESSAGES_PER_BATCH_SEND = 300;
+
+    private final AtomicBoolean  running = new AtomicBoolean(false);
 
     private ConnectionFactory  honoConnectionFactory;
     private HonoClient         honoClient;
@@ -88,7 +98,7 @@ public class HonoSender {
         connect();
         updateAssertion();
         createSender();
-
+        running.compareAndSet(false, true);
         LOGGER.debug("sender active: {}/{} ({})",sampler.getEndpoint(),sampler.getTenant(),Thread.currentThread().getName());
     }
 
@@ -130,11 +140,13 @@ public class HonoSender {
     }
 
     private void createSender() throws InterruptedException {
+
         final CountDownLatch senderLatch = new CountDownLatch(1);
         if (honoClient == null || !honoClient.isConnected()) {
             connect();
         }
-        if(sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
+
+        if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
             honoClient.getOrCreateTelemetrySender(sampler.getTenant(), resultHandler -> {
                 if (resultHandler.failed()) {
                     LOGGER.error("HonoClient.getOrCreateTelemetrySender() failed", resultHandler.cause());
@@ -143,8 +155,7 @@ public class HonoSender {
                 }
                 senderLatch.countDown();
             });
-        }
-        else {
+        } else {
             honoClient.getOrCreateEventSender(sampler.getTenant(), resultHandler -> {
                 if (resultHandler.failed()) {
                     LOGGER.error("HonoClient.getOrCreateEventSender() failed", resultHandler.cause());
@@ -158,54 +169,95 @@ public class HonoSender {
     }
 
     public void send(final SampleResult sampleResult, final String deviceId, final boolean waitOnCredits) throws InterruptedException {
+
         if (messageSender == null) {
-            LOGGER.error("messsage sender is null - try to create it lazy");
+            LOGGER.warn("messsage sender is null, trying to create it lazily ...");
             createSender();
         }
+
         try {
             if (messageSender != null) {
-                Map<String, Long> properties = new HashMap<>();
-                if (sampler.isSetSenderTime()) {
-                    properties.put("millis", System.currentTimeMillis());
-                }
+
+                final AtomicInteger messagesSent = new AtomicInteger(0);
+                final AtomicLong bytesSent = new AtomicLong(0);
+                final long messageLength = sampler.getData().getBytes(StandardCharsets.UTF_8).length;
+
                 // defaults
-                sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", sampler.getEndpoint(),sampler.getTenant(), deviceId));
-                sampleResult.setResponseData(sampler.getData().getBytes());
-                sampleResult.setSentBytes(sampler.getData().getBytes().length);
+                sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", sampler.getEndpoint(), sampler.getTenant(), deviceId));
+                // sampleResult.setResponseData(sampler.getData().getBytes());
                 // start sample
                 sampleResult.sampleStart();
-                if(waitOnCredits) {
-                    // wait until we have credits
-                    final CountDownLatch senderLatch = new CountDownLatch(1);
-                    messageSender.send(deviceId, properties, sampler.getData(),
-                            sampler.getContentType(), token, capacityAvailableHandler -> {
-                                senderLatch.countDown();
-                            });
-                    senderLatch.await();
-                }
-                else {
+
+                if (waitOnCredits) {
+
+                    final CountDownLatch batchComplete = new CountDownLatch(1);
+                    final Handler<Void> runBatch = run -> {
+                        LOGGER.info("starting batch send with {} credits available", messageSender.getCredit());
+                        while (!messageSender.sendQueueFull() && messagesSent.get() < MAX_MESSAGES_PER_BATCH_SEND) {
+                            Map<String, Object> properties = new HashMap<>();
+                            properties.put("millis", System.currentTimeMillis());
+                            messageSender.send(deviceId, properties, sampler.getData(), sampler.getContentType(), token, (Handler<Void>) null);
+                            bytesSent.addAndGet(messageLength);
+                            messagesSent.incrementAndGet();
+                            if (LOGGER.isDebugEnabled()) {
+                                if (messagesSent.get() % 200 == 0) {
+                                    LOGGER.debug("messages sent: {}", messagesSent.get());
+                                }
+                            }
+                        }
+                        batchComplete.countDown();
+                    };
+
+                    vertx.getOrCreateContext().runOnContext(batchSend -> {
+
+                        if (messageSender.sendQueueFull()) {
+                            LOGGER.info("waiting for credits ...");
+                            messageSender.sendQueueDrainHandler(runBatch);
+                        } else {
+                            runBatch.handle(null);
+                        }
+                    });
+
+                    batchComplete.await();
+
+                } else {
+
+                    Map<String, Long> properties = new HashMap<>();
+                    if (sampler.isSetSenderTime()) {
+                        properties.put("millis", System.currentTimeMillis());
+                    }
+
                     // mark send as error when we have no credits
                     boolean messageAccepted = messageSender.send(deviceId, properties, sampler.getData(),
                             sampler.getContentType(), token);
-                    if (!messageAccepted) {
+
+                    if (messageAccepted) {
+                        bytesSent.addAndGet(messageLength);
+                        messagesSent.incrementAndGet();
+                    } else {
                         String error = MessageFormat.format(
                                 "ERROR: Client has not enough capacity - credit: {0}  device: {1}  address: {2}  thread: {3}",
                                 messageSender.getCredit(), deviceId, sampler.getTenant(),
-                                Thread.currentThread().getName());
+                                sampler.getThreadName());
                         sampleResult.setResponseMessage(error);
                         sampleResult.setSuccessful(false);
                         sampleResult.setResponseCode("500");
                         LOGGER.error(error);
                     }
                 }
-                sampleResult.sampleEnd();
-                LOGGER.debug("sended: " + deviceId);
+
+                sampleResult.setSentBytes(bytesSent.get());
+                sampleResult.setSampleCount(messagesSent.get());
+                LOGGER.info("{}: sent batch of {} messages for device {}", sampler.getThreadName(), messagesSent.get(), deviceId);
             } else {
-                String error = "sender could not be established";
+                String error = "sender link could not be established";
                 sampleResult.setResponseMessage(error);
                 sampleResult.setSuccessful(false);
                 LOGGER.error(error);
             }
+
+            sampleResult.sampleEnd();
+
         } catch (Throwable t) {
             LOGGER.error("unknown exception", t);
         }
@@ -263,13 +315,25 @@ public class HonoSender {
     }
 
     public void close() throws InterruptedException {
-        try {
-            removeDevice();
-            registrationHonoClient.shutdown();
-            honoClient.shutdown();
-            vertx.close();
-        } catch (final Throwable t) {
-            LOGGER.error("unknown exception in closing of sender", t);
+
+        if (running.compareAndSet(true, false)) {
+            try {
+                final CountDownLatch closeLatch = new CountDownLatch(1);
+                messageSender.close(closeAttempt -> {
+                    if (closeAttempt.succeeded()) {
+                        closeLatch.countDown();
+                    }
+                });
+                if (!closeLatch.await(5, TimeUnit.SECONDS)) {
+                    LOGGER.warn("could not close sender properly, shutting down connection ...");
+                }
+                removeDevice();
+                registrationHonoClient.shutdown();
+                honoClient.shutdown();
+                vertx.close();
+            } catch (final Throwable t) {
+                LOGGER.error("unknown exception in closing of sender", t);
+            }
         }
     }
 }

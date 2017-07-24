@@ -60,7 +60,6 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         res.setResponseOK();
         res.setDataType(SampleResult.TEXT);
         res.setSampleLabel(getName());
-        res.sampleStart();
         honoReceiver.sample(res, isUseSenderTime());
         return res;
     }

@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.jmeter.client;
 
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.concurrent.CountDownLatch;
 
@@ -43,10 +44,9 @@ public class HonoReceiver {
     private HonoClient          amqpNetworkClient;
     private Vertx               vertx = Vertx.vertx();
 
+    private long                sampleStart;
     private int                 messageCount;
     private long                messageSize;
-    private double              avgElapsed;
-    private StringBuffer        messages = new StringBuffer();
     private HonoReceiverSampler sampler;
 
     private final transient Object lock = new Object();
@@ -110,51 +110,48 @@ public class HonoReceiver {
 
     public void sample(final SampleResult result, final boolean isUseSenderTime) {
         synchronized (lock) {
-            result.setResponseCode("200");
+            long elapsed = System.currentTimeMillis() - sampleStart;
+            result.setResponseCodeOK();
             result.setSuccessful(true);
             result.setSampleCount(messageCount);
-            result.setResponseMessage(MessageFormat.format("{0},{1},{2}",messageCount,messageSize,avgElapsed / 1000));
-            result.setResponseData(messages.toString().getBytes());
-            result.sampleEnd();
+            result.setResponseMessage(MessageFormat.format("count: {0}, bytes received: {1}, period: {2}", messageCount, messageSize, elapsed));
             result.setBytes(messageSize);
-            if (messageCount == 0 || !isUseSenderTime) {
-                result.setEndTime(result.getStartTime());
+            if (messageCount > 0) {
+                result.setStampAndTime(sampleStart, elapsed);
             } else {
-                result.setEndTime(result.getStartTime() + (long) this.avgElapsed);
+                result.setStampAndTime(sampleStart, 0);
             }
+            LOGGER.info("{}: received batch of {} messages in {} milliseconds", sampler.getThreadName(), messageCount, elapsed);
             messageSize = 0;
             messageCount = 0;
-            avgElapsed = 0f;
-            messages.setLength(0);
+            sampleStart = System.currentTimeMillis();
         }
     }
 
-    private String getValue(final Section body) {
+    private byte[] getValue(final Section body) {
         if (body instanceof Data) {
-            return new String(((Data) body).getValue().getArray()); // better string representation for e.g. \n
+            return ((Data) body).getValue().getArray();
         } else if (body instanceof AmqpValue) {
-            return ((AmqpValue) body).getValue().toString();
-        } else if (body != null) {
-            return body.toString();
+            return ((AmqpValue) body).getValue().toString().getBytes(StandardCharsets.UTF_8);
         } else {
-            return "";
+            return new byte[0];
         }
     }
 
     private void messageReceived(final Message message) {
         try {
             synchronized (lock) {
-                final String value = getValue(message.getBody());
-                final Long time = (Long) message.getApplicationProperties().getValue().get("millis");
-                if (time != null) {
-                    final long elapsed = System.currentTimeMillis() - time;
-                    avgElapsed = (avgElapsed * messageCount + elapsed) / (messageCount + 1);
+                final int bodyLength = getValue(message.getBody()).length;
+                if (sampleStart == 0) {
+                    final Long time = (Long) message.getApplicationProperties().getValue().get("millis");
+                    if (time != null) {
+                        sampleStart = time;
+                    } else {
+                        sampleStart = System.currentTimeMillis();
+                    }
                 }
-                LOGGER.debug("message received: {}  time: {}  count: {} ({})", value, time, messageCount,
-                        Thread.currentThread().getName());
-                messageSize += value.length();
+                messageSize += bodyLength;
                 messageCount++;
-                messages.append(value);
             }
         } catch (final Throwable t) {
             LOGGER.error("unknown exception in messageReceived()", t);
