@@ -71,7 +71,7 @@ public class StandaloneCredentialsApiTest {
     private static final String                DEFAULT_DEVICE_ID = "4711";
 
     private static Vertx                       vertx = Vertx.vertx();
-    private static SimpleDeviceRegistryServer server;
+    private static DeviceRegistryAmqpServer server;
 
     private static HonoClient                  client;
     private static CredentialsClient           credentialsClient;
@@ -86,7 +86,7 @@ public class StandaloneCredentialsApiTest {
         CredentialsConfigProperties credentialsProperties = new CredentialsConfigProperties();
         credentialsProperties.setCredentialsFilename("credentials.json");
 
-        server = new SimpleDeviceRegistryServer();
+        server = new DeviceRegistryAmqpServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx,createAuthenticationService(createUser())));
         server.setConfig(props);
         server.addEndpoint(new CredentialsEndpoint(vertx));

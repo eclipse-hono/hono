@@ -39,7 +39,7 @@ import io.vertx.core.Future;
 @ComponentScan(basePackages = { "org.eclipse.hono.service", "org.eclipse.hono.deviceregistry" })
 @Configuration
 @EnableAutoConfiguration
-public class Application extends AbstractApplication<SimpleDeviceRegistryServer, ServiceConfigProperties> {
+public class Application extends AbstractApplication<DeviceRegistryAmqpServer, ServiceConfigProperties> {
 
     private AuthenticationService authenticationService;
     private CredentialsService credentialsService;
@@ -79,7 +79,7 @@ public class Application extends AbstractApplication<SimpleDeviceRegistryServer,
     }
 
     @Override
-    protected final void customizeServiceInstance(final SimpleDeviceRegistryServer instance) {
+    protected final void customizeServiceInstance(final DeviceRegistryAmqpServer instance) {
     }
 
     @Override

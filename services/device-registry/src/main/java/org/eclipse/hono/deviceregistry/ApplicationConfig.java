@@ -60,7 +60,7 @@ public class ApplicationConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean deviceRegistryServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(SimpleDeviceRegistryServer.class.getName());
+        factory.setTargetBeanName(DeviceRegistryAmqpServer.class.getName());
         return factory;
     }
 

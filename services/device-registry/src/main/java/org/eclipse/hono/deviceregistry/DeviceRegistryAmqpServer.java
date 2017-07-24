@@ -36,7 +36,7 @@ import java.util.Objects;
  */
 @Component
 @Scope("prototype")
-public final class SimpleDeviceRegistryServer extends AmqpServiceBase<ServiceConfigProperties> {
+public final class DeviceRegistryAmqpServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     private ConnectionFactory authenticationService;
 
