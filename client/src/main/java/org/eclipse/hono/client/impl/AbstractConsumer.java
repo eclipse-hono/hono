@@ -67,7 +67,7 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
                     // below threshold (prefetch / 2)
                     if (remainingCredits < threshold) {
                         int credits = prefetch - remainingCredits;
-                        LOG.trace("replenishing sender with {} credits ", credits);
+                        LOG.debug("replenishing sender with {} credits ", credits);
                         receiver.flow(credits);
                     }
                 }
