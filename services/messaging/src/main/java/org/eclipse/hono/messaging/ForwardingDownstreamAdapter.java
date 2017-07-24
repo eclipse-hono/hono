@@ -63,13 +63,13 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers   = new ArrayList<>();
     private final Vertx                               vertx;
 
-    private GaugeService       gaugeService                = NullGaugeService.getInstance();
-    private CounterService     counterService              = NullCounterService.getInstance();
-    private boolean            running                     = false;
-    private boolean            retryOnFailedConnectAttempt = true;
-    private ProtonConnection   downstreamConnection;
-    private SenderFactory      senderFactory;
-    private ConnectionFactory  downstreamConnectionFactory;
+    private GaugeService      gaugeService                = NullGaugeService.getInstance();
+    private CounterService    counterService              = NullCounterService.getInstance();
+    private boolean           running                     = false;
+    private boolean           retryOnFailedConnectAttempt = true;
+    private ProtonConnection  downstreamConnection;
+    private SenderFactory     senderFactory;
+    private ConnectionFactory downstreamConnectionFactory;
 
     /**
      * Creates a new adapter instance for a sender factory.
@@ -274,6 +274,9 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     /**
      * Handles unexpected disconnection from downstream container.
+     * <p>
+     * Clears all internal state kept for the connection, e.g. open links etc, and then tries to
+     * reconnect.
      * 
      * @param con The failed connection.
      */
@@ -293,6 +296,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             }
             receiversPerConnection.clear();
             activeSenders.clear();
+            downstreamConnection.attachments().clear();
             downstreamConnection.disconnectHandler(null);
             downstreamConnection.disconnect();
             counterService.decrement(MetricConstants.metricNameDownstreamConnections());
@@ -351,8 +355,8 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 resultHandler.handle(attempt);
             });
 
-            createSender(client.getTargetAddress(), replenishedSender -> handleFlow(replenishedSender, client))
-            .compose(createdSender -> {
+            final ResourceIdentifier targetAddress = ResourceIdentifier.fromString(client.getTargetAddress());
+            createSender(targetAddress, replenishedSender -> handleFlow(replenishedSender, client)).compose(createdSender -> {
                 addSender(client, createdSender);
                 tracker.complete();
             }, tracker);
@@ -393,21 +397,14 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     private Future<ProtonSender> createSender(
-            final String targetAddress,
+            final ResourceIdentifier targetAddress,
             final Handler<ProtonSender> sendQueueDrainHandler) {
 
         if (!isConnected()) {
             return Future.failedFuture("downstream connection must be opened before creating sender");
         } else {
-            String tenantOnlyTargetAddress = getTenantOnlyTargetAddress(targetAddress);
-            String address = tenantOnlyTargetAddress.replace(Constants.DEFAULT_PATH_SEPARATOR, honoConfig.getPathSeparator());
-            return senderFactory.createSender(downstreamConnection, address, getDownstreamQos(), sendQueueDrainHandler);
+            return senderFactory.createSender(downstreamConnection, targetAddress, getDownstreamQos(), sendQueueDrainHandler);
         }
-    }
-
-    private static String getTenantOnlyTargetAddress(final String address) {
-        ResourceIdentifier targetAddress = ResourceIdentifier.fromString(address);
-        return String.format("%s/%s", targetAddress.getEndpoint(), targetAddress.getTenantId());
     }
 
     /**

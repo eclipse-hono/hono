@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 /**
@@ -39,12 +38,11 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
     private ProtonReceiver link;
     private String id;
 
-    UpstreamReceiverImpl(final String linkId, final ProtonReceiver receiver, final ProtonQoS qos) {
+    UpstreamReceiverImpl(final String linkId, final ProtonReceiver receiver) {
         this.id = Objects.requireNonNull(linkId);
         this.link = Objects.requireNonNull(receiver);
         this.link.setAutoAccept(false);
         this.link.setPrefetch(0);
-        this.link.setQoS(qos);
     }
 
     @Override
@@ -95,7 +93,7 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
 
     @Override
     public String getTargetAddress() {
-        return link.getRemoteTarget().getAddress();
+        return link.getTarget().getAddress();
     }
 
     @Override

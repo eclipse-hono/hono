@@ -14,8 +14,11 @@ package org.eclipse.hono.messaging;
 
 import java.util.Objects;
 
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
@@ -32,11 +35,23 @@ import io.vertx.proton.ProtonSession;
 public class SenderFactoryImpl implements SenderFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(SenderFactoryImpl.class);
+    private HonoMessagingConfigProperties config;
+
+    /**
+     * Sets the configuration properties.
+     * 
+     * @param config The configuration.
+     * @throws NullPointerException if config is {@code null}.
+     */
+    @Autowired(required = false)
+    public void setConfiguration(final HonoMessagingConfigProperties config) {
+        this.config = Objects.requireNonNull(config);
+    }
 
     @Override
     public Future<ProtonSender> createSender(
             final ProtonConnection connection,
-            final String address,
+            final ResourceIdentifier address,
             final ProtonQoS qos,
             final Handler<ProtonSender> sendQueueDrainHandler) {
 
@@ -47,33 +62,43 @@ public class SenderFactoryImpl implements SenderFactory {
         if (connection.isDisconnected()) {
             return Future.failedFuture("connection is disconnected");
         } else {
-            return newSession(connection).compose(session -> {
+            return newSession(connection, address).compose(session -> {
                 return newSender(connection, session, address, qos, sendQueueDrainHandler);
             });
         }
     }
 
-    private Future<ProtonSession> newSession(final ProtonConnection con) {
+    private Future<ProtonSession> newSession(final ProtonConnection con, final ResourceIdentifier targetAddress) {
         final Future<ProtonSession> result = Future.future();
-        con.createSession().openHandler(remoteOpen -> {
-            if (remoteOpen.succeeded()) {
-                result.complete(remoteOpen.result());
-            } else {
-                result.fail(remoteOpen.cause());
-            }
-        }).open();
+        ProtonSession session = con.attachments().get(targetAddress.getEndpoint(), ProtonSession.class);
+        if (session != null) {
+            LOG.debug("re-using existing session for sending {} data downstream", targetAddress.getEndpoint());
+            result.complete(session);
+        } else {
+            LOG.debug("creating new session for sending {} data downstream", targetAddress.getEndpoint());
+            session = con.createSession();
+            con.attachments().set(targetAddress.getEndpoint(), ProtonSession.class, session);
+            session.openHandler(remoteOpen -> {
+                if (remoteOpen.succeeded()) {
+                    result.complete(remoteOpen.result());
+                } else {
+                    result.fail(remoteOpen.cause());
+                }
+            });
+            session.open();
+        }
         return result;
     }
 
     private Future<ProtonSender> newSender(
             final ProtonConnection connection,
             final ProtonSession session,
-            final String address,
+            final ResourceIdentifier address,
             final ProtonQoS qos,
             final Handler<ProtonSender> sendQueueDrainHandler) {
 
         Future<ProtonSender> result = Future.future();
-        ProtonSender sender = session.createSender(address);
+        ProtonSender sender = session.createSender(getTenantOnlyTargetAddress(address));
         sender.setQoS(qos);
         sender.sendQueueDrainHandler(sendQueueDrainHandler);
         sender.openHandler(openAttempt -> {
@@ -97,5 +122,10 @@ public class SenderFactoryImpl implements SenderFactory {
         });
         sender.open();
         return result;
+    }
+
+    private String getTenantOnlyTargetAddress(final ResourceIdentifier id) {
+        String pathSeparator = config == null ? Constants.DEFAULT_PATH_SEPARATOR : config.getPathSeparator();
+        return String.format("%s%s%s", id.getEndpoint(), pathSeparator, id.getTenantId());
     }
 }

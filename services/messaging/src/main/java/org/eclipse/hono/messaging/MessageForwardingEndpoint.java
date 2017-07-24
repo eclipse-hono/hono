@@ -147,8 +147,9 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
             receiver.close();
         } else {
             receiver.setQoS(receiver.getRemoteQoS());
+            receiver.setTarget(receiver.getRemoteTarget());
             final String linkId = UUID.randomUUID().toString();
-            final UpstreamReceiver link = UpstreamReceiver.newUpstreamReceiver(linkId, receiver, receiver.getRemoteQoS());
+            final UpstreamReceiver link = UpstreamReceiver.newUpstreamReceiver(linkId, receiver);
 
             downstreamAdapter.onClientAttach(link, s -> {
                 if (s.succeeded()) {

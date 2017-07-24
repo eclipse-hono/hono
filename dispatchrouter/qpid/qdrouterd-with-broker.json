@@ -103,19 +103,17 @@
 
   ["vhost", {
       "id": "hono-internal",
-      "maxConnections": 10,
-      "maxConnectionsPerUser": 10,
+      "maxConnections": 5,
       "groups": {
         "Hono": {
           "users": "Eclipse IoT;Hono;hono-messaging",
           "remoteHosts": "*",
-          "maxSessions": 100,
+          "maxSessions": 2,
           "maxFrameSize": 32768,
           "maxSessionWindow": 3276800,
           "maxMessageSize": 131072,
           "allowUserIdProxy": true,
-          "sources": "$management",
-          "targets": "telemetry/*, event/*, $management"
+          "targets": "telemetry/*, event/*"
         }
       }
   }],
