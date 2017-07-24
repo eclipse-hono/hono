@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.service.auth.impl;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
@@ -54,20 +55,21 @@ public class StandaloneAuthServerTest {
 
         AuthTokenHelper tokenHelper = AuthTokenHelperImpl.forSharedSecret(SIGNING_SECRET, 5);
 
-        AuthenticationServerConfigProperties props = new AuthenticationServerConfigProperties();
+        ServiceConfigProperties props = new ServiceConfigProperties();
         props.setInsecurePortEnabled(true);
         props.setInsecurePort(0);
-        props.getSigning().setTokenExpiration(5);
-        props.getSigning().setSharedSecret(SIGNING_SECRET);
-        props.setPermissionsPath(new ClassPathResource("authentication-service-test-permissions.json"));
 
         server = new SimpleAuthenticationServer();
         server.setConfig(props);
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx, tokenHelper));
         server.addEndpoint(new AuthenticationEndpoint(vertx));
 
+        AuthenticationServerConfigProperties serviceProps = new AuthenticationServerConfigProperties();
+        serviceProps.getSigning().setTokenExpiration(5);
+        serviceProps.getSigning().setSharedSecret(SIGNING_SECRET);
+        serviceProps.setPermissionsPath(new ClassPathResource("authentication-service-test-permissions.json"));
         FileBasedAuthenticationService authServiceImpl = new FileBasedAuthenticationService();
-        authServiceImpl.setConfig(props);
+        authServiceImpl.setConfig(serviceProps);
         authServiceImpl.setTokenFactory(tokenHelper);
 
         Async startup = ctx.async();

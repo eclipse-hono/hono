@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.service.registration.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import io.vertx.core.AsyncResult;
@@ -51,6 +52,12 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     private Map<String, Map<String, JsonObject>> identities = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
+
+    @Autowired
+    @Override
+    public void setConfig(final DeviceRegistryConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
 
     @Override
     protected void doStart(Future<Void> startFuture) {

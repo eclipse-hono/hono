@@ -100,13 +100,13 @@
               </images>
               <resources>
                 <env>
-                  <HONO_AUTH_KEY_PATH>/etc/hono/certs/auth-server-key.pem</HONO_AUTH_KEY_PATH>
-                  <HONO_AUTH_CERT_PATH>/etc/hono/certs/auth-server-cert.pem</HONO_AUTH_CERT_PATH>
-                  <HONO_AUTH_MAX_INSTANCES>1</HONO_AUTH_MAX_INSTANCES>
-                  <HONO_AUTH_BIND_ADDRESS>0.0.0.0</HONO_AUTH_BIND_ADDRESS>
-                  <HONO_AUTH_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_AUTH_INSECURE_PORT_BIND_ADDRESS>
-                  <HONO_AUTH_INSECURE_PORT_ENABLED>true</HONO_AUTH_INSECURE_PORT_ENABLED>
-                  <HONO_AUTH_TRUST_STORE_PATH>/etc/hono/certs/trusted-certs.pem</HONO_AUTH_TRUST_STORE_PATH>
+                  <HONO_AUTH_AMQP_KEY_PATH>/etc/hono/certs/auth-server-key.pem</HONO_AUTH_AMQP_KEY_PATH>
+                  <HONO_AUTH_AMQP_CERT_PATH>/etc/hono/certs/auth-server-cert.pem</HONO_AUTH_AMQP_CERT_PATH>
+                  <HONO_AUTH_AMQP_MAX_INSTANCES>1</HONO_AUTH_AMQP_MAX_INSTANCES>
+                  <HONO_AUTH_AMQP_BIND_ADDRESS>0.0.0.0</HONO_AUTH_AMQP_BIND_ADDRESS>
+                  <HONO_AUTH_AMQP_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_AUTH_AMQP_INSECURE_PORT_BIND_ADDRESS>
+                  <HONO_AUTH_AMQP_INSECURE_PORT_ENABLED>true</HONO_AUTH_AMQP_INSECURE_PORT_ENABLED>
+                  <HONO_AUTH_AMQP_TRUST_STORE_PATH>/etc/hono/certs/trusted-certs.pem</HONO_AUTH_AMQP_TRUST_STORE_PATH>
                   <SPRING_PROFILES_ACTIVE>authentication-impl,dev</SPRING_PROFILES_ACTIVE>
                 </env>
               </resources>

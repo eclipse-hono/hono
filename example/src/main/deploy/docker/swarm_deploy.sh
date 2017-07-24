@@ -58,10 +58,10 @@ echo ... done
 echo
 echo Deploying Authentication Server ...
 docker service create -l $NS --detach --name hono-service-auth --network $NS \
-  --env HONO_AUTH_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_AUTH_KEY_PATH=/etc/hono/certs/auth-server-key.pem \
-  --env HONO_AUTH_CERT_PATH=/etc/hono/certs/auth-server-cert.pem \
-  --env HONO_AUTH_MAX_INSTANCES=1 \
+  --env HONO_AUTH_AMQP_BIND_ADDRESS=0.0.0.0 \
+  --env HONO_AUTH_AMQP_KEY_PATH=/etc/hono/certs/auth-server-key.pem \
+  --env HONO_AUTH_AMQP_CERT_PATH=/etc/hono/certs/auth-server-cert.pem \
+  --env HONO_AUTH_AMQP_MAX_INSTANCES=1 \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
   eclipsehono/hono-service-auth:${project.version}
@@ -75,12 +75,12 @@ docker service create -l $NS --detach --name hono-service-device-registry --netw
   --env HONO_AUTH_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem \
   --env HONO_AUTH_NAME='Hono Device Registry' \
   --env HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem \
-  --env HONO_DEVICE_REGISTRY_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_DEVICE_REGISTRY_KEY_PATH=/etc/hono/certs/device-registry-key.pem \
-  --env HONO_DEVICE_REGISTRY_CERT_PATH=/etc/hono/certs/device-registry-cert.pem \
-  --env HONO_DEVICE_REGISTRY_INSECURE_PORT_ENABLED=false \
-  --env HONO_DEVICE_REGISTRY_MAX_INSTANCES=1 \
-  --env HONO_DEVICE_REGISTRY_SIGNING_SHARED_SECRET=g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0 \
+  --env HONO_REGISTRY_AMQP_BIND_ADDRESS=0.0.0.0 \
+  --env HONO_REGISTRY_AMQP_KEY_PATH=/etc/hono/certs/device-registry-key.pem \
+  --env HONO_REGISTRY_AMQP_CERT_PATH=/etc/hono/certs/device-registry-cert.pem \
+  --env HONO_REGISTRY_AMQP_INSECURE_PORT_ENABLED=false \
+  --env HONO_REGISTRY_AMQP_MAX_INSTANCES=1 \
+  --env HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0 \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=default,dev \
   eclipsehono/hono-service-device-registry:${project.version}

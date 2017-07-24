@@ -15,6 +15,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.*;
+
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.event.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
@@ -38,7 +39,19 @@ import java.util.Objects;
 @Component
 @Scope("prototype")
 public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProperties> {
-    protected ConnectionFactory authenticationService;
+
+    private ConnectionFactory authenticationService;
+
+    @Override
+    protected String getServiceName() {
+        return "Hono";
+    }
+
+    @Autowired
+    @Override
+    public void setConfig(final HonoMessagingConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
 
     /**
      * Sets the factory to use for creating an AMQP 1.0 connection to
@@ -51,11 +64,6 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
     public void setAuthenticationServiceConnectionFactory(final ConnectionFactory factory) {
         authenticationService = Objects.requireNonNull(factory);
-    }
-
-    @Override
-    protected String getServiceName() {
-        return "Hono";
     }
 
     @Override

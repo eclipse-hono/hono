@@ -62,6 +62,12 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     private static final Map<String, JsonObject> users = new HashMap<>();
     private AuthTokenHelper tokenFactory;
 
+    @Autowired
+    @Override
+    public void setConfig(final AuthenticationServerConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
+
     /**
      * Sets the factory to use for creating tokens asserting a client's identity and authorities.
      * 

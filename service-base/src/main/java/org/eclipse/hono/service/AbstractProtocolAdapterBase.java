@@ -49,6 +49,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     private HonoClient credentials;
 
     /**
+     * Sets the configuration by means of Spring dependency injection.
+     * <p>
+     * Most protocol adapters will support a single transport protocol to communicate with
+     * devices only. For those adapters there will only be a single bean instance available
+     * in the application context of type <em>T</em>.
+     */
+    @Autowired
+    @Override
+    public void setConfig(final T configuration) {
+        setSpecificConfig(configuration);
+    }
+
+    /**
      * Sets the client to use for connecting to the Hono Messaging component.
      * 
      * @param honoClient The client.

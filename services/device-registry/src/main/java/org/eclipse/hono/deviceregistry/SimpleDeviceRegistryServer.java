@@ -19,6 +19,7 @@ import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
@@ -35,8 +36,21 @@ import java.util.Objects;
  */
 @Component
 @Scope("prototype")
-public final class SimpleDeviceRegistryServer extends AmqpServiceBase<DeviceRegistryConfigProperties> {
-    protected ConnectionFactory authenticationService;
+public final class SimpleDeviceRegistryServer extends AmqpServiceBase<ServiceConfigProperties> {
+
+    private ConnectionFactory authenticationService;
+
+    @Override
+    protected String getServiceName() {
+        return "Hono-DeviceRegistry";
+    }
+
+    @Autowired
+    @Qualifier("amqp")
+    @Override
+    public void setConfig(final ServiceConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
 
     /**
      * Sets the factory to use for creating an AMQP 1.0 connection to
@@ -49,11 +63,6 @@ public final class SimpleDeviceRegistryServer extends AmqpServiceBase<DeviceRegi
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
     public void setAuthenticationServiceConnectionFactory(final ConnectionFactory factory) {
         authenticationService = Objects.requireNonNull(factory);
-    }
-
-    @Override
-    protected String getServiceName() {
-        return "Hono-DeviceRegistry";
     }
 
     /**

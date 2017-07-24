@@ -27,6 +27,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
@@ -78,18 +79,19 @@ public class StandaloneCredentialsApiTest {
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) throws Exception {
 
-        DeviceRegistryConfigProperties props = new DeviceRegistryConfigProperties();
+        ServiceConfigProperties props = new ServiceConfigProperties();
         props.setInsecurePortEnabled(true);
         props.setInsecurePort(0);
 
-        props.setCredentialsFilename("credentials.json");
+        CredentialsConfigProperties credentialsProperties = new CredentialsConfigProperties();
+        credentialsProperties.setCredentialsFilename("credentials.json");
 
         server = new SimpleDeviceRegistryServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx,createAuthenticationService(createUser())));
         server.setConfig(props);
         server.addEndpoint(new CredentialsEndpoint(vertx));
         FileBasedCredentialsService deviceRegistryImpl = new FileBasedCredentialsService();
-        deviceRegistryImpl.setConfig(props);
+        deviceRegistryImpl.setConfig(credentialsProperties);
 
         Future<CredentialsClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {

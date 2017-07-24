@@ -70,13 +70,19 @@ public class AmqpServiceBaseTest {
         publishCalled = false;
 
         AmqpServiceBase<ServiceConfigProperties> server = new AmqpServiceBase<ServiceConfigProperties>() {
+
             @Override
             protected String getServiceName() {
                 return "AmqpServiceBase";
             }
 
             @Override
-            protected void publishConnectionClosedEvent(ProtonConnection con) {
+            public void setConfig(final ServiceConfigProperties configuration) {
+                setSpecificConfig(configuration);
+            }
+
+            @Override
+            protected void publishConnectionClosedEvent(final ProtonConnection con) {
                 publishCalled = true;
             }
         };

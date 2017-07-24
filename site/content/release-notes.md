@@ -4,6 +4,15 @@ menu = "main"
 weight = 800
 +++
 
+## 0.5-M7 (not yet released)
+
+### Configuration Changes
+
+* The *Device Registry* and *Auth Server* components now support configuration of both an *AMQP* and/or an *HTTP* endpoint implementing the *Device Registration* and *Authentication* APIs respectively. For that purpose the environment variable names for configuring these components have been adapted accordingly.
+
+See component docs for details.
+
+
 ## 0.5-M6
 
 ### New Features

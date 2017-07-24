@@ -12,7 +12,6 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.registration.RegistrationService;
 
 import io.vertx.core.Handler;
@@ -23,44 +22,13 @@ import io.vertx.core.json.JsonObject;
  * Configuration properties for the Hono's device registry as own server.
  *
  */
-public final class DeviceRegistryConfigProperties {
+public final class CredentialsConfigProperties {
 
-    /**
-     * The default number of devices that can be registered for each tenant.
-     */
-    public static final int DEFAULT_MAX_DEVICES_PER_TENANT = 100;
-    private static final String DEFAULT_DEVICES_FILENAME = "/home/hono/device-registry/device-identities.json";
-    private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
+    private static final String DEFAULT_CREDENTIALS_FILENAME = "/home/hono/device-registry/credentials.json";
 
-    // the name of the file used to persist the registry content
-    private String filename = DEFAULT_DEVICES_FILENAME;
+    private String credentialsFilename = DEFAULT_CREDENTIALS_FILENAME;
     private boolean saveToFile = false;
     private boolean modificationEnabled = true;
-    private int maxDevicesPerTenant = DEFAULT_MAX_DEVICES_PER_TENANT;
-
-    /**
-     * Gets the path to the file that the content of the device registry should be persisted to
-     * periodically.
-     * <p>
-     * Default value is <em>/home/hono/device-registry/device-identities.json</em>.
-     * 
-     * @return The file name.
-     */
-    public String getFilename() {
-        return filename;
-    }
-
-    /**
-     * Sets the path to the file that the content of the device registry should be persisted to
-     * periodically.
-     * <p>
-     * Default value is <em>/home/hono/device-registry/device-identities.json</em>.
-     * 
-     * @param filename The name of the file to persist to (can be a relative or absolute path).
-     */
-    public void setFilename(final String filename) {
-        this.filename = filename;
-    }
 
     /**
      * Checks whether the content of the registry should be persisted to the file system
@@ -116,37 +84,26 @@ public final class DeviceRegistryConfigProperties {
     }
 
     /**
-     * Gets the maximum number of devices that can be registered for each tenant.
+     * Gets the path to the file that the credentials registry should be persisted to
+     * periodically.
      * <p>
-     * The default value of this property is {@link #DEFAULT_MAX_DEVICES_PER_TENANT}.
-     * 
-     * @return The maximum number of devices.
-     */
-    public int getMaxDevicesPerTenant() {
-        return maxDevicesPerTenant;
-    }
-
-    /**
-     * Sets the maximum number of devices that can be registered for each tenant.
-     * <p>
-     * The default value of this property is {@link #DEFAULT_MAX_DEVICES_PER_TENANT}.
-     * 
-     * @param maxDevices The maximum number of devices.
-     * @throws IllegalArgumentException if the number of devices is &lt;= 0.
-     */
-    public void setMaxDevicesPerTenant(final int maxDevices) {
-        if (maxDevices <= 0) {
-            throw new IllegalArgumentException("max devices must be > 0");
-        }
-        this.maxDevicesPerTenant = maxDevices;
-    }
-
-    /**
-     * Gets the properties for determining key material for creating registration assertion tokens.
+     * Default value is <em>/home/hono/device-registry/credentials.json</em>.
      *
-     * @return The properties.
+     * @return The file name.
      */
-    public SignatureSupportingConfigProperties getSigning() {
-        return registrationAssertionProperties;
+    public String getCredentialsFilename() {
+        return credentialsFilename;
+    }
+
+    /**
+     * Sets the path to the file that the credentials registry should be persisted to
+     * periodically.
+     * <p>
+     * Default value is <em>/home/hono/device-registry/credentials.json</em>.
+     *
+     * @param filename The name of the file to persist to (can be a relative or absolute path).
+     */
+    public void setCredentialsFilename(final String filename) {
+        this.credentialsFilename = filename;
     }
 }

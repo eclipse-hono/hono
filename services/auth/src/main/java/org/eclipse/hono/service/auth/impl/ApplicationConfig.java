@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.service.auth.impl;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
@@ -61,31 +62,26 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes this service's configuration properties as a Spring bean.
+     * Exposes this service's AMQP endpoint configuration properties as a Spring bean.
      * 
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.auth")
-    public AuthenticationServerConfigProperties serviceProperties() {
-        AuthenticationServerConfigProperties props = new AuthenticationServerConfigProperties();
+    @ConfigurationProperties(prefix = "hono.auth.amqp")
+    public ServiceConfigProperties amqpProperties() {
+        ServiceConfigProperties props = new ServiceConfigProperties();
         return props;
     }
 
     /**
-     * Exposes a utility object for validating the signature of JWTs asserting client identity as a Spring bean.
+     * Exposes this service's AMQP endpoint configuration properties as a Spring bean.
      * 
-     * @return The bean.
+     * @return The properties.
      */
     @Bean
-    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
-    public AuthTokenHelper authTokenValidator() {
-        AuthenticationServerConfigProperties serviceProps = serviceProperties();
-        if (!serviceProps.getSigning().isAppropriateForValidating() && serviceProps.getCertPath() != null) {
-            // fall back to TLS configuration
-            serviceProps.getSigning().setCertPath(serviceProps.getCertPath());
-        }
-        return AuthTokenHelperImpl.forValidating(vertx(), serviceProps.getSigning());
+    @ConfigurationProperties(prefix = "hono.auth.svc")
+    public AuthenticationServerConfigProperties serviceProperties() {
+        return new AuthenticationServerConfigProperties();
     }
 
     /**
@@ -96,12 +92,31 @@ public class ApplicationConfig {
     @Bean
     @Qualifier("signing")
     public AuthTokenHelper authTokenFactory() {
+        ServiceConfigProperties amqpProps = amqpProperties();
         AuthenticationServerConfigProperties serviceProps = serviceProperties();
-        if (!serviceProps.getSigning().isAppropriateForCreating() && serviceProps.getKeyPath() != null) {
+        if (!serviceProps.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
             // fall back to TLS configuration
-            serviceProps.getSigning().setKeyPath(serviceProps.getKeyPath());
+            serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());
         }
         return AuthTokenHelperImpl.forSigning(vertx(), serviceProps.getSigning());
     }
 
+    /**
+     * Creates a helper for validating JWTs asserting a client's identity and authorities.
+     * <p>
+     * An instance of this bean is required for the {@code HonoSaslAuthenticationFactory}.
+     * 
+     * @return The bean.
+     */
+    @Bean
+    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
+    public AuthTokenHelper tokenValidator() {
+        ServiceConfigProperties amqpProps = amqpProperties();
+        AuthenticationServerConfigProperties serviceProps = serviceProperties();
+        if (!serviceProps.getValidation().isAppropriateForValidating() && amqpProps.getCertPath() != null) {
+            // fall back to TLS configuration
+            serviceProps.getValidation().setCertPath(amqpProps.getCertPath());
+        }
+        return AuthTokenHelperImpl.forValidating(vertx(), serviceProps.getValidation());
+    }
 }

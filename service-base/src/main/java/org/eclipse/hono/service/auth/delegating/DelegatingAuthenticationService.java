@@ -40,6 +40,12 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     private AuthenticationServerClient client;
     private ConnectionFactory factory;
 
+    @Autowired
+    @Override
+    public void setConfig(final AuthenticationServerClientConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
+
     /**
      * Sets the factory to use for connecting to the authentication server.
      * 

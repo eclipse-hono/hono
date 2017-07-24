@@ -149,6 +149,11 @@ public class BaseRegistrationServiceTest {
         return new BaseRegistrationService<ServiceConfigProperties>() {
 
             @Override
+            public void setConfig(final ServiceConfigProperties configuration) {
+                setSpecificConfig(configuration);
+            }
+
+            @Override
             public void updateDevice(final String tenantId, final String deviceId, final JsonObject otherKeys, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
             }
 

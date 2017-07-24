@@ -75,8 +75,13 @@ public class StandaloneEventApiTest {
     private static MessageSender               eventSender;
     private static RegistrationAssertionHelper assertionHelper;
 
+    /**
+     * Sets up Hono Messaging service.
+     * 
+     * @param ctx The test context.
+     */
     @BeforeClass
-    public static void prepareHonoServer(final TestContext ctx) throws Exception {
+    public static void prepareHonoServer(final TestContext ctx) {
 
         assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
         downstreamAdapter = new MessageDiscardingDownstreamAdapter(vertx);
@@ -109,7 +114,6 @@ public class StandaloneEventApiTest {
                     .build());
             client.connect(new ProtonClientOptions(), setupTracker.completer());
         }, setupTracker);
-
     }
 
     /**

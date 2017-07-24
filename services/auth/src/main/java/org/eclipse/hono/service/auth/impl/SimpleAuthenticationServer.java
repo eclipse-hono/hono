@@ -15,10 +15,12 @@ package org.eclipse.hono.service.auth.impl;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -35,7 +37,13 @@ import io.vertx.proton.ProtonSession;
  */
 @Component
 @Scope("prototype")
-public class SimpleAuthenticationServer extends AmqpServiceBase<AuthenticationServerConfigProperties> {
+public class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
+
+    @Autowired
+    @Override
+    public void setConfig(final ServiceConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
 
     @Override
     protected String getServiceName() {

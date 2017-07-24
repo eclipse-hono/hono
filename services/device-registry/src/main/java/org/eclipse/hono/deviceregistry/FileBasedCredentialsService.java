@@ -12,8 +12,6 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -23,14 +21,10 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.service.credentials.BaseCredentialsService;
 import org.eclipse.hono.util.CredentialsResult;
-import org.springframework.context.annotation.Profile;
-import org.springframework.core.io.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -48,7 +42,7 @@ import static org.eclipse.hono.util.CredentialsConstants.*;
  * credentials kept in memory are written to the file.
  */
 @Repository
-public final class FileBasedCredentialsService extends BaseCredentialsService<DeviceRegistryConfigProperties> {
+public final class FileBasedCredentialsService extends BaseCredentialsService<CredentialsConfigProperties> {
 
     private static final String ARRAY_CREDENTIALS = "credentials";
     private static final String FIELD_TENANT = "tenant";
@@ -58,6 +52,11 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
     private boolean running = false;
     private boolean dirty = false;
 
+    @Autowired
+    @Override
+    public void setConfig(final CredentialsConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
 
     @Override
     protected void doStart(final Future<Void> startFuture) throws Exception {
@@ -99,7 +98,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
         }
     }
 
-    protected void parseCredentials(final JsonArray credentialsObject) {
+    private void parseCredentials(final JsonArray credentialsObject) {
         final AtomicInteger credentialsCount = new AtomicInteger();
 
         for (Object obj : credentialsObject) {
@@ -143,7 +142,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
         }
     }
 
-    protected void saveToFile(final Future<Void> writeResult) {
+    private void saveToFile(final Future<Void> writeResult) {
 
         if (!dirty) {
             log.trace("credentials registry does not need to be persisted");
@@ -209,7 +208,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<De
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
-    protected CredentialsResult getCredentialsResult(final String tenantId, final String authId, final String type) {
+    private CredentialsResult getCredentialsResult(final String tenantId, final String authId, final String type) {
         JsonObject data = getCredentials(tenantId, authId, type);
         if (data != null) {
             JsonObject resultPayload = getResultPayload(

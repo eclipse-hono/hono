@@ -14,6 +14,8 @@ package org.eclipse.hono.deviceregistry;
 
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
+
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -23,7 +25,6 @@ import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 
 import io.vertx.core.Vertx;
 import org.springframework.context.annotation.Scope;
@@ -64,15 +65,38 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes this service's configuration properties as a Spring bean.
+     * Exposes this service's AMQP endpoint configuration properties as a Spring bean.
+     * 
+     * @return The properties.
+     */
+    @Qualifier("amqp")
+    @Bean
+    @ConfigurationProperties(prefix = "hono.registry.amqp")
+    public ServiceConfigProperties amqpProperties() {
+        ServiceConfigProperties props = new ServiceConfigProperties();
+        return props;
+    }
+
+    /**
+     * Exposes the Device Registration service's configuration properties as a Spring bean.
      * 
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.device.registry")
+    @ConfigurationProperties(prefix = "hono.registry.svc")
     public DeviceRegistryConfigProperties serviceProperties() {
-        DeviceRegistryConfigProperties props = new DeviceRegistryConfigProperties();
-        return props;
+        return new DeviceRegistryConfigProperties();
+    }
+
+    /**
+     * Exposes the Credentials service's configuration properties as a Spring bean.
+     * 
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.credentials.svc")
+    public CredentialsConfigProperties credentialsProperties() {
+        return new CredentialsConfigProperties();
     }
 
     /**
@@ -83,10 +107,11 @@ public class ApplicationConfig {
     @Bean
     @Qualifier("signing")
     public RegistrationAssertionHelper registrationAssertionFactory() {
+        ServiceConfigProperties amqpProps = amqpProperties();
         DeviceRegistryConfigProperties serviceProps = serviceProperties();
-        if (!serviceProps.getSigning().isAppropriateForCreating() && serviceProps.getKeyPath() != null) {
+        if (!serviceProps.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
             // fall back to TLS configuration
-            serviceProps.getSigning().setKeyPath(serviceProps.getKeyPath());
+            serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());
         }
         return RegistrationAssertionHelperImpl.forSigning(vertx(), serviceProps.getSigning());
     }

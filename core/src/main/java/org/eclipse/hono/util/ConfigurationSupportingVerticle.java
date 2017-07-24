@@ -12,11 +12,6 @@
 
 package org.eclipse.hono.util;
 
-import java.util.Objects;
-
-import org.eclipse.hono.config.AbstractConfig;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import io.vertx.core.AbstractVerticle;
 
 
@@ -33,18 +28,31 @@ public abstract class ConfigurationSupportingVerticle<T> extends AbstractVerticl
     private T config;
 
     /**
-     * Sets the properties to use for configuring the sockets to listen on.
+     * Sets the specific object instance to use for configuring this <em>Verticle</em>.
      * 
      * @param props The properties.
-     * @throws NullPointerException if props is {@code null}.
      */
-    @Autowired(required = false)
-    public final void setConfig(final T props) {
-        this.config = Objects.requireNonNull(props);
+    protected final void setSpecificConfig(final T props) {
+        this.config = props;
     }
 
     /**
-     * Gets the properties in use for configuring the sockets to listen on.
+     * Sets the properties to use for configuring this <em>Verticle</em>.
+     * <p>
+     * Subclasses <em>must</em> invoke {@link #setSpecificConfig(Object)} with the configuration
+     * object.
+     * <p>
+     * This method mainly exists so that subclasses can annotate its concrete implementation
+     * with Spring annotations like @c{@code Autowired} and/or {@code Qualifier} to get injected
+     * a particular bean instance.
+     * 
+     * @param configuration The configuration properties.
+     * @throws NullPointerException if configuration is {@code null}.
+     */
+    public abstract void setConfig(final T configuration);
+
+    /**
+     * Gets the properties that this <em>Verticle</em> has been configured with.
      * 
      * @return The properties or {@code null} if not set.
      */

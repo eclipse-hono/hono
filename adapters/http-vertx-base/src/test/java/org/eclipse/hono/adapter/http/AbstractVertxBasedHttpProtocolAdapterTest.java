@@ -170,6 +170,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
 
             @Override
+            public void setConfig(final ServiceConfigProperties configuration) {
+                setSpecificConfig(configuration);
+            }
+
+            @Override
             protected void addRoutes(final Router router) {
             }
 
@@ -219,6 +224,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
 
             @Override
+            public void setConfig(final ServiceConfigProperties configuration) {
+                setSpecificConfig(configuration);
+            }
+
+            @Override
             protected void addRoutes(final Router router) {
             }
 
@@ -238,6 +248,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> getAdapter(final Router router, final Handler<Router> routeRegistrator) {
 
         return new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
+
+            @Override
+            public void setConfig(final ServiceConfigProperties configuration) {
+                setSpecificConfig(configuration);
+            }
 
             @Override
             protected void addRoutes(final Router router) {
