@@ -257,6 +257,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, contentType, registrationAssertion);
+        addEndpointSpecificProperties(msg, deviceId);
         return send(msg, dispositionHandler);
     }
 
