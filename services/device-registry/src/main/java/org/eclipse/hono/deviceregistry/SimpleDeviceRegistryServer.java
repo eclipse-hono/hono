@@ -12,7 +12,7 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import org.eclipse.hono.service.registration.BaseDeviceRegistryServer;
+import org.eclipse.hono.service.registration.BaseDeviceRegistryRestServer;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +22,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Scope("prototype")
-public final class SimpleDeviceRegistryServer extends BaseDeviceRegistryServer<DeviceRegistryConfigProperties> {
+public final class SimpleDeviceRegistryServer extends BaseDeviceRegistryRestServer<DeviceRegistryConfigProperties> {
 
 }
