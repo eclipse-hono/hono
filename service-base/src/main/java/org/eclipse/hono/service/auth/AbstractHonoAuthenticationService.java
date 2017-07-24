@@ -19,7 +19,6 @@ import java.util.Objects;
 import javax.security.auth.login.CredentialException;
 
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.config.AbstractConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +34,7 @@ import io.vertx.core.json.JsonObject;
  * 
  * @param <T> The type of configuration properties this service supports.
  */
-public abstract class AbstractHonoAuthenticationService<T extends AbstractConfig> extends BaseAuthenticationService<T> {
+public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthenticationService<T> {
 
     /**
      * A logger to be used by subclasses.

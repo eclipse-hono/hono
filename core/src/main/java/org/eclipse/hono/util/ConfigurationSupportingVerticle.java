@@ -25,10 +25,10 @@ import io.vertx.core.AbstractVerticle;
  * 
  * This class provides support for accessing configuration properties.
  * 
- * @param <T> The type of configuration properties this service supports.
+ * @param <T> The type of configuration properties this verticle supports.
  *
  */
-public abstract class ConfigurationSupportingVerticle<T extends AbstractConfig> extends AbstractVerticle {
+public abstract class ConfigurationSupportingVerticle<T> extends AbstractVerticle {
 
     private T config;
 

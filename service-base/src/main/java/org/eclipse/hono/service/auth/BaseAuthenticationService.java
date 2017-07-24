@@ -14,7 +14,6 @@ package org.eclipse.hono.service.auth;
 import static org.eclipse.hono.service.auth.AuthenticationConstants.ERROR_CODE_AUTHENTICATION_FAILED;
 import static org.eclipse.hono.service.auth.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
 
-import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +37,7 @@ import io.vertx.core.json.JsonObject;
  * 
  * @param <T> The type of configuration properties this service supports.
  */
-public abstract class BaseAuthenticationService<T extends AbstractConfig> extends ConfigurationSupportingVerticle<T> implements AuthenticationService {
+public abstract class BaseAuthenticationService<T> extends ConfigurationSupportingVerticle<T> implements AuthenticationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(BaseAuthenticationService.class);
     private MessageConsumer<JsonObject> authRequestConsumer;

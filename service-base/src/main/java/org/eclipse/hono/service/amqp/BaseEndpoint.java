@@ -43,7 +43,7 @@ import io.vertx.proton.ProtonSender;
  * 
  * @param <T> The type of configuration properties this endpoint understands.
  */
-public abstract class BaseEndpoint<T extends ServiceConfigProperties> implements Endpoint {
+public abstract class BaseEndpoint<T> implements Endpoint {
 
     /**
      * The Vert.x instance this endpoint is running on.
