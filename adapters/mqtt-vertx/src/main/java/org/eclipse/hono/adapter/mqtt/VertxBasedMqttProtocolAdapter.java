@@ -55,6 +55,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
     private MqttServer server;
     private MqttServer insecureServer;
     private Map<MqttEndpoint, String> registrationAssertions = new HashMap<>();
+    private Map<MqttEndpoint, KeepAliveChecker> keepAliveCheckers = new HashMap<>();
 
     @Override
     public int getPortDefaultValue() {
@@ -187,7 +188,14 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
 
         } else {
+
+            this.keepAliveCheckers.put(endpoint,
+                    new KeepAliveChecker(this.vertx, endpoint));
+
             endpoint.publishHandler(message -> {
+
+                // keep alive the connection
+                this.keepAliveCheckers.get(endpoint).keepAlive();
 
                 LOG.trace("received message [client ID: {}, topic: {}, QoS: {}, payload {}]", endpoint.clientIdentifier(), message.topicName(),
                         message.qosLevel(), message.payload().toString(Charset.defaultCharset()));
@@ -243,6 +251,13 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
                 LOG.debug("client [{}] closes connection", endpoint.clientIdentifier());
                 if (registrationAssertions.remove(endpoint) != null)
                     LOG.trace("removed registration assertion for client [{}]", endpoint.clientIdentifier());
+
+                KeepAliveChecker keepAliveChecker = keepAliveCheckers.get(endpoint);
+                if (keepAliveChecker != null) {
+                    keepAliveChecker.close();
+                    keepAliveCheckers.remove(endpoint);
+                    LOG.trace("removed keep alive checker for client [{}]", endpoint.clientIdentifier());
+                }
             });
 
             endpoint.accept(false);
@@ -294,6 +309,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
     private void close(final MqttEndpoint endpoint) {
         registrationAssertions.remove(endpoint);
+        keepAliveCheckers.remove(endpoint);
         if (endpoint.isConnected()) {
             LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
             endpoint.close();
