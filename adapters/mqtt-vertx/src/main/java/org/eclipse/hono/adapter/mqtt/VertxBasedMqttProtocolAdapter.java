@@ -240,7 +240,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
             });
 
             endpoint.closeHandler(v -> {
-                LOG.debug("client [{}] closes connection", endpoint.clientIdentifier());
+                LOG.debug("connection closed with client [{}]", endpoint.clientIdentifier());
                 if (registrationAssertions.remove(endpoint) != null)
                     LOG.trace("removed registration assertion for client [{}]", endpoint.clientIdentifier());
             });
