@@ -49,27 +49,19 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
 
         Future<ProtonReceiver> result = Future.future();
         final String targetAddress = String.format(address, pathSeparator, tenantId);
-        final int threshold = prefetch >> 1;
 
         context.runOnContext(open -> {
             final ProtonReceiver receiver = con.createReceiver(targetAddress);
             receiver.setAutoAccept(true);
-            receiver.setPrefetch(0);
+            receiver.setPrefetch(prefetch);
             receiver.setQoS(qos);
             receiver.handler((delivery, message) -> {
                 if (consumer != null) {
                     consumer.accept(delivery, message);
                 }
-                int remainingCredits = receiver.getCredit() - receiver.getQueued();
-                LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]", delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
-                if (prefetch > 0) {
-                    // replenish sender with credits once the remaining credits fall
-                    // below threshold (prefetch / 2)
-                    if (remainingCredits < threshold) {
-                        int credits = prefetch - remainingCredits;
-                        LOG.debug("replenishing sender with {} credits ", credits);
-                        receiver.flow(credits);
-                    }
+                if (LOG.isTraceEnabled()) {
+                    int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                    LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]", delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
                 }
             });
             receiver.openHandler(receiverOpen -> {
@@ -77,9 +69,6 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
                     LOG.debug("receiver [source: {}, qos: {}] open", receiver.getRemoteSource(), receiver.getRemoteQoS());
                     if (qos.equals(ProtonQoS.AT_LEAST_ONCE) && !qos.equals(receiver.getRemoteQoS())) {
                         LOG.info("remote container uses other QoS than requested [requested: {}, in use: {}]", qos, receiver.getRemoteQoS());
-                    }
-                    if (prefetch > 0) {
-                        receiver.flow(prefetch);
                     }
                     result.complete(receiver);
                 } else {
@@ -90,5 +79,4 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
         });
         return result;
     }
-
 }
