@@ -420,24 +420,4 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         return Future.succeededFuture();
     }
 
-    /**
-     * Register readiness checks for the service.
-     * <p>
-     * Subclasses must override this method to register service specific checks.
-     *
-     * @param handler The health check handler to register the checks with.
-     */
-    @Override
-    public abstract void registerReadinessChecks(HealthCheckHandler handler);
-
-    /**
-     * Register liveness checks for the service.
-     * <p>
-     * Subclasses must override this method to register service specific checks.
-     *
-     * @param handler The health check handler to register the checks with.
-     */
-    @Override
-    public abstract void registerLivenessChecks(HealthCheckHandler handler);
-
 }
