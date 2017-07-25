@@ -28,7 +28,7 @@ import org.springframework.beans.factory.annotation.Value;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.http.*;
-import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -197,7 +197,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * Subclasses should override this method to provide a service specific default value.
      * <p>
      *
-     * @return 8443
+     * @return 8080
      */
     @Override
     public int getInsecurePortDefaultValue() {
@@ -259,13 +259,8 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Creates the router for handling requests.
      * <p>
-     * This method creates a router instance with the following routes:
-     * <ol>
-     * <li>A default route limiting the body size of requests to the maximum payload size set in the <em>config</em>
-     * properties.</li>
-     * <li>A route for retrieving this adapter's current status from the resource path returned by
-     * {@link #getStatusResourcePath()} (if not {@code null}).</li>
-     * </ol>
+     * This method creates a router instance with a default route limiting the body size of requests to the maximum
+     * payload size set in the <em>config</em> properties.
      *
      * @return The newly created router (never {@code null}).
      */
@@ -276,25 +271,9 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         router.route().handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize())
                 .setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY));
 
-        String statusResourcePath = getStatusResourcePath();
-        if (statusResourcePath != null) {
-            router.route(HttpMethod.GET, statusResourcePath).handler(this::doGetStatus);
-        }
-
         return router;
     }
 
-    /**
-     * Returns the path for the status resource.
-     * <p>
-     * By default, this method returns {@code /status}. Subclasses may override this method to return a different path
-     * or {@code null}, in which case the status resource will be disabled.
-     *
-     * @return The resource path or {@code null}.
-     */
-    protected String getStatusResourcePath() {
-        return "/status";
-    }
 
     /**
      * Adds custom routes for handling requests.
@@ -391,7 +370,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     @Override
-    protected Future<Void> stopInternal() {
+    protected final Future<Void> stopInternal() {
 
         return preShutdown()
                 .compose(s -> stopServer())
@@ -441,21 +420,24 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         return Future.succeededFuture();
     }
 
-    private void doGetStatus(final RoutingContext ctx) {
-        JsonObject result = new JsonObject();
-        result.put("active profiles", activeProfiles);
-        adaptStatusResource(result);
-        ctx.response()
-                .putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON)
-                .end(result.encodePrettily());
-    }
+    /**
+     * Register readiness checks for the service.
+     * <p>
+     * Subclasses must override this method to register service specific checks.
+     *
+     * @param handler The health check handler to register the checks with.
+     */
+    @Override
+    public abstract void registerReadinessChecks(HealthCheckHandler handler);
 
     /**
-     * Adapts the JsonObject returned on a status request. Subclasses can add their own properties here.
+     * Register liveness checks for the service.
+     * <p>
+     * Subclasses must override this method to register service specific checks.
      *
-     * @param status status object to be adapted
+     * @param handler The health check handler to register the checks with.
      */
-    protected void adaptStatusResource(final JsonObject status) {
-        // empty
-    }
+    @Override
+    public abstract void registerLivenessChecks(HealthCheckHandler handler);
+
 }
