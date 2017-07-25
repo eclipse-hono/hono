@@ -133,4 +133,18 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
         });
     }
 
+    /**
+     * Sets the session's window size to the value of configuration parameter <em>maxSessionWindow</em>.
+     */
+    @Override
+    protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
+        LOG.info("opening new session with client [name: {}, session window size: {}]", con.getRemoteContainer(), getConfig().getMaxSessionWindow());
+        session.setIncomingCapacity(getConfig().getMaxSessionWindow());
+        session.closeHandler(sessionResult -> {
+            if (sessionResult.succeeded()) {
+                sessionResult.result().close();
+            }
+        }).open();
+    }
+
 }
