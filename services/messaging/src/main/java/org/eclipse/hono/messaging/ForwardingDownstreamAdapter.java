@@ -257,9 +257,19 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose) {
-        logger.info("connection to downstream container [{}] is closed", downstreamConnection.getRemoteContainer());
+
+        if (remoteClose.succeeded()) {
+            if (remoteClose.result() != downstreamConnection) {
+                logger.warn("downstream container closed unknown connection");
+                return;
+            } else {
+                logger.info("downstream container [{}] has closed connection", downstreamConnection.getRemoteContainer());
+            }
+        } else {
+            logger.info("downstream container [{}] has closed connection: {}", downstreamConnection.getRemoteContainer(), remoteClose.cause().getMessage());
+        }
         downstreamConnection.close();
-        counterService.decrement(MetricConstants.metricNameDownstreamConnections());
+        onDisconnectFromDownstreamContainer(downstreamConnection);
     }
 
     /**
@@ -297,12 +307,16 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     private void reconnect(final Handler<AsyncResult<ProtonConnection>> resultHandler) {
 
-        final ProtonClientOptions clientOptions = createClientOptions();
-        if (clientOptions.getReconnectAttempts() != 0) {
-            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-                logger.info("attempting to re-connect to downstream container");
-                connectToDownstream(clientOptions, resultHandler);
-            });
+        if (!running) {
+            logger.info("adapter is stopped, will not re-connect to downstream container");
+        } else {
+            final ProtonClientOptions clientOptions = createClientOptions();
+            if (clientOptions.getReconnectAttempts() != 0) {
+                vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+                    logger.info("attempting to re-connect to downstream container");
+                    connectToDownstream(clientOptions, resultHandler);
+                });
+            }
         }
     }
 

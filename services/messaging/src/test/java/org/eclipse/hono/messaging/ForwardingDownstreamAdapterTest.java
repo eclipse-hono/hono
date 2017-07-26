@@ -91,11 +91,10 @@ public class ForwardingDownstreamAdapterTest {
     /**
      * Verifies that <em>drain</em> requests received from the downstream container are forwarded
      * to upstream clients.
-     * @throws InterruptedException
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testHandleFlowForwardsDrainRequestUpstream() throws InterruptedException {
+    public void testHandleFlowForwardsDrainRequestUpstream() {
 
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX, "myTenant", null);
         final UpstreamReceiver client = newClient();
@@ -186,7 +185,7 @@ public class ForwardingDownstreamAdapterTest {
         // expect the connection factory to be invoked twice
         // first on initial connection
         // second on re-connect attempt
-        DisconnectHandlerProvidingConnectionFactory factory = new DisconnectHandlerProvidingConnectionFactory(connectionToCreate, 2);
+        HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(connectionToCreate, 2);
 
         // GIVEN an adapter connected to a downstream container
         givenADownstreamAdapter();
@@ -197,18 +196,49 @@ public class ForwardingDownstreamAdapterTest {
         factory.getDisconnectHandler().handle(connectionToCreate);
 
         // THEN the adapter tries to reconnect to the downstream container
-        factory.await(1, TimeUnit.SECONDS);
-        assertTrue(adapter.isActiveSendersEmpty());
+        if (!factory.await(1, TimeUnit.SECONDS)) {
+            fail("adapter did not re-connect to downstream container");
+        } else {
+            assertTrue(adapter.isActiveSendersEmpty());
+        }
+    }
+
+    /**
+     * Verifies that the adapter tries to re-connect to a downstream container once the existing
+     * connection has been closed remotely.
+     */
+    @Test
+    public void testOnRemoteCloseTriggersReconnect() {
+
+        final ProtonConnection connectionToCreate = mock(ProtonConnection.class);
+        when(connectionToCreate.getRemoteContainer()).thenReturn("downstream");
+        // expect the connection factory to be invoked twice
+        // first on initial connection
+        // second on re-connect attempt
+        HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(connectionToCreate, 2);
+
+        // GIVEN an adapter connected to a downstream container
+        givenADownstreamAdapter();
+        adapter.setDownstreamConnectionFactory(factory);
+        adapter.start(Future.future());
+
+        // WHEN the downstream container closes the connection
+        factory.getCloseHandler().handle(Future.succeededFuture(connectionToCreate));
+
+        // THEN the adapter tries to reconnect to the downstream container
+        if (!factory.await(1, TimeUnit.SECONDS)) {
+            fail("adapter did not re-connect to downstream container");
+        } else {
+            assertTrue(adapter.isActiveSendersEmpty());
+        }
     }
 
     /**
      * Verifies that all links to upstream clients are closed when the connection to the
      * downstream container is lost.
-     * 
-     * @throws Exception if the test fails.
      */
     @Test
-    public void testDownstreamDisconnectClosesUpstreamReceivers() throws Exception {
+    public void testDownstreamDisconnectClosesUpstreamReceivers() {
 
         final ProtonConnection connectionToCreate = mock(ProtonConnection.class);
         when(connectionToCreate.getRemoteContainer()).thenReturn("downstream");
@@ -217,7 +247,7 @@ public class ForwardingDownstreamAdapterTest {
         // expect the connection factory to be invoked twice
         // first on initial connection
         // second on re-connect attempt
-        DisconnectHandlerProvidingConnectionFactory factory = new DisconnectHandlerProvidingConnectionFactory(connectionToCreate, 2);
+        HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(connectionToCreate, 2);
 
         // GIVEN an adapter connected to a downstream container
         givenADownstreamAdapter(downstreamSender);
@@ -249,7 +279,7 @@ public class ForwardingDownstreamAdapterTest {
         when(connectionToCreate.isDisconnected()).thenReturn(Boolean.FALSE);
         final UpstreamReceiver client = newClient();
         when(client.getTargetAddress()).thenReturn("telemetry/TENANT");
-        final DisconnectHandlerProvidingConnectionFactory factory = new DisconnectHandlerProvidingConnectionFactory(connectionToCreate);
+        final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(connectionToCreate);
         final SenderFactory senderFactory = (con, address, qos, drainHandler) -> {
             Future<ProtonSender> result = Future.future();
             return result;
@@ -284,7 +314,7 @@ public class ForwardingDownstreamAdapterTest {
     @Test
     public void testConnectToDownstreamRetriesToConnectOnFailedAttempt() {
 
-        final DisconnectHandlerProvidingConnectionFactory factory = new DisconnectHandlerProvidingConnectionFactory(null, 3);
+        final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(null, 3);
 
         // GIVEN an adapter
         givenADownstreamAdapter();
@@ -321,17 +351,18 @@ public class ForwardingDownstreamAdapterTest {
         };
     }
 
-    private class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
+    private class HandlerCapturingConnectionFactory implements ConnectionFactory {
 
         private Handler<ProtonConnection> disconnectHandler;
+        private Handler<AsyncResult<ProtonConnection>> closeHandler;
         private CountDownLatch expectedConnectionAttempts;
         private ProtonConnection connectionToCreate;
 
-        public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate) {
+        public HandlerCapturingConnectionFactory(final ProtonConnection conToCreate) {
             this(conToCreate, 1);
         }
 
-        public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate, final int expectedConnectionAttempts) {
+        public HandlerCapturingConnectionFactory(final ProtonConnection conToCreate, final int expectedConnectionAttempts) {
             this.connectionToCreate = conToCreate;
             this.expectedConnectionAttempts = new CountDownLatch(expectedConnectionAttempts);
         }
@@ -357,6 +388,7 @@ public class ForwardingDownstreamAdapterTest {
             if (expectedConnectionAttempts.getCount() > 0) {
                 expectedConnectionAttempts.countDown();
                 this.disconnectHandler = disconnectHandler;
+                this.closeHandler = closeHandler;
                 if (connectionToCreate == null) {
                     connectionResultHandler.handle(Future.failedFuture("cannot connect"));
                 } else {
@@ -387,6 +419,10 @@ public class ForwardingDownstreamAdapterTest {
 
         public Handler<ProtonConnection> getDisconnectHandler() {
             return disconnectHandler;
+        }
+
+        public Handler<AsyncResult<ProtonConnection>> getCloseHandler() {
+            return closeHandler;
         }
 
         public boolean await(final long timeout, final TimeUnit unit) {
