@@ -53,6 +53,8 @@ node {
             sh "docker tag eclipsehono/hono-dispatch-router:${buildVersion} bsinno/hono-dispatch-router:latest"
             sh "docker tag eclipsehono/hono-artemis:${buildVersion} bsinno/hono-artemis:${buildVersion}"
             sh "docker tag eclipsehono/hono-artemis:${buildVersion} bsinno/hono-artemis:latest"
+            sh "docker tag eclipsehono/grafana:${buildVersion} bsinno/hono-grafana:${buildVersion}"
+            sh "docker tag eclipsehono/grafana:${buildVersion} bsinno/hono-grafana:latest"
 
             // push to dockerhub
             sh "docker login -u $DOCKERHUB_USER_ID -p $DOCKERHUB_USER_PW"
@@ -68,6 +70,8 @@ node {
             sh "docker push bsinno/hono-dispatch-router:latest"
             sh "docker push bsinno/hono-artemis:${buildVersion}"
             sh "docker push bsinno/hono-artemis:latest"
+            sh "docker push bsinno/hono-grafana:${buildVersion}"
+            sh "docker push bsinno/hono-grafana:latest"
         }
     }
 }
