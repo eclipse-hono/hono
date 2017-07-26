@@ -12,13 +12,9 @@
 package org.eclipse.hono.telemetry.impl;
 
 import static org.eclipse.hono.TestSupport.*;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
@@ -33,6 +29,7 @@ import org.junit.runner.RunWith;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
@@ -64,19 +61,19 @@ public class ForwardingTelemetryDownstreamAdapterTest {
      * Verifies that telemetry data uploaded by an upstream client is forwarded to the
      * downstream container.
      * 
-     * @throws InterruptedException if test execution gets interrupted.
+     * @param ctx The test context.
      */
     @Test
-    public void testProcessTelemetryDataForwardsMessageToDownstreamSender() throws InterruptedException {
+    public void testProcessMessageForwardsMessageToDownstreamSender(final TestContext ctx) {
 
         final UpstreamReceiver client = newClient();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
 
         // GIVEN an adapter with a connection to a downstream container
-        final CountDownLatch latch = new CountDownLatch(1);
+        final Async msgSent = ctx.async();
         ProtonSender sender = newMockSender(false);
         when(sender.send(any(Message.class))).then(invocation -> {
-            latch.countDown();
+            msgSent.complete();
             return null;
         });
         ForwardingTelemetryDownstreamAdapter adapter = new ForwardingTelemetryDownstreamAdapter(vertx, newMockSenderFactory(sender));
@@ -90,9 +87,14 @@ public class ForwardingTelemetryDownstreamAdapterTest {
         adapter.processMessage(client, delivery, msg);
 
         // THEN the message has been delivered to the downstream container
-        assertTrue(latch.await(1, TimeUnit.SECONDS));
+        msgSent.await(1000);
     }
 
+    /**
+     * Verifies that telemetry data is discarded if no downstream credit is available.
+     * 
+     * @param ctx The test context.
+     */
     @Test
     public void testProcessMessageDiscardsMessageIfNoCreditIsAvailable(final TestContext ctx) {
 
@@ -102,7 +104,7 @@ public class ForwardingTelemetryDownstreamAdapterTest {
 
         // GIVEN an adapter with a connection to a downstream container
         ProtonSender sender = newMockSender(false);
-        when(sender.getCredit()).thenReturn(0);
+        when(sender.sendQueueFull()).thenReturn(true);
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());

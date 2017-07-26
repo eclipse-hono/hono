@@ -57,6 +57,12 @@ public class ForwardingEventDownstreamAdapterTest {
         vertx = mock(Vertx.class);
     }
 
+    /**
+     * Verifies that an event uploaded by an upstream client is forwarded to the
+     * downstream container.
+     * 
+     * @param ctx The test context.
+     */
     @Test
     public void testProcessMessageForwardsMessageToDownstreamSender(final TestContext ctx) {
 
@@ -90,6 +96,11 @@ public class ForwardingEventDownstreamAdapterTest {
         verify(delivery).disposition(any(Accepted.class), eq(Boolean.TRUE));
     }
 
+    /**
+     * Verifies that an event is released if no downstream credit is available.
+     * 
+     * @param ctx The test context.
+     */
     @Test
     public void testProcessMessageReleasesMessageIfNoCreditIsAvailable(final TestContext ctx) {
 
@@ -99,7 +110,7 @@ public class ForwardingEventDownstreamAdapterTest {
 
         // GIVEN an adapter with a connection to a downstream container
         ProtonSender sender = newMockSender(false);
-        when(sender.getCredit()).thenReturn(0);
+        when(sender.sendQueueFull()).thenReturn(true);
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());

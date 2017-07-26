@@ -289,6 +289,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
                 counterService.decrement(MetricConstants.metricNameUpstreamLinks(client.getTargetAddress()));
                 counterService.decrement(MetricConstants.metricNameDownstreamSenders(client.getTargetAddress()));
+                gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()), 0);
             }
             receiversPerConnection.clear();
             activeSenders.clear();
@@ -370,8 +371,8 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             final ProtonSender replenishedSender,
             final UpstreamReceiver client) {
 
-        logger.debug("received FLOW from downstream sender [con:{}, link: {}, credits: {}, queued: {}, drain: {}",
-                client.getConnectionId(), client.getLinkId(), replenishedSender.getCredit(),
+        logger.debug("received FLOW from downstream container [con:{}, link: {}, sendQueueFull: {}, credits: {}, queued: {}, drain: {}",
+                client.getConnectionId(), client.getLinkId(), replenishedSender.sendQueueFull(), replenishedSender.getCredit(),
                 replenishedSender.getQueued(), replenishedSender.getDrain());
         if (replenishedSender.getDrain()) {
             // send drain request upstream and act upon result of request to drain upstream client
@@ -383,12 +384,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         } else {
             int downstreamCredit = getAvailableDownstreamCredit(replenishedSender);
             client.replenish(downstreamCredit);
-            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()),downstreamCredit);
+            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()), downstreamCredit);
         }
     }
 
     private static int getAvailableDownstreamCredit(final ProtonSender downstreamSender) {
-        return Math.max(0, downstreamSender.getCredit() - downstreamSender.getQueued());
+        return Math.max(0, downstreamSender.getCredit());
     }
 
     private Future<ProtonSender> createSender(
@@ -477,6 +478,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         if (sender != null && sender.isOpen()) {
             logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
             counterService.decrement(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
+            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(link.getTargetAddress()), 0);
             sender.close();
         }
     }
@@ -496,7 +498,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             logger.info("no downstream sender for link [{}] available, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
         } else if (sender.isOpen()) {
-            if (sender.getCredit() <= 0) {
+            if (sender.sendQueueFull()) {
                 if (upstreamDelivery.remotelySettled()) {
                     // sender has sent the message pre-settled, i.e. we can simply discard the message
                     logger.debug("no downstream credit available for link [{}], discarding message [{}]",
@@ -511,8 +513,6 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     counterService.increment(MetricConstants.metricNameUndeliverableMessages(sender.getTarget().getAddress()));
                 }
             } else {
-                // make sure upstream client does not starve before more credits flow in from downstream container
-                client.replenish(getAvailableDownstreamCredit(sender));
                 logger.trace("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}], credit available: {}, queued: {}",
                         msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer(), sender.getCredit(), sender.getQueued());
                 forwardMessage(sender, msg, upstreamDelivery);

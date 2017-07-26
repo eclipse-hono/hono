@@ -144,6 +144,7 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
     }
 
     private class LinkStatus {
+
         private long msgCount;
         private UpstreamReceiver client;
         private boolean suspended;
@@ -159,8 +160,7 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
                 if (msgCount % pauseThreshold == 0) {
                     pause();
                 }
-            } else if (msgCount % DEFAULT_CREDIT == 0) {
-                // we need to replenish client every DEFAULT_CREDIT messages
+            } else {
                 client.replenish(DEFAULT_CREDIT);
             }
         }
