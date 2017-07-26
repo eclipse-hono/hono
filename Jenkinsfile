@@ -24,7 +24,7 @@ node('iothub') {
                 sh "git config remote.origin.url 'https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git'"
                 sh "git remote set-url origin 'https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git'"
                 withSonarQubeEnv('ECS-Sonar') {
-                    sh script: """\\ 
+                    sh script: """\\
                         ${mvnHome}/bin/mvn -B -s ${MAVEN_SETTINGS} clean org.jacoco:jacoco-maven-plugin:0.7.9:prepare-agent verify \\
                         org.sonarsource.scanner.maven:sonar-maven-plugin:3.3.0.603:sonar deploy -Pbuild-docker-image,run-tests scm:tag \\
                         -Drevision=${buildVersion} -DskipStaging=true \\
