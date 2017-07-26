@@ -24,7 +24,6 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.messaging.DownstreamAdapter;
 import org.eclipse.hono.messaging.ErrorConditions;
 import org.eclipse.hono.messaging.MessageForwardingEndpoint;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.MessageHelper;

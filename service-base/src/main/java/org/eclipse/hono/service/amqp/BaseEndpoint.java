@@ -13,8 +13,6 @@ package org.eclipse.hono.service.amqp;
 
 import static org.eclipse.hono.util.MessageHelper.encodeIdToJson;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
@@ -58,7 +56,6 @@ public abstract class BaseEndpoint<T> implements Endpoint {
      */
     @SuppressWarnings("unchecked")
     protected T                                 config               = (T) new ServiceConfigProperties();
-    private Map<String, UpstreamReceiver>       activeClients        = new HashMap<>();
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -120,31 +117,6 @@ public abstract class BaseEndpoint<T> implements Endpoint {
     }
 
     /**
-     * Closes the link to an upstream client and removes all state kept for it.
-     * 
-     * @param client The client to detach.
-     */
-    protected final void onLinkDetach(final UpstreamReceiver client) {
-        onLinkDetach(client, null);
-    }
-
-    /**
-     * Closes the link to an upstream client and removes all state kept for it.
-     * 
-     * @param client The client to detach.
-     * @param error The error condition to convey to the client when closing the link.
-     */
-    protected final void onLinkDetach(final UpstreamReceiver client, final ErrorCondition error) {
-        if (error == null) {
-            logger.debug("closing receiver for client [{}]", client.getLinkId());
-        } else {
-            logger.debug("closing receiver for client [{}]: {}", client.getLinkId(), error.getDescription());
-        }
-        client.close(error);
-        removeClientLink(client.getLinkId());
-    }
-
-    /**
      * Closes the link to a proton based receiver client.
      *
      * @param client The client to detach.
@@ -182,35 +154,6 @@ public abstract class BaseEndpoint<T> implements Endpoint {
             logger.debug("closing proton receiver for client [{}]: {}", MessageHelper.getLinkName(client), error.getDescription());
         }
         client.close();
-    }
-
-    /**
-     * Registers a link with an upstream client.
-     * 
-     * @param link The link to register.
-     */
-    protected final void registerClientLink(final UpstreamReceiver link) {
-        activeClients.put(link.getLinkId(), link);
-    }
-
-    /**
-     * Looks up a link with an upstream client based on its identifier.
-     * 
-     * @param linkId The identifier of the client.
-     * @return The link object representing the client or {@code null} if no link with the given identifier exists.
-     * @throws NullPointerException if the link id is {@code null}.
-     */
-    protected final UpstreamReceiver getClientLink(final String linkId) {
-        return activeClients.get(Objects.requireNonNull(linkId));
-    }
-
-    /**
-     * Deregisters a link with an upstream client.
-     * 
-     * @param linkId The identifier of the link to deregister.
-     */
-    protected final void removeClientLink(final String linkId) {
-        activeClients.remove(linkId);
     }
 
     @Override

@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
+import org.eclipse.hono.messaging.UpstreamReceiver;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Test;

@@ -13,7 +13,6 @@
 package org.eclipse.hono.messaging;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;

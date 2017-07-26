@@ -24,7 +24,7 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.event.impl.ForwardingEventDownstreamAdapter;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
+import org.eclipse.hono.messaging.UpstreamReceiver;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Test;

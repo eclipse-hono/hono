@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.service.amqp;
+package org.eclipse.hono.messaging;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;

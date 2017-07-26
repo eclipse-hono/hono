@@ -25,7 +25,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.messaging.ForwardingDownstreamAdapter;
 import org.eclipse.hono.messaging.SenderFactory;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
