@@ -17,6 +17,7 @@ import io.vertx.core.dns.AddressResolverOptions;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsEndpoint;
+import org.eclipse.hono.service.http.HttpServiceBase;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationEndpoint;
@@ -27,6 +28,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import io.vertx.core.Vertx;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
 
 /**
@@ -57,10 +59,25 @@ public class ApplicationConfig {
      * 
      * @return The factory.
      */
+    @Qualifier("amqp")
     @Bean
-    public ObjectFactoryCreatingFactoryBean deviceRegistryServerFactory() {
+    public ObjectFactoryCreatingFactoryBean amqpServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(DeviceRegistryAmqpServer.class.getName());
+        return factory;
+    }
+
+    /**
+     * FIXME
+     * Exposes a factory for creating service instances as a Spring bean.
+     *
+     * @return The factory.
+     */
+    @Qualifier("rest")
+    @Bean
+    public ObjectFactoryCreatingFactoryBean restServerFactory() {
+        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        factory.setTargetBeanName(DeviceRegistryRestServer.class.getName());
         return factory;
     }
 
@@ -70,6 +87,7 @@ public class ApplicationConfig {
      * @return The properties.
      */
     @Qualifier("amqp")
+    @Primary // needed for class BaseEndpoint
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.amqp")
     public ServiceConfigProperties amqpProperties() {
@@ -78,8 +96,22 @@ public class ApplicationConfig {
     }
 
     /**
+     * FIXME.
+     * Exposes this service's AMQP endpoint configuration properties as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @Qualifier("rest")
+    @Bean
+    @ConfigurationProperties(prefix = "hono.registry.rest")
+    public ServiceConfigProperties restProperties() {
+        ServiceConfigProperties props = new ServiceConfigProperties();
+        return props;
+    }
+
+    /**
      * Exposes the Device Registration service's configuration properties as a Spring bean.
-     * 
+     *
      * @return The properties.
      */
     @Bean
@@ -124,7 +156,9 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public RegistrationEndpoint registrationEndpoint() {
-        return new RegistrationEndpoint(vertx());
+        final RegistrationEndpoint registrationEndpoint = new RegistrationEndpoint(vertx());
+        registrationEndpoint.setConfiguration(amqpProperties());
+        return registrationEndpoint;
     }
 
     /**
@@ -135,6 +169,8 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public CredentialsEndpoint credentialsEndpoint() {
-        return new CredentialsEndpoint(vertx());
+        final CredentialsEndpoint credentialsEndpoint = new CredentialsEndpoint(vertx());
+        credentialsEndpoint.setConfiguration(amqpProperties());
+        return credentialsEndpoint;
     }
 }
