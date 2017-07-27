@@ -1,0 +1,22 @@
+hono:
+  auth:
+    host: ${hono.auth.host}
+    port: 5671
+    keyPath: /run/secrets/device-registry-key.pem
+    certPath: /run/secrets/device-registry-cert.pem
+    trustStorePath: /run/secrets/trusted-certs.pem
+    name: 'Hono Device Registry'
+    validation:
+      certPath: ${hono.auth.validation.certPath}
+  registry:
+    amqp:
+      bindAddress: 0.0.0.0
+      keyPath: /run/secrets/device-registry-key.pem
+      certPath: /run/secrets/device-registry-cert.pem
+      healthCheckBindAddress: 0.0.0.0
+      healthCheckPort: 8088
+      maxInstances: 1
+    svc:
+      signing:
+        sharedSecret: ${hono.regAssertion.sharedSecret}
+

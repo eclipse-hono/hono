@@ -67,7 +67,13 @@ oc create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying Device Registry ...
-oc create -f $HONO_HOME/services/device-registry/target/classes/META-INF/fabric8/openshift.yml
+oc create secret generic hono-service-device-registry-conf \
+  --from-file=$CERTS/device-registry-key.pem \
+  --from-file=$CERTS/device-registry-cert.pem \
+  --from-file=$CERTS/auth-server-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=application.yml=$CONFIG/hono-service-device-registry-config.yml
+oc create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying Hono Messaging ...

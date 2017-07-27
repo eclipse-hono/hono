@@ -28,6 +28,10 @@ docker secret rm \
   hono-service-messaging-config.yml
 
 docker service rm hono-service-device-registry
+docker secret rm \
+  device-registry-key.pem \
+  device-registry-cert.pem \
+  hono-service-device-registry-config.yml
 
 docker service rm hono-service-auth
 docker secret rm \

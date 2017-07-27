@@ -5,7 +5,19 @@ spec:
       - name: registry
         persistentVolumeClaim:
           claimName: registry
+      - name: conf
+        secret:
+          secretName: ${project.artifactId}-conf
       containers:
       - volumeMounts:
         - name: registry
           mountPath: /home/hono/device-registry
+        - name: conf
+          mountPath: /run/secrets
+        env:
+        - name: SPRING_CONFIG_LOCATION
+          value: file:///run/secrets/
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml

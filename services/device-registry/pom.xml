@@ -10,12 +10,6 @@
   <description>A default device registry for Hono implementing the device registration and credentials API.</description>
 
   <properties>
-    <hono.device-registry.certPath>/etc/hono/certs/device-registry-cert.pem</hono.device-registry.certPath>
-    <hono.device-registry.keyPath>/etc/hono/certs/device-registry-key.pem</hono.device-registry.keyPath>
-    <!-- 
-      The shared secret to use for creating/validating registration assertions.
-     -->
-    <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
     <vertx.health.port>8088</vertx.health.port>
     <vertx.health.path>/liveness</vertx.health.path>
     <vertx.health.readiness.path>/readiness</vertx.health.readiness.path>
@@ -87,15 +81,6 @@
                       <inline>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
-                            <includes>
-                              <include>device-registry-*.pem</include>
-                              <include>auth-server-cert.pem</include>
-                              <include>trusted-certs.pem</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
                             <directory>${project.build.directory}</directory>
                             <outputDirectory>opt/hono</outputDirectory>
                             <includes>
@@ -108,27 +93,6 @@
                   </build>
                 </image>
               </images>
-              <resources>
-                <env>
-                  <HONO_AUTH_HOST>${hono.auth.host}</HONO_AUTH_HOST>
-                  <HONO_AUTH_PORT>5671</HONO_AUTH_PORT>
-                  <HONO_AUTH_NAME>${project.name}</HONO_AUTH_NAME>
-                  <HONO_AUTH_KEY_PATH>${hono.device-registry.keyPath}</HONO_AUTH_KEY_PATH>
-                  <HONO_AUTH_CERT_PATH>${hono.device-registry.certPath}</HONO_AUTH_CERT_PATH>
-                  <HONO_AUTH_VALIDATION_CERT_PATH>${hono.auth.validation.certPath}</HONO_AUTH_VALIDATION_CERT_PATH>
-                  <HONO_AUTH_TRUST_STORE_PATH>${hono.trustStore.path}</HONO_AUTH_TRUST_STORE_PATH>
-                  <HONO_REGISTRY_AMQP_KEY_PATH>${hono.device-registry.keyPath}</HONO_REGISTRY_AMQP_KEY_PATH>
-                  <HONO_REGISTRY_AMQP_CERT_PATH>${hono.device-registry.certPath}</HONO_REGISTRY_AMQP_CERT_PATH>
-                  <HONO_REGISTRY_AMQP_BIND_ADDRESS>0.0.0.0</HONO_REGISTRY_AMQP_BIND_ADDRESS>
-                  <HONO_REGISTRY_AMQP_HEALTH_CHECK_PORT>${vertx.health.port}</HONO_REGISTRY_AMQP_HEALTH_CHECK_PORT>
-                  <HONO_REGISTRY_AMQP_HEALTH_CHECK_BIND_ADDRESS>0.0.0.0</HONO_REGISTRY_AMQP_HEALTH_CHECK_BIND_ADDRESS>
-                  <HONO_REGISTRY_AMQP_INSECURE_PORT_BIND_ADDRESS>0.0.0.0</HONO_REGISTRY_AMQP_INSECURE_PORT_BIND_ADDRESS>
-                  <HONO_REGISTRY_AMQP_INSECURE_PORT_ENABLED>true</HONO_REGISTRY_AMQP_INSECURE_PORT_ENABLED>
-                  <HONO_REGISTRY_AMQP_MAX_INSTANCES>1</HONO_REGISTRY_AMQP_MAX_INSTANCES>
-                  <HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET>${hono.regAssertion.sharedSecret}</HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET>
-                  <SPRING_PROFILES_ACTIVE>dev</SPRING_PROFILES_ACTIVE>
-                </env>
-              </resources>
             </configuration>
           </plugin>
         </plugins>

@@ -35,6 +35,7 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
       The shared secret to use for creating/validating registration assertions.
      -->
     <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
+    <hono.auth.validation.certPath>/run/secrets/auth-server-cert.pem</hono.auth.validation.certPath>
   </properties>
 
   <dependencies>
@@ -149,7 +150,7 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>hono-demo-certs,hono-dispatch-router,hono-service-auth,hono-service-messaging</includeArtifactIds>
+              <includeArtifactIds>hono-demo-certs,hono-dispatch-router,hono-service-auth,hono-service-messaging,hono-service-device-registry</includeArtifactIds>
               <outputDirectory>${project.build.directory}/config</outputDirectory>
               <includes>*.pem,qpid/*,sasl/*,META-INF/fabric8/**/*.yml</includes>
               <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>

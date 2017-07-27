@@ -137,7 +137,6 @@
     <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
     <hono.auth.host>hono-service-auth.hono</hono.auth.host>
-    <hono.auth.validation.certPath>/etc/hono/certs/auth-server-cert.pem</hono.auth.validation.certPath>
   </properties>
 
   <modules>

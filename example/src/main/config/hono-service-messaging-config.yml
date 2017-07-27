@@ -1,12 +1,13 @@
 hono:
   auth:
-    host: hono-service-auth.hono
+    host: ${hono.auth.host}
     port: 5671
     keyPath: /run/secrets/hono-messaging-key.pem
     certPath: /run/secrets/hono-messaging-cert.pem
     trustStorePath: /run/secrets/trusted-certs.pem
+    name: 'Hono Messaging'
     validation:
-      certPath: /run/secrets/auth-server-cert.pem
+      certPath: ${hono.auth.validation.certPath}
   downstream:
     host: hono-dispatch-router.hono
     port: 5673
@@ -20,8 +21,6 @@ hono:
     healthCheckPort: 8088
     maxInstances: 1
     bindAddress: 0.0.0.0
-    insecurePortEnabled: true
-    insecurePortBindAddress: 0.0.0.0
     validation:
       sharedSecret: ${hono.regAssertion.sharedSecret}
   metric:

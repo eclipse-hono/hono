@@ -74,20 +74,18 @@ echo ... done
 
 echo
 echo Deploying Device Registry ...
+docker secret create -l $NS device-registry-key.pem $CERTS/device-registry-key.pem
+docker secret create -l $NS device-registry-cert.pem $CERTS/device-registry-cert.pem
+docker secret create -l $NS hono-service-device-registry-config.yml $CONFIG/hono-service-device-registry-config.yml
 docker service create -l $NS --detach --name hono-service-device-registry --network $NS \
+  --secret device-registry-key.pem \
+  --secret device-registry-cert.pem \
+  --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
-  --env HONO_AUTH_HOST=hono-service-auth.hono \
-  --env HONO_AUTH_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem \
-  --env HONO_AUTH_NAME='Hono Device Registry' \
-  --env HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem \
-  --env HONO_REGISTRY_AMQP_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_REGISTRY_AMQP_KEY_PATH=/etc/hono/certs/device-registry-key.pem \
-  --env HONO_REGISTRY_AMQP_CERT_PATH=/etc/hono/certs/device-registry-cert.pem \
-  --env HONO_REGISTRY_AMQP_INSECURE_PORT_ENABLED=false \
-  --env HONO_REGISTRY_AMQP_MAX_INSTANCES=1 \
-  --env HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0 \
+  --secret hono-service-device-registry-config.yml \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env SPRING_PROFILES_ACTIVE=default,dev \
+  --env SPRING_PROFILES_ACTIVE=dev \
   eclipsehono/hono-service-device-registry:${project.version}
 echo ... done
 
@@ -104,7 +102,7 @@ docker service create -l $NS --detach --name hono-service-messaging --network $N
   --secret hono-service-messaging-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env SPRING_PROFILES_ACTIVE=default,dev \
+  --env SPRING_PROFILES_ACTIVE=dev \
   eclipsehono/hono-service-messaging:${project.version}
 echo ... done
 
