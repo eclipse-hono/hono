@@ -82,10 +82,8 @@ public class CredentialsMessageFilterTest {
     }
 
     private ResourceIdentifier getResourceIdentifier(final String tenant, final String device) {
-        return ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, tenant, device);
+        return ResourceIdentifier.from(CredentialsConstants.CREDENTIALS_ENDPOINT, tenant, device);
     }
-
-
 
     private Message givenAMessageHavingProperties(final String action) {
         final Message msg = ProtonHelper.message();
