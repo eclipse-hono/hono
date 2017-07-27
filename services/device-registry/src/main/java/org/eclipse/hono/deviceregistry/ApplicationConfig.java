@@ -38,6 +38,10 @@ import org.springframework.context.annotation.Scope;
 @Configuration
 public class ApplicationConfig {
 
+    private static final String BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER = "deviceRegistryAmqpServer";
+
+    private static final String BEAN_NAME_DEVICE_REGISTRY_REST_SERVER = "deviceRegistryRestServer";
+
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
      * 
@@ -54,6 +58,13 @@ public class ApplicationConfig {
         return Vertx.vertx(options);
     }
 
+
+    @Bean(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER)
+    @Scope("prototype")
+    public DeviceRegistryAmqpServer deviceRegistryAmqpServer(){
+        return new DeviceRegistryAmqpServer();
+    }
+
     /**
      * Exposes a factory for creating service instances as a Spring bean.
      * 
@@ -63,8 +74,14 @@ public class ApplicationConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean amqpServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(DeviceRegistryAmqpServer.class.getName());
+        factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER);
         return factory;
+    }
+
+    @Bean(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER)
+    @Scope("prototype")
+    public DeviceRegistryRestServer deviceRegistryRestServer(){
+        return new DeviceRegistryRestServer();
     }
 
     /**
@@ -77,7 +94,7 @@ public class ApplicationConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean restServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(DeviceRegistryRestServer.class.getName());
+        factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER);
         return factory;
     }
 

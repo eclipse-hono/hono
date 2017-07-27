@@ -34,8 +34,6 @@ import java.util.Objects;
  * It implements Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> and
  * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
  */
-@Component
-@Scope("prototype")
 public final class DeviceRegistryAmqpServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     private ConnectionFactory authenticationService;

@@ -12,14 +12,10 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Verticle;
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.AbstractApplication;
-import org.eclipse.hono.service.HonoBeanNameGenerator;
 import org.eclipse.hono.service.NewAbstractApplication;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.credentials.CredentialsService;
@@ -27,7 +23,6 @@ import org.eclipse.hono.service.registration.RegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
@@ -40,7 +35,7 @@ import io.vertx.core.Future;
  * and <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
  * </p>
  */
-@ComponentScan(basePackages = { "org.eclipse.hono.service", "org.eclipse.hono.deviceregistry" }, nameGenerator = HonoBeanNameGenerator.class)
+@ComponentScan(basePackages = { "org.eclipse.hono.service", "org.eclipse.hono.deviceregistry" })
 @Configuration
 @EnableAutoConfiguration
 public class Application extends NewAbstractApplication {

@@ -41,8 +41,6 @@ import org.springframework.stereotype.Component;
  *
  * TODO: add all operations of the Registration API.
  */
-@Component
-@Scope("prototype")
 public class DeviceRegistryRestServer extends HttpServiceBase<ServiceConfigProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryRestServer.class);
