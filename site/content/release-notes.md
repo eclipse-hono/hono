@@ -6,9 +6,14 @@ weight = 800
 
 ## 0.5-M7 (not yet released)
 
+### New Features
+
+* The Metrics uses templates and tags of InfluxDB, are selectable by tenant in Grafana and works with scaled *Hono Messaging* instances  
+
 ### Configuration Changes
 
 * The *Device Registry* and *Auth Server* components now support configuration of both an *AMQP* and/or an *HTTP* endpoint implementing the *Device Registration* and *Authentication* APIs respectively. For that purpose the environment variable names for configuring these components have been adapted accordingly.
+* Metrics default for the prefix in the Graphite reporter is now the hostname
 
 See component docs for details.
 

@@ -26,9 +26,10 @@ docker secret create -l $NS trusted-certs.pem $CERTS/trusted-certs.pem
 
 echo
 echo Deploying Influx DB and Grafana ...
-docker service create -l $NS --detach --name influxdb --network $NS -p 2003:2003 -p 8083:8083 -p 8086:8086 \
-  --env INFLUXDB_GRAPHITE_ENABLED=true \
+docker service create -l $NS --detach --name influxdb --network $NS \
   --env INFLUXDB_ADMIN_ENABLED=true \
+  --env INFLUXDB_GRAPHITE_0_ENABLED=true \
+  --env INFLUXDB_GRAPHITE_0_TEMPLATES='*.counter.hono.messaging.receivers.upstream.links.* host.measurement.measurement.measurement.measurement.measurement.measurement.type.tenant.measurement*, *.counter.hono.messaging.senders.downstream.* host.measurement.measurement.measurement.measurement.measurement.type.tenant.measurement*, *.gauge.hono.messaging.link.downstream.credits.* host.measurement.measurement.measurement.measurement.measurement.measurement.type.tenant, *.counter.hono.messaging.messages.* host.measurement.measurement.measurement.measurement.type.tenant.measurement*, *.meter.hono.messaging.messages.* host.measurement.measurement.measurement.measurement.type.tenant.measurement*, host.measurement*' \
   influxdb:${influxdb.version}
 docker service create -l $NS --detach --name grafana --network $NS -p 3000:3000 eclipsehono/grafana:${project.version}
 echo ... done

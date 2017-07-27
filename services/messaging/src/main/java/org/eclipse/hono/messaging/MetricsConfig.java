@@ -12,7 +12,9 @@
 
 package org.eclipse.hono.messaging;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -40,8 +42,10 @@ import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 @Configuration
 public class MetricsConfig {
 
-    private static final String HONO = "hono";
-    private static final Logger LOG = LoggerFactory.getLogger(MetricsConfig.class);
+    private static final String HONO    = "hono";
+    private static final String UNKNOWN = "unknown";
+
+    private static final Logger LOG     = LoggerFactory.getLogger(MetricsConfig.class);
 
     private final MetricRegistry metricRegistry;
 
@@ -96,13 +100,22 @@ public class MetricsConfig {
             @Value("${hono.metric.reporter.graphite.prefix:}") final String prefix) {
         LOG.info("metrics - graphite reporter activated: {}:{}  prefix: {}  period: {}",host,port,prefix,period);
         final Graphite graphite = new Graphite(new InetSocketAddress(host, port));
+        String processedPrefix = prefix;
+        if(processedPrefix.isEmpty()) {
+            try {
+                processedPrefix = InetAddress.getLocalHost().getHostName();
+            } catch(UnknownHostException exception) {
+                processedPrefix = UNKNOWN;
+            }
+        }
         final GraphiteReporter reporter = GraphiteReporter.forRegistry(metricRegistry)
                 .convertRatesTo(TimeUnit.SECONDS)
                 .convertDurationsTo(TimeUnit.MILLISECONDS)
                 .filter(MetricFilter.ALL)
-                .prefixedWith(prefix)
+                .prefixedWith(processedPrefix)
                 .build(graphite);
         reporter.start(period, TimeUnit.MILLISECONDS);
         return reporter;
     }
+
 }

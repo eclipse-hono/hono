@@ -57,6 +57,7 @@ public final class TestSupport {
     public static final String CLIENT_CONTAINER = "hono-client";
     public static final String CLIENT_ID = "protocol_adapter";
     public static final String CON_ID = "connection-1";
+    public static final String DEFAULT_ADDRESS = "type/tenant";
     public static final int DEFAULT_CREDITS = 20;
 
     public static ProtonConnection openConnection(final TestContext ctx, final Vertx vertx, final String host, final int port) {
@@ -202,6 +203,7 @@ public final class TestSupport {
         UpstreamReceiver client = mock(UpstreamReceiver.class);
         when(client.getLinkId()).thenReturn(linkId);
         when(client.getConnectionId()).thenReturn(connectionId);
+        when(client.getTargetAddress()).thenReturn(DEFAULT_ADDRESS);
         return client;
     }
 
@@ -223,7 +225,9 @@ public final class TestSupport {
         when(sender.sendQueueDrainHandler(drainHandlerCaptor.capture())).then(invocation -> {
             return sender;
         });
-        when(sender.getTarget()).thenReturn(new Target());
+        Target target = new Target();
+        target.setAddress(DEFAULT_ADDRESS);
+        when(sender.getTarget()).thenReturn(target);
         return sender;
     }
 

@@ -12,6 +12,8 @@
 
 package org.eclipse.hono.messaging;
 
+import java.util.Objects;
+
 /**
  * Constants/metric names
  */
@@ -24,28 +26,33 @@ public class MetricConstants {
     }
 
     public static String metricNameDownstreamLinkCredits(final String address) {
-        return PREFIX + ".link.downstream.credits." + address;
+        return PREFIX + ".link.downstream.credits." + normalizeAddress(address);
     }
 
     public static String metricNameDownstreamSenders(final String address) {
-        return PREFIX + ".senders.downstream." + address;
+        return PREFIX + ".senders.downstream." + normalizeAddress(address);
     }
 
     public static String metricNameUpstreamLinks(final String address) {
-        return PREFIX + ".receivers.upstream.links." + address;
+        return PREFIX + ".receivers.upstream.links." + normalizeAddress(address);
     }
 
     public static String metricNameProcessedMessages(final String address) {
         // prefix "meter" is used by spring boot actuator together with dropwizard metrics
-        return "meter." + PREFIX + ".messages." + address + ".processed";
+        return "meter." + PREFIX + ".messages." + normalizeAddress(address) + ".processed";
     }
 
     public static String metricNameDiscardedMessages(final String address) {
-        return PREFIX + ".messages." + address + ".discarded";
+        return PREFIX + ".messages." + normalizeAddress(address) + ".discarded";
     }
 
     public static String metricNameUndeliverableMessages(final String address) {
-        return PREFIX + ".messages." + address + ".undeliverable";
+        return PREFIX + ".messages." + normalizeAddress(address) + ".undeliverable";
+    }
+
+    private static String normalizeAddress(final String address) {
+        Objects.requireNonNull(address);
+        return address.replace('/','.');
     }
 
 }
