@@ -76,7 +76,7 @@ public class NewAbstractApplication {
      * @param definedServiceFactories The serviceFactories.
      */
     @Autowired(required = false)
-    public final void addServiceFactories(final List<ObjectFactory<? extends AbstractServiceBase>> definedServiceFactories) {
+    public final void addServiceFactories(final Collection<ObjectFactory<? extends AbstractServiceBase>> definedServiceFactories) {
         Objects.requireNonNull(definedServiceFactories);
         serviceFactories.addAll(definedServiceFactories);
         log.debug("added {} service factories", definedServiceFactories.size());
