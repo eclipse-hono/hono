@@ -46,7 +46,7 @@ public class NewAbstractApplication {
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final Set<ObjectFactory<? extends AbstractServiceBase>> serviceFactories = new HashSet<>();
+    private Set<ObjectFactory<? extends AbstractServiceBase>> serviceFactories;
 
     private Vertx vertx;
 
@@ -71,15 +71,17 @@ public class NewAbstractApplication {
     }
 
     /**
-     * Adds multiple serviceFactories to this server.
+     * Sets the factories to use for creating service instances to deploy the Vert.x container during startup.
+     * <p>
      *
-     * @param definedServiceFactories The serviceFactories.
+     * @param factories The service factories.
+     * @throws NullPointerException if factories is {@code null}.
      */
-    @Autowired(required = false)
-    public final void addServiceFactories(final Collection<ObjectFactory<? extends AbstractServiceBase>> definedServiceFactories) {
-        Objects.requireNonNull(definedServiceFactories);
-        serviceFactories.addAll(definedServiceFactories);
-        log.debug("added {} service factories", definedServiceFactories.size());
+    @Autowired
+    public final void setServiceFactories(final Set<ObjectFactory<? extends AbstractServiceBase>> factories) {
+        Objects.requireNonNull(factories);
+        serviceFactories = factories;
+        log.debug("added {} service factories", factories.size());
     }
 
     /**
