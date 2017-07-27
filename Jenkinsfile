@@ -32,10 +32,10 @@ node('iothub') {
                         -Ddocker.host.name=sazvl0062.saz.bosch-si.com\\
                         """.stripIndent()
                 }
-                // deploy documentation to nginx via shared directory
-                sh "rm -rf /home/jenkins-slave/docker-share/hono-site"
-                sh "mkdir -p /home/jenkins-slave/docker-share/hono-site"
-                sh "cp -R site/target/* /home/jenkins-slave/docker-share/hono-site"
+                // deploy documentation to nginx
+                sh "rm -rf /opt/nginx/data/html/hono-site"
+                sh "mkdir -p /opt/nginx/data/html/hono-site"
+                sh "cp -R site/target/* /opt/nginx/data/html/hono-site"
             }
         }
     }
