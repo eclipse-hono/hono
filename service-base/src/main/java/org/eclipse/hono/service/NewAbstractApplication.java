@@ -20,15 +20,15 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.*;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.Environment;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 /**
  * TODO: fix me.
@@ -46,7 +46,7 @@ public class NewAbstractApplication {
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final Set<ObjectFactory<? extends ConfigurationSupportingVerticle>> serviceFactories = new HashSet<>();
+    private final Set<ObjectFactory<? extends AbstractServiceBase>> serviceFactories = new HashSet<>();
 
     private Vertx vertx;
 
@@ -76,7 +76,7 @@ public class NewAbstractApplication {
      * @param definedServiceFactories The serviceFactories.
      */
     @Autowired(required = false)
-    public final void addServiceFactories(final List<ObjectFactory<? extends ConfigurationSupportingVerticle>> definedServiceFactories) {
+    public final void addServiceFactories(final List<ObjectFactory<? extends AbstractServiceBase>> definedServiceFactories) {
         Objects.requireNonNull(definedServiceFactories);
         serviceFactories.addAll(definedServiceFactories);
         log.debug("added {} service factories", definedServiceFactories.size());
@@ -109,10 +109,10 @@ public class NewAbstractApplication {
 
         final int startupTimeoutSeconds = 20; // TODO: how to determine timeout? Really configurable per service?
 
-        for (ObjectFactory<? extends ConfigurationSupportingVerticle> serviceFactory : serviceFactories) {
+        for (ObjectFactory<? extends AbstractServiceBase> serviceFactory : serviceFactories) {
 
 
-            final ConfigurationSupportingVerticle firstServiceInstance = serviceFactory.getObject();
+            final AbstractServiceBase firstServiceInstance = serviceFactory.getObject();
             final ServiceConfigProperties config = (ServiceConfigProperties) firstServiceInstance.getConfig();
             final int maxInstances = config == null ? 1 : config.getMaxInstances();
 //            final int startupTimeoutSeconds = config == null ? 20 : config.getStartupTimeout();
@@ -159,8 +159,8 @@ public class NewAbstractApplication {
         return Future.succeededFuture();
     }
 
-    final Future<Void> deployServiceVerticles(final ConfigurationSupportingVerticle firstServiceInstance,
-                                              ObjectFactory<? extends ConfigurationSupportingVerticle> serviceFactory, final int maxInstances) {
+    final Future<Void> deployServiceVerticles(final AbstractServiceBase firstServiceInstance,
+            ObjectFactory<? extends AbstractServiceBase> serviceFactory, final int maxInstances) {
 
         Objects.requireNonNull(firstServiceInstance);
         final Future<Void> result = Future.future();
@@ -171,7 +171,7 @@ public class NewAbstractApplication {
         deploymentTracker.add(deployTracker);
 
         for (int i = 0; i < maxInstances; i++) {
-            final ConfigurationSupportingVerticle serviceInstance = serviceFactory.getObject();
+            final AbstractServiceBase serviceInstance = serviceFactory.getObject();
             log.debug("created new instance of service: " + serviceInstance);
             final Future<String> tracker = Future.future();
             vertx.deployVerticle(serviceInstance, tracker.completer());
@@ -234,20 +234,6 @@ public class NewAbstractApplication {
             shutdownHandler.handle(Boolean.FALSE);
         }
     }
-
-    // TODO: How could we provide this?
-//    /**
-//     * Invoked with each created service instance.
-//     * <p>
-//     * Subclasses may override this method in order to customize
-//     * the service instance before it gets deployed to the Vert.x
-//     * container.
-//     *
-//     * @param instance The service instance.
-//     */
-//    protected void customizeServiceInstance(final S instance) {
-//        // empty
-//    }
 
     /**
      * Invoked after the service instances have been deployed successfully.
