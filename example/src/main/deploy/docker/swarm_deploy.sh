@@ -63,6 +63,7 @@ docker secret create -l $NS hono-service-auth-config.yml $CONFIG/hono-service-au
 docker service create -l $NS --detach --name hono-service-auth --network $NS \
   --secret auth-server-key.pem \
   --secret auth-server-cert.pem \
+  --secret trusted-certs.pem \
   --secret hono-service-auth-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
