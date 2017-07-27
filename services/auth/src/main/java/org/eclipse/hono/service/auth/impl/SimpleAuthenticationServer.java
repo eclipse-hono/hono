@@ -24,11 +24,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
-import io.vertx.proton.ProtonSession;
 
 
 /**
@@ -37,7 +36,7 @@ import io.vertx.proton.ProtonSession;
  */
 @Component
 @Scope("prototype")
-public class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
+public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     @Autowired
     @Override
@@ -50,24 +49,9 @@ public class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigPro
         return "Hono-Auth";
     }
 
-    protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
-        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getInsecurePortBindAddress(), getInsecurePort()));
-        setRemoteConnectionOpenHandler(connection);
-    };
-
-    private void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
-
-        connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
-        connection.receiverOpenHandler(remoteOpenReceiver -> {
-            remoteOpenReceiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "no such node"));
-        });
-        connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
-        connection.disconnectHandler(this::handleRemoteDisconnect);
-        connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
-        connection.openHandler(remoteOpen -> {
-            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
-            connection.open();
-        });
+    @Override
+    protected void handleReceiverOpen(ProtonConnection con, ProtonReceiver receiver) {
+        receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "cannot write to node")).close();
     }
 
     /**
@@ -76,6 +60,7 @@ public class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigPro
      * @param con the connection to the client.
      * @param sender the sender created for the link.
      */
+    @Override
     protected void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
 
         final Source remoteSource = sender.getRemoteSource();
