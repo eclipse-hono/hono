@@ -9,8 +9,16 @@
   </parent>
 
   <artifactId>hono-artemis</artifactId>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
+  <name>Hono Artemis</name>
   <description>Module for building a Docker image for ActiveMQ Artemis using the Hono default configuration.</description>
+
+  <properties>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <maven.source.skip>true</maven.source.skip>
+    <gpg.skip>true</gpg.skip>
+    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -110,5 +118,4 @@
       </build>
     </profile>
   </profiles>
-  <name>Hono Artemis</name>
 </project>

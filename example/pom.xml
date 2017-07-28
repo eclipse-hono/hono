@@ -79,7 +79,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-artemis</artifactId>
       <version>${project.version}</version>
-      <type>pom</type>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -89,7 +88,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-metrics</artifactId>
       <version>${project.version}</version>
-      <type>pom</type>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -165,7 +163,9 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                 hono-service-messaging,
                 hono-service-device-registry,
                 hono-adapter-rest-vertx,
-                hono-adapter-mqtt-vertx
+                hono-adapter-mqtt-vertx,
+                hono-metrics,
+                hono-artemis
               </includeArtifactIds>
               <outputDirectory>${project.build.directory}/config</outputDirectory>
               <includes>

@@ -25,12 +25,12 @@ kubectl create namespace $NS
 
 echo
 echo Deploying Grafana ...
-kubectl create -f $HONO_HOME/metrics/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo
 echo Deploying Artemis broker ...
-kubectl create -f $HONO_HOME/broker/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo

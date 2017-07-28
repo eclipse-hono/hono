@@ -25,28 +25,14 @@
     <fileSets>
 
         <fileSet>
-            <outputDirectory>example/target/deploy</outputDirectory>
+            <outputDirectory>deploy</outputDirectory>
             <directory>${project.build.directory}/deploy</directory>
             <fileMode>0755</fileMode>
         </fileSet>
 
         <fileSet>
-            <outputDirectory>example/target/config</outputDirectory>
+            <outputDirectory>config</outputDirectory>
             <directory>${project.build.directory}/config</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
-        <fileSet>
-            <outputDirectory>metrics/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>../metrics/target/classes/META-INF/fabric8</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
-        <fileSet>
-            <outputDirectory>broker/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>../broker/target/classes/META-INF/fabric8</directory>
             <fileMode>0644</fileMode>
             <directoryMode>0755</directoryMode>
         </fileSet>

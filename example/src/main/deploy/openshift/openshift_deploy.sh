@@ -39,11 +39,11 @@ oc new-project hono --description="Open source IoT connectivity" --display-name=
 # starting to deploy Eclipse Hono (developer user)
 echo
 echo Deploying Grafana ...
-oc create -f $HONO_HOME/metrics/target/classes/META-INF/fabric8/openshift.yml
+oc create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying Apache ActiveMQ Artemis Broker ...
-oc create -f $HONO_HOME/broker/target/classes/META-INF/fabric8/openshift.yml
+oc create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying Qpid Dispatch Router ...

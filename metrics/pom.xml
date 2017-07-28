@@ -10,8 +10,14 @@
 
   <artifactId>hono-metrics</artifactId>
   <name>Metrics Docker Images</name>
-  <packaging>pom</packaging>
   <description>Docker image to visualize Hono metrics</description>
+
+  <properties>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <maven.source.skip>true</maven.source.skip>
+    <gpg.skip>true</gpg.skip>
+    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+  </properties>
 
   <dependencies>
     <dependency>
