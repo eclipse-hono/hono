@@ -17,9 +17,17 @@ NS=hono
 
 echo UNDEPLOYING ECLIPSE HONO FROM DOCKER SWARM
 
-docker service rm \
-  hono-adapter-mqtt-vertx \
-  hono-adapter-rest-vertx
+docker service rm hono-adapter-rest-vertx
+docker secret rm \
+  rest-adapter-key.pem \
+  rest-adapter-cert.pem \
+  hono-adapter-rest-vertx-config.yml
+
+docker service rm hono-adapter-mqtt-vertx
+docker secret rm \
+  mqtt-adapter-key.pem \
+  mqtt-adapter-cert.pem \
+  hono-adapter-mqtt-vertx-config.yml
 
 docker service rm hono-service-messaging
 docker secret rm \

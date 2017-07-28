@@ -1,0 +1,31 @@
+hono:
+  mqtt:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    keyPath: /run/secrets/mqtt-adapter-key.pem
+    certPath: /run/secrets/mqtt-adapter-cert.pem
+    maxInstances: 1
+    healthCheckPort: 8088
+    healthCheckBindAddress: 0.0.0.0
+  messaging:
+    name: 'Hono MQTT Adapter'
+    host: ${hono.messaging.host}
+    port: 5671
+    username: ${hono.adapter.mqtt.username}
+    password: ${hono.adapter.mqtt.password}
+    trustStorePath: ${hono.trustStore.path}
+  registration:
+    name: 'Hono MQTT Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.mqtt.username}
+    password: ${hono.adapter.mqtt.password}
+    trustStorePath: ${hono.trustStore.path}
+  credentials:
+    name: 'Hono MQTT Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.mqtt.username}
+    password: ${hono.adapter.mqtt.password}
+    trustStorePath: ${hono.trustStore.path}

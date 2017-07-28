@@ -27,15 +27,23 @@
 
   <name>Hono Examples</name>
   <description>A collection of example code for sending and receiving telemetry data using HonoClient.
-Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kubernetes or an Openshift cluster.</description>
+Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kubernetes or an Openshift cluster using example configuration properties.</description>
 
   <properties>
     <docker.skip.build>true</docker.skip.build>
+    <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
+    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
+    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
     <!-- 
       The shared secret to use for creating/validating registration assertions.
      -->
     <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
     <hono.auth.validation.certPath>/run/secrets/auth-server-cert.pem</hono.auth.validation.certPath>
+    <hono.adapter.mqtt.username>mqtt-adapter@HONO</hono.adapter.mqtt.username>
+    <hono.adapter.mqtt.password>mqtt-secret</hono.adapter.mqtt.password>
+    <hono.adapter.rest.username>rest-adapter@HONO</hono.adapter.rest.username>
+    <hono.adapter.rest.password>rest-secret</hono.adapter.rest.password>
+    <hono.trustStore.path>/run/secrets/trusted-certs.pem</hono.trustStore.path>
   </properties>
 
   <dependencies>
@@ -150,9 +158,22 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>hono-demo-certs,hono-dispatch-router,hono-service-auth,hono-service-messaging,hono-service-device-registry</includeArtifactIds>
+              <includeArtifactIds>
+                hono-demo-certs,
+                hono-dispatch-router,
+                hono-service-auth,
+                hono-service-messaging,
+                hono-service-device-registry,
+                hono-adapter-rest-vertx,
+                hono-adapter-mqtt-vertx
+              </includeArtifactIds>
               <outputDirectory>${project.build.directory}/config</outputDirectory>
-              <includes>*.pem,qpid/*,sasl/*,META-INF/fabric8/**/*.yml</includes>
+              <includes>
+                *.pem,
+                qpid/*,
+                sasl/*,
+                META-INF/fabric8/**/*.yml
+              </includes>
               <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
               <stripClassifier>true</stripClassifier>
               <stripVersion>true</stripVersion>

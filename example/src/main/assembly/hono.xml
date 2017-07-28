@@ -38,13 +38,6 @@
         </fileSet>
 
         <fileSet>
-            <outputDirectory>example/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>${project.build.outputDirectory}/META-INF/fabric8/</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
-        <fileSet>
             <outputDirectory>metrics/target/classes/META-INF/fabric8/</outputDirectory>
             <directory>../metrics/target/classes/META-INF/fabric8</directory>
             <fileMode>0644</fileMode>
@@ -54,20 +47,6 @@
         <fileSet>
             <outputDirectory>broker/target/classes/META-INF/fabric8/</outputDirectory>
             <directory>../broker/target/classes/META-INF/fabric8</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
-        <fileSet>
-            <outputDirectory>adapters/rest-vertx/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>../adapters/rest-vertx/target/classes/META-INF/fabric8</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
-        <fileSet>
-            <outputDirectory>adapters/mqtt-vertx/target/classes/META-INF/fabric8/</outputDirectory>
-            <directory>../adapters/mqtt-vertx/target/classes/META-INF/fabric8</directory>
             <fileMode>0644</fileMode>
             <directoryMode>0755</directoryMode>
         </fileSet>

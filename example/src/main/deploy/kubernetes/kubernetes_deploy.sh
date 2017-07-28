@@ -83,12 +83,24 @@ echo ... done
 
 echo
 echo Deploying HTTP REST adapter ...
-kubectl create -f $HONO_HOME/adapters/rest-vertx/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create secret generic hono-adapter-rest-vertx-conf \
+  --from-file=$CERTS/rest-adapter-key.pem \
+  --from-file=$CERTS/rest-adapter-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=application.yml=$CONFIG/hono-adapter-rest-vertx-config.yml \
+  --namespace $NS
+kubectl create -f $CONFIG/hono-adapter-rest-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo
 echo Deploying MQTT adapter ...
-kubectl create -f $HONO_HOME/adapters/mqtt-vertx/target/classes/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create secret generic hono-adapter-mqtt-vertx-conf \
+  --from-file=$CERTS/mqtt-adapter-key.pem \
+  --from-file=$CERTS/mqtt-adapter-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=application.yml=$CONFIG/hono-adapter-mqtt-vertx-config.yml \
+  --namespace $NS
+kubectl create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED TO KUBERNETES

@@ -130,13 +130,6 @@
       Build images defined in modules with packaging type "pom".
      -->
     <fabric8.skip.build.pom>false</fabric8.skip.build.pom>
-    <!-- 
-      The default path to load the trusted CA certificates from.
-     -->
-    <hono.trustStore.path>/etc/hono/certs/trusted-certs.pem</hono.trustStore.path>
-    <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
-    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
-    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
   </properties>
 
   <modules>

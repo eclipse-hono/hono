@@ -108,26 +108,15 @@ echo ... done
 
 echo
 echo Deploying HTTP REST adapter ...
+docker secret create -l $NS rest-adapter-key.pem $CERTS/rest-adapter-key.pem
+docker secret create -l $NS rest-adapter-cert.pem $CERTS/rest-adapter-cert.pem
+docker secret create -l $NS hono-adapter-rest-vertx-config.yml $CONFIG/hono-adapter-rest-vertx-config.yml
 docker service create -l $NS --detach --name hono-adapter-rest-vertx --network $NS -p 8080:8080 -p 8443:8443 \
+  --secret rest-adapter-key.pem \
+  --secret rest-adapter-cert.pem \
   --secret trusted-certs.pem \
-  --env HONO_MESSAGING_NAME='Hono REST Adapter' \
-  --env HONO_MESSAGING_HOST=hono-service-messaging.hono \
-  --env HONO_MESSAGING_PORT=5671 \
-  --env HONO_MESSAGING_USERNAME=rest-adapter@HONO \
-  --env HONO_MESSAGING_PASSWORD=rest-secret \
-  --env HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem \
-  --env HONO_REGISTRATION_NAME='Hono REST Adapter' \
-  --env HONO_REGISTRATION_HOST=hono-service-device-registry.hono \
-  --env HONO_REGISTRATION_PORT=5671 \
-  --env HONO_REGISTRATION_USERNAME=rest-adapter@HONO \
-  --env HONO_REGISTRATION_PASSWORD=rest-secret \
-  --env HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem \
-  --env HONO_HTTP_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_HTTP_INSECURE_PORT_ENABLED=true \
-  --env HONO_HTTP_KEY_PATH=/etc/hono/certs/rest-adapter-key.pem \
-  --env HONO_HTTP_CERT_PATH=/etc/hono/certs/rest-adapter-cert.pem \
-  --env HONO_HTTP_MAX_INSTANCES=1 \
+  --secret hono-adapter-rest-vertx-config.yml \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-rest-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   eclipsehono/hono-adapter-rest-vertx:${project.version}
@@ -135,26 +124,15 @@ echo ... done
 
 echo
 echo Deploying MQTT adapter ...
+docker secret create -l $NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key.pem
+docker secret create -l $NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
+docker secret create -l $NS hono-adapter-mqtt-vertx-config.yml $CONFIG/hono-adapter-mqtt-vertx-config.yml
 docker service create -l $NS --detach --name hono-adapter-mqtt-vertx --network $NS -p 1883:1883 -p 8883:8883 \
+  --secret mqtt-adapter-key.pem \
+  --secret mqtt-adapter-cert.pem \
   --secret trusted-certs.pem \
-  --env HONO_MESSAGING_NAME='Hono MQTT Adapter' \
-  --env HONO_MESSAGING_HOST=hono-service-messaging.hono \
-  --env HONO_MESSAGING_PORT=5671 \
-  --env HONO_MESSAGING_USERNAME=mqtt-adapter@HONO \
-  --env HONO_MESSAGING_PASSWORD=mqtt-secret \
-  --env HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem \
-  --env HONO_REGISTRATION_NAME='Hono MQTT Adapter' \
-  --env HONO_REGISTRATION_HOST=hono-service-device-registry.hono \
-  --env HONO_REGISTRATION_PORT=5671 \
-  --env HONO_REGISTRATION_USERNAME=mqtt-adapter@HONO \
-  --env HONO_REGISTRATION_PASSWORD=mqtt-secret \
-  --env HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem \
-  --env HONO_MQTT_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_MQTT_INSECURE_PORT_BIND_ADDRESS=0.0.0.0 \
-  --env HONO_MQTT_INSECURE_PORT_ENABLED=true \
-  --env HONO_MQTT_KEY_PATH=/etc/hono/certs/mqtt-adapter-key.pem \
-  --env HONO_MQTT_CERT_PATH=/etc/hono/certs/mqtt-adapter-cert.pem \
-  --env HONO_MQTT_MAX_INSTANCES=1 \
+  --secret hono-adapter-mqtt-vertx-config.yml \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   eclipsehono/hono-adapter-mqtt-vertx:${project.version}
