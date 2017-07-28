@@ -51,7 +51,7 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
         int remainingCredit = link.getCredit() - link.getQueued();
         if (downstreamCredit > remainingCredit) {
             int credit = downstreamCredit - remainingCredit;
-            LOG.debug("replenishing client [{}] with {} credits", id, credit);
+            LOG.trace("replenishing client [{}] with {} credits", id, credit);
             link.flow(credit);
         } else {
             // link has remaining credit, no need to replenish yet
