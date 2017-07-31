@@ -14,16 +14,16 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.service.credentials.CredentialsSecretsValidator;
+import org.eclipse.hono.service.credentials.CredentialsUtils;
+import org.eclipse.hono.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -480,6 +480,60 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     public void registerLivenessChecks(final HealthCheckHandler handler) {
         handler.register("ping", status -> {
             status.complete(Status.OK());
+        });
+    }
+    private Future<CredentialsObject> getCredentialsForDevice(final String tenantId, final String type, final String authId) {
+
+        Future<CredentialsObject> result = Future.future();
+        getCredentialsClient(tenantId).compose(client -> {
+            Future<CredentialsResult<CredentialsObject>> credResultFuture = Future.future();
+            client.get(type, authId, credResultFuture.completer());
+            return credResultFuture;
+        }).compose(credResult -> {
+            if (credResult.getStatus() == HttpURLConnection.HTTP_OK) {
+                CredentialsObject payload = credResult.getPayload();
+                result.complete(payload);
+            } else if (credResult.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
+                result.fail(String.format("cannot retrieve credentials (not found for type <%s>, authId <%s>)",type,authId));
+            } else {
+                result.fail("cannot retrieve credentials");
+            }
+        }, result);
+
+        return result;
+    }
+
+    /**
+     * Validates an authentication object against credentials secrets available by the get operation of the
+     *  <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
+     * <p>The credentials are first retrieved from the credentials service, and then all matching validators are
+     * invoked until one is successful or all failed. The authentication object is validated iff at least
+     * one validator was successful.
+     *
+     * @param tenantId The tenantId to which the device belongs.
+     * @param type The type of credentials that are to be used for validation.
+     * @param authId The authId of the credentials that are to be used for validation.
+     * @param authenticationObject The authentication object to be validated, e.g. a password, a preshared-key, etc.
+
+     * @return Future The future object carrying the payload of the credentials get operation, if successful.
+     */
+    protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId,
+                                                              final Object authenticationObject) {
+        return getCredentialsForDevice(tenantId, type, authId).compose(payload -> {
+            Future<String> resultDeviceId = Future.future();
+            CredentialsSecretsValidator validator = CredentialsUtils.findAppropriateValidators(type);
+            try {
+                if (validator != null && validator.validate(payload, authenticationObject)) {
+                    resultDeviceId.complete(payload.getDeviceId());
+                } else {
+                    resultDeviceId.fail("credentials invalid - not validated");
+                }
+            }
+            catch (IllegalArgumentException e) {
+                resultDeviceId.fail(String.format("credentials invalid : %s", e.getMessage()));
+            }
+
+            return resultDeviceId;
         });
     }
 }
