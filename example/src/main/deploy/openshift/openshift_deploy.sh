@@ -44,6 +44,16 @@ oc create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying Apache ActiveMQ Artemis Broker ...
+oc create secret generic hono-artemis-conf \
+  --from-file=$CONFIG/hono-artemis-jar/etc/broker.xml \
+  --from-file=$CONFIG/hono-artemis-jar/etc/bootstrap.xml \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-users.properties \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-roles.properties \
+  --from-file=$CONFIG/hono-artemis-jar/etc/login.config \
+  --from-file=$CONFIG/hono-artemis-jar/etc/logging.properties \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis.profile \
+  --from-file=$CERTS/artemisKeyStore.p12 \
+  --from-file=$CERTS/trustStore.jks
 oc create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
