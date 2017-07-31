@@ -181,28 +181,39 @@ public final class MessageHelper {
      */
     public static JsonObject getJsonPayload(final Message msg) {
 
+        final String payload = getPayload(msg);
+        return (payload != null ? new JsonObject(payload) : null);
+    }
+
+    /**
+     * Gets a message's body as String object that can be used for constructing a JsonObject or bind a POJO using
+     * jackson-databind e.g.
+     *
+     * @param msg The AMQP 1.0 message to parse the body of.
+     * @return The message body parsed into a JSON object or {@code null} if the message does not have a <em>Data</em>
+     *         nor an <em>AmqpValue</em> section.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    public static String getPayload(final Message msg) {
+
         Objects.requireNonNull(msg);
         if (msg.getBody() == null) {
             LOG.debug("message has no body");
             return null;
-        } else {
-
-            JsonObject result = null;
-
-            if (msg.getBody() instanceof Data) {
-                Data body = (Data) msg.getBody();
-                result = new JsonObject(new String(body.getValue().getArray(), StandardCharsets.UTF_8));
-            } else if (msg.getBody() instanceof AmqpValue) {
-                AmqpValue body = (AmqpValue) msg.getBody();
-                if (body.getValue() instanceof String) {
-                    result = new JsonObject((String) body.getValue());
-                }
-            } else {
-                LOG.debug("unsupported body type [{}]", msg.getBody().getClass().getName());
-            }
-
-            return result;
         }
+
+        if (msg.getBody() instanceof Data) {
+            Data body = (Data) msg.getBody();
+            return new String(body.getValue().getArray(), StandardCharsets.UTF_8);
+        } else if (msg.getBody() instanceof AmqpValue) {
+            AmqpValue body = (AmqpValue) msg.getBody();
+            if (body.getValue() instanceof String) {
+                return (String) body.getValue();
+            }
+        }
+
+        LOG.debug("unsupported body type [{}]", msg.getBody().getClass().getName());
+        return null;
     }
 
     public static void addTenantId(final Message msg, final String tenantId) {

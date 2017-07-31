@@ -68,10 +68,10 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      *
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to.
-     * @param result The {@link RegistrationResult} object with the payload for the reply object.
+     * @param result The {@link RegistrationResult} object with the payload as JsonObject for the reply object.
      * @return JsonObject The json reply object that is to be sent back via the vert.x event bus.
      */
-    public static JsonObject getServiceReplyAsJson(final String tenantId, final String deviceId, final CredentialsResult result) {
+    public static JsonObject getServiceReplyAsJson(final String tenantId, final String deviceId, final CredentialsResult<JsonObject> result) {
         return getServiceReplyAsJson(result.getStatus(), tenantId, deviceId, result.getPayload());
     }
 

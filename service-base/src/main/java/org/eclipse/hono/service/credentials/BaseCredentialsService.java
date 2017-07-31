@@ -336,8 +336,8 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     }
 
     /**
-     * Wraps a given device ID and registration data into a JSON structure suitable
-     * to be returned to clients as the result of a registration operation.
+     * Wraps a given device ID and credentials data into a JSON structure suitable
+     * to be returned to clients as the result of a credentials operation.
      * 
      * @param deviceId The identifier of the device.
      * @param type The type of credentials returned.

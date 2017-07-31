@@ -22,6 +22,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -225,15 +226,24 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
                         // check that MQTT client tries to publish on topic with device_id same as on connection
                         if (resource.getResourceId().equals(endpoint.clientIdentifier())) {
+                            // check credentials for valid authentication
+                            // so far, only hashed-password supported, more to follow
+                            final String type = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
+                            final String user = (endpoint.auth() == null ? null : endpoint.auth().userName());
+                            final String protocolAdapterPassword = (endpoint.auth() == null ? null : endpoint.auth().password());
 
-                            Future<String> assertionTracker = getRegistrationAssertion(endpoint, resource);
-                            Future<MessageSender> senderTracker = getSenderTracker(message, resource);
+                            validateCredentialsForDevice(resource.getTenantId(), type, user, protocolAdapterPassword).compose(deviceId -> {
+                                LOG.trace("successfully authenticated device id <{}>", deviceId);
 
-                            CompositeFuture.all(assertionTracker, senderTracker).compose(ok -> {
-                                doUploadMessage(resource.getTenantId(), assertionTracker.result(), endpoint, message, senderTracker.result(), messageTracker);
+                                Future<Void> messageResult = Future.future();
+
+                                Future<String> assertionTracker = getRegistrationAssertion(endpoint, resource);
+                                Future<MessageSender> senderTracker = getSenderTracker(message, resource);
+
+                                CompositeFuture.all(assertionTracker, senderTracker).compose(ok -> {
+                                    doUploadMessage(resource.getTenantId(), assertionTracker.result(), endpoint, message, senderTracker.result(), messageTracker);
+                                }, messageResult);
                             }, messageTracker);
-
-
                         } else {
                             // MQTT client is trying to publish on a different device_id used on connection (MQTT has no way for errors)
                             messageTracker.fail("client not authorized");
@@ -255,6 +265,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
                     LOG.trace("removed registration assertion for client [{}]", endpoint.clientIdentifier());
             });
 
+            // TODO : check credentials here
             endpoint.accept(false);
         }
     }

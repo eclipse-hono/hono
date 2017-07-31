@@ -18,12 +18,12 @@ import io.vertx.core.json.JsonObject;
  * A container for the result returned by a Hono API that implements the request response pattern.
  *
  */
-public class RequestResponseResult {
+public class RequestResponseResult<T> {
 
     private final int status;
-    private final JsonObject payload;
+    private final T payload;
 
-    protected RequestResponseResult(final int status, final JsonObject payload) {
+    protected RequestResponseResult(final int status, final T payload) {
         this.status = status;
         this.payload = payload;
     }
@@ -38,7 +38,7 @@ public class RequestResponseResult {
     /**
      * @return the payload
      */
-    public final JsonObject getPayload() {
+    public final T getPayload() {
         return payload;
     }
 }

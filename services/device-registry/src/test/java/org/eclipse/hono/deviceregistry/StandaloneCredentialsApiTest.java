@@ -15,7 +15,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -34,6 +33,7 @@ import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -46,6 +46,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.net.HttpURLConnection.*;
@@ -219,7 +221,7 @@ public class StandaloneCredentialsApiTest {
         credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
-            JsonObject payload = s.result().getPayload();
+            CredentialsObject payload = s.result().getPayload();
 
             checkPayloadGetCredentialsContainsAuthIdAndType(payload);
             ok.complete();
@@ -237,7 +239,7 @@ public class StandaloneCredentialsApiTest {
         credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
-            JsonObject payload = s.result().getPayload();
+            CredentialsObject payload = s.result().getPayload();
 
             assertTrue(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(payload));
             ok.complete();
@@ -255,7 +257,7 @@ public class StandaloneCredentialsApiTest {
         credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
-            JsonObject payload = s.result().getPayload();
+            CredentialsObject payload = s.result().getPayload();
 
             checkPayloadGetCredentialsReturnsMultipleSecrets(payload);
             ok.complete();
@@ -270,7 +272,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsFirstSecretCorrectPassword(final TestContext ctx) throws UnsupportedEncodingException, NoSuchAlgorithmException {
         final Async ok = ctx.async();
 
-        final AtomicReference<JsonObject> payloadRef = new AtomicReference<>();
+        final AtomicReference<CredentialsObject> payloadRef = new AtomicReference<>();
 
         credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
@@ -293,7 +295,7 @@ public class StandaloneCredentialsApiTest {
         credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
-            JsonObject payload = s.result().getPayload();
+            CredentialsObject payload = s.result().getPayload();
 
             checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(payload);
             ok.complete();
@@ -311,40 +313,39 @@ public class StandaloneCredentialsApiTest {
         credentialsClient.get(CREDENTIALS_TYPE_PRESHARED_KEY, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
-            JsonObject payload = s.result().getPayload();
+            CredentialsObject payload = s.result().getPayload();
 
             assertFalse(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(payload));
             ok.complete();
         });
     }
 
-    private JsonObject pickFirstSecretFromPayload(final JsonObject payload) {
+    private Map<String, String> pickFirstSecretFromPayload(final CredentialsObject payload) {
         // secrets: first entry is expected to be valid, second entry may have timestamps not yet active (not checked), more entries may be avail
-        assertTrue(payload.containsKey(CredentialsConstants.FIELD_SECRETS));
-        JsonArray secrets = payload.getJsonArray(CredentialsConstants.FIELD_SECRETS);
+        List<Map<String, String>> secrets = payload.getSecrets();
         assertNotNull(secrets);
         assertTrue(secrets.size() > 0);
 
-        JsonObject firstSecret = secrets.getJsonObject(0);
+        Map<String, String> firstSecret = secrets.get(0);
         assertNotNull(firstSecret);
         return firstSecret;
     }
 
-    private void checkPayloadGetCredentialsReturnsFirstSecretWithCorrectPassword(final JsonObject payload) throws UnsupportedEncodingException, NoSuchAlgorithmException {
+    private void checkPayloadGetCredentialsReturnsFirstSecretWithCorrectPassword(final CredentialsObject payload) throws UnsupportedEncodingException, NoSuchAlgorithmException {
         assertNotNull(payload);
-        JsonObject firstSecret = pickFirstSecretFromPayload(payload);
+        Map<String, String> firstSecret = pickFirstSecretFromPayload(payload);
         assertNotNull(firstSecret);
 
-        String hashFunction = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+        String hashFunction = firstSecret.get(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
         assertNotNull(hashFunction);
-        assertEquals(hashFunction,firstSecret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
+        assertEquals(hashFunction,firstSecret.get(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
 
-        String salt = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
+        String salt = firstSecret.get(CredentialsConstants.FIELD_SECRETS_SALT);
         assertNotNull(salt);
         byte[] decodedSalt = Base64.getDecoder().decode(salt);
         assertEquals(new String(decodedSalt), CREDENTIALS_PASSWORD_SALT);  // see file, this should be the salt
 
-        String pwdHash = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        String pwdHash = firstSecret.get(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
         assertNotNull(pwdHash);
         byte[] password = Base64.getDecoder().decode(pwdHash);
         assertNotNull(password);
@@ -354,51 +355,50 @@ public class StandaloneCredentialsApiTest {
         assertTrue(Arrays.equals(password,hashedPassword));
     }
 
-    private void checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(final JsonObject payload) {
+    private void checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(final CredentialsObject payload) {
         assertNotNull(payload);
-        JsonObject firstSecret = pickFirstSecretFromPayload(payload);
+        Map<String, String> firstSecret = pickFirstSecretFromPayload(payload);
         assertNotNull(firstSecret);
 
         LocalDateTime now = LocalDateTime.now();
 
         assertTrue(firstSecret.containsKey(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE));
-        String notBefore = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
+        String notBefore = firstSecret.get(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
         LocalDateTime notBeforeLocalDate = LocalDateTime.parse(notBefore, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         assertTrue(now.compareTo(notBeforeLocalDate) >= 0);
 
         assertTrue(firstSecret.containsKey(CredentialsConstants.FIELD_SECRETS_NOT_AFTER));
-        String notAfter = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
+        String notAfter = firstSecret.get(CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
         LocalDateTime notAfterLocalDate = LocalDateTime.parse(notAfter, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         assertTrue(now.compareTo(notAfterLocalDate) <= 0);
     }
 
-    private void checkPayloadGetCredentialsReturnsMultipleSecrets(final JsonObject payload) {
+    private void checkPayloadGetCredentialsReturnsMultipleSecrets(final CredentialsObject payload) {
         assertNotNull(payload);
 
         // secrets: first entry is expected to be valid, second entry may have timestamps not yet active (not checked), more entries may be avail
-        assertTrue(payload.containsKey(CredentialsConstants.FIELD_SECRETS));
-        JsonArray secrets = payload.getJsonArray(CredentialsConstants.FIELD_SECRETS);
+        List<Map<String, String>> secrets = payload.getSecrets();
         assertNotNull(secrets);
         assertTrue(secrets.size() > 1); // at least 2 entries to test multiple entries
     }
 
-    private void checkPayloadGetCredentialsContainsAuthIdAndType(final JsonObject payload) {
+    private void checkPayloadGetCredentialsContainsAuthIdAndType(final CredentialsObject payload) {
         assertNotNull(payload);
 
-        assertTrue(payload.containsKey(CredentialsConstants.FIELD_AUTH_ID));
-        assertEquals(payload.getString(CredentialsConstants.FIELD_AUTH_ID), CREDENTIALS_USER);
+        assertNotNull(payload.getAuthId());
+        assertEquals(payload.getAuthId(), CREDENTIALS_USER);
 
-        assertTrue(payload.containsKey(CredentialsConstants.FIELD_TYPE));
-        assertEquals(payload.getString(CredentialsConstants.FIELD_TYPE), CREDENTIALS_TYPE_HASHED_PASSWORD);
+        assertNotNull(payload.getType());
+        assertEquals(payload.getType(), CREDENTIALS_TYPE_HASHED_PASSWORD);
     }
 
-    private boolean checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(final JsonObject payload) {
+    private boolean checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(final CredentialsObject payload) {
         assertNotNull(payload);
 
-        assertTrue(payload.containsKey(CredentialsConstants.FIELD_DEVICE_ID));
-        assertEquals(payload.getString(CredentialsConstants.FIELD_DEVICE_ID), DEFAULT_DEVICE_ID);
+        assertNotNull(payload.getDeviceId());
+        assertEquals(payload.getDeviceId(), DEFAULT_DEVICE_ID);
 
-        return (payload.getBoolean(CredentialsConstants.FIELD_ENABLED));
+        return (payload.getEnabled());
     }
 
     private byte[] hashPassword(final String hashFunction,final String hashSalt, final String passwordToHash) throws NoSuchAlgorithmException, UnsupportedEncodingException {
