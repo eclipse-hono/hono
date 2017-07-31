@@ -1,8 +1,18 @@
 spec:
   template:
     spec:
+      volumes:
+      - name: config
+        secret:
+          secretName: ${project.artifactId}-conf
       containers:
-      - image:
+      - image: ${artemis.image.name}
+        env:
+        - name: ARTEMIS_CONFIGURATION
+          value: /run/secrets
+        volumeMounts:
+        - name: config
+          mountPath: /run/secrets
         readinessProbe:
           initialDelaySeconds: 5
           periodSeconds: 5

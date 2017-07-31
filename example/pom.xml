@@ -159,6 +159,7 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
               <includeArtifactIds>
                 hono-demo-certs,
                 hono-dispatch-router,
+                hono-artemis,
                 hono-service-auth,
                 hono-service-messaging,
                 hono-service-device-registry,
@@ -170,9 +171,12 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
               <outputDirectory>${project.build.directory}/config</outputDirectory>
               <includes>
                 *.pem,
+                *.jks,
+                *.p12,
                 qpid/*,
                 sasl/*,
-                META-INF/fabric8/**/*.yml
+                META-INF/fabric8/**/*.yml,
+                etc/*
               </includes>
               <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
               <stripClassifier>true</stripClassifier>
