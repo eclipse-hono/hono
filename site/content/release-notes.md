@@ -8,12 +8,18 @@ weight = 800
 
 ### New Features
 
-* The Metrics uses templates and tags of InfluxDB, are selectable by tenant in Grafana and works with scaled *Hono Messaging* instances  
+* The metrics reported by Hono are now processed in InfluxDB by means of *templates* which parse some of the information contained in the keys into and InfluxDB *tags*. Consequently, the Grafana dashboard now correctly displays (aggregated) metrics reported by multiple *Hono Messaging* instances and provides means to filter metrics per tenant.
+* The Hono Messaging, Device Registry, REST and MQTT Adapeter components now expose meaningful *health checks* via HTTP which can be used by container orchestration tools like Kuberetes to e.g. determine a component's readiness to serve requests.
+
+### Fixes & Enhancements
+
+See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue%20milestone%3A0.5-M7) for the list of issues addressed by 0.5-M7.
 
 ### Configuration Changes
 
-* The *Device Registry* and *Auth Server* components now support configuration of both an *AMQP* and/or an *HTTP* endpoint implementing the *Device Registration* and *Authentication* APIs respectively. For that purpose the environment variable names for configuring these components have been adapted accordingly.
-* Metrics default for the prefix in the Graphite reporter is now the hostname
+* The *Device Registry* and *Auth Server* components will support the configuration of API endpoints employing other transport protocols than *AMQP* in the future. In preparation for that, the environment variable names for configuring these components have been adapted accordingly.
+* Metrics default for the *prefix* in the Graphite reporter is now the component's host name.
+* The Docker images for Hono's components do no longer contain demo keys and certificates. The keys, certificates and configuration data are now provided to containers during deployment by means of Docker and/or Kubernetes *Secrets*. Consequently, Hono does no longer provide its custom *Dispatch Router* Docker image but instead uses the standard image provided by the enmasse project.
 
 See component docs for details.
 
