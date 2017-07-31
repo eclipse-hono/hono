@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
 
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
@@ -50,6 +51,17 @@ public class ApplicationConfig {
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
         return Vertx.vertx(options);
+    }
+
+    /**
+     * Exposes properties for configuring the application properties a Spring bean.
+     *
+     * @return The application configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.app")
+    public ApplicationConfigProperties applicationConfigProperties(){
+        return new ApplicationConfigProperties();
     }
 
     /**

@@ -1,5 +1,6 @@
 package org.eclipse.hono.service;
 
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.Constants;
@@ -15,6 +16,9 @@ import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Router;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Objects;
 
 /**
  * A base class for implementing services binding to a secure and/or a non-secure port.
@@ -32,6 +36,14 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
     private HttpServer healthCheckServer;
+
+    private ApplicationConfigProperties applicationConfig = new ApplicationConfigProperties();
+
+    // TODO: move together with health check to application level (i.e. invoke in AbstractApplication).
+    @Autowired(required = false)
+    public void setApplicationConfig(ApplicationConfigProperties applicationConfig) {
+        this.applicationConfig = Objects.requireNonNull(applicationConfig);
+    }
 
     /**
      * Starts up this component.
@@ -90,11 +102,11 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     final Future<Void> startHealthCheckServer() {
 
         Future<Void> result = Future.future();
-        if (getConfig() != null && getConfig().getHealthCheckPort() != Constants.PORT_UNCONFIGURED) {
+        if (applicationConfig.getHealthCheckPort() != Constants.PORT_UNCONFIGURED) {
 
             HttpServerOptions options = new HttpServerOptions()
-                    .setPort(getConfig().getHealthCheckPort())
-                    .setHost(getConfig().getHealthCheckBindAddress());
+                    .setPort(applicationConfig.getHealthCheckPort())
+                    .setHost(applicationConfig.getHealthCheckBindAddress());
 
             Router router = Router.router(vertx);
             registerHealthCheckResources(router);

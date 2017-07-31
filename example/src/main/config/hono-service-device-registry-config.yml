@@ -1,4 +1,8 @@
 hono:
+  app:
+    maxInstances: 1
+    healthCheckBindAddress: 0.0.0.0
+    healthCheckPort: 8088
   auth:
     host: ${hono.auth.host}
     port: 5671
@@ -13,9 +17,6 @@ hono:
       bindAddress: 0.0.0.0
       keyPath: /run/secrets/device-registry-key.pem
       certPath: /run/secrets/device-registry-cert.pem
-      healthCheckBindAddress: 0.0.0.0
-      healthCheckPort: 8088
-      maxInstances: 1
     svc:
       signing:
         sharedSecret: ${hono.regAssertion.sharedSecret}

@@ -1,13 +1,14 @@
 hono:
+  app:
+    maxInstances: 1
+    healthCheckPort: 8088
+    healthCheckBindAddress: 0.0.0.0
   http:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
     keyPath: /run/secrets/rest-adapter-key.pem
     certPath: /run/secrets/rest-adapter-cert.pem
-    maxInstances: 1
-    healthCheckPort: 8088
-    healthCheckBindAddress: 0.0.0.0
   messaging:
     name: 'Hono REST Adapter'
     host: ${hono.messaging.host}

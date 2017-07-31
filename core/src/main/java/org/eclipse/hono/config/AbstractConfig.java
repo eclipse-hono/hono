@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.PortConfigurationHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +36,6 @@ public abstract class AbstractConfig {
     private static final Pattern PATTERN_PEM = Pattern.compile("^.*\\.[pP][eE][mM]$");
     private static final Pattern PATTERN_PKCS = Pattern.compile("^.*\\.[pP](12|[fF][xX])$");
     private static final Pattern PATTERN_JKS = Pattern.compile("^.*\\.[jJ][kK][sS]$");
-    private static final int MAX_PORT_NO = 65535;
-    private static final int MIN_PORT_NO = 0;
 
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -56,7 +55,7 @@ public abstract class AbstractConfig {
      * @return {@code true} if port &gt;= 0 and port &lt;= 65535.
      */
     protected boolean isValidPort(final int port) {
-        return port >= MIN_PORT_NO && port <= MAX_PORT_NO;
+        return PortConfigurationHelper.isValidPort(port);
     }
 
     /**

@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.service.auth.impl;
 
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
@@ -59,6 +60,17 @@ public class ApplicationConfig {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(SimpleAuthenticationServer.class.getName());
         return factory;
+    }
+
+    /**
+     * Exposes properties for configuring the application properties a Spring bean.
+     *
+     * @return The application configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.app")
+    public ApplicationConfigProperties applicationConfigProperties(){
+        return new ApplicationConfigProperties();
     }
 
     /**

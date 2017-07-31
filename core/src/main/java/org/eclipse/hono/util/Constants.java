@@ -76,6 +76,11 @@ public final class Constants {
     public static final int PORT_UNCONFIGURED = -1;
 
     /**
+     * The loopback device address.
+     */
+    public static final String LOOPBACK_DEVICE_ADDRESS = "127.0.0.1";
+
+    /**
      * The qualifier to use for referring to components scoped to the AMQP 1.0 messaging network.
      */
     public static final String QUALIFIER_DOWNSTREAM = "downstream";
