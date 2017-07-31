@@ -11,38 +11,47 @@ The Dispatch Router, together with the *Apache Artemis* message broker serves as
 
 ## Configuration
 
-The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of a [Docker image](https://hub.docker.com/r/gordons/qpid-dispatch/) created from the Qpid project source code.
+The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of the [enmasse project's Dispatch Router Docker image](https://hub.docker.com/r/enmasseproject/qdrouterd-base/) created from the Qpid project source code.
 
 The Dispatch Router can be configured by means of configuration files. Hono contains a default configuration in the `dispatchrouter/qpid` folder and in the `dispatchrouter/sasl` for enabling authentication through SASL. Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration file format and options.
 
 The provided configuration files are the following.
 
-| File                                     | Description                                                      |
-| :--------------------------------------- | :--------------------------------------------------------------- |
-| `/etc/hono/qdrouter/qdrouterd.json`  | The Dispatch Router configuration file. |
-| `/etc/hono/qdrouter/qdrouter-sasl.conf` | The configuration file for the [Cyrus SASL Library](http://www.cyrusimap.org/sasl/getting_started.html) used by Dispatch Router for authenticating clients. This configuration file can be adapted to e.g. configure LDAP or a database for verifying credentials.
-| `/etc/hono/qdrouter/qdrouterd.sasldb` | The Berkley DB file used by Cyrus SASL that contains the example users which are supported by the Dispatch Router.
+| File                                                    | Description                                                      |
+| :------------------------------------------------------ | :--------------------------------------------------------------- |
+| `dispatchrouter/qpid/qdrouterd-with-broker.json`  | A configuration file setting up SASL based authentication and an auto link for handling event messages using a message broker. |
+| `dispatchrouter/sasl/qdrouter-sasl.conf`           | A configuration file for the [Cyrus SASL Library](http://www.cyrusimap.org/sasl/getting_started.html) used by Dispatch Router for authenticating clients. This configuration file can be adapted to e.g. configure LDAP or a database for verifying credentials.
+| `dispatchrouter/sasl/qdrouterd.sasldb`             | A Berkley DB file used by Cyrus SASL which contains the example users that are supported by the Dispatch Router.
 
-The file paths are related to the Docker images where such configuration files are needed.
+## Run as a Docker Swarm Service
 
-## Run as a Docker Container
-
-The Dispatch Router can be run as a Docker container from the command line. The following command starts the Dispatch Router container using using the default configuration files included in the Dispatch Router image.
+The Dispatch Router can be run as a Docker container from the command line. The following commands create and start the Dispatch Router as a Docker Swarm service using the default keys and configuration files contained in the `dispatchrouter` and `demo-certs` modules:
 
 ~~~sh
-$ docker run -d --name qdrouter --network hono-net -p 15671:5671 -p 15672:5672 -p 15673:5673 \
-> eclipsehono/dispatch-router:latest /usr/sbin/qdrouterd -c /etc/hono/qdrouter/qdrouterd.json
+~/hono$ docker secret create qdrouter-key.pem demo-certs/certs/qdrouter-key.pem
+~/hono$ docker secret create qdrouter-cert.pem demo-certs/certs/qdrouter-cert.pem
+~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+~/hono$ docker secret create qdrouterd.json dispatchrouter/qpid/qdrouterd-with-broker.json
+~/hono$ docker secret create qdrouter-sasl.conf dispatchrouter/sasl/qdrouter-sasl.conf
+~/hono$ docker secret create qdrouterd.sasldb dispatchrouter/sasl/qdrouterd.sasldb
+~/hono$ docker service create --detach --name hono-dispatch-router --network hono-net -p 15671:5671 -p 15672:5672 -p 15673:5673 \
+>  --secret qdrouter-key.pem \
+>  --secret qdrouter-cert.pem \
+>  --secret trusted-certs.pem \
+>  --secret qdrouterd.json \
+>  --secret qdrouter-sasl.conf \
+>  --secret qdrouterd.sasldb \
+>  enmasseproject/qdrouterd-base:0.8.0-1 /sbin/qdrouterd -c /run/secrets/qdrouterd.json
 ~~~
 
 {{% note %}}
-There are two things noteworthy about the above command to start the Dispatch Router:
+There are several things noteworthy about the above command to start the Dispatch Router:
 
+1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
 1. The *--network* command line switch is used to specify the *user defined* Docker network that the Dispatch Router should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the Dispatch Router when they want to connect to it. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
-2. It is important to specify the configuration file on the Docker command line when starting the container. Otherwise, the Dispatch Router uses the default configuration located at */etc/qpid-dispatch/qdrouterd.conf* which provides unrestricted access.
+1. It is important to specify the configuration file on the Docker command line when starting the container. Otherwise, the Dispatch Router uses the default configuration located at */etc/qpid-dispatch/qdrouterd.conf* which provides unrestricted access.
 {{% /note %}}
 
-## Run using Docker Compose
+## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
-See the `example` module for details. The `example` module also contains an example service definition file that
-you can use as a starting point for your own configuration.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
