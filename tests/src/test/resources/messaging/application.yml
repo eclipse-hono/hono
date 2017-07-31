@@ -1,4 +1,7 @@
 hono:
+  app:
+    maxInstances: 1
+    startupTimeout: 65
   auth:
     host: hono-service-auth.hono
     port: 5672
@@ -10,11 +13,9 @@ hono:
   messaging:
     insecurePortEnabled: true
     insecurePortBindAddress: 0.0.0.0
-    maxInstances: 1
     waitForDownstreamConnectionEnabled: true
     validation:
       sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
-    startupTimeout: 65
 
 ---
 

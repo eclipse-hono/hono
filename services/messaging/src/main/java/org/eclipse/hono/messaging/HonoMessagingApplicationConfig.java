@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.messaging;
 
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
@@ -105,6 +106,17 @@ public class HonoMessagingApplicationConfig {
     @Qualifier(Constants.QUALIFIER_DOWNSTREAM)
     public ConnectionFactory downstreamConnectionFactory() {
         return new ConnectionFactoryImpl(vertx(), downstreamConnectionProperties());
+    }
+
+    /**
+     * Exposes properties for configuring the application properties a Spring bean.
+     *
+     * @return The application configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.app")
+    public ApplicationConfigProperties applicationConfigProperties(){
+        return new ApplicationConfigProperties();
     }
 
     /**

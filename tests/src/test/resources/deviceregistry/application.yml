@@ -1,4 +1,7 @@
 hono:
+  app:
+    maxInstances: 1
+    startupTimeout: 65
   auth:
     host: hono-service-auth.hono
     port: 5672
@@ -9,8 +12,6 @@ hono:
     amqp:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
-      maxInstances: 1
-      startupTimeout: 65
     svc:
       signing:
         sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf

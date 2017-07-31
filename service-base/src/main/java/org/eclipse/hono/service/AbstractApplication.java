@@ -21,17 +21,14 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
-import io.vertx.core.Vertx;
+import io.vertx.core.*;
 
 /**
  * A base class for implementing Spring Boot applications.
@@ -42,6 +39,7 @@ import io.vertx.core.Vertx;
  * @param <S> The service type.
  * @param <C> The type of configuration this application uses.
  */
+// TODO: remove parameter C.
 public class AbstractApplication<S, C extends ServiceConfigProperties> {
 
     /**
@@ -50,12 +48,12 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     private ObjectFactory<S> serviceFactory;
-    private C config;
+    private ApplicationConfigProperties config = new ApplicationConfigProperties();
     private Vertx vertx;
 
     /**
      * Sets the Vert.x instance to deploy the service to.
-     * 
+     *
      * @param vertx The vertx instance.
      * @throws NullPointerException if vertx is {@code null}.
      */
@@ -66,7 +64,7 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
 
     /**
      * Gets the Vert.x instance the service gets deployed to.
-     * 
+     *
      * @return The vertx instance.
      */
     protected Vertx getVertx() {
@@ -90,15 +88,14 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
     }
 
     /**
-     * Sets the configuration properties to use for this service.
+     * Sets the application configuration properties to use for this service.
      * 
      * @param config The properties.
      * @throws NullPointerException if the properties are {@code null}.
      */
     @Autowired(required = false)
-    public final void setConfiguration(final C config) {
+    public final void setApplicationConfiguration(final ApplicationConfigProperties config) {
         this.config = Objects.requireNonNull(config);
-        log.debug("using service configuration: " + config.getClass().getName());
     }
 
     /**
@@ -114,8 +111,8 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
         }
 
         final CountDownLatch startupLatch = new CountDownLatch(1);
-        final int maxInstances = config == null ? 1 : config.getMaxInstances();
-        final int startupTimeoutSeconds = config == null ? 20 : config.getStartupTimeout();
+        final int maxInstances = config.getMaxInstances();
+        final int startupTimeoutSeconds = config.getStartupTimeout();
         final S firstServiceInstance = serviceFactory.getObject();
 
         Future<Void> started = Future.future();
@@ -204,7 +201,7 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
      */
     @PreDestroy
     public final void shutdown() {
-        final int shutdownTimeoutSeconds = config == null ? 20 : config.getStartupTimeout();
+        final int shutdownTimeoutSeconds = config.getStartupTimeout();
         shutdown(shutdownTimeoutSeconds, succeeded -> {
             // do nothing
         });
