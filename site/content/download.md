@@ -12,18 +12,21 @@ on [Docker Hub](https://hub.docker.com/u/eclipsehono/).
 The most convenient way to both pull the images and start corresponding containers is by means of
 [deploying a *stack* using Docker's *Swarm Mode*](https://docs.docker.com/engine/reference/commandline/stack_deploy/). You can find an example stack definition using the published Hono images in the release archive:
 
-* [Eclipse Hono 0.5-M6 Release Archive](eclipse-hono-example-0.5-M6.tar.gz)
+* [Eclipse Hono 0.5-M7 Archive](eclipse-hono-example-0.5-M7.tar.gz)
 
 After downloading the archive, extract it to a local folder, change into that folder and run the following from the command line (assuming that you have Docker Engine running in Swarm mode):
 
 ~~~sh
-eclipse-hono-example-0.5-M6$ docker stack deploy -c example/target/deploy/docker/docker-compose.yml hono
+eclipse-hono-example-0.5-M7$ deploy/docker/swarm_deploy.sh
 ~~~
 
 You may also want to consider other [deployment options]({{< relref "deployment/openshift.md" >}}).
 
 ### Older Versions
 
+These artifacts are available for reference only. Please always use the latest milestone since this is the one we can best support you with.
+
+* [0.5-M6 Archive](eclipse-hono-example-0.5-M6.tar.gz)
 * [0.5-M5 Docker Compose file](docker-compose-0.5-M5.yml)
 * [0.5-M4 Docker Compose file](docker-compose-0.5-M4.yml)
 * [0.5-M3 Docker Compose file](docker-compose-0.5-M3.yml)
