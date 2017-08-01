@@ -108,6 +108,26 @@
         <role>Committer</role>
       </roles>
     </developer>
+    <developer>
+      <id>kfrank</id>
+      <name>Karsten Frank</name>
+      <email>karsten.frank@bosch-si.com</email>
+      <organization>Bosch Software Innovations GmbH</organization>
+      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
+    <developer>
+      <id>mpellmann</id>
+      <name>Marc Pellmann</name>
+      <email>marc.pellmann@bosch-si.com</email>
+      <organization>Bosch Software Innovations GmbH</organization>
+      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
   </developers>
 
   <properties>
