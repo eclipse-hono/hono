@@ -194,18 +194,21 @@ public class StandaloneEventApiTest {
 
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
     public void testEventWithNonMatchingRegistrationAssertionGetRejected(final TestContext ctx) throws Exception {
 
-        String assertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, "other-device");
+        final String assertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, "other-device");
+        final Async dispositionUpdate = ctx.async();
 
         client.getOrCreateEventSender(Constants.DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
             sender.send(DEVICE_1, "payload", "text/plain", assertion, (id, delivery) -> {
                 ctx.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
                 ctx.assertTrue(sender.isOpen());
+                dispositionUpdate.complete();
             });
         }));
 
+        dispositionUpdate.await(TIMEOUT);
     }
 
     @Test(timeout = TIMEOUT)
