@@ -40,7 +40,7 @@ import io.vertx.core.*;
  * @param <C> The type of configuration this application uses.
  */
 // TODO: remove parameter C.
-public class AbstractApplication<S, C extends ServiceConfigProperties> {
+public class AbstractApplication<S extends HealthCheckProvider, C extends ServiceConfigProperties> {
 
     /**
      * A logger to be shared with subclasses.
@@ -50,6 +50,8 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
     private ObjectFactory<S> serviceFactory;
     private ApplicationConfigProperties config = new ApplicationConfigProperties();
     private Vertx vertx;
+
+    private HealthCheckServer healthCheckServer;
 
     /**
      * Sets the Vert.x instance to deploy the service to.
@@ -110,6 +112,8 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
             throw new IllegalStateException("no service factory has been configured");
         }
 
+        healthCheckServer = new HealthCheckServer(vertx, config);
+
         final CountDownLatch startupLatch = new CountDownLatch(1);
         final int maxInstances = config.getMaxInstances();
         final int startupTimeoutSeconds = config.getStartupTimeout();
@@ -127,6 +131,7 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
         deployRequiredVerticles(maxInstances)
             .compose(s -> deployServiceVerticles(firstServiceInstance, maxInstances - 1))
             .compose(s -> postRegisterServiceVerticles())
+            .compose(s -> healthCheckServer.start())
             .compose(s -> started.complete(), started);
 
         try {
@@ -169,6 +174,8 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
             result.fail("service class is not a Verticle");
         } else {
             customizeServiceInstance(firstServiceInstance);
+            healthCheckServer.registerHealthCheckResources(firstServiceInstance);
+
             final Future<String> deployTracker = Future.future();
             vertx.deployVerticle((Verticle) firstServiceInstance, deployTracker.completer());
             deploymentTracker.add(deployTracker);
@@ -218,15 +225,21 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
         try {
             preShutdown();
             final CountDownLatch latch = new CountDownLatch(1);
-            if (vertx != null) {
-                log.debug("shutting down application...");
-                vertx.close(r -> {
-                    if (r.failed()) {
-                        log.error("could not shut down application cleanly", r.cause());
-                    }
-                    latch.countDown();
-                });
-            }
+
+            stopHealthCheckServer().setHandler(result -> {
+                if (vertx != null) {
+                    log.debug("shutting down application...");
+                    vertx.close(r -> {
+                        if (r.failed()) {
+                            log.error("could not shut down application cleanly", r.cause());
+                        }
+                        latch.countDown();
+                    });
+                } else {
+                    latch.countDown(); // Don't wait for the timeout.
+                }
+            });
+
             if (latch.await(maxWaitTime, TimeUnit.SECONDS)) {
                 log.info("application has been shut down successfully");
                 shutdownHandler.handle(Boolean.TRUE);
@@ -238,6 +251,14 @@ public class AbstractApplication<S, C extends ServiceConfigProperties> {
             log.error("shut down has been interrupted, aborting...");
             Thread.currentThread().interrupt();
             shutdownHandler.handle(Boolean.FALSE);
+        }
+    }
+
+    private Future<Void> stopHealthCheckServer() {
+        if (healthCheckServer != null) {
+            return healthCheckServer.stop();
+        } else {
+            return Future.succeededFuture();
         }
     }
 

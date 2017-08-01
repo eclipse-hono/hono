@@ -19,6 +19,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -41,7 +42,7 @@ import io.vertx.proton.ProtonSender;
  * 
  * @param <T> The type of configuration properties this endpoint understands.
  */
-public abstract class BaseEndpoint<T> implements Endpoint {
+public abstract class BaseEndpoint<T> implements Endpoint, HealthCheckProvider {
 
     /**
      * The Vert.x instance this endpoint is running on.
