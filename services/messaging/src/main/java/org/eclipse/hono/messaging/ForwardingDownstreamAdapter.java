@@ -275,8 +275,6 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         } else {
             // all links to downstream host will now be stale and unusable
             logger.warn("lost connection to downstream container [{}], closing upstream receivers ...", con.getRemoteContainer());
-            logger.debug("local error condition: {}", con.getCondition());
-            logger.debug("remote error condition: {}", con.getRemoteCondition());
 
             for (UpstreamReceiver client : activeSenders.keySet()) {
                 client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
