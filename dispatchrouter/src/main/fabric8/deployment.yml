@@ -1,16 +1,28 @@
 spec:
   template:
     spec:
+      volumes:
+      - name: config
+        secret:
+          secretName: ${project.artifactId}-conf
       containers:
-      - readinessProbe:
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 1
-          tcpSocket:
-            port: 5672
+      - image: ${dispatch-router.image.name}
+        command:
+        - /sbin/qdrouterd
+        - -c
+        - /run/secrets/qdrouterd-with-broker.json
+        volumeMounts:
+        - name: config
+          mountPath: /run/secrets
         livenessProbe:
-          initialDelaySeconds: 20
+          initialDelaySeconds: 180
           periodSeconds: 9
-          timeoutSeconds: 1
           tcpSocket:
             port: 5672
+          timeoutSeconds: 1
+        readinessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          tcpSocket:
+            port: 5672
+          timeoutSeconds: 1

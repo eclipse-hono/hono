@@ -257,6 +257,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, contentType, registrationAssertion);
+        addEndpointSpecificProperties(msg, deviceId);
         return send(msg, dispositionHandler);
     }
 
@@ -368,7 +369,8 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
                     LOG.debug("opening sender [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
                     result.fail(senderOpen.cause());
                 }
-            }).closeHandler(senderClosed -> {
+            });
+            sender.closeHandler(senderClosed -> {
                 if (senderClosed.succeeded()) {
                     LOG.debug("sender [{}] closed", targetAddress);
                 } else {
@@ -378,7 +380,8 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
                 if (closeHook != null) {
                     closeHook.handle(targetAddress);
                 }
-            }).open();
+            });
+            sender.open();
         });
 
         return result;

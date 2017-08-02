@@ -5,19 +5,19 @@ spec:
       - name: registry
         persistentVolumeClaim:
           claimName: registry
+      - name: conf
+        secret:
+          secretName: ${project.artifactId}-conf
       containers:
       - volumeMounts:
         - name: registry
           mountPath: /home/hono/device-registry
-        readinessProbe:
-          initialDelaySeconds: 15
-          periodSeconds: 5
-          timeoutSeconds: 1
-          tcpSocket:
-            port: 5672
-        livenessProbe:
-          initialDelaySeconds: 25
-          periodSeconds: 9
-          timeoutSeconds: 1
-          tcpSocket:
-            port: 5672
+        - name: conf
+          mountPath: /run/secrets
+        env:
+        - name: SPRING_CONFIG_LOCATION
+          value: file:///run/secrets/
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml

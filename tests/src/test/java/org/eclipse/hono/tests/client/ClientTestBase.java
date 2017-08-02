@@ -15,9 +15,10 @@ package org.eclipse.hono.tests.client;
 
 import static java.net.HttpURLConnection.*;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import java.util.stream.IntStream;
 
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
@@ -43,7 +44,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClientOptions;
@@ -68,11 +68,16 @@ public abstract class ClientTestBase {
      * A logger to be used by subclasses.
      */
     protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
-
+    /**
+     * A client for connecting to Hono Messaging.
+     */
     protected HonoClient honoClient;
-    protected HonoClient honoDeviceRegistryClient;
+    /**
+     * A client for connecting to the AMQP Messaging Network.
+     */
     protected HonoClient downstreamClient;
     private RegistrationClient registrationClient;
+    private HonoClient honoDeviceRegistryClient;
     private MessageSender sender;
     private MessageConsumer consumer;
 
@@ -236,11 +241,18 @@ public abstract class ClientTestBase {
      */
     abstract void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker);
 
+    /**
+     * Verifies that a number of messages uploaded to Hono's Telemetry or Event API can be successfully
+     * consumed via the AMQP Messaging Network.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if test execution is interrupted.
+     */
     @Test
-    public void testSendingMessages(final TestContext ctx) throws Exception {
+    public void testSendingMessages(final TestContext ctx) throws InterruptedException {
 
-        final Async received = ctx.async(IntegrationTestSupport.MSG_COUNT);
-        final Async accepted = ctx.async(IntegrationTestSupport.MSG_COUNT);
+        final CountDownLatch received = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
+        final CountDownLatch accepted = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final Async setup = ctx.async();
 
         final Future<MessageConsumer> setupTracker = Future.future();
@@ -277,6 +289,9 @@ public abstract class ClientTestBase {
                     assertMessagePropertiesArePresent(ctx, msg);
                     assertAdditionalMessageProperties(ctx, msg);
                     received.countDown();
+                    if (received.getCount() % 200 == 0) {
+                        LOGGER.info("messages received: {}", IntegrationTestSupport.MSG_COUNT - received.getCount());
+                    }
                 }, setupTracker.completer());
             } else {
                 setupTracker.fail("cannot assert registration status");
@@ -289,22 +304,44 @@ public abstract class ClientTestBase {
         long start = System.currentTimeMillis();
         final AtomicInteger messagesSent = new AtomicInteger();
 
-        IntStream.range(0, IntegrationTestSupport.MSG_COUNT).forEach(i -> {
-            Async latch = ctx.async();
-            sender.send(DEVICE_ID, "payload" + i, CONTENT_TYPE_TEXT_PLAIN, registrationAssertion, capacityAvailable -> {
-                latch.complete();
-                if (messagesSent.incrementAndGet() % 200 == 0) {
-                    LOGGER.info("messages sent: {}", messagesSent.get());
+        while (messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
+
+            final Async batchComplete = ctx.async();
+
+            vertx.getOrCreateContext().runOnContext(batchSend -> {
+                Handler<Void> runBatch = run -> {
+                    while (!sender.sendQueueFull() && messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
+                        sender.send(DEVICE_ID, "payload_" + messagesSent.getAndIncrement(), CONTENT_TYPE_TEXT_PLAIN, registrationAssertion, (Handler<Void>) null);
+                        if (messagesSent.get() % 200 == 0) {
+                            LOGGER.info("messages sent: " + messagesSent.get());
+                        }
+                    }
+                    batchComplete.complete();
+                };
+                if (sender.sendQueueFull()) {
+                    // wait for credit to arrive
+                    sender.sendQueueDrainHandler(runBatch);
+                } else {
+                    runBatch.handle(null);
                 }
             });
-            latch.await();
-        });
+
+            batchComplete.await();
+        }
 
         long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
-        received.await(timeToWait);
-        accepted.await(timeToWait);
-        LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.count(), System.currentTimeMillis() - start);
+        if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            LOGGER.info("sent {} and received {} messages after {} milliseconds",
+                    messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.getCount(), System.currentTimeMillis() - start);
+            ctx.fail("did not receive all messages sent");
+        } else if (!accepted.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            LOGGER.info("sent {} and received {} messages after {} milliseconds",
+                    messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.getCount(), System.currentTimeMillis() - start);
+            ctx.fail("not all sent messages have been accepted");
+        } else {
+            LOGGER.info("sent {} and received {} messages after {} milliseconds",
+                    messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.getCount(), System.currentTimeMillis() - start);
+        }
     }
 
     /**
@@ -344,6 +381,15 @@ public abstract class ClientTestBase {
         ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
     }
 
+    /**
+     * Perform additional checks on a received message.
+     * <p>
+     * This default implementation does nothing. Subclasses should override this method to implement
+     * reasonable checks.
+     * 
+     * @param ctx The test context.
+     * @param msg The message to perform checks on.
+     */
     protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
         // empty
     }

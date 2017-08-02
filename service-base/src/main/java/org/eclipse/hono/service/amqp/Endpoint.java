@@ -14,6 +14,7 @@ package org.eclipse.hono.service.amqp;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Future;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -72,4 +73,24 @@ public interface Endpoint {
      * @param stopFuture Completes if this endpoint has stopped successfully.
      */
     void stop(Future<Void> stopFuture);
+
+    /**
+     * Registers checks to perform in order to determine whether this endpoint is ready to serve requests.
+     * <p>
+     * An external systems management component can get the result of running these checks by means
+     * of doing a HTTP GET /readiness on the service component this endpoint belongs to.
+     * 
+     * @param handler The handler to register the checks with.
+     */
+    void registerReadinessChecks(final HealthCheckHandler handler);
+
+    /**
+     * Registers checks to perform in order to determine whether this endpoint is alive.
+     * <p>
+     * An external systems management component can get the result of running these checks by means
+     * of doing a HTTP GET /liveness on the service component this endpoint belongs to.
+     * 
+     * @param handler The handler to register the checks with.
+     */
+    void registerLivenessChecks(final HealthCheckHandler handler);
 }

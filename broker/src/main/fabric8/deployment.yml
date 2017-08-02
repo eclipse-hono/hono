@@ -8,10 +8,10 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 1
           tcpSocket:
-            port: 5672
+            port: 5671
         livenessProbe:
           initialDelaySeconds: 20
           periodSeconds: 9
           timeoutSeconds: 1
           tcpSocket:
-            port: 5672
+            port: 5671

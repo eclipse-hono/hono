@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.service.amqp;
+package org.eclipse.hono.messaging;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 /**
@@ -34,28 +33,25 @@ import io.vertx.proton.ProtonReceiver;
  */
 public class UpstreamReceiverImpl implements UpstreamReceiver {
 
-    private static final int MAX_LINK_CREDIT = 250;
-    private static final int MIN_LINK_CREDIT = 20;
     private static final Logger LOG = LoggerFactory.getLogger(UpstreamReceiverImpl.class);
     private final AtomicBoolean drainFlag = new AtomicBoolean(false);
     private ProtonReceiver link;
     private String id;
 
-    UpstreamReceiverImpl(final String linkId, final ProtonReceiver receiver, final ProtonQoS qos) {
+    UpstreamReceiverImpl(final String linkId, final ProtonReceiver receiver) {
         this.id = Objects.requireNonNull(linkId);
         this.link = Objects.requireNonNull(receiver);
         this.link.setAutoAccept(false);
         this.link.setPrefetch(0);
-        this.link.setQoS(qos);
     }
 
     @Override
     public void replenish(final int downstreamCredit) {
 
-        int remainingCredit = link.getCredit();
-        if (downstreamCredit > 0 && remainingCredit <= MIN_LINK_CREDIT) {
-            int credit = Math.min(MAX_LINK_CREDIT, downstreamCredit);
-            LOG.debug("replenishing client [{}] with {} credits", id, credit);
+        int remainingCredit = link.getCredit() - link.getQueued();
+        if (downstreamCredit > remainingCredit) {
+            int credit = downstreamCredit - remainingCredit;
+            LOG.trace("replenishing client [{}] with {} credits", id, credit);
             link.flow(credit);
         } else {
             // link has remaining credit, no need to replenish yet
@@ -97,7 +93,7 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
 
     @Override
     public String getTargetAddress() {
-        return link.getRemoteTarget().getAddress();
+        return link.getTarget().getAddress();
     }
 
     @Override

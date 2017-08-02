@@ -15,11 +15,13 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import io.vertx.proton.ProtonConnection;
+import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +31,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
@@ -42,6 +46,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
     private HonoClient messaging;
     private HonoClient registration;
+    private HonoClient credentials;
+
+    /**
+     * Sets the configuration by means of Spring dependency injection.
+     * <p>
+     * Most protocol adapters will support a single transport protocol to communicate with
+     * devices only. For those adapters there will only be a single bean instance available
+     * in the application context of type <em>T</em>.
+     */
+    @Autowired
+    @Override
+    public void setConfig(final T configuration) {
+        setSpecificConfig(configuration);
+    }
 
     /**
      * Sets the client to use for connecting to the Hono Messaging component.
@@ -85,15 +103,46 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         return registration;
     }
 
-    @Override
-    public final void start(final Future<Void> startFuture) {
-        if (messaging == null) {
-            startFuture.fail("Hono Messaging client must be set");
-        } else if (registration == null) {
-            startFuture.fail("Registration client must be set");
+    /**
+     * Sets the client to use for connecting to the Credentials API (which may be offered by the Device Registry component).
+     * If no credentials client is configured, the registration client will be used for accessing the Credentials API.
+     *
+     * @param credentialsServiceClient The client.
+     * @throws NullPointerException if the client is {@code null}.
+     */
+    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
+    @Autowired(required = false)
+    public final void setCredentialsServiceClient(final HonoClient credentialsServiceClient) {
+        this.credentials = Objects.requireNonNull(credentialsServiceClient);
+    }
+
+    /**
+     * Gets the client used for connecting to the Credentials API.
+     *
+     * @return The client.
+     */
+    public final HonoClient getCredentialsServiceClient() {
+        if (credentials == null) {
+            return registration;
         } else {
-            doStart(startFuture);
+            return credentials;
         }
+    }
+
+    @Override
+    public final Future<Void> startInternal() {
+        Future<Void> result = Future.future();
+        if (messaging == null) {
+            result.fail("Hono Messaging client must be set");
+        } else if (registration == null) {
+            result.fail("Device Registration client must be set");
+        } else {
+            if (credentials == null) {
+                LOG.info("Credentials client not configured, using Device Registration client instead.");
+            }
+            doStart(result);
+        }
+        return result;
     }
 
     /**
@@ -109,8 +158,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     @Override
-    public final void stop(Future<Void> stopFuture) {
-        doStop(stopFuture);
+    public final Future<Void> stopInternal() {
+        Future<Void> result = Future.future();
+        doStop(result);
+        return result;
     }
 
     /**
@@ -150,8 +201,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("connected to Hono Messaging");
                 }
-            },
-            this::onDisconnectMessaging
+            }, this::onDisconnectMessaging
             );
         }
     }
@@ -171,8 +221,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("cannot reconnect to Hono Messaging");
                 }
-            }, this::onDisconnectMessaging
-            );
+            }, this::onDisconnectMessaging);
         });
     }
 
@@ -201,9 +250,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("connected to Device Registration service");
                 }
-            },
-            this::onDisconnectDeviceRegistry
-            );
+            }, this::onDisconnectDeviceRegistry);
         }
     }
 
@@ -222,9 +269,60 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 } else {
                     LOG.debug("cannot reconnect to Device Registration service");
                 }
-            },
-            this::onDisconnectDeviceRegistry
-            );
+            }, this::onDisconnectDeviceRegistry);
+        });
+    }
+
+    /**
+     * Connects to the Credentials service using the configured client.
+     *
+     * @param connectHandler The handler to invoke with the outcome of the connection attempt.
+     *                       If {@code null} and the connection attempt failed, this method
+     *                       tries to re-connect until a connection is established.
+     */
+    protected final void connectToCredentialsService(final Handler<AsyncResult<HonoClient>> connectHandler) {
+
+        if (credentials == null) {
+            if (connectHandler != null) {
+                if (registration != null) {
+                    // give back registration client if credentials client is not configured
+                    connectHandler.handle(Future.succeededFuture(registration));
+                } else {
+                    connectHandler.handle(Future.failedFuture("Neither Credentials client nor Device Registration client is set"));
+                }
+            }
+        } else if (credentials.isConnected()) {
+            LOG.debug("already connected to Credentials service");
+            if (connectHandler != null) {
+                connectHandler.handle(Future.succeededFuture(credentials));
+            }
+        } else {
+            credentials.connect(createClientOptions(), connectAttempt -> {
+                if (connectHandler != null) {
+                    connectHandler.handle(connectAttempt);
+                } else {
+                    LOG.debug("connected to Credentials service");
+                }
+            }, this::onDisconnectCredentialsService);
+        }
+    }
+
+    /**
+     * Attempts a reconnect for the Hono Credentials client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
+     *
+     * @param con The connection that was disonnected.
+     */
+    private void onDisconnectCredentialsService(final ProtonConnection con) {
+
+        vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+            LOG.info("attempting to reconnect to Credentials service");
+            credentials.connect(createClientOptions(), connectAttempt -> {
+                if (connectAttempt.succeeded()) {
+                    LOG.debug("reconnected to Credentials service");
+                } else {
+                    LOG.debug("cannot reconnect to Credentials service");
+                }
+            }, this::onDisconnectCredentialsService);
         });
     }
 
@@ -236,14 +334,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
-     * Checks if this adapter is connected to both the Hono server and the Device Registration service.
+     * Checks if this adapter is connected to both <em>Hono Messaging</em> and the Device Registration service.
      * 
      * @return {@code true} if this adapter is connected.
      */
     protected final boolean isConnected() {
-        boolean result = messaging != null && messaging.isConnected();
-        if (registration != null) {
-            result &= registration.isConnected();
+        boolean result = messaging != null && messaging.isConnected() &&
+                registration != null && registration.isConnected();
+        if (credentials != null) {
+            result &= credentials.isConnected();
         }
         return result;
     }
@@ -257,6 +356,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
         Future<Void> messagingTracker = Future.future();
         Future<Void> registrationTracker = Future.future();
+        Future<Void> credentialsTracker = Future.future();
 
         if (messaging == null) {
             messagingTracker.complete();
@@ -270,7 +370,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             registration.shutdown(registrationTracker.completer());
         }
 
-        CompositeFuture.all(messagingTracker, registrationTracker).setHandler(s -> {
+        if (credentials == null) {
+            credentialsTracker.complete();
+        } else {
+            credentials.shutdown(credentialsTracker.completer());
+        }
+
+        CompositeFuture.all(messagingTracker, registrationTracker, credentialsTracker).setHandler(s -> {
             if (closeHandler != null) {
                 if (s.succeeded()) {
                     closeHandler.handle(Future.succeededFuture());
@@ -318,6 +424,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
+     * Gets a client for interacting with the Credentials service.
+     *
+     * @param tenantId The tenant that the client is scoped to.
+     * @return The client.
+     */
+    protected final Future<CredentialsClient> getCredentialsClient(final String tenantId) {
+        Future<CredentialsClient> result = Future.future();
+        getCredentialsServiceClient().getOrCreateCredentialsClient(tenantId, result.completer());
+        return result;
+    }
+
+    /**
      * Gets a registration status assertion for a device.
      * 
      * @param tenantId The tenant that the device belongs to.
@@ -338,5 +456,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             }
         }, result);
         return result;
+    }
+
+    /**
+     * Registers a check that succeeds if this component is connected to Hono Messaging,
+     * the Device Registration and the Credentials service.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+        handler.register("connection-to-services", status -> {
+            if (isConnected()) {
+                status.complete(Status.OK());
+            } else {
+                status.complete(Status.KO());
+            }
+        });
+    }
+
+    /**
+     * Registers a check that always succeeds.
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler handler) {
+        handler.register("ping", status -> {
+            status.complete(Status.OK());
+        });
     }
 }

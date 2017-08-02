@@ -11,39 +11,28 @@
  */
 package org.eclipse.hono.client.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.client.*;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
+import io.vertx.core.*;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
@@ -186,7 +175,7 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler, Handler<ProtonConnection> disconnectHandler) {
+    private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler, final Handler<ProtonConnection> disconnectHandler) {
 
         if (clientOptions == null || clientOptions.getReconnectAttempts() == 0) {
             connectionHandler.handle(Future.failedFuture("failed to connect"));
@@ -200,7 +189,7 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
-    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose, Handler<ProtonConnection> disconnectHandler) {
+    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose, final Handler<ProtonConnection> disconnectHandler) {
         if (remoteClose.failed()) {
             LOG.info("remote server [{}:{}] closed connection with error condition: {}",
                     connectionFactory.getHost(), connectionFactory.getPort(), remoteClose.cause().getMessage());
@@ -341,12 +330,26 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
+
     /* (non-Javadoc)
      * @see org.eclipse.hono.client.HonoClient#createTelemetryConsumer(java.lang.String, java.util.function.Consumer, io.vertx.core.Handler)
      */
     @Override
     public HonoClient createTelemetryConsumer(
             final String tenantId,
+            final Consumer<Message> telemetryConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+        return createTelemetryConsumer(tenantId, AbstractHonoClient.DEFAULT_SENDER_CREDITS, telemetryConsumer,
+                creationHandler);
+    }
+
+    /* (non-Javadoc)
+     * @see org.eclipse.hono.client.HonoClient#createTelemetryConsumer(java.lang.String, int, java.util.function.Consumer, io.vertx.core.Handler)
+     */
+    @Override
+    public HonoClient createTelemetryConsumer(
+            final String tenantId,
+            final int prefetch,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
@@ -363,18 +366,60 @@ public final class HonoClientImpl implements HonoClient {
             creationHandler.handle(attempt);
         });
         checkConnection().compose(
-                connected -> TelemetryConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer()),
+                connected -> TelemetryConsumerImpl.create(context, connection, tenantId,
+                        connectionFactory.getPathSeparator(), prefetch, telemetryConsumer, consumerTracker.completer()),
                 consumerTracker);
         return this;
     }
 
     /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, java.util.function.Consumer, io.vertx.core.Handler)
+     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, int, java.util.function.Consumer, io.vertx.core.Handler)
      */
     @Override
     public HonoClient createEventConsumer(
             final String tenantId,
             final Consumer<Message> eventConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+
+        createEventConsumer(tenantId, AbstractHonoClient.DEFAULT_SENDER_CREDITS, (delivery, message) -> eventConsumer.accept(message), creationHandler);
+        return this;
+    }
+
+    /* (non-Javadoc)
+     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, int, java.util.function.Consumer, io.vertx.core.Handler)
+     */
+    @Override
+    public HonoClient createEventConsumer(
+            final String tenantId,
+            final int prefetch,
+            final Consumer<Message> eventConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+
+        createEventConsumer(tenantId, prefetch, (delivery, message) -> eventConsumer.accept(message), creationHandler);
+        return this;
+    }
+
+    /* (non-Javadoc)
+     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, java.util.function.BiConsumer, io.vertx.core.Handler)
+     */
+    @Override
+    public HonoClient createEventConsumer(
+            final String tenantId,
+            final BiConsumer<ProtonDelivery, Message> eventConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+
+        createEventConsumer(tenantId, AbstractHonoClient.DEFAULT_SENDER_CREDITS, eventConsumer, creationHandler);
+        return this;
+    }
+
+    /* (non-Javadoc)
+     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, java.util.function.BiConsumer, io.vertx.core.Handler)
+     */
+    @Override
+    public HonoClient createEventConsumer(
+            final String tenantId,
+            final int prefetch,
+            final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
         // register a handler to be notified if the underlying connection to the server fails
@@ -390,7 +435,8 @@ public final class HonoClientImpl implements HonoClient {
             creationHandler.handle(attempt);
         });
         checkConnection().compose(
-                connected -> EventConsumerImpl.create(context, connection, tenantId, connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer()),
+                connected -> EventConsumerImpl.create(context, connection, tenantId,
+                        connectionFactory.getPathSeparator(), prefetch, eventConsumer, consumerTracker.completer()),
                 consumerTracker);
         return this;
     }

@@ -34,6 +34,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoReceiverSampler.class);
 
     private static final String USE_SENDER_TIME = "useSenderTime";
+    private static final String PREFETCH = "prefetch";
 
     private HonoReceiver honoReceiver;
 
@@ -45,13 +46,20 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         setProperty(USE_SENDER_TIME, useSenderTime);
     }
 
+    public String getPrefetch() {
+        return getPropertyAsString(PREFETCH);
+    }
+
+    public void setPrefetch(final String prefetch) {
+        setProperty(PREFETCH, prefetch);
+    }
+
     @Override
     public SampleResult sample(final Entry entry) {
         SampleResult res = new SampleResult();
         res.setResponseOK();
         res.setDataType(SampleResult.TEXT);
         res.setSampleLabel(getName());
-        res.sampleStart();
         honoReceiver.sample(res, isUseSenderTime());
         return res;
     }

@@ -4,21 +4,21 @@
     "mode": "standalone",
     "workerThreads": 4,
     "saslConfigName": "qdrouter-sasl",
-    "saslConfigPath": "/etc/hono/qdrouter/"
+    "saslConfigPath": "/run/secrets/"
   }],
 
   ["sslProfile", {
     "name": "external",
-    "certDb": "/etc/hono/certs/trusted-certs.pem",
-    "certFile": "/etc/hono/certs/qdrouter-cert.pem",
-    "keyFile": "/etc/hono/certs/qdrouter-key.pem"
+    "certDb": "/run/secrets/trusted-certs.pem",
+    "certFile": "/run/secrets/qdrouter-cert.pem",
+    "keyFile": "/run/secrets/qdrouter-key.pem"
   }],
 
   ["sslProfile", {
     "name": "internal",
-    "certDb": "/etc/hono/certs/trusted-certs.pem",
-    "certFile": "/etc/hono/certs/qdrouter-cert.pem",
-    "keyFile": "/etc/hono/certs/qdrouter-key.pem",
+    "certDb": "/run/secrets/trusted-certs.pem",
+    "certFile": "/run/secrets/qdrouter-cert.pem",
+    "keyFile": "/run/secrets/qdrouter-key.pem",
     "uidFormat": "oun"
   }],
 
@@ -27,14 +27,14 @@
     "requireSsl": true,
     "host": "0.0.0.0",
     "port": 5671,
-    "authenticatePeer": "yes",
+    "authenticatePeer": true,
     "saslMechanisms": "PLAIN"
   }],
 
   ["listener", {
     "host": "0.0.0.0",
     "port": 5672,
-    "authenticatePeer": "yes",
+    "authenticatePeer": true,
     "saslMechanisms": "PLAIN"
   }],
 
@@ -43,14 +43,15 @@
     "requireSsl": true,
     "host": "0.0.0.0",
     "port": 5673,
-    "authenticatePeer": "yes",
+    "authenticatePeer": true,
     "saslMechanisms": "EXTERNAL"
   }],
 
   ["connector", {
+    "sslProfile": "external",
     "name": "broker",
     "host": "hono-artemis.hono",
-    "port": 5672,
+    "port": 5671,
     "role": "route-container",
     "saslUsername": "artemis",
     "saslPassword": "artemis"
@@ -88,15 +89,13 @@
         "consumers": {
           "users": "consumer@HONO",
           "remoteHosts": "*",
-          "maxSessions": 100,
-          "maxMessageSize": 102400,
+          "maxSessions": 10,
           "sources": "telemetry/*, event/*"
         },
         "DEFAULT_TENANT": {
           "users": "user1@HONO",
           "remoteHosts": "*",
-          "maxSessions": 100,
-          "maxMessageSize": 102400,
+          "maxSessions": 10,
           "sources": "telemetry/DEFAULT_TENANT, event/DEFAULT_TENANT"
         }
       }
@@ -104,17 +103,17 @@
 
   ["vhost", {
       "id": "hono-internal",
-      "maxConnections": 100,
-      "maxConnectionsPerUser": 10,
-      "maxConnectionsPerHost": 10,
+      "maxConnections": 5,
       "groups": {
         "Hono": {
           "users": "Eclipse IoT;Hono;hono-messaging",
           "remoteHosts": "*",
-          "maxSessions": 500,
-          "maxMessageSize": 204800,
-          "sources": "$management",
-          "targets": "telemetry/*, event/*, $management"
+          "maxSessions": 2,
+          "maxFrameSize": 32768,
+          "maxSessionWindow": 3276800,
+          "maxMessageSize": 131072,
+          "allowUserIdProxy": true,
+          "targets": "telemetry/*, event/*"
         }
       }
   }],

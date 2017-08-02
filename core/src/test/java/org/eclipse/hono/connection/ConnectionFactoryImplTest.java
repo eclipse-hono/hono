@@ -21,10 +21,15 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.impl.VertxHttp2ClientUpgradeCodec;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 
@@ -32,10 +37,14 @@ import io.vertx.proton.ProtonConnection;
  * Verifies behavior of {@code ConnectionFactoryImpl}.
  *
  */
+@RunWith(VertxUnitRunner.class)
 public class ConnectionFactoryImplTest {
 
-    Vertx vertx;
+    private Vertx vertx;
 
+    /**
+     * Sets up fixture.
+     */
     @Before
     public void setup() {
         vertx = Vertx.vertx();
@@ -44,35 +53,30 @@ public class ConnectionFactoryImplTest {
     /**
      * Verifies that the given result handler is invoked if a connection attempt fails.
      * 
-     * @throws InterruptedException if the test gets interrupted during execution.
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectInvokesHandlerOnfailureToConnect() throws InterruptedException {
+    public void testConnectInvokesHandlerOnfailureToConnect(final TestContext ctx) {
 
         // GIVEN a factory configured to connect to a non-existing server
         ClientConfigProperties props = new ClientConfigProperties();
         props.setHost("127.0.0.1");
-        props.setPort(12000); // no server running on port
+        props.setPort(25673); // no server running on port
         props.setAmqpHostname("hono");
         props.setName("client");
         ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
 
         // WHEN trying to connect to the server
-        final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<Throwable> cause = new AtomicReference<>();
-        Handler<AsyncResult<ProtonConnection>> connectionHandler = (attempt) -> {
-            if (attempt.failed()) {
-                cause.set(attempt.cause());
-                latch.countDown();
-            }
-        };
+        final Async handlerInvocation = ctx.async();
 
         ProtonClientOptions options = new ProtonClientOptions().setConnectTimeout(100);
-        factory.connect(options, null, null, connectionHandler);
+        factory.connect(options, null, null, ctx.asyncAssertFailure(t -> {
+            ctx.assertNotNull(t);
+            handlerInvocation.complete();
+        }));
 
         // THEN the connection attempt fails and the given handler is invoked
-        assertTrue(latch.await(200, TimeUnit.MILLISECONDS));
-        assertThat(cause.get(), is(notNullValue()));
+        handlerInvocation.await(500);
     }
 
 }

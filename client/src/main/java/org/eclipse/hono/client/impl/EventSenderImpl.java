@@ -98,6 +98,9 @@ public final class EventSenderImpl extends AbstractSender {
         });
     }
 
+    /**
+     * Sets the <em>durable</em> message property to {@code true}.
+     */
     @Override
     protected void addEndpointSpecificProperties(final Message msg, final String deviceId) {
         msg.setDurable(true);

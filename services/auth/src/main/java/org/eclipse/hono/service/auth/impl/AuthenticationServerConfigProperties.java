@@ -14,7 +14,6 @@ package org.eclipse.hono.service.auth.impl;
 
 import java.util.Objects;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -24,7 +23,7 @@ import org.springframework.core.io.Resource;
  * Configuration properties for the {@code FileBasedAuthenticationService}.
  *
  */
-public class AuthenticationServerConfigProperties extends ServiceConfigProperties {
+public class AuthenticationServerConfigProperties {
 
     private static final Resource DEFAULT_PERMISSIONS_RESOURCE = new ClassPathResource("permissions.json");
     private final SignatureSupportingConfigProperties signing = new SignatureSupportingConfigProperties();
@@ -36,6 +35,15 @@ public class AuthenticationServerConfigProperties extends ServiceConfigPropertie
      * @return The properties.
      */
     public final SignatureSupportingConfigProperties getSigning() {
+        return signing;
+    }
+
+    /**
+     * Gets the properties for determining key material for validating tokens issued by this service.
+     * 
+     * @return The properties.
+     */
+    public final SignatureSupportingConfigProperties getValidation() {
         return signing;
     }
 

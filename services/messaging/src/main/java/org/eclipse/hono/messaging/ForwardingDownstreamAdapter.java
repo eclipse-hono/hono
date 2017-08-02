@@ -20,7 +20,6 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -64,13 +63,13 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers   = new ArrayList<>();
     private final Vertx                               vertx;
 
-    private GaugeService       gaugeService                = NullGaugeService.getInstance();
-    private CounterService     counterService              = NullCounterService.getInstance();
-    private boolean            running                     = false;
-    private boolean            retryOnFailedConnectAttempt = true;
-    private ProtonConnection   downstreamConnection;
-    private SenderFactory      senderFactory;
-    private ConnectionFactory  downstreamConnectionFactory;
+    private GaugeService      gaugeService                = NullGaugeService.getInstance();
+    private CounterService    counterService              = NullCounterService.getInstance();
+    private boolean           running                     = false;
+    private boolean           retryOnFailedConnectAttempt = true;
+    private ProtonConnection  downstreamConnection;
+    private SenderFactory     senderFactory;
+    private ConnectionFactory downstreamConnectionFactory;
 
     /**
      * Creates a new adapter instance for a sender factory.
@@ -258,13 +257,26 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose) {
-        logger.info("connection to downstream container [{}] is closed", downstreamConnection.getRemoteContainer());
+
+        if (remoteClose.succeeded()) {
+            if (remoteClose.result() != downstreamConnection) {
+                logger.warn("downstream container closed unknown connection");
+                return;
+            } else {
+                logger.info("downstream container [{}] has closed connection", downstreamConnection.getRemoteContainer());
+            }
+        } else {
+            logger.info("downstream container [{}] has closed connection: {}", downstreamConnection.getRemoteContainer(), remoteClose.cause().getMessage());
+        }
         downstreamConnection.close();
-        counterService.decrement(MetricConstants.metricNameDownstreamConnections());
+        onDisconnectFromDownstreamContainer(downstreamConnection);
     }
 
     /**
      * Handles unexpected disconnection from downstream container.
+     * <p>
+     * Clears all internal state kept for the connection, e.g. open links etc, and then tries to
+     * reconnect.
      * 
      * @param con The failed connection.
      */
@@ -280,9 +292,11 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
                 counterService.decrement(MetricConstants.metricNameUpstreamLinks(client.getTargetAddress()));
                 counterService.decrement(MetricConstants.metricNameDownstreamSenders(client.getTargetAddress()));
+                gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()), 0);
             }
             receiversPerConnection.clear();
             activeSenders.clear();
+            downstreamConnection.attachments().clear();
             downstreamConnection.disconnectHandler(null);
             downstreamConnection.disconnect();
             counterService.decrement(MetricConstants.metricNameDownstreamConnections());
@@ -298,12 +312,16 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     private void reconnect(final Handler<AsyncResult<ProtonConnection>> resultHandler) {
 
-        final ProtonClientOptions clientOptions = createClientOptions();
-        if (clientOptions.getReconnectAttempts() != 0) {
-            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-                logger.info("attempting to re-connect to downstream container");
-                connectToDownstream(clientOptions, resultHandler);
-            });
+        if (!running) {
+            logger.info("adapter is stopped, will not re-connect to downstream container");
+        } else {
+            final ProtonClientOptions clientOptions = createClientOptions();
+            if (clientOptions.getReconnectAttempts() != 0) {
+                vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+                    logger.info("attempting to re-connect to downstream container");
+                    connectToDownstream(clientOptions, resultHandler);
+                });
+            }
         }
     }
 
@@ -337,8 +355,8 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 resultHandler.handle(attempt);
             });
 
-            createSender(client.getTargetAddress(), replenishedSender -> handleFlow(replenishedSender, client))
-            .compose(createdSender -> {
+            final ResourceIdentifier targetAddress = ResourceIdentifier.fromString(client.getTargetAddress());
+            createSender(targetAddress, replenishedSender -> handleFlow(replenishedSender, client)).compose(createdSender -> {
                 addSender(client, createdSender);
                 tracker.complete();
             }, tracker);
@@ -357,8 +375,8 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             final ProtonSender replenishedSender,
             final UpstreamReceiver client) {
 
-        logger.debug("received FLOW from downstream sender [con:{}, link: {}, credits: {}, queued: {}, drain: {}",
-                client.getConnectionId(), client.getLinkId(), replenishedSender.getCredit(),
+        logger.trace("received FLOW from downstream container [con:{}, link: {}, sendQueueFull: {}, credits: {}, queued: {}, drain: {}",
+                client.getConnectionId(), client.getLinkId(), replenishedSender.sendQueueFull(), replenishedSender.getCredit(),
                 replenishedSender.getQueued(), replenishedSender.getDrain());
         if (replenishedSender.getDrain()) {
             // send drain request upstream and act upon result of request to drain upstream client
@@ -370,30 +388,23 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         } else {
             int downstreamCredit = getAvailableDownstreamCredit(replenishedSender);
             client.replenish(downstreamCredit);
-            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()),downstreamCredit);
+            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()), downstreamCredit);
         }
     }
 
     private static int getAvailableDownstreamCredit(final ProtonSender downstreamSender) {
-        return Math.max(0, downstreamSender.getCredit() - downstreamSender.getQueued());
+        return Math.max(0, downstreamSender.getCredit());
     }
 
     private Future<ProtonSender> createSender(
-            final String targetAddress,
+            final ResourceIdentifier targetAddress,
             final Handler<ProtonSender> sendQueueDrainHandler) {
 
         if (!isConnected()) {
             return Future.failedFuture("downstream connection must be opened before creating sender");
         } else {
-            String tenantOnlyTargetAddress = getTenantOnlyTargetAddress(targetAddress);
-            String address = tenantOnlyTargetAddress.replace(Constants.DEFAULT_PATH_SEPARATOR, honoConfig.getPathSeparator());
-            return senderFactory.createSender(downstreamConnection, address, getDownstreamQos(), sendQueueDrainHandler);
+            return senderFactory.createSender(downstreamConnection, targetAddress, getDownstreamQos(), sendQueueDrainHandler);
         }
-    }
-
-    private static String getTenantOnlyTargetAddress(final String address) {
-        ResourceIdentifier targetAddress = ResourceIdentifier.fromString(address);
-        return String.format("%s/%s", targetAddress.getEndpoint(), targetAddress.getTenantId());
     }
 
     /**
@@ -464,6 +475,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         if (sender != null && sender.isOpen()) {
             logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
             counterService.decrement(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
+            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(link.getTargetAddress()), 0);
             sender.close();
         }
     }
@@ -483,7 +495,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             logger.info("no downstream sender for link [{}] available, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
         } else if (sender.isOpen()) {
-            if (sender.getCredit() <= 0) {
+            if (sender.sendQueueFull()) {
                 if (upstreamDelivery.remotelySettled()) {
                     // sender has sent the message pre-settled, i.e. we can simply discard the message
                     logger.debug("no downstream credit available for link [{}], discarding message [{}]",
@@ -498,8 +510,6 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     counterService.increment(MetricConstants.metricNameUndeliverableMessages(sender.getTarget().getAddress()));
                 }
             } else {
-                // make sure upstream client does not starve before more credits flow in from downstream container
-                client.replenish(getAvailableDownstreamCredit(sender));
                 logger.trace("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}], credit available: {}, queued: {}",
                         msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer(), sender.getCredit(), sender.getQueued());
                 forwardMessage(sender, msg, upstreamDelivery);
@@ -518,6 +528,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      *
      * @return {@code true} if the connection is open (and thus usable).
      */
+    @Override
     public final boolean isConnected() {
         return downstreamConnection != null && !downstreamConnection.isDisconnected();
     }

@@ -1,5 +1,5 @@
 spec:
   ports:
-  - port: 5672
+  - port: 5671
     protocol: TCP
-    targetPort: 5672
+    targetPort: 5671

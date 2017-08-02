@@ -16,7 +16,6 @@ import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.Objects;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -42,7 +41,7 @@ import io.vertx.core.json.JsonObject;
  * 
  * @param <T> The type of configuration properties this service requires.
  */
-public abstract class BaseRegistrationService<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> implements RegistrationService {
+public abstract class BaseRegistrationService<T> extends ConfigurationSupportingVerticle<T> implements RegistrationService {
 
     /**
      * A logger to be shared by subclasses.
@@ -281,7 +280,7 @@ public abstract class BaseRegistrationService<T extends ServiceConfigProperties>
         request.reply(RegistrationConstants.getServiceReplyAsJson(tenantId, deviceId, result));
     }
 
-    private final JsonObject getRequestPayload(final JsonObject request) {
+    private JsonObject getRequestPayload(final JsonObject request) {
 
         final JsonObject payload = request.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
         Boolean enabled = payload.getBoolean(FIELD_ENABLED);

@@ -61,30 +61,19 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
         return IANA_SECURE_MQTT_PORT;
     }
 
+    @Override
     public int getInsecurePortDefaultValue() {
         return IANA_MQTT_PORT;
     }
 
     @Override
-    public int getPort() {
-        if (server != null) {
-            return server.actualPort();
-        } else if (isSecurePortEnabled()) {
-            return getConfig().getPort(getPortDefaultValue());
-        } else {
-            return Constants.PORT_UNCONFIGURED;
-        }
+    protected final int getActualPort() {
+        return (server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED);
     }
 
     @Override
-    public int getInsecurePort() {
-        if (insecureServer != null) {
-            return insecureServer.actualPort();
-        } else if (isInsecurePortEnabled()) {
-            return getConfig().getInsecurePort(getInsecurePortDefaultValue());
-        } else {
-            return Constants.PORT_UNCONFIGURED;
-        }
+    protected final int getActualInsecurePort() {
+        return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
     }
 
     private Future<MqttServer> bindSecureMqttServer() {
@@ -151,6 +140,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
             this.insecureServer = insecureServer;
             connectToMessaging(null);
             connectToDeviceRegistration(null);
+            connectToCredentialsService(null);
             startFuture.complete();
         }, startFuture);
     }
@@ -191,7 +181,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
     private void handleEndpointConnection(final MqttEndpoint endpoint) {
 
-        LOG.info("Connection request from client {}", endpoint.clientIdentifier());
+        LOG.info("connection request from client {}", endpoint.clientIdentifier());
 
         if (!isConnected()) {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
@@ -247,8 +237,14 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
                     LOG.debug("client [ID: {}] tries to publish on unsupported topic", endpoint.clientIdentifier());
                     close(endpoint);
                 }
-
             });
+
+            endpoint.closeHandler(v -> {
+                LOG.debug("connection closed with client [{}]", endpoint.clientIdentifier());
+                if (registrationAssertions.remove(endpoint) != null)
+                    LOG.trace("removed registration assertion for client [{}]", endpoint.clientIdentifier());
+            });
+
             endpoint.accept(false);
         }
     }
@@ -284,8 +280,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
             registrationAssertions.remove(endpoint);
             Future<String> result = Future.future();
             getRegistrationAssertion(address.getTenantId(), address.getResourceId()).compose(t -> {
-                LOG.trace("caching registration assertion for client [{}]", endpoint.clientIdentifier());
-                registrationAssertions.put(endpoint, t);
+                // if the client closes the connection right after publishing the messages and before that
+                // the registration assertion has been returned, avoid to put it into the map
+                if (endpoint.isConnected()) {
+                    LOG.trace("caching registration assertion for client [{}]", endpoint.clientIdentifier());
+                    registrationAssertions.put(endpoint, t);
+                }
                 result.complete(t);
             }, result);
             return result;

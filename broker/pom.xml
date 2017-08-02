@@ -9,8 +9,16 @@
   </parent>
 
   <artifactId>hono-artemis</artifactId>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
+  <name>Hono Artemis</name>
   <description>Module for building a Docker image for ActiveMQ Artemis using the Hono default configuration.</description>
+
+  <properties>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <maven.source.skip>true</maven.source.skip>
+    <gpg.skip>true</gpg.skip>
+    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -45,7 +53,7 @@
             </goals>
             <configuration>
               <includeArtifactIds>hono-demo-certs</includeArtifactIds>
-              <outputDirectory>${project.build.outputDirectory}/certs</outputDirectory>
+              <outputDirectory>${project.build.directory}/certs</outputDirectory>
               <excludes>META-INF/**</excludes>
             </configuration>
           </execution>
@@ -73,7 +81,7 @@
                   <build>
                     <from>enmasseproject/activemq-artemis:${artemis.version}-1</from>
                     <ports>
-                      <port>5672</port>
+                      <port>5671</port>
                     </ports>
                     <assembly>
                       <mode>dir</mode>
@@ -90,6 +98,14 @@
                               <include>artemis-roles.properties</include>
                             </includes>
                           </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>etc</outputDirectory>
+                            <includes>
+                              <include>artemisKeyStore.p12</include>
+                              <include>trustStore.jks</include>
+                            </includes>
+                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
@@ -102,5 +118,4 @@
       </build>
     </profile>
   </profiles>
-  <name>Hono Artemis</name>
 </project>

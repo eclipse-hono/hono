@@ -13,7 +13,6 @@
 package org.eclipse.hono.messaging;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -105,4 +104,11 @@ public interface DownstreamAdapter {
      * @throws IllegalStateException if this adapter is not running.
      */
     void processMessage(UpstreamReceiver client, ProtonDelivery delivery, Message message);
+
+    /**
+     * Checks if this adapter is currently connected to the downstream AMQP container.
+     * 
+     * @return {@code true} if this adapter has a usable connection to the container.
+     */
+    boolean isConnected();
 }

@@ -1,6 +1,10 @@
 spec:
   template:
     spec:
+      volumes:
+      - name: conf
+        secret:
+          secretName: ${project.artifactId}-conf
       containers:
       - readinessProbe:
           initialDelaySeconds: 15
@@ -14,3 +18,13 @@ spec:
           timeoutSeconds: 1
           tcpSocket:
             port: 5672
+        volumeMounts:
+        - name: conf
+          mountPath: /run/secrets
+        env:
+        - name: SPRING_CONFIG_LOCATION
+          value: file:///run/secrets/
+        - name: SPRING_PROFILES_ACTIVE
+          value: authentication-impl,dev
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml

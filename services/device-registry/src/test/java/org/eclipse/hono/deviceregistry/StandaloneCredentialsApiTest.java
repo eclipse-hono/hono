@@ -27,6 +27,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
@@ -37,7 +38,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.core.io.ClassPathResource;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -64,13 +64,14 @@ public class StandaloneCredentialsApiTest {
     private static final String                USER    = "hono-client";
     private static final String                PWD     = "secret";
     private static final String                CREDENTIALS_USER = "billie";
-    private static final String                CREDENTIALS_TYPE = "hashed-password";
+    private static final String                CREDENTIALS_TYPE_HASHED_PASSWORD = "hashed-password";
+    private static final String                CREDENTIALS_TYPE_PRESHARED_KEY = "psk";
     private static final String                CREDENTIALS_USER_PASSWORD = "hono-secret";
     private static final String                CREDENTIALS_PASSWORD_SALT = "hono";
     private static final String                DEFAULT_DEVICE_ID = "4711";
 
     private static Vertx                       vertx = Vertx.vertx();
-    private static SimpleDeviceRegistryServer server;
+    private static DeviceRegistryAmqpServer server;
 
     private static HonoClient                  client;
     private static CredentialsClient           credentialsClient;
@@ -78,18 +79,19 @@ public class StandaloneCredentialsApiTest {
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) throws Exception {
 
-        DeviceRegistryConfigProperties props = new DeviceRegistryConfigProperties();
+        ServiceConfigProperties props = new ServiceConfigProperties();
         props.setInsecurePortEnabled(true);
         props.setInsecurePort(0);
 
-        props.setCredentialsPath(new ClassPathResource("credentials.json"));
+        CredentialsConfigProperties credentialsProperties = new CredentialsConfigProperties();
+        credentialsProperties.setCredentialsFilename("credentials.json");
 
-        server = new SimpleDeviceRegistryServer();
+        server = new DeviceRegistryAmqpServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx,createAuthenticationService(createUser())));
         server.setConfig(props);
         server.addEndpoint(new CredentialsEndpoint(vertx));
         FileBasedCredentialsService deviceRegistryImpl = new FileBasedCredentialsService();
-        deviceRegistryImpl.setConfig(props);
+        deviceRegistryImpl.setConfig(credentialsProperties);
 
         Future<CredentialsClient> setupTracker = Future.future();
         setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {
@@ -171,7 +173,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsNotExistingAuthId(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE, "notExisting", s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, "notExisting", s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_NOT_FOUND);
             ok.complete();
@@ -199,7 +201,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsNullAuthId(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE, null, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, null, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_BAD_REQUEST);
             ok.complete();
@@ -214,7 +216,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsReturnsCredentialsTypeAndAuthId(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             JsonObject payload = s.result().getPayload();
@@ -232,12 +234,12 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsReturnsCredentialsDefaultDeviceIdAndIsEnabled(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             JsonObject payload = s.result().getPayload();
 
-            checkPayloadGetCredentialsContainsDefaultDeviceIdAndIsEnabled(payload);
+            assertTrue(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(payload));
             ok.complete();
         });
     }
@@ -250,7 +252,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsReturnsMultipleSecrets(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             JsonObject payload = s.result().getPayload();
@@ -270,7 +272,7 @@ public class StandaloneCredentialsApiTest {
 
         final AtomicReference<JsonObject> payloadRef = new AtomicReference<>();
 
-        credentialsClient.get(CREDENTIALS_TYPE, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             payloadRef.set(s.result().getPayload());
@@ -288,7 +290,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsFirstSecretCurrentlyActiveTimeInterval(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             JsonObject payload = s.result().getPayload();
@@ -298,6 +300,23 @@ public class StandaloneCredentialsApiTest {
         });
     }
 
+    /**
+     * Verify that setting authId and type preshared-key to existing credentials is responded with HTTP_OK.
+     * Check that the payload contains NOT_BEFORE and NOT_AFTER entries which denote a currently active time interval.
+     */
+    @Test(timeout = TIMEOUT)
+    public void testGetCredentialsPresharedKeyIsNotEnabled(final TestContext ctx) {
+        final Async ok = ctx.async();
+
+        credentialsClient.get(CREDENTIALS_TYPE_PRESHARED_KEY, CREDENTIALS_USER, s -> {
+            ctx.assertTrue(s.succeeded());
+            ctx.assertEquals(s.result().getStatus(), HTTP_OK);
+            JsonObject payload = s.result().getPayload();
+
+            assertFalse(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(payload));
+            ok.complete();
+        });
+    }
 
     private JsonObject pickFirstSecretFromPayload(final JsonObject payload) {
         // secrets: first entry is expected to be valid, second entry may have timestamps not yet active (not checked), more entries may be avail
@@ -370,16 +389,16 @@ public class StandaloneCredentialsApiTest {
         assertEquals(payload.getString(CredentialsConstants.FIELD_AUTH_ID), CREDENTIALS_USER);
 
         assertTrue(payload.containsKey(CredentialsConstants.FIELD_TYPE));
-        assertEquals(payload.getString(CredentialsConstants.FIELD_TYPE), CREDENTIALS_TYPE);
+        assertEquals(payload.getString(CredentialsConstants.FIELD_TYPE), CREDENTIALS_TYPE_HASHED_PASSWORD);
     }
 
-    private void checkPayloadGetCredentialsContainsDefaultDeviceIdAndIsEnabled(final JsonObject payload) {
+    private boolean checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(final JsonObject payload) {
         assertNotNull(payload);
 
         assertTrue(payload.containsKey(CredentialsConstants.FIELD_DEVICE_ID));
         assertEquals(payload.getString(CredentialsConstants.FIELD_DEVICE_ID), DEFAULT_DEVICE_ID);
 
-        assertTrue(payload.getBoolean(CredentialsConstants.FIELD_ENABLED));
+        return (payload.getBoolean(CredentialsConstants.FIELD_ENABLED));
     }
 
     private byte[] hashPassword(final String hashFunction,final String hashSalt, final String passwordToHash) throws NoSuchAlgorithmException, UnsupportedEncodingException {

@@ -48,7 +48,7 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.mqtt")
-    public ServiceConfigProperties honoServerProperties() {
+    public ServiceConfigProperties adapterProperties() {
         return new ServiceConfigProperties();
     }
 

@@ -23,7 +23,6 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.BaseEndpoint;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -35,6 +34,8 @@ import org.springframework.boot.actuate.metrics.CounterService;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -146,8 +147,9 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
             receiver.close();
         } else {
             receiver.setQoS(receiver.getRemoteQoS());
+            receiver.setTarget(receiver.getRemoteTarget());
             final String linkId = UUID.randomUUID().toString();
-            final UpstreamReceiver link = UpstreamReceiver.newUpstreamReceiver(linkId, receiver, receiver.getRemoteQoS());
+            final UpstreamReceiver link = UpstreamReceiver.newUpstreamReceiver(linkId, receiver);
 
             downstreamAdapter.onClientAttach(link, s -> {
                 if (s.succeeded()) {
@@ -171,6 +173,30 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
                 }
             });
         }
+    }
+
+    /**
+     * Closes the link to an upstream client and removes all state kept for it.
+     * 
+     * @param client The client to detach.
+     */
+    protected final void onLinkDetach(final UpstreamReceiver client) {
+        onLinkDetach(client, null);
+    }
+
+    /**
+     * Closes the link to an upstream client and removes all state kept for it.
+     * 
+     * @param client The client to detach.
+     * @param error The error condition to convey to the client when closing the link.
+     */
+    protected final void onLinkDetach(final UpstreamReceiver client, final ErrorCondition error) {
+        if (error == null) {
+            logger.debug("closing receiver for client [{}]", client.getLinkId());
+        } else {
+            logger.debug("closing receiver for client [{}]: {}", client.getLinkId(), error.getDescription());
+        }
+        client.close(error);
     }
 
     final void forwardMessage(final UpstreamReceiver link, final ProtonDelivery delivery, final Message msg) {
@@ -210,4 +236,21 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
      * @return The delivery modes this endpoint supports.
      */
     protected abstract ProtonQoS[] getEndpointQos();
+
+    /**
+     * Registers a check that succeeds if this endpoint has a usable connection to its
+     * downstream container.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+        handler.register(getName() + "-endpoint-downstream-connection", status -> {
+            if (downstreamAdapter == null) {
+                status.complete(Status.KO());
+            } else if (downstreamAdapter.isConnected()) {
+                status.complete(Status.OK());
+            } else {
+                status.complete(Status.KO());
+            }
+        });
+    }
 }

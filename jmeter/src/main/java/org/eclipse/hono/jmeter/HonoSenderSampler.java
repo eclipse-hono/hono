@@ -146,6 +146,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     @Override
     public SampleResult sample(final Entry entry) {
+
         SampleResult res = new SampleResult();
         res.setDataType(SampleResult.TEXT);
         res.setResponseOK();

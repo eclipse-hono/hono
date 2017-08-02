@@ -136,14 +136,6 @@
       Build images defined in modules with packaging type "pom".
      -->
     <fabric8.skip.build.pom>false</fabric8.skip.build.pom>
-    <!-- 
-      The default path to load the trusted CA certificates from.
-     -->
-    <hono.trustStore.path>/etc/hono/certs/trusted-certs.pem</hono.trustStore.path>
-    <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
-    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
-    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
-    <hono.auth.validation.certPath>/etc/hono/certs/auth-server-cert.pem</hono.auth.validation.certPath>
   </properties>
 
   <modules>
@@ -209,11 +201,21 @@
           </configuration>
           <executions>
             <execution>
-              <id>fabric8</id>
+              <id>create_resources</id>
+              <!-- 
+                create Kubernetes/Openshift descriptors before the artifact is packaged so
+                that the desciptors are included in the artifact
+               -->
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>resource</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>build_images</id>
               <phase>package</phase>
               <goals>
                 <goal>build</goal>
-                <goal>resource</goal>
               </goals>
             </execution>
           </executions>
@@ -532,7 +534,7 @@
           <plugin>
             <groupId>org.eclipse.cbi.maven.plugins</groupId>
             <artifactId>eclipse-jarsigner-plugin</artifactId>
-            <version>1.1.3</version>
+            <version>1.1.4</version>
             <configuration>
               <excludeInnerJars>true</excludeInnerJars>
             </configuration>

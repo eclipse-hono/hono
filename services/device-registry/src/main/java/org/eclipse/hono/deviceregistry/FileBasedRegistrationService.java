@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.service.registration.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import io.vertx.core.AsyncResult;
@@ -52,6 +53,12 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     private boolean running = false;
     private boolean dirty = false;
 
+    @Autowired
+    @Override
+    public void setConfig(final DeviceRegistryConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
+
     @Override
     protected void doStart(Future<Void> startFuture) {
 
@@ -67,7 +74,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
                         saveToFile(Future.future());
                     });
                 } else {
-                    log.info("persistence is disabled, will not safe device identities to file");
+                    log.info("persistence is disabled, will not save device identities to file");
                 }
             }
         }

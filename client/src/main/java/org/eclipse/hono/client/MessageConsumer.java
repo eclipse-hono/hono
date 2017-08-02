@@ -30,4 +30,14 @@ public interface MessageConsumer {
      * @param closeHandler A handler that is called back with the result of the attempt to close the links.
      */
     void close(Handler<AsyncResult<Void>> closeHandler);
+
+    /**
+     * Grants the given number of message credits to the sender.
+     *
+     * For use when created with 0 prefetch in consumer creation
+     *
+     * @param credits the credits to flow
+     * @throws IllegalStateException if prefetch is non-zero, or an existing drain operation is not yet complete
+     */
+    void flow(int credits) throws IllegalStateException;
 }

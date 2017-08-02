@@ -15,18 +15,19 @@ package org.eclipse.hono.service.auth.impl;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
-import io.vertx.proton.ProtonSession;
 
 
 /**
@@ -35,62 +36,22 @@ import io.vertx.proton.ProtonSession;
  */
 @Component
 @Scope("prototype")
-public class SimpleAuthenticationServer extends AmqpServiceBase<AuthenticationServerConfigProperties> {
+public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
+
+    @Autowired
+    @Override
+    public void setConfig(final ServiceConfigProperties configuration) {
+        setSpecificConfig(configuration);
+    }
 
     @Override
-    protected void onRemoteConnectionOpen(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-Auth-%s:%d", getBindAddress(), getPort()));
-        setRemoteConnectionOpenHandler(connection);
+    protected String getServiceName() {
+        return "Hono-Auth";
     }
 
-    protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
-        connection.setContainer(String.format("Hono-Auth-%s:%d", getInsecurePortBindAddress(), getInsecurePort()));
-        setRemoteConnectionOpenHandler(connection);
-    };
-
-    private void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
-
-        connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
-        connection.receiverOpenHandler(remoteOpenReceiver -> {
-            remoteOpenReceiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "no such node"));
-        });
-        connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
-        connection.disconnectHandler(this::handleRemoteDisconnect);
-        connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
-        connection.openHandler(remoteOpen -> {
-            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
-            connection.open();
-        });
-    }
-
-    private void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.info("opening new session with client [{}]", con.getRemoteContainer());
-        session.closeHandler(sessionResult -> {
-            if (sessionResult.succeeded()) {
-                sessionResult.result().close();
-            }
-        }).open();
-    }
-
-    /**
-     * Invoked when a client closes the connection with this server.
-     *
-     * @param con The connection to close.
-     * @param res The client's close frame.
-     */
-    private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
-        if (res.succeeded()) {
-            LOG.info("client [{}] closed connection", con.getRemoteContainer());
-        } else {
-            LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
-        }
-        con.close();
-        con.disconnect();
-    }
-
-    private void handleRemoteDisconnect(final ProtonConnection connection) {
-        LOG.info("client [{}] disconnected", connection.getRemoteContainer());
-        connection.disconnect();
+    @Override
+    protected void handleReceiverOpen(ProtonConnection con, ProtonReceiver receiver) {
+        receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "cannot write to node")).close();
     }
 
     /**
@@ -99,7 +60,8 @@ public class SimpleAuthenticationServer extends AmqpServiceBase<AuthenticationSe
      * @param con the connection to the client.
      * @param sender the sender created for the link.
      */
-    void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
+    @Override
+    protected void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
 
         final Source remoteSource = sender.getRemoteSource();
         LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",

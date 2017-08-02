@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.service.amqp.UpstreamReceiver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -108,6 +107,11 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
     public void onClientDetach(final UpstreamReceiver client) {
     }
 
+    @Override
+    public boolean isConnected() {
+        return true;
+    }
+
     /**
      * Sets the consumer for telemetry messages received from upstream.
      * 
@@ -140,6 +144,7 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
     }
 
     private class LinkStatus {
+
         private long msgCount;
         private UpstreamReceiver client;
         private boolean suspended;
@@ -155,8 +160,7 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
                 if (msgCount % pauseThreshold == 0) {
                     pause();
                 }
-            } else if (msgCount % DEFAULT_CREDIT == 0) {
-                // we need to replenish client every DEFAULT_CREDIT messages
+            } else {
                 client.replenish(DEFAULT_CREDIT);
             }
         }

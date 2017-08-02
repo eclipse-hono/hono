@@ -13,6 +13,7 @@
 package org.eclipse.hono.client;
 
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -22,6 +23,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * A factory for creating clients for Hono's arbitrary APIs.
@@ -152,8 +154,29 @@ public interface HonoClient {
             Handler<AsyncResult<MessageConsumer>> creationHandler);
 
     /**
+     * Creates a new consumer of telemetry data for a tenant.
+     *
+     * @param tenantId The tenant to consume data for.
+     * @param prefetch the number of message credits the consumer grants and replenishes automatically as messages are
+     *                 delivered. To manage credit manually, you can instead set prefetch to 0.
+     * @param telemetryConsumer The handler to invoke with every message received.
+     * @param creationHandler The handler to invoke with the outcome of the operation.
+     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    HonoClient createTelemetryConsumer(
+            String tenantId,
+            int prefetch,
+            Consumer<Message> telemetryConsumer,
+            Handler<AsyncResult<MessageConsumer>> creationHandler);
+
+    /**
      * Creates a new consumer of events for a tenant.
-     * 
+     * <p>
+     * The events passed in to the registered eventConsumer will be settled
+     * automatically if the consumer does not throw an exception and does not
+     * manually handle the message disposition using the passed in delivery.
+     *
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
      * @param creationHandler The handler to invoke with the outcome of the operation.
@@ -163,6 +186,58 @@ public interface HonoClient {
     HonoClient createEventConsumer(
             String tenantId,
             Consumer<Message> eventConsumer,
+            Handler<AsyncResult<MessageConsumer>> creationHandler);
+
+    /**
+     * Creates a new consumer of events for a tenant.
+     *
+     * @param tenantId The tenant to consume events for.
+     * @param prefetch the number of message credits the consumer grants and replenishes automatically as messages are
+     *                 delivered. To manage credit manually, you can instead set prefetch to 0.
+     * @param eventConsumer The handler to invoke with every event received.
+     * @param creationHandler The handler to invoke with the outcome of the operation.
+     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    HonoClient createEventConsumer(
+            String tenantId,
+            int prefetch,
+            Consumer<Message> eventConsumer,
+            Handler<AsyncResult<MessageConsumer>> creationHandler);
+
+    /**
+     * Creates a new consumer of events for a tenant.
+     * <p>
+     * The events passed in to the registered eventConsumer will be settled
+     * automatically if the consumer does not throw an exception and does not
+     * manually handle the message disposition using the passed in delivery.
+     *
+     * @param tenantId The tenant to consume events for.
+     * @param eventConsumer The handler to invoke with every event received.
+     * @param creationHandler The handler to invoke with the outcome of the operation.
+     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    HonoClient createEventConsumer(
+            String tenantId,
+            BiConsumer<ProtonDelivery, Message> eventConsumer,
+            Handler<AsyncResult<MessageConsumer>> creationHandler);
+
+    /**
+     * Creates a new consumer of events for a tenant.
+     *
+     * @param tenantId The tenant to consume events for.
+     * @param prefetch the number of message credits the consumer grants and replenishes automatically as messages are
+     *                 delivered. To manage credit manually, you can instead set prefetch to 0.
+     * @param eventConsumer The handler to invoke with every event received.
+     * @param creationHandler The handler to invoke with the outcome of the operation.
+     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    HonoClient createEventConsumer(
+            String tenantId,
+            int prefetch,
+            BiConsumer<ProtonDelivery, Message> eventConsumer,
             Handler<AsyncResult<MessageConsumer>> creationHandler);
 
     /**

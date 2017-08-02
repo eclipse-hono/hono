@@ -12,13 +12,14 @@
 
 package org.eclipse.hono.service.amqp;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.proton.*;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.Source;
+import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.auth.AuthorizationService;
@@ -29,11 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonLink;
-import io.vertx.proton.ProtonServer;
-import io.vertx.proton.ProtonServerOptions;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
 /**
@@ -53,6 +50,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     private ProtonServer insecureServer;
     private ProtonSaslAuthenticatorFactory saslAuthenticatorFactory;
     private AuthorizationService authorizationService;
+
+    /**
+     * Gets the name of the service, that may be used for the container name on amqp connections e.g.
+     * @return The name of the service.
+     */
+    protected abstract String getServiceName();
 
     /**
      * Gets the default port number of the secure AMQP port.
@@ -123,6 +126,15 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     /**
+     * Iterates over the endpoints registered with this service.
+     * 
+     * @return The endpoints.
+     */
+    protected final Iterable<Endpoint> endpoints() {
+        return endpoints.values();
+    }
+
+    /**
      * Sets the factory to use for creating objects performing SASL based authentication of clients.
      *
      * @param factory The factory.
@@ -153,18 +165,16 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     @Override
-    public void start(final Future<Void> startupHandler) {
+    public Future<Void> startInternal() {
 
         if (authorizationService == null) {
             authorizationService = new ClaimsBasedAuthorizationService();
         }
-        preStartServers()
+        return preStartServers()
             .compose(s -> checkPortConfiguration())
             .compose(s -> startEndpoints())
             .compose(s -> startSecureServer())
-            .compose(s -> startInsecureServer())
-            .compose(s -> startupHandler.complete(), startupHandler);
-
+            .compose(s -> startInsecureServer());
     }
 
     /**
@@ -297,8 +307,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     @Override
-    public final void stop(Future<Void> shutdownHandler) {
+    public final Future<Void> stopInternal() {
 
+        Future<Void> shutdownHandler = Future.future();
         Future<Void> tracker = Future.future();
         if (server != null) {
             server.close(tracker.completer());
@@ -313,43 +324,45 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                 shutdownHandler.complete();
             }
         }, shutdownHandler);
+        return shutdownHandler;
     }
 
     @Override
-    public final int getPort() {
-        if (server != null) {
-            return server.actualPort();
-        } else if (isSecurePortEnabled()) {
-            return getConfig().getPort(getPortDefaultValue());
-        } else {
-            return Constants.PORT_UNCONFIGURED;
-        }
+    protected final int getActualPort() {
+        return (server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED);
     }
 
     @Override
-    public final int getInsecurePort() {
-        if (insecureServer != null) {
-            return insecureServer.actualPort();
-        } else if (isInsecurePortEnabled()) {
-            return getConfig().getInsecurePort(getInsecurePortDefaultValue());
-        } else {
-            return Constants.PORT_UNCONFIGURED;
-        }
+    protected final int getActualInsecurePort() {
+        return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
     }
 
     /**
      * Invoked when an AMQP <em>open</em> frame is received on the secure port.
-     * 
+     * <p>
+     * Configures the AMQP connection for the secure port and provides a basic connection handling.
+     * Subclasses may override this method to set custom handlers.
+     *
      * @param connection The AMQP connection that the frame is supposed to establish.
      */
-    protected abstract void onRemoteConnectionOpen(final ProtonConnection connection);
+    protected void onRemoteConnectionOpen(final ProtonConnection connection) {
+        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getBindAddress(), getPort()));
+        setRemoteConnectionOpenHandler(connection);
+    }
 
     /**
      * Invoked when an AMQP <em>open</em> frame is received on the insecure port.
-     * 
+     * <p>
+     * Configures the AMQP connection for the insecure port and provides a basic connection handling.
+     * Subclasses may override this method to set custom handlers.
+     *
      * @param connection The AMQP connection that the frame is supposed to establish.
+     * @throws NullPointerException if connection is {@code null}.
      */
-    protected abstract void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection);
+    protected void onRemoteConnectionOpenInsecurePort(final ProtonConnection connection) {
+        connection.setContainer(String.format("%s-%s:%d", getServiceName(), getInsecurePortBindAddress(), getInsecurePort()));
+        setRemoteConnectionOpenHandler(connection);
+    }
 
     /**
      * Closes a link for an unknown target address.
@@ -384,6 +397,186 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             return ResourceIdentifier.fromStringAssumingDefaultTenant(address);
         } else {
             return ResourceIdentifier.fromString(address);
+        }
+    }
+
+    /**
+     * Handles a request from a client to establish a link for sending messages to this server.
+     * The already established connection must have an authenticated user as principal for doing the authorization check.
+     *
+     * @param con the connection to the client.
+     * @param receiver the receiver created for the link.
+     */
+    protected void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
+        if (receiver.getRemoteTarget().getAddress() == null) {
+            LOG.debug("client [{}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link",
+                    con.getRemoteContainer());
+            receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
+        } else {
+            LOG.debug("client [{}] wants to open a link for sending messages [address: {}]",
+                    con.getRemoteContainer(), receiver.getRemoteTarget());
+            try {
+                final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
+                final Endpoint endpoint = getEndpoint(targetResource);
+                if (endpoint == null) {
+                    handleUnknownEndpoint(con, receiver, targetResource);
+                } else {
+                    final HonoUser user = Constants.getClientPrincipal(con);
+                    getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).setHandler(authAttempt -> {
+                        if (authAttempt.succeeded() && authAttempt.result()) {
+                            Constants.copyProperties(con, receiver);
+                            receiver.setTarget(receiver.getRemoteTarget());
+                            endpoint.onLinkAttach(con, receiver, targetResource);
+                        } else {
+                            LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
+                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
+                        }
+                    });
+                }
+            } catch (final IllegalArgumentException e) {
+                LOG.debug("client has provided invalid resource identifier as target address", e);
+                receiver.close();
+            }
+        }
+    }
+
+    /**
+     * Handles a request from a client to establish a link for receiving messages from this server.
+     *
+     * @param con the connection to the client.
+     * @param sender the sender created for the link.
+     */
+    protected void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
+        final Source remoteSource = sender.getRemoteSource();
+        LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
+                con.getRemoteContainer(), remoteSource);
+        try {
+            final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
+            final Endpoint endpoint = getEndpoint(targetResource);
+            if (endpoint == null) {
+                handleUnknownEndpoint(con, sender, targetResource);
+            } else {
+                final HonoUser user = Constants.getClientPrincipal(con);
+                getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).setHandler(authAttempt -> {
+                    if (authAttempt.succeeded() && authAttempt.result()) {
+                        Constants.copyProperties(con, sender);
+                        sender.setSource(sender.getRemoteSource());
+                        endpoint.onLinkAttach(con, sender, targetResource);
+                    } else {
+                        LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
+                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
+                    }
+                });
+            }
+        } catch (final IllegalArgumentException e) {
+            LOG.debug("client has provided invalid resource identifier as target address", e);
+            sender.close();
+        }
+    }
+
+    private void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
+        connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
+        connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
+        connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
+        connection.disconnectHandler(this::handleRemoteDisconnect);
+        connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
+        connection.openHandler(remoteOpen -> {
+            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
+            connection.open();
+            // attach an ID so that we can later inform downstream components when connection is closed
+            connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
+        });
+    }
+
+    /**
+     * Invoked when a client initiates a session (which is then opened in this method).
+     * <p>
+     * Subclasses should override this method if other behaviour shall be implemented on session open.
+     *
+     * @param con The connection of the session.
+     * @param session The session that is initiated.
+     */
+    protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
+        LOG.info("opening new session with client [{}]", con.getRemoteContainer());
+        session.closeHandler(sessionResult -> {
+            if (sessionResult.succeeded()) {
+                sessionResult.result().close();
+            }
+        }).open();
+    }
+
+    /**
+     * Is called whenever a proton connection was closed. The implementation is intentionally empty.
+     * <p>
+     * Subclasses should override this method to publish this as an event on the vertx bus if desired.
+     *
+     * @param con The connection that was closed.
+     */
+    protected void publishConnectionClosedEvent(final ProtonConnection con) {
+    }
+
+    /**
+     * Invoked when a client closes the connection with this server.
+     * <p>
+     * The implementation closes and disconnects the connection.
+     *
+     * @param con The connection to close.
+     * @param res The client's close frame.
+     */
+    protected void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
+        if (res.succeeded()) {
+            LOG.info("client [{}] closed connection", con.getRemoteContainer());
+        } else {
+            LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
+        }
+        con.close();
+        con.disconnect();
+        publishConnectionClosedEvent(con);
+    }
+
+    /**
+     * Invoked when the client's transport connection is disconnected from this server.
+     *
+     * @param con The connection that was disconnected.
+     */
+    protected void handleRemoteDisconnect(final ProtonConnection con) {
+        LOG.info("client [{}] disconnected", con.getRemoteContainer());
+        con.disconnect();
+        publishConnectionClosedEvent(con);
+    }
+
+    /**
+     * Registers this service's endpoints' readiness checks.
+     * <p>
+     * This default implementation invokes {@link Endpoint#registerReadinessChecks(HealthCheckHandler)}
+     * for all registered endpoints.
+     * <p>
+     * Subclasses should override this method to register more specific checks.
+     * 
+     * @param handler The health check handler to register the checks with.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+
+        for (Endpoint ep : endpoints()) {
+            ep.registerReadinessChecks(handler);
+        }
+    }
+
+    /**
+     * Registers this service's endpoints' liveness checks.
+     * <p>
+     * This default implementation invokes {@link Endpoint#registerLivenessChecks(HealthCheckHandler)}
+     * for all registered endpoints.
+     * <p>
+     * Subclasses should override this method to register more specific checks.
+     * 
+     * @param handler The health check handler to register the checks with.
+     */
+    @Override
+    public void registerLivenessChecks(HealthCheckHandler handler) {
+        for (Endpoint ep : endpoints()) {
+            ep.registerLivenessChecks(handler);
         }
     }
 }
