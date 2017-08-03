@@ -18,7 +18,6 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
@@ -27,6 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 
 import io.vertx.core.*;
 
@@ -40,7 +41,7 @@ import io.vertx.core.*;
  * @param <C> The type of configuration this application uses.
  */
 // TODO: remove parameter C.
-public class AbstractApplication<S extends HealthCheckProvider, C extends ServiceConfigProperties> {
+public class AbstractApplication<S extends HealthCheckProvider, C extends ServiceConfigProperties> implements ApplicationRunner {
 
     /**
      * A logger to be shared with subclasses.
@@ -86,7 +87,7 @@ public class AbstractApplication<S extends HealthCheckProvider, C extends Servic
     @Autowired
     public final void setServiceFactory(final ObjectFactory<S> factory) {
         this.serviceFactory = Objects.requireNonNull(factory);
-        log.debug("using service factory: " + factory.getClass().getName());
+        log.debug("using service factory: {}", factory.getClass().getName());
     }
 
     /**
@@ -103,8 +104,7 @@ public class AbstractApplication<S extends HealthCheckProvider, C extends Servic
     /**
      * Starts up this application.
      */
-    @PostConstruct
-    public final void startup() {
+    public void run(final ApplicationArguments args) throws Exception {
 
         if (vertx == null) {
             throw new IllegalStateException("no Vert.x instance has been configured");
@@ -117,7 +117,6 @@ public class AbstractApplication<S extends HealthCheckProvider, C extends Servic
         final CountDownLatch startupLatch = new CountDownLatch(1);
         final int maxInstances = config.getMaxInstances();
         final int startupTimeoutSeconds = config.getStartupTimeout();
-        final S firstServiceInstance = serviceFactory.getObject();
 
         Future<Void> started = Future.future();
         started.setHandler(s -> {
@@ -129,7 +128,7 @@ public class AbstractApplication<S extends HealthCheckProvider, C extends Servic
         });
 
         deployRequiredVerticles(maxInstances)
-            .compose(s -> deployServiceVerticles(firstServiceInstance, maxInstances - 1))
+            .compose(s -> deployServiceVerticles(maxInstances))
             .compose(s -> postRegisterServiceVerticles())
             .compose(s -> healthCheckServer.start())
             .compose(s -> started.complete(), started);
@@ -164,31 +163,29 @@ public class AbstractApplication<S extends HealthCheckProvider, C extends Servic
         return Future.succeededFuture();
     }
 
-    final Future<Void> deployServiceVerticles(final S firstServiceInstance, final int maxInstances) {
+    final Future<Void> deployServiceVerticles(final int maxInstances) {
 
-        Objects.requireNonNull(firstServiceInstance);
         final Future<Void> result = Future.future();
         @SuppressWarnings("rawtypes")
         final List<Future> deploymentTracker = new ArrayList<>();
-        if (!Verticle.class.isInstance(firstServiceInstance)) {
+        S serviceInstance = serviceFactory.getObject();
+        if (!Verticle.class.isInstance(serviceInstance)) {
             result.fail("service class is not a Verticle");
         } else {
-            customizeServiceInstance(firstServiceInstance);
-            healthCheckServer.registerHealthCheckResources(firstServiceInstance);
+            customizeServiceInstance(serviceInstance);
+            healthCheckServer.registerHealthCheckResources(serviceInstance);
 
             final Future<String> deployTracker = Future.future();
-            vertx.deployVerticle((Verticle) firstServiceInstance, deployTracker.completer());
+            vertx.deployVerticle((Verticle) serviceInstance, deployTracker.completer());
             deploymentTracker.add(deployTracker);
 
-            for (int i = 0; i < maxInstances; i++) {
-                final S serviceInstance = serviceFactory.getObject();
-                log.debug("created new instance of service: " + serviceInstance);
-                if (Verticle.class.isInstance(serviceInstance)) {
-                    customizeServiceInstance(serviceInstance);
-                    final Future<String> tracker = Future.future();
-                    vertx.deployVerticle((Verticle) serviceInstance, tracker.completer());
-                    deploymentTracker.add(tracker);
-                }
+            for (int i = 1; i < maxInstances; i++) { // first instance has already been deployed
+                serviceInstance = serviceFactory.getObject();
+                log.debug("created new instance of service: {}", serviceInstance);
+                customizeServiceInstance(serviceInstance);
+                final Future<String> tracker = Future.future();
+                vertx.deployVerticle((Verticle) serviceInstance, tracker.completer());
+                deploymentTracker.add(tracker);
             }
 
             CompositeFuture.all(deploymentTracker).setHandler(s -> {
