@@ -9,7 +9,7 @@ weight = 800
 ### New Features
 
 * The metrics reported by Hono are now processed in InfluxDB by means of *templates* which parse some of the information contained in the keys into and InfluxDB *tags*. Consequently, the Grafana dashboard now correctly displays (aggregated) metrics reported by multiple *Hono Messaging* instances and provides means to filter metrics per tenant.
-* The Hono Messaging, Device Registry, REST and MQTT Adapeter components now expose meaningful *health checks* via HTTP which can be used by container orchestration tools like Kuberetes to e.g. determine a component's readiness to serve requests.
+* The Hono Messaging, Device Registry, REST and MQTT Adapter components now expose meaningful *health checks* via HTTP which can be used by container orchestration tools like Kuberetes to e.g. determine a component's readiness to serve requests.
 
 ### Fixes & Enhancements
 
