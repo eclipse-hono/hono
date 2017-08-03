@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Configuration;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
+import org.springframework.context.annotation.Scope;
 
 /**
  * Spring Boot configuration for the simple authentication server application.
@@ -33,6 +34,8 @@ import io.vertx.core.dns.AddressResolverOptions;
  */
 @Configuration
 public class ApplicationConfig {
+
+    private static final String BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER = "simpleAuthenticationServer";
 
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
@@ -50,6 +53,12 @@ public class ApplicationConfig {
         return Vertx.vertx(options);
     }
 
+    @Bean(name = BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER)
+    @Scope("prototype")
+    public SimpleAuthenticationServer simpleAuthenticationServer(){
+        return new SimpleAuthenticationServer();
+    }
+
     /**
      * Exposes a factory for creating service instances as a Spring bean.
      * 
@@ -58,7 +67,7 @@ public class ApplicationConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean authServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(SimpleAuthenticationServer.class.getName());
+        factory.setTargetBeanName(BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER);
         return factory;
     }
 

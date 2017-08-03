@@ -29,12 +29,15 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
 import io.vertx.core.metrics.MetricsOptions;
+import org.springframework.context.annotation.Scope;
 
 /**
  * Spring bean definitions required by the Hono application.
  */
 @Configuration
 public class HonoMessagingApplicationConfig {
+
+    private static final String BEAN_NAME_HONO_MESSAGING = "honoMessaging";
 
     private MetricsOptions metricsOptions;
 
@@ -68,6 +71,12 @@ public class HonoMessagingApplicationConfig {
         return Vertx.vertx(options);
     }
 
+    @Bean(name = BEAN_NAME_HONO_MESSAGING)
+    @Scope("prototype")
+    public HonoMessaging honoMessaging() {
+        return new HonoMessaging();
+    }
+
     /**
      * Exposes a factory for {@code HonoServer} instances as a Spring bean.
      * 
@@ -76,7 +85,7 @@ public class HonoMessagingApplicationConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean honoServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(HonoMessaging.class.getName());
+        factory.setTargetBeanName(BEAN_NAME_HONO_MESSAGING);
         return factory;
     }
 
