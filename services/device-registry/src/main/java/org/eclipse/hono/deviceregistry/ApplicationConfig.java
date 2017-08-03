@@ -37,6 +37,8 @@ import org.springframework.context.annotation.Scope;
 @Configuration
 public class ApplicationConfig {
 
+    private static final String BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER = "deviceRegistryAmqpServer";
+
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
      * 
@@ -51,6 +53,12 @@ public class ApplicationConfig {
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
         return Vertx.vertx(options);
+    }
+
+    @Bean(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER)
+    @Scope("prototype")
+    public DeviceRegistryAmqpServer deviceRegistryAmqpServer(){
+        return new DeviceRegistryAmqpServer();
     }
 
     /**
@@ -72,7 +80,7 @@ public class ApplicationConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean deviceRegistryServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(DeviceRegistryAmqpServer.class.getName());
+        factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER);
         return factory;
     }
 

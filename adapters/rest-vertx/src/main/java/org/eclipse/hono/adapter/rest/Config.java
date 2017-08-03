@@ -20,12 +20,21 @@ import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 
 /**
  * Spring Beans used by the Hono REST protocol adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
+
+    private static final String BEAN_NAME_VERTX_BASED_REST_PROTOCOL_ADAPTER = "vertxBasedRestProtocolAdapter";
+
+    @Bean(name = BEAN_NAME_VERTX_BASED_REST_PROTOCOL_ADAPTER)
+    @Scope("prototype")
+    public VertxBasedRestProtocolAdapter vertxBasedRestProtocolAdapter(){
+        return new VertxBasedRestProtocolAdapter();
+    }
 
     @Override
     protected void customizeMessagingClientConfigProperties(final ClientConfigProperties props) {
@@ -71,7 +80,7 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean serviceFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(VertxBasedRestProtocolAdapter.class.getName());
+        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_REST_PROTOCOL_ADAPTER);
         return factory;
     }
 }

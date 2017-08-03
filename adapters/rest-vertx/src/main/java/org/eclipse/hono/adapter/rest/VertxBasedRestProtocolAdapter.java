@@ -24,8 +24,6 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -39,8 +37,6 @@ import io.vertx.ext.web.RoutingContext;
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Registration API using REST.
  */
-@Component
-@Scope("prototype")
 public class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);

@@ -14,7 +14,6 @@ package org.eclipse.hono.service.auth.impl;
 
 import java.util.Objects;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -32,7 +31,7 @@ import io.vertx.core.Future;
 @ComponentScan(basePackages = "org.eclipse.hono.service.auth")
 @Configuration
 @EnableAutoConfiguration
-public class Application extends AbstractApplication<SimpleAuthenticationServer, ServiceConfigProperties> {
+public class Application extends AbstractApplication {
 
     private FileBasedAuthenticationService authenticationService;
 

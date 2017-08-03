@@ -16,7 +16,6 @@ import java.util.Objects;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Verticle;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractApplication;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.credentials.CredentialsService;
@@ -39,7 +38,7 @@ import io.vertx.core.Future;
 @ComponentScan(basePackages = { "org.eclipse.hono.service", "org.eclipse.hono.deviceregistry" })
 @Configuration
 @EnableAutoConfiguration
-public class Application extends AbstractApplication<DeviceRegistryAmqpServer, ServiceConfigProperties> {
+public class Application extends AbstractApplication {
 
     private AuthenticationService authenticationService;
     private CredentialsService credentialsService;
@@ -76,10 +75,6 @@ public class Application extends AbstractApplication<DeviceRegistryAmqpServer, S
     @Autowired
     public final void setAuthenticationService(final AuthenticationService authenticationService) {
         this.authenticationService = Objects.requireNonNull(authenticationService);
-    }
-
-    @Override
-    protected final void customizeServiceInstance(final DeviceRegistryAmqpServer instance) {
     }
 
     @Override

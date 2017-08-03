@@ -21,8 +21,6 @@ import org.eclipse.hono.service.amqp.Endpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
@@ -34,8 +32,6 @@ import io.vertx.proton.ProtonSender;
  * An authentication server serving JSON Web Tokens to clients that have been authenticated using SASL.
  *
  */
-@Component
-@Scope("prototype")
 public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     @Autowired

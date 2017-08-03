@@ -32,7 +32,7 @@ import io.vertx.core.Verticle;
 @ComponentScan(basePackages = "org.eclipse.hono")
 @Configuration
 @EnableAutoConfiguration
-public class HonoMessagingApplication extends AbstractApplication<HonoMessaging, HonoMessagingConfigProperties> {
+public class HonoMessagingApplication extends AbstractApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoMessagingApplication.class);
 

@@ -22,8 +22,6 @@ import org.eclipse.hono.service.auth.AuthenticationConstants;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 
@@ -34,8 +32,6 @@ import java.util.Objects;
  * It implements Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> and
  * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
  */
-@Component
-@Scope("prototype")
 public final class DeviceRegistryAmqpServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     private ConnectionFactory authenticationService;

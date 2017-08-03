@@ -25,8 +25,6 @@ import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
 
@@ -36,8 +34,6 @@ import java.util.Objects;
  * Hono Messaging is an AMQP 1.0 container that provides nodes for uploading <em>Telemetry</em> and
  * <em>Event</em> messages.
  */
-@Component
-@Scope("prototype")
 public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProperties> {
 
     private ConnectionFactory authenticationService;
