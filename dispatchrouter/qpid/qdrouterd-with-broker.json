@@ -103,7 +103,7 @@
 
   ["vhost", {
       "id": "hono-internal",
-      "maxConnections": 5,
+      "maxConnections": 6,
       "groups": {
         "Hono": {
           "users": "Eclipse IoT;Hono;hono-messaging",
