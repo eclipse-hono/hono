@@ -38,7 +38,10 @@ oc new-project hono --description="Open source IoT connectivity" --display-name=
 
 # starting to deploy Eclipse Hono (developer user)
 echo
-echo Deploying Grafana ...
+echo "Deploying influxDB & Grafana ..."
+oc create secret generic influxdb-conf \
+  --from-file=$CONFIG/influxdb.conf \
+  --namespace $NS
 oc create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/openshift.yml
 echo ... done
 

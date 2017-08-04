@@ -55,10 +55,10 @@ docker secret rm \
   qdrouter-sasl.conf \
   qdrouterd.sasldb
 
-docker service rm \
-  hono-artemis \
-  grafana \
-  influxdb
+docker service rm hono-artemis
+
+docker service rm grafana influxdb
+docker secret rm influxdb.conf
 
 docker secret rm trusted-certs.pem
 
