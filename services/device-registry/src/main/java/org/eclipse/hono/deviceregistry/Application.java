@@ -16,8 +16,7 @@ import java.util.Objects;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Verticle;
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.AbstractApplication;
+import org.eclipse.hono.service.NewAbstractApplication;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
@@ -39,7 +38,7 @@ import io.vertx.core.Future;
 @ComponentScan(basePackages = { "org.eclipse.hono.service", "org.eclipse.hono.deviceregistry" })
 @Configuration
 @EnableAutoConfiguration
-public class Application extends AbstractApplication<DeviceRegistryAmqpServer, ServiceConfigProperties> {
+public class Application extends NewAbstractApplication {
 
     private AuthenticationService authenticationService;
     private CredentialsService credentialsService;
@@ -78,12 +77,13 @@ public class Application extends AbstractApplication<DeviceRegistryAmqpServer, S
         this.authenticationService = Objects.requireNonNull(authenticationService);
     }
 
-    @Override
-    protected final void customizeServiceInstance(final DeviceRegistryAmqpServer instance) {
-    }
+    // TODO: How could we provide this?
+//    @Override
+//    protected final void customizeServiceInstance(final DeviceRegistryAmqpServer instance) {
+//    }
 
     @Override
-    protected final Future<Void> deployRequiredVerticles(int maxInstances) {
+    protected final Future<Void> deployRequiredVerticles() {
 
         Future<Void> result = Future.future();
         CompositeFuture.all(
