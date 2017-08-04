@@ -18,6 +18,7 @@ import io.vertx.core.dns.AddressResolverOptions;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsEndpoint;
+import org.eclipse.hono.service.registration.DeviceRegistryAmqpServerBase;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationEndpoint;
@@ -89,7 +90,7 @@ public class ApplicationConfig {
      * 
      * @return The properties.
      */
-    @Qualifier("amqp")
+    @Qualifier(DeviceRegistryAmqpServerBase.CONFIGURATION_QUALIFIER_AMQP)
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.amqp")
     public ServiceConfigProperties amqpProperties() {
