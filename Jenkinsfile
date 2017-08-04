@@ -50,10 +50,6 @@ node('iothub') {
             sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
             sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
             sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:latest"
-            sh "docker tag eclipsehono/hono-dispatch-router:${buildVersion} bsinno/hono-dispatch-router:${buildVersion}"
-            sh "docker tag eclipsehono/hono-dispatch-router:${buildVersion} bsinno/hono-dispatch-router:latest"
-            sh "docker tag eclipsehono/hono-artemis:${buildVersion} bsinno/hono-artemis:${buildVersion}"
-            sh "docker tag eclipsehono/hono-artemis:${buildVersion} bsinno/hono-artemis:latest"
             sh "docker tag eclipsehono/grafana:${buildVersion} bsinno/hono-grafana:${buildVersion}"
             sh "docker tag eclipsehono/grafana:${buildVersion} bsinno/hono-grafana:latest"
 
@@ -67,10 +63,6 @@ node('iothub') {
             sh "docker push bsinno/hono-adapter-rest-vertx:latest"
             sh "docker push bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
             sh "docker push bsinno/hono-adapter-mqtt-vertx:latest"
-            sh "docker push bsinno/hono-dispatch-router:${buildVersion}"
-            sh "docker push bsinno/hono-dispatch-router:latest"
-            sh "docker push bsinno/hono-artemis:${buildVersion}"
-            sh "docker push bsinno/hono-artemis:latest"
             sh "docker push bsinno/hono-grafana:${buildVersion}"
             sh "docker push bsinno/hono-grafana:latest"
         }
