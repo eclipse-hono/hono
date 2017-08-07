@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.mqtt;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.eclipse.hono.adapter.mqtt.credentials.MqttUsernamePassword;
@@ -48,6 +49,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
 
+
     private MqttServer server;
     private MqttServer insecureServer;
     private Map<MqttEndpoint, String> registrationAssertions = new HashMap<>();
@@ -72,6 +74,24 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
         return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
     }
 
+    public void setMqttSecureServer(MqttServer server) {
+        Objects.requireNonNull(server);
+        if (server.actualPort() > 0) {
+            throw new IllegalArgumentException("mqtt server must not be started already");
+        } else {
+            this.server = server;
+        }
+    }
+
+    public void setMqttInsecureServer(MqttServer server) {
+        Objects.requireNonNull(server);
+        if (server.actualPort() > 0) {
+            throw new IllegalArgumentException("mqtt server must not be started already");
+        } else {
+            this.insecureServer = server;
+        }
+    }
+
     private Future<MqttServer> bindSecureMqttServer() {
 
         if (isSecurePortEnabled()) {
@@ -82,7 +102,13 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
                 .setMaxMessageSize(getConfig().getMaxPayloadSize());
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
-            return bindMqttServer(options);
+
+            Future<MqttServer> result = Future.future();
+            result.setHandler(mqttServerAsyncResult -> {
+                server = mqttServerAsyncResult.result();
+            });
+            bindMqttServer(options, server, result);
+            return result;
         } else {
             return Future.succeededFuture();
         }
@@ -96,31 +122,36 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
                 .setHost(getConfig().getInsecurePortBindAddress())
                 .setPort(determineInsecurePort())
                 .setMaxMessageSize(getConfig().getMaxPayloadSize());
-            return bindMqttServer(options);
+
+            Future<MqttServer> result = Future.future();
+            result.setHandler(mqttServerAsyncResult -> {
+                insecureServer = mqttServerAsyncResult.result();
+            });
+            bindMqttServer(options, insecureServer, result);
+            return result;
         } else {
             return Future.succeededFuture();
         }
     }
 
-    private Future<MqttServer> bindMqttServer(final MqttServerOptions options) {
+    private void bindMqttServer(final MqttServerOptions options, final MqttServer mqttServer, final Future<MqttServer> result) {
 
-        final Future<MqttServer> result = Future.future();
-        MqttServer server = MqttServer.create(this.vertx, options);
+        final MqttServer createdMqttServer =
+                (mqttServer == null ? MqttServer.create(this.vertx, options) : mqttServer);
 
-        server
+        createdMqttServer
             .endpointHandler(this::handleEndpointConnection)
             .listen(done -> {
 
                 if (done.succeeded()) {
-                    LOG.info("Hono MQTT protocol adapter running on {}:{}", getConfig().getBindAddress(), server.actualPort());
-                    result.complete(server);
+                    LOG.info("Hono MQTT protocol adapter running on {}:{}", getConfig().getBindAddress(), createdMqttServer.actualPort());
+                    result.complete(createdMqttServer);
                 } else {
                     LOG.error("error while starting up Hono MQTT adapter", done.cause());
                     result.fail(done.cause());
                 }
 
             });
-        return result;
     }
 
     @Override
@@ -129,11 +160,8 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
         LOG.info("limiting size of inbound message payload to {} bytes", getConfig().getMaxPayloadSize());
         checkPortConfiguration()
         .compose(s -> bindSecureMqttServer())
-        .compose(secureServer -> {
-            this.server = secureServer;
-            return bindInsecureMqttServer();
-        }).compose(insecureServer -> {
-            this.insecureServer = insecureServer;
+        .compose(secureServer -> bindInsecureMqttServer())
+        .compose(insecureServer -> {
             connectToMessaging(null);
             connectToDeviceRegistration(null);
             connectToCredentialsService(null);
@@ -175,7 +203,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
             }, shutdownTracker);
     }
 
-    private void handleEndpointConnection(final MqttEndpoint endpoint) {
+    void handleEndpointConnection(final MqttEndpoint endpoint) {
 
         LOG.info("connection request from client {}", endpoint.clientIdentifier());
 
@@ -198,6 +226,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
                 if (endpoint.auth() == null) {
                     LOG.trace("no auth information in endpoint found");
                     endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                    return;
                 }
 
                 MqttUsernamePassword authObject = MqttUsernamePassword.create(endpoint.auth().userName(),
@@ -205,6 +234,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
 
                 if (authObject == null) {
                     endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                    return;
                 }
 
                 validateCredentialsForDevice(authObject.getTenantId(), authObject.getType(), authObject.getAuthId(),
