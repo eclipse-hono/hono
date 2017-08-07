@@ -82,6 +82,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_MQTT_KEY_STORE_PATH`<br>`--hono.mqtt.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the protocol adapter should use for authenticating to clients. Either this option or the `HONO_MQTT_KEY_PATH` and `HONO_MQTT_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_MQTT_MAX_PAYLOAD_SIZE`<br>`--hono.mqtt.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming MQTT message's payload in bytes. When a client sends a message with a larger payload, the message is discarded and the connection to the client gets closed. |
 | `HONO_MQTT_PORT`<br>`--hono.mqtt.port` | no | `8883` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_MQTT_AUTHENTICATE_DEVICES`<br>`--hono.mqtt.authenticateDevices` | no | `true` | If set to `true` the protocol adapter demands the authentication of devices by using the [Credentials Service]({{< relref "#credentials-service-configuration" >}}) before they are allowed to publish messages. |
 
 The variables only need to be set if the default values do not match your environment.
 
