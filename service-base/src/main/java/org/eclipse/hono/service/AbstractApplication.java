@@ -35,7 +35,7 @@ import io.vertx.core.*;
 /**
  * A base class for implementing Spring Boot applications.
  * <p>
- * This class requires that an instance of {@link ObjectFactory<AbstractServiceBase>} is provided
+ * This class requires that an instance of {@link ObjectFactory} is provided
  * ({@link #addServiceFactories(Set)} for each service to be exposed by this application.
  */
 public class AbstractApplication implements ApplicationRunner {
@@ -45,7 +45,7 @@ public class AbstractApplication implements ApplicationRunner {
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final Set<ObjectFactory<? extends AbstractServiceBase>> serviceFactories = new HashSet<>();
+    private final Set<ObjectFactory<? extends AbstractServiceBase<?>>> serviceFactories = new HashSet<>();
     private ApplicationConfigProperties config = new ApplicationConfigProperties();
     private Vertx vertx;
 
@@ -80,7 +80,7 @@ public class AbstractApplication implements ApplicationRunner {
      * @throws NullPointerException if factories is {@code null}.
      */
     @Autowired
-    public final void addServiceFactories(final Set<ObjectFactory<? extends AbstractServiceBase>> factories) {
+    public final void addServiceFactories(final Set<ObjectFactory<? extends AbstractServiceBase<?>>> factories) {
         Objects.requireNonNull(factories);
         serviceFactories.addAll(factories);
         log.debug("added {} service factories", factories.size());
@@ -145,11 +145,12 @@ public class AbstractApplication implements ApplicationRunner {
     private CompositeFuture deployServiceVerticles() {
         final int maxInstances = config.getMaxInstances();
 
+        @SuppressWarnings("rawtypes")
         final List<Future> deploymentTracker = new ArrayList<>();
 
-        for (ObjectFactory<? extends AbstractServiceBase> serviceFactory : serviceFactories) {
+        for (ObjectFactory<? extends AbstractServiceBase<?>> serviceFactory : serviceFactories) {
 
-            AbstractServiceBase serviceInstance = serviceFactory.getObject();
+            AbstractServiceBase<?> serviceInstance = serviceFactory.getObject();
 
             healthCheckServer.registerHealthCheckResources(serviceInstance);
 
