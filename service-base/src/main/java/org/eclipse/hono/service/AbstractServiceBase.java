@@ -27,7 +27,6 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
 
     /**
      * Starts up this component.
-     * <p>
      * <ol>
      * <li>invokes {@link #startInternal()}</li>
      * </ol>
@@ -53,7 +52,6 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
 
     /**
      * Stops this component.
-     * <p>
      * <ol>
      * <li>invokes {@link #stopInternal()}</li>
      * </ol>

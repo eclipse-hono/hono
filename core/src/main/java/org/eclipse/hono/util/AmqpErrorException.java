@@ -32,8 +32,8 @@ public final class AmqpErrorException extends RuntimeException {
     /**
      * Creates a new exception for an error and description.
      * 
-     * @param error
-     * @param description
+     * @param error The AMQP error to convey in this exception.
+     * @param description A textual description of the context the error occurred in.
      */
     public AmqpErrorException(final Symbol error, final String description) {
         super(Objects.requireNonNull(description));
@@ -43,8 +43,8 @@ public final class AmqpErrorException extends RuntimeException {
     /**
      * Creates a new exception for an error and description.
      * 
-     * @param error
-     * @param description
+     * @param error The AMQP error to convey in this exception.
+     * @param description A textual description of the context the error occurred in.
      */
     public AmqpErrorException(final String error, final String description) {
         super(Objects.requireNonNull(description));
@@ -53,6 +53,8 @@ public final class AmqpErrorException extends RuntimeException {
 
     
     /**
+     * Gets the AMQP error conveyed in this exception.
+     * 
      * @return The error.
      */
     public final Symbol getError() {
