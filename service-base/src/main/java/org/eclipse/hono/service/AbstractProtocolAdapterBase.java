@@ -13,17 +13,20 @@ package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
 
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.service.credentials.CredentialsSecretsValidator;
+import org.eclipse.hono.service.credentials.CredentialsUtils;
+import org.eclipse.hono.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -47,6 +50,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     private HonoClient messaging;
     private HonoClient registration;
     private HonoClient credentials;
+    private CredentialsUtils credentialsUtils;
 
     /**
      * Sets the configuration by means of Spring dependency injection.
@@ -127,6 +131,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         } else {
             return credentials;
         }
+    }
+
+    /**
+     * Sets the credentials utility bean for the validation of credentials.
+     *
+     * @param credentialsUtils The prototype scoped instance of the utility class.
+     * @throws NullPointerException if the utility class is {@code null}.
+     */
+    @Autowired
+    public final void setCredentialsUtils(final CredentialsUtils credentialsUtils) {
+        this.credentialsUtils = Objects.requireNonNull(credentialsUtils);
+    }
+
+    /**
+     * Gets the credentials utility class used for the validation of credentials.
+     *
+     * @return The credentials utility class.
+     */
+    public final CredentialsUtils getCredentialsUtils() {
+        return this.credentialsUtils;
     }
 
     @Override
@@ -481,5 +505,68 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         handler.register("ping", status -> {
             status.complete(Status.OK());
         });
+    }
+
+    private Future<JsonObject> getCredentialsForDevice(final String tenantId, final String type, final String authId) {
+
+        Future<JsonObject> result = Future.future();
+        getCredentialsClient(tenantId).compose(client -> {
+            Future<CredentialsResult> credResultFuture = Future.future();
+            client.get(type, authId, credResultFuture.completer());
+            return credResultFuture;
+        }).compose(credResult -> {
+            if (credResult.getStatus() == HttpURLConnection.HTTP_OK) {
+                JsonObject payload = credResult.getPayload();
+                result.complete(payload);
+            } else if (credResult.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
+                result.fail(String.format("cannot retrieve credentials (not found for type <%s>, authId <%s>)",type,authId));
+            } else {
+                result.fail("cannot retrieve credentials");
+            }
+        }, result);
+
+        return result;
+    }
+
+    /**
+     * Validates an authentication object against credentials secrets available by the get operation of the
+     *  <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
+     * <p>The credentials are first retrieved from the credentials service, and then all matching validators are
+     * invoked until one is successful or all failed. The authentication object is validated iff at least
+     * one validator was successful.
+     *
+     * @param tenantId The tenantId to which the device belongs.
+     * @param type The type of credentials that are to be used for validation.
+     * @param authId The authId of the credentials that are to be used for validation.
+     * @param authenticationObject The authentication object to be validated, e.g. a password, a preshared-key, etc.
+
+     * @return Future The future object carrying the payload of the credentials get operation, if successful.
+     */
+    protected Future<JsonObject> validateCredentialsForDevice(final String tenantId, final String type, final String authId,
+                                                              final Object authenticationObject) {
+        Future<JsonObject> credResult = Future.future();
+
+        credResult = getCredentialsForDevice(tenantId, type, authId).compose(payload -> {
+            Future<JsonObject> result = Future.future();
+            Set<CredentialsSecretsValidator> validators = getCredentialsUtils().findAppropriateValidators(type);
+            if (validators == null || validators.size() == 0) {
+                result.fail(String.format("Cannot find validators for type <%s>", type));
+                return result;
+            }
+
+            // since several validators may exist per type, they are invoked until one is successful (or none)
+            Predicate<CredentialsSecretsValidator> validationPred =
+                    validator -> validator.validate(payload, authenticationObject);
+            Optional<CredentialsSecretsValidator> validator = validators.stream().filter(validationPred).findAny();
+
+            if (!validator.isPresent()) {
+                result.fail("Credentials invalid");
+            } else {
+                result.complete(payload);
+            }
+
+            return result;
+        });
+        return credResult;
     }
 }
