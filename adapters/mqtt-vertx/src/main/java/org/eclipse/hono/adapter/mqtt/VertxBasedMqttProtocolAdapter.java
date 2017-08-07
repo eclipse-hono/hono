@@ -40,7 +40,7 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
  */
-public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<ServiceConfigProperties> {
+public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<MqttProtocolAdapterProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedMqttProtocolAdapter.class);
 
@@ -193,28 +193,33 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
                     LOG.trace("removed registration assertion for client [{}]", endpoint.clientIdentifier());
             });
 
-            // check credentials for valid authentication
-            // so far, only hashed-password supported, more to follow
-            try {
+            if (getConfig().isAuthenticateDevices()) {
 
-                MqttUsernamePassword authObject = MqttUsernamePassword.create(endpoint,
-                        getConfig().isSingleTenant());
+                // check credentials for valid authentication
+                // so far, only hashed-password supported, more to follow
+                try {
 
-                Future<Void> validationTracker = Future.future();
-                validationTracker.setHandler(result -> {
-                    if (result.failed()) {
-                        endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-                    }
-                });
-                validateCredentialsForDevice(authObject.getTenantId(), authObject.getType(), authObject.getAuthId(),
-                        authObject.getPassword()).compose(
-                                deviceId -> {
-                                    LOG.trace("successfully authenticated device id <{}>", deviceId);
-                                    endpoint.accept(false);
-                                }, validationTracker);
-            } catch (IllegalArgumentException e) {
-                LOG.warn(e.getMessage());
-                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                    MqttUsernamePassword authObject = MqttUsernamePassword.create(endpoint,
+                            getConfig().isSingleTenant());
+
+                    Future<Void> validationTracker = Future.future();
+                    validationTracker.setHandler(result -> {
+                        if (result.failed()) {
+                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                        }
+                    });
+                    validateCredentialsForDevice(authObject.getTenantId(), authObject.getType(), authObject.getAuthId(),
+                            authObject.getPassword()).compose(
+                            deviceId -> {
+                                LOG.trace("successfully authenticated device id <{}>", deviceId);
+                                endpoint.accept(false);
+                            }, validationTracker);
+                } catch (IllegalArgumentException e) {
+                    LOG.warn(e.getMessage());
+                    endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                }
+            } else {
+                endpoint.accept(false);
             }
         }
     }
