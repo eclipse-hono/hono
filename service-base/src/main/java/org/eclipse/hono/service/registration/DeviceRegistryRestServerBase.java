@@ -15,6 +15,7 @@ package org.eclipse.hono.service.registration;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
 
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.HttpServiceBase;
 import org.eclipse.hono.util.RegistrationConstants;

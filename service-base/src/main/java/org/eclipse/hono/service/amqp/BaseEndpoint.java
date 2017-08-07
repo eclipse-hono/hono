@@ -74,7 +74,6 @@ public abstract class BaseEndpoint<T> implements Endpoint, HealthCheckProvider {
      * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
      */
-    @Autowired(required = false)
     public final void setConfiguration(final T props) {
         this.config = Objects.requireNonNull(props);
     }

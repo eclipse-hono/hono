@@ -17,6 +17,10 @@ hono:
       bindAddress: 0.0.0.0
       keyPath: /run/secrets/device-registry-key.pem
       certPath: /run/secrets/device-registry-cert.pem
+    rest:
+      bindAddress: 0.0.0.0
+      keyPath: /run/secrets/device-registry-key.pem
+      certPath: /run/secrets/device-registry-cert.pem
     svc:
       signing:
         sharedSecret: ${hono.regAssertion.sharedSecret}
