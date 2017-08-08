@@ -121,7 +121,7 @@ public class ApplicationConfig {
      * @return The factory.
      */
     @Bean
-    public ObjectFactoryCreatingFactoryBean deviceRegistryServerFactory() {
+    public ObjectFactoryCreatingFactoryBean deviceRegistryAmqpServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER);
         return factory;
