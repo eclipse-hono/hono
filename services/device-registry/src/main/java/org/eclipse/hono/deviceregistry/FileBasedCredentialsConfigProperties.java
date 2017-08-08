@@ -22,7 +22,7 @@ import io.vertx.core.json.JsonObject;
  * Configuration properties for the Hono's device registry as own server.
  *
  */
-public final class CredentialsConfigProperties {
+public final class FileBasedCredentialsConfigProperties {
 
     private static final String DEFAULT_CREDENTIALS_FILENAME = "/home/hono/device-registry/credentials.json";
 

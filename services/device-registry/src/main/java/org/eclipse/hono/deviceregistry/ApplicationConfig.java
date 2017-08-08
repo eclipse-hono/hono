@@ -128,27 +128,27 @@ public class ApplicationConfig {
     }
 
     /**
-     * Gets properties for configuring the {@code FileBasedRegistrationService} which implements
+     * Gets properties for configuring {@code FileBasedRegistrationService} which implements
      * the <em>Device Registration</em> API.
      * 
      * @return The properties.
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.svc")
-    public DeviceRegistryConfigProperties serviceProperties() {
-        return new DeviceRegistryConfigProperties();
+    public FileBasedRegistrationConfigProperties serviceProperties() {
+        return new FileBasedRegistrationConfigProperties();
     }
 
     /**
-     * Gets properties for configuring the {@code FileBasedCredentialsService} which implements
+     * Gets properties for configuring {@code FileBasedCredentialsService} which implements
      * the <em>Credentials</em> API.
      * 
      * @return The properties.
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.credentials.svc")
-    public CredentialsConfigProperties credentialsProperties() {
-        return new CredentialsConfigProperties();
+    public FileBasedCredentialsConfigProperties credentialsProperties() {
+        return new FileBasedCredentialsConfigProperties();
     }
 
     /**
@@ -160,7 +160,7 @@ public class ApplicationConfig {
     @Qualifier("signing")
     public RegistrationAssertionHelper registrationAssertionFactory() {
         ServiceConfigProperties amqpProps = amqpProperties();
-        DeviceRegistryConfigProperties serviceProps = serviceProperties();
+        FileBasedRegistrationConfigProperties serviceProps = serviceProperties();
         if (!serviceProps.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
             // fall back to TLS configuration
             serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());

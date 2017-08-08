@@ -83,7 +83,7 @@ public class StandaloneCredentialsApiTest {
         props.setInsecurePortEnabled(true);
         props.setInsecurePort(0);
 
-        CredentialsConfigProperties credentialsProperties = new CredentialsConfigProperties();
+        FileBasedCredentialsConfigProperties credentialsProperties = new FileBasedCredentialsConfigProperties();
         credentialsProperties.setCredentialsFilename("credentials.json");
 
         server = new DeviceRegistryAmqpServer();

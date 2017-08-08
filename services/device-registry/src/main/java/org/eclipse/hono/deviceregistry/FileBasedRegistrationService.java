@@ -43,7 +43,7 @@ import io.vertx.core.json.JsonObject;
  * devices kept in memory are written to the file.
  */
 @Repository
-public final class FileBasedRegistrationService extends BaseRegistrationService<DeviceRegistryConfigProperties> {
+public final class FileBasedRegistrationService extends BaseRegistrationService<FileBasedRegistrationConfigProperties> {
 
     private static final String ARRAY_DEVICES = "devices";
     private static final String FIELD_TENANT = "tenant";
@@ -55,7 +55,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
 
     @Autowired
     @Override
-    public void setConfig(final DeviceRegistryConfigProperties configuration) {
+    public void setConfig(final FileBasedRegistrationConfigProperties configuration) {
         setSpecificConfig(configuration);
     }
 

@@ -42,7 +42,7 @@ public class FileBasedRegistrationServiceTest
 {
    private static final String TENANT = "tenant";
    private static final String DEVICE = "device";
-   private DeviceRegistryConfigProperties props;
+   private FileBasedRegistrationConfigProperties props;
    private FileBasedRegistrationService registrationService;
    Vertx vertx;
    EventBus eventBus;
@@ -54,7 +54,7 @@ public class FileBasedRegistrationServiceTest
       eventBus = mock(EventBus.class);
       when(vertx.eventBus()).thenReturn(eventBus);
 
-      props = new DeviceRegistryConfigProperties();
+      props = new FileBasedRegistrationConfigProperties();
       registrationService = new FileBasedRegistrationService();
       registrationService.setConfig(props);
       registrationService.init(vertx, ctx);

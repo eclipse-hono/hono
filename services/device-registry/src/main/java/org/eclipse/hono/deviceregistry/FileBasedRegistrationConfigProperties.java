@@ -23,7 +23,7 @@ import io.vertx.core.json.JsonObject;
  * Configuration properties for the Hono's device registry as own server.
  *
  */
-public final class DeviceRegistryConfigProperties {
+public final class FileBasedRegistrationConfigProperties {
 
     /**
      * The default number of devices that can be registered for each tenant.
