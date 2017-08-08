@@ -41,16 +41,6 @@ import io.vertx.ext.web.handler.BodyHandler;
 public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
 
     /**
-     * The <em>application/json</em> content type.
-     */
-    protected static final String CONTENT_TYPE_JSON = "application/json";
-
-    /**
-     * The <em>application/json; charset=utf-8</em> content type.
-     */
-    protected static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
-
-    /**
      * Default file uploads directory used by Vert.x Web
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";

@@ -31,6 +31,16 @@ import io.vertx.ext.web.RoutingContext;
  */
 public abstract class HttpEndpointUtils {
 
+    /**
+     * The <em>application/json</em> content type.
+     */
+    public static final String CONTENT_TYPE_JSON = "application/json";
+
+    /**
+     * The <em>application/json; charset=utf-8</em> content type.
+     */
+    public static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
+
     private static final Logger LOG = LoggerFactory.getLogger(HttpEndpointUtils.class);
 
     private HttpEndpointUtils() {
