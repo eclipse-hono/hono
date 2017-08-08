@@ -20,7 +20,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
  */
 public class MqttProtocolAdapterProperties extends ServiceConfigProperties {
 
-    private boolean authenticateDevices = true;
+    private boolean authenticationRequired = true;
 
     /**
      * Checks whether the MQTT protocol adapter always authenticates devices using their provided credentials as defined
@@ -33,9 +33,8 @@ public class MqttProtocolAdapterProperties extends ServiceConfigProperties {
      *
      * @return {@code true} if the MQTT protocol adapter demands the authentication of devices to allow the publishing of data.
      */
-
-    public final boolean isAuthenticateDevices() {
-        return authenticateDevices;
+    public final boolean isAuthenticationRequired() {
+        return authenticationRequired;
     }
 
     /**
@@ -47,11 +46,9 @@ public class MqttProtocolAdapterProperties extends ServiceConfigProperties {
      * <p>
      * The default value of this property is {@code true}.
      *
-     * @param authenticateDevices {@code true} if the server should wait for downstream connections to be established during startup.
-     * @return {@code true} if the MQTT protocol adapter demands the authentication of devices to allow the publishing of data.
+     * @param authenticationRequired {@code true} if the server should wait for downstream connections to be established during startup.
      */
-    public final MqttProtocolAdapterProperties setAuthenticateDevices(final boolean authenticateDevices) {
-        this.authenticateDevices = authenticateDevices;
-        return this;
+    public final void setAuthenticationRequired(final boolean authenticationRequired) {
+        this.authenticationRequired = authenticationRequired;
     }
 }

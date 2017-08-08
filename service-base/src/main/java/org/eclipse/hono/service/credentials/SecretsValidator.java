@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.service.credentials;
 
+import org.eclipse.hono.service.credentials.validators.AbstractSecretValidator;
 import org.eclipse.hono.util.CredentialsObject;
 
 /**
@@ -24,24 +25,24 @@ import org.eclipse.hono.util.CredentialsObject;
  * {@link org.eclipse.hono.service.credentials.validators} will be automatically found during startup and are used
  * during authentication.
  * This makes adding of own validators very easy.
- * <p>See the provided validators (e.g. {@link org.eclipse.hono.service.credentials.validators.CredentialsValidatorHashedPassword})
+ * <p>See the provided validators (e.g. {@link org.eclipse.hono.service.credentials.validators.HashedPasswordValidator})
  * as a blueprint for how to write own validators.
- * See {@link org.eclipse.hono.service.credentials.validators.AbstractCredentialsValidator} as the base class for such
+ * See {@link AbstractSecretValidator} as the base class for such
  * implementations.
  *
- * @param <T> The type of what has to be validated (called item below): this can be String in case of password validation, a certificate
+ * @param <T> The type of secret that is validated: this can be String in case of password validation, a certificate
  *           class in case of a client certificate, etc.
  */
 
-public interface CredentialsSecretsValidator<T> {
+public interface SecretsValidator<T> {
     /**
      * Get the type of credentials secrets this validator is responsible for.
      * <p>This can be freely defined, but there are some predefined types in the
      * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
      *
-     * @return The type of credentials secrets.
+     * @return The type of credentials secrets that are handled by the implementor.
      */
-    String getSecretsType();
+    String getSupportedType();
 
     /**
      * Validate  an instance of T (e.g. a password) against credentials secrets (as JsonObject as defined in the
@@ -49,10 +50,10 @@ public interface CredentialsSecretsValidator<T> {
      * <p>
      *
      * @param credentialsGetPayload The payload as returned from the credentials API get operation.
-     * @param itemToValidate The item that has to be validated, e.g. a password String, a certificate, etc.
+     * @param secret The secret that has to be validated, e.g. a password String, a certificate, etc.
      *
      * @return True if the item could be validated, false otherwise.
      * @throws IllegalArgumentException If the payload is not correct.
      */
-    boolean validate(final CredentialsObject credentialsGetPayload, T itemToValidate) throws IllegalArgumentException;
+    boolean validate(final CredentialsObject credentialsGetPayload, T secret);
 }

@@ -15,6 +15,7 @@ package org.eclipse.hono.util;
 /**
  * A container for the result returned by Hono's credentials API.
  *
+ * @param <T> denotes the concrete type of the payload that is part of the result
  */
 public final class CredentialsResult<T> extends RequestResponseResult<T> {
     private CredentialsResult(final int status, final T payload) {

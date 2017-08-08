@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.service.credentials.validators;
 
-import org.eclipse.hono.service.credentials.CredentialsSecretsValidator;
+import org.eclipse.hono.service.credentials.SecretsValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
@@ -33,33 +33,23 @@ import java.util.function.Predicate;
  * The detailed algorithm to validate a single credential entry is delegated to the implementing subclass and so supports
  * a specified small implementation class per credentials type..
  *
- * @param <T> The type of what has to be validated (called item below): this can be String in case of password validation, a certificate
+ * @param <T> The type of secret that has to be validated: this can be String in case of password validation, a certificate
  *           class in case of a client certificate, etc.
  */
-public abstract class AbstractCredentialsValidator<T> implements CredentialsSecretsValidator<T> {
+public abstract class AbstractSecretValidator<T> implements SecretsValidator<T> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractCredentialsValidator.class);
-
-    /**
-     * Get the type of credentials secrets this validator is responsible for.
-     * <p>This can be freely defined, but there are some predefined types in the
-     * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
-     *
-     * @return The type of credentials secrets.
-     */
-    @Override
-    public abstract String getSecretsType();
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractSecretValidator.class);
 
     /**
      * Validate an instance of T (e.g. a password) against a single credentials secret (as JsonObject).
      * <p>
      * Subclasses need to implement their specified algorithm for validation in this method.
      *
-     * @param itemToValidate The item to validate.
-     * @param aSecret The secret record as JsonObject (as returned by the <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
+     * @param secretToValidate The item to validate.
+     * @param aSecret The secret record as Map representing the JsonObject returned by the <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
      * @return The result of the validation as boolean.
      */
-    protected abstract boolean validateSingleSecret(final T itemToValidate, final Map<String, String> aSecret);
+    protected abstract boolean validateSingleSecret(final T secretToValidate, final Map<String, String> aSecret);
 
     /**
      * Validate  an instance of T (e.g. a password) against credentials secrets (as JsonObject as defined in the
@@ -73,13 +63,13 @@ public abstract class AbstractCredentialsValidator<T> implements CredentialsSecr
      * is set to failed.
      *
      * @param credentialsObject The credentials that were returned from the credentials get operation.
-     * @param authenticationObject The object to authenticate.
+     * @param secret The secret to validate.
      *
      * @return boolean True if the authenticationObject could be validated, false otherwise.
      * @throws IllegalArgumentException If the payload is not correct.
      */
     @Override
-    public final boolean validate(final CredentialsObject credentialsObject, final T authenticationObject) throws IllegalArgumentException {
+    public final boolean validate(final CredentialsObject credentialsObject, final T secret) {
 
         if (!credentialsObject.getEnabled()) {
             // if not found : default is enabled
@@ -99,7 +89,7 @@ public abstract class AbstractCredentialsValidator<T> implements CredentialsSecr
 
         try {
             // find any validated secret -> validation was successful
-            Predicate<Object> validationPred = secret -> validateSingleSecret(authenticationObject, (Map<String, String>) secret);
+            Predicate<Object> validationPred = credentialsSecret -> validateSingleSecret(secret, (Map<String, String>) credentialsSecret);
             Optional<Map<String, String>> validationSecret = secrets.stream().filter(validationPred).findAny();
 
             if (!validationSecret.isPresent()) {
@@ -108,10 +98,9 @@ public abstract class AbstractCredentialsValidator<T> implements CredentialsSecr
             }
         }
         catch(ClassCastException e) {
-            throw new IllegalArgumentException(String.format("validator for type <%s> does not match with passed class %s", getSecretsType(),
-                    authenticationObject.getClass().getName()));
+            throw new IllegalArgumentException(String.format("validator for type <%s> does not match with passed class %s", getSupportedType(),
+                    secret.getClass().getName()));
         }
-
         return true;
     }
 }

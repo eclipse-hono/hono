@@ -11,31 +11,32 @@
  */
 package org.eclipse.hono.adapter.mqtt.credentials;
 
-import io.vertx.mqtt.MqttEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
-
-import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class to handle mqtt username/password authentication in CONNECT messages.
  * <p>
- * During connect messages, the tenant of a device can only be determined as part of the mqtt username.
- * Thus the following convention is realized inside this class:
+ * During connect messages, the tenant of a device can only be determined as part of the mqtt username. Thus the
+ * following convention is realized inside this class:
  * <p>
  * <ul>
  * <li>If the adapter runs in single tenant mode, the tenant is set to {@link Constants#DEFAULT_TENANT}.
  * <li>If the adapter runs in multiple tenant mode, the tenant must be part of the mqtt username, which must comply to
  * the structure authId@tenantId.
  * </ul>
-  */
+ */
 public class MqttUsernamePassword {
-    private final String type = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
-    private String authId;
-    private String password;
-    private String tenantId;
 
-    public final  String getType() {
+    private static final Logger LOG  = LoggerFactory.getLogger(MqttUsernamePassword.class);
+    private static final String type = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
+    private String              authId;
+    private String              password;
+    private String              tenantId;
+
+    public final String getType() {
         return type;
     }
 
@@ -52,49 +53,47 @@ public class MqttUsernamePassword {
     }
 
     /**
-     * Create an instance of this class from the MqttEndpoint.
+     * Create an instance of this class. The tenant is derived from the passed parameters (see class description).
      *
-     * @param endpoint The mqtt endpoint from the adapter that is available during CONNECT. The auth information is taken
-     *                 from it to obtain the username and password.
+     * @param userName The userName that shall be stored in the instance.
+     * @param password The password that shall be stored in the instance.
      * @param singleTenant If true the tenant is set to the {@link Constants#DEFAULT_TENANT}, otherwise it is taken from
-     *                     the endpoint.
+     *            the endpoint.
      *
-     * @return The instance of the created object.
-     *
-     * @throws IllegalArgumentException If the auth information is null, or the username in the auth object is null,
-     * or the username does not comply to the structure authId@tenantId.
+     * @return The instance of the created object. Will be null if the userName is null,  or the
+     *             username does not comply to the structure userName@tenantId.
      */
-    public static final MqttUsernamePassword create(final MqttEndpoint endpoint,
-                                                    final boolean singleTenant) throws IllegalArgumentException {
-        MqttUsernamePassword credentials = new MqttUsernamePassword();
-        if (endpoint.auth() == null) {
-            throw new IllegalArgumentException("no auth information in endpoint found");
+    public static final MqttUsernamePassword create(final String userName, final String password,
+            final boolean singleTenant) {
+        MqttUsernamePassword credentials = fillAuthIdAndTenantId(userName, singleTenant);
+        if (credentials != null) {
+            credentials.password = password;
         }
-        fillAuthIdAndTenantId(credentials, endpoint.auth().userName(), singleTenant);
-        credentials.password = endpoint.auth().password();
         return credentials;
     }
 
-    private static void fillAuthIdAndTenantId(final MqttUsernamePassword credentials, final String userFromMqtt,
-                                              final boolean singleTenant) throws IllegalArgumentException {
+    private static MqttUsernamePassword fillAuthIdAndTenantId(final String userFromMqtt, final boolean singleTenant) {
         if (userFromMqtt == null) {
-            throw new IllegalArgumentException("auth object in endpoint found, but username must not be null");
+            LOG.trace("auth object in endpoint found, but username must not be null");
+            return null;
         }
-        Objects.requireNonNull(userFromMqtt);
+
+        MqttUsernamePassword credentials = new MqttUsernamePassword();
         if (singleTenant) {
             credentials.authId = userFromMqtt;
             credentials.tenantId = Constants.DEFAULT_TENANT;
-            return;
-        }
-
-        // multi tenantId -> <userId>@<tenantId>
-        String[] userComponents = userFromMqtt.split("@");
-        if (userComponents.length != 2) {
-            throw new IllegalArgumentException(
-                    String.format("User %s in mqtt CONNECT message has not  structure, must fulfil the pattern '<authId>@<tenantId>'", userFromMqtt));
         } else {
-            credentials.authId = userComponents[0];
-            credentials.tenantId = userComponents[1];
+            // multi tenantId -> <userId>@<tenantId>
+            String[] userComponents = userFromMqtt.split("@");
+            if (userComponents.length != 2) {
+                LOG.trace("User {} in mqtt CONNECT message does not comply with the defined structure, must fulfil the pattern '<authId>@<tenantId>'",
+                        userFromMqtt);
+                return null;
+            } else {
+                credentials.authId = userComponents[0];
+                credentials.tenantId = userComponents[1];
+            }
         }
+        return credentials;
     }
 }
