@@ -27,7 +27,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 /**
- * An {@code Endpoint} for managing device registration information.
+ * An {@code AmqpEndpoint} for managing device registration information.
  * <p>
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a>.
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
