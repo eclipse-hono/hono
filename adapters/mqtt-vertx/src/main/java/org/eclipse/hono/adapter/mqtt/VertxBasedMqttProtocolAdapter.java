@@ -20,7 +20,6 @@ import io.vertx.core.Handler;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.eclipse.hono.adapter.mqtt.credentials.MqttUsernamePassword;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
@@ -185,7 +184,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
 
         } else {
-            endpoint.publishHandler(createMqttPublishMessageHandler(endpoint));
+            endpoint.publishHandler(getMqttPublishMessageHandlerImpl(endpoint));
 
             endpoint.closeHandler(v -> {
                 LOG.debug("connection closed with client [{}]", endpoint.clientIdentifier());
@@ -193,7 +192,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
                     LOG.trace("removed registration assertion for client [{}]", endpoint.clientIdentifier());
             });
 
-            if (getConfig().isAuthenticateDevices()) {
+            if (getConfig().isAuthenticationRequired()) {
 
                 // check credentials for valid authentication
                 // so far, only hashed-password supported, more to follow
@@ -224,7 +223,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
         }
     }
 
-    private Handler<MqttPublishMessage> createMqttPublishMessageHandler(final MqttEndpoint endpoint) {
+    private Handler<MqttPublishMessage> getMqttPublishMessageHandlerImpl(final MqttEndpoint endpoint) {
         return message -> {
 
             LOG.trace("received message [client ID: {}, topic: {}, QoS: {}, payload {}]", endpoint.clientIdentifier(), message.topicName(),

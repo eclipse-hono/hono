@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
  * Validator to validate credentials of type {@link CredentialsConstants#SECRETS_TYPE_HASHED_PASSWORD} for a given password.
  */
 @Component
-public final class CredentialsValidatorHashedPassword extends AbstractCredentialsValidator<String> {
+public final class ValidatorHashedPassword extends AbstractSecretsValidator<String> {
 
     /**
      * Get the type of credentials secrets this validator is responsible for.

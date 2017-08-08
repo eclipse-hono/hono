@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.service.credentials.validators;
 
-import org.eclipse.hono.service.credentials.CredentialsSecretsValidator;
+import org.eclipse.hono.service.credentials.SecretsValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
@@ -36,9 +36,9 @@ import java.util.function.Predicate;
  * @param <T> The type of what has to be validated (called item below): this can be String in case of password validation, a certificate
  *           class in case of a client certificate, etc.
  */
-public abstract class AbstractCredentialsValidator<T> implements CredentialsSecretsValidator<T> {
+public abstract class AbstractValidator<T> implements SecretsValidator<T> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractCredentialsValidator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractValidator.class);
 
     /**
      * Get the type of credentials secrets this validator is responsible for.
