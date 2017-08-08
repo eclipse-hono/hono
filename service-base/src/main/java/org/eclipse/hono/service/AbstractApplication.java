@@ -99,8 +99,18 @@ public class AbstractApplication implements ApplicationRunner {
 
     /**
      * Starts up this application.
+     * <p>
+     * The start up process entails the following steps:
+     * <ol>
+     * <li>invoke <em>deployRequiredVerticles</em> to deploy the verticle(s) implementing the service's functionality</li>
+     * <li>invoke <em>deployServiceVerticles</em> to deploy the protocol specific service endpoints</li>
+     * <li>invoke <em>postRegisterServiceVerticles</em> to perform any additional post deployment steps</li>
+     * <li>start the health check server</li>
+     * </ol>
+     * 
+     * @param args The command line arguments provided to the application.
      */
-    public void run(final ApplicationArguments args) throws Exception {
+    public void run(final ApplicationArguments args) {
 
         if (vertx == null) {
             throw new IllegalStateException("no Vert.x instance has been configured");
@@ -268,5 +278,14 @@ public class AbstractApplication implements ApplicationRunner {
      */
     protected void preShutdown() {
         // empty
+    }
+
+    /**
+     * Registers additional health checks.
+     * 
+     * @param provider The provider of the health checks.
+     */
+    protected final void registerHealthchecks(final HealthCheckProvider provider) {
+        healthCheckServer.registerHealthCheckResources(provider);
     }
 }

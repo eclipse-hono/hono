@@ -16,7 +16,9 @@ import java.util.Objects;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Verticle;
+
 import org.eclipse.hono.service.AbstractApplication;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
@@ -122,6 +124,26 @@ public class Application extends AbstractApplication {
         getVertx().deployVerticle(registrationService, result.completer());
         return result;
     }
+
+    /**
+     * Registers any additional health checks that the service implementation components provide.
+     * 
+     * @return A succeeded future.
+     */
+    @Override
+    protected Future<Void> postRegisterServiceVerticles() {
+        if (HealthCheckProvider.class.isInstance(authenticationService)) {
+            registerHealthchecks((HealthCheckProvider) authenticationService);
+        }
+        if (HealthCheckProvider.class.isInstance(credentialsService)) {
+            registerHealthchecks((HealthCheckProvider) credentialsService);
+        }
+        if (HealthCheckProvider.class.isInstance(registrationService)) {
+            registerHealthchecks((HealthCheckProvider) registrationService);
+        }
+        return Future.succeededFuture();
+    }
+
     /**
      * Starts the Device Registry Server.
      * 

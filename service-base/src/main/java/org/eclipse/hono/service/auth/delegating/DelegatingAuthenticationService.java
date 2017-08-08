@@ -16,6 +16,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ import org.springframework.stereotype.Service;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 
 
 /**
@@ -35,7 +39,7 @@ import io.vertx.core.Handler;
  */
 @Service
 @Profile("!authentication-impl")
-public class DelegatingAuthenticationService extends AbstractHonoAuthenticationService<AuthenticationServerClientConfigProperties> {
+public class DelegatingAuthenticationService extends AbstractHonoAuthenticationService<AuthenticationServerClientConfigProperties> implements HealthCheckProvider {
 
     private AuthenticationServerClient client;
     private ConnectionFactory factory;
@@ -55,6 +59,38 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     @Autowired
     public void setConnectionFactory(@Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final ConnectionFactory connectionFactory) {
         this.factory = Objects.requireNonNull(connectionFactory);
+    }
+
+    /**
+     * This method does not register any specific liveness checks.
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // do not register any specific checks
+    }
+
+    /**
+     * Registers a check which succeeds if a connection with the configured <em>Authentication</em> service can be established.
+     *
+     * @param readinessHandler The health check handler to register the checks with.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        readinessHandler.register("authentication-service-connection", status -> {
+            if (factory == null) {
+                status.complete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
+            } else {
+                log.debug("checking connection to Authentication service");
+                factory.connect(null, null, null, s -> {
+                    if (s.succeeded()) {
+                        s.result().close();
+                        status.complete(Status.OK());
+                    } else {
+                        status.complete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
+                    }
+                });
+            }
+        });
     }
 
     @Override

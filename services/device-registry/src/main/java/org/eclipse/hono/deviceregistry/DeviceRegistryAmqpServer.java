@@ -13,16 +13,16 @@
 package org.eclipse.hono.deviceregistry;
 
 
-import org.eclipse.hono.service.registration.DeviceRegistryAmqpServerBase;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.amqp.AmqpServiceBase;
 
 /**
  * Default AQMP server for Hono's example device registry.
  */
-public final class DeviceRegistryAmqpServer extends DeviceRegistryAmqpServerBase {
+public final class DeviceRegistryAmqpServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     @Override
     protected String getServiceName() {
         return "Hono-DeviceRegistry";
     }
-
 }
