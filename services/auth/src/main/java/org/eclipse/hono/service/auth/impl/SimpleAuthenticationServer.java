@@ -17,7 +17,7 @@ import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
-import org.eclipse.hono.service.amqp.Endpoint;
+import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,7 +64,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
                 con.getRemoteContainer(), remoteSource);
         try {
             final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
-            final Endpoint endpoint = getEndpoint(targetResource);
+            final AmqpEndpoint endpoint = getEndpoint(targetResource);
 
             if (endpoint == null) {
                 LOG.debug("no endpoint registered for node [{}]", targetResource);

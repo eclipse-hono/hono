@@ -37,7 +37,7 @@ import io.vertx.core.json.JsonObject;
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */
-public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
+public final class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates a new credentials endpoint for a vertx instance.
@@ -45,7 +45,7 @@ public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceCo
      * @param vertx The vertx instance to use.
      */
     @Autowired
-    public CredentialsEndpoint(final Vertx vertx) {
+    public CredentialsAmqpEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
     }
 

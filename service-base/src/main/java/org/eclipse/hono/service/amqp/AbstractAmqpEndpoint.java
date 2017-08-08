@@ -18,19 +18,15 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.AbstractEndpoint;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.healthchecks.HealthCheckHandler;
-import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
@@ -38,25 +34,16 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
 /**
- * Base class for Hono endpoints.
+ * Base class for AMQP based Hono endpoints.
  * 
  * @param <T> The type of configuration properties this endpoint understands.
  */
-public abstract class BaseEndpoint<T> implements Endpoint, HealthCheckProvider {
+public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implements AmqpEndpoint {
 
-    /**
-     * The Vert.x instance this endpoint is running on.
-     */
-    protected final Vertx                       vertx;
-    /**
-     * A logger to be used by subclasses.
-     */
-    protected final Logger                      logger               = LoggerFactory.getLogger(getClass());
     /**
      * The configuration properties for this endpoint.
      */
-    @SuppressWarnings("unchecked")
-    protected T                                 config               = (T) new ServiceConfigProperties();
+    protected T config;
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -64,8 +51,8 @@ public abstract class BaseEndpoint<T> implements Endpoint, HealthCheckProvider {
      * @param vertx The Vertx instance to use.
      * @throws NullPointerException if vertx is {@code null};
      */
-    protected BaseEndpoint(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
+    protected AbstractAmqpEndpoint(final Vertx vertx) {
+        super(vertx);
     }
 
     /**
@@ -74,47 +61,10 @@ public abstract class BaseEndpoint<T> implements Endpoint, HealthCheckProvider {
      * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
      */
+    @Qualifier(Constants.QUALIFIER_AMQP)
     @Autowired(required = false)
     public final void setConfiguration(final T props) {
         this.config = Objects.requireNonNull(props);
-    }
-
-    @Override
-    public final void start(final Future<Void> startFuture) {
-        if (vertx == null) {
-            startFuture.fail("Vert.x instance must be set");
-        } else {
-            doStart(startFuture);
-        }
-    }
-
-    /**
-     * Subclasses should override this method to create required resources
-     * during startup.
-     * <p>
-     * This implementation always completes the start future.
-     * 
-     * @param startFuture Completes if startup succeeded.
-     */
-    protected void doStart(final Future<Void> startFuture) {
-        startFuture.complete();
-    }
-
-    @Override
-    public final void stop(final Future<Void> stopFuture) {
-        doStop(stopFuture);
-    }
-
-    /**
-     * Subclasses should override this method to release resources
-     * during shutdown.
-     * <p>
-     * This implementation always completes the stop future.
-     * 
-     * @param stopFuture Completes if shutdown succeeded.
-     */
-    protected void doStop(final Future<Void> stopFuture) {
-        stopFuture.complete();
     }
 
     /**
@@ -211,27 +161,4 @@ public abstract class BaseEndpoint<T> implements Endpoint, HealthCheckProvider {
      * @return {@code true} if the message passes all checks and can be forwarded downstream.
      */
     protected abstract boolean passesFormalVerification(final ResourceIdentifier targetAddress, final Message message);
-
-    /**
-     * Registers a check that always succeeds.
-     * <p>
-     * Subclasses may want to override this method in order to implement more meaningful checks.
-     */
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler handler) {
-        handler.register(getName() + "-endpoint-live", status -> {
-            status.complete(Status.OK());
-        });
-    }
-
-    /**
-     * Does not register any checks.
-     * <p>
-     * Subclasses may want to override this method in order to implement meaningful checks
-     * specific to the particular endpoint.
-     */
-    @Override
-    public void registerReadinessChecks(HealthCheckHandler handler) {
-        // empty default implementation
-    }
 }

@@ -18,7 +18,7 @@ import static org.mockito.Mockito.*;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.service.amqp.Endpoint;
+import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,7 +51,7 @@ public class HonoMessagingTest {
         when(vertx.eventBus()).thenReturn(eventBus);
     }
 
-    private HonoMessaging createServer(final Endpoint telemetryEndpoint) {
+    private HonoMessaging createServer(final AmqpEndpoint telemetryEndpoint) {
 
         HonoMessaging server = new HonoMessaging();
         server.setConfig(new HonoMessagingConfigProperties());

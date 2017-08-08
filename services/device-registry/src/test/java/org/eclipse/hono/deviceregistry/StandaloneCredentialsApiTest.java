@@ -32,7 +32,7 @@ import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilde
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 
-import org.eclipse.hono.service.credentials.CredentialsEndpoint;
+import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -89,7 +89,7 @@ public class StandaloneCredentialsApiTest {
         server = new DeviceRegistryAmqpServer();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx,createAuthenticationService(createUser())));
         server.setConfig(props);
-        server.addEndpoint(new CredentialsEndpoint(vertx));
+        server.addEndpoint(new CredentialsAmqpEndpoint(vertx));
         FileBasedCredentialsService deviceRegistryImpl = new FileBasedCredentialsService();
         deviceRegistryImpl.setConfig(credentialsProperties);
 

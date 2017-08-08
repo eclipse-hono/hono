@@ -15,7 +15,7 @@ package org.eclipse.hono.service.auth.impl;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.service.amqp.BaseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -38,7 +38,7 @@ import io.vertx.proton.ProtonSender;
  */
 @Component
 @Scope("prototype")
-public class AuthenticationEndpoint extends BaseEndpoint<AuthenticationServerConfigProperties> {
+public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationServerConfigProperties> {
 
     /**
      * Creates a new endpoint for a Vertx instance.

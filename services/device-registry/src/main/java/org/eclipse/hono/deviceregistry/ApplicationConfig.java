@@ -17,10 +17,10 @@ import io.vertx.core.dns.AddressResolverOptions;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.credentials.CredentialsEndpoint;
+import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
-import org.eclipse.hono.service.registration.RegistrationEndpoint;
+import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
@@ -87,8 +87,8 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public RegistrationEndpoint registrationEndpoint() {
-        return new RegistrationEndpoint(vertx());
+    public RegistrationAmqpEndpoint registrationAmqpEndpoint() {
+        return new RegistrationAmqpEndpoint(vertx());
     }
 
     /**
@@ -98,8 +98,8 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public CredentialsEndpoint credentialsEndpoint() {
-        return new CredentialsEndpoint(vertx());
+    public CredentialsAmqpEndpoint credentialsAmqpEndpoint() {
+        return new CredentialsAmqpEndpoint(vertx());
     }
 
     /**

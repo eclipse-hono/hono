@@ -10,14 +10,22 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.service.http;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.HttpServiceBase;
+import org.eclipse.hono.service.Endpoint;
+
+import io.vertx.ext.web.Router;
 
 /**
- * Default REST server for Hono's example device registry.
+ * An endpoint that handles HTTP requests.
+ *
  */
-public class DeviceRegistryRestServer extends HttpServiceBase<ServiceConfigProperties> {
+public interface HttpEndpoint extends Endpoint {
 
+    /**
+     * Adds custom routes for handling requests that this endpoint can handle.
+     *
+     * @param router The router to add the routes to.
+     */
+    void addRoutes(Router router);
 }

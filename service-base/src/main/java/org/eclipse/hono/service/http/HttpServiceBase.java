@@ -12,11 +12,9 @@
 
 package org.eclipse.hono.service.http;
 
-import static java.net.HttpURLConnection.*;
-
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
@@ -29,9 +27,10 @@ import org.springframework.beans.factory.annotation.Value;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.http.*;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 /**
@@ -58,126 +57,33 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpServiceBase.class);
 
+    private final Set<HttpEndpoint> endpoints = new HashSet<>();
+
     @Value("${spring.profiles.active:}")
     private String activeProfiles;
-
     private HttpServer server;
     private HttpServer insecureServer;
 
     /**
-     * Ends a response with HTTP status code 400 (Bad Request) and an optional message.
-     * <p>
-     * The content type of the message will be <em>text/plain</em>.
+     * Adds multiple endpoints to this server.
      *
-     * @param response The HTTP response to write to.
-     * @param msg The message to write to the response's body (may be {@code null}).
-     * @throws NullPointerException if response is {@code null}.
+     * @param definedEndpoints The endpoints.
      */
-    protected static void badRequest(final HttpServerResponse response, final String msg) {
-        badRequest(response, msg, null);
+    @Autowired(required = false)
+    public final void addEndpoints(final Set<HttpEndpoint> definedEndpoints) {
+        endpoints.addAll(Objects.requireNonNull(definedEndpoints));
     }
 
     /**
-     * Ends a response with HTTP status code 400 (Bad Request) and an optional message.
+     * Adds an endpoint to this server.
      *
-     * @param response The HTTP response to write to.
-     * @param msg The message to write to the response's body (may be {@code null}).
-     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
-     * @throws NullPointerException if response is {@code null}.
+     * @param ep The endpoint.
      */
-    protected static void badRequest(final HttpServerResponse response, final String msg, final String contentType) {
-        LOG.debug("Bad request: {}", msg);
-        endWithStatus(response, HTTP_BAD_REQUEST, null, msg, contentType);
+    public final void addEndpoint(final HttpEndpoint ep) {
+        LOG.debug("registering endpoint [{}]", ep.getName());
+        endpoints.add(Objects.requireNonNull(ep));
     }
 
-    /**
-     * Ends a response with HTTP status code 500 (Internal Error) and an optional message.
-     * <p>
-     * The content type of the message will be <em>text/plain</em>.
-     *
-     * @param response The HTTP response to write to.
-     * @param msg The message to write to the response's body (may be {@code null}).
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void internalServerError(final HttpServerResponse response, final String msg) {
-        LOG.debug("Internal server error: {}", msg);
-        endWithStatus(response, HTTP_INTERNAL_ERROR, null, msg, null);
-    }
-
-    /**
-     * Ends a response with HTTP status code 503 (Service Unavailable) and sets the <em>Retry-After</em> HTTP header to
-     * a given number of seconds.
-     *
-     * @param response The HTTP response to write to.
-     * @param retryAfterSeconds The number of seconds to set in the header.
-     */
-    protected static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds) {
-        serviceUnavailable(response, retryAfterSeconds, null, null);
-    }
-
-    /**
-     * Ends a response with HTTP status code 503 (Service Unavailable) and sets the <em>Retry-After</em> HTTP header to
-     * a given number of seconds.
-     *
-     * @param response The HTTP response to write to.
-     * @param retryAfterSeconds The number of seconds to set in the header.
-     * @param detail The message to write to the response's body (may be {@code null}).
-     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds,
-                                             final String detail, final String contentType) {
-
-        LOG.debug("Service unavailable: {}", detail);
-        Map<CharSequence, CharSequence> headers = new HashMap<>(2);
-        headers.put(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "text/plain");
-        headers.put(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
-        endWithStatus(response, HTTP_UNAVAILABLE, headers, detail, contentType);
-    }
-
-    /**
-     * Ends a response with a given HTTP status code and detail message.
-     *
-     * @param response The HTTP response to write to.
-     * @param status The status code to write to the response.
-     * @param headers HTTP headers to set on the response (may be {@code null}).
-     * @param detail The message to write to the response's body (may be {@code null}).
-     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void endWithStatus(final HttpServerResponse response, final int status,
-                                        Map<CharSequence, CharSequence> headers, final String detail, final String contentType) {
-
-        Objects.requireNonNull(response);
-        response.setStatusCode(status);
-        if (headers != null) {
-            for (Map.Entry<CharSequence, CharSequence> header : headers.entrySet()) {
-                response.putHeader(header.getKey(), header.getValue());
-            }
-        }
-        if (detail != null) {
-            if (contentType != null) {
-                response.putHeader(HttpHeaders.CONTENT_TYPE, contentType);
-            } else {
-                response.putHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
-            }
-            response.end(detail);
-        } else {
-            response.end();
-        }
-    }
-
-    /**
-     * Gets the value of the <em>Content-Type</em> HTTP header for a request.
-     *
-     * @param ctx The routing context containing the HTTP request.
-     * @return The content type or {@code null} if the request doesn't contain a <em>Content-Type</em> header.
-     * @throws NullPointerException if context is {@code null}.
-     */
-    protected static String getContentType(final RoutingContext ctx) {
-
-        return Objects.requireNonNull(ctx).request().getHeader(HttpHeaders.CONTENT_TYPE);
-    }
 
     @Autowired
     @Qualifier(Constants.QUALIFIER_REST)
@@ -244,7 +150,8 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
                     if (router == null) {
                         return Future.failedFuture("no router configured");
                     } else {
-                        addRoutes(router);
+                        addEndpointRoutes(router);
+                        addCustomRoutes(router);
                         return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                     }
                 })
@@ -282,16 +189,26 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         return router;
     }
 
+    private void addEndpointRoutes(final Router router) {
+        for (HttpEndpoint ep : endpoints) {
+            ep.addRoutes(router);
+        }
+    }
 
     /**
-     * Adds custom routes for handling requests.
+     * Adds custom routes for handling requests that are not handled by the registered endpoints.
      * <p>
      * This method is invoked right before the http server is started with the value returned by
      * {@link #createRouter()}.
-     *
+     * <p>
+     * This default implementation does not register any routes. Subclasses should override this
+     * method in order to register any routes in addition to the ones added by the endpoints.
+     * 
      * @param router The router to add the custom routes to.
      */
-    protected abstract void addRoutes(final Router router);
+    protected void addCustomRoutes(final Router router) {
+        // empty default implementation
+    }
 
     /**
      * Gets the options to use for creating the TLS secured http server.
@@ -426,6 +343,34 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected Future<Void> postShutdown() {
         return Future.succeededFuture();
+    }
+
+    /**
+     * Iterates over all endpoints and registers their readiness checks with the handler.
+     * <p>
+     * Subclasses may override this method in order to register other/additional checks.
+     * 
+     * @param handler The handler to register the checks with.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+        for (HttpEndpoint ep : endpoints) {
+            ep.registerReadinessChecks(handler);
+        }
+    }
+
+    /**
+     * Iterates over all endpoints and registers their liveness checks with the handler.
+     * <p>
+     * Subclasses may override this method in order to register other/additional checks.
+     * 
+     * @param handler The handler to register the checks with.
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler handler) {
+        for (HttpEndpoint ep : endpoints) {
+            ep.registerLivenessChecks(handler);
+        }
     }
 
 }
