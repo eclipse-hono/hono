@@ -34,16 +34,7 @@ import java.util.Objects;
  */
 public abstract class DeviceRegistryAmqpServerBase extends AmqpServiceBase<ServiceConfigProperties> {
 
-    public static final String CONFIGURATION_QUALIFIER_AMQP = "amqp";
-
     private ConnectionFactory authenticationService;
-
-    @Autowired
-    @Qualifier(CONFIGURATION_QUALIFIER_AMQP)
-    @Override
-    public void setConfig(final ServiceConfigProperties configuration) {
-        setSpecificConfig(configuration);
-    }
 
     /**
      * Sets the factory to use for creating an AMQP 1.0 connection to

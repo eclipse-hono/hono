@@ -18,10 +18,10 @@ import io.vertx.core.dns.AddressResolverOptions;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsEndpoint;
-import org.eclipse.hono.service.registration.DeviceRegistryAmqpServerBase;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationEndpoint;
+import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -32,7 +32,7 @@ import io.vertx.core.Vertx;
 import org.springframework.context.annotation.Scope;
 
 /**
- * Spring Boot configuration for the simple device registry server application.
+ * Spring Boot configuration for the Device Registry application.
  *
  */
 @Configuration
@@ -56,16 +56,10 @@ public class ApplicationConfig {
         return Vertx.vertx(options);
     }
 
-    @Bean(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER)
-    @Scope("prototype")
-    public DeviceRegistryAmqpServer deviceRegistryAmqpServer(){
-        return new DeviceRegistryAmqpServer();
-    }
-
     /**
-     * Exposes properties for configuring the application properties a Spring bean.
+     * Gets general properties for configuring the Device Registry Spring Boot application.
      *
-     * @return The application configuration properties.
+     * @return The properties.
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.app")
@@ -74,7 +68,55 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes a factory for creating service instances as a Spring bean.
+     * Gets properties for configuring the Device Registry's AMQP 1.0 endpoint.
+     * 
+     * @return The properties.
+     */
+    @Qualifier(Constants.QUALIFIER_AMQP)
+    @Bean
+    @ConfigurationProperties(prefix = "hono.registry.amqp")
+    public ServiceConfigProperties amqpProperties() {
+        ServiceConfigProperties props = new ServiceConfigProperties();
+        return props;
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
+     * 
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public RegistrationEndpoint registrationEndpoint() {
+        return new RegistrationEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
+     * 
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public CredentialsEndpoint credentialsEndpoint() {
+        return new CredentialsEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of the Device Registry's AMQP 1.0 endpoint.
+     * <p>
+     * The endpoint is used for accessing both, the <em>Device Registration</em> and the <em>Credentials</em> API.
+     * 
+     * @return The endpoint.
+     */
+    @Bean(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER)
+    @Scope("prototype")
+    public DeviceRegistryAmqpServer deviceRegistryAmqpServer(){
+        return new DeviceRegistryAmqpServer();
+    }
+
+    /**
+     * Gets a factory for creating instances of the AMQP 1.0 based endpoint.
      * 
      * @return The factory.
      */
@@ -86,20 +128,8 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes this service's AMQP endpoint configuration properties as a Spring bean.
-     * 
-     * @return The properties.
-     */
-    @Qualifier(DeviceRegistryAmqpServerBase.CONFIGURATION_QUALIFIER_AMQP)
-    @Bean
-    @ConfigurationProperties(prefix = "hono.registry.amqp")
-    public ServiceConfigProperties amqpProperties() {
-        ServiceConfigProperties props = new ServiceConfigProperties();
-        return props;
-    }
-
-    /**
-     * Exposes the Device Registration service's configuration properties as a Spring bean.
+     * Gets properties for configuring the {@code FileBasedRegistrationService} which implements
+     * the <em>Device Registration</em> API.
      * 
      * @return The properties.
      */
@@ -110,7 +140,8 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes the Credentials service's configuration properties as a Spring bean.
+     * Gets properties for configuring the {@code FileBasedCredentialsService} which implements
+     * the <em>Credentials</em> API.
      * 
      * @return The properties.
      */
@@ -135,27 +166,5 @@ public class ApplicationConfig {
             serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());
         }
         return RegistrationAssertionHelperImpl.forSigning(vertx(), serviceProps.getSigning());
-    }
-
-    /**
-     * Expose Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> endpoint as a Spring bean.
-     * 
-     * @return The endpoint.
-     */
-    @Bean
-    @Scope("prototype")
-    public RegistrationEndpoint registrationEndpoint() {
-        return new RegistrationEndpoint(vertx());
-    }
-
-    /**
-     * Expose Hono's <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> endpoint as a Spring bean.
-     * 
-     * @return The endpoint.
-     */
-    @Bean
-    @Scope("prototype")
-    public CredentialsEndpoint credentialsEndpoint() {
-        return new CredentialsEndpoint(vertx());
     }
 }

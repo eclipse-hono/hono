@@ -23,6 +23,8 @@ import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 
 import io.vertx.core.CompositeFuture;
@@ -175,6 +177,13 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     protected static String getContentType(final RoutingContext ctx) {
 
         return Objects.requireNonNull(ctx).request().getHeader(HttpHeaders.CONTENT_TYPE);
+    }
+
+    @Autowired
+    @Qualifier(Constants.QUALIFIER_REST)
+    @Override
+    public final void setConfig(final T configuration) {
+        setSpecificConfig(configuration);
     }
 
     /**

@@ -18,10 +18,6 @@ import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.HttpServiceBase;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -39,19 +35,8 @@ import io.vertx.ext.web.RoutingContext;
  */
 public class DeviceRegistryRestServerBase<T extends ServiceConfigProperties> extends HttpServiceBase<T> {
 
-    public static final String CONFIGURATION_QUALIFIER = "rest";
-
-    private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryRestServerBase.class);
-
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
-
-    @Autowired
-    @Qualifier(CONFIGURATION_QUALIFIER)
-    @Override
-    public final void setConfig(final T configuration) {
-        setSpecificConfig(configuration);
-    }
 
     @Override
     protected final void addRoutes(final Router router) {

@@ -27,6 +27,7 @@ import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -56,6 +57,13 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @return The name of the service.
      */
     protected abstract String getServiceName();
+
+    @Autowired
+    @Qualifier(Constants.QUALIFIER_AMQP)
+    @Override
+    public void setConfig(final T configuration) {
+        setSpecificConfig(configuration);
+    }
 
     /**
      * Gets the default port number of the secure AMQP port.
