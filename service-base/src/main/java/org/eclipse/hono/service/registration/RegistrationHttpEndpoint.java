@@ -13,7 +13,9 @@
 package org.eclipse.hono.service.registration;
 
 import java.net.HttpURLConnection;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
@@ -24,7 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -52,6 +56,17 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         super(Objects.requireNonNull(vertx));
     }
 
+    private static JsonObject getPayloadForParams(final HttpServerRequest request) {
+        JsonObject payload = new JsonObject();
+        for (Entry<String, String> param : request.params()) {
+            // filter out tenant param captured from URI path
+            if (!PARAM_TENANT.equalsIgnoreCase(param.getKey())) {
+                payload.put(param.getKey(), param.getValue());
+            }
+        }
+        return payload;
+    }
+
     @Override
     public String getName() {
         return RegistrationConstants.REGISTRATION_ENDPOINT;
@@ -59,8 +74,33 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
 
     @Override
     public void addRoutes(final Router router) {
+
+        // ADD device registration
+        router.route(HttpMethod.POST, String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT))
+            .consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
+            .handler(this::doRegisterDeviceJson);
+        router.route(HttpMethod.POST, String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT))
+            .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
+            .handler(this::doRegisterDeviceForm);
+        router.route(HttpMethod.POST, String.format("/%s/*/*", RegistrationConstants.REGISTRATION_ENDPOINT))
+            .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+
         router.route(HttpMethod.GET, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(this::doGetDevice);
+
+        // UPDATE existing registration
+        router.route(HttpMethod.PUT, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
+            .consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
+            .handler(this::doUpdateRegistrationJson);
+        router.route(HttpMethod.PUT, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
+            .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
+            .handler(this::doUpdateRegistrationForm);
+        router.route(HttpMethod.PUT, String.format("/%s/*/*", RegistrationConstants.REGISTRATION_ENDPOINT))
+            .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+
+        // REMOVE registration
+        router.route(HttpMethod.DELETE, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
+            .handler(this::doUnregisterDevice);
     }
 
     private static String getTenantParam(final RoutingContext ctx) {
@@ -75,28 +115,148 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
 
         final String deviceId = getDeviceIdParam(ctx);
         final String tenantId = getTenantParam(ctx);
-
+        final HttpServerResponse response = ctx.response();
         final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_GET, tenantId, deviceId);
 
-        vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, requestMsg,
-                result -> {
-                    HttpServerResponse response = ctx.response();
-                    if (result.failed()) {
-                        HttpEndpointUtils.internalServerError(response, "could not get device");
-                    } else {
-                        final JsonObject registrationResult = (JsonObject) result.result().body();
-                        final Integer status = Integer.valueOf(registrationResult.getString("status"));
+        doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
+            response.setStatusCode(status);
+            switch (status) {
+                case HttpURLConnection.HTTP_OK:
+                    final String msg = registrationResult.getJsonObject("payload").encodePrettily();
+                    response
+                            .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+                            .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
+                            .write(msg);
+                default:
+                    response.end();
+                }
+        });
+    }
+
+    private void doRegisterDeviceJson(final RoutingContext ctx) {
+        try {
+            JsonObject payload = null;
+            if (ctx.getBody().length() > 0) {
+                payload = ctx.getBodyAsJson();
+            }
+            registerDevice(ctx, payload);
+        } catch (DecodeException e) {
+            HttpEndpointUtils.badRequest(ctx.response(), "body does not contain a valid JSON object");
+        }
+    }
+
+    private void doRegisterDeviceForm(final RoutingContext ctx) {
+
+        registerDevice(ctx, getPayloadForParams(ctx.request()));
+    }
+
+    private void registerDevice(final RoutingContext ctx, final JsonObject payload) {
+
+        if (payload == null) {
+            HttpEndpointUtils.badRequest(ctx.response(), "missing body");
+        } else {
+            Object deviceId = payload.remove(PARAM_DEVICE_ID);
+            if (deviceId == null) {
+                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", PARAM_DEVICE_ID));
+            } else if (!(deviceId instanceof String)) {
+                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' must be a string", PARAM_DEVICE_ID));
+            } else {
+                final String tenantId = getTenantParam(ctx);
+                logger.debug("registering data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
+                final HttpServerResponse response = ctx.response();
+                final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_REGISTER, tenantId, (String) deviceId, payload);
+                doRegistrationAction(ctx,requestMsg, (status, registrationResult) -> {
                         response.setStatusCode(status);
-                        switch (status) {
-                            case HttpURLConnection.HTTP_OK:
-                                final String msg = registrationResult.encodePrettily();
-                                response
-                                        .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
-                                        .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
-                                        .write(msg);
-                            default:
-                                response.end();
-                            }
+                        switch(status) {
+                        case HttpURLConnection.HTTP_CREATED:
+                            response
+                                .putHeader(
+                                        HttpHeaders.LOCATION,
+                                        String.format("/%s/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId));
+                        default:
+                            response.end();
+                        }
+                });
+            }
+        }
+    }
+
+    private void doUpdateRegistrationJson(final RoutingContext ctx) {
+
+        try {
+            JsonObject payload = null;
+            if (ctx.getBody().length() > 0) {
+                payload = ctx.getBodyAsJson();
+            }
+            updateRegistration(getDeviceIdParam(ctx), payload, ctx);
+        } catch (DecodeException e) {
+            HttpEndpointUtils.badRequest(ctx.response(), "body does not contain a valid JSON object");
+        }
+    }
+
+    private void doUpdateRegistrationForm(final RoutingContext ctx) {
+
+        updateRegistration(getDeviceIdParam(ctx), getPayloadForParams(ctx.request()), ctx);
+    }
+
+    private void updateRegistration(final String deviceId, final JsonObject payload, final RoutingContext ctx) {
+
+        if (payload != null) {
+            payload.remove(PARAM_DEVICE_ID);
+        }
+        final String tenantId = getTenantParam(ctx);
+        logger.debug("updating registration data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
+        final HttpServerResponse response = ctx.response();
+        final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_UPDATE, tenantId, deviceId, payload);
+
+        doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
+                response.setStatusCode(status);
+                switch(status) {
+                case HttpURLConnection.HTTP_OK:
+                    String msg = registrationResult.getJsonObject("payload").encodePrettily();
+                    response
+                        .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+                        .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
+                        .write(msg);
+                default:
+                    response.end();
+                }
+        });
+    }
+
+    private void doUnregisterDevice(final RoutingContext ctx) {
+
+        final String deviceId = getDeviceIdParam(ctx);
+        final String tenantId = getTenantParam(ctx);
+        logger.debug("removing registration information for device [tenant: {}, device: {}]", tenantId, deviceId);
+        final HttpServerResponse response = ctx.response();
+        final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_DEREGISTER, tenantId, deviceId);
+        doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
+                response.setStatusCode(status);
+                switch(status) {
+                case HttpURLConnection.HTTP_OK:
+                    String msg = registrationResult.getJsonObject("payload").encodePrettily();
+                    response
+                        .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+                        .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
+                        .write(msg);
+                default:
+                    response.end();
+                }
+        });
+    }
+
+    private void doRegistrationAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
+
+        vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, requestMsg,
+                invocation -> {
+                    HttpServerResponse response = ctx.response();
+                    if (invocation.failed()) {
+                        HttpEndpointUtils.serviceUnavailable(response, 2);
+                    } else {
+                        final JsonObject registrationResult = (JsonObject) invocation.result().body();
+                        final Integer status = Integer.valueOf(registrationResult.getString("status"));
+                        responseHandler.accept(status, registrationResult);
                     }
                 });
     }

@@ -20,6 +20,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
+import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -39,6 +40,7 @@ import org.springframework.context.annotation.Scope;
 public class ApplicationConfig {
 
     private static final String BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER = "deviceRegistryAmqpServer";
+    private static final String BEAN_NAME_DEVICE_REGISTRY_REST_SERVER = "deviceRegistryRestServer";
 
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
@@ -124,6 +126,55 @@ public class ApplicationConfig {
     public ObjectFactoryCreatingFactoryBean deviceRegistryAmqpServerFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER);
+        return factory;
+    }
+
+    /**
+     * Gets properties for configuring the Device Registry's REST endpoint.
+     * 
+     * @return The properties.
+     */
+    @Qualifier(Constants.QUALIFIER_REST)
+    @Bean
+    @ConfigurationProperties(prefix = "hono.registry.rest")
+    public ServiceConfigProperties restProperties() {
+        ServiceConfigProperties props = new ServiceConfigProperties();
+        return props;
+    }
+
+    /**
+     * Creates a new instance of an HTTP protocol handler for Hono's <em>Device Registration</em> API.
+     * 
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public RegistrationHttpEndpoint registrationHttpEndpoint() {
+        return new RegistrationHttpEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of the Device Registry's REST endpoint.
+     * <p>
+     * The endpoint is used for accessing both, the <em>Device Registration</em> and the <em>Credentials</em> API.
+     * 
+     * @return The endpoint.
+     */
+    @Bean(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER)
+    @Scope("prototype")
+    public DeviceRegistryRestServer deviceRegistryRestServer(){
+        return new DeviceRegistryRestServer();
+    }
+
+    /**
+     * Gets a factory for creating instances of the REST based endpoint.
+     * 
+     * @return The factory.
+     */
+    @Bean
+    public ObjectFactoryCreatingFactoryBean deviceRegistryRestServerFactory() {
+        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER);
         return factory;
     }
 

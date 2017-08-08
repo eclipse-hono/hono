@@ -1,0 +1,8 @@
+metadata:
+  name: ${project.artifactId}-http
+spec:
+  to:
+    kind: Service
+    name: ${project.artifactId}
+  port:
+    targetPort: 8080

@@ -1,0 +1,16 @@
+spec:
+  type: NodePort
+  ports:
+  - port: 5671
+    protocol: TCP
+    targetPort: 5671
+    nodePort: 31671
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    nodePort: 31080
+  - port: 8443
+    protocol: TCP
+    targetPort: 8443
+    nodePort: 31443
+    

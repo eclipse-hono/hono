@@ -1,0 +1,10 @@
+metadata:
+  name: ${project.artifactId}-https
+spec:
+  to:
+    kind: Service
+    name: ${project.artifactId}
+  port:
+    targetPort: 8443
+  tls:
+    termination: passthrough
