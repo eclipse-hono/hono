@@ -11,7 +11,6 @@
  */
 package org.eclipse.hono.service.credentials;
 
-import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -23,25 +22,33 @@ import java.util.*;
  */
 @Component
 public final class CredentialsUtils {
-    private static final Map<String, CredentialsSecretsValidator> secretsValidators = new HashMap<>();
+    private static final Map<String, SecretsValidator> secretsValidators = new HashMap<>();
 
     @Autowired(required = false)
-    public final void addValidators(final Set<CredentialsSecretsValidator> definedValidators) throws BeanCreationException {
+    public final void addValidators(final Set<SecretsValidator> definedValidators) {
         Objects.requireNonNull(definedValidators);
-        for (CredentialsSecretsValidator secretsValidator : definedValidators) {
+        for (SecretsValidator secretsValidator : definedValidators) {
             addSecretsValidator(secretsValidator);
         }
     }
 
-    private void addSecretsValidator(final CredentialsSecretsValidator secretsValidator) throws IllegalArgumentException {
-        if (secretsValidators.containsKey(secretsValidator.getSecretsType())) {
+    /**
+     * Add validator bean to the internal map that keeps track of a single validator per type.
+     *
+     * @param secretsValidator The validator bean to add to the map.
+     *
+     * @throws IllegalArgumentException If there was a validator for this type already (which is considered conceptually
+     * illegal).
+     */
+    private void addSecretsValidator(final SecretsValidator secretsValidator) {
+        if (secretsValidators.containsKey(secretsValidator.getSupportedType())) {
             throw new IllegalArgumentException(String.format("multiple credentials validators for type <%s> found - not supported.",
-                    secretsValidator.getSecretsType()));
+                    secretsValidator.getSupportedType()));
         }
-        secretsValidators.put(secretsValidator.getSecretsType(), secretsValidator);
+        secretsValidators.put(secretsValidator.getSupportedType(), secretsValidator);
     }
 
-    public static CredentialsSecretsValidator findAppropriateValidators(final String secretsType) {
+    public static SecretsValidator findAppropriateValidators(final String secretsType) {
         return secretsValidators.get(secretsType);
     }
 }

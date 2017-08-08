@@ -41,6 +41,8 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
 
     private static final Logger                  LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
 
+    private static final ObjectMapper            objectMapper = new ObjectMapper();
+
     private CredentialsClientImpl(final Context context, final ProtonConnection con, final String tenantId,
                                   final Handler<AsyncResult<CredentialsClient>> creationHandler) {
         super(context, con, tenantId, creationHandler);
@@ -62,13 +64,13 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
     protected CredentialsResult<CredentialsObject> getResult(final int status, final String payload) {
         try {
             if (status == HTTP_OK) {
-                ObjectMapper om = new ObjectMapper();
-                return CredentialsResult.from(status, om.readValue(payload, CredentialsObject.class));
+                return CredentialsResult.from(status, objectMapper.readValue(payload, CredentialsObject.class));
+            } else {
+                return CredentialsResult.from(status, null);
             }
         } catch (IOException e) {
             return CredentialsResult.from(HTTP_INTERNAL_ERROR, null);
         }
-        return CredentialsResult.from(status, null);
     }
 
     /**

@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
  * Validator to validate credentials of type {@link CredentialsConstants#SECRETS_TYPE_HASHED_PASSWORD} for a given password.
  */
 @Component
-public final class CredentialsValidatorHashedPassword extends AbstractCredentialsValidator<String> {
+public final class HashedPasswordValidator extends AbstractSecretValidator<String> {
 
     /**
      * Get the type of credentials secrets this validator is responsible for.
@@ -33,7 +33,7 @@ public final class CredentialsValidatorHashedPassword extends AbstractCredential
      * @return The type of credentials secrets.
      */
     @Override
-    public String getSecretsType() {
+    public String getSupportedType() {
         return CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
     }
 
@@ -45,29 +45,29 @@ public final class CredentialsValidatorHashedPassword extends AbstractCredential
      * <p>If a salt is contained in the credentials record (in base64 encoding), the hash function will be salted first.
      *
      * @param password The password to validate.
-     * @param aSecret The secret record as JsonObject (as returned by the <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
+     * @param hashedPasswordSecret The secret record as JsonObject (as returned by the <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
      * @return The result of the approval as boolean.
      */
     @Override
-    protected boolean validateSingleSecret(final String password, final Map<String, String> aSecret) {
-        String hashFunction = aSecret.get(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+    protected boolean validateSingleSecret(final String password, final Map<String, String> hashedPasswordSecret) {
+        String hashFunction = hashedPasswordSecret.get(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
         if (hashFunction == null) {
             return false;
         }
 
-        return checkPasswordAgainstSecret(aSecret, hashFunction, password);
+        return checkPasswordAgainstSecret(hashedPasswordSecret, hashFunction, password);
     }
 
-    private boolean checkPasswordAgainstSecret(final Map<String, String> secret, final String hashFunction, final String protocolAdapterPassword) {
+    private boolean checkPasswordAgainstSecret(final Map<String, String> hashedPasswordSecret, final String hashFunction, final String plainTextPassword) {
 
-        String pwdHash = secret.get(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        String pwdHash = hashedPasswordSecret.get(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
         if (pwdHash == null) {
             return false;
         }
 
         byte[] password = Base64.getDecoder().decode(pwdHash);
 
-        final String salt = secret.get(CredentialsConstants.FIELD_SECRETS_SALT);
+        final String salt = hashedPasswordSecret.get(CredentialsConstants.FIELD_SECRETS_SALT);
         byte[] decodedSalt = null;
         // the salt is optional so decodedSalt may stay null if salt was not found
         if (salt != null) {
@@ -75,7 +75,7 @@ public final class CredentialsValidatorHashedPassword extends AbstractCredential
         }
 
         try {
-            byte[] hashedPassword = hashPassword(hashFunction, decodedSalt, protocolAdapterPassword);
+            byte[] hashedPassword = hashPassword(hashFunction, decodedSalt, plainTextPassword);
             if (!Arrays.equals(password, hashedPassword)) {
                 return false;
             }

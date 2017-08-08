@@ -12,11 +12,10 @@
 package org.eclipse.hono.util;
 
 
-import io.vertx.core.json.JsonObject;
-
 /**
  * A container for the result returned by a Hono API that implements the request response pattern.
  *
+ * @param <T> denotes the concrete type of the payload that is part of the result
  */
 public class RequestResponseResult<T> {
 
