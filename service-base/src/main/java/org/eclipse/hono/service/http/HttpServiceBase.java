@@ -12,15 +12,15 @@
 
 package org.eclipse.hono.service.http;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,8 +54,6 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * Default file uploads directory used by Vert.x Web
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
-
-    private static final Logger LOG = LoggerFactory.getLogger(HttpServiceBase.class);
 
     private final Set<HttpEndpoint> endpoints = new HashSet<>();
 
@@ -145,15 +143,9 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
         return preStartServers()
                 .compose(s -> checkPortConfiguration())
-                .compose(s -> {
-                    Router router = createRouter();
-                    if (router == null) {
-                        return Future.failedFuture("no router configured");
-                    } else {
-                        addEndpointRoutes(router);
-                        addCustomRoutes(router);
-                        return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
-                    }
+                .compose(s -> startEndpoints())
+                .compose(router -> {
+                     return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 })
                 .compose(s -> onStartupSuccess());
     }
@@ -256,13 +248,18 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             if (server == null) {
                 server = vertx.createHttpServer(getHttpServerOptions());
             }
-            server.requestHandler(router::accept).listen(done -> {
-                if (done.succeeded()) {
-                    LOG.info("secure http server listening on {}:{}", bindAddress, server.actualPort());
-                    result.complete(done.result());
+            server.requestHandler(router::accept).listen(bindAttempt -> {
+                if (bindAttempt.succeeded()) {
+                    if (getPort() == getPortDefaultValue()) {
+                        LOG.info("server listens on standard secure port [{}:{}]", bindAddress, server.actualPort());
+                    } else {
+                        LOG.warn("server listens on non-standard secure port [{}:{}], default is {}", bindAddress,
+                                server.actualPort(), getPortDefaultValue());
+                    }
+                    result.complete(bindAttempt.result());
                 } else {
-                    LOG.error("error while starting up secure http server", done.cause());
-                    result.fail(done.cause());
+                    LOG.error("cannot bind to secure port", bindAttempt.cause());
+                    result.fail(bindAttempt.cause());
                 }
             });
             return result;
@@ -279,19 +276,52 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             if (insecureServer == null) {
                 insecureServer = vertx.createHttpServer(getInsecureHttpServerOptions());
             }
-            insecureServer.requestHandler(router::accept).listen(done -> {
-                if (done.succeeded()) {
-                    LOG.info("insecure http server listening on {}:{}", bindAddress, insecureServer.actualPort());
-                    result.complete(done.result());
+            insecureServer.requestHandler(router::accept).listen(bindAttempt -> {
+                if (bindAttempt.succeeded()) {
+                    if (getInsecurePort() == getInsecurePortDefaultValue()) {
+                        LOG.info("server listens on standard insecure port [{}:{}]", bindAddress, insecureServer.actualPort());
+                    } else {
+                        LOG.warn("server listens on non-standard insecure port [{}:{}], default is {}", bindAddress,
+                                insecureServer.actualPort(), getInsecurePortDefaultValue());
+                    }
+                    result.complete(bindAttempt.result());
                 } else {
-                    LOG.error("error while starting up insecure http server", done.cause());
-                    result.fail(done.cause());
+                    LOG.error("cannot bind to insecure port", bindAttempt.cause());
+                    result.fail(bindAttempt.cause());
                 }
             });
             return result;
         } else {
             return Future.succeededFuture();
         }
+    }
+
+    private Future<Router> startEndpoints() {
+
+        final Future<Router> startFuture = Future.future();
+        final Router router = createRouter();
+        if (router == null) {
+            startFuture.fail("no router configured");
+        } else {
+            addEndpointRoutes(router);
+            addCustomRoutes(router);
+            @SuppressWarnings("rawtypes")
+            List<Future> endpointFutures = new ArrayList<>(endpoints.size());
+            for (HttpEndpoint ep : endpoints) {
+                LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+                Future<Void> endpointFuture = Future.future();
+                endpointFutures.add(endpointFuture);
+                ep.start(endpointFuture);
+            }
+            CompositeFuture.all(endpointFutures).setHandler(startup -> {
+                if (startup.succeeded()) {
+                    startFuture.complete(router);
+                } else {
+                    startFuture.fail(startup.cause());
+                }
+            });
+        }
+        return startFuture;
     }
 
     @Override
