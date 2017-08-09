@@ -46,8 +46,6 @@
         <option name="name" value="hono.messaging.hostnameVerificationRequired" />
         <option name="value" value="false" />
       </param>
-
-
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.registration.name" />
@@ -83,7 +81,6 @@
         <option name="name" value="hono.registration.hostnameVerificationRequired" />
         <option name="value" value="false" />
       </param>
-
       <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.http.bindAddress" />
@@ -118,6 +115,14 @@
         <option name="enabled" value="true" />
         <option name="name" value="hono.http.maxInstances" />
         <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="name" value="hono.http.healthCheckPort" />
+        <option name="value" value="8089" />
+      </param>
+      <param>
+        <option name="name" value="hono.http.healthCheckBindAddress" />
+        <option name="value" value="0.0.0.0" />
       </param>
     </additionalParameters>
     <module name="hono-adapter-rest-vertx" />

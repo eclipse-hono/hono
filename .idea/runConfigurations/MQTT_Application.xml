@@ -106,6 +106,14 @@
         <option name="name" value="hono.mqtt.maxInstances" />
         <option name="value" value="1" />
       </param>
+      <param>
+        <option name="name" value="hono.mqtt.healthCheckPort" />
+        <option name="value" value="8090" />
+      </param>
+      <param>
+        <option name="name" value="hono.mqtt.healthCheckBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
     </additionalParameters>
     <module name="hono-adapter-mqtt-vertx" />
     <envs />

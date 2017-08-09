@@ -97,6 +97,14 @@
         <option name="value" value="DeviceRegistrySharedSecret_HasToBe32CharsOrLonger" />
       </param>
       <param>
+        <option name="name" value="hono.messaging.healthCheckPort" />
+        <option name="value" value="8088" />
+      </param>
+      <param>
+        <option name="name" value="hono.messaging.healthCheckBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
         <option name="enabled" value="true" />
         <option name="name" value="hono.metric.reporter.graphite.active" />
         <option name="value" value="false" />

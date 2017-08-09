@@ -13,27 +13,32 @@
     <additionalParameters>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.auth.bindAddress" />
+        <option name="name" value="hono.auth.amqp.bindAddress" />
         <option name="value" value="0.0.0.0" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.auth.port" />
+        <option name="name" value="hono.auth.amqp.port" />
         <option name="value" value="25671" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.auth.keyPath" />
+        <option name="name" value="hono.auth.amqp.keyPath" />
         <option name="value" value="../../demo-certs/certs/auth-server-key.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.auth.certPath" />
+        <option name="name" value="hono.auth.amqp.certPath" />
         <option name="value" value="../../demo-certs/certs/auth-server-cert.pem" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.auth.maxInstances" />
+        <option name="name" value="hono.auth.amqp.trustStorePath" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.auth.amqp.maxInstances" />
         <option name="value" value="1" />
       </param>
       <param>
