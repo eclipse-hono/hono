@@ -199,7 +199,7 @@ influxdb                       172.30.203.114   <none>        2003/TCP,8083/TCP,
 
 Using the "OpenShift Origin client tools" way, these services are accessible using the related `CLUSTER-IP` and the "internal" ports (i.e. 8080, 5671, ...).
 
-Using the "Minishift" way, you have to use the Minishift VM IP address (that you can get with the `minishift ip` command) and the so called "node" ports (i.e. 30080, 30671, ...).
+Using the "Minishift" way, you have to use the Minishift VM IP address (that you can get with the `minishift ip` command) and the so called *node ports* (i.e. 30080, 30671, ...).
 
 ### Starting a Consumer
 

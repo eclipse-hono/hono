@@ -107,20 +107,20 @@ Please refer to the [REST Adapter]({{< relref "rest-adapter.md" >}}) documentati
 The following sections assume that the REST adapter Docker container has been started on the local machine. However, if you started the REST adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
 {{% /warning %}}
 
-### Registering a device using the REST adapter
+### Registering a Device
 
 The first thing to do is registering a device identity with Hono. Hono uses this information to authorize access to the device's telemetry data and functionality.
 
-The following command registers a device with ID `4711`.
+The following command registers a device with ID `4711` with the Device Registry.
 
 ~~~sh
-$ curl -X POST -i -d 'device_id=4711' http://localhost:8080/registration/DEFAULT_TENANT
+$ curl -X POST -i -d 'device_id=4711' http://localhost:28080/registration/DEFAULT_TENANT
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http POST http://localhost:8080/registration/DEFAULT_TENANT device_id=4711
+$ http POST http://localhost:28080/registration/DEFAULT_TENANT device_id=4711
 ~~~
 
 The result will contain a `Location` header containing the resource path created for the device. In this example it will look like this:
@@ -134,13 +134,13 @@ Content-Length: 0
 You can then retrieve registration data for the device using
 
 ~~~sh
-$ curl -i http://localhost:8080/registration/DEFAULT_TENANT/4711
+$ curl -i http://localhost:28080/registration/DEFAULT_TENANT/4711
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http http://localhost:8080/registration/DEFAULT_TENANT/4711
+$ http http://localhost:28080/registration/DEFAULT_TENANT/4711
 ~~~
 
 which will result in something like this:
@@ -158,7 +158,7 @@ Content-Length: 35
 }
 ~~~
 
-### Uploading Telemetry Data using the REST adapter
+### Uploading Telemetry Data using the REST Adapter
 
 ~~~sh
 $ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
@@ -197,7 +197,7 @@ If you haven't started a consumer you will continue to get `503 Resource Unavail
 
 Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
 
-### Uploading Event Data using the REST adapter
+### Uploading Event Data using the REST Adapter
 
 In a similar way you can upload event data, using curl
 
