@@ -68,33 +68,6 @@
 			"response": []
 		},
 		{
-			"name": "Find Registration",
-			"request": {
-				"url": "http://{{hono.host}}:{{hono.port}}/registration/{{tenant}}/find",
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/x-www-form-urlencoded",
-						"description": ""
-					}
-				],
-				"body": {
-					"mode": "urlencoded",
-					"urlencoded": [
-						{
-							"key": "ep",
-							"value": "IMEI4711",
-							"type": "text",
-							"enabled": true
-						}
-					]
-				},
-				"description": ""
-			},
-			"response": []
-		},
-		{
 			"name": "Update Registration",
 			"request": {
 				"url": "http://{{hono.host}}:{{hono.port}}/registration/{{tenant}}/4711",

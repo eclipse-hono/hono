@@ -85,6 +85,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         router.route(HttpMethod.POST, String.format("/%s/*/*", RegistrationConstants.REGISTRATION_ENDPOINT))
             .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
 
+        // GET device registration
         router.route(HttpMethod.GET, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(this::doGetDevice);
 

@@ -122,12 +122,4 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
 
         createAndSendRequest(ACTION_ASSERT, createDeviceIdProperties(deviceId), null, resultHandler);
     }
-
-    @Override
-    public void find(final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-
-        final Map<String, Object> properties = createDeviceIdProperties(value);
-        properties.put(APP_PROPERTY_KEY, key);
-        sendMessage(createMessage(ACTION_FIND, properties), resultHandler);
-    }
 }

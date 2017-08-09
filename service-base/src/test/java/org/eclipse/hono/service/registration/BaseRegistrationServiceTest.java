@@ -167,10 +167,6 @@ public class BaseRegistrationServiceTest {
             }
 
             @Override
-            public void findDevice(final String tenantId, final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-            }
-
-            @Override
             public void addDevice(final String tenantId, final String deviceId, JsonObject otherKeys, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
             }
         };

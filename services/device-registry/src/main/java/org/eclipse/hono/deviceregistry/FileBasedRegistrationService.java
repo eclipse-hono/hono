@@ -197,23 +197,6 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     }
 
     @Override
-    public void findDevice(final String tenantId, final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        resultHandler.handle(Future.succeededFuture(findDevice(tenantId, key, value)));
-    }
-
-    RegistrationResult findDevice(final String tenantId, final String key, final String value) {
-        final Map<String, JsonObject> devices = identities.get(tenantId);
-        if (devices != null) {
-            for (Entry<String, JsonObject> entry : devices.entrySet()) {
-                if (value.equals(entry.getValue().getString(key))) {
-                    return RegistrationResult.from(HTTP_OK, getResultPayload(entry.getKey(), entry.getValue()));
-                }
-            }
-        }
-        return RegistrationResult.from(HTTP_NOT_FOUND);
-    }
-
-    @Override
     public void removeDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         resultHandler.handle(Future.succeededFuture(removeDevice(tenantId, deviceId)));

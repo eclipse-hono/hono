@@ -152,11 +152,6 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
                 log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
                 getDevice(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
-            case ACTION_FIND:
-                final String key = body.getString(RegistrationConstants.APP_PROPERTY_KEY);
-                log.debug("looking up device [key: {}, value: {}] of tenant [{}]", key, deviceId, tenantId);
-                findDevice(tenantId, key, deviceId, result -> reply(regMsg, result));
-                break;
             case ACTION_REGISTER:
                 JsonObject payload = getRequestPayload(body);
                 log.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId,
