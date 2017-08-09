@@ -141,12 +141,12 @@ $ docker run -d --name hono-messaging --network hono-net \
 > -e 'HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem' \
 > -e 'HONO_DOWNSTREAM_HOST=qdrouter.hono' \
 > -e 'HONO_DOWNSTREAM_PORT=5673' \
-> -e 'HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem' \
-> -e 'HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-cert.pem' \
+> -e 'HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-messaging-key.pem' \
+> -e 'HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-messaging-cert.pem' \
 > -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
 > -e 'HONO_MESSAGING_VALIDATION_SHARED_SECRET=asharedsecretforvalidatingassertions' \
-> -e 'HONO_MESSAGING_KEY_PATH=/etc/hono/certs/hono-key.pem' \
-> -e 'HONO_MESSAGING_CERT_PATH=/etc/hono/certs/hono-cert.pem' \
+> -e 'HONO_MESSAGING_KEY_PATH=/etc/hono/certs/hono-messaging-key.pem' \
+> -e 'HONO_MESSAGING_CERT_PATH=/etc/hono/certs/hono-messaging-cert.pem' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
 > -p5672:5672 eclipsehono/hono-server:latest
@@ -180,12 +180,12 @@ The corresponding command to start up the service with the configuration used in
 > --hono.downstream.host=qdrouter.hono,\
 > --hono.downstream.port=5673,\
 > --hono.downstream.hostnameVerificationRequired=false,\
-> --hono.downstream.keyPath=target/certs/hono-key.pem,\
-> --hono.downstream.certPath=target/certs/hono-cert.pem,\
+> --hono.downstream.keyPath=target/certs/hono-messaging-key.pem,\
+> --hono.downstream.certPath=target/certs/hono-messaging-cert.pem,\
 > --hono.downstream.trustStorePath=target/certs/trusted-certs.pem,\
 > --hono.messaging.validation.sharedSecret=asharedsecretforvalidatingassertions,\
-> --hono.messaging.keyPath=target/certs/hono-key.pem,\
-> --hono.messaging.certPath=target/certs/hono-cert.pem,\
+> --hono.messaging.keyPath=target/certs/hono-messaging-key.pem,\
+> --hono.messaging.certPath=target/certs/hono-messaging-cert.pem,\
 > --hono.messaging.trustStorePath=target/certs/trusted-certs.pem,\
 > --hono.messaging.insecurePortEnabled=true,\
 > --hono.messaging.insecurePortBindAddress=0.0.0.0
