@@ -159,13 +159,13 @@ The corresponding command to start up the server with the configuration used in 
 ~~~sh
 ~/hono/services/device-registry $ mvn spring-boot:run -Drun.arguments=\
 > --hono.registry.amqp.bindAddress=0.0.0.0,\
-> --hono.registry.amqp.keyPath=target/certs/device-registry-key.pem,\
-> --hono.registry.amqp.certPath=target/certs/device-registry-cert.pem,\
-> --hono.registry.amqp.trustStorePath=target/certs/trusted-certs.pem,\
+> --hono.registry.amqp.keyPath=../../demo-certs/certs/device-registry-key.pem,\
+> --hono.registry.amqp.certPath=../../demo-certs/certs/device-registry-cert.pem,\
+> --hono.registry.amqp.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
 > --hono.auth.host=localhost,\
 > --hono.auth.name='device-registry',\
-> --hono.auth.validation.certPath=target/certs/auth-server-cert.pem,\
-> --hono.auth.trustStorePath=target/certs/trusted-certs.pem
+> --hono.auth.validation.certPath=../../demo-certs/certs/auth-server-cert.pem,\
+> --hono.auth.trustStorePath=../../demo-certs/certs/trusted-certs.pem
 ~~~
 
 {{% note %}}

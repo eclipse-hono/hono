@@ -172,21 +172,21 @@ In order to do so, the service can be started using the `spring-boot:run` maven 
 The corresponding command to start up the service with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/services/messaging$ mvn spring-boot:run -Drun.arguments= \
+~/hono/services/messaging$ mvn spring-boot:run -Drun.arguments=\
 > --hono.auth.host=auth-server.hono,\
-> --hono.auth.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.auth.validation.certPath=target/certs/auth-server-cert.pem,\
+> --hono.auth.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+> --hono.auth.validation.certPath=../../demo-certs/certs/auth-server-cert.pem,\
 > --hono.auth.hostnameVerificationRequired=false,\
 > --hono.downstream.host=qdrouter.hono,\
 > --hono.downstream.port=5673,\
 > --hono.downstream.hostnameVerificationRequired=false,\
-> --hono.downstream.keyPath=target/certs/hono-messaging-key.pem,\
-> --hono.downstream.certPath=target/certs/hono-messaging-cert.pem,\
-> --hono.downstream.trustStorePath=target/certs/trusted-certs.pem,\
+> --hono.downstream.keyPath=../../demo-certs/certs/hono-messaging-key.pem,\
+> --hono.downstream.certPath=../../demo-certs/certs/hono-messaging-cert.pem,\
+> --hono.downstream.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
 > --hono.messaging.validation.sharedSecret=asharedsecretforvalidatingassertions,\
-> --hono.messaging.keyPath=target/certs/hono-messaging-key.pem,\
-> --hono.messaging.certPath=target/certs/hono-messaging-cert.pem,\
-> --hono.messaging.trustStorePath=target/certs/trusted-certs.pem,\
+> --hono.messaging.keyPath=../../demo-certs/certs/hono-messaging-key.pem,\
+> --hono.messaging.certPath=../../demo-certs/certs/hono-messaging-cert.pem,\
+> --hono.messaging.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
 > --hono.messaging.insecurePortEnabled=true,\
 > --hono.messaging.insecurePortBindAddress=0.0.0.0
 ~~~

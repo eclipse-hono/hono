@@ -176,12 +176,12 @@ The corresponding command to start up the adapter with the configuration used in
 > --hono.messaging.host=hono-service-messaging.hono,\
 > --hono.messaging.username=rest-adapter@HONO,\
 > --hono.messaging.password=rest-secret,\
-> --hono.messaging.trustStorePath=target/certs/trusted-certs.pem \
+> --hono.messaging.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
 > --hono.registration.host=hono-service-device-registry.hono,\
 > --hono.registration.username=rest-adapter@HONO,\
 > --hono.registration.password=rest-secret,\
-> --hono.registration.trustStorePath=target/certs/trusted-certs.pem \
-> --hono.http.bindAddress=0.0.0.0 \
+> --hono.registration.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+> --hono.http.bindAddress=0.0.0.0,\
 > --hono.http.insecurePortEnabled=true,\
 > --hono.http.insecurePortBindAddress=0.0.0.0
 ~~~
