@@ -201,18 +201,16 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
                     MqttUsernamePassword authObject = MqttUsernamePassword.create(endpoint,
                             getConfig().isSingleTenant());
 
-                    Future<Void> validationTracker = Future.future();
-                    validationTracker.setHandler(result -> {
-                        if (result.failed()) {
-                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-                        }
-                    });
                     validateCredentialsForDevice(authObject.getTenantId(), authObject.getType(), authObject.getAuthId(),
-                            authObject.getPassword()).compose(
-                            deviceId -> {
-                                LOG.trace("successfully authenticated device id <{}>", deviceId);
-                                endpoint.accept(false);
-                            }, validationTracker);
+                            authObject.getPassword()).setHandler(attempt -> {
+                                if (attempt.succeeded()) {
+                                    String deviceId = attempt.result();
+                                    LOG.trace("successfully authenticated device id <{}>", deviceId);
+                                    endpoint.accept(false);
+                                } else {
+                                    endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                                }
+                    });
                 } catch (IllegalArgumentException e) {
                     LOG.warn(e.getMessage());
                     endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
@@ -251,8 +249,10 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
                     });
 
                     // check that MQTT client tries to publish on topic with device_id same as on connection
-                    if (resource.getResourceId().equals(endpoint.clientIdentifier())) {
-
+                    if (getConfig().isSingleTenant() && !resource.getResourceId().equals(endpoint.clientIdentifier())) {
+                        // MQTT client is trying to publish on a different device_id used on connection (MQTT has no way for errors)
+                        messageTracker.fail("client not authorized");
+                    } else {
                         Future<String> assertionTracker = getRegistrationAssertion(endpoint, resource);
                         Future<MessageSender> senderTracker = getSenderTracker(message, resource);
 
@@ -260,9 +260,6 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
                             doUploadMessage(resource.getTenantId(), assertionTracker.result(), endpoint, message,
                                     senderTracker.result(), messageTracker);
                         }, messageTracker);
-                    } else {
-                        // MQTT client is trying to publish on a different device_id used on connection (MQTT has no way for errors)
-                        messageTracker.fail("client not authorized");
                     }
                 }
 
