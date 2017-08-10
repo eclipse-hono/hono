@@ -76,4 +76,32 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <!--
+              Execution and configuration for copying certificates from related module
+              to "target/certs" folder so that they can be referred to when starting
+              containers from the source folders.
+             -->
+            <id>copy_demo_certs</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeArtifactIds>hono-demo-certs</includeArtifactIds>
+              <outputDirectory>${project.build.directory}/certs</outputDirectory>
+              <includes>*.pem</includes>
+              <excludeTransitive>true</excludeTransitive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
