@@ -23,6 +23,11 @@
       </param>
       <param>
         <option name="enabled" value="true" />
+        <option name="name" value="hono.auth.keyPath" />
+        <option name="value" value="../../demo-certs/certs/auth-server-key.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
         <option name="name" value="hono.auth.certPath" />
         <option name="value" value="../../demo-certs/certs/auth-server-cert.pem" />
       </param>
@@ -43,32 +48,37 @@
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.device.registry.port" />
+        <option name="name" value="hono.auth.validation.certPath" />
+        <option name="value" value="../../demo-certs/certs/auth-server-cert.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registry.amqp.port" />
         <option name="value" value="26671" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.device.registry.keyPath" />
-        <option name="value" value="../../demo-certs/certs/device-registry-key.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.device.registry.certPath" />
-        <option name="value" value="../../demo-certs/certs/device-registry-cert.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.device.registry.bindAddress" />
+        <option name="name" value="hono.registry.amqp.bindAddress" />
         <option name="value" value="0.0.0.0" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.device.registry.maxInstances" />
+        <option name="name" value="hono.registry.amqp.keyPath" />
+        <option name="value" value="../../demo-certs/certs/device-registry-key.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registry.amqp.certPath" />
+        <option name="value" value="../../demo-certs/certs/device-registry-cert.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registry.amqp.maxInstances" />
         <option name="value" value="1" />
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.device.registry.signing.sharedSecret" />
+        <option name="name" value="hono.registry.svc.signing.sharedSecret" />
         <option name="value" value="DeviceRegistrySharedSecret_HasToBe32CharsOrLonger" />
       </param>
       <param>
