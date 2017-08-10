@@ -286,7 +286,7 @@ public abstract class ClientTestBase {
             if (r.getStatus() == HTTP_OK) {
                 createConsumer(TEST_TENANT_ID, msg -> {
                     LOGGER.trace("received {}", msg);
-                    assertMessagePropertiesArePresent(ctx, msg);
+                    assertMessageProperties(ctx, msg);
                     assertAdditionalMessageProperties(ctx, msg);
                     received.countDown();
                     if (received.getCount() % 200 == 0) {
@@ -375,10 +375,11 @@ public abstract class ClientTestBase {
         ));
     }
 
-    private void assertMessagePropertiesArePresent(final TestContext ctx, final Message msg) {
+    private void assertMessageProperties(final TestContext ctx, final Message msg) {
         ctx.assertNotNull(MessageHelper.getDeviceId(msg));
         ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
         ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
+        ctx.assertNull(MessageHelper.getRegistrationAssertion(msg));
     }
 
     /**

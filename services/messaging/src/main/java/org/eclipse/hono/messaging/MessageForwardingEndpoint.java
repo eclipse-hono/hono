@@ -202,7 +202,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
     final void forwardMessage(final UpstreamReceiver link, final ProtonDelivery delivery, final Message msg) {
 
         final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, String.class));
-        final String token = MessageHelper.getRegistrationAssertion(msg);
+        final String token = MessageHelper.getAndRemoveRegistrationAssertion(msg);
 
         if (assertRegistration(token, messageAddress)) {
             downstreamAdapter.processMessage(link, delivery, msg);

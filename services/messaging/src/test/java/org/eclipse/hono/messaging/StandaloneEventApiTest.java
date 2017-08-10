@@ -186,10 +186,10 @@ public class StandaloneEventApiTest {
             eventSender.send(DEVICE_1, null, "payload" + i, "text/plain; charset=utf-8", registrationAssertion, replenished -> {
                 waitForCredit.complete();
             }, (id, delivery) -> {
-                ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()));
+                ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()), "message has not been accepted");
             });
             LOG.trace("sender's send queue full: {}", eventSender.sendQueueFull());
-            waitForCredit.await();
+            waitForCredit.await(100);
         });
 
     }

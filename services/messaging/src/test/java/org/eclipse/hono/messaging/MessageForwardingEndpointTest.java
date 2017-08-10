@@ -13,6 +13,7 @@ package org.eclipse.hono.messaging;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
@@ -171,13 +172,18 @@ public class MessageForwardingEndpointTest {
         endpoint.setRegistrationAssertionValidator(tokenValidator);
         endpoint.setDownstreamAdapter(adapter);
 
+        // WHEN processing a message bearing a valid registration assertion
         Message msg = ProtonHelper.message();
-        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_REGISTRATION_ASSERTION, validToken);
+        MessageHelper.addRegistrationAssertion(msg, validToken);
         MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, "telemetry/tenant/4711");
         endpoint.forwardMessage(client, delivery, msg);
 
+        // THEN the message is sent downstream
         verify(adapter).processMessage(client, delivery, msg);
         verify(client, times(0)).close(any(ErrorCondition.class));
+        // and the assertion has been removed from the message
+        assertThat("downstream message should not contain registration assertion",
+                MessageHelper.getRegistrationAssertion(msg), is(nullValue()));
     }
 
     /**

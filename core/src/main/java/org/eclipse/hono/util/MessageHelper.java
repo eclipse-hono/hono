@@ -47,29 +47,29 @@ public final class MessageHelper {
      * The name of the AMQP 1.0 message application property containing the id of the device that has reported the data
      * belongs to.
      */
-    public static final String APP_PROPERTY_DEVICE_ID          = "device_id";
+    public static final String APP_PROPERTY_DEVICE_ID              = "device_id";
     /**
      * The name of the AMQP 1.0 message application property containing the id of the tenant the device that has
      * reported the data belongs to.
      */
-    public static final String APP_PROPERTY_TENANT_ID          = "tenant_id";
+    public static final String APP_PROPERTY_TENANT_ID              = "tenant_id";
     /**
      * The name of the AMQP 1.0 message application property containing a JWT token asserting a device's registration status.
      */
-    public static final String APP_PROPERTY_REGISTRATION_ASSERTION  = "reg_assertion";
+    public static final String APP_PROPERTY_REGISTRATION_ASSERTION = "reg_assertion";
     /**
      * The name of the AMQP 1.0 message application property containing the resource a message is addressed at.
      */
-    public static final String APP_PROPERTY_RESOURCE          = "resource";
+    public static final String APP_PROPERTY_RESOURCE               = "resource";
 
     /**
      * The name of the AMQP 1.0 message system property 'subject'.
      */
-    public static final String SYS_PROPERTY_SUBJECT              = "subject";
-    public static final String SYS_PROPERTY_CORRELATION_ID       = "correlation-id";
+    public static final String SYS_PROPERTY_SUBJECT                = "subject";
+    public static final String SYS_PROPERTY_CORRELATION_ID         = "correlation-id";
 
-    public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID          = "x-opt-app-correlation-id";
-    public static final String APP_PROPERTY_STATUS               = "status";
+    public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID = "x-opt-app-correlation-id";
+    public static final String APP_PROPERTY_STATUS                 = "status";
 
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
@@ -87,9 +87,50 @@ public final class MessageHelper {
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID, String.class);
     }
 
+    /**
+     * Gets the registration assertion conveyed in an AMQP 1.0 message.
+     * <p>
+     * The assertion is expected to be contained in the messages's <em>delivery-annotation</em>
+     * under key {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
+     * 
+     * @param msg The message.
+     * @return The assertion or {@code null} if the message does not contain an assertion (at the
+     *         expected location).
+     */
     public static String getRegistrationAssertion(final Message msg) {
+        return getRegistrationAssertion(msg, false);
+    }
+
+    /**
+     * Gets and removes the registration assertion conveyed in an AMQP 1.0 message.
+     * <p>
+     * The assertion is expected to be contained in the messages's <em>delivery-annotation</em>
+     * under key {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
+     * 
+     * @param msg The message.
+     * @return The assertion or {@code null} if the message does not contain an assertion (at the
+     *         expected location).
+     */
+    public static String getAndRemoveRegistrationAssertion(final Message msg) {
+        return getRegistrationAssertion(msg, true);
+    }
+
+    private static String getRegistrationAssertion(final Message msg, final boolean removeAssertion) {
         Objects.requireNonNull(msg);
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_REGISTRATION_ASSERTION, String.class);
+        String assertion = null;
+        ApplicationProperties properties = msg.getApplicationProperties();
+        if (properties != null) {
+            Object obj = null;
+            if (removeAssertion) {
+                obj = properties.getValue().remove(APP_PROPERTY_REGISTRATION_ASSERTION);
+            } else {
+                obj = properties.getValue().get(APP_PROPERTY_REGISTRATION_ASSERTION);
+            }
+            if (obj instanceof String) {
+                assertion = (String) obj;
+            }
+        }
+        return assertion;
     }
 
     public static String getDeviceIdAnnotation(final Message msg) {
@@ -172,10 +213,28 @@ public final class MessageHelper {
         addProperty(msg, APP_PROPERTY_DEVICE_ID, deviceId);
     }
 
+    /**
+     * Adds a registration assertion to an AMQP 1.0 message.
+     * <p>
+     * The assertion is put to the message's <em>delivery-annotations</em> under key
+     * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
+     * 
+     * @param msg The message.
+     * @param token The assertion to add.
+     */
     public static void addRegistrationAssertion(final Message msg, final String token) {
         addProperty(msg, APP_PROPERTY_REGISTRATION_ASSERTION, token);
     }
 
+    /**
+     * Adds a property to an AMQP 1.0 message.
+     * <p>
+     * The property is added to the message's <em>application-properties</em>.
+     * 
+     * @param msg The message.
+     * @param key The property key.
+     * @param value The property value.
+     */
     @SuppressWarnings("unchecked")
     public static void addProperty(final Message msg, final String key, final Object value) {
         ApplicationProperties props = msg.getApplicationProperties();

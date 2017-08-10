@@ -55,7 +55,7 @@ The following table provides an overview of the properties a client needs to set
 
 The body of the message MUST consist of a single AMQP *Data* section containing the telemetry data. The format and encoding of the data MUST be indicated by the *content-type* and (optional) *content-encoding* properties of the message.
 
-Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers.
+Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers. However, the *assertion* contained in the *application-properties* will **not** be propagated downstream.
 
 Note that Hono does not return any *application layer* message back to the client in order to signal the outcome of the operation. Instead, Hono signals reception of the message by means of the AMQP `ACCEPTED` outcome if the message complies with the formal requirements. Note that this does **not** mean that the telemetry message has been successfully forwarded to the AMQP 1.0 messaging network.
 

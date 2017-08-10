@@ -23,7 +23,6 @@
   <logger name="org.eclipse.hono.service.credentials" level="INFO"/>
   <logger name="org.eclipse.hono.service.registration" level="INFO"/>
   <logger name="org.eclipse.hono.telemetry" level="INFO"/>
-  <logger name="org.eclipse.hono.telemetry.impl" level="INFO"/>
   <logger name="org.eclipse.hono.util" level="INFO"/>
 
   <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
