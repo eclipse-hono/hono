@@ -128,42 +128,45 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
 
-## Run as a Docker Container
+## Run as a Docker Swarm Service
 
-When running the adapter as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
-
-The following command starts the REST adapter container using the trusted certificates included in the image under path `/etc/hono/certs`.
+The REST adapter can be run as a Docker container from the command line. The following commands create and start the REST adapter as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
 
 ~~~sh
-$ docker run -d --name rest-adapter --network hono-net \
+~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+~/hono$ docker secret create rest-adapter-key.pem demo-certs/certs/rest-adapter-key.pem
+~/hono$ docker secret create rest-adapter-cert.pem demo-certs/certs/rest-adapter-cert.pem
+~/hono$ docker service create --detach --name hono-adapter-rest-vertx --network hono-net -p 8080:8080 -p 8443:8443  \
+> --secret trusted-certs.pem \
+> --secret rest-adapter-key.pem \
+> --secret rest-adapter-cert.pem \
 > -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
 > -e 'HONO_MESSAGING_USERNAME=rest-adapter@HONO' \
 > -e 'HONO_MESSAGING_PASSWORD=rest-secret' \
-> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
 > -e 'HONO_REGISTRATION_USERNAME=rest-adapter@HONO' \
 > -e 'HONO_REGISTRATION_PASSWORD=rest-secret' \
-> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_HTTP_BIND_ADDRESS=0.0.0.0' \
-> -e 'HONO_HTTP_KEY_PATH=/etc/hono/certs/rest-adapter-key.pem' \
-> -e 'HONO_HTTP_CERT_PATH=/etc/hono/certs/rest-adapter-cert.pem' \
+> -e 'HONO_HTTP_KEY_PATH=/run/secrets/rest-adapter-key.pem' \
+> -e 'HONO_HTTP_CERT_PATH=/run/secrets/rest-adapter-cert.pem' \
 > -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> -p8080:8080 -p8443:8443 eclipsehono/hono-adapter-rest-vertx:latest
+> eclipsehono/hono-adapter-rest-vertx:latest
 ~~~
 
 {{% note %}}
-The *--network* command line switch is used to specify the *user defined* Docker network that the REST adapter container should attach to. It is important that the REST adapter container is attached to the same network that the Hono Messaging component is attached to so that the REST adapter can use the Hono Messaging component's host name to connect to it via the Docker network.
-Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
+There are several things noteworthy about the above command to start the service:
 
-In cases where the REST adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the REST adapter container should attach to. It is important that the REST adapter container is attached to the same network that the Hono Messaging component is attached to so that the REST adapter can use the Hono Messaging component's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. In cases where the REST adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
-## Run using Docker Compose
+## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
-See the `example` module for details. The `example` module also contains an example service definition file that
-you can use as a starting point for your own configuration.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
 
 ## Run the Spring Boot Application
 

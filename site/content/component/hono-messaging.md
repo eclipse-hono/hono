@@ -128,42 +128,48 @@ This can be used to narrow the visibility of the insecure port to a local networ
 
 The service may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
 
-## Run as a Docker Container
+## Run as a Docker Swarm Service
 
-When running the Hono Messaging component as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
-
-The following command starts the container using the configuration files included in the image under path `/etc/hono`.
+Hono Messaging can be run as a Docker container from the command line. The following commands create and start Hono Messaging as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
 
 ~~~sh
-$ docker run -d --name hono-messaging --network hono-net \
-> -e 'HONO_AUTH_HOST=auth-server.hono' \
-> -e 'HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
-> -e 'HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem' \
-> -e 'HONO_DOWNSTREAM_HOST=qdrouter.hono' \
+~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+~/hono$ docker secret create auth-server-cert.pem demo-certs/certs/auth-server-cert.pem
+~/hono$ docker secret create hono-messaging-key.pem demo-certs/certs/hono-messaging-key.pem
+~/hono$ docker secret create hono-messaging-cert.pem demo-certs/certs/hono-messaging-cert.pem
+~/hono$ docker service create --detach --name hono-service-messaging --network hono-net -p 5672:5672 \
+> --secret trusted-certs.pem \
+> --secret auth-server-cert.pem \
+> --secret hono-messaging-key.pem \
+> --secret hono-messaging-cert.pem \
+> -e 'HONO_AUTH_HOST=<name or address of the auth-server>' \
+> -e 'HONO_AUTH_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+> -e 'HONO_AUTH_VALIDATION_CERT_PATH=/run/secrets/auth-server-cert.pem' \
+> -e 'HONO_DOWNSTREAM_HOST=<name or address of the dispatch router>' \
 > -e 'HONO_DOWNSTREAM_PORT=5673' \
-> -e 'HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-messaging-key.pem' \
-> -e 'HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-messaging-cert.pem' \
-> -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_DOWNSTREAM_KEY_PATH=/run/secrets/hono-messaging-key.pem' \
+> -e 'HONO_DOWNSTREAM_CERT_PATH=/run/secrets/hono-messaging-cert.pem' \
+> -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_MESSAGING_VALIDATION_SHARED_SECRET=asharedsecretforvalidatingassertions' \
-> -e 'HONO_MESSAGING_KEY_PATH=/etc/hono/certs/hono-messaging-key.pem' \
-> -e 'HONO_MESSAGING_CERT_PATH=/etc/hono/certs/hono-messaging-cert.pem' \
+> -e 'HONO_MESSAGING_KEY_PATH=/run/secrets/hono-messaging-key.pem' \
+> -e 'HONO_MESSAGING_CERT_PATH=/run/secrets/hono-messaging-cert.pem' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
-> -p5672:5672 eclipsehono/hono-server:latest
+> eclipsehono/hono-server:latest
 ~~~
 
 {{% note %}}
-The *--network* command line switch is used to specify the *user defined* Docker network that the service should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the service when they want to connect to it. For the same reason it is important that the service container is attached to the same network that the Dispatch Router is attached to so that the service can use the Dispatch Router's host name to connect to it via the Docker network.
-Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
+There are several things noteworthy about the above command to start the service:
 
-In cases where the Hono Messaging container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to put all environment variable definitions into a file and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the service should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the service when they want to connect to it. For the same reason it is important that the service container is attached to the same network that the Dispatch Router is attached to so that the service can use the Dispatch Router's host name to connect to it via the Docker network.
+Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. In cases where the Hono Messaging container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to put all environment variable definitions into a file and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
-## Run using Docker Compose
+## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
-See the `example` module for details. The `example` module also contains an example service definition file that
-you can use as a starting point for your own configuration.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
 
 ## Run the Spring Boot Application
 

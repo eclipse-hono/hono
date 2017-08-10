@@ -86,33 +86,35 @@ This can be used to narrow the visibility of the insecure port to a local networ
 
 The server may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
 
-## Run as a Docker Container
+## Run as a Docker Swarm Service
 
-When running the server as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
-
-The following command starts a container using the configuration files included in the image under path `/etc/hono`.
+The Auth Server can be run as a Docker container from the command line. The following commands create and start the Auth Server as a Docker Swarm service using the default keys and configuration files contained in the `services/auth` and `demo-certs` modules:
 
 ~~~sh
-$ docker run -d --name auth-server --network hono-net \
+~/hono$ docker secret create auth-server-key.pem demo-certs/certs/auth-server-key.pem
+~/hono$ docker secret create auth-server-cert.pem demo-certs/certs/auth-server-cert.pem
+~/hono$ docker service create --detach --name auth-server --network hono-net -p5671:5671 \
+> --secret auth-server-key.pem \
+> --secret auth-server-cert.pem \
 > -e 'HONO_AUTH_AMQP_BIND_ADDRESS=0.0.0.0'
-> -e 'HONO_AUTH_AMQP_KEY_PATH=/etc/hono/certs/auth-server-key.pem' \
-> -e 'HONO_AUTH_AMQP_CERT_PATH=/etc/hono/certs/auth-server-cert.pem' \
-> -e 'HONO_AUTH_SVC_PERMISSIONS_PATH=file:/etc/hono/permissions.json' \
-> -p5671:5671 eclipsehono/hono-service-auth:latest
+> -e 'HONO_AUTH_AMQP_KEY_PATH=/run/secrets/auth-server-key.pem' \
+> -e 'HONO_AUTH_AMQP_CERT_PATH=/run/secrets/auth-server-cert.pem' \
+> -e 'SPRING_PROFILES_ACTIVE=authentication-impl' \
+> eclipsehono/hono-service-auth:latest
 ~~~
 
 {{% note %}}
-The *--network* command line switch is used to specify the *user defined* Docker network that the Hono components should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the server when they want to connect to it.
-Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
+There are several things noteworthy about the above command to start the service:
 
-In cases where the server container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the Hono components should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the server when they want to connect to it.
+Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. In cases where the server container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
-## Run using Docker Compose
+## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
-See the `example` module for details. The `example` module also contains an example service definition file that
-you can use as a starting point for your own configuration.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
 
 ## Run the Spring Boot Application
 
@@ -121,7 +123,7 @@ In order to do so, the server can be started using the `spring-boot:run` maven g
 The corresponding command to start up the server with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/services/auth$ mvn spring-boot:run -Drun.arguments=\
+~/hono/services/auth$ mvn spring-boot:run -Drun.profiles=authentication-impl -Drun.arguments=\
 > --hono.auth.amqp.bindAddress=0.0.0.0,\
 > --hono.auth.amqp.keyPath=target/certs/auth-server-key.pem,\
 > --hono.auth.amqp.certPath=target/certs/auth-server-cert.pem,\
