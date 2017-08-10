@@ -82,7 +82,7 @@ After that, it's needed to log into the cluster as a system administrator in ord
 
 ~~~sh
 $ oc login -u system:admin
-$ oc create -f <path-to-repo>/example/target/classes/META-INF/fabric8/openshift/hono-pv.yml
+$ oc create -f <path-to-repo>/example/target/deploy/openshift/hono-pv.yml
 ~~~
 
 When the persistent volume is provisioned, come back to use the default `developer` user.
