@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.service.credentials;
 
+import org.eclipse.hono.service.credentials.validators.AbstractSecretsValidator;
 import org.eclipse.hono.util.CredentialsObject;
 
 /**
@@ -24,16 +25,16 @@ import org.eclipse.hono.util.CredentialsObject;
  * {@link org.eclipse.hono.service.credentials.validators} will be automatically found during startup and are used
  * during authentication.
  * This makes adding of own validators very easy.
- * <p>See the provided validators (e.g. {@link org.eclipse.hono.service.credentials.validators.CredentialsValidatorHashedPassword})
+ * <p>See the provided validators (e.g. {@link org.eclipse.hono.service.credentials.validators.HashedPasswordValidator})
  * as a blueprint for how to write own validators.
- * See {@link org.eclipse.hono.service.credentials.validators.AbstractCredentialsValidator} as the base class for such
+ * See {@link AbstractSecretsValidator} as the base class for such
  * implementations.
  *
  * @param <T> The type of what has to be validated (called item below): this can be String in case of password validation, a certificate
  *           class in case of a client certificate, etc.
  */
 
-public interface CredentialsSecretsValidator<T> {
+public interface SecretsValidator<T> {
     /**
      * Get the type of credentials secrets this validator is responsible for.
      * <p>This can be freely defined, but there are some predefined types in the

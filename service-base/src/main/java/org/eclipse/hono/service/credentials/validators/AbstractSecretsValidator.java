@@ -36,9 +36,9 @@ import java.util.function.Predicate;
  * @param <T> The type of what has to be validated (called item below): this can be String in case of password validation, a certificate
  *           class in case of a client certificate, etc.
  */
-public abstract class AbstractValidator<T> implements SecretsValidator<T> {
+public abstract class AbstractSecretsValidator<T> implements SecretsValidator<T> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractValidator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractSecretsValidator.class);
 
     /**
      * Get the type of credentials secrets this validator is responsible for.

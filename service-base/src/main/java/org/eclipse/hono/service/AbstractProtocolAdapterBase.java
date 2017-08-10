@@ -14,14 +14,13 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.credentials.CredentialsSecretsValidator;
+import org.eclipse.hono.service.credentials.SecretsValidator;
 import org.eclipse.hono.service.credentials.CredentialsUtils;
 import org.eclipse.hono.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -494,7 +493,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 CredentialsObject payload = credResult.getPayload();
                 result.complete(payload);
             } else if (credResult.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                result.fail(String.format("cannot retrieve credentials (not found for type <%s>, authId <%s>)",type,authId));
+                result.fail(String.format("cannot retrieve credentials (not found for type <%s>, authId <%s>)", type, authId));
             } else {
                 result.fail("cannot retrieve credentials");
             }
@@ -521,7 +520,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                                                               final Object authenticationObject) {
         return getCredentialsForDevice(tenantId, type, authId).compose(payload -> {
             Future<String> resultDeviceId = Future.future();
-            CredentialsSecretsValidator validator = CredentialsUtils.findAppropriateValidators(type);
+            SecretsValidator validator = CredentialsUtils.findAppropriateValidators(type);
             try {
                 if (validator != null && validator.validate(payload, authenticationObject)) {
                     resultDeviceId.complete(payload.getDeviceId());
@@ -532,7 +531,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             catch (IllegalArgumentException e) {
                 resultDeviceId.fail(String.format("credentials invalid : %s", e.getMessage()));
             }
-
             return resultDeviceId;
         });
     }
