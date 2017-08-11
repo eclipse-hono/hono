@@ -214,14 +214,14 @@ where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the
 
 ### Uploading Telemetry
 
-In order to upload telemetry to Hono, the device needs to be already registered with the system. For doing that, you can use the HTTP REST protocol adapter running
-the following command (i.e. for a device with ID `4711`) :
+In order to upload telemetry to Hono, the device needs to be already registered with the system. For doing that, you can use the HTTP REST endpoint provided by
+the Device Registration service and running the following command (i.e. for a device with ID `4711`) :
 
 ~~~sh
 $ curl -X POST -i -d 'device_id=4711' http://<IP_ADDRESS>:<PORT>/registration/DEFAULT_TENANT
 ~~~
 
-where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the HTTP REST service as described before.
+where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the HTTP REST endpoint as described before.
 After having the device registered, uploading telemetry is just a simple HTTP PUT command.
 
 ~~~sh
@@ -229,6 +229,7 @@ $ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}'
 > http://<IP_ADDRESS>:<PORT>/telemetry/DEFAULT_TENANT/4711
 ~~~
 
+where in this case `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the HTTP REST protocol adapter.
 Other than using the HTTP REST protocol adapter, it's possible to upload telemetry data using the MQTT protocol adapter.
 
 ~~~sh
