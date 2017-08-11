@@ -13,6 +13,11 @@
     <additionalParameters>
       <param>
         <option name="enabled" value="true" />
+        <option name="name" value="hono.app.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
         <option name="name" value="hono.auth.amqp.bindAddress" />
         <option name="value" value="0.0.0.0" />
       </param>
@@ -35,11 +40,6 @@
         <option name="enabled" value="true" />
         <option name="name" value="hono.auth.amqp.trustStorePath" />
         <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.auth.amqp.maxInstances" />
-        <option name="value" value="1" />
       </param>
       <param>
         <option name="enabled" value="true" />

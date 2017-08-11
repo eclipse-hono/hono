@@ -13,6 +13,11 @@
     <additionalParameters>
       <param>
         <option name="enabled" value="true" />
+        <option name="name" value="hono.app.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
         <option name="name" value="hono.auth.host" />
         <option name="value" value="localhost" />
       </param>
@@ -73,8 +78,33 @@
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.registry.amqp.maxInstances" />
-        <option name="value" value="1" />
+        <option name="name" value="hono.registry.rest.bindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registry.rest.port" />
+        <option name="value" value="8443" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registry.rest.keyPath" />
+        <option name="value" value="../../demo-data/certs/device-registry-key.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registry.rest.certPath" />
+        <option name="value" value="../../demo-data/certs/device-registry-cert.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registry.rest.insecurePortEnabled" />
+        <option name="value" value="true" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registry.rest.insecurePort" />
+        <option name="value" value="8080" />
       </param>
       <param>
         <option name="enabled" value="true" />

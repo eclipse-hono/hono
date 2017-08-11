@@ -8,6 +8,19 @@
     <additionalParameters>
       <param>
         <option name="enabled" value="true" />
+        <option name="name" value="hono.app.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckPort" />
+        <option name="value" value="8090" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
         <option name="name" value="hono.messaging.name" />
         <option name="value" value="Hono MQTT Adapter" />
       </param>
@@ -100,19 +113,6 @@
         <option name="enabled" value="true" />
         <option name="name" value="hono.mqtt.certPath" />
         <option name="value" value="../../demo-certs/certs/mqtt-adapter-cert.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.mqtt.maxInstances" />
-        <option name="value" value="1" />
-      </param>
-      <param>
-        <option name="name" value="hono.mqtt.healthCheckPort" />
-        <option name="value" value="8090" />
-      </param>
-      <param>
-        <option name="name" value="hono.mqtt.healthCheckBindAddress" />
-        <option name="value" value="0.0.0.0" />
       </param>
     </additionalParameters>
     <module name="hono-adapter-mqtt-vertx" />

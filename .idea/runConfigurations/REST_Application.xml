@@ -13,6 +13,19 @@
     <additionalParameters>
       <param>
         <option name="enabled" value="true" />
+        <option name="name" value="hono.app.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckPort" />
+        <option name="value" value="8090" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
         <option name="name" value="hono.messaging.name" />
         <option name="value" value="Hono REST Adapter" />
       </param>
@@ -110,19 +123,6 @@
         <option name="enabled" value="true" />
         <option name="name" value="hono.http.certPath" />
         <option name="value" value="../../demo-certs/certs/rest-adapter-cert.pem" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="hono.http.maxInstances" />
-        <option name="value" value="1" />
-      </param>
-      <param>
-        <option name="name" value="hono.http.healthCheckPort" />
-        <option name="value" value="8089" />
-      </param>
-      <param>
-        <option name="name" value="hono.http.healthCheckBindAddress" />
-        <option name="value" value="0.0.0.0" />
       </param>
     </additionalParameters>
     <module name="hono-adapter-rest-vertx" />

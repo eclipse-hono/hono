@@ -13,6 +13,19 @@
     <additionalParameters>
       <param>
         <option name="enabled" value="true" />
+        <option name="name" value="hono.app.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckPort" />
+        <option name="value" value="8088" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
         <option name="name" value="hono.auth.host" />
         <option name="value" value="localhost" />
       </param>
@@ -88,21 +101,8 @@
       </param>
       <param>
         <option name="enabled" value="true" />
-        <option name="name" value="hono.messaging.maxInstances" />
-        <option name="value" value="1" />
-      </param>
-      <param>
-        <option name="enabled" value="true" />
         <option name="name" value="hono.messaging.validation.sharedSecret" />
         <option name="value" value="DeviceRegistrySharedSecret_HasToBe32CharsOrLonger" />
-      </param>
-      <param>
-        <option name="name" value="hono.messaging.healthCheckPort" />
-        <option name="value" value="8088" />
-      </param>
-      <param>
-        <option name="name" value="hono.messaging.healthCheckBindAddress" />
-        <option name="value" value="0.0.0.0" />
       </param>
       <param>
         <option name="enabled" value="true" />
