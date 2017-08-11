@@ -30,21 +30,22 @@ such daemon will be used and the final images will be available inside the Minik
 ~/hono$ mvn clean install -Pbuild-docker-image
 ~~~
 
-## One _script_ deployment
+## Script based Deployment
 
-In order to deploy Eclipse Hono on Kubernetes, a bunch of steps are needed as explained in the next chapter. If you want to avoid to do them, a _one click_ deployment
+In order to deploy Eclipse Hono on Kubernetes, a bunch of steps are needed as explained in the next chapter. If you want to avoid to do them manually, a _one click_ deployment
 script is available in the repository.
-After having the Kubernetes cluster up and running and the Kubectl command line tool in the PATH, the deployment can be executed launching the following bash script
-(from the "example/target/deploy/kubernetes/" directory)
+After having the Kubernetes cluster up and running and the `kubectl` command line tool in the PATH, the deployment can be done by running the following bash script
+(from the `example/target/deploy/kubernetes` directory)
 
 ~~~sh
-$ ./kubernetes_deploy.sh
+~hono/example/target/deploy/kubernetes$ chmod +x *.sh
+~hono/example/target/deploy/kubernetes$ ./kubernetes_deploy.sh
 ~~~
 
-When you want to shutdown the Eclipse Hono instance, there is the following useful script:
+There also is a script for shutting down and undeploying Hono:
 
 ~~~sh
-$ ./kubernetes_undeploy.sh
+~hono/example/target/deploy/kubernetes$ ./kubernetes_undeploy.sh
 ~~~
 
 ## Step by step deployment
@@ -132,15 +133,16 @@ $ kubectl create -f <path-to-repo>/adapters/mqtt-vertx/target/classes/META-INF/f
 
 In this way, all the components are accessible inside the cluster using the _service_ addresses from a client's point of view.
 
-In order to see the deployed components, you can use the Kubernetes UI which is accessible launching the following command : 
+In order to see the deployed components, you can launch Kubernetes' web UI in a browser by issuing:
 
 ~~~sh
 $ minikube dashboard
 ~~~
 
+Be sure to switch to the `hono` namespace in the UI in order to see the components deployed as part of Hono.
 In the following pictures an Eclipse Hono deployment on Kubernetes is running with all the provided components.
 
-![Eclipse Hono on Kubernets](../kubernetes_hono.png)
+![Eclipse Hono on Kubernetes](../kubernetes_hono.png)
 
 ## Access to Hono services
 
