@@ -74,10 +74,10 @@ public abstract class AbstractRequestResponseClient<C extends RequestResponseCli
      * Creates a result object from the status and payload of a response received from the endpoint.
      *
      * @param status The status of the response.
-     * @param payload The json payload of the response.
+     * @param payload The json payload of the response as String.
      * @return The result object.
      */
-    protected abstract R getResult(final int status, final JsonObject payload);
+    protected abstract R getResult(final int status, final String payload);
 
     /**
      * Creates a client for a vert.x context.
@@ -166,7 +166,7 @@ public abstract class AbstractRequestResponseClient<C extends RequestResponseCli
                 message.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_STATUS,
                 String.class);
-        final JsonObject payload = MessageHelper.getJsonPayload(message);
+        final String payload = MessageHelper.getPayload(message);
         return getResult(Integer.valueOf(status), payload);
     }
 
