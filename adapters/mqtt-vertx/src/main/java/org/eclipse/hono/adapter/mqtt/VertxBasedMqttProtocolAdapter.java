@@ -303,9 +303,14 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
         boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM, registrationAssertion, (messageId, delivery) -> {
             LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
-            if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE && endpoint.isConnected()) {
+            if (message.qosLevel() == MqttQoS.AT_MOST_ONCE) {
+                uploadHandler.complete();
+            } else if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
                 if (Accepted.class.isInstance(delivery.getRemoteState())) {
-                    endpoint.publishAcknowledge(message.messageId());
+                    // check that the remote MQTT client is still connected before sending PUBACK
+                    if (endpoint.isConnected()) {
+                        endpoint.publishAcknowledge(message.messageId());
+                    }
                     uploadHandler.complete();
                 } else {
                     uploadHandler.fail("message not accepted by remote");
