@@ -133,20 +133,20 @@ public abstract class AbstractConfig {
         if (trustStorePath == null) {
             return null;
         } else if (hasPemFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from file [{}] as trust anchor", trustStorePath);
+            LOG.debug("using certificates from file [{}] as trust anchor", trustStorePath);
             return new PemTrustOptions().addCertPath(trustStorePath);
         } else if (hasPkcsFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from PKCS12 key store [{}] as trust anchor", trustStorePath);
+            LOG.debug("using certificates from PKCS12 key store [{}] as trust anchor", trustStorePath);
             return new PfxOptions()
                         .setPath(getTrustStorePath())
                         .setPassword(getTrustStorePassword());
         } else if (hasJksFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from JKS key store [{}] as trust anchor", trustStorePath);
+            LOG.debug("using certificates from JKS key store [{}] as trust anchor", trustStorePath);
             return new JksOptions()
                         .setPath(getTrustStorePath())
                         .setPassword(getTrustStorePassword());
         } else {
-            LOG.info("unsupported trust store format");
+            LOG.debug("unsupported trust store format");
             return null;
         }
     }
@@ -223,18 +223,18 @@ public abstract class AbstractConfig {
     public KeyCertOptions getKeyCertOptions() {
 
         if (keyPath != null && certPath != null && hasPemFileSuffix(keyPath) && hasPemFileSuffix(certPath)) {
-            LOG.info("using key [{}] and certificate [{}] for identity", keyPath, certPath);
+            LOG.debug("using key [{}] and certificate [{}] for identity", keyPath, certPath);
             return new PemKeyCertOptions().setKeyPath(keyPath).setCertPath(certPath);
         } else if (keyStorePath == null) {
             return null;
         } else if (hasPkcsFileSuffix(keyStorePath)) {
-            LOG.info("using key & certificate from PKCS12 key store [{}] for identity", keyStorePath);
+            LOG.debug("using key & certificate from PKCS12 key store [{}] for identity", keyStorePath);
             return new PfxOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
         } else if (hasJksFileSuffix(keyStorePath)) {
-            LOG.info("using key & certificate from JKS key store [{}] for server identity", keyStorePath);
+            LOG.debug("using key & certificate from JKS key store [{}] for server identity", keyStorePath);
             return new JksOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
         } else {
-            LOG.info("unsupported key store format");
+            LOG.debug("unsupported key store format");
             return null;
         }
     }

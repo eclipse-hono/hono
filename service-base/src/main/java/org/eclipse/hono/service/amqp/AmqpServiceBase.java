@@ -489,7 +489,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         connection.disconnectHandler(this::handleRemoteDisconnect);
         connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
         connection.openHandler(remoteOpen -> {
-            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
+            LOG.debug("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
             connection.open();
             // attach an ID so that we can later inform downstream components when connection is closed
             connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
@@ -505,7 +505,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param session The session that is initiated.
      */
     protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.info("opening new session with client [{}]", con.getRemoteContainer());
+        LOG.debug("opening new session with client [{}]", con.getRemoteContainer());
         session.closeHandler(sessionResult -> {
             if (sessionResult.succeeded()) {
                 sessionResult.result().close();
@@ -533,9 +533,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
         if (res.succeeded()) {
-            LOG.info("client [{}] closed connection", con.getRemoteContainer());
+            LOG.debug("client [{}] closed connection", con.getRemoteContainer());
         } else {
-            LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
+            LOG.debug("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
         con.close();
         con.disconnect();
@@ -548,7 +548,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param con The connection that was disconnected.
      */
     protected void handleRemoteDisconnect(final ProtonConnection con) {
-        LOG.info("client [{}] disconnected", con.getRemoteContainer());
+        LOG.debug("client [{}] disconnected", con.getRemoteContainer());
         con.disconnect();
         publishConnectionClosedEvent(con);
     }
