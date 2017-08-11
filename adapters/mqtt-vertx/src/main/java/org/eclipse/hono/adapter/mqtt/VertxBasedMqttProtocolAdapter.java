@@ -25,8 +25,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -40,8 +38,6 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
  */
-@Component
-@Scope("prototype")
 public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<ServiceConfigProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedMqttProtocolAdapter.class);
@@ -307,9 +303,14 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
 
         boolean accepted = sender.send(endpoint.clientIdentifier(), message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM, registrationAssertion, (messageId, delivery) -> {
             LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
-            if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE && endpoint.isConnected()) {
+            if (message.qosLevel() == MqttQoS.AT_MOST_ONCE) {
+                uploadHandler.complete();
+            } else if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
                 if (Accepted.class.isInstance(delivery.getRemoteState())) {
-                    endpoint.publishAcknowledge(message.messageId());
+                    // check that the remote MQTT client is still connected before sending PUBACK
+                    if (endpoint.isConnected()) {
+                        endpoint.publishAcknowledge(message.messageId());
+                    }
                     uploadHandler.complete();
                 } else {
                     uploadHandler.fail("message not accepted by remote");

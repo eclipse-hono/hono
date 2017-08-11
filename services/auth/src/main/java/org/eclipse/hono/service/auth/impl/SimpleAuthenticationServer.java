@@ -17,12 +17,10 @@ import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
-import org.eclipse.hono.service.amqp.Endpoint;
+import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
@@ -34,8 +32,6 @@ import io.vertx.proton.ProtonSender;
  * An authentication server serving JSON Web Tokens to clients that have been authenticated using SASL.
  *
  */
-@Component
-@Scope("prototype")
 public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     @Autowired
@@ -68,7 +64,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
                 con.getRemoteContainer(), remoteSource);
         try {
             final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
-            final Endpoint endpoint = getEndpoint(targetResource);
+            final AmqpEndpoint endpoint = getEndpoint(targetResource);
 
             if (endpoint == null) {
                 LOG.debug("no endpoint registered for node [{}]", targetResource);

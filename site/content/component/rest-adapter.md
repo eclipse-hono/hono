@@ -68,17 +68,17 @@ The following table provides an overview of the configuration variables and corr
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------: | :------ | :---------- |
+| `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
+| `HONO_APP_HEALTH_CHECK_PORT`<br>`--hono.app.healthCheckPort` | no | - | The port that the HTTP server, which exposes the service's health check resources, should bind to. If set, the adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
+| `HONO_APP_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.app.healthCheckBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the HTTP server, which exposes the service's health check resources, should be bound to. The HTTP server will only be started if `HONO_APP_HEALTH_CHECK_BIND_ADDRESS` is set explicitly. |
 | `HONO_HTTP_BIND_ADDRESS`<br>`--hono.http.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_HTTP_CERT_PATH`<br>`--hono.http.certPath` | no | - | The absolute path to the PEM file containing the certificate that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_HTTP_KEY_PATH`.<br>Alternatively, the `HONO_HTTP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_HTTP_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.http.healthCheckBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the HTTP server exposing the adapter's health check resources should be bound to. The HTTP server will only be started if `HONO_HTTP_HEALTH_CHECK_PORT` is set explicitly.<br>*NB:* The HTTP server exposing the health checks is different (and independent) from the HTTP server exposing the adapter's REST API. |
-| `HONO_HTTP_HEALTH_CHECK_PORT`<br>`--hono.http.healthCheckPort` | no | - | The port that the HTTP server exposing the adapter's health check resources should bind to. If set, the adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
 | `HONO_HTTP_INSECURE_PORT`<br>`--hono.http.insecurePort` | no | - | The insecure port the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_HTTP_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.http.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_HTTP_INSECURE_PORT_ENABLED`<br>`--hono.http.insecurePortEnabled` | no | `false` | If set to `true` the protocol adapter will open an insecure port (not secured by TLS) using either the port number set via `HONO_HTTP_INSECURE_PORT` or the default port number (`8080`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_HTTP_KEY_PATH`<br>`--hono.http.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_HTTP_CERT_PATH`. Alternatively, the `HONO_HTTP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_HTTP_KEY_STORE_PASSWORD`<br>`--hono.http.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_HTTP_KEY_STORE_PATH`<br>`--hono.http.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the protocol adapter should use for authenticating to clients. Either this option or the `HONO_HTTP_KEY_PATH` and `HONO_HTTP_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
-| `HONO_HTTP_MAX_INSTANCES`<br>`--hono.http.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
 | `HONO_HTTP_MAX_PAYLOAD_SIZE`<br>`--hono.http.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming HTTP request's body in bytes. Requests with a larger body size are rejected with a 413 `Request entity too large` response. |
 | `HONO_HTTP_PORT`<br>`--hono.http.port` | no | `8443` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 
@@ -128,42 +128,45 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
 
-## Run as a Docker Container
+## Run as a Docker Swarm Service
 
-When running the adapter as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
-
-The following command starts the REST adapter container using the trusted certificates included in the image under path `/etc/hono/certs`.
+The REST adapter can be run as a Docker container from the command line. The following commands create and start the REST adapter as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
 
 ~~~sh
-$ docker run -d --name rest-adapter --network hono-net \
+~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+~/hono$ docker secret create rest-adapter-key.pem demo-certs/certs/rest-adapter-key.pem
+~/hono$ docker secret create rest-adapter-cert.pem demo-certs/certs/rest-adapter-cert.pem
+~/hono$ docker service create --detach --name hono-adapter-rest-vertx --network hono-net -p 8080:8080 -p 8443:8443  \
+> --secret trusted-certs.pem \
+> --secret rest-adapter-key.pem \
+> --secret rest-adapter-cert.pem \
 > -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
 > -e 'HONO_MESSAGING_USERNAME=rest-adapter@HONO' \
 > -e 'HONO_MESSAGING_PASSWORD=rest-secret' \
-> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
 > -e 'HONO_REGISTRATION_USERNAME=rest-adapter@HONO' \
 > -e 'HONO_REGISTRATION_PASSWORD=rest-secret' \
-> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_HTTP_BIND_ADDRESS=0.0.0.0' \
-> -e 'HONO_HTTP_KEY_PATH=/etc/hono/certs/rest-adapter-key.pem' \
-> -e 'HONO_HTTP_CERT_PATH=/etc/hono/certs/rest-adapter-cert.pem' \
+> -e 'HONO_HTTP_KEY_PATH=/run/secrets/rest-adapter-key.pem' \
+> -e 'HONO_HTTP_CERT_PATH=/run/secrets/rest-adapter-cert.pem' \
 > -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> -p8080:8080 -p8443:8443 eclipsehono/hono-adapter-rest-vertx:latest
+> eclipsehono/hono-adapter-rest-vertx:latest
 ~~~
 
 {{% note %}}
-The *--network* command line switch is used to specify the *user defined* Docker network that the REST adapter container should attach to. It is important that the REST adapter container is attached to the same network that the Hono Messaging component is attached to so that the REST adapter can use the Hono Messaging component's host name to connect to it via the Docker network.
-Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
+There are several things noteworthy about the above command to start the service:
 
-In cases where the REST adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the REST adapter container should attach to. It is important that the REST adapter container is attached to the same network that the Hono Messaging component is attached to so that the REST adapter can use the Hono Messaging component's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. In cases where the REST adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
-## Run using Docker Compose
+## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
-See the `example` module for details. The `example` module also contains an example service definition file that
-you can use as a starting point for your own configuration.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
 
 ## Run the Spring Boot Application
 
@@ -193,156 +196,6 @@ from the Spring Boot application and want it to connect to a Hono Messaging inst
 value of the *--hono.messaging.host* option to the IP address (or name) of the Docker host running the Hono Messaging container.
 The same holds true analogously for the *hono-service-device-registry.hono* address.
 {{% /note %}}
-
-## Using the Registration API
-
-### Register Device
-
-* URI: `/registration/${tenantId}`
-* Method: `POST`
-* Headers:
-  * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
-* Parameters (encoded as payload according to the content type):
-  * (required) `device_id`: The ID of the device to register.
-  * (optional) Arbitrary key/value pairs containing additional data to be registered with the device.
-* Status Codes:
-  * 201 (Created): Device has been registered successfully under resource indicated by `Location` header.
-  * 400 (Bad Request): Device has not been registered because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
-  * 409 (Conflict): There already exists a device with the given ID. The request has not been processed.
-
-**Example**
-
-The following command registers a device with ID `4711`
-
-    $ curl -i -X POST -d device_id=4711 -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT
-
-or equivalently using JSON
-
-    $ curl -i -X POST -d '{"device_id":"4711","ep":"IMEI4711"}' -H 'Content-Type: application/json' http://localhost:8080/registration/DEFAULT_TENANT
-
-The response will contain a `Location` header containing the resource path created for the device. In this example it will look
-like this:
-
-    HTTP/1.1 201 Created
-    Location: /registration/DEFAULT_TENANT/4711
-    Content-Length: 0
-
-### Read Registration
-
-* URI: `/registration/${tenantId}/${deviceId}`
-* Method: `GET`
-* Status Codes:
-  * 200 (OK): Device has been found, body contains registration data.
-  * 404 (Not Found): No device with the given identifier is registered for the given tenant.
-
-**Example**
-
-The following command retrieves registration data for device `4711`:
-
-    $ curl -i http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
-
-The response will look similar to this:
-
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 35
-
-    {
-      "data" : {
-         "enabled": true,
-         "ep": "IMEI4711"
-      },
-      "id" : "4711"
-    }
-
-### Find Registration
-
-This resource can be used to look up registration data by one of the additional keys registered for a device.
-
-* URI: `/registration/${tenantId}/find`
-* Method: `POST`
-* Headers:
-  * (required) `Content-Type: application/x-www-url-encoded`
-* Parameters (encoded as payload according to the content type):
-  * (required) a key/value pair to look up the device by.
-
-**Example**
-
-The following command retrieves registration data for device `4711`:
-
-    $ curl -i -X POST -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT/find
-
-The response will look similar to this:
-
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 35
-
-    {
-      "data" : {
-         "enabled": true,
-         "ep": "IMEI4711"
-      },
-      "id" : "4711"
-    }
-
-### Update Registration
-
-* URI: `/registration/${tenantId}/${deviceId}`
-* Method: `PUT`
-* Headers:
-  * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
-* Parameters (encoded as payload according to content type):
-  * (optional) Arbitrary key/value pairs containing additional data to be registered with the device. The existing key/value pairs will be replaced with these key/values.
-* Status Codes:
-  * 200 (OK): Device registration data has been updated. The body contains the *previous* data registered for the device.
-  * 400 (Bad Request): Device registration has not been updated because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
-  * 404 (Not Found): No device with the given identifier is registered for the given tenant.
-
-**Example**
-
-    $ curl -i -X PUT -d ep=IMEI4711 -d psk-id=psk4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
-
-The response will look similar to this:
-
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 35
-
-    {
-      "data" : {
-         "enabled": true,
-         "ep": "IMEI4711"
-      },
-      "id" : "4711"
-    }
-
-### Delete Registration
-
-* URI: `/registration/${tenantId}/${deviceId}`
-* Method: `DELETE`
-* Status Codes:
-  * 200 (OK): Device registration has been deleted. The payload contains the data that had been registered for the device.
-  * 404 (Not Found): No device with the given identifier is registered for the given tenant.
-
-**Example**
-
-    $ curl -i -X DELETE http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
-
-The response will look similar to this:
-
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 35
-
-    {
-      "data" : {
-         "enabled": true,
-         "ep": "IMEI4711",
-         "psk-id": "psk4711"
-      },
-      "id" : "4711"
-    }
 
 ## Using the Telemetry API
 

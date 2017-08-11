@@ -34,7 +34,7 @@
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:0.8.0-1</dispatch-router.image.name>
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
     <grafana.version>4.2.0</grafana.version>
-    <influxdb.version>1.2.2</influxdb.version>
+    <influxdb.version>1.2.4-alpine</influxdb.version>
     <jackson.version>2.7.4</jackson.version>
     <java-base-image.name>openjdk:8-jre-alpine</java-base-image.name>
     <jjwt.version>0.7.0</jjwt.version>

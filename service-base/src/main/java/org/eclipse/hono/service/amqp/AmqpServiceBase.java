@@ -27,6 +27,7 @@ import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -37,7 +38,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  * A base class for implementing services using AMQP 1.0 as the transport protocol.
  * <p>
  * This class provides support for implementing an AMQP 1.0 container hosting arbitrary
- * API {@link Endpoint}s. An endpoint can be used to handle messages being sent to and/or
+ * API {@link AmqpEndpoint}s. An endpoint can be used to handle messages being sent to and/or
  * received from an AMQP <em>node</em> represented by an address prefix.
  * 
  * @param <T> The type of configuration properties this service uses.
@@ -45,7 +46,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
 
     // <name, node implementation>
-    private final Map<String, Endpoint> endpoints = new HashMap<>();
+    private final Map<String, AmqpEndpoint> endpoints = new HashMap<>();
     private ProtonServer server;
     private ProtonServer insecureServer;
     private ProtonSaslAuthenticatorFactory saslAuthenticatorFactory;
@@ -56,6 +57,13 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @return The name of the service.
      */
     protected abstract String getServiceName();
+
+    @Autowired
+    @Qualifier(Constants.QUALIFIER_AMQP)
+    @Override
+    public void setConfig(final T configuration) {
+        setSpecificConfig(configuration);
+    }
 
     /**
      * Gets the default port number of the secure AMQP port.
@@ -83,9 +91,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param definedEndpoints The endpoints.
      */
     @Autowired(required = false)
-    public final void addEndpoints(final List<Endpoint> definedEndpoints) {
+    public final void addEndpoints(final List<AmqpEndpoint> definedEndpoints) {
         Objects.requireNonNull(definedEndpoints);
-        for (Endpoint ep : definedEndpoints) {
+        for (AmqpEndpoint ep : definedEndpoints) {
             addEndpoint(ep);
         }
     }
@@ -95,7 +103,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      *
      * @param ep The endpoint.
      */
-    public final void addEndpoint(final Endpoint ep) {
+    public final void addEndpoint(final AmqpEndpoint ep) {
         if (endpoints.putIfAbsent(ep.getName(), ep) != null) {
             LOG.warn("multiple endpoints defined with name [{}]", ep.getName());
         } else {
@@ -110,7 +118,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @return The endpoint for handling the address or {@code null} if no endpoint is registered
      *         for the target address.
      */
-    protected final Endpoint getEndpoint(final ResourceIdentifier targetAddress) {
+    protected final AmqpEndpoint getEndpoint(final ResourceIdentifier targetAddress) {
         return getEndpoint(targetAddress.getEndpoint());
     }
 
@@ -121,7 +129,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @return The endpoint registered under the given name or {@code null} if no endpoint has been registered
      *         under the name.
      */
-    protected final Endpoint getEndpoint(final String endpointName) {
+    protected final AmqpEndpoint getEndpoint(final String endpointName) {
         return endpoints.get(endpointName);
     }
 
@@ -130,7 +138,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * 
      * @return The endpoints.
      */
-    protected final Iterable<Endpoint> endpoints() {
+    protected final Iterable<AmqpEndpoint> endpoints() {
         return endpoints.values();
     }
 
@@ -193,7 +201,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
         @SuppressWarnings("rawtypes")
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
-        for (Endpoint ep : endpoints.values()) {
+        for (AmqpEndpoint ep : endpoints.values()) {
             LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             Future<Void> endpointFuture = Future.future();
             endpointFutures.add(endpointFuture);
@@ -417,7 +425,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     con.getRemoteContainer(), receiver.getRemoteTarget());
             try {
                 final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
-                final Endpoint endpoint = getEndpoint(targetResource);
+                final AmqpEndpoint endpoint = getEndpoint(targetResource);
                 if (endpoint == null) {
                     handleUnknownEndpoint(con, receiver, targetResource);
                 } else {
@@ -452,7 +460,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                 con.getRemoteContainer(), remoteSource);
         try {
             final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
-            final Endpoint endpoint = getEndpoint(targetResource);
+            final AmqpEndpoint endpoint = getEndpoint(targetResource);
             if (endpoint == null) {
                 handleUnknownEndpoint(con, sender, targetResource);
             } else {
@@ -481,7 +489,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         connection.disconnectHandler(this::handleRemoteDisconnect);
         connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
         connection.openHandler(remoteOpen -> {
-            LOG.info("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
+            LOG.debug("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
             connection.open();
             // attach an ID so that we can later inform downstream components when connection is closed
             connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
@@ -497,7 +505,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param session The session that is initiated.
      */
     protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.info("opening new session with client [{}]", con.getRemoteContainer());
+        LOG.debug("opening new session with client [{}]", con.getRemoteContainer());
         session.closeHandler(sessionResult -> {
             if (sessionResult.succeeded()) {
                 sessionResult.result().close();
@@ -525,9 +533,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
         if (res.succeeded()) {
-            LOG.info("client [{}] closed connection", con.getRemoteContainer());
+            LOG.debug("client [{}] closed connection", con.getRemoteContainer());
         } else {
-            LOG.info("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
+            LOG.debug("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
         con.close();
         con.disconnect();
@@ -540,7 +548,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param con The connection that was disconnected.
      */
     protected void handleRemoteDisconnect(final ProtonConnection con) {
-        LOG.info("client [{}] disconnected", con.getRemoteContainer());
+        LOG.debug("client [{}] disconnected", con.getRemoteContainer());
         con.disconnect();
         publishConnectionClosedEvent(con);
     }
@@ -548,7 +556,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Registers this service's endpoints' readiness checks.
      * <p>
-     * This default implementation invokes {@link Endpoint#registerReadinessChecks(HealthCheckHandler)}
+     * This default implementation invokes {@link AmqpEndpoint#registerReadinessChecks(HealthCheckHandler)}
      * for all registered endpoints.
      * <p>
      * Subclasses should override this method to register more specific checks.
@@ -558,7 +566,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
 
-        for (Endpoint ep : endpoints()) {
+        for (AmqpEndpoint ep : endpoints()) {
             ep.registerReadinessChecks(handler);
         }
     }
@@ -566,7 +574,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Registers this service's endpoints' liveness checks.
      * <p>
-     * This default implementation invokes {@link Endpoint#registerLivenessChecks(HealthCheckHandler)}
+     * This default implementation invokes {@link AmqpEndpoint#registerLivenessChecks(HealthCheckHandler)}
      * for all registered endpoints.
      * <p>
      * Subclasses should override this method to register more specific checks.
@@ -575,7 +583,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     @Override
     public void registerLivenessChecks(HealthCheckHandler handler) {
-        for (Endpoint ep : endpoints()) {
+        for (AmqpEndpoint ep : endpoints()) {
             ep.registerLivenessChecks(handler);
         }
     }

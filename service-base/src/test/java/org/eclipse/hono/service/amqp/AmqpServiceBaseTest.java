@@ -66,7 +66,7 @@ public class AmqpServiceBaseTest {
         when(vertx.eventBus()).thenReturn(eventBus);
     }
 
-    private AmqpServiceBase<ServiceConfigProperties> createServer(final Endpoint amqpEndpoint) {
+    private AmqpServiceBase<ServiceConfigProperties> createServer(final AmqpEndpoint amqpEndpoint) {
         publishCalled = false;
 
         AmqpServiceBase<ServiceConfigProperties> server = new AmqpServiceBase<ServiceConfigProperties>() {
@@ -100,7 +100,7 @@ public class AmqpServiceBaseTest {
         // GIVEN a server with an endpoint
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(ENDPOINT, Constants.DEFAULT_TENANT, null);
         final CountDownLatch linkEstablished = new CountDownLatch(1);
-        final Endpoint endpoint = new BaseEndpoint<ServiceConfigProperties>(vertx) {
+        final AmqpEndpoint endpoint = new AbstractAmqpEndpoint<ServiceConfigProperties>(vertx) {
 
             @Override
             public String getName() {
@@ -138,7 +138,7 @@ public class AmqpServiceBaseTest {
 
         // GIVEN a server with a endpoint
         final ResourceIdentifier restrictedTargetAddress = ResourceIdentifier.from(ENDPOINT, "RESTRICTED_TENANT", null);
-        final Endpoint endpoint = mock(Endpoint.class);
+        final AmqpEndpoint endpoint = mock(AmqpEndpoint.class);
         when(endpoint.getName()).thenReturn(ENDPOINT);
         AuthorizationService authService = mock(AuthorizationService.class);
         when(authService.isAuthorized(Constants.PRINCIPAL_ANONYMOUS, restrictedTargetAddress, Activity.WRITE)).thenReturn(Future.succeededFuture(Boolean.FALSE));

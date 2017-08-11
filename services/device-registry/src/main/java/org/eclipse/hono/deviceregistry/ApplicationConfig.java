@@ -15,11 +15,14 @@ package org.eclipse.hono.deviceregistry;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
 
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.credentials.CredentialsEndpoint;
+import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
-import org.eclipse.hono.service.registration.RegistrationEndpoint;
+import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
+import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
+import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -30,11 +33,14 @@ import io.vertx.core.Vertx;
 import org.springframework.context.annotation.Scope;
 
 /**
- * Spring Boot configuration for the simple device registry server application.
+ * Spring Boot configuration for the Device Registry application.
  *
  */
 @Configuration
 public class ApplicationConfig {
+
+    private static final String BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER = "deviceRegistryAmqpServer";
+    private static final String BEAN_NAME_DEVICE_REGISTRY_REST_SERVER = "deviceRegistryRestServer";
 
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
@@ -53,23 +59,22 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes a factory for creating service instances as a Spring bean.
-     * 
-     * @return The factory.
+     * Gets general properties for configuring the Device Registry Spring Boot application.
+     *
+     * @return The properties.
      */
     @Bean
-    public ObjectFactoryCreatingFactoryBean deviceRegistryServerFactory() {
-        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(DeviceRegistryAmqpServer.class.getName());
-        return factory;
+    @ConfigurationProperties(prefix = "hono.app")
+    public ApplicationConfigProperties applicationConfigProperties(){
+        return new ApplicationConfigProperties();
     }
 
     /**
-     * Exposes this service's AMQP endpoint configuration properties as a Spring bean.
+     * Gets properties for configuring the Device Registry's AMQP 1.0 endpoint.
      * 
      * @return The properties.
      */
-    @Qualifier("amqp")
+    @Qualifier(Constants.QUALIFIER_AMQP)
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.amqp")
     public ServiceConfigProperties amqpProperties() {
@@ -78,25 +83,123 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes the Device Registration service's configuration properties as a Spring bean.
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
+     * 
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public RegistrationAmqpEndpoint registrationAmqpEndpoint() {
+        return new RegistrationAmqpEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
+     * 
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public CredentialsAmqpEndpoint credentialsAmqpEndpoint() {
+        return new CredentialsAmqpEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of the Device Registry's AMQP 1.0 endpoint.
+     * <p>
+     * The endpoint is used for accessing both, the <em>Device Registration</em> and the <em>Credentials</em> API.
+     * 
+     * @return The endpoint.
+     */
+    @Bean(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER)
+    @Scope("prototype")
+    public DeviceRegistryAmqpServer deviceRegistryAmqpServer(){
+        return new DeviceRegistryAmqpServer();
+    }
+
+    /**
+     * Gets a factory for creating instances of the AMQP 1.0 based endpoint.
+     * 
+     * @return The factory.
+     */
+    @Bean
+    public ObjectFactoryCreatingFactoryBean deviceRegistryAmqpServerFactory() {
+        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER);
+        return factory;
+    }
+
+    /**
+     * Gets properties for configuring the Device Registry's REST endpoint.
+     * 
+     * @return The properties.
+     */
+    @Qualifier(Constants.QUALIFIER_REST)
+    @Bean
+    @ConfigurationProperties(prefix = "hono.registry.rest")
+    public ServiceConfigProperties restProperties() {
+        ServiceConfigProperties props = new ServiceConfigProperties();
+        return props;
+    }
+
+    /**
+     * Creates a new instance of an HTTP protocol handler for Hono's <em>Device Registration</em> API.
+     * 
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public RegistrationHttpEndpoint registrationHttpEndpoint() {
+        return new RegistrationHttpEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of the Device Registry's REST endpoint.
+     * <p>
+     * The endpoint is used for accessing both, the <em>Device Registration</em> and the <em>Credentials</em> API.
+     * 
+     * @return The endpoint.
+     */
+    @Bean(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER)
+    @Scope("prototype")
+    public DeviceRegistryRestServer deviceRegistryRestServer(){
+        return new DeviceRegistryRestServer();
+    }
+
+    /**
+     * Gets a factory for creating instances of the REST based endpoint.
+     * 
+     * @return The factory.
+     */
+    @Bean
+    public ObjectFactoryCreatingFactoryBean deviceRegistryRestServerFactory() {
+        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER);
+        return factory;
+    }
+
+    /**
+     * Gets properties for configuring {@code FileBasedRegistrationService} which implements
+     * the <em>Device Registration</em> API.
      * 
      * @return The properties.
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.svc")
-    public DeviceRegistryConfigProperties serviceProperties() {
-        return new DeviceRegistryConfigProperties();
+    public FileBasedRegistrationConfigProperties serviceProperties() {
+        return new FileBasedRegistrationConfigProperties();
     }
 
     /**
-     * Exposes the Credentials service's configuration properties as a Spring bean.
+     * Gets properties for configuring {@code FileBasedCredentialsService} which implements
+     * the <em>Credentials</em> API.
      * 
      * @return The properties.
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.credentials.svc")
-    public CredentialsConfigProperties credentialsProperties() {
-        return new CredentialsConfigProperties();
+    public FileBasedCredentialsConfigProperties credentialsProperties() {
+        return new FileBasedCredentialsConfigProperties();
     }
 
     /**
@@ -108,33 +211,11 @@ public class ApplicationConfig {
     @Qualifier("signing")
     public RegistrationAssertionHelper registrationAssertionFactory() {
         ServiceConfigProperties amqpProps = amqpProperties();
-        DeviceRegistryConfigProperties serviceProps = serviceProperties();
+        FileBasedRegistrationConfigProperties serviceProps = serviceProperties();
         if (!serviceProps.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
             // fall back to TLS configuration
             serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());
         }
         return RegistrationAssertionHelperImpl.forSigning(vertx(), serviceProps.getSigning());
-    }
-
-    /**
-     * Expose Hono's <a href="https://www.eclipse.org/hono/api/Device-Registration-API/">Device Registration API</a> endpoint as a Spring bean.
-     * 
-     * @return The endpoint.
-     */
-    @Bean
-    @Scope("prototype")
-    public RegistrationEndpoint registrationEndpoint() {
-        return new RegistrationEndpoint(vertx());
-    }
-
-    /**
-     * Expose Hono's <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> endpoint as a Spring bean.
-     * 
-     * @return The endpoint.
-     */
-    @Bean
-    @Scope("prototype")
-    public CredentialsEndpoint credentialsEndpoint() {
-        return new CredentialsEndpoint(vertx());
     }
 }

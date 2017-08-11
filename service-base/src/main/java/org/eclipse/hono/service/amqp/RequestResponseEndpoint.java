@@ -46,7 +46,7 @@ import io.vertx.proton.ProtonSender;
  * 
  * @param <T> The type of configuration properties this endpoint uses.
  */
-public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties> extends BaseEndpoint<T> {
+public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties> extends AbstractAmqpEndpoint<T> {
 
     private static final int REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS = 20;
 

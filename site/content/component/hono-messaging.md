@@ -22,8 +22,8 @@ The following table provides an overview of the configuration variables and corr
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
 | `HONO_AUTH_HOST`<br>`--hono.auth.host` | yes | `localhost` | The IP address or name of the Authentication service host. NB: This needs to be set to an address that can be resolved within the network the service runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Hono Messaging container to the Docker network that the Authentication service container is running on. |
-| `HONO_AUTH_CERT_PATH`<br>`--hono.auth.certPath` | no | - | The absolute path to the PEM file containing the public key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_MESSAGING_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_KEY_PATH`. |
-| `HONO_AUTH_KEY_PATH`<br>`--hono.auth.keyPath` | no | - | The absolute path to the PEM file containing the private key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_MESSAGING_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_CERT_PATH`. |
+| `HONO_AUTH_CERT_PATH`<br>`--hono.auth.certPath` | no | - | The absolute path to the PEM file containing the public key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_KEY_PATH`. |
+| `HONO_AUTH_KEY_PATH`<br>`--hono.auth.keyPath` | no | - | The absolute path to the PEM file containing the private key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_CERT_PATH`. |
 | `HONO_AUTH_PORT`<br>`--hono.auth.port` | yes | `5671` | The port that the Authentication service is listening on for connections. |
 | `HONO_AUTH_TRUST_STORE_PASSWORD`<br>`--hono.auth.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_AUTH_TRUST_STORE_PATH`<br>`--hono.auth.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating the Authentication service. This property **must** be set if the Authentication service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
@@ -50,17 +50,17 @@ The following table provides an overview of the configuration variables and corr
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
+| `HONO_APP_HEALTH_CHECK_PORT`<br>`--hono.app.healthCheckPort` | no | - | The port that the HTTP server, which exposes the service's health check resources, should bind to. If set, the adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
+| `HONO_APP_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.app.healthCheckBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the HTTP server, which exposes the service's health check resources, should be bound to. The HTTP server will only be started if `HONO_APP_HEALTH_CHECK_BIND_ADDRESS` is set explicitly. |
 | `HONO_MESSAGING_BIND_ADDRESS`<br>`--hono.messaging.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MESSAGING_CERT_PATH`<br>`--hono.messaging.certPath` | no | - | The absolute path to the PEM file containing the certificate that the service should use for authenticating to clients. This option must be used in conjunction with `HONO_MESSAGING_KEY_PATH`.<br>Alternatively, the `HONO_MESSAGING_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_MESSAGING_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.messaging.healthCheckBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the HTTP server, which exposes the service's health check resources, should be bound to. The HTTP server will only be started if `HONO_MESSAGING_HEALTH_CHECK_PORT` is set explicitly. |
-| `HONO_MESSAGING_HEALTH_CHECK_PORT`<br>`--hono.messaging.healthCheckPort` | no | - | The port that the HTTP server, which exposes the service's health check resources, should bind to. If set, the adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
 | `HONO_MESSAGING_INSECURE_PORT`<br>`--hono.messaging.insecurePort` | no | - | The insecure port the service should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.messaging.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MESSAGING_INSECURE_PORT_ENABLED`<br>`--hono.messaging.insecurePortEnabled` | no | `false` | If set to `true` the service will open an insecure port (not secured by TLS) using either the port number set via `HONO_MESSAGING_INSECURE_PORT` or the default AMQP port number (`5672`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MESSAGING_KEY_PATH`<br>`--hono.messaging.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the service should use for authenticating to clients. This option must be used in conjunction with `HONO_MESSAGING_CERT_PATH`. Alternatively, the `HONO_MESSAGING_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_MESSAGING_KEY_STORE_PASSWORD`<br>`--hono.messaging.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_MESSAGING_KEY_STORE_PATH`<br>`--hono.messaging.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the service should use for authenticating to clients. Either this option or the `HONO_MESSAGING_KEY_PATH` and `HONO_MESSAGING_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
-| `HONO_MESSAGING_MAX_INSTANCES`<br>`--hono.messaging.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
 | `HONO_MESSAGING_PORT`<br>`--hono.messaging.port` | no | `5671` | The secure port that the service should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MESSAGING_TRUST_STORE_PASSWORD`<br>`--hono.messaging.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_MESSAGING_TRUST_STORE_PATH`<br>`--hono.messaging.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
@@ -128,42 +128,48 @@ This can be used to narrow the visibility of the insecure port to a local networ
 
 The service may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
 
-## Run as a Docker Container
+## Run as a Docker Swarm Service
 
-When running the Hono Messaging component as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
-
-The following command starts the container using the configuration files included in the image under path `/etc/hono`.
+Hono Messaging can be run as a Docker container from the command line. The following commands create and start Hono Messaging as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
 
 ~~~sh
-$ docker run -d --name hono-messaging --network hono-net \
-> -e 'HONO_AUTH_HOST=auth-server.hono' \
-> -e 'HONO_AUTH_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
-> -e 'HONO_AUTH_VALIDATION_CERT_PATH=/etc/hono/certs/auth-server-cert.pem' \
-> -e 'HONO_DOWNSTREAM_HOST=qdrouter.hono' \
+~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+~/hono$ docker secret create auth-server-cert.pem demo-certs/certs/auth-server-cert.pem
+~/hono$ docker secret create hono-messaging-key.pem demo-certs/certs/hono-messaging-key.pem
+~/hono$ docker secret create hono-messaging-cert.pem demo-certs/certs/hono-messaging-cert.pem
+~/hono$ docker service create --detach --name hono-service-messaging --network hono-net -p 5672:5672 \
+> --secret trusted-certs.pem \
+> --secret auth-server-cert.pem \
+> --secret hono-messaging-key.pem \
+> --secret hono-messaging-cert.pem \
+> -e 'HONO_AUTH_HOST=<name or address of the auth-server>' \
+> -e 'HONO_AUTH_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+> -e 'HONO_AUTH_VALIDATION_CERT_PATH=/run/secrets/auth-server-cert.pem' \
+> -e 'HONO_DOWNSTREAM_HOST=<name or address of the dispatch router>' \
 > -e 'HONO_DOWNSTREAM_PORT=5673' \
-> -e 'HONO_DOWNSTREAM_KEY_PATH=/etc/hono/certs/hono-key.pem' \
-> -e 'HONO_DOWNSTREAM_CERT_PATH=/etc/hono/certs/hono-cert.pem' \
-> -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_DOWNSTREAM_KEY_PATH=/run/secrets/hono-messaging-key.pem' \
+> -e 'HONO_DOWNSTREAM_CERT_PATH=/run/secrets/hono-messaging-cert.pem' \
+> -e 'HONO_DOWNSTREAM_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_MESSAGING_VALIDATION_SHARED_SECRET=asharedsecretforvalidatingassertions' \
-> -e 'HONO_MESSAGING_KEY_PATH=/etc/hono/certs/hono-key.pem' \
-> -e 'HONO_MESSAGING_CERT_PATH=/etc/hono/certs/hono-cert.pem' \
+> -e 'HONO_MESSAGING_KEY_PATH=/run/secrets/hono-messaging-key.pem' \
+> -e 'HONO_MESSAGING_CERT_PATH=/run/secrets/hono-messaging-cert.pem' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
-> -p5672:5672 eclipsehono/hono-server:latest
+> eclipsehono/hono-server:latest
 ~~~
 
 {{% note %}}
-The *--network* command line switch is used to specify the *user defined* Docker network that the service should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the service when they want to connect to it. For the same reason it is important that the service container is attached to the same network that the Dispatch Router is attached to so that the service can use the Dispatch Router's host name to connect to it via the Docker network.
-Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
+There are several things noteworthy about the above command to start the service:
 
-In cases where the Hono Messaging container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to put all environment variable definitions into a file and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the service should attach to. This is important so that other components can use Docker's DNS service to look up the (virtual) IP address of the service when they want to connect to it. For the same reason it is important that the service container is attached to the same network that the Dispatch Router is attached to so that the service can use the Dispatch Router's host name to connect to it via the Docker network.
+Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. In cases where the Hono Messaging container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to put all environment variable definitions into a file and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
-## Run using Docker Compose
+## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
-See the `example` module for details. The `example` module also contains an example service definition file that
-you can use as a starting point for your own configuration.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
 
 ## Run the Spring Boot Application
 
@@ -180,12 +186,12 @@ The corresponding command to start up the service with the configuration used in
 > --hono.downstream.host=qdrouter.hono,\
 > --hono.downstream.port=5673,\
 > --hono.downstream.hostnameVerificationRequired=false,\
-> --hono.downstream.keyPath=target/certs/hono-key.pem,\
-> --hono.downstream.certPath=target/certs/hono-cert.pem,\
+> --hono.downstream.keyPath=target/certs/hono-messaging-key.pem,\
+> --hono.downstream.certPath=target/certs/hono-messaging-cert.pem,\
 > --hono.downstream.trustStorePath=target/certs/trusted-certs.pem,\
 > --hono.messaging.validation.sharedSecret=asharedsecretforvalidatingassertions,\
-> --hono.messaging.keyPath=target/certs/hono-key.pem,\
-> --hono.messaging.certPath=target/certs/hono-cert.pem,\
+> --hono.messaging.keyPath=target/certs/hono-messaging-key.pem,\
+> --hono.messaging.certPath=target/certs/hono-messaging-cert.pem,\
 > --hono.messaging.trustStorePath=target/certs/trusted-certs.pem,\
 > --hono.messaging.insecurePortEnabled=true,\
 > --hono.messaging.insecurePortBindAddress=0.0.0.0

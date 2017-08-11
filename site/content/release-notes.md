@@ -4,12 +4,22 @@ menu = "main"
 weight = 800
 +++
 
-## 0.5-M7 (not yet released)
+## 0.5-M8
+
+### New Features
+
+* As already hinted at by the change log for 0.5-M7, the *Device Registry* now exposes RESTful resources accessible via HTTP which represent the operations of the Device Registration API. This is in addition to the standard AMQP 1.0 based Device Registration endpoint. In exchange, the REST Adapter no longer exposes these resources, i.e. device can no longer be registered using the REST Adapter. In subsequent milestones the Device Registry will be extended to also expose the Credentials API by means of RESTful resources accessible via HTTP. Please note that the RESTful resources do **not** constitue an *official* Hono API, i.e. the Device Registration API and the Credentials API are still defined by means of AMQP 1.0 message exchanges only. The REST API is simply provided for convenience, so that it is easier to e.g. register a device from the command line using tools like *curl* and/or *HTTPie*. 
+
+### Fixes & Enhancements
+
+See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue%20milestone%3A0.5-M8) for the list of issues addressed by 0.5-M8.
+
+## 0.5-M7
 
 ### New Features
 
 * The metrics reported by Hono are now processed in InfluxDB by means of *templates* which parse some of the information contained in the keys into and InfluxDB *tags*. Consequently, the Grafana dashboard now correctly displays (aggregated) metrics reported by multiple *Hono Messaging* instances and provides means to filter metrics per tenant.
-* The Hono Messaging, Device Registry, REST and MQTT Adapeter components now expose meaningful *health checks* via HTTP which can be used by container orchestration tools like Kuberetes to e.g. determine a component's readiness to serve requests.
+* The Hono Messaging, Device Registry, REST and MQTT Adapter components now expose meaningful *health checks* via HTTP which can be used by container orchestration tools like Kuberetes to e.g. determine a component's readiness to serve requests.
 
 ### Fixes & Enhancements
 
@@ -20,6 +30,7 @@ See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue
 * The *Device Registry* and *Auth Server* components will support the configuration of API endpoints employing other transport protocols than *AMQP* in the future. In preparation for that, the environment variable names for configuring these components have been adapted accordingly.
 * Metrics default for the *prefix* in the Graphite reporter is now the component's host name.
 * The Docker images for Hono's components do no longer contain demo keys and certificates. The keys, certificates and configuration data are now provided to containers during deployment by means of Docker and/or Kubernetes *Secrets*. Consequently, Hono does no longer provide its custom *Dispatch Router* Docker image but instead uses the standard image provided by the enmasse project.
+* Hono no longer uses a Docker Compose file for deploying to Docker Swarm. Instead, a shell script is used which runs multiple Docker Swarm commands for deploying Hono. This approach provides for more flexibility and is more consistent with the approach already taken for the deployment to Kubernetes/Openshift.
 
 See component docs for details.
 

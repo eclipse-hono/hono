@@ -53,19 +53,6 @@ public interface RegistrationService extends Verticle {
     void assertRegistration(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
-     * Finds device registration data by a key registered for the device.
-     * 
-     * @param tenantId The tenant the device belongs to.
-     * @param key The name of the key to look up the device registration by.
-     * @param value The value for the key to match on.
-     * @param resultHandler The handler to invoke with the result of the operation. If a device with the
-     *         given key/value is registered for the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
-     *         and the <em>payload</em> will contain the keys registered for the device.
-     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
-     */
-    void findDevice(String tenantId, String key, String value, Handler<AsyncResult<RegistrationResult>> resultHandler);
-
-    /**
      * Registers a device.
      * 
      * @param tenantId The tenant the device belongs to.

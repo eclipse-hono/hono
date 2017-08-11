@@ -69,17 +69,17 @@ The following table provides an overview of the configuration variables and corr
 
 | Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
 | :------------------------------------------ | :-------: | :------------ | :------------|
+| `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
+| `HONO_APP_HEALTH_CHECK_PORT`<br>`--hono.app.healthCheckPort` | no | - | The port that the HTTP server, which exposes the service's health check resources, should bind to. If set, the adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
+| `HONO_APP_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.app.healthCheckBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the HTTP server, which exposes the service's health check resources, should be bound to. The HTTP server will only be started if `HONO_APP_HEALTH_CHECK_BIND_ADDRESS` is set explicitly. |
 | `HONO_MQTT_BIND_ADDRESS`<br>`--hono.mqtt.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MQTT_CERT_PATH`<br>`--hono.mqtt.certPath` | no | - | The absolute path to the PEM file containing the certificate that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_MQTT_KEY_PATH`.<br>Alternatively, the `HONO_MQTT_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_MQTT_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.mqtt.healthCheckBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the HTTP server exposing the adapter's health check resources should be bound to. The HTTP server will only be started if `HONO_MQTT_HEALTH_CHECK_PORT` is set explicitly. |
-| `HONO_MQTT_HEALTH_CHECK_PORT`<br>`--hono.mqtt.healthCheckPort` | no | - | The port that the HTTP server exposing the adapter's health check resources should bind to. If set, the adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
 | `HONO_MQTT_INSECURE_PORT`<br>`--hono.mqtt.insecurePort` | no | - | The insecure port the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MQTT_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.mqtt.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MQTT_INSECURE_PORT_ENABLED`<br>`--hono.mqtt.insecurePortEnabled` | no | `false` | If set to `true` the protocol adapter will open an insecure port (not secured by TLS) using either the port number set via `HONO_MQTT_INSECURE_PORT` or the default MQTT port number (`1883`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MQTT_KEY_PATH`<br>`--hono.mqtt.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_MQTT_CERT_PATH`. Alternatively, the `HONO_MQTT_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_MQTT_KEY_STORE_PASSWORD`<br>`--hono.mqtt.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_MQTT_KEY_STORE_PATH`<br>`--hono.mqtt.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the protocol adapter should use for authenticating to clients. Either this option or the `HONO_MQTT_KEY_PATH` and `HONO_MQTT_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
-| `HONO_MQTT_MAX_INSTANCES`<br>`--hono.mqtt.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
 | `HONO_MQTT_MAX_PAYLOAD_SIZE`<br>`--hono.mqtt.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming MQTT message's payload in bytes. When a client sends a message with a larger payload, the message is discarded and the connection to the client gets closed. |
 | `HONO_MQTT_PORT`<br>`--hono.mqtt.port` | no | `8883` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 
@@ -129,42 +129,45 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
 
-## Run as a Docker Container
+## Run as a Docker Swarm Service
 
-When running the adapter as a Docker container, the preferred way of configuration is to pass environment variables to the container during startup using Docker's `-e` or `--env` command line option.
-
-The following command starts the MQTT adapter container using the trusted certificates included in the image under path `/etc/hono/certs`.
+The MQTT adapter can be run as a Docker container from the command line. The following commands create and start the MQTT adapter as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
 
 ~~~sh
-$ docker run -d --name mqtt-adapter --network hono-net \
+~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+~/hono$ docker secret create mqtt-adapter-key.pem demo-certs/certs/mqtt-adapter-key.pem
+~/hono$ docker secret create mqtt-adapter-cert.pem demo-certs/certs/mqtt-adapter-cert.pem
+~/hono$ docker service create --detach --name hono-adapter-mqtt-vertx --network hono-net -p 1883:1883 -p 8883:8883 \
+> --secret trusted-certs.pem \
+> --secret mqtt-adapter-key.pem \
+> --secret mqtt-adapter-cert.pem \
 > -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
 > -e 'HONO_MESSAGING_USERNAME=mqtt-adapter@HONO' \
 > -e 'HONO_MESSAGING_PASSWORD=mqtt-secret' \
-> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
 > -e 'HONO_REGISTRATION_USERNAME=mqtt-adapter@HONO' \
 > -e 'HONO_REGISTRATION_PASSWORD=mqtt-secret' \
-> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/etc/hono/certs/trusted-certs.pem' \
+> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_MQTT_BIND_ADDRESS=0.0.0.0' \
-> -e 'HONO_MQTT_KEY_PATH=/etc/hono/certs/mqtt-adapter-key.pem' \
-> -e 'HONO_MQTT_CERT_PATH=/etc/hono/certs/mqtt-adapter-cert.pem' \
+> -e 'HONO_MQTT_KEY_PATH=/run/secrets/mqtt-adapter-key.pem' \
+> -e 'HONO_MQTT_CERT_PATH=/run/secrets/mqtt-adapter-cert.pem' \
 > -e 'HONO_MQTT_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_MQTT_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> -p1883:1883 -p8883:8883 eclipsehono/hono-adapter-mqtt-vertx:latest
+> eclipsehono/hono-adapter-mqtt-vertx:latest
 ~~~
 
 {{% note %}}
-The *--network* command line switch is used to specify the *user defined* Docker network that the MQTT adapter container should attach to. It is important that the MQTT adapter container is attached to the same network that the Hono Messaging component is attached to so that the MQTT adapter can use the Hono Messaging component's host name to connect to it via the Docker network.
-Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker. When using a *Docker Compose* file to start up a complete Hono stack as a whole, the compose file will either explicitly define one or more networks that the containers attach to or the *default* network is used which is created automatically by Docker Compose for an application stack.
+There are several things noteworthy about the above command to start the service:
 
-In cases where the MQTT adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the MQTT adapter container should attach to. It is important that the MQTT adapter container is attached to the same network that the Hono Messaging component is attached to so that the MQTT adapter can use the Hono Messaging component's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. In cases where the MQTT adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
-## Run using Docker Compose
+## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using Docker Compose.
-See the `example` module for details. The `example` module also contains an example service definition file that
-you can use as a starting point for your own configuration.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
 
 ## Run the Spring Boot Application
 

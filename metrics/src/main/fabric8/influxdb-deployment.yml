@@ -7,19 +7,20 @@ spec:
       volumes:
       - name: influxdb-storage
         emptyDir: {}
+      - name: conf
+        secret:
+          secretName: influxdb-conf
       containers:
       - image: influxdb:${influxdb.version}
         name: eclipsehono-influxdb
+        args:
+        - -config
+        - /run/secrets/influxdb.conf
         volumeMounts:
         - name: influxdb-storage
           mountPath: /var/lib/influxdb
-        env:
-        - name: INFLUXDB_GRAPHITE_0_ENABLED
-          value: true
-        - name: INFLUXDB_GRAPHITE_0_TEMPLATES
-          value: "*.counter.hono.messaging.receivers.upstream.links.* host.measurement.measurement.measurement.measurement.measurement.measurement.type.tenant.measurement*, *.counter.hono.messaging.senders.downstream.* host.measurement.measurement.measurement.measurement.measurement.type.tenant.measurement*, *.gauge.hono.messaging.link.downstream.credits.* host.measurement.measurement.measurement.measurement.measurement.measurement.type.tenant, *.counter.hono.messaging.messages.* host.measurement.measurement.measurement.measurement.type.tenant.measurement*, *.meter.hono.messaging.messages.* host.measurement.measurement.measurement.measurement.type.tenant.measurement*, host.measurement*"
-        - name: INFLUXDB_ADMIN_ENABLED
-          value: true
+        - name: conf
+          mountPath: /run/secrets
         ports:
         - containerPort: "8086"
           name: api

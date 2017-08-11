@@ -43,7 +43,7 @@ import io.vertx.core.json.JsonObject;
  * devices kept in memory are written to the file.
  */
 @Repository
-public final class FileBasedRegistrationService extends BaseRegistrationService<DeviceRegistryConfigProperties> {
+public final class FileBasedRegistrationService extends BaseRegistrationService<FileBasedRegistrationConfigProperties> {
 
     private static final String ARRAY_DEVICES = "devices";
     private static final String FIELD_TENANT = "tenant";
@@ -55,7 +55,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
 
     @Autowired
     @Override
-    public void setConfig(final DeviceRegistryConfigProperties configuration) {
+    public void setConfig(final FileBasedRegistrationConfigProperties configuration) {
         setSpecificConfig(configuration);
     }
 
@@ -194,23 +194,6 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
         } else {
             return null;
         }
-    }
-
-    @Override
-    public void findDevice(final String tenantId, final String key, final String value, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        resultHandler.handle(Future.succeededFuture(findDevice(tenantId, key, value)));
-    }
-
-    RegistrationResult findDevice(final String tenantId, final String key, final String value) {
-        final Map<String, JsonObject> devices = identities.get(tenantId);
-        if (devices != null) {
-            for (Entry<String, JsonObject> entry : devices.entrySet()) {
-                if (value.equals(entry.getValue().getString(key))) {
-                    return RegistrationResult.from(HTTP_OK, getResultPayload(entry.getKey(), entry.getValue()));
-                }
-            }
-        }
-        return RegistrationResult.from(HTTP_NOT_FOUND);
     }
 
     @Override

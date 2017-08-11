@@ -19,14 +19,12 @@ import io.vertx.proton.*;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.event.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
-import org.eclipse.hono.service.amqp.Endpoint;
+import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
 import org.eclipse.hono.telemetry.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
 
@@ -36,8 +34,6 @@ import java.util.Objects;
  * Hono Messaging is an AMQP 1.0 container that provides nodes for uploading <em>Telemetry</em> and
  * <em>Event</em> messages.
  */
-@Component
-@Scope("prototype")
 public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProperties> {
 
     private ConnectionFactory authenticationService;
@@ -106,14 +102,14 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
     /**
      * Registers this service's endpoints' readiness checks.
      * <p>
-     * This invokes {@link Endpoint#registerReadinessChecks(HealthCheckHandler)} for all registered endpoints
+     * This invokes {@link AmqpEndpoint#registerReadinessChecks(HealthCheckHandler)} for all registered endpoints
      * and it checks if the <em>Authentication Service</em> is connected.
      *
      * @param handler The health check handler to register the checks with.
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
-        for (Endpoint ep : endpoints()) {
+        for (AmqpEndpoint ep : endpoints()) {
             ep.registerReadinessChecks(handler);
         }
         handler.register("authentication-service-connection", status -> {

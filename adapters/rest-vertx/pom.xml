@@ -9,6 +9,8 @@
   <artifactId>hono-adapter-rest-vertx</artifactId>
   <name>Hono REST Adapter</name>
 
+  <description>A protocol adapter exposing Hono's Telemetry &amp; Event APIs via HTTP in a RESTful manner.</description>
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -94,5 +96,4 @@
       </build>
     </profile>
   </profiles>
-
 </project>

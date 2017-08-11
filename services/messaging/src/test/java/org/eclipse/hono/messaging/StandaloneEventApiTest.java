@@ -186,26 +186,29 @@ public class StandaloneEventApiTest {
             eventSender.send(DEVICE_1, null, "payload" + i, "text/plain; charset=utf-8", registrationAssertion, replenished -> {
                 waitForCredit.complete();
             }, (id, delivery) -> {
-                ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()));
+                ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()), "message has not been accepted");
             });
             LOG.trace("sender's send queue full: {}", eventSender.sendQueueFull());
-            waitForCredit.await();
+            waitForCredit.await(100);
         });
 
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
     public void testEventWithNonMatchingRegistrationAssertionGetRejected(final TestContext ctx) throws Exception {
 
-        String assertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, "other-device");
+        final String assertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, "other-device");
+        final Async dispositionUpdate = ctx.async();
 
         client.getOrCreateEventSender(Constants.DEFAULT_TENANT, ctx.asyncAssertSuccess(sender -> {
             sender.send(DEVICE_1, "payload", "text/plain", assertion, (id, delivery) -> {
                 ctx.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
                 ctx.assertTrue(sender.isOpen());
+                dispositionUpdate.complete();
             });
         }));
 
+        dispositionUpdate.await(TIMEOUT);
     }
 
     @Test(timeout = TIMEOUT)

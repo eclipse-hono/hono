@@ -16,8 +16,9 @@ import java.util.Objects;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Verticle;
-import org.eclipse.hono.config.ServiceConfigProperties;
+
 import org.eclipse.hono.service.AbstractApplication;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
@@ -39,7 +40,7 @@ import io.vertx.core.Future;
 @ComponentScan(basePackages = { "org.eclipse.hono.service", "org.eclipse.hono.deviceregistry" })
 @Configuration
 @EnableAutoConfiguration
-public class Application extends AbstractApplication<DeviceRegistryAmqpServer, ServiceConfigProperties> {
+public class Application extends AbstractApplication {
 
     private AuthenticationService authenticationService;
     private CredentialsService credentialsService;
@@ -76,10 +77,6 @@ public class Application extends AbstractApplication<DeviceRegistryAmqpServer, S
     @Autowired
     public final void setAuthenticationService(final AuthenticationService authenticationService) {
         this.authenticationService = Objects.requireNonNull(authenticationService);
-    }
-
-    @Override
-    protected final void customizeServiceInstance(final DeviceRegistryAmqpServer instance) {
     }
 
     @Override
@@ -127,6 +124,26 @@ public class Application extends AbstractApplication<DeviceRegistryAmqpServer, S
         getVertx().deployVerticle(registrationService, result.completer());
         return result;
     }
+
+    /**
+     * Registers any additional health checks that the service implementation components provide.
+     * 
+     * @return A succeeded future.
+     */
+    @Override
+    protected Future<Void> postRegisterServiceVerticles() {
+        if (HealthCheckProvider.class.isInstance(authenticationService)) {
+            registerHealthchecks((HealthCheckProvider) authenticationService);
+        }
+        if (HealthCheckProvider.class.isInstance(credentialsService)) {
+            registerHealthchecks((HealthCheckProvider) credentialsService);
+        }
+        if (HealthCheckProvider.class.isInstance(registrationService)) {
+            registerHealthchecks((HealthCheckProvider) registrationService);
+        }
+        return Future.succeededFuture();
+    }
+
     /**
      * Starts the Device Registry Server.
      * 

@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.PortConfigurationHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +36,6 @@ public abstract class AbstractConfig {
     private static final Pattern PATTERN_PEM = Pattern.compile("^.*\\.[pP][eE][mM]$");
     private static final Pattern PATTERN_PKCS = Pattern.compile("^.*\\.[pP](12|[fF][xX])$");
     private static final Pattern PATTERN_JKS = Pattern.compile("^.*\\.[jJ][kK][sS]$");
-    private static final int MAX_PORT_NO = 65535;
-    private static final int MIN_PORT_NO = 0;
 
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -56,7 +55,7 @@ public abstract class AbstractConfig {
      * @return {@code true} if port &gt;= 0 and port &lt;= 65535.
      */
     protected boolean isValidPort(final int port) {
-        return port >= MIN_PORT_NO && port <= MAX_PORT_NO;
+        return PortConfigurationHelper.isValidPort(port);
     }
 
     /**
@@ -134,20 +133,20 @@ public abstract class AbstractConfig {
         if (trustStorePath == null) {
             return null;
         } else if (hasPemFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from file [{}] as trust anchor", trustStorePath);
+            LOG.debug("using certificates from file [{}] as trust anchor", trustStorePath);
             return new PemTrustOptions().addCertPath(trustStorePath);
         } else if (hasPkcsFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from PKCS12 key store [{}] as trust anchor", trustStorePath);
+            LOG.debug("using certificates from PKCS12 key store [{}] as trust anchor", trustStorePath);
             return new PfxOptions()
                         .setPath(getTrustStorePath())
                         .setPassword(getTrustStorePassword());
         } else if (hasJksFileSuffix(trustStorePath)) {
-            LOG.info("using certificates from JKS key store [{}] as trust anchor", trustStorePath);
+            LOG.debug("using certificates from JKS key store [{}] as trust anchor", trustStorePath);
             return new JksOptions()
                         .setPath(getTrustStorePath())
                         .setPassword(getTrustStorePassword());
         } else {
-            LOG.info("unsupported trust store format");
+            LOG.debug("unsupported trust store format");
             return null;
         }
     }
@@ -224,18 +223,18 @@ public abstract class AbstractConfig {
     public KeyCertOptions getKeyCertOptions() {
 
         if (keyPath != null && certPath != null && hasPemFileSuffix(keyPath) && hasPemFileSuffix(certPath)) {
-            LOG.info("using key [{}] and certificate [{}] for identity", keyPath, certPath);
+            LOG.debug("using key [{}] and certificate [{}] for identity", keyPath, certPath);
             return new PemKeyCertOptions().setKeyPath(keyPath).setCertPath(certPath);
         } else if (keyStorePath == null) {
             return null;
         } else if (hasPkcsFileSuffix(keyStorePath)) {
-            LOG.info("using key & certificate from PKCS12 key store [{}] for identity", keyStorePath);
+            LOG.debug("using key & certificate from PKCS12 key store [{}] for identity", keyStorePath);
             return new PfxOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
         } else if (hasJksFileSuffix(keyStorePath)) {
-            LOG.info("using key & certificate from JKS key store [{}] for server identity", keyStorePath);
+            LOG.debug("using key & certificate from JKS key store [{}] for server identity", keyStorePath);
             return new JksOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
         } else {
-            LOG.info("unsupported key store format");
+            LOG.debug("unsupported key store format");
             return null;
         }
     }

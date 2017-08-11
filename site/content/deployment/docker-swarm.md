@@ -147,13 +147,14 @@ The `swarm_deploy.sh` script already creates and uses Docker secrets for providi
 
        ~~~json
        hono:
+         app:
+           maxInstances: 1
          auth:
            amqp:
              bindAddress: 0.0.0.0
              keyPath: /run/secrets/auth-server-key.pem
              certPath: /run/secrets/auth-server-cert.pem
              trustStorePath: /run/secrets/trusted-certs.pem
-             maxInstances: 1
              insecurePortEnabled: true
              insecurePortBindAddress: 0.0.0.0
            svc:

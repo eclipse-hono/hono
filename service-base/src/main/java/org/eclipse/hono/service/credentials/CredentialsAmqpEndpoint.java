@@ -22,22 +22,18 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 /**
- * An {@code Endpoint} for managing device credential information.
+ * An {@code AmqpEndpoint} for managing device credential information.
  * <p>
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */
-public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
+public final class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates a new credentials endpoint for a vertx instance.
@@ -45,7 +41,7 @@ public final class CredentialsEndpoint extends RequestResponseEndpoint<ServiceCo
      * @param vertx The vertx instance to use.
      */
     @Autowired
-    public CredentialsEndpoint(final Vertx vertx) {
+    public CredentialsAmqpEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
     }
 

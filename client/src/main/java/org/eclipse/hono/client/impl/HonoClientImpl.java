@@ -180,10 +180,10 @@ public final class HonoClientImpl implements HonoClient {
         if (clientOptions == null || clientOptions.getReconnectAttempts() == 0) {
             connectionHandler.handle(Future.failedFuture("failed to connect"));
         } else {
-            LOG.debug("scheduling re-connect attempt ...");
+            LOG.trace("scheduling re-connect attempt ...");
             // give Vert.x some time to clean up NetClient
             vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, tid -> {
-                LOG.info("attempting to re-connect to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                LOG.debug("attempting to re-connect to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
                 connect(clientOptions, connectionHandler, disconnectHandler);
             });
         }
@@ -203,7 +203,7 @@ public final class HonoClientImpl implements HonoClient {
         if (con != connection) {
             LOG.warn("cannot handle failure of unknown connection");
         } else {
-            LOG.info("lost connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+            LOG.debug("lost connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             connection.disconnect();
             activeSenders.clear();
             activeRegClients.clear();

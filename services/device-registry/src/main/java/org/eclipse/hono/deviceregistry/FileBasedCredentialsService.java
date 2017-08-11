@@ -42,7 +42,7 @@ import static org.eclipse.hono.util.CredentialsConstants.*;
  * credentials kept in memory are written to the file.
  */
 @Repository
-public final class FileBasedCredentialsService extends BaseCredentialsService<CredentialsConfigProperties> {
+public final class FileBasedCredentialsService extends BaseCredentialsService<FileBasedCredentialsConfigProperties> {
 
     private static final String ARRAY_CREDENTIALS = "credentials";
     private static final String FIELD_TENANT = "tenant";
@@ -54,7 +54,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Cr
 
     @Autowired
     @Override
-    public void setConfig(final CredentialsConfigProperties configuration) {
+    public void setConfig(final FileBasedCredentialsConfigProperties configuration) {
         setSpecificConfig(configuration);
     }
 

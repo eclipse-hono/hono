@@ -11,7 +11,6 @@
  */
 package org.eclipse.hono.adapter.rest;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -24,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
 @ComponentScan(basePackages = "org.eclipse.hono.adapter.rest")
 @Configuration
 @EnableAutoConfiguration
-public class Application extends AbstractApplication<VertxBasedRestProtocolAdapter, ServiceConfigProperties> {
+public class Application extends AbstractApplication {
 
     /**
      * Starts the REST Adapter application.

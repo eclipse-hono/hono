@@ -53,15 +53,6 @@ public interface RegistrationClient extends RequestResponseClient {
     void get(String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
-     * Finds a device registration by a key that it is registered with.
-     *
-     * @param key The name of the key to find the device registration under.
-     * @param value The value that the key must match.
-     * @param resultHandler The handler to invoke with the result of the operation.
-     */
-    void find(String key, String value, Handler<AsyncResult<RegistrationResult>> resultHandler);
-
-    /**
      * Registers a device with Hono.
      * <p>
      * A device needs to be (successfully) registered before a client can upload

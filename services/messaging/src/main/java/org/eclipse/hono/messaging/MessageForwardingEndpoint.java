@@ -22,7 +22,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.amqp.BaseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -48,7 +48,7 @@ import io.vertx.proton.ProtonReceiver;
  * 
  * @param <T> The type of configuration properties this endpoint understands.
  */
-public abstract class MessageForwardingEndpoint<T extends ServiceConfigProperties> extends BaseEndpoint<T> {
+public abstract class MessageForwardingEndpoint<T extends ServiceConfigProperties> extends AbstractAmqpEndpoint<T> {
 
     private CounterService                counterService = NullCounterService.getInstance();
     private DownstreamAdapter             downstreamAdapter;
@@ -202,7 +202,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
     final void forwardMessage(final UpstreamReceiver link, final ProtonDelivery delivery, final Message msg) {
 
         final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, String.class));
-        final String token = MessageHelper.getRegistrationAssertion(msg);
+        final String token = MessageHelper.getAndRemoveRegistrationAssertion(msg);
 
         if (assertRegistration(token, messageAddress)) {
             downstreamAdapter.processMessage(link, delivery, msg);

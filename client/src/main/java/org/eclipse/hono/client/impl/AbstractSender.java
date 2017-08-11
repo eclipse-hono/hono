@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.util.MessageHelper.*;
-
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -28,6 +26,7 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -310,8 +309,8 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     private void addProperties(final Message msg, final String deviceId, final String contentType, final String registrationAssertion) {
         msg.setMessageId(String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement()));
         msg.setContentType(contentType);
-        addDeviceId(msg, deviceId);
-        addRegistrationAssertion(msg, registrationAssertion);
+        MessageHelper.addDeviceId(msg, deviceId);
+        MessageHelper.addRegistrationAssertion(msg, registrationAssertion);
     }
 
     /**

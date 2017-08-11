@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -20,12 +21,21 @@ import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 
 /**
  * Configuration class
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
+
+    private static final String BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER = "vertxBasedMqttProtocolAdapter";
+
+    @Bean(name = BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER)
+    @Scope("prototype")
+    public VertxBasedMqttProtocolAdapter vertxBasedMqttProtocolAdapter(){
+        return new VertxBasedMqttProtocolAdapter();
+    }
 
     @Override
     protected void customizeMessagingClientConfigProperties(final ClientConfigProperties props) {
@@ -39,6 +49,17 @@ public class Config extends AbstractAdapterConfig {
         if (props.getName() == null) {
             props.setName("Hono MQTT Adapter");
         }
+    }
+
+    /**
+     * Exposes properties for configuring the application properties a Spring bean.
+     *
+     * @return The application configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.app")
+    public ApplicationConfigProperties applicationConfigProperties(){
+        return new ApplicationConfigProperties();
     }
 
     /**
@@ -60,7 +81,7 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean serviceFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(VertxBasedMqttProtocolAdapter.class.getName());
+        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER);
         return factory;
     }
 }

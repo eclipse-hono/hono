@@ -24,7 +24,10 @@ echo DEPLOYING ECLIPSE HONO TO KUBERNETES
 kubectl create namespace $NS
 
 echo
-echo Deploying Grafana ...
+echo "Deploying influxDB & Grafana ..."
+kubectl create secret generic influxdb-conf \
+  --from-file=$CONFIG/influxdb.conf \
+  --namespace $NS
 kubectl create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 

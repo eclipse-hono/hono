@@ -76,6 +76,16 @@ public final class Constants {
     public static final int PORT_UNCONFIGURED = -1;
 
     /**
+     * The loopback device address.
+     */
+    public static final String LOOPBACK_DEVICE_ADDRESS = "127.0.0.1";
+
+    /**
+     * The qualifier to use for referring to AMQP based components.
+     */
+    public static final String QUALIFIER_AMQP = "amqp";
+
+    /**
      * The qualifier to use for referring to components scoped to the AMQP 1.0 messaging network.
      */
     public static final String QUALIFIER_DOWNSTREAM = "downstream";
@@ -84,6 +94,11 @@ public final class Constants {
      * The qualifier to use for referring to the Hono Messaging component.
      */
     public static final String QUALIFIER_MESSAGING = "messaging";
+
+    /**
+     * The qualifier to use for referring to REST based components.
+     */
+    public static final String QUALIFIER_REST = "rest";
 
     /**
      * The subject name to use for anonymous clients.

@@ -107,7 +107,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
         addOptions(clientOptions, effectiveUsername, effectivePassword);
 
         final ProtonClient client = ProtonClient.create(vertx);
-        logger.info("connecting to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
+        logger.debug("connecting to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
                 config.getHost(), config.getPort());
         client.connect(
                 clientOptions,
@@ -127,14 +127,14 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
 
         if (conAttempt.failed()) {
 
-            logger.info("can't connect to AMQP 1.0 container [{}://{}:{}]: {}", clientOptions.isSsl() ? "amqps" : "amqp",
+            logger.debug("can't connect to AMQP 1.0 container [{}://{}:{}]: {}", clientOptions.isSsl() ? "amqps" : "amqp",
                     config.getHost(), config.getPort(), conAttempt.cause().getMessage());
             connectionResultHandler.handle(Future.failedFuture(conAttempt.cause()));
 
         } else {
 
             // at this point the SASL exchange has completed successfully
-            logger.info("connected to AMQP 1.0 container [{}://{}:{}], opening connection ...",
+            logger.debug("connected to AMQP 1.0 container [{}://{}:{}], opening connection ...",
                     clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort());
             ProtonConnection downstreamConnection = conAttempt.result();
             downstreamConnection
@@ -142,7 +142,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
                     .setHostname(config.getAmqpHostname())
                     .openHandler(openCon -> {
                         if (openCon.succeeded()) {
-                            logger.info("connection to container [{}] at [{}://{}:{}] open", downstreamConnection.getRemoteContainer(),
+                            logger.debug("connection to container [{}] at [{}://{}:{}] open", downstreamConnection.getRemoteContainer(),
                                     clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort());
                             downstreamConnection.disconnectHandler(disconnectHandler);
                             downstreamConnection.closeHandler(closeHandler);
