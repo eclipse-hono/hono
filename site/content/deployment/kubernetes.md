@@ -42,97 +42,6 @@ After having the Kubernetes cluster up and running and the `kubectl` command lin
 ~hono/example/target/deploy/kubernetes$ ./kubernetes_deploy.sh
 ~~~
 
-There also is a script for shutting down and undeploying Hono:
-
-~~~sh
-~hono/example/target/deploy/kubernetes$ ./kubernetes_undeploy.sh
-~~~
-
-## Step by step deployment
-
-### Creating a namespace
-
-First, create a new namespace using the Kubectl command line tool in the following way :
-
-~~~sh
-$ kubectl create namespace hono
-~~~
-
-### Preparing persistent volume
-
-In order to handle the Device Registry and preserve the related file when pods go down for any reason (i.e. manual scale down to zero instances, crash, ...),
-a persistent volume is needed so that can be used, through a _claim_, by the Device Registry. In general, the persistent volume is deployed by the cluster
-administrator but for development purposes, a local `/tmp/hono` directory can be used on your _local_ host but it needs to be created with read/write permissions in the following way :
-
-~~~sh
-$ mkdir /tmp/hono
-$ chmod 777 /tmp/hono
-~~~
-
-After that, it's possible to provision the persistent volume with the following command.
-
-~~~sh
-kubectl create -f <path-to-repo>/example/target/classes/META-INF/fabric8/kubernetes/hono-pv.yml --namespace hono
-~~~
-
-### Deploying Eclipse Hono components
-
-It is now possible to deploy all the other Kubernetes resources related to:
-
-1. Grafana
-1. Artemis Broker
-1. Qpid Dispatch Router
-1. Auth Server
-1. Device Registry
-1. Hono Messaging
-1. HTTP REST adapter
-1. MQTT adapter
-
-Deploy Grafana (for metrics support):
-
-~~~sh
-$ kubectl create -f <path-to-repo>/metrics/target/classes/META-INF/fabric8/kubernetes.yml --namespace hono
-~~~
-
-Then the Artemis Broker:
-
-~~~sh
-$ kubectl create -f <path-to-repo>/broker/target/classes/META-INF/fabric8/kubernetes.yml --namespace hono
-~~~
-
-Then the Qpid Dispatch Router:
-
-~~~sh
-$ kubectl create -f <path-to-repo>/dispatchrouter/target/classes/META-INF/fabric8/kubernetes.yml --namespace hono
-~~~
-
-Then the Auth Server:
-
-~~~sh
-$ kubectl create -f <path-to-repo>/services/auth/target/classes/META-INF/fabric8/kubernetes.yml --namespace hono
-~~~
-
-Then the Device Registry:
-
-~~~sh
-$ kubectl create -f <path-to-repo>/services/device-registry/target/classes/META-INF/fabric8/kubernetes.yml --namespace hono
-~~~
-
-Then the Hono Messaging component:
-
-~~~sh
-$ kubectl create -f <path-to-repo>/services/messaging/target/classes/META-INF/fabric8/kubernetes.yml --namespace hono
-~~~
-
-Finally, both the adapters (HTTP REST and MQTT).
-
-~~~sh
-$ kubectl create -f <path-to-repo>/adapters/rest-vertx/target/classes/META-INF/fabric8/kubernetes.yml --namespace hono
-$ kubectl create -f <path-to-repo>/adapters/mqtt-vertx/target/classes/META-INF/fabric8/kubernetes.yml --namespace hono
-~~~
-
-In this way, all the components are accessible inside the cluster using the _service_ addresses from a client's point of view.
-
 In order to see the deployed components, you can launch Kubernetes' web UI in a browser by issuing:
 
 ~~~sh
@@ -144,13 +53,26 @@ In the following pictures an Eclipse Hono deployment on Kubernetes is running wi
 
 ![Eclipse Hono on Kubernetes](../kubernetes_hono.png)
 
-## Access to Hono services
+### Undeploying Hono
 
-The Kubernetes deployment provides access to Eclipse Hono by meaning of "services" and the main ones are :
+There also is a script for shutting down and undeploying Hono:
 
-* hono-dispatch-router-ext : router network for the business application in order to receive data
-* hono-adapter-mqtt-vertx : MQTT protocol adapter for sending data
-* hono-adapter-rest-vertx : HTTP protocol adapter for sending data
+~~~sh
+~hono/example/target/deploy/kubernetes$ ./kubernetes_undeploy.sh
+~~~
+
+## Deploying individual Components
+
+You may also deploy each of Hono's components separately by copying the relevant commands from the deploy script to your own script or entering them directly on the command line.
+
+## Accessing Hono Services
+
+The Kubernetes deployment provides access to Eclipse Hono by means of *services* and the main ones are:
+
+* **hono-dispatch-router-ext**: router network for the business application in order to consume data
+* **hono-adapter-mqtt-vertx**: protocol adapter for publishing telemetry data and events using the MQTT protocol
+* **hono-adapter-rest-vertx**: protocol adapter for publishing telemetry data and events using the HTTP protocol
+* **hono-service-device-registry**: component for registering and managing devices
 
 You can check these services through the `kubectl get services --namespace hono` command having the following output :
 
@@ -168,41 +90,36 @@ hono-service-messaging         10.0.0.223   <none>        5671/TCP              
 influxdb                       10.0.0.217   <none>        2003/TCP,8083/TCP,8086/TCP                   15m
 ~~~
 
-These services are accessible using the Minikube VM IP address (that you can get with the `minikube ip` command) and the so called *node ports* (i.e. 30080, 30671, ...).
+These services are accessible using the Minikube VM's IP address (which you can get with the `minikube ip` command) and the so called *node ports* (i.e. 30080, 30671, ...).
+In the following sections `<IP_ADDRESS>` needs to be replaced with the IP address of the Minikube VM.
 
 ### Starting a Consumer
 
-As described in the "Getting Started" guide, data produced by devices is usually consumed by downstream applications which connect directly to the router network service.
+As described in the [Getting Started]({{< relref "getting-started.md" >}}) guide, data produced by devices is usually consumed by downstream applications which connect directly to the router network service.
 You can start the client from the `example` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=<IP_ADDRESS>,--hono.client.port=<PORT>,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=<IP_ADDRESS>,--hono.client.port=30672,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
 ~~~
-
-where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the router network service as described before.
 
 ### Uploading Telemetry
 
-In order to upload telemetry to Hono, the device needs to be already registered with the system. For doing that, you can use the HTTP REST endpoint provided by
-the Device Registration service and running the following command (i.e. for a device with ID `4711`) :
+In order to upload telemetry data to Hono, the device needs to be registered with the system. You can register the device using the
+*Device Registry* by running the following command (i.e. for a device with ID `4711`):
 
 ~~~sh
-$ curl -X POST -i -d 'device_id=4711' http://<IP_ADDRESS>:<PORT>/registration/DEFAULT_TENANT
+$ curl -X POST -i -d 'device_id=4711' http://<IP_ADDRESS>:31080/registration/DEFAULT_TENANT
 ~~~
 
-where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the HTTP REST endpoint as described before.
-After having the device registered, uploading telemetry is just a simple HTTP PUT command.
+After having the device registered, uploading telemetry is just a simple HTTP PUT command to the *REST Adapter*:
 
 ~~~sh
 $ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
-> http://<IP_ADDRESS>:<PORT>/telemetry/DEFAULT_TENANT/4711
+> http://<IP_ADDRESS>:30080/telemetry/DEFAULT_TENANT/4711
 ~~~
 
-where in this case `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the HTTP REST protocol adapter.
-Other than using the HTTP REST protocol adapter, it's possible to upload telemetry data using the MQTT protocol adapter.
+Other than using the *REST Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
 
 ~~~sh
-mosquitto_pub -h <IP_ADDRESS> -p <PORT> -i 4711 -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+mosquitto_pub -h <IP_ADDRESS> -p 31883 -i 4711 -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 ~~~
-
-where `<IP_ADDRESS>` and `<PORT>` are the IP address and the related port of the MQTT service as described before.
