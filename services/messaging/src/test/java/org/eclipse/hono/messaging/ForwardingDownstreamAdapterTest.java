@@ -349,6 +349,7 @@ public class ForwardingDownstreamAdapterTest {
                 // nothing to do
             }
         };
+        adapter.setMetrics(mock(MessagingMetrics.class));
     }
 
     private class HandlerCapturingConnectionFactory implements ConnectionFactory {

@@ -215,7 +215,7 @@ public class MessageForwardingEndpointTest {
 
     private MessageForwardingEndpoint<ServiceConfigProperties> getEndpoint(final boolean passFormalVerification) {
 
-        return new MessageForwardingEndpoint<ServiceConfigProperties>(vertx) {
+        MessageForwardingEndpoint endpoint = new MessageForwardingEndpoint<ServiceConfigProperties>(vertx) {
 
             @Override
             public String getName() {
@@ -232,6 +232,8 @@ public class MessageForwardingEndpointTest {
                 return new ProtonQoS[]{ ProtonQoS.AT_MOST_ONCE };
             }
         };
+        endpoint.setMetrics(mock(MessagingMetrics.class));
+        return endpoint;
     }
 
     private String getToken(final String secret, final String tenantId, final String deviceId) {

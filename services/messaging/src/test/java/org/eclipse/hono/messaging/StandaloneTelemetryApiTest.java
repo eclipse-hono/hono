@@ -24,9 +24,6 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.messaging.HonoMessaging;
-import org.eclipse.hono.messaging.HonoMessagingConfigProperties;
-import org.eclipse.hono.messaging.MessageDiscardingDownstreamAdapter;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -83,6 +80,7 @@ public class StandaloneTelemetryApiTest {
         configProperties.setInsecurePort(0);
         server.setConfig(configProperties);
         TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
+        telemetryEndpoint.setMetrics(mock(MessagingMetrics.class));
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         telemetryEndpoint.setRegistrationAssertionValidator(assertionHelper);
         server.addEndpoint(telemetryEndpoint);

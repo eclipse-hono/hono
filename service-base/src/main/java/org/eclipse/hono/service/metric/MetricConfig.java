@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.messaging;
+package org.eclipse.hono.service.metric;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -40,31 +40,42 @@ import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
  * Spring bean definitions required by the metrics reporters.
  */
 @Configuration
-public class MetricsConfig {
+public class MetricConfig {
 
     private static final String HONO    = "hono";
     private static final String UNKNOWN = "unknown";
 
-    private static final Logger LOG     = LoggerFactory.getLogger(MetricsConfig.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MetricConfig.class);
+
+    private String prefix = HONO;
 
     private final MetricRegistry metricRegistry;
 
-    public MetricsConfig(final MetricRegistry metricRegistry) {
+    public MetricConfig(final MetricRegistry metricRegistry) {
         this.metricRegistry = metricRegistry;
+    }
+
+    /**
+     * Set the prefix to scope values of each service
+     *
+     * @param prefix The prefix
+     */
+    public void setPrefix(final String prefix) {
+        this.prefix = prefix;
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "hono.metric.jvm", name = "memory", havingValue = "true")
     public MemoryUsageGaugeSet jvmMetricsMemory(final MetricRegistry metricRegistry) {
         LOG.info("metrics - jvm/memory activated");
-        return metricRegistry.register(MetricConstants.PREFIX + ".jvm.memory", new MemoryUsageGaugeSet());
+        return metricRegistry.register(prefix + ".jvm.memory", new MemoryUsageGaugeSet());
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "hono.metric.jvm", name = "thread", havingValue = "true")
     public ThreadStatesGaugeSet jvmMetricsThreads() {
         LOG.info("metrics - jvm/threads activated");
-        return metricRegistry.register(MetricConstants.PREFIX + ".jvm.thread", new ThreadStatesGaugeSet());
+        return metricRegistry.register(prefix + ".jvm.thread", new ThreadStatesGaugeSet());
     }
 
     @Bean
@@ -74,7 +85,7 @@ public class MetricsConfig {
         SharedMetricRegistries.add(HONO, metricRegistry);
         SharedMetricRegistries.setDefault(HONO, metricRegistry);
         return new DropwizardMetricsOptions().setEnabled(true).setRegistryName(HONO)
-                        .setBaseName(MetricConstants.PREFIX + ".vertx").setJmxEnabled(true);
+                .setBaseName(prefix + ".vertx").setJmxEnabled(true);
     }
 
     @Bean
@@ -98,13 +109,13 @@ public class MetricsConfig {
             @Value("${hono.metric.reporter.graphite.host:localhost}") final String host,
             @Value("${hono.metric.reporter.graphite.port:2003}") final Integer port,
             @Value("${hono.metric.reporter.graphite.prefix:}") final String prefix) {
-        LOG.info("metrics - graphite reporter activated: {}:{}  prefix: {}  period: {}",host,port,prefix,period);
+        LOG.info("metrics - graphite reporter activated: {}:{}  prefix: {}  period: {}", host, port, prefix, period);
         final Graphite graphite = new Graphite(new InetSocketAddress(host, port));
         String processedPrefix = prefix;
-        if(processedPrefix.isEmpty()) {
+        if (processedPrefix.isEmpty()) {
             try {
                 processedPrefix = InetAddress.getLocalHost().getHostName();
-            } catch(UnknownHostException exception) {
+            } catch (UnknownHostException exception) {
                 processedPrefix = UNKNOWN;
             }
         }

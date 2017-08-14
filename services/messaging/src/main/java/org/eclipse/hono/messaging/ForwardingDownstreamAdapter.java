@@ -26,8 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.actuate.metrics.CounterService;
-import org.springframework.boot.actuate.metrics.GaugeService;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.AsyncResult;
@@ -48,7 +46,6 @@ import io.vertx.proton.ProtonSender;
 @Component
 public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
-
     /**
      * A logger to be shared with subclasses.
      */
@@ -63,8 +60,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers   = new ArrayList<>();
     private final Vertx                               vertx;
 
-    private GaugeService      gaugeService                = NullGaugeService.getInstance();
-    private CounterService    counterService              = NullCounterService.getInstance();
+    private MessagingMetrics  metrics;
     private boolean           running                     = false;
     private boolean           retryOnFailedConnectAttempt = true;
     private ProtonConnection  downstreamConnection;
@@ -117,41 +113,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     /**
-     * Sets the spring boot gauge service, will be based on Dropwizard Metrics, if in classpath.
-     *
-     * @param gaugeService The gauge service.
+     * Sets the metrics for this service
+     * @param metrics The metrics
      */
     @Autowired
-    public final void setGaugeService(final GaugeService gaugeService) {
-        this.gaugeService = gaugeService;
-    }
-
-    /**
-     * Gets the spring boot gauge service implementation
-     *
-     * @return The metrics service or a null implementation - never {@code null}
-     */
-    public final GaugeService getGaugeService() {
-        return gaugeService;
-    }
-
-    /**
-     * Sets the spring boot counter service, will be based on Dropwizard Metrics, if in classpath.
-     *
-     * @param counterService The counter service.
-     */
-    @Autowired
-    public final void setCounterService(final CounterService counterService) {
-        this.counterService = counterService;
-    }
-
-    /**
-     * Gets the spring boot gauge service implementation
-     *
-     * @return The metrics service or a null implementation - never {@code null}
-     */
-    public final CounterService getCounterService() {
-        return counterService;
+    public final void setMetrics(final MessagingMetrics metrics) {
+        this.metrics = metrics;
     }
 
     /**
@@ -199,7 +166,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 final String container = downstreamConnection.getRemoteContainer();
                 logger.info("closing connection to downstream container [{}]", container);
                 downstreamConnection.closeHandler(null).disconnectHandler(null).close();
-                counterService.decrement(MetricConstants.metricNameDownstreamConnections());
+                metrics.decrementDownStreamConnections();
             } else {
                 logger.debug("downstream connection already closed");
             }
@@ -241,7 +208,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 connectAttempt -> {
                     if (connectAttempt.succeeded()) {
                         this.downstreamConnection = connectAttempt.result();
-                        counterService.increment(MetricConstants.metricNameDownstreamConnections());
+                        metrics.incrementDownStreamConnections();
                         if (connectResultHandler != null) {
                             connectResultHandler.handle(Future.succeededFuture(connectAttempt.result()));
                         }
@@ -290,16 +257,16 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
             for (UpstreamReceiver client : activeSenders.keySet()) {
                 client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
-                counterService.decrement(MetricConstants.metricNameUpstreamLinks(client.getTargetAddress()));
-                counterService.decrement(MetricConstants.metricNameDownstreamSenders(client.getTargetAddress()));
-                gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()), 0);
+                metrics.decrementUpstreamLinks(client.getTargetAddress());
+                metrics.decrementDownstreamSenders(client.getTargetAddress());
+                metrics.submitDownstreamLinkCredits(client.getTargetAddress(),0);
             }
             receiversPerConnection.clear();
             activeSenders.clear();
             downstreamConnection.attachments().clear();
             downstreamConnection.disconnectHandler(null);
             downstreamConnection.disconnect();
-            counterService.decrement(MetricConstants.metricNameDownstreamConnections());
+            metrics.decrementDownStreamConnections();
 
             for (Iterator<Handler<AsyncResult<Void>>> iter = clientAttachHandlers.iterator(); iter.hasNext(); ) {
                 iter.next().handle(Future.failedFuture("connection to downstream container failed"));
@@ -388,7 +355,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         } else {
             int downstreamCredit = getAvailableDownstreamCredit(replenishedSender);
             client.replenish(downstreamCredit);
-            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(client.getTargetAddress()), downstreamCredit);
+            metrics.submitDownstreamLinkCredits(client.getTargetAddress(), downstreamCredit);
         }
     }
 
@@ -423,7 +390,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             receiversPerConnection.put(link.getConnectionId(), senders);
         }
         senders.add(link);
-        counterService.increment(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
+        metrics.incrementDownstreamSenders(link.getTargetAddress());
     }
 
     /**
@@ -465,7 +432,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             logger.info("closing {} downstream senders for connection [id: {}]", upstreamReceivers.size(), connectionId);
             for (UpstreamReceiver link : upstreamReceivers) {
                 closeSender(link);
-                counterService.decrement(MetricConstants.metricNameUpstreamLinks(link.getTargetAddress()));
+                metrics.decrementUpstreamLinks(link.getTargetAddress());
             }
         }
     }
@@ -474,8 +441,8 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         ProtonSender sender = activeSenders.remove(link);
         if (sender != null && sender.isOpen()) {
             logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
-            counterService.decrement(MetricConstants.metricNameDownstreamSenders(link.getTargetAddress()));
-            gaugeService.submit(MetricConstants.metricNameDownstreamLinkCredits(link.getTargetAddress()), 0);
+            metrics.decrementDownstreamSenders(link.getTargetAddress());
+            metrics.submitDownstreamLinkCredits(link.getTargetAddress(), 0);
             sender.close();
         }
     }
@@ -501,25 +468,25 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     logger.debug("no downstream credit available for link [{}], discarding message [{}]",
                             client.getLinkId(), msg.getMessageId());
                     ProtonHelper.accepted(upstreamDelivery, true);
-                    counterService.increment(MetricConstants.metricNameDiscardedMessages(sender.getTarget().getAddress()));
+                    metrics.incrementDiscardedMessages(sender.getTarget().getAddress());
                 } else {
                     // sender needs to be informed that we cannot process the message
                     logger.debug("no downstream credit available for link [{}], releasing message [{}]",
                             client.getLinkId(), msg.getMessageId());
                     ProtonHelper.released(upstreamDelivery, true);
-                    counterService.increment(MetricConstants.metricNameUndeliverableMessages(sender.getTarget().getAddress()));
+                    metrics.incrementUndeliverableMessages(sender.getTarget().getAddress());
                 }
             } else {
                 logger.trace("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}], credit available: {}, queued: {}",
                         msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer(), sender.getCredit(), sender.getQueued());
                 forwardMessage(sender, msg, upstreamDelivery);
-                counterService.increment(MetricConstants.metricNameProcessedMessages(sender.getTarget().getAddress()));
+                metrics.incrementProcessedMessages(sender.getTarget().getAddress());
             }
         } else {
             logger.warn("downstream sender for link [{}] is not open, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
             onClientDetach(client);
-            counterService.increment(MetricConstants.metricNameDiscardedMessages(sender.getTarget().getAddress()));
+            metrics.incrementDiscardedMessages(sender.getTarget().getAddress());
         }
     }
 
