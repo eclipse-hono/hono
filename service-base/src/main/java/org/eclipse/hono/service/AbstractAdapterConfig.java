@@ -13,11 +13,13 @@
 
 package org.eclipse.hono.service;
 
+import io.vertx.core.metrics.MetricsOptions;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -37,6 +39,19 @@ import io.vertx.core.dns.AddressResolverOptions;
  */
 public abstract class AbstractAdapterConfig {
 
+    private MetricsOptions metricsOptions;
+
+    /**
+     * Vert.x metrics options, if configured
+     *
+     * @param metricsOptions Vert.x metrics options
+     * @see MetricConfig
+     */
+    @Autowired(required = false)
+    public void setMetricsOptions(final MetricsOptions metricsOptions) {
+        this.metricsOptions = metricsOptions;
+    }
+
     /**
      * Exposes a Vert.x instance as a Spring bean.
      * 
@@ -50,6 +65,9 @@ public abstract class AbstractAdapterConfig {
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
+        if (metricsOptions != null) {
+            options.setMetricsOptions(metricsOptions);
+        }
         return Vertx.vertx(options);
     }
 

@@ -1,4 +1,4 @@
-package org.eclipse.hono.messaging;
+package org.eclipse.hono.service.metric;
 
 import org.springframework.boot.actuate.metrics.GaugeService;
 

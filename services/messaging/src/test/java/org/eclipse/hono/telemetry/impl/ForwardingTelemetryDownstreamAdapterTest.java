@@ -20,6 +20,7 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.event.impl.ForwardingEventDownstreamAdapter;
+import org.eclipse.hono.messaging.MessagingMetrics;
 import org.eclipse.hono.messaging.UpstreamReceiver;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
@@ -77,6 +78,7 @@ public class ForwardingTelemetryDownstreamAdapterTest {
             return null;
         });
         ForwardingTelemetryDownstreamAdapter adapter = new ForwardingTelemetryDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        adapter.setMetrics(mock(MessagingMetrics.class));
         adapter.setDownstreamConnectionFactory(connectionFactory);
         adapter.start(Future.future());
         adapter.addSender(client, sender);
@@ -106,6 +108,7 @@ public class ForwardingTelemetryDownstreamAdapterTest {
         ProtonSender sender = newMockSender(false);
         when(sender.sendQueueFull()).thenReturn(true);
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        adapter.setMetrics(mock(MessagingMetrics.class));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());
         adapter.addSender(client, sender);

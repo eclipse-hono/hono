@@ -15,6 +15,7 @@ package org.eclipse.hono.messaging;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
@@ -45,7 +46,7 @@ public class HonoMessagingApplicationConfig {
      * Vert.x metrics options, if configured
      *
      * @param metricsOptions Vert.x metrics options
-     * @see MetricsConfig
+     * @see MetricConfig
      */
     @Autowired(required = false)
     public void setMetricsOptions(final MetricsOptions metricsOptions) {
