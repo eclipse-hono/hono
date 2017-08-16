@@ -4,6 +4,12 @@ menu = "main"
 weight = 800
 +++
 
+## 0.5-M9 (not yet released)
+
+### New Features
+
+* Metrics could be used in all services, now. New metrics from MQTT Adapter and REST Adapter are there and will be written to InfluxDB and shown in Grafana in the example deployment. 
+
 ## 0.5-M8
 
 ### New Features

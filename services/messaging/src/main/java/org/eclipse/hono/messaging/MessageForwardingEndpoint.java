@@ -78,6 +78,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
 
     /**
      * Sets the metric for this service
+     *
      * @param metrics The metric
      */
     @Autowired

@@ -34,6 +34,7 @@ import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
@@ -48,9 +49,20 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
 
-    private MqttServer server;
-    private MqttServer insecureServer;
+    private MqttServer                server;
+    private MqttServer                insecureServer;
     private Map<MqttEndpoint, String> registrationAssertions = new HashMap<>();
+    private MqttAdapterMetrics        metrics;
+
+    /**
+     * Sets the metrics for this service
+     *
+     * @param metrics The metrics
+     */
+    @Autowired
+    public final void setMetrics(final MqttAdapterMetrics metrics) {
+        this.metrics = metrics;
+    }
 
     @Override
     public int getPortDefaultValue() {
@@ -142,7 +154,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
     }
 
     @Override
-    public void doStop(Future<Void> stopFuture) {
+    public void doStop(final Future<Void> stopFuture) {
 
         Future<Void> shutdownTracker = Future.future();
         shutdownTracker.setHandler(done -> {
@@ -202,10 +214,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
                             if (s.failed()) {
                                 LOG.debug("cannot process message [client ID: {}, topic: {}, QoS: {}]: {}", endpoint.clientIdentifier(),
                                         resource, message.qosLevel(), s.cause().getMessage());
+                                metrics.incrementUndeliverableMqttMessages(message.topicName());
                                 close(endpoint);
                             } else {
                                 LOG.trace("successfully processed message [client ID: {}, topic: {}, QoS: {}]", endpoint.clientIdentifier(),
                                         resource, message.qosLevel());
+                                metrics.incrementProcessedMqttMessages(message.topicName());
                             }
                         });
 

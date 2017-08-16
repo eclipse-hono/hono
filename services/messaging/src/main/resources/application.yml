@@ -5,9 +5,9 @@ hono:
     name: Hono Messaging
   metric:
     jvm:
-      memory: true
-      thread: true
-    vertx: true
+      memory: false
+      thread: false
+    vertx: false
     reporter:
       console:
         active: false
