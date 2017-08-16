@@ -1,3 +1,15 @@
+/**
+ * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Bosch Software Innovations GmbH - initial creation
+ */
+
 package org.eclipse.hono.service.metric;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,15 +30,21 @@ abstract public class Metrics {
     protected static String TIMER_PREFIX     = "timer.";
     protected static String HISTOGRAM_PREFIX = "histogram.";
 
+    /** metric parts for messages - useable for AMQP, MQTT, etc. */
+    protected static final String MESSAGES      = ".messages.";
+    protected static final String PROCESSED     = ".processed";
+    protected static final String DISCARDED     = ".discarded";
+    protected static final String UNDELIVERABLE = ".undeliverable";
+
     protected GaugeService   gaugeService   = NullGaugeService.getInstance();
     protected CounterService counterService = NullCounterService.getInstance();
 
     /**
-     * It is needed to set the specific service prefix
+     * It is needed to set the specific service prefix; if no config is given it is not needed and will never be used
      *
      * @param metricConfig The metrics config
      */
-    @Autowired
+    @Autowired(required = false)
     public void setMetricConfig(final MetricConfig metricConfig) {
         metricConfig.setPrefix(getPrefix());
     }

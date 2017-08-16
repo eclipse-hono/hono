@@ -28,11 +28,6 @@ public class MessagingMetrics extends Metrics {
     private static final String SENDERS_DOWNSTREAM       = ".senders.downstream.";
     private static final String RECEIVERS_UPSTREAM_LINKS = ".receivers.upstream.links.";
 
-    private static final String MESSAGES      = ".messages.";
-    private static final String PROCESSED     = ".processed";
-    private static final String DISCARDED     = ".discarded";
-    private static final String UNDELIVERABLE = ".undeliverable";
-
     @Override
     protected String getPrefix() {
         return SERVICE_PREFIX;

@@ -109,7 +109,6 @@ public class MetricConfig {
             @Value("${hono.metric.reporter.graphite.host:localhost}") final String host,
             @Value("${hono.metric.reporter.graphite.port:2003}") final Integer port,
             @Value("${hono.metric.reporter.graphite.prefix:}") final String prefix) {
-        LOG.info("metrics - graphite reporter activated: {}:{}  prefix: {}  period: {}", host, port, prefix, period);
         final Graphite graphite = new Graphite(new InetSocketAddress(host, port));
         String processedPrefix = prefix;
         if (processedPrefix.isEmpty()) {
@@ -119,6 +118,7 @@ public class MetricConfig {
                 processedPrefix = UNKNOWN;
             }
         }
+        LOG.info("metrics - graphite reporter activated: {}:{}  prefix: {}  period: {}", host, port, processedPrefix, period);
         final GraphiteReporter reporter = GraphiteReporter.forRegistry(metricRegistry)
                 .convertRatesTo(TimeUnit.SECONDS)
                 .convertDurationsTo(TimeUnit.MILLISECONDS)

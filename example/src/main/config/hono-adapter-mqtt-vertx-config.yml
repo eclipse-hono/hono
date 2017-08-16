@@ -30,3 +30,15 @@ hono:
     username: ${hono.adapter.mqtt.username}
     password: ${hono.adapter.mqtt.password}
     trustStorePath: ${hono.trustStore.path}
+  metric:
+    reporter:
+      graphite:
+        active: true
+        host: influxdb.hono
+        port: 2003
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: true
+
