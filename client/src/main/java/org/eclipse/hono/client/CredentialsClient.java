@@ -14,6 +14,7 @@ package org.eclipse.hono.client;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 
 import java.net.HttpURLConnection;
@@ -42,5 +43,5 @@ public interface CredentialsClient extends RequestResponseClient {
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
 
      */
-    void get(String type, String authId,  Handler<AsyncResult<CredentialsResult>> resultHandler);
+    void get(String type, String authId,  Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler);
 }

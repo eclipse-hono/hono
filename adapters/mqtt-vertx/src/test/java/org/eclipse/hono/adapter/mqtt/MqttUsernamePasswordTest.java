@@ -41,13 +41,12 @@ public class MqttUsernamePasswordTest {
      * Verifies that in multi tenant mode, a username containing userId@tenantId leads to a correctly filled instance.
      */
     @Test
-    public void testTenantFromUserMultiTenant() throws Exception {
+    public void testTenantFromUserMultiTenant() {
         MqttAuth auth = mock(MqttAuth.class);
         when(auth.userName()).thenReturn(TEST_USER_OTHER_TENANT);
         when(auth.password()).thenReturn(TEST_PASSWORD);
-        MqttEndpoint mqttEndpoint = mockMqttEndpoint(auth);
 
-        MqttUsernamePassword mqttUsernamePassword = MqttUsernamePassword.create(mqttEndpoint, false);
+        MqttUsernamePassword mqttUsernamePassword = MqttUsernamePassword.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
 
         assertEquals(mqttUsernamePassword.getType(), CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         assertEquals(mqttUsernamePassword.getTenantId(), TEST_OTHER_TENANT);
@@ -56,37 +55,37 @@ public class MqttUsernamePasswordTest {
     }
 
     /**
-     * Verifies that if no tenantId is present in the username, an IllegalArgumentException is thrown for multi tenant mode.
+     * Verifies that if no tenantId is present in the username, the created object for multi tenant mode is null.
      */
-    @Test(expected = IllegalArgumentException.class)
-    public void testTenantFromUserMultiTenantWrongUsername() throws Exception {
+    @Test
+    public void testTenantFromUserMultiTenantWrongUsername() {
         MqttAuth auth = mockMqttAuthWithoutTenantIdInUsername();
 
-        MqttEndpoint mqttEndpoint = mockMqttEndpoint(auth);
-        MqttUsernamePassword.create(mqttEndpoint, false);
+        MqttUsernamePassword mqttUserNamePassword = MqttUsernamePassword.create(auth.userName(), auth.password(), false);
+        assertNull(mqttUserNamePassword);
     }
 
     /**
-     * Verifies that if username is null, an IllegalArgumentException is thrown for multi tenant mode.
+     * Verifies that if username is null, the created object for multi tenant mode is null.
      */
-    @Test(expected = IllegalArgumentException.class)
-    public void testTenantFromUserMultiTenantNullUsername() throws Exception {
+    @Test
+    public void testTenantFromUserMultiTenantNullUsername() {
         MqttAuth auth = mock(MqttAuth.class);
         when(auth.userName()).thenReturn(null); // null user
 
-        MqttEndpoint mqttEndpoint = mockMqttEndpoint(auth);
-        MqttUsernamePassword.create(mqttEndpoint, false);
+        MqttUsernamePassword mqttUserNamePassword = MqttUsernamePassword.create(auth.userName(), auth.password(), false);
+        assertNull(mqttUserNamePassword);
     }
 
     /**
-     * Verifies that if username does not comply to the structure authId@tenantId, an IllegalArgumentException is thrown for multi tenant mode.
+     * Verifies that if username does not comply to the structure authId@tenantId, the created object for multi tenant mode is null.
      */
-    @Test(expected = IllegalArgumentException.class)
-    public void testTenantFromUserMultiTenantWrongUsernameStructure() throws Exception {
+    @Test
+    public void testTenantFromUserMultiTenantWrongUsernameStructure() {
         MqttAuth auth = mockMqttAuthWithoutTenantIdInUsername();
 
-        MqttEndpoint mqttEndpoint = mockMqttEndpoint(auth);
-        MqttUsernamePassword.create(mqttEndpoint, false);
+        MqttUsernamePassword mqttUserNamePassword = MqttUsernamePassword.create(auth.userName(), auth.password(), false);
+        assertNull(mqttUserNamePassword);
     }
 
     /**
@@ -95,9 +94,8 @@ public class MqttUsernamePasswordTest {
     @Test
     public void testTenantFromUserSingleTenant() throws Exception {
         MqttAuth auth = mockMqttAuthWithoutTenantIdInUsername();
-        MqttEndpoint mqttEndpoint = mockMqttEndpoint(auth);
 
-        MqttUsernamePassword mqttUsernamePassword = MqttUsernamePassword.create(mqttEndpoint, true);
+        MqttUsernamePassword mqttUsernamePassword = MqttUsernamePassword.create(auth.userName(), auth.password(), true);
 
         assertEquals(mqttUsernamePassword.getType(), CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         assertEquals(mqttUsernamePassword.getTenantId(), Constants.DEFAULT_TENANT);
