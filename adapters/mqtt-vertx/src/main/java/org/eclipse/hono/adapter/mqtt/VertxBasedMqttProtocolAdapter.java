@@ -49,10 +49,10 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
 
-    private MqttServer                server;
-    private MqttServer                insecureServer;
+    private MqttServer server;
+    private MqttServer insecureServer;
     private Map<MqttEndpoint, String> registrationAssertions = new HashMap<>();
-    private MqttAdapterMetrics        metrics;
+    private MqttAdapterMetrics metrics;
 
     /**
      * Sets the metrics for this service
