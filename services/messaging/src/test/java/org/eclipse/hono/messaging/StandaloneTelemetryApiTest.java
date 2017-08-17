@@ -27,7 +27,7 @@ import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilde
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
-import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.junit.After;

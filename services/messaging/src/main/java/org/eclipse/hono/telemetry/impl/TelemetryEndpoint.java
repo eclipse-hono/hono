@@ -18,7 +18,7 @@ import org.eclipse.hono.messaging.DownstreamAdapter;
 import org.eclipse.hono.messaging.HonoMessagingConfigProperties;
 import org.eclipse.hono.messaging.HonoMessagingMessageFilter;
 import org.eclipse.hono.messaging.MessageForwardingEndpoint;
-import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;

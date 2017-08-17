@@ -23,7 +23,9 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.JwtHelper;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -582,7 +584,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
                 payload,
                 contentType,
                 getTelemetrySender(tenant),
-                "telemetry");
+                TelemetryConstants.TELEMETRY_ENDPOINT);
     }
 
     /**
@@ -634,7 +636,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
                 payload,
                 contentType,
                 getEventSender(tenant),
-                "event");
+                EventConstants.EVENT_ENDPOINT);
     }
 
     private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,

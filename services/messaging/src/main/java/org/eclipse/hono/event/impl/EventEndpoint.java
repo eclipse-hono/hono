@@ -16,7 +16,7 @@ package org.eclipse.hono.event.impl;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.event.EventConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.messaging.DownstreamAdapter;
 import org.eclipse.hono.messaging.HonoMessagingConfigProperties;
 import org.eclipse.hono.messaging.HonoMessagingMessageFilter;

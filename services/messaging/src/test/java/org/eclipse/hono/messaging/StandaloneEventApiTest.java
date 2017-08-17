@@ -27,7 +27,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.event.EventConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.event.impl.EventEndpoint;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;

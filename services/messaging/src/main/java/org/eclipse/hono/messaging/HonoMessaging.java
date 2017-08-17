@@ -17,11 +17,11 @@ import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.*;
 
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.event.EventConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
-import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
