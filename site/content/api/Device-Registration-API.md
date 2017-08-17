@@ -128,6 +128,14 @@ The body of the response message consists of a single *AMQP Value* section conta
 | *device-id*      | *yes*     | *string*   | The ID of the device that is subject of the assertion. |
 | *assertion*      | *yes*     | *string*   | A [JSON Web Token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
 
+Below is an example for a payload of a response to an *assertion* request for device `4711`:
+~~~json
+{
+  "device-id" : "4711",
+  "assertion" : "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE1MDMwMTY0MzJ9.Gz8VYpLso-IuasLrSm6YVg1irofz7RKEYS4kM2CUQ5o"
+}
+~~~
+
 The response message's *status* property may contain the following codes:
 
 | Code | Description |
