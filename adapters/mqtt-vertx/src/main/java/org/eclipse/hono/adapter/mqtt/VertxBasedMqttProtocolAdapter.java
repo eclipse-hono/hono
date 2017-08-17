@@ -214,12 +214,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<S
                             if (s.failed()) {
                                 LOG.debug("cannot process message [client ID: {}, topic: {}, QoS: {}]: {}", endpoint.clientIdentifier(),
                                         resource, message.qosLevel(), s.cause().getMessage());
-                                metrics.incrementUndeliverableMqttMessages(message.topicName());
+                                metrics.incrementUndeliverableMqttMessages(resource.getEndpoint(), resource.getTenantId());
                                 close(endpoint);
                             } else {
                                 LOG.trace("successfully processed message [client ID: {}, topic: {}, QoS: {}]", endpoint.clientIdentifier(),
                                         resource, message.qosLevel());
-                                metrics.incrementProcessedMqttMessages(message.topicName());
+                                metrics.incrementProcessedMqttMessages(resource.getEndpoint(), resource.getTenantId());
                             }
                         });
 

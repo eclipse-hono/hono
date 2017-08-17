@@ -81,4 +81,8 @@ abstract public class Metrics {
         return address.replace('/', '.');
     }
 
+    protected String mergeAsMetric(final String... parts ) {
+        return String.join(".",parts);
+    }
+
 }

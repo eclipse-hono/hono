@@ -581,7 +581,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
                 Objects.requireNonNull(deviceId),
                 payload,
                 contentType,
-                getTelemetrySender(tenant));
+                getTelemetrySender(tenant),
+                "telemetry");
     }
 
     /**
@@ -632,18 +633,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
                 Objects.requireNonNull(deviceId),
                 payload,
                 contentType,
-                getEventSender(tenant));
+                getEventSender(tenant),
+                "event");
     }
 
     private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
-            final Buffer payload, final String contentType, final Future<MessageSender> senderTracker) {
+            final Buffer payload, final String contentType, final Future<MessageSender> senderTracker,
+            final String endpointName) {
 
         if (contentType == null) {
             badRequest(ctx.response(), String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
-            metrics.incrementUndeliverableHttpMessages(ctx.normalisedPath());
+            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
         } else if (payload == null || payload.length() == 0) {
             badRequest(ctx.response(), "missing body");
-            metrics.incrementUndeliverableHttpMessages(ctx.normalisedPath());
+            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
         } else {
             
             final Future<String> tokenTracker = getRegistrationAssertionHeader(ctx, tenant, deviceId);
@@ -656,26 +659,28 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
                     } else {
                         serviceUnavailable(ctx.response(), 5);
                     }
-                    metrics.incrementUndeliverableHttpMessages(ctx.normalisedPath());
+                    metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
                 } else {
-                    sendToHono(ctx.response(), deviceId, payload, contentType, tokenTracker.result(), senderTracker.result(),ctx.normalisedPath());
+                    sendToHono(ctx.response(), deviceId, payload, contentType, tokenTracker.result(),
+                            senderTracker.result(), tenant, endpointName);
                 }
             });
         }
     }
 
     private void sendToHono(final HttpServerResponse response, final String deviceId, final Buffer payload,
-            final String contentType, final String token, final MessageSender sender, final String normalizedPath) {
+            final String contentType, final String token, final MessageSender sender, final String tenant,
+            final String endpointName) {
 
         boolean accepted = sender.send(deviceId, payload.getBytes(), contentType, token);
         if (accepted) {
             response.setStatusCode(HTTP_ACCEPTED).end();
-            metrics.incrementProcessedHttpMessages(normalizedPath);
+            metrics.incrementProcessedHttpMessages(endpointName,tenant);
         } else {
             serviceUnavailable(response, 2,
                     "resource limit exceeded, please try again later",
                     "text/plain");
-            metrics.incrementUndeliverableHttpMessages(normalizedPath);
+            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
         }
     }
 

@@ -22,19 +22,18 @@ import org.springframework.stereotype.Component;
 public class HttpAdapterMetrics extends Metrics {
 
     private static final String SERVICE_PREFIX = "hono.http";
-    private static final String MESSAGES       = ".messages";
 
     @Override
     protected String getPrefix() {
         return SERVICE_PREFIX;
     }
 
-    void incrementProcessedHttpMessages(final String clientId) {
-        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + normalizeAddress(clientId) + PROCESSED);
+    void incrementProcessedHttpMessages(final String resourceId, final String tenantId) {
+        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + mergeAsMetric(resourceId,tenantId) + PROCESSED);
     }
 
-    void incrementUndeliverableHttpMessages(final String clientId) {
-        counterService.increment(SERVICE_PREFIX + MESSAGES + normalizeAddress(clientId) + UNDELIVERABLE);
+    void incrementUndeliverableHttpMessages(final String resourceId, final String tenantId) {
+        counterService.increment(SERVICE_PREFIX + MESSAGES + mergeAsMetric(resourceId,tenantId) + UNDELIVERABLE);
     }
 
 }

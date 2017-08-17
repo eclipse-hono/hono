@@ -28,12 +28,12 @@ public class MqttAdapterMetrics extends Metrics {
         return SERVICE_PREFIX;
     }
 
-    void incrementProcessedMqttMessages(final String clientId) {
-        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + normalizeAddress(clientId) + PROCESSED);
+    void incrementProcessedMqttMessages(final String resourceId, final String tenantId) {
+        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + mergeAsMetric(resourceId,tenantId) + PROCESSED);
     }
 
-    void incrementUndeliverableMqttMessages(final String clientId) {
-        counterService.increment(SERVICE_PREFIX + MESSAGES + normalizeAddress(clientId) + UNDELIVERABLE);
+    void incrementUndeliverableMqttMessages(final String resourceId, final String tenantId) {
+        counterService.increment(SERVICE_PREFIX + MESSAGES + mergeAsMetric(resourceId,tenantId) + UNDELIVERABLE);
     }
 
 }
