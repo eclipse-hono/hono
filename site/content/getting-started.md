@@ -154,7 +154,7 @@ Content-Length: 35
   "data" : {
       "enabled": true
   },
-  "id" : "4711"
+  "device-id" : "4711"
 }
 ~~~
 
