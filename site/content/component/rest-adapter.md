@@ -3,7 +3,7 @@ title = "REST Adapter"
 weight = 350
 +++
 
-The REST protocol adapter exposes a RESTful API for Eclipse Hono&trade;'s Telemetry, Event and Registration endpoints.
+The REST protocol adapter exposes a RESTful API for Eclipse Hono&trade;'s Telemetry and Event endpoints.
 <!--more-->
 
 ## Configuration
