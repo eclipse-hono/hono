@@ -75,33 +75,30 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     @Override
     public void addRoutes(final Router router) {
 
+        final String pathWithTenant = String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT);
         // ADD device registration
-        router.route(HttpMethod.POST, String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT))
-            .consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
-            .handler(this::doRegisterDeviceJson);
-        router.route(HttpMethod.POST, String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT))
-            .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-            .handler(this::doRegisterDeviceForm);
-        router.route(HttpMethod.POST, String.format("/%s/*/*", RegistrationConstants.REGISTRATION_ENDPOINT))
-            .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+        router.route(HttpMethod.POST, pathWithTenant).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
+                .handler(this::doRegisterDeviceJson);
+        router.route(HttpMethod.POST, pathWithTenant).consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
+                .handler(this::doRegisterDeviceForm);
+        router.route(HttpMethod.POST, pathWithTenant)
+                .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
 
+        final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s",
+                RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID);
         // GET device registration
-        router.route(HttpMethod.GET, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(this::doGetDevice);
+        router.route(HttpMethod.GET, pathWithTenantAndDeviceId).handler(this::doGetDevice);
 
         // UPDATE existing registration
-        router.route(HttpMethod.PUT, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
-            .consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
-            .handler(this::doUpdateRegistrationJson);
-        router.route(HttpMethod.PUT, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
-            .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-            .handler(this::doUpdateRegistrationForm);
-        router.route(HttpMethod.PUT, String.format("/%s/*/*", RegistrationConstants.REGISTRATION_ENDPOINT))
-            .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+        router.route(HttpMethod.PUT, pathWithTenantAndDeviceId).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
+                .handler(this::doUpdateRegistrationJson);
+        router.route(HttpMethod.PUT, pathWithTenantAndDeviceId).consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
+                .handler(this::doUpdateRegistrationForm);
+        router.route(HttpMethod.PUT, pathWithTenantAndDeviceId)
+                .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
 
         // REMOVE registration
-        router.route(HttpMethod.DELETE, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(this::doUnregisterDevice);
+        router.route(HttpMethod.DELETE, pathWithTenantAndDeviceId).handler(this::doUnregisterDevice);
     }
 
     private static String getTenantParam(final RoutingContext ctx) {
