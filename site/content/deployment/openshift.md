@@ -132,7 +132,7 @@ As described in the [Getting Started]({{< relref "getting-started.md" >}}) guide
 You can start the client from the `example` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=<IP_ADDRESS>,--hono.client.port=30672,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=<IP_ADDRESS>,--hono.client.port=30671,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
 ~~~
 
 ### Uploading Telemetry
