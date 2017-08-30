@@ -248,7 +248,7 @@ The response will look similar to this:
          "enabled": true,
          "ep": "IMEI4711"
       },
-      "id" : "4711"
+      "device-id" : "4711"
     }
 
 ### Update Registration
@@ -279,7 +279,7 @@ The response will look similar to this:
          "enabled": true,
          "ep": "IMEI4711"
       },
-      "id" : "4711"
+      "device-id" : "4711"
     }
 
 ### Delete Registration
@@ -306,5 +306,5 @@ The response will look similar to this:
          "ep": "IMEI4711",
          "psk-id": "psk4711"
       },
-      "id" : "4711"
+      "device-id" : "4711"
     }
