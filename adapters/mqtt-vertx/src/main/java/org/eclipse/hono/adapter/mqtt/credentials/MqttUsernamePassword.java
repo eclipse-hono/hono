@@ -91,7 +91,7 @@ public class MqttUsernamePassword {
         String[] userComponents = userFromMqtt.split("@");
         if (userComponents.length != 2) {
             throw new IllegalArgumentException(
-                    String.format("User {} in mqtt CONNECT message has not  structure, must fulfil the pattern '<authId>@<tenantId>'", userFromMqtt));
+                    String.format("User %s in mqtt CONNECT message has not  structure, must fulfil the pattern '<authId>@<tenantId>'", userFromMqtt));
         } else {
             credentials.authId = userComponents[0];
             credentials.tenantId = userComponents[1];
