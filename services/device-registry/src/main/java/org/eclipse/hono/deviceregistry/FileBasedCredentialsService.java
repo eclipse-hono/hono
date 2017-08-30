@@ -225,9 +225,9 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     }
 
     private JsonObject getCredentials(final String tenantId, final String authId, final String type) {
-        Objects.nonNull(tenantId);
-        Objects.nonNull(authId);
-        Objects.nonNull(type);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(authId);
+        Objects.requireNonNull(type);
 
         final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
         if (credentialsForTenant != null) {
