@@ -24,11 +24,16 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
 import java.net.HttpURLConnection;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static org.eclipse.hono.util.CredentialsConstants.*;
+import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
+import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_ENABLED;
 
 /**
  * Base class for implementing {@code CredentialsService}s.
@@ -141,6 +146,15 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
             case OPERATION_GET:
                 processCredentialsMessageGetOperation(regMsg, tenantId, payload);
                 break;
+            case OPERATION_ADD:
+                processCredentialsMessageAddOperation(regMsg, tenantId, payload);
+                break;
+            case OPERATION_UPDATE:
+                processCredentialsMessageUpdateOperation(regMsg, tenantId, payload);
+                break;
+            case OPERATION_REMOVE:
+                processCredentialsMessageRemoveOperation(regMsg, tenantId, payload);
+                break;
             default:
                 log.debug("operation [{}] not supported", subject);
                 reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
@@ -165,6 +179,109 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         getCredentials(tenantId, type, authId, result -> reply(regMsg, result));
     }
 
+    private void processCredentialsMessageAddOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
+        if (!isValidCredentialsObject(payload)) {
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        }
+        addCredentials(tenantId, payload, result -> reply(regMsg, result));
+    }
+    
+    private void processCredentialsMessageUpdateOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
+        if (!isValidCredentialsObject(payload)) {
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        }
+        updateCredentials(tenantId, payload, result -> reply(regMsg, result)); 
+    }
+    
+    private void processCredentialsMessageRemoveOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
+        final String deviceId = payload.getString(FIELD_DEVICE_ID);
+        if (deviceId == null) {
+            log.debug("credentials remove request did not contain device-id in payload - not supported");
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        }
+        
+        final String type = payload.getString(FIELD_TYPE);
+        if (type == null) {
+            log.debug("credentials remove request did not contain type in payload - not supported");
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            return;
+        }
+
+        final String authId = payload.getString(FIELD_AUTH_ID);
+        
+        removeCredentials(tenantId, deviceId, type, authId, result -> reply(regMsg, result));
+    }
+
+    private boolean isValidCredentialsObject(final JsonObject credentials) {
+        return containsStringValueForField(credentials, RequestResponseApiConstants.FIELD_DEVICE_ID)
+                && containsStringValueForField(credentials, FIELD_TYPE)
+                && containsStringValueForField(credentials, FIELD_AUTH_ID)
+                && containsValidSecretValue(credentials);
+    }
+
+    private boolean containsValidSecretValue(final JsonObject credentials) {
+        final JsonArray secrets = credentials.getJsonArray(FIELD_SECRETS);
+        
+        if (secrets == null) {
+            log.debug("credentials request did not contain {} in payload - not supported", FIELD_SECRETS);
+            return false;
+        }
+
+        if (secrets.isEmpty()) {
+            log.debug("credentials request contains empty {} object in payload - not supported", FIELD_SECRETS);
+            return false;
+        }
+
+        for (int i = 0; i < secrets.size(); i++) {
+            JsonObject currentSecret = secrets.getJsonObject(i);
+            if (!containsValidTimestampIfPresentForField(currentSecret, FIELD_SECRETS_NOT_BEFORE)
+                    || !containsValidTimestampIfPresentForField(currentSecret, FIELD_SECRETS_NOT_AFTER)) {
+                log.debug("credentials request did contain invalid timestamp values in payload");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean containsStringValueForField(final JsonObject payload, final String field) {
+        final String value = payload.getString(field);
+
+        if (StringUtils.isEmpty(value)) {
+            log.debug("credentials request did not contain {} in payload - not supported", field);
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean containsValidTimestampIfPresentForField(final JsonObject payload, final String field) {
+        final String timeStamp = payload.getString(field);
+
+        if (timeStamp != null) {
+            return isValidTimestampForField(payload, field);
+        }
+        else {
+            return true;
+        }
+    }
+
+    private boolean isValidTimestampForField(final JsonObject payload, final String field) {
+        final String dateTime = payload.getString(field);
+
+        try {
+            final DateTimeFormatter timeFormatter = DateTimeFormatter.ISO_DATE_TIME;
+            timeFormatter.parse(dateTime);
+
+            return true;
+        }
+        catch (DateTimeParseException e) {
+            log.debug("credentials request did contain invalid timestamp in payload");
+            return false;
+        }
+    }
 
     private void reply(final Message<JsonObject> request, final AsyncResult<CredentialsResult> result) {
 
