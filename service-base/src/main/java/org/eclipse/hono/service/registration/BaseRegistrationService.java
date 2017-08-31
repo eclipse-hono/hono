@@ -20,6 +20,7 @@ import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,8 +139,8 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
 
         try {
             final JsonObject body = regMsg.body();
-            final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-            final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+            final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
+            final String deviceId = body.getString(RequestResponseApiConstants.FIELD_DEVICE_ID);
             final String operation = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
 
 
@@ -269,8 +270,8 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     protected final void reply(final Message<JsonObject> request, final RegistrationResult result) {
 
         final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+        final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
+        final String deviceId = body.getString(RequestResponseApiConstants.FIELD_DEVICE_ID);
 
         request.reply(RegistrationConstants.getServiceReplyAsJson(tenantId, deviceId, result));
     }

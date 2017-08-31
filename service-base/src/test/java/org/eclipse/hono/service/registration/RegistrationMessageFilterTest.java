@@ -19,11 +19,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.eclipse.hono.util.Constants;
 import org.junit.Test;
 
 import io.vertx.proton.ProtonHelper;
@@ -95,6 +98,23 @@ public class RegistrationMessageFilterTest {
         // THEN message validation succeeds
         assertTrue(RegistrationMessageFilter.verify(linkTarget, msg));
         assertMessageAnnotationsContainProperties(msg, MY_TENANT, MY_DEVICE);
+    }
+
+    @Test
+    public void testRegistrationMessageForEventBus() {
+
+        Message msg = ProtonHelper.message();
+        msg.setSubject(RegistrationConstants.ACTION_GET);
+        MessageHelper.addDeviceId(msg, "4711");
+        MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
+
+        ResourceIdentifier resource = ResourceIdentifier.from(RegistrationConstants.REGISTRATION_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        MessageHelper.annotate(msg, resource);
+
+        final JsonObject registrationJsonMessage = RegistrationConstants.getRegistrationMsg(msg);
+        assertNotNull(registrationJsonMessage);
+        assertTrue(registrationJsonMessage.containsKey(RequestResponseApiConstants.FIELD_TENANT_ID));
+        assertTrue(registrationJsonMessage.containsKey(RequestResponseApiConstants.FIELD_DEVICE_ID));
     }
 
     private void assertMessageAnnotationsContainProperties(final Message msg, final String tenantId,

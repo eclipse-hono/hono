@@ -21,6 +21,7 @@ import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,7 +119,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
             return;
         }
 
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
         final String subject = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
         final JsonObject payload = getRequestPayload(body);
 
@@ -183,8 +184,8 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     protected final void reply(final Message<JsonObject> request, final CredentialsResult result) {
 
         final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+        final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
+        final String deviceId = body.getString(RequestResponseApiConstants.FIELD_DEVICE_ID);
 
         request.reply(CredentialsConstants.getServiceReplyAsJson(tenantId, deviceId, result));
     }
@@ -195,7 +196,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
      * @param request The request from which the payload is tried to be extracted. Must not be null.
      * @return The payload as JsonObject (if found). Null otherwise.
      */
-    private final JsonObject getRequestPayload(final JsonObject request) {
+    private JsonObject getRequestPayload(final JsonObject request) {
 
         if (request == null) {
             return null;

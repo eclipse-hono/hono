@@ -58,8 +58,9 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
         Objects.requireNonNull(message);
         final String subject = message.getSubject();
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
+        final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getServiceRequestAsJson(subject, tenantId, null, payload);
+        return getServiceRequestAsJson(subject, tenantId, deviceId, payload);
     }
 
     /**

@@ -33,6 +33,7 @@ public class RequestResponseApiConstants {
     public static final String FIELD_PAYLOAD                     = "payload";
     public static final String FIELD_ENABLED                     = "enabled";
     public static final String FIELD_DEVICE_ID                   = "device-id";
+    public static final String FIELD_TENANT_ID                   = "tenant-id";
 
     /* message property names */
     public static final String APP_PROPERTY_KEY                  = "key";
@@ -46,8 +47,8 @@ public class RequestResponseApiConstants {
      * @return Message The built Proton message.
      */
     public static final Message getAmqpReply(final String endpoint, final JsonObject payload) {
-        final String tenantId = payload.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String deviceId = payload.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+        final String tenantId = payload.getString(FIELD_TENANT_ID);
+        final String deviceId = payload.getString(FIELD_DEVICE_ID);
         final String status = payload.getString(MessageHelper.APP_PROPERTY_STATUS);
         final JsonObject correlationIdJson = payload.getJsonObject(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
         final Object correlationId = decodeIdFromJson(correlationIdJson);
@@ -124,9 +125,9 @@ public class RequestResponseApiConstants {
     public static final JsonObject getServiceReplyAsJson(final int status, final String tenantId, final String deviceId,
                                                          final JsonObject payload) {
         final JsonObject jsonObject = new JsonObject();
-        jsonObject.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        jsonObject.put(FIELD_TENANT_ID, tenantId);
         if (deviceId != null) {
-            jsonObject.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+            jsonObject.put(FIELD_DEVICE_ID, deviceId);
         }
         jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, Integer.toString(status));
         if (payload != null) {
@@ -180,9 +181,9 @@ public class RequestResponseApiConstants {
         final JsonObject msg = new JsonObject();
         msg.put(MessageHelper.SYS_PROPERTY_SUBJECT, operation);
         if (deviceId != null) {
-            msg.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+            msg.put(FIELD_DEVICE_ID, deviceId);
         }
-        msg.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        msg.put(FIELD_TENANT_ID, tenantId);
         if (valueForKeyProperty != null) {
             msg.put(RegistrationConstants.APP_PROPERTY_KEY, valueForKeyProperty);
         }
