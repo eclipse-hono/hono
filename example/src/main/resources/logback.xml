@@ -15,7 +15,7 @@
 
   <logger name="org.eclipse.hono" level="INFO"/>
   <logger name="org.eclipse.hono.client" level="INFO"/>
-  <logger name="org.eclipse.hono.server" level="INFO"/>
+  <logger name="org.eclipse.hono.messaging" level="INFO"/>
   <logger name="org.eclipse.hono.service.auth" level="INFO"/>
   <logger name="org.eclipse.hono.service.registration" level="INFO"/>
   <logger name="org.eclipse.hono.telemetry" level="INFO"/>
