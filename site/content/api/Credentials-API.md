@@ -32,9 +32,12 @@ All operations are scoped to the *tenant* specified by the `${tenant_id}` parame
 
 ### Add Credentials
 
-Clients may use this command to initially *add* credentials for a device that has already been registered with Hono. The credentials to be added may be of arbitrary type. However, [Standard Credential Types]({{< relref "#standard-credential-types" >}}) contains an overview of some common types that are used by Hono's protocol adapters and which may be useful to others as well.
+Clients may use this command to initially *add* credentials for a device. The credentials to be added may be of arbitrary type. However, [Standard Credential Types]({{< relref "#standard-credential-types" >}}) contains an overview of some common types that are used by Hono's protocol adapters and which may be useful to others as well.
 
 This operation is *optional*, implementors of this API may provide other means for adding credential information, e.g. a RESTful API or a configuration file.
+
+*Optional check* : Implementors of this API may check first if the device has already been registered with Hono and respond with a non successful error code (see Reponse Message Format below) if the device was not found.
+This check is not mandatory and for some scenarios it might be desired to provide credentials for devices that are registered later (e.g. devices provisioned with pre-shared keys that are registered during their first time being connected to Hono).
 
 **Message Flow**
 
@@ -62,7 +65,7 @@ The response message's *status* property may contain the following codes:
 | :---- | :---------- |
 | *201* | Created, the credentials have been added successfully. |
 | *409* | Conflict, there already exist credentials with the *type* and *auth-id* for the *device-id* from the payload. |
-| *412* | Precondition Failed, there is no device registered with the given *device-id* within the tenant. |
+| *412* | Precondition Failed, there is no device registered with the given *device-id* within the tenant. **NB** This status is only used when the implementation checks the registration of the device (see optional check in [Add Credentials description]({{< relref "#add-credentials" >}})).|
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
