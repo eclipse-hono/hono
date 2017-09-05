@@ -516,7 +516,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
      * @return Future The future object carrying the payload of the credentials get operation, if successful.
      */
-    protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId,
+    public Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId,
                                                               final Object authenticationObject) {
         return getCredentialsForDevice(tenantId, type, authId).compose(payload -> {
             Future<String> resultDeviceId = Future.future();

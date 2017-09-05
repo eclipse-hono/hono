@@ -14,7 +14,6 @@ package org.eclipse.hono.adapter.rest;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -68,8 +67,8 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.http")
-    public ServiceConfigProperties honoServerProperties() {
-        return new ServiceConfigProperties();
+    public RestProtocolAdapterProperties honoServerProperties() {
+        return new RestProtocolAdapterProperties();
     }
 
     /**
