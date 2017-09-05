@@ -15,6 +15,7 @@ SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 HONO_HOME=$SCRIPTPATH/../../../..
 CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
+CREDENTIALS=$HONO_HOME/services/device-registry/src/test/resources/credentials.json
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach"
 
@@ -77,14 +78,17 @@ echo Deploying Device Registry ...
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
 docker secret create -l project=$NS hono-service-device-registry-config.yml $CONFIG/hono-service-device-registry-config.yml
+docker secret create -l project=$NS hono-service-device-registry-credentials.json $CREDENTIALS
 docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 25671:5671 -p 28080:8080 -p 28443:8443 \
   --secret device-registry-key.pem \
   --secret device-registry-cert.pem \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
   --secret hono-service-device-registry-config.yml \
+  --secret hono-service-device-registry-credentials.json \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME=/run/secrets/hono-service-device-registry-credentials.json \
   --env SPRING_PROFILES_ACTIVE=dev \
   eclipsehono/hono-service-device-registry:${project.version}
 echo ... done

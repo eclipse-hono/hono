@@ -39,7 +39,8 @@ docker service rm hono-service-device-registry
 docker secret rm \
   device-registry-key.pem \
   device-registry-cert.pem \
-  hono-service-device-registry-config.yml
+  hono-service-device-registry-config.yml \
+  hono-service-device-registry-credentials.json
 
 docker service rm hono-service-auth
 docker secret rm \
