@@ -170,6 +170,9 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<M
     public void doStart(final Future<Void> startFuture) {
 
         LOG.info("limiting size of inbound message payload to {} bytes", getConfig().getMaxPayloadSize());
+        if (!getConfig().isAuthenticationRequired()) {
+            LOG.warn("authentication of devices switched off");
+        }
         checkPortConfiguration()
         .compose(v -> bindSecureMqttServer())
         .compose(s -> bindInsecureMqttServer())
