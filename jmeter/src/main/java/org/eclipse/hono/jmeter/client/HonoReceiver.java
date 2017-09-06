@@ -54,17 +54,28 @@ public class HonoReceiver {
     public HonoReceiver(final HonoReceiverSampler sampler) throws InterruptedException {
         this.sampler = sampler;
 
-        // amqp network config
-        amqpNetworkConnectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
-                .disableHostnameVerification()
-                .host(sampler.getHost())
-                .name(sampler.getContainer())
-                .user(sampler.getUser())
-                .password(sampler.getPwd())
-                .port(Integer.parseInt(sampler.getPort()))
-                .trustStorePath(sampler.getTrustStorePath())
-                .vertx(vertx)
-                .build();
+        if (sampler.getUser() != null && sampler.getPwd() != null) {
+            // amqp network config
+            amqpNetworkConnectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
+                    .disableHostnameVerification()
+                    .host(sampler.getHost())
+                    .name(sampler.getContainer())
+                    .user(sampler.getUser()).password(sampler.getPwd())
+                    .port(Integer.parseInt(sampler.getPort()))
+                    .trustStorePath(sampler.getTrustStorePath())
+                    .vertx(vertx)
+                    .build();
+        } else {
+            // amqp network config without user/pw
+            amqpNetworkConnectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
+                    .disableHostnameVerification()
+                    .host(sampler.getHost())
+                    .name(sampler.getContainer())
+                    .port(Integer.parseInt(sampler.getPort()))
+                    .trustStorePath(sampler.getTrustStorePath())
+                    .vertx(vertx)
+                    .build();
+        }
 
         connect();
         createConsumer();
