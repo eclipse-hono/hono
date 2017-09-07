@@ -31,6 +31,7 @@ import io.vertx.core.dns.AddressResolverOptions;
  */
 @Configuration
 public class AppConfiguration {
+    protected final int DEFAULT_ADDRESS_RESOLUTION_TIMEOUT = 2000;
 
     /**
      * Exposes a Vert.x instance as a Spring bean.
@@ -44,7 +45,7 @@ public class AppConfiguration {
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
-                        .setQueryTimeout(1000));
+                        .setQueryTimeout(DEFAULT_ADDRESS_RESOLUTION_TIMEOUT));
         return Vertx.vertx(options);
     }
 
