@@ -30,6 +30,8 @@ import org.eclipse.hono.jmeter.HonoSampler;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.dns.AddressResolverOptions;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
@@ -40,9 +42,12 @@ public class HonoReceiver {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HonoReceiver.class);
 
+    private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 2000;
+    private static final int DEFAULT_ADDRESS_RESOLUTION_TIMEOUT_MILLIS = 2000;
+
     private ConnectionFactory   amqpNetworkConnectionFactory;
     private HonoClient          amqpNetworkClient;
-    private Vertx               vertx = Vertx.vertx();
+    private Vertx               vertx = vertx();
 
     private long                sampleStart;
     private int                 messageCount;
@@ -76,7 +81,7 @@ public class HonoReceiver {
     private void connect() throws InterruptedException {
         final CountDownLatch receiverConnectLatch = new CountDownLatch(1);
         amqpNetworkClient = new HonoClientImpl(vertx, amqpNetworkConnectionFactory);
-        amqpNetworkClient.connect(new ProtonClientOptions(), connectionHandler -> {
+        amqpNetworkClient.connect(getClientOptions(), connectionHandler -> {
             if (connectionHandler.failed()) {
                 LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
             }
@@ -165,5 +170,20 @@ public class HonoReceiver {
         } catch (final Throwable t) {
             LOGGER.error("unknown exception in closing of receiver", t);
         }
+    }
+
+    private Vertx vertx() {
+        VertxOptions options = new VertxOptions()
+                .setWarningExceptionTime(1500000000)
+                .setAddressResolverOptions(new AddressResolverOptions()
+                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
+                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                        .setRotateServers(true)
+                        .setQueryTimeout(DEFAULT_ADDRESS_RESOLUTION_TIMEOUT_MILLIS));
+        return Vertx.vertx(options);
+    }
+
+    private ProtonClientOptions getClientOptions() {
+        return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS).setReconnectAttempts(1);
     }
 }
