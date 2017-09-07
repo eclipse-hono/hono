@@ -45,6 +45,7 @@ public class AppConfiguration {
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                        .setRotateServers(true)
                         .setQueryTimeout(DEFAULT_ADDRESS_RESOLUTION_TIMEOUT));
         return Vertx.vertx(options);
     }
