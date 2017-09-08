@@ -34,15 +34,19 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoReceiverSampler.class);
 
     private static final String USE_SENDER_TIME = "useSenderTime";
+    private static final String SENDER_TIME_IN_PAYLOAD = "senderTimeInPayload";
+    private static final String SENDER_TIME_VARIABLE_NAME = "senderTimeVariableName";
+    private static final String RECONNECT_ATTEMPTS = "reconnectAttempts";
+    private static final String DEFAULT_SENDER_TIME_VARIABLE_NAME = "timeStamp";
     private static final String PREFETCH = "prefetch";
 
     private HonoReceiver honoReceiver;
 
-    public Boolean isUseSenderTime() {
+    public boolean isUseSenderTime() {
         return getPropertyAsBoolean(USE_SENDER_TIME);
     }
 
-    public void setUseSenderTime(final Boolean useSenderTime) {
+    public void setUseSenderTime(final boolean useSenderTime) {
         setProperty(USE_SENDER_TIME, useSenderTime);
     }
 
@@ -54,13 +58,37 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         setProperty(PREFETCH, prefetch);
     }
 
+    public String getSenderTimeVariableName() {
+        return getPropertyAsString(SENDER_TIME_VARIABLE_NAME, DEFAULT_SENDER_TIME_VARIABLE_NAME);
+    }
+
+    public void setSenderTimeVariableName(final String variableName) {
+        setProperty(SENDER_TIME_VARIABLE_NAME, variableName);
+    }
+
+    public boolean isSenderTimeInPayload() {
+        return getPropertyAsBoolean(SENDER_TIME_IN_PAYLOAD);
+    }
+
+    public void setSenderTimeInPayload(final boolean senderTimeInPayload) {
+        setProperty(SENDER_TIME_IN_PAYLOAD, senderTimeInPayload);
+    }
+
+    public String getReconnectAttempts() {
+        return getPropertyAsString(RECONNECT_ATTEMPTS, "1");
+    }
+
+    public void setReconnectAttempts(final String reconnectAttempts) {
+        setProperty(RECONNECT_ATTEMPTS, reconnectAttempts);
+    }
+
     @Override
     public SampleResult sample(final Entry entry) {
         SampleResult res = new SampleResult();
         res.setResponseOK();
         res.setDataType(SampleResult.TEXT);
         res.setSampleLabel(getName());
-        honoReceiver.sample(res, isUseSenderTime());
+        honoReceiver.sample(res);
         return res;
     }
 

@@ -12,10 +12,11 @@
 
 package org.eclipse.hono.jmeter.ui;
 
-import java.awt.*;
+import java.awt.BorderLayout;
 import java.util.stream.Stream;
 
-import javax.swing.*;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
 
 import org.apache.jmeter.gui.util.VerticalPanel;
 import org.apache.jmeter.samplers.gui.AbstractSamplerGui;

@@ -38,14 +38,14 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonClientOptions;
 
 /**
  * A wrapper around a {@code HonoClient} mapping the client's asynchronous API to the blocking
  * threading model used by JMeter.
  */
-public class HonoSender {
+public class HonoSender extends AbstractClient {
 
+    private static final int MAX_RECONNECT_ATTEMPTS      = 0;
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSender.class);
     private static final int MAX_MESSAGES_PER_BATCH_SEND = 300;
 
@@ -60,7 +60,7 @@ public class HonoSender {
 
     private String             token;
     private MessageSender      messageSender;
-    private Vertx              vertx = Vertx.vertx();
+    private Vertx              vertx = vertx();
     private HonoSenderSampler  sampler;
 
     public HonoSender(final HonoSenderSampler sampler) throws InterruptedException {
@@ -106,7 +106,7 @@ public class HonoSender {
     private void connect() throws InterruptedException {
         final CountDownLatch connectLatch = new CountDownLatch(1);
         honoClient = new HonoClientImpl(vertx, honoConnectionFactory);
-        honoClient.connect(new ProtonClientOptions(), connectionHandler -> {
+        honoClient.connect(getClientOptions(MAX_RECONNECT_ATTEMPTS), connectionHandler -> {
             if (connectionHandler.failed()) {
                 LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
             }
@@ -118,7 +118,7 @@ public class HonoSender {
     private void connectRegistry() throws InterruptedException {
         final CountDownLatch connectLatch = new CountDownLatch(1);
         registrationHonoClient = new HonoClientImpl(vertx, registrationConnectionFactory);
-        registrationHonoClient.connect(new ProtonClientOptions(), connectionHandler -> {
+        registrationHonoClient.connect(getClientOptions(MAX_RECONNECT_ATTEMPTS), connectionHandler -> {
             if (connectionHandler.failed()) {
                 LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
             }
@@ -196,7 +196,9 @@ public class HonoSender {
                         LOGGER.info("starting batch send with {} credits available", messageSender.getCredit());
                         while (!messageSender.sendQueueFull() && messagesSent.get() < MAX_MESSAGES_PER_BATCH_SEND) {
                             Map<String, Object> properties = new HashMap<>();
-                            properties.put("millis", System.currentTimeMillis());
+                            if (sampler.isSetSenderTime()) {
+                                properties.put(TIME_STAMP_VARIABLE, System.currentTimeMillis());
+                            }
                             messageSender.send(deviceId, properties, sampler.getData(), sampler.getContentType(), token, (Handler<Void>) null);
                             bytesSent.addAndGet(messageLength);
                             messagesSent.incrementAndGet();
@@ -225,7 +227,7 @@ public class HonoSender {
 
                     Map<String, Long> properties = new HashMap<>();
                     if (sampler.isSetSenderTime()) {
-                        properties.put("millis", System.currentTimeMillis());
+                        properties.put(TIME_STAMP_VARIABLE, System.currentTimeMillis());
                     }
 
                     // mark send as error when we have no credits
