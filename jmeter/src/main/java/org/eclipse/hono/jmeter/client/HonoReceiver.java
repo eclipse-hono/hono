@@ -12,8 +12,12 @@
 
 package org.eclipse.hono.jmeter.client;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.jmeter.samplers.SampleResult;
@@ -29,35 +33,36 @@ import org.eclipse.hono.jmeter.HonoReceiverSampler;
 import org.eclipse.hono.jmeter.HonoSampler;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.core.dns.AddressResolverOptions;
-import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Receiver, which connects to the AMQP network; asynchronous API needs to be used synchronous for JMeters threading
  * model
  */
-public class HonoReceiver {
+public class HonoReceiver extends AbstractClient {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HonoReceiver.class);
 
-    private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 2000;
-    private static final int DEFAULT_ADDRESS_RESOLUTION_TIMEOUT_MILLIS = 2000;
+    private ConnectionFactory amqpNetworkConnectionFactory;
+    private HonoClient amqpNetworkClient;
 
-    private ConnectionFactory   amqpNetworkConnectionFactory;
-    private HonoClient          amqpNetworkClient;
-    private Vertx               vertx = vertx();
-
-    private long                sampleStart;
-    private int                 messageCount;
-    private long                messageSize;
+    private long sampleStart;
+    private long sampleEnd;
+    private int messageCount;
+    private long messageSize;
     private HonoReceiverSampler sampler;
+    private Vertx vertx = vertx();
 
     private final transient Object lock = new Object();
 
     public HonoReceiver(final HonoReceiverSampler sampler) throws InterruptedException {
         this.sampler = sampler;
+
+        if (sampler.isUseSenderTime() && sampler.getSenderTimeVariableName() == null) {
+            throw new IllegalArgumentException("SenderTime VariableName must be set when using SenderTime flag");
+        }
 
         // amqp network config
         amqpNetworkConnectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
@@ -81,12 +86,13 @@ public class HonoReceiver {
     private void connect() throws InterruptedException {
         final CountDownLatch receiverConnectLatch = new CountDownLatch(1);
         amqpNetworkClient = new HonoClientImpl(vertx, amqpNetworkConnectionFactory);
-        amqpNetworkClient.connect(getClientOptions(), connectionHandler -> {
-            if (connectionHandler.failed()) {
-                LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
-            }
-            receiverConnectLatch.countDown();
-        });
+        amqpNetworkClient.connect(getClientOptions(Integer.parseInt(sampler.getReconnectAttempts())),
+                connectionHandler -> {
+                    if (connectionHandler.failed()) {
+                        LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
+                    }
+                    receiverConnectLatch.countDown();
+                });
         receiverConnectLatch.await();
     }
 
@@ -113,24 +119,65 @@ public class HonoReceiver {
         receiverLatch.await();
     }
 
-    public void sample(final SampleResult result, final boolean isUseSenderTime) {
+    public void sample(final SampleResult result) {
         synchronized (lock) {
-            long elapsed = System.currentTimeMillis() - sampleStart;
+            long elapsed = 0;
             result.setResponseCodeOK();
             result.setSuccessful(true);
             result.setSampleCount(messageCount);
-            result.setResponseMessage(MessageFormat.format("count: {0}, bytes received: {1}, period: {2}", messageCount, messageSize, elapsed));
             result.setBytes(messageSize);
-            if (messageCount > 0) {
+            result.setResponseMessage(
+                    MessageFormat.format("count: {0}, bytes received: {1}, period: {2}", messageCount,
+                            messageSize, elapsed));
+            if (sampler.isUseSenderTime() && messageCount > 0) {
+                    elapsed = sampleEnd - sampleStart;
+                    result.setStampAndTime(sampleStart, elapsed);
+            } else if (sampleStart != 0 && messageCount > 0) { // sampling is started only when a message with a
+                                                               // timestamp is received.
+                elapsed = System.currentTimeMillis() - sampleStart;
                 result.setStampAndTime(sampleStart, elapsed);
+                result.setIdleTime(elapsed);
             } else {
-                result.setStampAndTime(sampleStart, 0);
+                noMessagesReceived(result);
             }
-            LOGGER.info("{}: received batch of {} messages in {} milliseconds", sampler.getThreadName(), messageCount, elapsed);
+            LOGGER.info("{}: received batch of {} messages in {} milliseconds", sampler.getThreadName(), messageCount,
+                    elapsed);
+            // reset all counters
             messageSize = 0;
             messageCount = 0;
-            sampleStart = System.currentTimeMillis();
+            sampleStart = 0;
         }
+    }
+
+    private void noMessagesReceived(final SampleResult result) {
+        LOGGER.warn("No messages were received");
+        result.setIdleTime(0);
+    }
+
+    private void verifySenderTimeAndSetSamplingTime(final Long time, boolean senderTimeInPayload) {
+        if (time != null) {
+            sampleStart = time;
+            LOGGER.debug("Message sent time : {}", sampleStart);
+        } else {
+            throw new IllegalArgumentException("No Timestamp variable found in message");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getJSONValue(final Section message) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> result;
+        try {
+            result = objectMapper.readValue(getValue(message),
+                    HashMap.class);
+            if (result == null) {
+                result = Collections.emptyMap();
+            }
+        } catch (IOException e) {
+            LOGGER.warn("Could not parse the received message", e);
+            result = Collections.emptyMap();
+        }
+        return result;
     }
 
     private byte[] getValue(final Section body) {
@@ -144,22 +191,28 @@ public class HonoReceiver {
     }
 
     private void messageReceived(final Message message) {
-        try {
-            synchronized (lock) {
-                final int bodyLength = getValue(message.getBody()).length;
-                if (sampleStart == 0) {
-                    final Long time = (Long) message.getApplicationProperties().getValue().get("millis");
-                    if (time != null) {
-                        sampleStart = time;
-                    } else {
-                        sampleStart = System.currentTimeMillis();
-                    }
+        synchronized (lock) {
+            messageCount++;
+            LOGGER.trace("Received message. count : {}", messageCount);
+            byte[] messageBody = getValue(message.getBody());
+            messageSize += messageBody.length;
+
+            if (sampler.isUseSenderTime()) {
+                sampleEnd = System.currentTimeMillis();
+                LOGGER.debug("Message received time : {}", sampleEnd);
+                if (sampler.isSenderTimeInPayload()) {
+                    final Long time = (Long) getJSONValue(message.getBody())
+                            .get(sampler.getSenderTimeVariableName());
+                    verifySenderTimeAndSetSamplingTime(time, sampler.isSenderTimeInPayload());
+                } else {
+                    final Long time = (Long) message.getApplicationProperties().getValue().get("timeStamp");
+                    verifySenderTimeAndSetSamplingTime(time, sampler.isSenderTimeInPayload());
                 }
-                messageSize += bodyLength;
-                messageCount++;
+            } else {
+                if (sampleStart == 0) {
+                    sampleStart = System.currentTimeMillis();
+                }
             }
-        } catch (final Throwable t) {
-            LOGGER.error("unknown exception in messageReceived()", t);
         }
     }
 
@@ -170,20 +223,5 @@ public class HonoReceiver {
         } catch (final Throwable t) {
             LOGGER.error("unknown exception in closing of receiver", t);
         }
-    }
-
-    private Vertx vertx() {
-        VertxOptions options = new VertxOptions()
-                .setWarningExceptionTime(1500000000)
-                .setAddressResolverOptions(new AddressResolverOptions()
-                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
-                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
-                        .setRotateServers(true)
-                        .setQueryTimeout(DEFAULT_ADDRESS_RESOLUTION_TIMEOUT_MILLIS));
-        return Vertx.vertx(options);
-    }
-
-    private ProtonClientOptions getClientOptions() {
-        return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS).setReconnectAttempts(1);
     }
 }
