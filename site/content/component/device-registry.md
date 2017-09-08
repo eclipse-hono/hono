@@ -5,6 +5,12 @@ weight = 340
 
 The Device Registry component exposes an AMQP 1.0 based service endpoint implementing Eclipse Hono&trade;'s [Device Registration]({{< relref "api/Device-Registration-API.md" >}}) API. In addition, it can also be configured to expose RESTful resources representing the operations of the Device Registration API which can be accessed via HTTP.
 The Device Registration API is used by other services to assert a device's registration status, e.g. if it is enabled and if it is registered with a particular tenant.
+
+Furthermore, the Device Registry component exposes an AMQP 1.0 based service endpoint implementing Eclipse Hono&trade;'s [Credentials]({{< relref "api/Credentials-API.md" >}}) API.
+The Credentials API is used by protocol adapters to authenticate a device before the adapter processes any transfered data.
+
+There is no particular technical reason to implement these two API's in one component, so for production scenarios there might be two different components each implementing one of the API's.
+
 <!--more-->
 
 ## Configuration
@@ -66,6 +72,9 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_REGISTRY_SVC_SIGNING_KEY_PATH`<br>`--hono.registry.svc.signing.keyPath` | no  | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for signing tokens asserting a device's registration status. When using this variable, other services that need to validate the tokens issued by this service need to be configured with the corresponding certificate/public key. Alternatively, a symmetric key can be used for signing (and validating) by setting the `HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_REGISTRY_AMP_KEY_PATH` variable. If that variable is also not set, startup of the server fails. |
 | `HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET`<br>`--hono.registry.svc.signing.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for signing tokens asserting a device's registration status. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the signing key using this variable, other services that need to validate the tokens issued by this service need to be configured with the same key. Alternatively, an asymmetric key pair can be used for signing (and validating) by setting the `HONO_REGISTRY_SVC_SIGNING_KEY_PATH` variable. If none of these variables is set, startup of the server fails. |
 | `HONO_REGISTRY_SVC_SIGNING_TOKEN_EXPIRATION`<br>`--hono.registry.svc.signing.tokenExpiration` | no | `10` | The expiration period to use for the tokens asserting the registration status of devices. |
+| `HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME`<br>`--hono.credentials.svc.credentialsFilename` | no | `/home/hono/registration/`<br>`credentials.json` | The path to the file where the server stores credentials of devices. Hono tries to read credentials from this file during start-up and writes out all identities to this file periodically if property `HONO_CREDENTIALS_SVC_SAVE_TO_FILE` is set to `true`. The `eclipsehono/hono-service-device-registry` Docker image creates a volume under `/home/hono/registration` so that credentials information survives container restarts and/or image updates. If you are running the Hono server from the command line you will probably want to set this variable to a path using an existing folder since Hono will not try to create the path. |
+| `HONO_CREDENTIALS_SVC_MODIFICATION_ENABLED`<br>`--hono.credentials.svc.modificationEnabled` | no | `true` | When set to `false` the credentials stored cannot be updated nor removed. |
+| `HONO_CREDENTIALS_SVC_SAVE_TO_FILE`<br>`--hono.credentials.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered credentials to the file specified by the `HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME` property. |
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -136,6 +145,7 @@ The Device Registry can be run as a Docker container from the command line. The 
 > --secret device-registry-cert.pem \
 > --secret trusted-certs.pem \
 > --secret device-identities.json \
+> --secret credentials.json \
 > -e 'HONO_AUTH_HOST=<name or address of the auth-server>' \
 > -e 'HONO_AUTH_NAME=device-registry' \
 > -e 'HONO_AUTH_VALIDATION_CERT_PATH=/run/secrets/auth-server-cert.pem' \
@@ -144,6 +154,7 @@ The Device Registry can be run as a Docker container from the command line. The 
 > -e 'HONO_REGISTRY_AMQP_KEY_PATH=/run/secrets/device-registry-key.pem' \
 > -e 'HONO_REGISTRY_AMQP_CERT_PATH=/run/secrets/device-registry-cert.pem' \
 > -e 'HONO_REGISTRY_SVC_FILENAME=file:/run/secrets/device-identities.json' \
+> -e 'HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME=file:/run/secrets/credentials.json' \
 > -e 'HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=asharedsecretforvalidatingassertions' \
 > eclipsehono/hono-service-device-registry:latest
 ~~~

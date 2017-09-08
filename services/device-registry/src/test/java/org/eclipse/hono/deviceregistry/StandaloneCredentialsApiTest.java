@@ -65,7 +65,8 @@ public class StandaloneCredentialsApiTest {
     private static final int                   TIMEOUT = 5000; // milliseconds
     private static final String                USER    = "hono-client";
     private static final String                PWD     = "secret";
-    private static final String                CREDENTIALS_USER = "billie";
+    private static final String                CREDENTIALS_AUTHID1 = "sensor1";
+    private static final String                CREDENTIALS_AUTHID2 = "little-sensor2";
     private static final String                CREDENTIALS_TYPE_HASHED_PASSWORD = "hashed-password";
     private static final String                CREDENTIALS_TYPE_PRESHARED_KEY = "psk";
     private static final String                CREDENTIALS_USER_PASSWORD = "hono-secret";
@@ -218,7 +219,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsReturnsCredentialsTypeAndAuthId(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             CredentialsObject payload = s.result().getPayload();
@@ -236,7 +237,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsReturnsCredentialsDefaultDeviceIdAndIsEnabled(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             CredentialsObject payload = s.result().getPayload();
@@ -254,7 +255,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsReturnsMultipleSecrets(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             CredentialsObject payload = s.result().getPayload();
@@ -274,7 +275,7 @@ public class StandaloneCredentialsApiTest {
 
         final AtomicReference<CredentialsObject> payloadRef = new AtomicReference<>();
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             payloadRef.set(s.result().getPayload());
@@ -292,7 +293,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsFirstSecretCurrentlyActiveTimeInterval(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             CredentialsObject payload = s.result().getPayload();
@@ -310,7 +311,7 @@ public class StandaloneCredentialsApiTest {
     public void testGetCredentialsPresharedKeyIsNotEnabled(final TestContext ctx) {
         final Async ok = ctx.async();
 
-        credentialsClient.get(CREDENTIALS_TYPE_PRESHARED_KEY, CREDENTIALS_USER, s -> {
+        credentialsClient.get(CREDENTIALS_TYPE_PRESHARED_KEY, CREDENTIALS_AUTHID2, s -> {
             ctx.assertTrue(s.succeeded());
             ctx.assertEquals(s.result().getStatus(), HTTP_OK);
             CredentialsObject payload = s.result().getPayload();
@@ -386,7 +387,7 @@ public class StandaloneCredentialsApiTest {
         assertNotNull(payload);
 
         assertNotNull(payload.getAuthId());
-        assertEquals(payload.getAuthId(), CREDENTIALS_USER);
+        assertEquals(payload.getAuthId(), CREDENTIALS_AUTHID1);
 
         assertNotNull(payload.getType());
         assertEquals(payload.getType(), CREDENTIALS_TYPE_HASHED_PASSWORD);

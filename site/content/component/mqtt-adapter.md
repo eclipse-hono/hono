@@ -201,8 +201,10 @@ The same holds true analogously for the *hono-service-device-registry.hono* addr
 
 ## Using the Telemetry Topic Hierarchy
 
-First note that the following examples do not provide a username and password for connecting to MQTT.
-To make them work please ensure that the `HONO_MQTT_AUTHENTICATION_REQUIRED` property is set to false.
+The following examples use a username and password for connecting to MQTT. The username reflects the auth-id of the [Credentals API]({{< relref "api/Credentials-API.md" >}}) and usually represents a device.
+
+**NB** The standard setup of the [Device Registry component]({{< relref "component/device-registry.md" >}}) provides the example auth-id `sensor1` with the password `hono-secret` which are used here. 
+
 
 ### Upload Telemetry Data
 
@@ -215,7 +217,7 @@ To make them work please ensure that the `HONO_MQTT_AUTHENTICATION_REQUIRED` pro
 
 Upload a JSON string for device `4711`:
 
-    $ mosquitto_pub -i 4711 -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+    $ mosquitto_pub -i 4711 -u 'sensor1@DEFAULT_TENANT" -P "hono-secret" -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 
 ## Using the Event Topic Hierarchy
 
@@ -230,4 +232,10 @@ Upload a JSON string for device `4711`:
 
 Upload a JSON string for device `4711`:
 
-    $ mosquitto_pub -i 4711 -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
+    $ mosquitto_pub -i 4711 -u 'sensor1@DEFAULT_TENANT" -P "hono-secret" -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
+
+**Setup without authentication**
+
+To create a setup without authentication, please ensure that the `HONO_MQTT_AUTHENTICATION_REQUIRED` property is set to false.
+For such a setup the `-u`  and `-P` parts of the `mosquitto_pub` calls can be skipped.
+

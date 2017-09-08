@@ -12,10 +12,6 @@ Note, however, that in real world applications the device credentials will proba
 
 The Credentials API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
-{{% note %}}
-This API is not yet implemented in Hono.
-{{% /note %}}
-
 ## Preconditions
 
 The preconditions for invoking any of the Credential API's operations are as follows:
@@ -94,12 +90,12 @@ The body of the request MUST consist of a single *AMQP Value* section containing
 | *type*           | *yes*     | *string*   | The type of credentials to look up. Potential values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   | The authentication identifier to look up credentials for. |
 
-The following request payload may be used to look up the hashed password for user `billie`:
+The following request payload may be used to look up the hashed password for a device with the authentication identifier `sensor1`:
 
 ~~~json
 {
   "type": "hashed-password",
-  "auth-id": "billie"
+  "auth-id": "sensor1"
 }
 ~~~
 
@@ -271,13 +267,13 @@ The table below contains the properties used to define the validity period of a 
 
 ### Examples
 
-Below is an example for a payload containing [a hashed password]({{< relref "#hashed-password" >}}) for device `4711` with username `billie` using SHA512 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`). Note that the payload does not contain a `not-before` property, thus it may be used immediately up until X-mas eve 2017.
+Below is an example for a payload containing [a hashed password]({{< relref "#hashed-password" >}}) for device `4711` with auth-id `sensor1` using SHA512 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`). Note that the payload does not contain a `not-before` property, thus it may be used immediately up until X-mas eve 2017.
 
 ~~~json
 {
   "device-id": "4711",
   "type": "hashed-password",
-  "auth-id": "billie",
+  "auth-id": "sensor1",
   "enabled": true,
   "secrets": [{
     "not-after": "20171224T1900Z+0100",
@@ -288,13 +284,13 @@ Below is an example for a payload containing [a hashed password]({{< relref "#ha
 }
 ~~~
 
-The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" >}}) with overlapping validity periods for device `myDevice` with PSK identity `jane`.
+The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" >}}) with overlapping validity periods for device `myDevice` with PSK identity `little-sensor2`.
 
 ~~~json
 {
   "device-id": "myDevice",
   "type": "psk",
-  "auth-id": "jane",
+  "auth-id": "little-sensor2",
   "enabled": true,
   "secrets": [{
     "not-after": "20170701T0000Z+0100",
@@ -328,7 +324,7 @@ All credential types used with Hono MUST contain `device-id`, `type`, `auth-id`,
 
 ### Hashed Password
 
-A credential type for storing a (hashed) password for a user.
+A credential type for storing a (hashed) password for a device.
 
 Example:
 
@@ -336,7 +332,7 @@ Example:
 {
   "device-id": "4711",
   "type": "hashed-password",
-  "auth-id": "billie",
+  "auth-id": "sensor1",
   "secrets": [{
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
@@ -348,7 +344,7 @@ Example:
 | Name             | Mandatory | Type       | Default   | Description |
 | :--------------- | :-------: | :--------- | :-------- | :---------- |
 | *type*           | *yes*     | *string*   |           | The credential type name, always `hashed-password`. |
-| *auth-id*        | *yes*     | *string*   |           | The *username* |
+| *auth-id*        | *yes*     | *string*   |           | The identity that the device should be authenticated as. |
 | *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. |
 | *salt*           | *no*      | *string*   |           | The Base64 encoded bytes used as *salt* for the password hash. If not set then the password hash has been created without salt. |
 | *hash-function*  | *no*      | *string*   | `sha256`  | The name of the hash function used to create the password hash. Examples include `sha256`, `sha512` etc. |
@@ -368,7 +364,7 @@ Example:
 {
   "device-id": "4711",
   "type": "psk",
-  "auth-id": "little-sensor",
+  "auth-id": "little-sensor2",
   "secrets": [{
     "key": "AQIDBAUGBwg="
   }]
