@@ -15,7 +15,7 @@ package org.eclipse.hono.adapter.mqtt;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -69,8 +69,8 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.mqtt")
-    public MqttProtocolAdapterProperties adapterProperties() {
-        return new MqttProtocolAdapterProperties();
+    public ProtocolAdapterProperties adapterProperties() {
+        return new ProtocolAdapterProperties();
     }
 
     /**

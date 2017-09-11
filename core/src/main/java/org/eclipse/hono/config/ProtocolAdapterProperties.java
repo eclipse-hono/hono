@@ -10,20 +10,18 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.mqtt;
-
-import org.eclipse.hono.config.ServiceConfigProperties;
+package org.eclipse.hono.config;
 
 /**
- * Configuration properties for the MQTT protocol adapter of Hono.
+ * Common configuration properties for protocol adapters of Hono.
  *
  */
-public class MqttProtocolAdapterProperties extends ServiceConfigProperties {
+public class ProtocolAdapterProperties extends ServiceConfigProperties {
 
     private boolean authenticationRequired = true;
 
     /**
-     * Checks whether the MQTT protocol adapter always authenticates devices using their provided credentials as defined
+     * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
      * in the <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
      * <p>
      * If this property is {@code false} then devices are always allowed to publish data without providing
@@ -31,14 +29,14 @@ public class MqttProtocolAdapterProperties extends ServiceConfigProperties {
      * <p>
      * The default value of this property is {@code true}.
      *
-     * @return {@code true} if the MQTT protocol adapter demands the authentication of devices to allow the publishing of data.
+     * @return {@code true} if the protocol adapter demands the authentication of devices to allow the publishing of data.
      */
     public final boolean isAuthenticationRequired() {
         return authenticationRequired;
     }
 
     /**
-     * Sets whether the MQTT protocol adapter always authenticates devices using their provided credentials as defined
+     * Sets whether the protocol adapter always authenticates devices using their provided credentials as defined
      * in the <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
      * <p>
      * If this property is set to {@code false} then devices are always allowed to publish data without providing

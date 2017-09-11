@@ -16,27 +16,21 @@ import static org.mockito.Mockito.*;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.vertx.core.*;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.mqtt.MqttAuth;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
-import org.eclipse.hono.adapter.mqtt.credentials.MqttUsernamePassword;
-import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.Constants;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.ext.web.Router;
 import io.vertx.proton.ProtonClientOptions;
-import org.mockito.Mock;
 
 /**
  * Verifies behavior of {@link VertxBasedMqttProtocolAdapter}.
@@ -51,7 +45,7 @@ public class VertxBasedMqttProtocolAdapterTest {
     HonoClient registrationClient;
     HonoClient credentialsClient;
 
-    MqttProtocolAdapterProperties config;
+    ProtocolAdapterProperties config;
 
     private Vertx vertx;
 
@@ -74,7 +68,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
         credentialsClient = mock(HonoClient.class);
-        config = new MqttProtocolAdapterProperties();
+        config = new ProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
     }
 
@@ -226,7 +220,7 @@ public class VertxBasedMqttProtocolAdapterTest {
     private VertxBasedMqttProtocolAdapter getAdapter(final MqttServer server) {
         VertxBasedMqttProtocolAdapter adapter = new VertxBasedMqttProtocolAdapter() {
             @Override
-            public void setConfig(final MqttProtocolAdapterProperties configuration) {
+            public void setConfig(final ProtocolAdapterProperties configuration) {
                 setSpecificConfig(configuration);
             }
         };

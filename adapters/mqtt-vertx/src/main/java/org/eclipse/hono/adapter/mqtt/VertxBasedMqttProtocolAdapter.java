@@ -20,6 +20,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.eclipse.hono.adapter.mqtt.credentials.MqttUsernamePassword;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
@@ -40,7 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
  */
-public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<MqttProtocolAdapterProperties> {
+public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<ProtocolAdapterProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedMqttProtocolAdapter.class);
 
