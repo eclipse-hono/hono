@@ -31,6 +31,7 @@ import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.jmeter.HonoSampler;
 import org.eclipse.hono.jmeter.HonoSenderSampler;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -303,7 +304,7 @@ public class HonoSender {
                 if (assertHandler.failed()) {
                     LOGGER.error("RegistrationClient.assertRegistration() failed", assertHandler.cause());
                 } else {
-                    token = assertHandler.result().getPayload().getString("assertion");
+                    token = assertHandler.result().getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
                 }
                 latch.countDown();
             });
