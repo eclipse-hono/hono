@@ -227,7 +227,7 @@ public final class MessageHelper {
     /**
      * Adds a registration assertion to an AMQP 1.0 message.
      * <p>
-     * The assertion is put to the message's <em>delivery-annotations</em> under key
+     * The assertion is put to the message's <em>application-properties</em> under key
      * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
      * 
      * @param msg The message.
