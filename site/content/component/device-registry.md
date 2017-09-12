@@ -210,7 +210,7 @@ The following sections describe the resources representing the operations of the
 * Headers:
   * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
 * Parameters (encoded as payload according to the content type):
-  * (required) `device_id`: The ID of the device to register.
+  * (required) `device-id`: The ID of the device to register.
   * (optional) Arbitrary key/value pairs containing additional data to be registered with the device.
 * Status Codes:
   * 201 (Created): Device has been registered successfully under resource indicated by `Location` header.
@@ -221,11 +221,11 @@ The following sections describe the resources representing the operations of the
 
 The following command registers a device with ID `4711`
 
-    $ curl -i -X POST -d device_id=4711 -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT
+    $ curl -i -X POST -d device-id=4711 -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT
 
 or equivalently using JSON
 
-    $ curl -i -X POST -d '{"device_id":"4711","ep":"IMEI4711"}' -H 'Content-Type: application/json' http://localhost:8080/registration/DEFAULT_TENANT
+    $ curl -i -X POST -d '{"device-id":"4711","ep":"IMEI4711"}' -H 'Content-Type: application/json' http://localhost:8080/registration/DEFAULT_TENANT
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:

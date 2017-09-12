@@ -12,6 +12,8 @@
 
 package org.eclipse.hono.service.registration;
 
+import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
+
 import java.net.HttpURLConnection;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -42,7 +44,8 @@ import io.vertx.ext.web.RoutingContext;
  */
 public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
-    private static final String PARAM_TENANT = "tenant";
+    // path parameters for capturing parts of the URI path
+    private static final String PARAM_TENANT_ID = "tenant_id";
     private static final String PARAM_DEVICE_ID = "device_id";
 
     /**
@@ -59,8 +62,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     private static JsonObject getPayloadForParams(final HttpServerRequest request) {
         JsonObject payload = new JsonObject();
         for (Entry<String, String> param : request.params()) {
-            // filter out tenant param captured from URI path
-            if (!PARAM_TENANT.equalsIgnoreCase(param.getKey())) {
+            if (PARAM_DEVICE_ID.equalsIgnoreCase(param.getKey())) {
+                // add device param captured from URI path - use same name as in JSON structures for that
+                payload.put(FIELD_DEVICE_ID, param.getValue());
+            } else if (!PARAM_TENANT_ID.equalsIgnoreCase(param.getKey())) { // filter out tenant param captured from URI path
                 payload.put(param.getKey(), param.getValue());
             }
         }
@@ -75,7 +80,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     @Override
     public void addRoutes(final Router router) {
 
-        final String pathWithTenant = String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT);
+        final String pathWithTenant = String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID);
         // ADD device registration
         router.route(HttpMethod.POST, pathWithTenant).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
                 .handler(this::doRegisterDeviceJson);
@@ -85,7 +90,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                 .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
 
         final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s",
-                RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID);
+                RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID);
         // GET device registration
         router.route(HttpMethod.GET, pathWithTenantAndDeviceId).handler(this::doGetDevice);
 
@@ -102,7 +107,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     }
 
     private static String getTenantParam(final RoutingContext ctx) {
-        return ctx.request().getParam(PARAM_TENANT);
+        return ctx.request().getParam(PARAM_TENANT_ID);
     }
 
     private static String getDeviceIdParam(final RoutingContext ctx) {
@@ -153,11 +158,11 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         if (payload == null) {
             HttpEndpointUtils.badRequest(ctx.response(), "missing body");
         } else {
-            Object deviceId = payload.remove(PARAM_DEVICE_ID);
+            Object deviceId = payload.remove(FIELD_DEVICE_ID);
             if (deviceId == null) {
-                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", PARAM_DEVICE_ID));
+                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", FIELD_DEVICE_ID));
             } else if (!(deviceId instanceof String)) {
-                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' must be a string", PARAM_DEVICE_ID));
+                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' must be a string", FIELD_DEVICE_ID));
             } else {
                 final String tenantId = getTenantParam(ctx);
                 logger.debug("registering data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
@@ -200,7 +205,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     private void updateRegistration(final String deviceId, final JsonObject payload, final RoutingContext ctx) {
 
         if (payload != null) {
-            payload.remove(PARAM_DEVICE_ID);
+            payload.remove(FIELD_DEVICE_ID);
         }
         final String tenantId = getTenantParam(ctx);
         logger.debug("updating registration data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
