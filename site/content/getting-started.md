@@ -114,13 +114,13 @@ The first thing to do is registering a device identity with Hono. Hono uses this
 The following command registers a device with ID `4711` with the Device Registry.
 
 ~~~sh
-$ curl -X POST -i -d 'device_id=4711' http://localhost:28080/registration/DEFAULT_TENANT
+$ curl -X POST -i -d 'device-id=4711' http://localhost:28080/registration/DEFAULT_TENANT
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http POST http://localhost:28080/registration/DEFAULT_TENANT device_id=4711
+$ http POST http://localhost:28080/registration/DEFAULT_TENANT device-id=4711
 ~~~
 
 The result will contain a `Location` header containing the resource path created for the device. In this example it will look like this:

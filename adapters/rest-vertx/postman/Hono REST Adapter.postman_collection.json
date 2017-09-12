@@ -23,7 +23,7 @@
 					"mode": "urlencoded",
 					"urlencoded": [
 						{
-							"key": "device_id",
+							"key": "device-id",
 							"value": "4711",
 							"type": "text",
 							"enabled": true
@@ -50,13 +50,13 @@
 					"mode": "urlencoded",
 					"urlencoded": [
 						{
-							"key": "device_id",
+							"key": "device-id",
 							"value": "4711",
 							"type": "text",
 							"enabled": true
 						},
 						{
-							"key": "aditional_parameter",
+							"key": "additional_parameter",
 							"value": "true",
 							"type": "text",
 							"enabled": true
