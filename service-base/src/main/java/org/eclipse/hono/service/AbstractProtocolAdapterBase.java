@@ -46,7 +46,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     private HonoClient messaging;
     private HonoClient registration;
     private HonoClient credentials;
-
+    
     /**
      * Validates an authentication object for a device.
      * Needs to be implemented by protocol adapters to support the authentication of devices.
@@ -454,14 +454,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
      * Gets a registration status assertion for a device.
      * 
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to get the assertion for.
+     * @param logicalDeviceId The device to get the assertion for.
      * @return The assertion.
      */
-    protected final Future<String> getRegistrationAssertion(final String tenantId, final String deviceId) {
+    protected final Future<String> getRegistrationAssertion(final String tenantId, final String logicalDeviceId) {
         Future<String> result = Future.future();
         getRegistrationClient(tenantId).compose(client -> {
             Future<RegistrationResult> tokenTracker = Future.future();
-            client.assertRegistration(deviceId, tokenTracker.completer());
+            client.assertRegistration(logicalDeviceId, tokenTracker.completer());
             return tokenTracker;
         }).compose(regResult -> {
             if (regResult.getStatus() == HttpURLConnection.HTTP_OK) {
@@ -497,6 +497,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             status.complete(Status.OK());
         });
     }
+    
     private Future<CredentialsObject> getCredentialsForDevice(final String tenantId, final String type, final String authId) {
 
         Future<CredentialsObject> result = Future.future();
@@ -549,5 +550,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             }
             return resultDeviceId;
         });
+    }
+
+    /**
+     * Validates that the resource identifier for a protocol adapter message does not contradict to the given tenantIds
+     * and deviceIds. It is not considered an error if the resource identifier does not contain segments for tenantId
+     * and/or deviceId.
+     *
+     * @param resource The resource identifier (built from the MQTT topic name).
+     * @param tenantId The tenantId to validate.
+     * @param logicalDeviceId The logicalDeviceId to validate.
+     * 
+     * @return True if the validation was successful, false otherwise.
+     */
+    protected boolean validateCredentialsWithTopicStructure(final ResourceIdentifier resource, final String tenantId, final String logicalDeviceId) {
+        if (resource.getTenantId() != null && !resource.getTenantId().equals(tenantId)) {
+            return false;
+        }
+        if (resource.getResourceId() != null && !resource.getResourceId().equals(logicalDeviceId)) {
+            return false;
+        }
+        return true;
     }
 }
