@@ -13,6 +13,7 @@ package org.eclipse.hono.service.credentials;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonArray;
@@ -31,6 +32,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_NOT_IMPLEMENTED;
 import static org.eclipse.hono.util.CredentialsConstants.*;
 import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
 import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_ENABLED;
@@ -120,7 +122,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         final JsonObject body = regMsg.body();
         if (body == null) {
             log.debug("credentials request did not contain body - not supported");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         }
 
@@ -130,15 +132,15 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
 
         if (tenantId == null) {
             log.debug("credentials request did not contain tenantId - not supported");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         } else if (subject == null) {
             log.debug("credentials request did not contain subject - not supported");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         } else if (payload == null) {
             log.debug("credentials request contained invalid or no payload at all (expected json format) - not supported");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         }
 
@@ -157,7 +159,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
                 break;
             default:
                 log.debug("operation [{}] not supported", subject);
-                reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+                reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
         }
     }
 
@@ -165,14 +167,14 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         final String type = payload.getString(FIELD_TYPE);
         if (type == null) {
             log.debug("credentials get request did not contain type in payload - not supported");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         }
 
         final String authId = payload.getString(FIELD_AUTH_ID);
         if (authId == null) {
             log.debug("credentials get request did not contain authId in payload - not supported");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         }
         log.debug("getting credentials [{}:{}] of tenant [{}]", type, authId, tenantId);
@@ -181,7 +183,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
 
     private void processCredentialsMessageAddOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
         if (!isValidCredentialsObject(payload)) {
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         }
         addCredentials(tenantId, payload, result -> reply(regMsg, result));
@@ -189,7 +191,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     
     private void processCredentialsMessageUpdateOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
         if (!isValidCredentialsObject(payload)) {
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         }
         updateCredentials(tenantId, payload, result -> reply(regMsg, result)); 
@@ -199,20 +201,68 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         final String deviceId = payload.getString(FIELD_DEVICE_ID);
         if (deviceId == null) {
             log.debug("credentials remove request did not contain device-id in payload - not supported");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         }
         
         final String type = payload.getString(FIELD_TYPE);
         if (type == null) {
             log.debug("credentials remove request did not contain type in payload - not supported");
-            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
             return;
         }
 
         final String authId = payload.getString(FIELD_AUTH_ID);
         
         removeCredentials(tenantId, deviceId, type, authId, result -> reply(regMsg, result));
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void addCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void getCredentials(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void updateCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void removeCredentials(final String tenantId, final String deviceId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    private void handleUnimplementedOperation(final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HTTP_NOT_IMPLEMENTED, (JsonObject) null)));
     }
 
     private boolean isValidCredentialsObject(final JsonObject credentials) {
@@ -283,7 +333,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         }
     }
 
-    private void reply(final Message<JsonObject> request, final AsyncResult<CredentialsResult> result) {
+    private void reply(final Message<JsonObject> request, final AsyncResult<CredentialsResult<JsonObject>> result) {
 
         if (result.succeeded()) {
             reply(request, result.result());
@@ -298,7 +348,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
      * @param request The message to respond to.
      * @param result The credentials result that should be conveyed in the response.
      */
-    protected final void reply(final Message<JsonObject> request, final CredentialsResult result) {
+    protected final void reply(final Message<JsonObject> request, final CredentialsResult<JsonObject> result) {
 
         final JsonObject body = request.body();
         final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);

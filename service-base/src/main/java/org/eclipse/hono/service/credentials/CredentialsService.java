@@ -38,7 +38,7 @@ public interface CredentialsService extends Verticle {
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void getCredentials(String tenantId, String type, String authId, Handler<AsyncResult<CredentialsResult>> resultHandler);
+    void getCredentials(String tenantId, String type, String authId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
     /**
      * Add credentials to credentials registry.
@@ -53,7 +53,7 @@ public interface CredentialsService extends Verticle {
      *         Otherwise the operation is successful and the <em>status</em> will be {@link HttpURLConnection#HTTP_CREATED}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void addCredentials(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult>> resultHandler);
+    void addCredentials(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
     /**
      * Updates device credentials data.
@@ -67,7 +67,7 @@ public interface CredentialsService extends Verticle {
      *         Otherwise the operation is successful and the status will be {@link HttpURLConnection#HTTP_NO_CONTENT}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void updateCredentials(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult>> resultHandler);
+    void updateCredentials(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
     /**
      * Removes device credentials data.
@@ -83,5 +83,5 @@ public interface CredentialsService extends Verticle {
      *         Otherwise the operation is successful and the status will be {@link HttpURLConnection#HTTP_NO_CONTENT}.
      * @throws NullPointerException if any of the parameters - except authId - is {@code null}.
      */
-    void removeCredentials(String tenantId, String deviceId, String type, String authId, Handler<AsyncResult<CredentialsResult>> resultHandler);
+    void removeCredentials(String tenantId, String deviceId, String type, String authId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 }

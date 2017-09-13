@@ -182,33 +182,12 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     }
 
     @Override
-    public final void getCredentials(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-        CredentialsResult credentialsResult = getCredentialsResult(tenantId, authId, type);
+    public final void getCredentials(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        CredentialsResult<JsonObject> credentialsResult = getCredentialsResult(tenantId, authId, type);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
-    @Override
-    public void addCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-        // TODO: implement as in memory version
-        CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
-        resultHandler.handle(Future.succeededFuture(credentialsResult));
-    }
-
-    @Override
-    public void updateCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-        // TODO: implement as in memory version
-        CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
-        resultHandler.handle(Future.succeededFuture(credentialsResult));
-    }
-
-    @Override
-    public void removeCredentials(final String tenantId, final String deviceId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult>> resultHandler) {
-        // TODO: implement as in memory version
-        CredentialsResult credentialsResult = CredentialsResult.from(HTTP_NOT_IMPLEMENTED);
-        resultHandler.handle(Future.succeededFuture(credentialsResult));
-    }
-
-    private CredentialsResult getCredentialsResult(final String tenantId, final String authId, final String type) {
+    private CredentialsResult<JsonObject> getCredentialsResult(final String tenantId, final String authId, final String type) {
         JsonObject data = getCredentials(tenantId, authId, type);
         if (data != null) {
             JsonObject resultPayload = getResultPayload(
@@ -220,7 +199,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
             );
             return CredentialsResult.from(HTTP_OK, resultPayload);
         } else {
-            return CredentialsResult.from(HTTP_NOT_FOUND);
+            return CredentialsResult.from(HTTP_NOT_FOUND, (JsonObject) null);
         }
     }
 

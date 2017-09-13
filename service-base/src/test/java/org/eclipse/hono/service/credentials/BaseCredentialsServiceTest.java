@@ -178,24 +178,15 @@ public class BaseCredentialsServiceTest {
     }
 
     private BaseCredentialsService<ServiceConfigProperties> createBaseCredentialsService() {
+
         return new BaseCredentialsService<ServiceConfigProperties>() {
-            @Override
-            public void updateCredentials(String tenantId, JsonObject credentialsObject,
-                    Handler<AsyncResult<CredentialsResult>> resultHandler) {
-            }
-            @Override
-            public void removeCredentials(String tenantId, String deviceId, String type, String authId,
-                    Handler<AsyncResult<CredentialsResult>> resultHandler) {
-            }
-            @Override
-            public void getCredentials(String tenantId, String type, String authId,
-                    Handler<AsyncResult<CredentialsResult>> resultHandler) {
-            }
+
             @Override
             public void addCredentials(String tenantId, JsonObject credentialsObject,
-                    Handler<AsyncResult<CredentialsResult>> resultHandler) {
-                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HTTP_CREATED)));
+                    Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HTTP_CREATED, (JsonObject) null)));
             }
+
             @Override
             public void setConfig(ServiceConfigProperties configuration) {
             }

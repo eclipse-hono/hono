@@ -15,18 +15,32 @@ package org.eclipse.hono.util;
 /**
  * A container for the result returned by Hono's credentials API.
  *
- * @param <T> denotes the concrete type of the payload that is part of the result
+ * @param <T> denotes the concrete type of the payload that is conveyed in the result
  */
 public final class CredentialsResult<T> extends RequestResponseResult<T> {
+
     private CredentialsResult(final int status, final T payload) {
         super(status, payload);
     }
 
-    public static CredentialsResult from(final int status) {
-        return new CredentialsResult(status, null);
+    /**
+     * Creates a new result for a status code.
+     * 
+     * @param status The status code indicating the outcome of the request.
+     * @return The result.
+     */
+    public static CredentialsResult<Void> from(final int status) {
+        return new CredentialsResult<Void>(status, null);
     }
 
+    /**
+     * Creates a new result for a status code and payload.
+     * 
+     * @param status The status code indicating the outcome of the request.
+     * @param payload The payload to convey to the sender of the request.
+     * @return The result.
+     */
     public static <T> CredentialsResult<T> from(final int status, final T payload) {
-        return new CredentialsResult<>(status, payload);
+        return new CredentialsResult<T>(status, payload);
     }
 }

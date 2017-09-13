@@ -22,20 +22,30 @@ public class RequestResponseResult<T> {
     private final int status;
     private final T payload;
 
+    /**
+     * Creates a new result for a status code and payload.
+     * 
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to convey to the sender of the request.
+     */
     protected RequestResponseResult(final int status, final T payload) {
         this.status = status;
         this.payload = payload;
     }
 
     /**
-     * @return the status
+     * Gets the status code indicating the outcome of the request.
+     * 
+     * @return The code.
      */
     public final int getStatus() {
         return status;
     }
 
     /**
-     * @return the payload
+     * Gets the payload to convey to the sender of the request.
+     * 
+     * @return The payload.
      */
     public final T getPayload() {
         return payload;

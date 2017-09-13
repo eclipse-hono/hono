@@ -12,24 +12,26 @@
 
 package org.eclipse.hono.client.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
-import io.vertx.proton.*;
-import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.eclipse.hono.util.CredentialsConstants.OPERATION_GET;
 
 import java.io.IOException;
 import java.util.Objects;
 import java.util.UUID;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.util.CredentialsConstants.OPERATION_GET;
+import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.CredentialsResult;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonConnection;
 
 /**
  * A Vertx-Proton based client for Hono's Credentials API.
@@ -38,9 +40,6 @@ import static org.eclipse.hono.util.CredentialsConstants.OPERATION_GET;
 public final class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsClient, CredentialsResult<CredentialsObject>> implements CredentialsClient {
 
     private static final String                  CREDENTIALS_NAME = "credentials";
-
-    private static final Logger                  LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
-
     private static final ObjectMapper            objectMapper = new ObjectMapper();
 
     private CredentialsClientImpl(final Context context, final ProtonConnection con, final String tenantId,
@@ -66,10 +65,10 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
             if (status == HTTP_OK) {
                 return CredentialsResult.from(status, objectMapper.readValue(payload, CredentialsObject.class));
             } else {
-                return CredentialsResult.from(status, null);
+                return CredentialsResult.from(status, (CredentialsObject) null);
             }
         } catch (IOException e) {
-            return CredentialsResult.from(HTTP_INTERNAL_ERROR, null);
+            return CredentialsResult.from(HTTP_INTERNAL_ERROR, (CredentialsObject) null);
         }
     }
 
