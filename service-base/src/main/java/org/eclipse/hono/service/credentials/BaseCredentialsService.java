@@ -273,34 +273,44 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     }
 
     private boolean containsValidSecretValue(final JsonObject credentials) {
-        final JsonArray secrets = credentials.getJsonArray(FIELD_SECRETS);
-        
-        if (secrets == null) {
-            log.debug("credentials request did not contain {} in payload - not supported", FIELD_SECRETS);
-            return false;
-        }
 
-        if (secrets.isEmpty()) {
-            log.debug("credentials request contains empty {} object in payload - not supported", FIELD_SECRETS);
-            return false;
-        }
+        final Object obj = credentials.getValue(FIELD_SECRETS);
 
-        for (int i = 0; i < secrets.size(); i++) {
-            JsonObject currentSecret = secrets.getJsonObject(i);
-            if (!containsValidTimestampIfPresentForField(currentSecret, FIELD_SECRETS_NOT_BEFORE)
-                    || !containsValidTimestampIfPresentForField(currentSecret, FIELD_SECRETS_NOT_AFTER)) {
-                log.debug("credentials request did contain invalid timestamp values in payload");
+        if (JsonArray.class.isInstance(obj)) {
+
+            JsonArray secrets = (JsonArray) obj;
+            if (secrets.isEmpty()) {
+
+                log.debug("credentials request contains empty {} object in payload - not supported", FIELD_SECRETS);
                 return false;
+
+            } else {
+
+                for (int i = 0; i < secrets.size(); i++) {
+                    JsonObject currentSecret = secrets.getJsonObject(i);
+                    if (!containsValidTimestampIfPresentForField(currentSecret, FIELD_SECRETS_NOT_BEFORE)
+                            || !containsValidTimestampIfPresentForField(currentSecret, FIELD_SECRETS_NOT_AFTER)) {
+                        log.debug("credentials request did contain invalid timestamp values in payload");
+                        return false;
+                    }
+                }
+
+                return true;
             }
+
+        } else {
+
+            log.debug("credentials request does not contain a {} array in payload - not supported", FIELD_SECRETS);
+            return false;
+
         }
-        return true;
     }
 
     private boolean containsStringValueForField(final JsonObject payload, final String field) {
-        final String value = payload.getString(field);
 
+        final Object value = payload.getValue(field);
         if (StringUtils.isEmpty(value)) {
-            log.debug("credentials request did not contain {} in payload - not supported", field);
+            log.debug("credentials request did not contain string typed field {} in payload - not supported", field);
             return false;
         }
 
@@ -308,26 +318,25 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     }
 
     private boolean containsValidTimestampIfPresentForField(final JsonObject payload, final String field) {
-        final String timeStamp = payload.getString(field);
 
-        if (timeStamp != null) {
-            return isValidTimestampForField(payload, field);
-        }
-        else {
+        final Object value = payload.getValue(field);
+        if (value == null) {
             return true;
+        } else if (String.class.isInstance(value)) {
+            return isValidTimestamp((String) value);
+        } else {
+            return false;
         }
     }
 
-    private boolean isValidTimestampForField(final JsonObject payload, final String field) {
-        final String dateTime = payload.getString(field);
+    private boolean isValidTimestamp(final String dateTime) {
 
         try {
             final DateTimeFormatter timeFormatter = DateTimeFormatter.ISO_DATE_TIME;
             timeFormatter.parse(dateTime);
 
             return true;
-        }
-        catch (DateTimeParseException e) {
+        } catch (DateTimeParseException e) {
             log.debug("credentials request did contain invalid timestamp in payload");
             return false;
         }
@@ -367,22 +376,18 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
 
         if (request == null) {
             return null;
+        } else {
+            JsonObject payload = null;
+            Object payloadObject = request.getValue(CredentialsConstants.FIELD_PAYLOAD);
+            if (JsonObject.class.isInstance(payloadObject)) {
+                payload = (JsonObject) payloadObject;
+                if (!payload.containsKey(FIELD_ENABLED)) {
+                    log.debug("adding 'enabled' key to payload");
+                    payload.put(FIELD_ENABLED, Boolean.TRUE);
+                }
+            }
+            return payload;
         }
-
-
-        Object payloadObject = request.getValue(CredentialsConstants.FIELD_PAYLOAD);
-        if (!(payloadObject instanceof JsonObject)) {
-            return null;
-        }
-        final JsonObject payload = (JsonObject) payloadObject;
-
-
-        Boolean enabled = payload.getBoolean(FIELD_ENABLED);
-        if (enabled == null) {
-            log.debug("adding 'enabled' key to payload");
-            payload.put(FIELD_ENABLED, Boolean.TRUE);
-        }
-        return payload;
     }
 
     /**
