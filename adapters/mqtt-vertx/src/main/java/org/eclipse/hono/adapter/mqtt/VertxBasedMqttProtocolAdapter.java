@@ -366,6 +366,11 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
         }
     }
 
+    @Override
+    protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId, final Object authenticationObject) {
+        return approveCredentialsAndResolveLogicalDeviceId(tenantId, type, authId, authenticationObject);
+    }
+
     private void close(final MqttEndpoint endpoint) {
         registrationAssertions.remove(endpoint);
         if (endpoint.isConnected()) {

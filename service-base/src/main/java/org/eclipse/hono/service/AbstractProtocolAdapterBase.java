@@ -48,6 +48,22 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     private HonoClient credentials;
 
     /**
+     * Validates an authentication object for a device.
+     * Needs to be implemented by protocol adapters to support the authentication of devices.
+     * The standard implementation using the
+     *  <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> is available by calling
+     *  the method {@link #approveCredentialsAndResolveLogicalDeviceId(String, String, String, Object)};
+     *
+     * @param tenantId The tenantId to which the device belongs.
+     * @param type The type of credentials that are to be used for validation.
+     * @param authId The authId of the credentials that are to be used for validation.
+     * @param authenticationObject The authentication object to be validated, e.g. a password, a preshared-key, etc.
+     *
+     * @return Future The future object carrying the logicalDeviceId, if successful.
+     */
+    protected abstract Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId,
+                                                                                  final Object authenticationObject);
+    /**
      * Sets the configuration by means of Spring dependency injection.
      * <p>
      * Most protocol adapters will support a single transport protocol to communicate with
@@ -514,10 +530,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
      * @param authId The authId of the credentials that are to be used for validation.
      * @param authenticationObject The authentication object to be validated, e.g. a password, a preshared-key, etc.
 
-     * @return Future The future object carrying the payload of the credentials get operation, if successful.
+     * @return Future The future object carrying the logicalDeviceId that was resolved by the credentials get operation, if successful.
      */
-    protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId,
-                                                              final Object authenticationObject) {
+    protected final Future<String> approveCredentialsAndResolveLogicalDeviceId(final String tenantId, final String type,
+                                                                               final String authId, final Object authenticationObject) {
         return getCredentialsForDevice(tenantId, type, authId).compose(payload -> {
             Future<String> resultDeviceId = Future.future();
             SecretsValidator validator = CredentialsUtils.findAppropriateValidators(type);
