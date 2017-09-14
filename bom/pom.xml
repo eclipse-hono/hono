@@ -52,6 +52,7 @@
     <truth.version>0.28</truth.version>
     <vertx.version>3.4.1</vertx.version>
     <jmeter.version>3.2</jmeter.version>
+    <guava.version>21.0</guava.version>
   </properties>
 
   <dependencyManagement>
@@ -282,6 +283,11 @@
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-dispatch-router</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

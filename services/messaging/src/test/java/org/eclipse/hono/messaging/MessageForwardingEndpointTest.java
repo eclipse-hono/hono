@@ -11,20 +11,24 @@
  */
 package org.eclipse.hono.messaging;
 
-import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.messaging.DownstreamAdapter;
-import org.eclipse.hono.messaging.ErrorConditions;
-import org.eclipse.hono.messaging.MessageForwardingEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.MessageHelper;
@@ -238,6 +242,6 @@ public class MessageForwardingEndpointTest {
 
     private String getToken(final String secret, final String tenantId, final String deviceId) {
 
-        return RegistrationAssertionHelperImpl.forSharedSecret(secret, 10).getAssertion(tenantId, deviceId);
+        return RegistrationAssertionHelperImpl.forSharedSecret(secret, 10, 100_000L).getAssertion(tenantId, deviceId);
     }
 }

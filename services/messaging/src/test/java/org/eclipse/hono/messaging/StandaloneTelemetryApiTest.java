@@ -27,9 +27,9 @@ import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilde
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -71,7 +71,7 @@ public class StandaloneTelemetryApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) throws Exception {
 
-        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
+        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10, 100_000L);
         telemetryAdapter = new MessageDiscardingDownstreamAdapter(vertx);
         server = new HonoMessaging();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx, TestSupport.createAuthenticationService(createUser())));
