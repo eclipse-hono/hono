@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
-import org.eclipse.hono.adapter.mqtt.credentials.MqttUsernamePassword;
+import org.eclipse.hono.auth.UsernamePasswordCredentials;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -245,7 +245,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
                     return;
                 }
 
-                MqttUsernamePassword authObject = MqttUsernamePassword.create(endpoint.auth().userName(),
+                UsernamePasswordCredentials authObject = UsernamePasswordCredentials.create(endpoint.auth().userName(),
                         endpoint.auth().password(), getConfig().isSingleTenant());
 
                 if (authObject == null) {
