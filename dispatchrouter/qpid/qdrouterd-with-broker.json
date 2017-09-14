@@ -71,7 +71,7 @@
 
   ["address", {
     "prefix": "telemetry/",
-    "distribution": "multicast"
+    "distribution": "balanced"
   }],
 
   ["policy", {

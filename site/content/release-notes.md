@@ -4,6 +4,16 @@ menu = "main"
 weight = 800
 +++
 
+# 0.5-M10 (not yet released)
+
+### Fixes & Enhancements
+
+* Enhanced internal flow control for telemetry messages.
+
+### Configuration Changes
+
+* The example *Dispatch Router* is configured to balanced for consumers (vs. multicast before). For full AMQP flow control, this is the preferred option.
+
 ## 0.5-M9
 
 ### New Features
