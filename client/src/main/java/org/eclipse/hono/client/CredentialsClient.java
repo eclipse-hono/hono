@@ -41,7 +41,6 @@ public interface CredentialsClient extends RequestResponseClient {
      *         and the <em>payload</em> contains the details as defined
      *         here <a href="https://www.eclipse.org/hono/api/Credentials-API/#credentials-format">Credentials Format</a>.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
-
      */
-    void get(String type, String authId,  Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler);
+    void get(String type, String authId, Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler);
 }

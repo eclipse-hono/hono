@@ -45,15 +45,14 @@ public interface SecretsValidator<T> {
     String getSupportedType();
 
     /**
-     * Validate  an instance of T (e.g. a password) against credentials secrets (as JsonObject as defined in the
+     * Validates an instance of T (e.g. a password) against credentials secrets (as JsonObject as defined in the
      * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>).
-     * <p>
      *
      * @param credentialsGetPayload The payload as returned from the credentials API get operation.
      * @param secret The secret that has to be validated, e.g. a password String, a certificate, etc.
      *
-     * @return True if the item could be validated, false otherwise.
+     * @return {@code True} if the item could be validated, {@code false} otherwise.
      * @throws IllegalArgumentException If the payload is not correct.
      */
-    boolean validate(final CredentialsObject credentialsGetPayload, T secret);
+    boolean validate(CredentialsObject credentialsGetPayload, T secret);
 }
