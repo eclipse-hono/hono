@@ -173,7 +173,7 @@ public class StandaloneEventApiTest {
             eventSender = creationAttempt.result();
             sender.complete();
         });
-        sender.await(1000L);
+        sender.await(2000L);
 
         String registrationAssertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, DEVICE_1);
         LOG.debug("got registration assertion for device [{}]: {}", DEVICE_1, registrationAssertion);
@@ -187,7 +187,7 @@ public class StandaloneEventApiTest {
                 ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()), "message has not been accepted");
             });
             LOG.trace("sender's send queue full: {}", eventSender.sendQueueFull());
-            waitForCredit.await(100);
+            waitForCredit.await();
         });
 
     }
