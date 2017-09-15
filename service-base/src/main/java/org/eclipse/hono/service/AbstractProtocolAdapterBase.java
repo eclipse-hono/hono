@@ -536,7 +536,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                                                                                final String authId, final Object authenticationObject) {
         return getCredentialsForDevice(tenantId, type, authId).compose(payload -> {
             Future<String> resultDeviceId = Future.future();
-            SecretsValidator validator = CredentialsUtils.findAppropriateValidators(type);
+            SecretsValidator<Object> validator = CredentialsUtils.findAppropriateValidators(type);
             try {
                 if (validator != null && validator.validate(payload, authenticationObject)) {
                     resultDeviceId.complete(payload.getDeviceId());
