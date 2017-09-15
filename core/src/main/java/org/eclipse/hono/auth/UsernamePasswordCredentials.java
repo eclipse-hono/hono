@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * The properties are determined as follows:
  * <ul>
- * <li><em>password</em> is always set to the given password.</em>
+ * <li><em>password</em> is always set to the given password.</li>
  * <li>If Hono is configured for single tenant mode, <em>tenantId</em> is set to {@link Constants#DEFAULT_TENANT} and
  * <em>authId</em> is set to the given username.</li>
  * <li>If Hono is configured for multi tenant mode, the given username is split in two around the first occurrence of
