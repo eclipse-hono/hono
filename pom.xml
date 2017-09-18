@@ -173,7 +173,6 @@
     <module>service-base</module>
     <module>services</module>
     <module>site</module>
-    <module>tests</module>
   </modules>
 
 
