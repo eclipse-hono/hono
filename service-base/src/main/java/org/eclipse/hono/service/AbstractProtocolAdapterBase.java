@@ -14,15 +14,19 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import io.vertx.proton.ProtonConnection;
+import org.eclipse.hono.auth.DeviceCredentials;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.credentials.SecretsValidator;
-import org.eclipse.hono.service.credentials.CredentialsUtils;
-import org.eclipse.hono.util.*;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -33,6 +37,7 @@ import io.vertx.core.Handler;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.ProtonConnection;
 
 /**
  * A base class for implementing protocol adapters.
@@ -46,23 +51,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     private HonoClient messaging;
     private HonoClient registration;
     private HonoClient credentials;
-    
-    /**
-     * Validates an authentication object for a device.
-     * Needs to be implemented by protocol adapters to support the authentication of devices.
-     * The standard implementation using the
-     *  <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> is available by calling
-     *  the method {@link #approveCredentialsAndResolveDeviceId(String, String, String, Object)};
-     *
-     * @param tenantId The tenantId to which the device belongs.
-     * @param type The type of credentials that are to be used for validation.
-     * @param authId The authId of the credentials that are to be used for validation.
-     * @param authenticationObject The authentication object to be validated, e.g. a password, a preshared-key, etc.
-     *
-     * @return Future The future object carrying the logicalDeviceId, if successful.
-     */
-    protected abstract Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId,
-                                                                                  final Object authenticationObject);
+
     /**
      * Sets the configuration by means of Spring dependency injection.
      * <p>
@@ -349,7 +338,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
-     * Checks if this adapter is connected to both <em>Hono Messaging</em> and the Device Registration service.
+     * Checks if this adapter is connected to <em>Hono Messaging</em>, <em>Device Registration</em>
+     * and the <em>Credentials</em> service.
      * 
      * @return {@code true} if this adapter is connected.
      */
@@ -497,20 +487,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             status.complete(Status.OK());
         });
     }
-    
-    private Future<CredentialsObject> getCredentialsForDevice(final String tenantId, final String type, final String authId) {
+
+    private Future<CredentialsObject> getCredentialsForDevice(final DeviceCredentials deviceCredentials) {
 
         Future<CredentialsObject> result = Future.future();
-        getCredentialsClient(tenantId).compose(client -> {
+        getCredentialsClient(deviceCredentials.getTenantId()).compose(client -> {
             Future<CredentialsResult<CredentialsObject>> credResultFuture = Future.future();
-            client.get(type, authId, credResultFuture.completer());
+            client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(), credResultFuture.completer());
             return credResultFuture;
         }).compose(credResult -> {
             if (credResult.getStatus() == HttpURLConnection.HTTP_OK) {
                 CredentialsObject payload = credResult.getPayload();
                 result.complete(payload);
             } else if (credResult.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                result.fail(String.format("cannot retrieve credentials (not found for type <%s>, authId <%s>)", type, authId));
+                result.fail(String.format("no such credentials [type: %s, authId: %s]",
+                        deviceCredentials.getType(), deviceCredentials.getAuthId()));
             } else {
                 result.fail("cannot retrieve credentials");
             }
@@ -520,33 +511,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
-     * Validates an authentication object against credentials secrets available by the get operation of the
-     *  <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
-     * <p>The credentials are first retrieved from the credentials service, and then all matching validators are
-     * invoked until one is successful or all failed. The authentication object is validated iff at least
-     * one validator was successful.
+     * Validates an authentication object for a device.
      *
-     * @param tenantId The tenantId to which the device belongs.
-     * @param type The type of credentials that are to be used for validation.
-     * @param authId The authId of the credentials that are to be used for validation.
-     * @param authenticationObject The authentication object to be validated, e.g. a password, a preshared-key, etc.
-
-     * @return Future The future object carrying the logicalDeviceId that was resolved by the credentials get operation, if successful.
+     * @param deviceCredentials The credentials provided by the device.
+     * @return A future indicating the outcome of the validation. If successful, the future contains the
+     *         <em>logical</em> identifier of the device.
      */
-    protected final Future<String> approveCredentialsAndResolveDeviceId(final String tenantId, final String type,
-                                                                        final String authId, final Object authenticationObject) {
-        return getCredentialsForDevice(tenantId, type, authId).compose(payload -> {
+    public Future<String> validateCredentialsForDevice(final DeviceCredentials deviceCredentials) {
+
+        return getCredentialsForDevice(deviceCredentials).compose(payload -> {
+
             Future<String> resultDeviceId = Future.future();
-            SecretsValidator<Object> validator = CredentialsUtils.findAppropriateValidators(type);
-            try {
-                if (validator != null && validator.validate(payload, authenticationObject)) {
-                    resultDeviceId.complete(payload.getDeviceId());
-                } else {
-                    resultDeviceId.fail("credentials invalid - not validated");
-                }
-            }
-            catch (IllegalArgumentException e) {
-                resultDeviceId.fail(String.format("credentials invalid : %s", e.getMessage()));
+            if (deviceCredentials.validate(payload)) {
+                resultDeviceId.complete(payload.getDeviceId());
+            } else {
+                resultDeviceId.fail("validation of credentials failed");
             }
             return resultDeviceId;
         });

@@ -713,9 +713,4 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             });
         }
     }
-
-    @Override
-    protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId, final Object authenticationObject) {
-        return approveCredentialsAndResolveDeviceId(tenantId, type, authId, authenticationObject);
-    }
 }
