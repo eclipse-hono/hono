@@ -13,6 +13,8 @@ package org.eclipse.hono.util;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +25,7 @@ import java.util.Map;
  * Is mapped internally from json representation by jackson-databind.
  */
 public final class CredentialsObject {
+
     @JsonProperty(CredentialsConstants.FIELD_DEVICE_ID)
     private String deviceId;
     @JsonProperty(CredentialsConstants.FIELD_TYPE)
@@ -37,13 +40,13 @@ public final class CredentialsObject {
      * The further processing of secrets is part of the validator for the specific type.
      */
     @JsonProperty(CredentialsConstants.FIELD_SECRETS)
-    private List<Map<String,String>> secrets;
+    private List<Map<String, String>> secrets;
 
     public String getDeviceId() {
         return deviceId;
     }
 
-    public void setDeviceId(String deviceId) {
+    public void setDeviceId(final String deviceId) {
         this.deviceId = deviceId;
     }
 
@@ -51,7 +54,7 @@ public final class CredentialsObject {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(final String type) {
         this.type = type;
     }
 
@@ -59,7 +62,7 @@ public final class CredentialsObject {
         return authId;
     }
 
-    public void setAuthId(String authId) {
+    public void setAuthId(final String authId) {
         this.authId = authId;
     }
 
@@ -67,15 +70,22 @@ public final class CredentialsObject {
         return enabled;
     }
 
-    public void setEnabled(Boolean enabled) {
+    public void setEnabled(final Boolean enabled) {
         this.enabled = enabled;
     }
 
     public List<Map<String, String>> getSecrets() {
-        return secrets;
+        return Collections.unmodifiableList(secrets);
     }
 
-    public void setSecrets(List<Map<String, String>> secrets) {
-        this.secrets = secrets;
+    public void setSecrets(final List<Map<String, String>> secrets) {
+        this.secrets = new LinkedList<>(secrets);
+    }
+
+    public void addSecret(final Map<String, String> secret) {
+        if (secrets == null) {
+            secrets = new LinkedList<>();
+        }
+        secrets.add(secret);
     }
 }
