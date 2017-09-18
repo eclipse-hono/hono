@@ -12,13 +12,12 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import io.vertx.core.AsyncResult;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.eclipse.hono.auth.DeviceCredentials;
 import org.eclipse.hono.auth.UsernamePasswordCredentials;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -28,16 +27,17 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
@@ -88,19 +88,31 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
         return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
     }
 
-    public void setMqttSecureServer(MqttServer server) {
+    /**
+     * Sets the MQTT server to use for handling secure MQTT connections.
+     * 
+     * @param server The server.
+     * @throws NullPointerException if the server is {@code null}.
+     */
+    public void setMqttSecureServer(final MqttServer server) {
         Objects.requireNonNull(server);
         if (server.actualPort() > 0) {
-            throw new IllegalArgumentException("mqtt server must not be started already");
+            throw new IllegalArgumentException("MQTT server must not be started already");
         } else {
             this.server = server;
         }
     }
 
-    public void setMqttInsecureServer(MqttServer server) {
+    /**
+     * Sets the MQTT server to use for handling non-secure MQTT connections.
+     * 
+     * @param server The server.
+     * @throws NullPointerException if the server is {@code null}.
+     */
+    public void setMqttInsecureServer(final MqttServer server) {
         Objects.requireNonNull(server);
         if (server.actualPort() > 0) {
-            throw new IllegalArgumentException("mqtt server must not be started already");
+            throw new IllegalArgumentException("MQTT server must not be started already");
         } else {
             this.insecureServer = server;
         }
@@ -271,52 +283,59 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
                     endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
             return;
         }
-        
-        UsernamePasswordCredentials authObject = UsernamePasswordCredentials.create(endpoint.auth().userName(),
+
+        UsernamePasswordCredentials redentials = UsernamePasswordCredentials.create(endpoint.auth().userName(),
                 endpoint.auth().password(), getConfig().isSingleTenant());
 
-        if (authObject == null) {
+        if (redentials == null) {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
-            LOG.debug("connection request from client [clientId: {}] rejected {}",
+            LOG.debug("connection request from client [clientId: {}] rejected [cause: {}]",
                     endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
-            return;
+        } else {
+            validateCredentialsForDevice(redentials).setHandler(attempt -> handleCredentialsResult(attempt, endpoint, redentials));
         }
 
-        validateCredentialsForDevice(authObject.getTenantId(), authObject.getType(), authObject.getAuthId(),
-                authObject.getPassword()).setHandler(attempt -> handleCredentialsResult(attempt, endpoint, authObject));
     }
 
-    void handleCredentialsResult(final AsyncResult<String> attempt, final MqttEndpoint endpoint, final UsernamePasswordCredentials authObject) {
+    void handleCredentialsResult(final AsyncResult<String> attempt, final MqttEndpoint endpoint, final DeviceCredentials credentials) {
+
         if (attempt.succeeded()) {
             final String deviceId = attempt.result();
             LOG.debug("successfully authenticated deviceId: {}", deviceId);
-            endpoint.accept(false);
 
             endpoint.publishHandler(message -> {
-                final ResourceIdentifier resource = ResourceIdentifier.fromString(message.topicName());
 
-                // check that the device publishes to its device-id
-                if (!validateCredentialsWithTopicStructure(resource, authObject.getTenantId(), deviceId)) {
+                try {
+                    final ResourceIdentifier resource = ResourceIdentifier.fromString(message.topicName());
 
-                    // if MQTT client does not conform to the topic structure, close the connection (MQTT has no way for errors)
-                    endpoint.close();
-                } else {
-                    // the payload is ALWAYS published to the deviceId downstream
-                    publishMessage(endpoint, authObject.getTenantId(), deviceId, message, resource);
+                    // check that the device publishes to its device-id
+                    if (!validateCredentialsWithTopicStructure(resource, credentials.getTenantId(), deviceId)) {
+
+                        // if MQTT client does not conform to the topic structure, close the connection (MQTT has no way for errors)
+                        endpoint.close();
+                    } else {
+                        // the payload is ALWAYS published to the deviceId downstream
+                        publishMessage(endpoint, credentials.getTenantId(), deviceId, message, resource);
+                    }
+                } catch (final IllegalArgumentException e) {
+                    LOG.debug("discarding message with malformed topic ...");
                 }
             });
 
             endpoint.closeHandler(v -> {
                 LOG.debug("connection closed to device [tenantId: {}, authId: {}, deviceId: {}]",
-                        authObject.getTenantId(), authObject.getAuthId(), deviceId);
-                if (registrationAssertions.remove(endpoint) != null)
+                        credentials.getTenantId(), credentials.getAuthId(), deviceId);
+                if (registrationAssertions.remove(endpoint) != null) {
                     LOG.trace("removed registration assertion for device [tenantId: {}, authId: {}, deviceId: {}]",
-                            authObject.getTenantId(), authObject.getAuthId(), deviceId);
+                            credentials.getTenantId(), credentials.getAuthId(), deviceId);
+                }
             });
+
+            endpoint.accept(false);
 
         } else {
             LOG.debug("authentication failed for device [tenantId: {}, authId: {}, cause: {}]",
-                    authObject.getTenantId(), authObject.getAuthId(), MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                    credentials.getTenantId(), credentials.getAuthId(), MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
         }
     }
@@ -403,11 +422,6 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
             }, result);
             return result;
         }
-    }
-
-    @Override
-    protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId, final Object authenticationObject) {
-        return approveCredentialsAndResolveDeviceId(tenantId, type, authId, authenticationObject);
     }
 
     private void close(final MqttEndpoint endpoint) {
