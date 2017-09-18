@@ -217,7 +217,7 @@ The following examples use a username and password for connecting to MQTT. The u
 
 Upload a JSON string for device `4711`:
 
-    $ mosquitto_pub -i 4711 -u 'sensor1@DEFAULT_TENANT" -P "hono-secret" -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+    $ mosquitto_pub -i 4711 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 
 ## Using the Event Topic Hierarchy
 
@@ -232,7 +232,7 @@ Upload a JSON string for device `4711`:
 
 Upload a JSON string for device `4711`:
 
-    $ mosquitto_pub -i 4711 -u 'sensor1@DEFAULT_TENANT" -P "hono-secret" -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
+    $ mosquitto_pub -i 4711 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
 
 **Setup without authentication**
 
