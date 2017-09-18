@@ -1,0 +1,9 @@
+[ {
+  "tenant" : "DEFAULT_TENANT",
+  "devices" : [ {
+    "device-id" : "4711",
+    "data" : { 
+      "enabled" : true
+    }
+  } ]
+} ]
