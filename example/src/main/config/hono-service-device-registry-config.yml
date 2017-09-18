@@ -24,7 +24,6 @@ hono:
       insecurePortBindAddress: 0.0.0.0
       insecurePortEnabled: true
     svc:
-      filename: /run/secrets/example-device-identities.json
       signing:
         sharedSecret: ${hono.regAssertion.sharedSecret}
   credentials:
