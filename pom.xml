@@ -11,7 +11,7 @@
     Bosch Software Innovations GmbH - initial API and implementation and initial documentation
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.eclipse.hono</groupId>
@@ -60,7 +60,6 @@
       <url>https://repo.bosch-si.com/content/repositories/edc-thirdparty</url>
     </repository>
   </distributionManagement>
-
 
   <developers>
     <developer>
@@ -133,6 +132,11 @@
   </developers>
 
   <properties>
+    <!-- default when no revision property is passed in from the commandline -->
+    <revision>0-SNAPSHOT</revision>
+    <!-- Plugin versions -->
+    <nexus-staging-maven-plugin.version>1.6.8</nexus-staging-maven-plugin.version>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -148,7 +152,7 @@
      -->
     <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
 
-    <!-- 
+    <!--
       Build images defined in modules with packaging type "pom".
      -->
     <fabric8.skip.build.pom>false</fabric8.skip.build.pom>
@@ -169,6 +173,7 @@
     <module>service-base</module>
     <module>services</module>
     <module>site</module>
+    <module>tests</module>
   </modules>
 
 
@@ -179,13 +184,6 @@
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
           <version>0.21.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-scm-plugin</artifactId>
-          <version>1.9.4</version>
-          <configuration>
-            <tag>hono-${project.version}</tag>
-          </configuration>
         </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>
@@ -224,7 +222,7 @@
           <executions>
             <execution>
               <id>create_resources</id>
-              <!-- 
+              <!--
                 create Kubernetes/Openshift descriptors before the artifact is packaged so
                 that the desciptors are included in the artifact
                -->
@@ -328,7 +326,7 @@
           <version>2.19.1</version>
         </plugin>
         <plugin>
-          <!-- 
+          <!--
             Copy legal documents from "legal" module to "target/classes" folder
             so that we make sure to include legal docs in all modules.
            -->
@@ -367,6 +365,11 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>flatten-maven-plugin</artifactId>
+          <version>1.0.0</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -394,7 +397,7 @@
         <version>1.4.1</version>
         <executions>
           <execution>
-            <!-- Make sure that only non-snapshot versions are used for the dependencies. 
+            <!-- Make sure that only non-snapshot versions are used for the dependencies.
               Only active when property 'snapshotDependencyAllowed' is false. -->
             <id>enforce-no-snapshots</id>
             <goals>
@@ -429,7 +432,7 @@
         </executions>
       </plugin>
       <plugin>
-        <!-- 
+        <!--
           Use the Nexus Staging plugin as a full replacement for the standard
           Maven Deploy plugin.
           See https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin
@@ -444,13 +447,51 @@
          -->
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.8</version>
+        <version>${nexus-staging-maven-plugin.version}</version>
         <extensions>true</extensions>
         <configuration>
-          <serverId>ossrh</serverId>
-          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+          <serverId>edc</serverId>
+          <nexusUrl>https://repo.bosch-si.com/</nexusUrl>
           <autoReleaseAfterClose>false</autoReleaseAfterClose>
         </configuration>
+      </plugin>
+
+
+      <!--execute git commands on maven command line, for instance mvn scm:tag -->
+      <plugin>
+        <artifactId>maven-scm-plugin</artifactId>
+        <version>1.9.4</version>
+        <configuration>
+          <tag>hono-${project.version}</tag>
+        </configuration>
+      </plugin>
+
+      <!--replace target version in POM's  -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.0.0</version>
+        <configuration>
+          <!--flattenMode>minimum</flattenMode-->
+        </configuration>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -475,12 +516,12 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
             <executions>
-	            <execution>
-	              <id>attach-javadocs</id>
-	              <goals>
-	                <goal>jar</goal>
-	             </goals>
-	            </execution>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
             </executions>
           </plugin>
         </plugins>
