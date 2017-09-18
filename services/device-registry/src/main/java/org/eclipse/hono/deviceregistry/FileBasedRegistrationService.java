@@ -67,23 +67,33 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
                 log.info("modification of registered devices has been disabled");
             }
             if (getConfig().getFilename() != null) {
-                loadRegistrationData();
-                if (getConfig().isSaveToFile()) {
-                    log.info("saving device identities to file every 3 seconds");
-                    vertx.setPeriodic(3000, saveIdentities -> {
-                        saveToFile(Future.future());
-                    });
-                } else {
-                    log.info("persistence is disabled, will not save device identities to file");
-                }
+                loadRegistrationData().compose(s -> {
+                    if (getConfig().isSaveToFile()) {
+                        log.info("saving device identities to file every 3 seconds");
+                        vertx.setPeriodic(3000, saveIdentities -> {
+                            saveToFile(Future.future());
+                        });
+                    } else {
+                        log.info("persistence is disabled, will not save device identities to file");
+                    }
+                    running = true;
+                    startFuture.complete();
+                }, startFuture);
+            } else {
+                startFuture.complete();
             }
+        } else {
+            startFuture.complete();
         }
-        running = true;
-        startFuture.complete();
     }
 
-    private void loadRegistrationData() {
-        if (getConfig().getFilename() != null) {
+    Future<Void> loadRegistrationData() {
+        Future<Void> result = Future.future();
+
+        if (getConfig().getFilename() == null) {
+            result.fail(new IllegalStateException("device identity filename is not set"));
+        } else {
+
             final FileSystem fs = vertx.fileSystem();
             log.debug("trying to load device registration information from file {}", getConfig().getFilename());
             if (fs.existsBlocking(getConfig().getFilename())) {
@@ -94,23 +104,30 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
                        for (Object obj : allObjects) {
                            JsonObject tenant = (JsonObject) obj;
                            String tenantId = tenant.getString(FIELD_TENANT);
+                           log.debug("loading devices for tenant [{}]", tenantId);
                            Map<String, JsonObject> deviceMap = new HashMap<>();
                            for (Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
                                JsonObject device = (JsonObject) deviceObj;
-                               deviceMap.put(device.getString(FIELD_DEVICE_ID), device.getJsonObject(FIELD_DATA));
+                               String deviceId = device.getString(FIELD_DEVICE_ID);
+                               log.debug("loading device [{}]", deviceId);
+                               deviceMap.put(deviceId, device.getJsonObject(FIELD_DATA));
                                deviceCount.incrementAndGet();
                            }
                            identities.put(tenantId, deviceMap);
                        }
                        log.info("successfully loaded {} device identities from file [{}]", deviceCount.get(), getConfig().getFilename());
+                       result.complete();
                    } else {
-                       log.warn("could not load device identities from file [{}]", getConfig().getFilename(), readAttempt.cause());
+                       log.warn("could not load device identities from file [{}]", getConfig().getFilename());
+                       result.fail(readAttempt.cause());
                    }
                 });
             } else {
-                log.debug("device identity file {} does not exist (yet)", getConfig().getFilename());
+                log.debug("device identity file [{}] does not exist (yet)", getConfig().getFilename());
+                result.complete();
             }
         }
+        return result;
     }
 
     @Override
