@@ -16,7 +16,7 @@
 
   <groupId>org.eclipse.hono</groupId>
   <artifactId>hono-parent</artifactId>
-  <version>${revision}</version>
+  <version>BOSCH_nightly</version>
   <packaging>pom</packaging>
 
   <name>Hono</name>
