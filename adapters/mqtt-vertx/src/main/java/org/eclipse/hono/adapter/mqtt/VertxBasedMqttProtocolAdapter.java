@@ -222,10 +222,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
 
     void handleEndpointConnection(final MqttEndpoint endpoint) {
 
-        LOG.info("connection request from client {}", endpoint.clientIdentifier());
+        LOG.debug("connection request from client [{}]", endpoint.clientIdentifier());
 
         if (!isConnected()) {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+            LOG.debug("connection request from client [{}] rejected [{}]",
+                    endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
 
         } else {
             if (getConfig().isAuthenticationRequired()) {
@@ -255,6 +257,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
             }
             publishMessage(endpoint, resource.getTenantId(), resource.getResourceId(), message, resource);
         });
+        LOG.debug("successfully connected with client [{}]", endpoint.clientIdentifier());
         endpoint.accept(false);
     }
 
@@ -264,6 +267,8 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
         if (endpoint.auth() == null) {
             LOG.trace("no auth information in endpoint found");
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+            LOG.debug("connection request from client [{}] rejected [{}]",
+                    endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
             return;
         }
         
@@ -272,6 +277,8 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
 
         if (authObject == null) {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+            LOG.debug("connection request from client [{}] rejected [{}]",
+                    endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
             return;
         }
 
@@ -282,7 +289,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
     void handleCredentialsResult(final AsyncResult<String> attempt, final MqttEndpoint endpoint, final UsernamePasswordCredentials authObject) {
         if (attempt.succeeded()) {
             String logicalDeviceId = attempt.result();
-            LOG.trace("successfully authenticated device id <{}>", logicalDeviceId);
+            LOG.debug("successfully authenticated device id [{}]", logicalDeviceId);
             endpoint.accept(false);
 
             endpoint.publishHandler(message -> {
@@ -304,6 +311,8 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
             });
 
         } else {
+            LOG.debug("authentication failed for client [{}] rejected [{}]",
+                    endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
         }
     }
