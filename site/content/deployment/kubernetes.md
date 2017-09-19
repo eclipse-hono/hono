@@ -121,5 +121,9 @@ $ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}'
 Other than using the *REST Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
 
 ~~~sh
-mosquitto_pub -h <IP_ADDRESS> -p 31883 -i 4711 -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+mosquitto_pub -h <IP_ADDRESS> -p 31883 -i 4711 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 ~~~
+
+In this case, username and password are needed due to the device authentication supported by the *MQTT Adapter*.
+In order to avoid such authentication, please ensure that the `HONO_MQTT_AUTHENTICATION_REQUIRED` property is set to false.
+For such a setup the `-u`  and `-P` parts of the `mosquitto_pub` calls can be skipped.
