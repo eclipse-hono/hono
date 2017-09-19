@@ -52,7 +52,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
      * Needs to be implemented by protocol adapters to support the authentication of devices.
      * The standard implementation using the
      *  <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a> is available by calling
-     *  the method {@link #approveCredentialsAndResolveLogicalDeviceId(String, String, String, Object)};
+     *  the method {@link #approveCredentialsAndResolveDeviceId(String, String, String, Object)};
      *
      * @param tenantId The tenantId to which the device belongs.
      * @param type The type of credentials that are to be used for validation.
@@ -533,8 +533,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
      * @return Future The future object carrying the logicalDeviceId that was resolved by the credentials get operation, if successful.
      */
-    protected final Future<String> approveCredentialsAndResolveLogicalDeviceId(final String tenantId, final String type,
-                                                                               final String authId, final Object authenticationObject) {
+    protected final Future<String> approveCredentialsAndResolveDeviceId(final String tenantId, final String type,
+                                                                        final String authId, final Object authenticationObject) {
         return getCredentialsForDevice(tenantId, type, authId).compose(payload -> {
             Future<String> resultDeviceId = Future.future();
             SecretsValidator<Object> validator = CredentialsUtils.findAppropriateValidators(type);
@@ -559,15 +559,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
      *
      * @param resource The resource identifier (built from the MQTT topic name).
      * @param tenantId The tenantId to validate.
-     * @param logicalDeviceId The logicalDeviceId to validate.
+     * @param deviceId The deviceId to validate.
      * 
      * @return True if the validation was successful, false otherwise.
      */
-    protected boolean validateCredentialsWithTopicStructure(final ResourceIdentifier resource, final String tenantId, final String logicalDeviceId) {
+    protected boolean validateCredentialsWithTopicStructure(final ResourceIdentifier resource, final String tenantId, final String deviceId) {
         if (resource.getTenantId() != null && !resource.getTenantId().equals(tenantId)) {
             return false;
         }
-        if (resource.getResourceId() != null && !resource.getResourceId().equals(logicalDeviceId)) {
+        if (resource.getResourceId() != null && !resource.getResourceId().equals(deviceId)) {
             return false;
         }
         return true;

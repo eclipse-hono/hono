@@ -201,41 +201,76 @@ The same holds true analogously for the *hono-service-device-registry.hono* addr
 
 ## Using the Telemetry Topic Hierarchy
 
-The following examples use a username and password for connecting to MQTT. The username reflects the auth-id of the [Credentals API]({{< relref "api/Credentials-API.md" >}}) and usually represents a device.
+The following examples use a username and password for connecting to MQTT. The username reflects the auth-id of the [Credentals API]({{< relref "api/Credentials-API.md" >}}) and usually represents a device. It may be identical to the device-id.
 
-**NB** The standard setup of the [Device Registry component]({{< relref "component/device-registry.md" >}}) provides the example auth-id `sensor1` with the password `hono-secret` which are used here. 
+**NB** The standard setup of the [Device Registry component]({{< relref "component/device-registry.md" >}}) provides the example auth-id `sensor1` with the password `hono-secret` 
+and the device-id `4711` which are used here. Some devices may not know their device-id but only their auth-id - this case is covered in the examples as well. 
 
 
-### Upload Telemetry Data
+### Upload Telemetry Data (authenticated devices)
 
-* Topic: `telemetry/${tenantId}/${deviceId}`
-* Client-id: ${deviceId}
+* Topic: `telemetry`
 * Payload:
   * (required) Arbitrary payload
 
+**NB** If the device knows its *device-id*, it may also use the full qualified topic address `telemetry/${tenant-id}/${device-id}`
+
 **Example**
 
-Upload a JSON string for device `4711`:
+Upload a JSON string for device-id `4711`:
 
-    $ mosquitto_pub -i 4711 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
+
+or using the full qualified topic address:
+
+    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+
+
+
+### Upload Telemetry Data (unauthenticated devices)
+
+* Topic: `telemetry/${tenant-id}/${device-id}`
+* Payload:
+  * (required) Arbitrary payload
+
+To create a setup without authentication, please ensure that the `HONO_MQTT_AUTHENTICATION_REQUIRED` property is set to false.
+
+**Example**
+
+Upload a JSON string for device-id `4711`:
+
+    $ mosquitto_pub -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 
 ## Using the Event Topic Hierarchy
 
-### Send Event Message
+### Send Event Message (authenticated devices)
 
-* Topic: `event/${tenantId}/${deviceId}`
-* Client-id: ${deviceId}
+* Topic: `event`
 * Payload:
   * (required) Arbitrary payload
+
+**NB** If the device knows its *device-id*, it may also use the full qualified topic address `event/${tenant-id}/${device-id}`
 
 **Example**
 
 Upload a JSON string for device `4711`:
 
-    $ mosquitto_pub -i 4711 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
+    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event -m '{"alarm": 1}'
+    
+or using the full qualified topic address:
 
-**Setup without authentication**
+    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
+
+### Send Event Message (unauthenticated devices)
+
+* Topic: `event/${tenant-id}/${device-id}`
+* Payload:
+  * (required) Arbitrary payload
 
 To create a setup without authentication, please ensure that the `HONO_MQTT_AUTHENTICATION_REQUIRED` property is set to false.
-For such a setup the `-u`  and `-P` parts of the `mosquitto_pub` calls can be skipped.
 
+**Example**
+
+Upload a JSON string for device `4711`:
+
+    $ mosquitto_pub -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
