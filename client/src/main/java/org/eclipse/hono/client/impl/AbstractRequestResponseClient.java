@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A Vertx-Proton based parent class for the implementation of API clients that follow the request response pattern.
@@ -44,12 +43,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * A subclass of this class only needs to implement some abstract helper methods (see the method descriptions) and their own
  * API specific methods. This allows for implementation classes that focus on the API specific code.
  */
-public abstract class AbstractRequestResponseClient<C extends RequestResponseClient, R extends RequestResponseResult>
+public abstract class AbstractRequestResponseClient<C extends RequestResponseClient, R extends RequestResponseResult<?>>
         extends AbstractHonoClient implements RequestResponseClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractRequestResponseClient.class);
 
-    protected final AtomicLong                           messageCounter = new AtomicLong();
     protected final Map<String, Handler<AsyncResult<R>>> replyMap = new ConcurrentHashMap<>();
     protected final String                               replyToAddress;
 
