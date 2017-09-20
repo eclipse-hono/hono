@@ -39,21 +39,22 @@ public abstract class AbstractHonoClient {
     /**
      * The number of credits to flow to senders by default.
      */
-    protected static final int    DEFAULT_SENDER_CREDITS = 1000;
-    private static final Logger   LOG                    = LoggerFactory.getLogger(AbstractHonoClient.class);
+    protected static final int DEFAULT_SENDER_CREDITS = 1000;
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**
      * The vertx-proton object used for sending messages to the server.
      */
-    protected ProtonSender        sender;
+    protected ProtonSender   sender;
     /**
      * The vertx-proton object used for receiving messages from the server.
      */
-    protected ProtonReceiver      receiver;
+    protected ProtonReceiver receiver;
     /**
      * The vertx context to run all interactions with the server on.
      */
-    protected Context             context;
+    protected Context        context;
 
     /**
      * Creates a client for a vert.x context.
