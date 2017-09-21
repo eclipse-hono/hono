@@ -233,6 +233,45 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         return null;
     }
 
+    @Override
+    public void addCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        CredentialsResult credentialsResult = addCredentialsResult(tenantId, otherKeys);
+        resultHandler.handle(Future.succeededFuture(credentialsResult));
+    }
+
+    private CredentialsResult addCredentialsResult(final String tenantId, final JsonObject otherKeys) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(otherKeys);
+
+        String authId = otherKeys.getString(FIELD_AUTH_ID);
+
+        Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
+
+        JsonArray authIdCredentials = getAuthIdCredentials(authId, credentialsForTenant);
+
+        // check if credentials already exist with the type and auth-id for the device-id from the payload.
+        for (Object credentialsObj: authIdCredentials) {
+            JsonObject credentials = (JsonObject) credentialsObj;
+            if (credentials.getString(FIELD_TYPE).equals(otherKeys.getString(FIELD_TYPE)) &&
+                credentials.getString(FIELD_DEVICE_ID).equals(otherKeys.getString(FIELD_DEVICE_ID))) {
+                return CredentialsResult.from(HTTP_CONFLICT);
+            }
+        }
+
+        authIdCredentials.add(otherKeys);
+        credentialsForTenant.put(authId, authIdCredentials);
+
+        return CredentialsResult.from(HTTP_CREATED);
+    }
+
+    private Map<String, JsonArray> getCredentialsForTenant(final String tenantId) {
+        return credentials.computeIfAbsent(tenantId, id -> new HashMap<>());
+    }
+
+    private JsonArray getAuthIdCredentials(final String authId, final Map<String, JsonArray> credentialsForTenant) {
+        return credentialsForTenant.computeIfAbsent(authId, id -> new JsonArray());
+    }
+
     /**
      * Removes all credentials from the registry.
      */
