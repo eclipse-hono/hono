@@ -345,11 +345,11 @@ Example:
 | :--------------- | :-------: | :--------- | :-------- | :---------- |
 | *type*           | *yes*     | *string*   |           | The credential type name, always `hashed-password`. |
 | *auth-id*        | *yes*     | *string*   |           | The identity that the device should be authenticated as. |
-| *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. |
+| *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. The password hash MUST be computed by applying the hash function to the byte array consisting of the salt bytes (if a salt is used) and the UTF-8 encoding of the clear text password. |
 | *salt*           | *no*      | *string*   |           | The Base64 encoded bytes used as *salt* for the password hash. If not set then the password hash has been created without salt. |
 | *hash-function*  | *no*      | *string*   | `sha-256` | The name of the hash function used to create the password hash. Examples include `sha-256`, `sha-512` etc. |
 
-**NB** It is strongly recommended to only use salted password hashes. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
+**NB** It is strongly recommended to use salted password hashes only. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
 Whenever a password is updated for a user, the salt should change as well.
 
 **NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
