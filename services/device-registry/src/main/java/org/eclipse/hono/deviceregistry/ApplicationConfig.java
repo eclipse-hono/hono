@@ -18,6 +18,7 @@ import io.vertx.core.dns.AddressResolverOptions;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
+import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
@@ -151,6 +152,17 @@ public class ApplicationConfig {
     @Scope("prototype")
     public RegistrationHttpEndpoint registrationHttpEndpoint() {
         return new RegistrationHttpEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of an HTTP protocol handler for Hono's <em>Credentials</em> API.
+     *
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public CredentialsHttpEndpoint credentialsHttpEndpoint() {
+        return new CredentialsHttpEndpoint(vertx());
     }
 
     /**

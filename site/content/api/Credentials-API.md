@@ -279,7 +279,7 @@ Below is an example for a payload containing [a hashed password]({{< relref "#ha
     "not-after": "20171224T1900Z+0100",
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
-    "hash-function": "sha512"
+    "hash-function": "sha-512"
   }]
 }
 ~~~
@@ -336,7 +336,7 @@ Example:
   "secrets": [{
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
-    "hash-function": "sha512"
+    "hash-function": "sha-512"
   }]
 }
 ~~~
@@ -347,7 +347,7 @@ Example:
 | *auth-id*        | *yes*     | *string*   |           | The identity that the device should be authenticated as. |
 | *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. |
 | *salt*           | *no*      | *string*   |           | The Base64 encoded bytes used as *salt* for the password hash. If not set then the password hash has been created without salt. |
-| *hash-function*  | *no*      | *string*   | `sha256`  | The name of the hash function used to create the password hash. Examples include `sha256`, `sha512` etc. |
+| *hash-function*  | *no*      | *string*   | `sha-256` | The name of the hash function used to create the password hash. Examples include `sha-256`, `sha-512` etc. |
 
 **NB** It is strongly recommended to only use salted password hashes. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
 Whenever a password is updated for a user, the salt should change as well.
