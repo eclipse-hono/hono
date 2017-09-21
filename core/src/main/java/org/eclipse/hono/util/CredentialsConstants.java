@@ -43,6 +43,11 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     public static final String SECRETS_TYPE_HASHED_PASSWORD      = "hashed-password";
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
 
+    /**
+     * The name of the default hash function to use for hashed passwords if not set explicitly.
+     */
+    public static final String DEFAULT_HASH_FUNCTION             ="sha-256";
+
     private static final List<String> OPERATIONS = Arrays.asList(OPERATION_GET, OPERATION_ADD, OPERATION_UPDATE, OPERATION_REMOVE);
 
     /**

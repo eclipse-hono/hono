@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.auth;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -130,46 +130,49 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
         return tenantId;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.auth.AbstractDeviceCredentials#matchesCredentials(java.util.Map)
+    /**
+     * Matches the credentials against a given secret.
+     * <p>
+     * The secret is expected to be of type <em>hashed-password</em> as defined by
+     * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Hono's Credentials API</a>.
+     * 
+     * @param candidateSecret The secret to match against.
+     * @return {@code true} if the credentials match the secret.
      */
     @Override
     public boolean matchesCredentials(final Map<String, String> candidateSecret) {
-
-        String hashFunction = candidateSecret.get(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
-        if (hashFunction == null) {
-            return false;
-        }
 
         String pwdHash = candidateSecret.get(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
         if (pwdHash == null) {
             return false;
         }
 
-        byte[] password = Base64.getDecoder().decode(pwdHash);
+        byte[] hashedPasswordOnRecord = Base64.getDecoder().decode(pwdHash);
 
-        final String salt = candidateSecret.get(CredentialsConstants.FIELD_SECRETS_SALT);
-        byte[] decodedSalt = null;
+        byte[] salt = null;
+        final String encodedSalt = candidateSecret.get(CredentialsConstants.FIELD_SECRETS_SALT);
         // the salt is optional so decodedSalt may stay null if salt was not found
-        if (salt != null) {
-            decodedSalt = Base64.getDecoder().decode(salt);
+        if (encodedSalt != null) {
+            salt = Base64.getDecoder().decode(encodedSalt);
         }
 
-        try {
-            byte[] hashedPassword = hashPassword(hashFunction, decodedSalt, getPassword());
-            // check if the password is the hashed version of the protocol adapter password
-            return Arrays.equals(password, hashedPassword);
-        } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
-            return false;
-        }
+        String hashFunction = candidateSecret.getOrDefault(
+                CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION,
+                CredentialsConstants.DEFAULT_HASH_FUNCTION);
+
+        return checkPassword(hashFunction, salt, hashedPasswordOnRecord);
     }
 
-    private byte[] hashPassword(final String hashFunction, final byte[] hashSalt, final String passwordToHash) throws NoSuchAlgorithmException, UnsupportedEncodingException {
-        MessageDigest messageDigest = MessageDigest.getInstance(hashFunction);
-        if (hashSalt != null) {
-            messageDigest.update(hashSalt);
+    private boolean checkPassword(final String hashFunction, final byte[] salt, final byte[] hashedPasswordOnRecord) {
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance(hashFunction);
+            if (salt != null) {
+                messageDigest.update(salt);
+            }
+            byte[] hashedPassword = messageDigest.digest(getPassword().getBytes(StandardCharsets.UTF_8));
+            return Arrays.equals(hashedPassword, hashedPasswordOnRecord);
+        } catch (final NoSuchAlgorithmException e) {
+            return false;
         }
-        byte[] theHashedPassword = messageDigest.digest(passwordToHash.getBytes());
-        return theHashedPassword;
     }
 }
