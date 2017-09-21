@@ -71,12 +71,11 @@ public class ConnectionFactoryImplTest {
 
         ProtonClientOptions options = new ProtonClientOptions().setConnectTimeout(100);
         factory.connect(options, null, null, ctx.asyncAssertFailure(t -> {
-            ctx.assertNotNull(t);
             handlerInvocation.complete();
         }));
 
         // THEN the connection attempt fails and the given handler is invoked
-        handlerInvocation.await(500);
+        handlerInvocation.await(2000);
     }
 
 }
