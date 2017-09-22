@@ -235,11 +235,11 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
     @Override
     public void addCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        CredentialsResult credentialsResult = addCredentialsResult(tenantId, otherKeys);
+        CredentialsResult<JsonObject> credentialsResult = addCredentialsResult(tenantId, otherKeys);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
-    private CredentialsResult addCredentialsResult(final String tenantId, final JsonObject otherKeys) {
+    private CredentialsResult<JsonObject> addCredentialsResult(final String tenantId, final JsonObject otherKeys) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(otherKeys);
 
