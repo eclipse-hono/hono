@@ -206,7 +206,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
             );
             return CredentialsResult.from(HTTP_OK, resultPayload);
         } else {
-            return CredentialsResult.from(HTTP_NOT_FOUND, (JsonObject) null);
+            return CredentialsResult.from(HTTP_NOT_FOUND);
         }
     }
 
