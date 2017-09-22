@@ -154,7 +154,7 @@ public class FileBasedRegistrationServiceTest
    @Test
    public void testGetFailsForDeregisteredDevice() {
        processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CREATED, TENANT, DEVICE));
-       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getServiceReplyAsJson(HTTP_OK, TENANT, DEVICE, expectedMessage(DEVICE)));
+       processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getServiceReplyAsJson(HTTP_NO_CONTENT, TENANT, DEVICE));
        processMessageAndExpectResponse(mockMsg(ACTION_GET), getServiceReplyAsJson(HTTP_NOT_FOUND, TENANT, DEVICE));
    }
 

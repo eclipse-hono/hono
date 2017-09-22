@@ -138,10 +138,10 @@ Below is an example for a payload of a response to an *assertion* request for de
 
 The response message's *status* property may contain the following codes:
 
-| Code | Description |
-| :--- | :---------- |
+| Code  | Description |
+| :---- | :---------- |
 | *200* | OK, the device is registered for the given tenant and is enabled. The payload contains the signed assertion. |
-| *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id* or the device is not enabled. |
+| *404* | Not Found, there is no device registered with the given *device id* within the given *tenant id* or the device is not enabled. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -169,13 +169,11 @@ The request message MAY include payload as defined in the [Payload Format]({{< r
 
 A response to an *update registration* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
 
-The response message includes payload as defined in the [Payload Format]({{< relref "#payload-format" >}}) section below. The `data` member contains the key/value pairs that **have been replaced** by this operation.
-
 The response message's *status* property may contain the following codes:
 
 | Code  | Description |
 | :---- | :---------- |
-| *200* | OK, the device registration has been successfully updated. The message payload contains the data that has been *previously* registered and which has been *replaced* with the payload of the request message. |
+| *204* | No Content, the device registration has been updated successfully. |
 | *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id*. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
@@ -205,13 +203,11 @@ The body of the message SHOULD be empty and will be ignored if it is not.
 
 A response to a *deregister device* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
 
-The response message includes payload as defined in the [Payload Format]({{< relref "#payload-format" >}}) section below. The payload contains the key/value pairs of the device that has been unregistered.
-
 The response may contain the following status codes:
 
-| Code | Description |
-| :--- | :---------- |
-| *200* | OK, the device has been successfully deregistered. |
+| Code  | Description |
+| :---- | :---------- |
+| *204* | No Content, the device has been successfully deregistered. |
 | *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id*. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.

@@ -8,9 +8,13 @@ weight = 800
 
 ### New Features
 
-* Metrics could be used in all services, now. New metrics from MQTT Adapter and REST Adapter are there and will be written to InfluxDB and shown in Grafana in the example deployment.
+* Metrics could be used in all services now. New metrics from MQTT Adapter and REST Adapter are there and will be written to InfluxDB and shown in Grafana in the example deployment.
 * The Credentials API is implemented and available as AMQP endpoint in the Device Registry component. The example deployment offers a file based implementation which implements the mandatory GET operation of the Credentials API. The optional parts are checked for valid parameters but are responded by the file based implementation with *not implemented*. This way the implementation of a production ready credentials store is eased, since only the defined methods need to be implemented by a Spring component (like the FileBasedCredentialsService class).
-* The MQTT adapter requires a username/password authentication by default now. The example file based credentials implementaion offers one documented combination of username/password ("sensor1"/"hono-secret") to use. Additionally, for special test scenarios the authentication of devices can be switched off in the MQTT adapter by configuration, in which case the adapter is open to all clients (like it was before). 
+* The MQTT adapter requires a username/password authentication by default now. The example file based credentials implementation offers one documented combination of username/password ("sensor1"/"hono-secret") to use. Additionally, for special test scenarios the authentication of devices can be switched off in the MQTT adapter by configuration, in which case the adapter is open to all clients (like it was before).
+
+### API Changes
+
+* The Device Registration API's *update* and *deregister* operations have been adapted to match the semantics of the Credentials API. Both operations now return a status code of 204 (*No Content*) on successful execution and do no longer contain the previous value in the response body.
 
 ## 0.5-M8
 

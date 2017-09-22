@@ -223,9 +223,9 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
 
         if (getConfig().isModificationEnabled()) {
             final Map<String, JsonObject> devices = identities.get(tenantId);
-            if (devices != null && devices.containsKey(deviceId)) {
+            if (devices != null && devices.remove(deviceId) != null) {
                 dirty = true;
-                return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, devices.remove(deviceId)));
+                return RegistrationResult.from(HTTP_NO_CONTENT);
             } else {
                 return RegistrationResult.from(HTTP_NOT_FOUND);
             }
@@ -276,8 +276,9 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
             JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
             final Map<String, JsonObject> devices = identities.get(tenantId);
             if (devices != null && devices.containsKey(deviceId)) {
+                devices.put(deviceId, obj);
                 dirty = true;
-                return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, devices.put(deviceId, obj)));
+                return RegistrationResult.from(HTTP_NO_CONTENT);
             } else {
                 return RegistrationResult.from(HTTP_NOT_FOUND);
             }
