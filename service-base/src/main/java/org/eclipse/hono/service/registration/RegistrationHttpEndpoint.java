@@ -114,6 +114,16 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         return ctx.request().getParam(PARAM_DEVICE_ID);
     }
 
+    private static void setResponseBody(final JsonObject registrationResult, final HttpServerResponse response) {
+        JsonObject msg = registrationResult.getJsonObject("payload");
+        if (msg != null) {
+            String body = msg.encodePrettily();
+            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+                .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
+                .write(body);
+        }
+    }
+
     private void doGetDevice(final RoutingContext ctx) {
 
         final String deviceId = getDeviceIdParam(ctx);
@@ -172,8 +182,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                         response.setStatusCode(status);
                         switch(status) {
                         case HttpURLConnection.HTTP_CREATED:
-                            response
-                                .putHeader(
+                            response.putHeader(
                                         HttpHeaders.LOCATION,
                                         String.format("/%s/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId));
                         default:
@@ -214,16 +223,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
 
         doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
                 response.setStatusCode(status);
-                switch(status) {
-                case HttpURLConnection.HTTP_OK:
-                    String msg = registrationResult.getJsonObject("payload").encodePrettily();
-                    response
-                        .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
-                        .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
-                        .write(msg);
-                default:
-                    response.end();
+                if (status >=400) {
+                    setResponseBody(registrationResult, response);
                 }
+                response.end();
         });
     }
 
@@ -236,16 +239,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_DEREGISTER, tenantId, deviceId);
         doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
                 response.setStatusCode(status);
-                switch(status) {
-                case HttpURLConnection.HTTP_OK:
-                    String msg = registrationResult.getJsonObject("payload").encodePrettily();
-                    response
-                        .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
-                        .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
-                        .write(msg);
-                default:
-                    response.end();
+                if (status >= 400) {
+                    setResponseBody(registrationResult, response);
                 }
+                response.end();
         });
     }
 
