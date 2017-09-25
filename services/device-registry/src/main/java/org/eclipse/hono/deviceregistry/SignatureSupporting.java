@@ -14,8 +14,19 @@ package org.eclipse.hono.deviceregistry;
 
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 
+/**
+ * An interface for providing {@link SignatureSupportingConfigProperties}
+ * <p>
+ * This interface is intended for implementors of configurations which support
+ * {@link SignatureSupportingConfigProperties}.
+ */
 public interface SignatureSupporting {
 
+    /**
+     * Gets the properties for determining key material for creating registration assertion tokens.
+     *
+     * @return The properties.
+     */
     public SignatureSupportingConfigProperties getSigning();
 
 }
