@@ -23,7 +23,7 @@ import io.vertx.core.json.JsonObject;
  * Configuration properties for the Hono's device registry as own server.
  *
  */
-public final class FileBasedRegistrationConfigProperties {
+public final class FileBasedRegistrationConfigProperties implements SignatureSupporting {
 
     /**
      * The default number of devices that can be registered for each tenant.
@@ -146,6 +146,7 @@ public final class FileBasedRegistrationConfigProperties {
      *
      * @return The properties.
      */
+    @Override
     public SignatureSupportingConfigProperties getSigning() {
         return registrationAssertionProperties;
     }

@@ -221,9 +221,8 @@ public class ApplicationConfig {
      */
     @Bean
     @Qualifier("signing")
-    public RegistrationAssertionHelper registrationAssertionFactory() {
+    public RegistrationAssertionHelper registrationAssertionFactory(final SignatureSupporting serviceProps) {
         ServiceConfigProperties amqpProps = amqpProperties();
-        FileBasedRegistrationConfigProperties serviceProps = serviceProperties();
         if (!serviceProps.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
             // fall back to TLS configuration
             serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());
