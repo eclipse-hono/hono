@@ -25,9 +25,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.net.HttpURLConnection.*;
@@ -45,6 +47,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
     private static final String ARRAY_CREDENTIALS = "credentials";
     private static final String FIELD_TENANT = "tenant";
+    private static final String TYPE_SPECIFIER_WILDCARD = "*";
 
     // <tenantId, <authId, credentialsData[]>>
     private Map<String, Map<String, JsonArray>> credentials = new HashMap<>();
@@ -260,8 +263,76 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
         authIdCredentials.add(otherKeys);
         credentialsForTenant.put(authId, authIdCredentials);
-
+        dirty = true;
         return CredentialsResult.from(HTTP_CREATED);
+    }
+
+    /**
+     * Remove the credentials that match the given parameters.
+     * See the parameters for detailed specification.
+     *
+     * @param tenantId The id of the tenant for that credentials shall be deleted. Mandatory.
+     * @param deviceId The if of the device for that credentials shall be deleted. Mandatory.
+     * @param type The type of credentials that shall be deleted. If set to '*', credentials of all types for the
+     *             provided (other) parameters will be deleted. Mandatory.
+     * @param authId The auth-id for that credentials shall be deleted. Optional - if null, credentials with arbitrary
+     *               auth-id's will be deleted.
+     * @param resultHandler The result handler that handles the result (which contains the status of the removal).
+     */
+    @Override
+    public void removeCredentials(final String tenantId, final String deviceId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        CredentialsResult<JsonObject> credentialsResult = removeCredentialsResult(tenantId, deviceId, type, authId);
+        resultHandler.handle(Future.succeededFuture(credentialsResult));
+    }
+
+    private CredentialsResult<JsonObject> removeCredentialsResult(final String tenantId, final String deviceId, final String type, final String authId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(type);
+
+        final AtomicBoolean removedAnyElement = new AtomicBoolean(false);
+
+        final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
+        if (credentialsForTenant != null) {
+            if (authId != null) {
+                final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
+                removedAnyElement.set(removeCredentialsFromCredentialsArray(deviceId, type, credentialsForAuthId));
+            } else {
+                // delete based on type (no authId provided) - this might consume more time on large data sets and is thus
+                // handled explicitly
+                credentialsForTenant.forEach((authIdKey, credentialsArray) -> {
+                    removedAnyElement.set(removeCredentialsFromCredentialsArray(deviceId, type, credentialsArray));
+                });
+            }
+        }
+
+        if (removedAnyElement.get()) {
+            dirty = true;
+            return CredentialsResult.from(HTTP_NO_CONTENT);
+        } else {
+            return CredentialsResult.from(HTTP_NOT_FOUND);
+        }
+    }
+
+    private boolean removeCredentialsFromCredentialsArray(String deviceId, String type, JsonArray credentialsForAuthId) {
+        boolean removedElement = false;
+
+        if (credentialsForAuthId != null) {
+            // the array always contains the same deviceId and authId, but possibly different types
+            // use an iterator here to allow removal during looping (streams currently do not allow this)
+            Iterator credentialsIterator = credentialsForAuthId.iterator();
+            while (credentialsIterator.hasNext()) {
+                final JsonObject element = (JsonObject) credentialsIterator.next();
+                if (!element.getString(FIELD_DEVICE_ID).equals(deviceId)) {
+                    break; // no futher investigation of array necessary
+                } else if (type.equals(TYPE_SPECIFIER_WILDCARD) || type.equals(element.getString(FIELD_TYPE))) {
+                    credentialsIterator.remove();
+                    removedElement = true;
+                }
+            }
+        }
+
+        return removedElement;
     }
 
     private Map<String, JsonArray> getCredentialsForTenant(final String tenantId) {

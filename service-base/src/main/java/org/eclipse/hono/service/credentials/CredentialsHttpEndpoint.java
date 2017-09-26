@@ -36,13 +36,16 @@ import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
  * An {@code HttpEndpoint} for managing device credentials.
  * <p>
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/api/Credentials-API//">Credentials API</a>.
- * It receives HTTP requests representing operation invocations and sends them to an address on the vertx
+ * It receives HTTP requests representing operation invocations and sends them to the address {@link CredentialsConstants#CREDENTIALS_ENDPOINT} on the vertx
  * event bus for processing. The outcome is then returned to the peer in the HTTP response.
  */
 public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
     // path parameters for capturing parts of the URI path
     private static final String PARAM_TENANT_ID = "tenant_id";
+    private static final String PARAM_DEVICE_ID = "device_id";
+    private static final String PARAM_TYPE = "type";
+    private static final String PARAM_AUTH_ID = "auth_id";
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -62,12 +65,34 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         // ADD credentials
         router.route(HttpMethod.POST, pathWithTenant).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
                 .handler(this::doAddCredentialsJson);
-        router.route(HttpMethod.POST, pathWithTenant)
-                .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+        router.route(HttpMethod.POST, pathWithTenant).handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+
+        // REMOVE credentials
+        final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s",
+                CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID);
+        router.route(HttpMethod.DELETE, pathWithTenantAndDeviceId).handler(this::doRemoveCredentials);
+        final String pathWithTenantAndDeviceIdAndType = String.format("/%s/:%s/:%s/:%s",
+                CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID, PARAM_TYPE, PARAM_AUTH_ID);
+        router.route(HttpMethod.DELETE, pathWithTenantAndDeviceIdAndType).handler(this::doRemoveCredentials);
+        final String pathWithTenantAndDeviceIdAndTypeAndAuthId = String.format("/%s/:%s/:%s/:%s/:%s",
+                CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID, PARAM_TYPE, PARAM_AUTH_ID);
+        router.route(HttpMethod.DELETE, pathWithTenantAndDeviceIdAndTypeAndAuthId).handler(this::doRemoveCredentials);
     }
 
     private static String getTenantParam(final RoutingContext ctx) {
         return ctx.request().getParam(PARAM_TENANT_ID);
+    }
+
+    private static String getDeviceIdParam(final RoutingContext ctx) {
+        return ctx.request().getParam(PARAM_DEVICE_ID);
+    }
+
+    private static String getTypeParam(final RoutingContext ctx) {
+        return ctx.request().getParam(PARAM_TYPE);
+    }
+
+    private static String getAuthIdParam(final RoutingContext ctx) {
+        return ctx.request().getParam(PARAM_AUTH_ID);
     }
 
     @Override
@@ -108,14 +133,14 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                 logger.debug("adding credentials for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
                 final HttpServerResponse response = ctx.response();
                 final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.OPERATION_ADD, tenantId, (String) deviceId, payload);
-                doAddCredentialsAction(ctx, requestMsg, (status, addCredentialsResult) -> {
+                doCredentialsAction(ctx, requestMsg, (status, addCredentialsResult) -> {
                     response.setStatusCode(status);
                     switch(status) {
                         case HttpURLConnection.HTTP_CREATED:
                         response
                                 .putHeader(
                                         HttpHeaders.LOCATION,
-                                        String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, authId, type));
+                                        String.format("/%s/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, deviceId, type, authId));
                         default:
                             response.end();
                     }
@@ -124,7 +149,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         }
     }
 
-    private void doAddCredentialsAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
+    private void doCredentialsAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
 
         vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, requestMsg,
                 invocation -> {
@@ -132,10 +157,50 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                     if (invocation.failed()) {
                         HttpEndpointUtils.serviceUnavailable(response, 2);
                     } else {
-                        final JsonObject addCredentialsResult = (JsonObject) invocation.result().body();
-                        final Integer status = Integer.valueOf(addCredentialsResult.getString("status"));
-                        responseHandler.accept(status, addCredentialsResult);
+                        final JsonObject credentialsResult = (JsonObject) invocation.result().body();
+                        final Integer status = Integer.valueOf(credentialsResult.getString("status"));
+                        responseHandler.accept(status, credentialsResult);
                     }
                 });
     }
+
+    private static void setResponseBody(final JsonObject registrationResult, final HttpServerResponse response) {
+        JsonObject msg = registrationResult.getJsonObject("payload");
+        if (msg != null) {
+            String body = msg.encodePrettily();
+            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+                    .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
+                    .write(body);
+        }
+    }
+
+    private void doRemoveCredentials(final RoutingContext ctx) {
+        // mandatory params
+        final String tenantId = getTenantParam(ctx);
+        final String deviceId = getDeviceIdParam(ctx);
+        // optional params
+        final String type = getTypeParam(ctx);
+        final String authId = getAuthIdParam(ctx);
+
+        logger.debug("removeCredentials: tenant_id: {}, device_id: {}, type: {}, authId: {}", tenantId, deviceId, type, authId);
+
+        final HttpServerResponse response = ctx.response();
+        final JsonObject payload = new JsonObject();
+        payload.put(CredentialsConstants.FIELD_TYPE, (type == null) ? "*" : type);
+        if (authId != null) {
+            payload.put(CredentialsConstants.FIELD_AUTH_ID, authId);
+        }
+
+        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.OPERATION_REMOVE,
+                tenantId, deviceId, payload);
+
+        doCredentialsAction(ctx, requestMsg, (status, removeCredentialsResult) -> {
+            response.setStatusCode(status);
+            if (status >= 400) {
+                setResponseBody(removeCredentialsResult, response);
+            }
+            response.end();
+        });
+    }
+
 }

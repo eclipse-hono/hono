@@ -198,7 +198,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     }
     
     private void processCredentialsMessageRemoveOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
-        final String deviceId = payload.getString(FIELD_DEVICE_ID);
+        final String deviceId = regMsg.body().getString(FIELD_DEVICE_ID);
         if (deviceId == null) {
             log.debug("credentials remove request did not contain device-id in payload - not supported");
             reply(regMsg, CredentialsResult.from(HTTP_BAD_REQUEST, (JsonObject) null));
