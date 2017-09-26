@@ -6,7 +6,7 @@ weight = 435
 The *Credentials API* is used by *Protocol Adapters* to retrieve credentials used to authenticate *Devices* connecting to the adapter. In particular, the API supports the storage, look up and deletion of *shared secrets* which are often used by IoT devices by means of *username/password* based authentication schemes.
 <!--more-->
 
-Credentials are of a certain *type* which indicates which authentication mechanism the credentials can be used with. Each set of credentials also contains an *authentication identity* which is the identity claimed by the device during authentication. This authentication identity is usually different from the *logical* ID the device has been registered with using Hono's [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}). Multiple sets of credentials (including arbitrary *authentication identities*) can be registered for each *logical* device ID.
+Credentials are of a certain *type* which indicates which authentication mechanism the credentials can be used with. Each set of credentials also contains an *authentication identity* which is the identity claimed by the device during authentication. This authentication identity is usually different from the *device-id* the device has been registered with using Hono's [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}). Multiple sets of credentials (including arbitrary *authentication identities*) can be registered for each *device-id*.
 
 Note, however, that in real world applications the device credentials will probably be kept and managed by an existing *system of record*, using e.g. a database for persisting the credentials. The Credential API accounts for this fact by means of defining only the [Get Credentials]({{< relref "#get-credentials" >}}) operation as *mandatory*, meaning that this operation is strictly required by a Hono instance for it to work properly. The remaining operations are defined as *optional* from Hono's perspective.
 
@@ -279,7 +279,7 @@ Below is an example for a payload containing [a hashed password]({{< relref "#ha
     "not-after": "20171224T1900Z+0100",
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
-    "hash-function": "sha512"
+    "hash-function": "sha-512"
   }]
 }
 ~~~
@@ -336,7 +336,7 @@ Example:
   "secrets": [{
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
-    "hash-function": "sha512"
+    "hash-function": "sha-512"
   }]
 }
 ~~~
@@ -345,11 +345,11 @@ Example:
 | :--------------- | :-------: | :--------- | :-------- | :---------- |
 | *type*           | *yes*     | *string*   |           | The credential type name, always `hashed-password`. |
 | *auth-id*        | *yes*     | *string*   |           | The identity that the device should be authenticated as. |
-| *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. |
+| *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. The password hash MUST be computed by applying the hash function to the byte array consisting of the salt bytes (if a salt is used) and the UTF-8 encoding of the clear text password. |
 | *salt*           | *no*      | *string*   |           | The Base64 encoded bytes used as *salt* for the password hash. If not set then the password hash has been created without salt. |
-| *hash-function*  | *no*      | *string*   | `sha256`  | The name of the hash function used to create the password hash. Examples include `sha256`, `sha512` etc. |
+| *hash-function*  | *no*      | *string*   | `sha-256` | The name of the hash function used to create the password hash. Examples include `sha-256`, `sha-512` etc. |
 
-**NB** It is strongly recommended to only use salted password hashes. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
+**NB** It is strongly recommended to use salted password hashes only. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
 Whenever a password is updated for a user, the salt should change as well.
 
 **NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).

@@ -24,7 +24,6 @@ import org.eclipse.hono.util.CredentialsResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -61,46 +60,54 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     @Override
     protected void doStart(final Future<Void> startFuture) throws Exception {
         if (!running) {
-            loadCredentials();
-            if (getConfig().isSaveToFile()) {
-                log.info("saving credentials to file every 3 seconds");
-                vertx.setPeriodic(3000, saveIdentities -> {
-                    saveToFile(Future.future());
-                });
-            } else {
-                log.info("persistence is disabled, will not save credentials to file");
-            }
+            loadCredentials().compose(s -> {
+                if (getConfig().isSaveToFile()) {
+                    log.info("saving credentials to file every 3 seconds");
+                    vertx.setPeriodic(3000, saveIdentities -> {
+                        saveToFile(Future.future());
+                    });
+                } else {
+                    log.info("persistence is disabled, will not save credentials to file");
+                }
+                running = true;
+                startFuture.complete();
+            }, startFuture);
+        } else {
+            startFuture.complete();
         }
-        running = true;
-        startFuture.complete();
     }
 
-    void loadCredentials() throws IOException {
+    Future<Void> loadCredentials() {
+        Future<Void> result = Future.future();
         if (getConfig().getCredentialsFilename() == null) {
-            throw new IllegalStateException("credentials filename is not set");
-        }
-
-        final FileSystem fs = vertx.fileSystem();
-        log.debug("trying to load credentials information from file {}", getConfig().getCredentialsFilename());
-
-        if (fs.existsBlocking(getConfig().getCredentialsFilename())) {
-            log.info("loading credentials from file {}", getConfig().getCredentialsFilename());
-            fs.readFile(getConfig().getCredentialsFilename(), readAttempt -> {
-                if (readAttempt.succeeded()) {
-                    JsonArray allObjects = new JsonArray(new String(readAttempt.result().getBytes()));
-                    parseCredentials(allObjects);
-                } else {
-                    log.warn("could not load credentials from file [{}]", getConfig().getCredentialsFilename(), readAttempt.cause());
-                }
-            });
+            result.fail(new IllegalStateException("credentials filename is not set"));
         } else {
-            log.debug("credentials file {} does not exist (yet)", getConfig().getCredentialsFilename());
+            final FileSystem fs = vertx.fileSystem();
+            log.debug("trying to load credentials information from file {}", getConfig().getCredentialsFilename());
+
+            if (fs.existsBlocking(getConfig().getCredentialsFilename())) {
+                log.info("loading credentials from file [{}]", getConfig().getCredentialsFilename());
+                fs.readFile(getConfig().getCredentialsFilename(), readAttempt -> {
+                    if (readAttempt.succeeded()) {
+                        JsonArray allObjects = readAttempt.result().toJsonArray();
+                        parseCredentials(allObjects);
+                        result.complete();
+                    } else {
+                        result.fail(readAttempt.cause());
+                    }
+                });
+            } else {
+                log.debug("credentials file [{}] does not exist (yet)", getConfig().getCredentialsFilename());
+                result.complete();
+            }
         }
+        return result;
     }
 
     private void parseCredentials(final JsonArray credentialsObject) {
         final AtomicInteger credentialsCount = new AtomicInteger();
 
+        log.debug("trying to load credentials for {} tenants", credentialsObject.size());
         for (Object obj : credentialsObject) {
             JsonObject tenant = (JsonObject) obj;
             String tenantId = tenant.getString(FIELD_TENANT);
@@ -199,7 +206,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
             );
             return CredentialsResult.from(HTTP_OK, resultPayload);
         } else {
-            return CredentialsResult.from(HTTP_NOT_FOUND, (JsonObject) null);
+            return CredentialsResult.from(HTTP_NOT_FOUND);
         }
     }
 
@@ -224,6 +231,45 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
             }
         }
         return null;
+    }
+
+    @Override
+    public void addCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        CredentialsResult<JsonObject> credentialsResult = addCredentialsResult(tenantId, otherKeys);
+        resultHandler.handle(Future.succeededFuture(credentialsResult));
+    }
+
+    private CredentialsResult<JsonObject> addCredentialsResult(final String tenantId, final JsonObject otherKeys) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(otherKeys);
+
+        String authId = otherKeys.getString(FIELD_AUTH_ID);
+
+        Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
+
+        JsonArray authIdCredentials = getAuthIdCredentials(authId, credentialsForTenant);
+
+        // check if credentials already exist with the type and auth-id for the device-id from the payload.
+        for (Object credentialsObj: authIdCredentials) {
+            JsonObject credentials = (JsonObject) credentialsObj;
+            if (credentials.getString(FIELD_TYPE).equals(otherKeys.getString(FIELD_TYPE)) &&
+                credentials.getString(FIELD_DEVICE_ID).equals(otherKeys.getString(FIELD_DEVICE_ID))) {
+                return CredentialsResult.from(HTTP_CONFLICT);
+            }
+        }
+
+        authIdCredentials.add(otherKeys);
+        credentialsForTenant.put(authId, authIdCredentials);
+
+        return CredentialsResult.from(HTTP_CREATED);
+    }
+
+    private Map<String, JsonArray> getCredentialsForTenant(final String tenantId) {
+        return credentials.computeIfAbsent(tenantId, id -> new HashMap<>());
+    }
+
+    private JsonArray getAuthIdCredentials(final String authId, final Map<String, JsonArray> credentialsForTenant) {
+        return credentialsForTenant.computeIfAbsent(authId, id -> new JsonArray());
     }
 
     /**

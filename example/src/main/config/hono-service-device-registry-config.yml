@@ -28,5 +28,5 @@ hono:
         sharedSecret: ${hono.regAssertion.sharedSecret}
   credentials:
     svc:
-      credentialsFilename: /run/secrets/hono-service-device-registry-credentials.json
+      credentialsFilename: /run/secrets/example-credentials.json
 

@@ -17,14 +17,11 @@ import static org.eclipse.hono.util.RegistrationConstants.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationResult;
-import org.eclipse.hono.util.RequestResponseResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,8 +37,8 @@ import io.vertx.proton.ProtonConnection;
  */
 public final class RegistrationClientImpl extends AbstractRequestResponseClient<RegistrationClient, RegistrationResult> implements RegistrationClient {
 
-    private static final Logger                  LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
-    private static final String                  REGISTRATION_NAME = "registration";
+    private static final String REGISTRATION_NAME = "registration";
+    private static final Logger LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
 
     private RegistrationClientImpl(final Context context, final ProtonConnection con, final String tenantId,
                                    final Handler<AsyncResult<RegistrationClient>> creationHandler) {
@@ -59,7 +56,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
     @Override
     protected String createMessageId() {
 
-        return String.format("reg-client-%d", messageCounter.getAndIncrement());
+        return String.format("reg-client-%s", UUID.randomUUID());
     }
 
     @Override

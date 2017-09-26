@@ -185,11 +185,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             protected void onStartupSuccess() {
                 ctx.fail("should not invoke onStartupSuccess");
             }
-
-            @Override
-            protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId, final Object authenticationObject) {
-                return null;
-            }
         };
 
         adapter.setConfig(config);
@@ -245,11 +240,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             protected void onStartupSuccess() {
                 onStartupSuccess.complete();
             }
-
-            @Override
-            protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId, final Object authenticationObject) {
-                return null;
-            }
         };
 
         adapter.setConfig(config);
@@ -280,11 +270,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             @Override
             protected Router createRouter() {
                 return router;
-            }
-
-            @Override
-            protected Future<String> validateCredentialsForDevice(final String tenantId, final String type, final String authId, final Object authenticationObject) {
-                return null;
             }
         };
     }

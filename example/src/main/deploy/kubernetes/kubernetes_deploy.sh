@@ -16,7 +16,6 @@ SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 HONO_HOME=$SCRIPTPATH/../../../..
 CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
-CREDENTIALS=$HONO_HOME/services/device-registry/src/test/resources/credentials.json
 NS=hono
 
 echo DEPLOYING ECLIPSE HONO TO KUBERNETES
@@ -68,9 +67,9 @@ kubectl create secret generic hono-service-device-registry-conf \
   --from-file=$CERTS/device-registry-cert.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=hono-service-device-registry-credentials.json=$CREDENTIALS \
+  --from-file=$CONFIG/example-credentials.json \
   --from-file=application.yml=$CONFIG/hono-service-device-registry-config.yml \
-    --namespace $NS
+  --namespace $NS
 kubectl create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 

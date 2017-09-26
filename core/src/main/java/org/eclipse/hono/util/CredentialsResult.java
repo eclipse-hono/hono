@@ -29,8 +29,8 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
      * @param status The status code indicating the outcome of the request.
      * @return The result.
      */
-    public static CredentialsResult<Void> from(final int status) {
-        return new CredentialsResult<Void>(status, null);
+    public static <T> CredentialsResult<T> from(final int status) {
+        return new CredentialsResult<T>(status, null);
     }
 
     /**

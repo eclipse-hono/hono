@@ -23,12 +23,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.eclipse.hono.util.MessageHelper.decodeIdFromJson;
+import org.eclipse.hono.util.MessageHelper;
 
 /**
  * Constants &amp; utility methods that are common to APIs that follow the request response pattern.
  */
 public class RequestResponseApiConstants {
+
     /* message payload fields */
     public static final String FIELD_PAYLOAD                     = "payload";
     public static final String FIELD_ENABLED                     = "enabled";
@@ -51,7 +52,7 @@ public class RequestResponseApiConstants {
         final String deviceId = payload.getString(FIELD_DEVICE_ID);
         final String status = payload.getString(MessageHelper.APP_PROPERTY_STATUS);
         final JsonObject correlationIdJson = payload.getJsonObject(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
-        final Object correlationId = decodeIdFromJson(correlationIdJson);
+        final Object correlationId = MessageHelper.decodeIdFromJson(correlationIdJson);
         final boolean isApplCorrelationId = payload.getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
         return getAmqpReply(endpoint, status, correlationId, tenantId, deviceId, isApplCorrelationId,
                 payload.getJsonObject(CredentialsConstants.FIELD_PAYLOAD));
@@ -131,7 +132,7 @@ public class RequestResponseApiConstants {
         }
         jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, Integer.toString(status));
         if (payload != null) {
-            jsonObject.put(CredentialsConstants.FIELD_PAYLOAD, payload);
+            jsonObject.put(FIELD_PAYLOAD, payload);
         }
         return jsonObject;
     }
