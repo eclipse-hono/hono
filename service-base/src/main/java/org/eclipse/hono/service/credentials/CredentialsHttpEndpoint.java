@@ -92,15 +92,19 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         if (payload == null) {
             HttpEndpointUtils.badRequest(ctx.response(), "missing body");
         } else {
-            Object deviceId = payload.getValue(FIELD_DEVICE_ID);
+            final Object deviceId = payload.getValue(FIELD_DEVICE_ID);
+            final String authId = payload.getString(CredentialsConstants.FIELD_AUTH_ID);
+            final String type = payload.getString(CredentialsConstants.FIELD_TYPE);
             if (deviceId == null) {
                 HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", FIELD_DEVICE_ID));
             } else if (!(deviceId instanceof String)) {
                 HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' must be a string", FIELD_DEVICE_ID));
+            } else if (authId == null) {
+                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", CredentialsConstants.FIELD_AUTH_ID));
+            } else if (type == null) {
+                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", CredentialsConstants.FIELD_TYPE));
             } else {
                 final String tenantId = getTenantParam(ctx);
-                final String authId = payload.getString(CredentialsConstants.FIELD_AUTH_ID);
-                final String type = payload.getString(CredentialsConstants.FIELD_TYPE);
                 logger.debug("adding credentials for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
                 final HttpServerResponse response = ctx.response();
                 final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.OPERATION_ADD, tenantId, (String) deviceId, payload);
