@@ -30,6 +30,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Tests the Credentials REST Interface of the {@link DeviceRegistryRestServer}.
@@ -99,7 +100,7 @@ public class CredentialsRestServerTest {
     public void testAddCredentials(final TestContext context)  {
         final String requestUri = buildCredentialsPostUri();
 
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayload();
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
 
         final Async async = context.async();
         vertx.createHttpClient().post(getPort(), HOST, requestUri).putHeader("Content-Type", CONTENT_TYPE_JSON)
@@ -119,8 +120,8 @@ public class CredentialsRestServerTest {
      */
     @Test
     public void testAddCredentialsConflictReported(final TestContext context)  {
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayload();
-        final Future<Void> addCredentialsFuture = Future.future();
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final Future<Integer> addCredentialsFuture = Future.future();
         addCredentials(requestBodyAddCredentials, addCredentialsFuture);
 
         final String requestUri = buildCredentialsPostUri();
@@ -129,6 +130,7 @@ public class CredentialsRestServerTest {
         done.setHandler(context.asyncAssertSuccess());
 
         addCredentialsFuture.compose(ar -> {
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
             // now try to add credentials again
             vertx.createHttpClient().post(getPort(), HOST, requestUri).putHeader("content-type", CONTENT_TYPE_JSON)
                     .handler(response -> {
@@ -147,7 +149,7 @@ public class CredentialsRestServerTest {
         final String requestUri = buildCredentialsPostUri();
         final String contentType = "application/x-www-form-urlencoded";
 
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayload();
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
 
         final Async async = context.async();
         final int expectedStatus = HttpURLConnection.HTTP_BAD_REQUEST;
@@ -238,9 +240,9 @@ public class CredentialsRestServerTest {
      */
     @Test
     public void testRenoveAddedCredentialsByNotExistingTypeButWithAuthId(final TestContext context) {
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayload();
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
 
-        final Future<Void> addCredentialsFuture = Future.future();
+        final Future<Integer> addCredentialsFuture = Future.future();
         addCredentials(requestBodyAddCredentials, addCredentialsFuture);
 
         final Future<Void> done = Future.future();
@@ -249,6 +251,7 @@ public class CredentialsRestServerTest {
                 TEST_DEVICE_ID, "notExistingType", TEST_AUTH_ID);
 
         addCredentialsFuture.compose(ar -> {
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
             // now try to remove credentials again
             vertx.createHttpClient().delete(getPort(), HOST, deleteRequestUri)
                     .handler(response -> {
@@ -278,7 +281,7 @@ public class CredentialsRestServerTest {
      * a non-existing type.
      */
     @Test
-    public void testRenoveNonExistingCredentialsByDeviceIdAndType(final TestContext context) {
+    public void testRemoveNonExistingCredentialsByDeviceIdAndType(final TestContext context) {
         final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
                 TEST_DEVICE_ID, "invalid-type");
 
@@ -297,16 +300,143 @@ public class CredentialsRestServerTest {
         addAndRemoveCredentialsAgain(context, requestUri, HttpURLConnection.HTTP_NOT_FOUND);
     }
 
-    private void addAndRemoveCredentialsAgain(final TestContext context, final String requestUri, final int expectedStatusCode) {
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayload();
-        final Future<Void> addCredentialsFuture = Future.future();
+    /**
+     * Verify that a correctly added credentials record can be successfully looked up again by using the type and authId.
+     */
+    @Test
+    public void testGetAddedCredentials(final TestContext context)  {
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final Future<Integer> addCredentialsFuture = Future.future();
+        addCredentials(requestBodyAddCredentials, addCredentialsFuture);
+
+        final Future<Void> done = Future.future();
+        done.setHandler(context.asyncAssertSuccess());
+
+        final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                TEST_AUTH_ID, SECRETS_TYPE_HASHED_PASSWORD);
+
+        addCredentialsFuture.compose(ar -> {
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
+            // now try to get credentials again
+            vertx.createHttpClient().get(getPort(), HOST, requestUri)
+                    .handler(response -> {
+                        context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
+                        response.bodyHandler(totalBuffer -> {
+                            context.assertFalse(totalBuffer.toString().isEmpty()); // credentials object expected
+                            // the answer must contain all of the payload of the add request, so test that now
+                            context.assertTrue(testJsonObjectToBeContained(
+                                    new JsonObject(totalBuffer.toString()), requestBodyAddCredentials));
+                            done.complete();
+                        });
+                    }).exceptionHandler(done::fail).end();
+        }, done);
+    }
+
+    @Test
+    public void testGetAddedCredentialsMultipleTypes(final TestContext context)  {
+        final JsonObject requestBodyAddCredentialsHashedPassword = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final Future<Integer> addCredentialsFutureHashedPassword = Future.future();
+
+        addCredentials(requestBodyAddCredentialsHashedPassword, addCredentialsFutureHashedPassword);
+
+        final Future<Void> done = Future.future();
+        done.setHandler(context.asyncAssertSuccess());
+
+        final String requestUriHashedPassword = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                TEST_AUTH_ID, SECRETS_TYPE_HASHED_PASSWORD);
+
+        final JsonObject requestBodyAddCredentialsPresharedKey = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID,
+                TEST_AUTH_ID);
+        final String requestUriPresharedKey = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY);
+
+        addCredentialsFutureHashedPassword.compose(ar -> {
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
+            final Future<Integer> addCredentialsFuturePresharedKey = Future.future();
+            addCredentials(requestBodyAddCredentialsPresharedKey, addCredentialsFuturePresharedKey);
+            return addCredentialsFuturePresharedKey;
+        }).compose(ar -> {
+            Future<Void> getDone = Future.future();
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
+            // now try to get credentials again
+            vertx.createHttpClient().get(getPort(), HOST, requestUriHashedPassword)
+                    .handler(response -> {
+                        context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
+                        response.bodyHandler(totalBuffer -> {
+                            context.assertFalse(totalBuffer.toString().isEmpty()); // credentials object expected
+                            // the answer must contain all of the payload of the add request, so test that now
+                            context.assertTrue(testJsonObjectToBeContained(
+                                    new JsonObject(totalBuffer.toString()), requestBodyAddCredentialsHashedPassword));
+                            getDone.complete();
+                        });
+                    }).exceptionHandler(getDone::fail).end();
+            return getDone;
+        }).compose(ar -> {
+            // now try to get the other credentials again
+            vertx.createHttpClient().get(getPort(), HOST, requestUriPresharedKey)
+                    .handler(response -> {
+                        context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
+                        response.bodyHandler(totalBuffer -> {
+                            context.assertFalse(totalBuffer.toString().isEmpty()); // credentials object expected
+                            // the answer must contain all of the payload of the add request, so test that now
+                            context.assertTrue(testJsonObjectToBeContained(
+                                    new JsonObject(totalBuffer.toString()), requestBodyAddCredentialsPresharedKey));
+                            done.complete();
+                        });
+                    }).exceptionHandler(done::fail).end();
+        }, done);
+    }
+
+    /**
+     * Verify that a correctly added credentials record is not found when looking it up again with a wrong type.
+     */
+    @Test
+    public void testGetAddedCredentialsButWithWrongType(final TestContext context)  {
+        final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                "notExistingType", TEST_AUTH_ID);
+        addAndGetCredentialsAgain(context, requestUri, HttpURLConnection.HTTP_NOT_FOUND);
+    }
+
+    /**
+     * Verify that a correctly added credentials record is not found when looking it up again with a wrong authId.
+     */
+    @Test
+    public void testGetAddedCredentialsButWithWrongAuthId(final TestContext context)  {
+        final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                SECRETS_TYPE_HASHED_PASSWORD, "wrongAuthId");
+        addAndGetCredentialsAgain(context, requestUri, HttpURLConnection.HTTP_NOT_FOUND);
+    }
+
+    private void addAndGetCredentialsAgain(final TestContext context, final String requestUri, final int expectedStatusCode) {
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final Future<Integer> addCredentialsFuture = Future.future();
         addCredentials(requestBodyAddCredentials, addCredentialsFuture);
 
         final Future<Void> done = Future.future();
         done.setHandler(context.asyncAssertSuccess());
 
         addCredentialsFuture.compose(ar -> {
-            // now try to add credentials again
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
+            // now try to get credentials again
+            vertx.createHttpClient().get(getPort(), HOST, requestUri)
+                    .handler(response -> {
+                        context.assertEquals(expectedStatusCode, response.statusCode());
+                        done.complete();
+                    }).exceptionHandler(done::fail).end();
+        }, done);
+    }
+
+    private void addAndRemoveCredentialsAgain(final TestContext context, final String requestUri, final int expectedStatusCode) {
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final Future<Integer> addCredentialsFuture = Future.future();
+        addCredentials(requestBodyAddCredentials, addCredentialsFuture);
+
+        final Future<Void> done = Future.future();
+        done.setHandler(context.asyncAssertSuccess());
+
+        addCredentialsFuture.compose(ar -> {
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
+            // now try to remove credentials again
             vertx.createHttpClient().delete(getPort(), HOST, requestUri)
                     .handler(response -> {
                         context.assertEquals(expectedStatusCode, response.statusCode());
@@ -331,7 +461,7 @@ public class CredentialsRestServerTest {
                 }).exceptionHandler(context::fail).end(requestBody.encodePrettily());
     }
 
-    private JsonObject buildCredentialsPayload() {
+    private JsonObject buildCredentialsPayloadHashedPassword(final String deviceId, final String authId) {
         final JsonObject secret = new JsonObject().
                 put(FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00").
                 put(FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00+01:00").
@@ -339,20 +469,79 @@ public class CredentialsRestServerTest {
                 put(FIELD_SECRETS_SALT, "aG9ubw==").
                 put(FIELD_SECRETS_PWD_HASH, "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA==");
         final JsonObject credPayload = new JsonObject().
-                put(FIELD_DEVICE_ID, TEST_DEVICE_ID).
+                put(FIELD_DEVICE_ID, deviceId).
                 put(FIELD_TYPE, SECRETS_TYPE_HASHED_PASSWORD).
-                put(FIELD_AUTH_ID, TEST_AUTH_ID).
+                put(FIELD_AUTH_ID, authId).
                 put(FIELD_SECRETS, new JsonArray().add(secret));
         return credPayload;
     }
 
-    private void addCredentials(final JsonObject requestPayload, final Future<Void> resultFuture) {
+    private JsonObject buildCredentialsPayloadPresharedKey(final String deviceId, final String authId) {
+        final JsonObject secret = new JsonObject().
+                put(FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00").
+                put(FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00+01:00").
+                put(FIELD_SECRETS_KEY, "aG9uby1zZWNyZXQ="); // base64 "hono-secret"
+        final JsonObject credPayload = new JsonObject().
+                put(FIELD_DEVICE_ID, deviceId).
+                put(FIELD_TYPE, SECRETS_TYPE_PRESHARED_KEY).
+                put(FIELD_AUTH_ID, authId).
+                put(FIELD_SECRETS, new JsonArray().add(secret));
+        return credPayload;
+    }
+
+    /**
+     * A simple implementation of subtree containment: all entries of the JsonObject that is tested to be contained
+     * must be contained in the other JsonObject as well. Nested JsonObjects are treated the same by recursively callong
+     * this method to test the containment.
+     * Note that currently JsonArrays need to be equal and are not tested for containment (not necessary for our purposes
+     * here).
+     * @param jsonObject The JsonObject that must fully contain the other JsonObject (but may contain more entries as well).
+     * @param jsonObjectToBeContained The JsonObject that needs to be fully contained inside the other JsonObject.
+     * @return The result of the containment test.
+     */
+    private boolean testJsonObjectToBeContained(final JsonObject jsonObject, final JsonObject jsonObjectToBeContained) {
+        if (jsonObjectToBeContained == null) {
+            return true;
+        }
+        if (jsonObject == null) {
+            return false;
+        }
+        AtomicBoolean containResult = new AtomicBoolean(true);
+
+        jsonObjectToBeContained.forEach(entry -> {
+            if (!jsonObject.containsKey(entry.getKey())) {
+                containResult.set(false);
+            } else {
+                if (entry.getValue() == null) {
+                    if (jsonObject.getValue(entry.getKey()) != null) {
+                        containResult.set(false);
+                    }
+                } else if (entry.getValue() instanceof JsonObject) {
+                    if (!(jsonObject.getValue(entry.getKey()) instanceof JsonObject)) {
+                        containResult.set(false);
+                    } else {
+                        if (!testJsonObjectToBeContained((JsonObject)entry.getValue(),
+                                (JsonObject)jsonObject.getValue(entry.getKey()))) {
+                            containResult.set(false);
+                        }
+                    }
+                } else {
+                    if (!(entry.getValue().equals(jsonObject.getValue(entry.getKey())))) {
+                        containResult.set(false);
+                    }
+                }
+            }
+        });
+        return containResult.get();
+    }
+
+    private void addCredentials(final JsonObject requestPayload, final Future<Integer> resultFuture) {
         final String requestUri = buildCredentialsPostUri();
 
         vertx.createHttpClient().post(getPort(), HOST, requestUri).putHeader("Content-Type", CONTENT_TYPE_JSON)
                 .handler(response -> {
                     if (response.statusCode() == HttpURLConnection.HTTP_CREATED) {
-                        resultFuture.complete();
+                        resultFuture.complete(response.statusCode());
                     } else {
                         resultFuture.fail("add credentials failed; response status code: " + response.statusCode());
                     }
@@ -362,7 +551,7 @@ public class CredentialsRestServerTest {
     private void testPostWithMissingPayloadParts(final TestContext context, final String fieldMissing) {
         final String requestUri = buildCredentialsPostUri();
 
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayload();
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
         requestBodyAddCredentials.remove(fieldMissing);
 
         final Async async = context.async();

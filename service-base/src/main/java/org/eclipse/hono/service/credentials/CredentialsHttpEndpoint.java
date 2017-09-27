@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
@@ -72,11 +73,20 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                 CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID);
         router.route(HttpMethod.DELETE, pathWithTenantAndDeviceId).handler(this::doRemoveCredentials);
         final String pathWithTenantAndDeviceIdAndType = String.format("/%s/:%s/:%s/:%s",
-                CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID, PARAM_TYPE, PARAM_AUTH_ID);
+                CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID, PARAM_TYPE);
         router.route(HttpMethod.DELETE, pathWithTenantAndDeviceIdAndType).handler(this::doRemoveCredentials);
         final String pathWithTenantAndDeviceIdAndTypeAndAuthId = String.format("/%s/:%s/:%s/:%s/:%s",
                 CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID, PARAM_TYPE, PARAM_AUTH_ID);
         router.route(HttpMethod.DELETE, pathWithTenantAndDeviceIdAndTypeAndAuthId).handler(this::doRemoveCredentials);
+
+        // GET credentials
+        final String pathWithTenantAuthId = String.format("/%s/:%s/:%s",
+                CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_AUTH_ID);
+        router.route(HttpMethod.GET, pathWithTenantAuthId).handler(this::doGetCredentials);
+        final String pathWithTenantAndAuthIdAndType = String.format("/%s/:%s/:%s/:%s",
+                CredentialsConstants.CREDENTIALS_ENDPOINT, PARAM_TENANT_ID, PARAM_AUTH_ID, PARAM_TYPE);
+        router.route(HttpMethod.GET, pathWithTenantAndAuthIdAndType).handler(this::doGetCredentials);
+
     }
 
     private static String getTenantParam(final RoutingContext ctx) {
@@ -149,6 +159,60 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         }
     }
 
+    private void doRemoveCredentials(final RoutingContext ctx) {
+        // mandatory params
+        final String tenantId = getTenantParam(ctx);
+        final String deviceId = getDeviceIdParam(ctx);
+        // optional params
+        final String type = Optional.ofNullable(getTypeParam(ctx)).orElse(CredentialsConstants.SPECIFIER_WILDCARD);
+        final String authId = getAuthIdParam(ctx);
+
+        logger.debug("removeCredentials: tenant_id: {}, device_id: {}, type: {}, authId: {}", tenantId, deviceId, type, authId);
+
+        final HttpServerResponse response = ctx.response();
+        final JsonObject payload = new JsonObject();
+        payload.put(CredentialsConstants.FIELD_TYPE, type);
+        if (authId != null) {
+            payload.put(CredentialsConstants.FIELD_AUTH_ID, authId);
+        }
+
+        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.OPERATION_REMOVE,
+                tenantId, deviceId, payload);
+
+        doCredentialsAction(ctx, requestMsg, (status, removeCredentialsResult) -> {
+            response.setStatusCode(status);
+            if (status >= 400) {
+                setResponseBody(removeCredentialsResult, response);
+            }
+            response.end();
+        });
+    }
+
+    private void doGetCredentials(final RoutingContext ctx) {
+        // mandatory params
+        final String tenantId = getTenantParam(ctx);
+        final String authId = getAuthIdParam(ctx);
+        // optional params
+        final String type = Optional.ofNullable(getTypeParam(ctx)).orElse(CredentialsConstants.SPECIFIER_WILDCARD);
+
+        logger.debug("getCredentials: tenant_id: {}, authId: {}, type: {}", tenantId, authId, type);
+
+        final HttpServerResponse response = ctx.response();
+
+        final JsonObject payload = new JsonObject();
+        final JsonObject requestMsg = CredentialsConstants.getServiceGetRequestAsJson(
+                tenantId, authId, type, payload);
+
+        doCredentialsAction(ctx, requestMsg, (status, getCredentialsResult) -> {
+            response.setStatusCode(status);
+            if (status == HttpURLConnection.HTTP_OK || status >= 400) {
+                setResponseBody(getCredentialsResult, response);
+            }
+            response.end();
+        });
+
+    }
+
     private void doCredentialsAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
 
         vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, requestMsg,
@@ -173,34 +237,4 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                     .write(body);
         }
     }
-
-    private void doRemoveCredentials(final RoutingContext ctx) {
-        // mandatory params
-        final String tenantId = getTenantParam(ctx);
-        final String deviceId = getDeviceIdParam(ctx);
-        // optional params
-        final String type = getTypeParam(ctx);
-        final String authId = getAuthIdParam(ctx);
-
-        logger.debug("removeCredentials: tenant_id: {}, device_id: {}, type: {}, authId: {}", tenantId, deviceId, type, authId);
-
-        final HttpServerResponse response = ctx.response();
-        final JsonObject payload = new JsonObject();
-        payload.put(CredentialsConstants.FIELD_TYPE, (type == null) ? "*" : type);
-        if (authId != null) {
-            payload.put(CredentialsConstants.FIELD_AUTH_ID, authId);
-        }
-
-        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.OPERATION_REMOVE,
-                tenantId, deviceId, payload);
-
-        doCredentialsAction(ctx, requestMsg, (status, removeCredentialsResult) -> {
-            response.setStatusCode(status);
-            if (status >= 400) {
-                setResponseBody(removeCredentialsResult, response);
-            }
-            response.end();
-        });
-    }
-
 }

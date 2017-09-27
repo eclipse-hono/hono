@@ -20,6 +20,7 @@ import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.service.credentials.BaseCredentialsService;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -47,7 +48,6 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
     private static final String ARRAY_CREDENTIALS = "credentials";
     private static final String FIELD_TENANT = "tenant";
-    private static final String TYPE_SPECIFIER_WILDCARD = "*";
 
     // <tenantId, <authId, credentialsData[]>>
     private Map<String, Map<String, JsonArray>> credentials = new HashMap<>();
@@ -193,14 +193,22 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
     @Override
     public final void getCredentials(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        CredentialsResult<JsonObject> credentialsResult = getCredentialsResult(tenantId, authId, type);
+        final CredentialsResult<JsonObject> credentialsResult;
+
+        if (CredentialsConstants.SPECIFIER_WILDCARD.equals(type)) {
+            credentialsResult = getCredentialsMultipleResult(tenantId, authId);
+        } else {
+            credentialsResult = getCredentialsSingleResult(tenantId, authId, type);
+        }
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
-    private CredentialsResult<JsonObject> getCredentialsResult(final String tenantId, final String authId, final String type) {
-        JsonObject data = getCredentials(tenantId, authId, type);
+    private CredentialsResult<JsonObject> getCredentialsSingleResult(final String tenantId, final String authId, final String type) {
+        final JsonObject data = getSingleCredentials(tenantId, authId, type);
         if (data != null) {
-            JsonObject resultPayload = getResultPayload(
+            // do not use the internal JsonObject, it might not be identical with the response object, so copy
+            // the values instead
+            final JsonObject resultPayload = getResultPayload(
                     data.getString(FIELD_DEVICE_ID),
                     data.getString(FIELD_TYPE),
                     data.getString(FIELD_AUTH_ID),
@@ -213,7 +221,43 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         }
     }
 
-    private JsonObject getCredentials(final String tenantId, final String authId, final String type) {
+    private CredentialsResult<JsonObject> getCredentialsMultipleResult(final String tenantId, final String authId) {
+        final JsonArray credentialsArray = getMultipleCredentials(tenantId, authId);
+        if (credentialsArray != null) {
+            final JsonArray returnCredentialsArray = new JsonArray();
+            credentialsArray.forEach(elem -> {
+                final JsonObject jsonObject = (JsonObject)elem;
+                // do not use the internal JsonObject, it might not be identical with the response object, so copy
+                // the values instead
+                final JsonObject resultPayload = getResultPayload(
+                        jsonObject.getString(FIELD_DEVICE_ID),
+                        jsonObject.getString(FIELD_TYPE),
+                        jsonObject.getString(FIELD_AUTH_ID),
+                        jsonObject.getBoolean(FIELD_ENABLED),
+                        jsonObject.getJsonArray(FIELD_SECRETS));
+                returnCredentialsArray.add(resultPayload);
+            });
+            final JsonObject resultPayload = new JsonObject();
+            resultPayload.put(FIELD_CREDENTIALS_TOTAL, returnCredentialsArray.size());
+            // for REST design principles: use plural for endpoint, use exactly this as payload key to the array then
+            resultPayload.put(CREDENTIALS_ENDPOINT, returnCredentialsArray);
+            return CredentialsResult.from(HTTP_OK, resultPayload);
+        } else {
+            return CredentialsResult.from(HTTP_NOT_FOUND);
+        }
+    }
+    /**
+     * Get the credentials associated with the authId and the given type.
+     * If type is null, all credentials associated with the authId are returned (as JsonArray inside the return value).
+     *
+     * @param tenantId The id of the tenant for that credentials shall be deleted. Mandatory.
+     * @param authId The auth-id for that credentials shall be looked up.
+     * @param type The type of credentials that shall be looked up. If set to null, 
+     *             credentials of all types will be looked up. Optional.
+     * @return The JsonObject containing the credentials. If multiple credentials are found (type was null), 
+     *             this contains a JsonArray that has the credentials objects as elements.
+     */
+    private JsonObject getSingleCredentials(final String tenantId, final String authId, final String type) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(authId);
         Objects.requireNonNull(type);
@@ -232,6 +276,18 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
                     return authIdCredential;
                 }
             }
+        }
+        return null;
+    }
+
+    private JsonArray getMultipleCredentials(final String tenantId, final String authId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(authId);
+
+        final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
+        if (credentialsForTenant != null) {
+            final JsonArray authIdCredentials = credentialsForTenant.get(authId);
+            return authIdCredentials;
         }
         return null;
     }
@@ -272,7 +328,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
      * See the parameters for detailed specification.
      *
      * @param tenantId The id of the tenant for that credentials shall be deleted. Mandatory.
-     * @param deviceId The if of the device for that credentials shall be deleted. Mandatory.
+     * @param deviceId The id of the device for that credentials shall be deleted. Mandatory.
      * @param type The type of credentials that shall be deleted. If set to '*', credentials of all types for the
      *             provided (other) parameters will be deleted. Mandatory.
      * @param authId The auth-id for that credentials shall be deleted. Optional - if null, credentials with arbitrary
@@ -343,7 +399,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
                 final JsonObject element = (JsonObject) credentialsIterator.next();
                 if (!element.getString(FIELD_DEVICE_ID).equals(deviceId)) {
                     break; // no futher investigation of array necessary
-                } else if (type.equals(TYPE_SPECIFIER_WILDCARD) || type.equals(element.getString(FIELD_TYPE))) {
+                } else if (type.equals(SPECIFIER_WILDCARD) || type.equals(element.getString(FIELD_TYPE))) {
                     credentialsIterator.remove();
                     removedElement = true;
                 }

@@ -138,8 +138,8 @@ public class RequestResponseApiConstants {
     }
 
     /**
-     * Build a Json object as a reply for internal communication via the vert.x event bus.
-     * Services use this object to build their response when replying to a request that was received for processing.
+     * Build a Json object as a request for internal communication via the vert.x event bus.
+     * Clients use this object to build their request that is sent to the processing service.
      *
      * @param operation The operation that shall be processed by the service.
      * @param tenantId The tenant for which the message was processed.
@@ -151,8 +151,8 @@ public class RequestResponseApiConstants {
     }
 
     /**
-     * Build a Json object as a reply for internal communication via the vert.x event bus.
-     * Services use this object to build their response when replying to a request that was received for processing.
+     * Build a Json object as a request for internal communication via the vert.x event bus.
+     * Clients use this object to build their request that is sent to the processing service.
      *
      * @param operation The operation that shall be processed by the service.
      * @param tenantId The tenant for which the message was processed.
@@ -166,8 +166,8 @@ public class RequestResponseApiConstants {
     }
 
     /**
-     * Build a Json object as a reply for internal communication via the vert.x event bus.
-     * Services use this object to build their response when replying to a request that was received for processing.
+     * Build a Json object as a request for internal communication via the vert.x event bus.
+     * Clients use this object to build their request that is sent to the processing service.
      *
      * @param operation The operation that shall be processed by the service.
      * @param tenantId The tenant for which the message was processed.
