@@ -297,12 +297,19 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
             if (authId != null) {
                 final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
                 removedAnyElement.set(removeCredentialsFromCredentialsArray(deviceId, type, credentialsForAuthId));
+                if (credentialsForAuthId != null && credentialsForAuthId.isEmpty()) {
+                    credentialsForTenant.remove(authId); // do not leave empty array as value
+                }
             } else {
                 // delete based on type (no authId provided) - this might consume more time on large data sets and is thus
                 // handled explicitly
                 credentialsForTenant.forEach((authIdKey, credentialsArray) -> {
-                    removedAnyElement.set(removeCredentialsFromCredentialsArray(deviceId, type, credentialsArray));
+                    if (removeCredentialsFromCredentialsArray(deviceId, type, credentialsArray)) {
+                        removedAnyElement.set(true);
+                    }
                 });
+                // there might be empty credentials arrays left now, so remove them in a second run
+                cleanupEmptyCredentialsArrays(credentialsForTenant);
             }
         }
 
@@ -314,7 +321,18 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         }
     }
 
-    private boolean removeCredentialsFromCredentialsArray(String deviceId, String type, JsonArray credentialsForAuthId) {
+    private void cleanupEmptyCredentialsArrays(final Map<String, JsonArray> mapToCleanup) {
+        // use an iterator here to allow removal during looping (streams currently do not allow this)
+        Iterator<String> credentialsIterator = mapToCleanup.keySet().iterator();
+        while (credentialsIterator.hasNext()) {
+            String key = credentialsIterator.next();
+            if (mapToCleanup.get(key) != null && mapToCleanup.get(key).isEmpty()) {
+                credentialsIterator.remove();
+            }
+        }
+    }
+
+    private boolean removeCredentialsFromCredentialsArray(final String deviceId, final String type, final JsonArray credentialsForAuthId) {
         boolean removedElement = false;
 
         if (credentialsForAuthId != null) {
