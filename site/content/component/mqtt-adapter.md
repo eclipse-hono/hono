@@ -203,7 +203,7 @@ The same holds true analogously for the *hono-service-device-registry.hono* addr
 
 The following examples use a username and password for connecting to MQTT. The username reflects the auth-id of the [Credentals API]({{< relref "api/Credentials-API.md" >}}) and usually represents a device. It may be identical to the device-id.
 
-**NB** The standard setup of the [Device Registry component]({{< relref "component/device-registry.md" >}}) provides the example auth-id `sensor1` with the password `hono-secret` 
+**NB** The standard setup of the [Device Registry component]({{< relref "component/device-registry.md" >}}) provides the example auth-id `sensor1@DEFAULT_TENANT` with the password `hono-secret` 
 and the device-id `4711` which are used here. Some devices may not know their device-id but only their auth-id - this case is covered in the examples as well. 
 
 
