@@ -9,7 +9,7 @@
  * Contributors:
  * Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.auth;
+package org.eclipse.hono.service.auth.device;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

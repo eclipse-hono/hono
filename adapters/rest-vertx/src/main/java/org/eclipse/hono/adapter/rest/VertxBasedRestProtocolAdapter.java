@@ -12,22 +12,22 @@
 
 package org.eclipse.hono.adapter.rest;
 
+import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.auth.User;
+import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BasicAuthHandler;
-import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
-
-import io.vertx.core.http.HttpMethod;
-import io.vertx.ext.web.Router;
-import org.eclipse.hono.auth.UsernamePasswordCredentials;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using REST.

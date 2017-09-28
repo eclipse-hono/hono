@@ -17,11 +17,11 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
-import org.eclipse.hono.auth.DeviceCredentials;
-import org.eclipse.hono.auth.UsernamePasswordCredentials;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.auth.device.DeviceCredentials;
+import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;

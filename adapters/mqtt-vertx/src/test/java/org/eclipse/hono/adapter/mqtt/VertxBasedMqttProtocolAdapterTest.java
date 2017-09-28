@@ -13,30 +13,34 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
-import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
-import io.vertx.core.*;
-import io.vertx.mqtt.MqttAuth;
-import io.vertx.mqtt.MqttEndpoint;
-import io.vertx.mqtt.MqttServer;
-
-import org.eclipse.hono.auth.DeviceCredentials;
-import org.eclipse.hono.auth.UsernamePasswordCredentials;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.auth.device.DeviceCredentials;
+import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.util.Constants;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
+import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.mqtt.MqttAuth;
+import io.vertx.mqtt.MqttEndpoint;
+import io.vertx.mqtt.MqttServer;
 import io.vertx.proton.ProtonClientOptions;
-import org.mockito.ArgumentCaptor;
 
 /**
  * Verifies behavior of {@link VertxBasedMqttProtocolAdapter}.

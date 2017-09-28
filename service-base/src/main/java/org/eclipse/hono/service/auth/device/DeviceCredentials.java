@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.auth;
+package org.eclipse.hono.service.auth.device;
 
 import org.eclipse.hono.util.CredentialsObject;
 
