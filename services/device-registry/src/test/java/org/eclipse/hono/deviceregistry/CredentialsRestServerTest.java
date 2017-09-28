@@ -30,6 +30,8 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -318,72 +320,98 @@ public class CredentialsRestServerTest {
         addCredentialsFuture.compose(ar -> {
             context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
             // now try to get credentials again
-            vertx.createHttpClient().get(getPort(), HOST, requestUri)
-                    .handler(response -> {
-                        context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
-                        response.bodyHandler(totalBuffer -> {
-                            context.assertFalse(totalBuffer.toString().isEmpty()); // credentials object expected
-                            // the answer must contain all of the payload of the add request, so test that now
-                            context.assertTrue(testJsonObjectToBeContained(
-                                    new JsonObject(totalBuffer.toString()), requestBodyAddCredentials));
-                            done.complete();
-                        });
-                    }).exceptionHandler(done::fail).end();
+            validateCredentialsGetRequest(context, requestUri, requestBodyAddCredentials, done);
         }, done);
     }
 
+    /**
+     * Verify that multiple (2) correctly added credentials records of the same authId can be successfully looked up by single
+     * requests using their type and authId again.
+     */
     @Test
-    public void testGetAddedCredentialsMultipleTypes(final TestContext context)  {
-        final JsonObject requestBodyAddCredentialsHashedPassword = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
-        final Future<Integer> addCredentialsFutureHashedPassword = Future.future();
-
-        addCredentials(requestBodyAddCredentialsHashedPassword, addCredentialsFutureHashedPassword);
-
+    public void testGetAddedCredentialsMultipleTypesSingleRequests(final TestContext context) throws InterruptedException {
         final Future<Void> done = Future.future();
         done.setHandler(context.asyncAssertSuccess());
 
-        final String requestUriHashedPassword = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                TEST_AUTH_ID, SECRETS_TYPE_HASHED_PASSWORD);
+        final JsonObject requestBodyAddCredentialsHashedPassword = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
 
         final JsonObject requestBodyAddCredentialsPresharedKey = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID,
                 TEST_AUTH_ID);
-        final String requestUriPresharedKey = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY);
 
-        addCredentialsFutureHashedPassword.compose(ar -> {
+        final ArrayList<JsonObject> credentialsListToAdd = new ArrayList();
+        credentialsListToAdd.add(requestBodyAddCredentialsHashedPassword);
+        credentialsListToAdd.add(requestBodyAddCredentialsPresharedKey);
+        addMultipleCredentials(context, credentialsListToAdd
+        ).compose(ar -> {
             context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
-            final Future<Integer> addCredentialsFuturePresharedKey = Future.future();
-            addCredentials(requestBodyAddCredentialsPresharedKey, addCredentialsFuturePresharedKey);
-            return addCredentialsFuturePresharedKey;
-        }).compose(ar -> {
             Future<Void> getDone = Future.future();
-            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
             // now try to get credentials again
-            vertx.createHttpClient().get(getPort(), HOST, requestUriHashedPassword)
-                    .handler(response -> {
-                        context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
-                        response.bodyHandler(totalBuffer -> {
-                            context.assertFalse(totalBuffer.toString().isEmpty()); // credentials object expected
-                            // the answer must contain all of the payload of the add request, so test that now
-                            context.assertTrue(testJsonObjectToBeContained(
-                                    new JsonObject(totalBuffer.toString()), requestBodyAddCredentialsHashedPassword));
-                            getDone.complete();
-                        });
-                    }).exceptionHandler(getDone::fail).end();
+            final String requestUriHashedPassword = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                    TEST_AUTH_ID, SECRETS_TYPE_HASHED_PASSWORD);
+            validateCredentialsGetRequest(context, requestUriHashedPassword, requestBodyAddCredentialsHashedPassword, getDone);
             return getDone;
         }).compose(ar -> {
             // now try to get the other credentials again
-            vertx.createHttpClient().get(getPort(), HOST, requestUriPresharedKey)
-                    .handler(response -> {
-                        context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
-                        response.bodyHandler(totalBuffer -> {
-                            context.assertFalse(totalBuffer.toString().isEmpty()); // credentials object expected
-                            // the answer must contain all of the payload of the add request, so test that now
-                            context.assertTrue(testJsonObjectToBeContained(
-                                    new JsonObject(totalBuffer.toString()), requestBodyAddCredentialsPresharedKey));
-                            done.complete();
-                        });
-                    }).exceptionHandler(done::fail).end();
+            final String requestUriPresharedKey = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                    TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY);
+            validateCredentialsGetRequest(context, requestUriPresharedKey, requestBodyAddCredentialsPresharedKey, done);
+        }, done);
+    }
+
+    /**
+     * Verify that multiple correctly added credentials records of the same authId can be successfully looked up again
+     * by using just authId.
+     * The returned JsonObject must consist of the total number of entries and contain all previously added credentials
+     * in the provided JsonArray that is found under the key of the endpoint {@link CredentialsConstants#CREDENTIALS_ENDPOINT}.
+     */
+    @Test
+    public void testGetAddedCredentialsMultipleTypesMultipleRequests(final TestContext context) throws InterruptedException {
+        final Future<Void> done = Future.future();
+        done.setHandler(context.asyncAssertSuccess());
+
+        final JsonObject requestBodyAddCredentialsHashedPassword = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+
+        final JsonObject requestBodyAddCredentialsPresharedKey = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID,
+                TEST_AUTH_ID);
+
+        final ArrayList<JsonObject> credentialsListToAdd = new ArrayList();
+        credentialsListToAdd.add(requestBodyAddCredentialsHashedPassword);
+        credentialsListToAdd.add(requestBodyAddCredentialsPresharedKey);
+        addMultipleCredentials(context, credentialsListToAdd
+        ).compose(ar -> {
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
+            // now try to get all these credentials again
+            final String requestUriAuthId = String.format("/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                    TEST_AUTH_ID);
+            validateCredentialsGetMultipleRequest(context, requestUriAuthId, credentialsListToAdd, done);
+        }, done);
+    }
+
+    /**
+     * Verify that multiple correctly added credentials records of the same authId can be successfully looked up again
+     * by using just authId.
+     * The returned JsonObject must consist of the total number of entries and contain all previously added credentials
+     * in the provided JsonArray that is found under the key of the endpoint {@link CredentialsConstants#CREDENTIALS_ENDPOINT}.
+     */
+    @Test
+    public void testGetAddedCredentialsMultipleTypesMultipleRequests2(final TestContext context) throws InterruptedException {
+        final Future<Void> done = Future.future();
+        done.setHandler(context.asyncAssertSuccess());
+
+        final ArrayList<JsonObject> credentialsListToAdd = new ArrayList();
+        for(int i = 0; i < 20; i++) {
+            final JsonObject requestBodyAddCredentialsPresharedKey = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID,
+                    TEST_AUTH_ID);
+            requestBodyAddCredentialsPresharedKey.put(FIELD_TYPE, "type" + i);
+            credentialsListToAdd.add(requestBodyAddCredentialsPresharedKey);
+        }
+        addMultipleCredentials(context, credentialsListToAdd
+        ).compose(ar -> {
+            context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
+            // now try to get all these credentials again
+            final String requestUriAuthId = String.format("/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                    TEST_AUTH_ID);
+            validateCredentialsGetMultipleRequest(context, requestUriAuthId, credentialsListToAdd, done);
         }, done);
     }
 
@@ -443,6 +471,67 @@ public class CredentialsRestServerTest {
                         done.complete();
                     }).exceptionHandler(done::fail).end();
         }, done);
+    }
+
+    private Future<Integer> addMultipleCredentials(final TestContext context,
+                                                   final List<JsonObject> credentialsList) throws InterruptedException {
+        int elemCounter = 0;
+
+        while (elemCounter < credentialsList.size()) {
+            final Async batchComplete = context.async();
+
+            final Future<Integer> addCredentialsFuture = Future.future();
+            addCredentialsFuture.setHandler(handler -> {
+                batchComplete.complete();
+            });
+
+            final JsonObject currentCredentialsElem = credentialsList.get(elemCounter);
+            addCredentials(currentCredentialsElem, addCredentialsFuture);
+
+            batchComplete.await(2000);
+            elemCounter++;
+        }
+
+        return Future.succeededFuture(HttpURLConnection.HTTP_CREATED);
+    }
+
+    private void validateCredentialsGetRequest(final TestContext context, final String getRequestUri,
+                                               final JsonObject requestBodyAddCredentialsHashedPassword, final Future<Void> validationFuture) {
+        vertx.createHttpClient().get(getPort(), HOST, getRequestUri)
+                .handler(response -> {
+                    context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
+                    response.bodyHandler(totalBuffer -> {
+                        context.assertFalse(totalBuffer.toString().isEmpty()); // credentials object expected
+                        // the answer must contain all of the payload of the add request, so test that now
+                        context.assertTrue(testJsonObjectToBeContained(
+                                new JsonObject(totalBuffer.toString()), requestBodyAddCredentialsHashedPassword));
+                        validationFuture.complete();
+                    });
+                }).exceptionHandler(validationFuture::fail).end();
+    }
+
+    private void validateCredentialsGetMultipleRequest(final TestContext context, final String getRequestUri,
+                                                       final List<JsonObject> credentialsList,
+                                                       final Future<Void> validationFuture) {
+        vertx.createHttpClient().get(getPort(), HOST, getRequestUri)
+                .handler(response -> {
+                    context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
+                    response.bodyHandler(totalBuffer -> {
+                        context.assertFalse(totalBuffer.toString().isEmpty()); // credentials object expected
+                        // the answer must contain all of the payload of the add request, so test that now
+                        JsonObject multipleCredentialsResponse = new JsonObject(totalBuffer.toString());
+                        context.assertTrue(multipleCredentialsResponse.containsKey(FIELD_CREDENTIALS_TOTAL));
+                        Integer totalCredentialsFound = multipleCredentialsResponse.getInteger(FIELD_CREDENTIALS_TOTAL);
+                        context.assertEquals(totalCredentialsFound, credentialsList.size());
+                        context.assertTrue(multipleCredentialsResponse.containsKey(CREDENTIALS_ENDPOINT));
+                        final JsonArray credentials = multipleCredentialsResponse.getJsonArray(CREDENTIALS_ENDPOINT);
+                        context.assertNotNull(credentials);
+                        context.assertEquals(credentials.size(), totalCredentialsFound);
+                        // TODO: add full test if the lists are 'identical' (contain the same JsonObjects by using the
+                        //       contained helper method)
+                        validationFuture.complete();
+                    });
+                }).exceptionHandler(validationFuture::fail).end();
     }
 
     private String buildCredentialsPostUri() {
