@@ -16,7 +16,7 @@ HONO_HOME=$SCRIPTPATH/../../../..
 CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
-CREATE_OPTIONS="-l project=$NS --network $NS --detach"
+CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
 
 echo DEPLOYING ECLIPSE HONO TO DOCKER SWARM
 
