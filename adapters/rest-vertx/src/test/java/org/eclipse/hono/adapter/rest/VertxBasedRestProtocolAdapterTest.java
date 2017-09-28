@@ -12,23 +12,32 @@
 
 package org.eclipse.hono.adapter.rest;
 
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
-import io.vertx.core.*;
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.junit.*;
+import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.http.HttpEndpointUtils;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-
-import java.util.*;
-
-import static org.eclipse.hono.service.http.HttpEndpointUtils.CONTENT_TYPE_JSON;
 
 /**
  * Verifies behavior of {@link VertxBasedRestProtocolAdapter}.
@@ -42,8 +51,7 @@ public class VertxBasedRestProtocolAdapterTest {
 
     private static HonoClient messagingClient;
     private static HonoClient registrationClient;
-    private static HonoClient credentialsClient;
-
+    private static HonoClientBasedAuthProvider credentialsAuthProvider;
     private static ProtocolAdapterProperties config;
     private static VertxBasedRestProtocolAdapter restAdapter;
 
@@ -63,15 +71,18 @@ public class VertxBasedRestProtocolAdapterTest {
 
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
-        credentialsClient = mock(HonoClient.class);
+        credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
+
         config = new ProtocolAdapterProperties();
+        config.setInsecurePort(0);
         config.setInsecurePortEnabled(true);
         config.setAuthenticationRequired(true);
-        restAdapter = spy(VertxBasedRestProtocolAdapter.class);
+
+        restAdapter = new VertxBasedRestProtocolAdapter();
         restAdapter.setConfig(config);
         restAdapter.setHonoMessagingClient(messagingClient);
         restAdapter.setRegistrationServiceClient(registrationClient);
-        restAdapter.setCredentialsServiceClient(credentialsClient);
+        restAdapter.setCredentialsAuthProvider(credentialsAuthProvider);
 
         Future<String> restServerDeploymentTracker = Future.future();
         vertx.deployVerticle(restAdapter, restServerDeploymentTracker.completer());
@@ -79,53 +90,58 @@ public class VertxBasedRestProtocolAdapterTest {
     }
 
     @Test
-    public final void testBasicAuthFailsEmptyHeader(final TestContext context) throws Exception {
+    public final void testBasicAuthFailsEmptyHeader(final TestContext context) {
         final Async async = context.async();
 
         vertx.createHttpClient().get(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
-                .putHeader("content-type", CONTENT_TYPE_JSON).handler(response -> {
-            context.assertEquals(HTTP_UNAUTHORIZED, response.statusCode());
+                .putHeader("content-type", HttpEndpointUtils.CONTENT_TYPE_JSON).handler(response -> {
+            context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
             response.bodyHandler(totalBuffer -> {
                 async.complete();
             });
         }).exceptionHandler(context::fail).end();
     }
 
+    @SuppressWarnings("unchecked")
     @Test
-    public final void testBasicAuthFailsWrongCredentials(final TestContext context) throws Exception {
+    public final void testBasicAuthFailsWrongCredentials(final TestContext context) {
         final Async async = context.async();
         final String encodedUserPass = Base64.getEncoder()
-                .encodeToString("testuser@DEFAULT_TENANT:password123".getBytes("utf-8"));
+                .encodeToString("testuser@DEFAULT_TENANT:password123".getBytes(StandardCharsets.UTF_8));
 
-        Future<String> validationResult = Future.future();
-        validationResult.fail("");
-        doReturn(validationResult).when(restAdapter).validateCredentialsForDevice(anyObject());
+        doAnswer(invocation -> {
+            Handler<AsyncResult<User>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            resultHandler.handle(Future.failedFuture("bad credentials"));
+            return null;
+        }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
         vertx.createHttpClient().put(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
-                .putHeader("content-type", CONTENT_TYPE_JSON)
+                .putHeader("content-type", HttpEndpointUtils.CONTENT_TYPE_JSON)
                 .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
-            context.assertEquals(HTTP_UNAUTHORIZED, response.statusCode());
+            context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
             response.bodyHandler(totalBuffer -> {
                 async.complete();
             });
         }).exceptionHandler(context::fail).end();
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public final void testBasicAuthSuccess(final TestContext context) throws Exception {
         final Async async = context.async();
         final String encodedUserPass = Base64.getEncoder()
-                .encodeToString("existinguser@DEFAULT_TENANT:password123".getBytes("utf-8"));
+                .encodeToString("existinguser@DEFAULT_TENANT:password123".getBytes(StandardCharsets.UTF_8));
 
-        Future<String> validationResult = Future.future();
-        validationResult.complete("device_1");
-
-        doReturn(validationResult).when(restAdapter).validateCredentialsForDevice(anyObject());
+        doAnswer(invocation -> {
+            Handler<AsyncResult<User>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "device_1")));
+            return null;
+        }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
         vertx.createHttpClient().get(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
-                .putHeader("content-type", CONTENT_TYPE_JSON)
+                .putHeader("content-type", HttpEndpointUtils.CONTENT_TYPE_JSON)
                 .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
-            context.assertEquals(HTTP_NOT_FOUND, response.statusCode());
+            context.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
             response.bodyHandler(totalBuffer -> {
                 async.complete();
             });

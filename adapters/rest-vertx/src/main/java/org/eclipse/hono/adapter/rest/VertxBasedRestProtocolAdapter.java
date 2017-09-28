@@ -12,19 +12,15 @@
 
 package org.eclipse.hono.adapter.rest;
 
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.service.auth.device.Device;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.AuthProvider;
-import io.vertx.ext.auth.User;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BasicAuthHandler;
@@ -32,19 +28,17 @@ import io.vertx.ext.web.handler.BasicAuthHandler;
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using REST.
  */
-public class VertxBasedRestProtocolAdapter
-        extends AbstractVertxBasedHttpProtocolAdapter<ProtocolAdapterProperties> implements AuthProvider {
+public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<ProtocolAdapterProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
-    private static final String USERNAME_PROPERTY = "username";
-    private static final String PASSWORD_PROPERTY = "password";
 
     @Override
     protected final void addRoutes(final Router router) {
         if (!getConfig().isAuthenticationRequired()) {
-            LOG.warn("authentication of devices switched off");
+            LOG.warn("device authentication has been disabled");
+            LOG.warn("any device may publish data on behalf of all other devices");
         } else {
             setupBasicAuth(router);
         }
@@ -53,16 +47,36 @@ public class VertxBasedRestProtocolAdapter
     }
 
     private void setupBasicAuth(final Router router) {
-        router.route().handler(BasicAuthHandler.create(this));
+        router.route().handler(BasicAuthHandler.create(getCredentialsAuthProvider(), "default"));
     }
 
     private void addTelemetryApiRoutes(final Router router) {
+
+        if (getConfig().isAuthenticationRequired()) {
+            // route for posting telemetry data using tenant and device ID determined as part of
+            // device authentication
+            router.route(HttpMethod.POST, "/telemetry").handler(this::handlePostTelemetry);
+            // route for asserting that authenticated identity matches path variables
+            router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
+                .handler(this::assertDeviceIdentity);
+        }
+
         // route for uploading telemetry data
         router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(ctx -> uploadTelemetryMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
     private void addEventApiRoutes(final Router router) {
+
+        if (getConfig().isAuthenticationRequired()) {
+            // route for posting events using tenant and device ID determined as part of
+            // device authentication
+            router.route(HttpMethod.POST, "/event").handler(this::handlePostEvent);
+            // route for asserting that authenticated identity matches path variables
+            router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
+                .handler(this::assertDeviceIdentity);
+        }
+
         // route for sending event messages
         router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(ctx -> uploadEventMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
@@ -84,24 +98,41 @@ public class VertxBasedRestProtocolAdapter
         return null;
     }
 
-    @Override
-    public final void authenticate(final JsonObject authInfo, final Handler<AsyncResult<User>> resultHandler) {
-        String username = authInfo.getString(USERNAME_PROPERTY);
-        String password = authInfo.getString(PASSWORD_PROPERTY);
-        UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(username,
-                password, getConfig().isSingleTenant());
-        if (credentials == null) {
-            LOG.debug("authentication failed for device [authId: {}]", username);
-            resultHandler.handle(Future.failedFuture("authentication failed"));
+    private void handle401(final RoutingContext ctx) {
+        unauthorized(ctx.response(), "Basic realm=\"default\"");
+    }
+
+    void handlePostTelemetry(final RoutingContext ctx) {
+
+        if (Device.class.isInstance(ctx.user())) {
+            Device device = (Device) ctx.user();
+            uploadTelemetryMessage(ctx, device.getTenantId(), device.getDeviceId());
         } else {
-            this.validateCredentialsForDevice(credentials).setHandler(attempt -> {
-                if (attempt.succeeded()) {
-                    resultHandler.handle(Future.succeededFuture(null));
-                } else {
-                    LOG.debug("authentication failed for device [tenantId: {}, authId: {}]", credentials.getTenantId(), credentials.getAuthId());
-                    resultHandler.handle(Future.failedFuture("authentication failed"));
-                }
-            });
+            handle401(ctx);
+        }
+    }
+
+    void handlePostEvent(final RoutingContext ctx) {
+
+        if (Device.class.isInstance(ctx.user())) {
+            Device device = (Device) ctx.user();
+            uploadEventMessage(ctx, device.getTenantId(), device.getDeviceId());
+        } else {
+            handle401(ctx);
+        }
+    }
+
+    void assertDeviceIdentity(final RoutingContext ctx) {
+
+        if (Device.class.isInstance(ctx.user())) {
+            Device device = (Device) ctx.user();
+            if (device.getTenantId().equals(getTenantParam(ctx)) && device.getDeviceId().equals(getDeviceIdParam(ctx))) {
+                ctx.next();
+            } else {
+                endWithStatus(ctx.response(), HttpURLConnection.HTTP_FORBIDDEN, null, null, null);
+            }
+        } else {
+            handle401(ctx);
         }
     }
 }

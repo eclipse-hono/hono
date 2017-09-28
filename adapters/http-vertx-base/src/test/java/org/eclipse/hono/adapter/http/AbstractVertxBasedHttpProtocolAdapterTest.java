@@ -16,6 +16,7 @@ import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,7 +40,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     HonoClient messagingClient;
     HonoClient registrationClient;
-    HonoClient credentialsClient;
+    HonoClientBasedAuthProvider credentialsAuthProvider;
     ServiceConfigProperties config;
 
     /**
@@ -50,7 +51,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
-        credentialsClient = mock(HonoClient.class);
+        credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
         config = new ServiceConfigProperties();
         config.setInsecurePortEnabled(true);
     }
@@ -72,7 +73,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setInsecureHttpServer(server);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationClient);
-        adapter.setCredentialsServiceClient(credentialsClient);
+        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         // WHEN starting the adapter
@@ -89,7 +90,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(server).listen(any(Handler.class));
         verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
         verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
-        verify(credentialsClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
     }
 
     /**
@@ -105,8 +105,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         HttpServer server = getHttpServer(false);
         Async onStartupSuccess = ctx.async();
 
-        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(server, onStartupSuccess);
-        adapter.setCredentialsServiceClient(credentialsClient);
+        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(server, s -> onStartupSuccess.complete());
+        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         // WHEN starting the adapter
@@ -120,42 +120,33 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the onStartupSuccess method has been invoked
         startup.await(300);
         onStartupSuccess.await(300);
-
-        ctx.assertNotEquals(adapter.getCredentialsServiceClient(), adapter.getRegistrationServiceClient());
     }
 
 
     /**
-     * Verifies that the <me>onStartupSuccess</em> method is invoked if the http server has been started successfully,
-     * even if there is no credentials client set.
-     * The returned credentials client must be equal to the registration client in this case.
+     * Verifies that the <me>onStartupSuccess</em> method is not invoked if no credentials authentication provider is set.
      *
      * @param ctx The helper to use for running async tests on vertx.
-     * @throws Exception if the test fails.
      */
     @Test
-    public void testStartInvokesOnStartupSuccessWithoutExplicitCredentialsClient(final TestContext ctx) throws Exception {
+    public void testStartUpFailsIfCredentialsAuthProviderIsNotSet(final TestContext ctx) {
 
         // GIVEN an adapter with a client provided http server
         HttpServer server = getHttpServer(false);
-        Async onStartupSuccess = ctx.async();
 
-        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(server, onStartupSuccess);
+        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(server, s -> ctx.fail("should not have invoked onStartupSuccess"));
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         // WHEN starting the adapter
         Async startup = ctx.async();
         Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+        startupTracker.setHandler(ctx.asyncAssertFailure(s -> {
             startup.complete();
         }));
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has been invoked
         startup.await(300);
-        onStartupSuccess.await(300);
-
-        ctx.assertEquals(adapter.getCredentialsServiceClient(), adapter.getRegistrationServiceClient());
     }
 
     /**
@@ -191,7 +182,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setHttpServer(server);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationClient);
-        adapter.setCredentialsServiceClient(credentialsClient);
+        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         // WHEN starting the adapter
@@ -224,7 +215,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         });
         return server;
     }
-    private AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> getAdapter(final HttpServer server, final Async onStartupSuccess) {
+    private AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> getAdapter(final HttpServer server, final Handler<Void> onStartupSuccess) {
         AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
 
             @Override
@@ -238,7 +229,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
             @Override
             protected void onStartupSuccess() {
-                onStartupSuccess.complete();
+                onStartupSuccess.handle(null);
             }
         };
 

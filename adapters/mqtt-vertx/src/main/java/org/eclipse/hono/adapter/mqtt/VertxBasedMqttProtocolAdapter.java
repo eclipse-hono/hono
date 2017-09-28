@@ -20,6 +20,7 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -193,7 +194,6 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
         .compose(insecureServer -> {
             connectToMessaging(null);
             connectToDeviceRegistration(null);
-            connectToCredentialsService(null);
             startFuture.complete();
         }, startFuture);
     }
@@ -284,24 +284,25 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
             return;
         }
 
-        UsernamePasswordCredentials redentials = UsernamePasswordCredentials.create(endpoint.auth().userName(),
+        UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(endpoint.auth().userName(),
                 endpoint.auth().password(), getConfig().isSingleTenant());
 
-        if (redentials == null) {
+        if (credentials == null) {
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
             LOG.debug("connection request from client [clientId: {}] rejected [cause: {}]",
                     endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
         } else {
-            validateCredentialsForDevice(redentials).setHandler(attempt -> handleCredentialsResult(attempt, endpoint, redentials));
+            getCredentialsAuthProvider().authenticate(credentials, attempt -> handleCredentialsResult(attempt, endpoint, credentials));
         }
 
     }
 
-    void handleCredentialsResult(final AsyncResult<String> attempt, final MqttEndpoint endpoint, final DeviceCredentials credentials) {
+    private void handleCredentialsResult(final AsyncResult<Device> attempt, final MqttEndpoint endpoint, final DeviceCredentials credentials) {
 
         if (attempt.succeeded()) {
-            final String deviceId = attempt.result();
-            LOG.debug("successfully authenticated deviceId: {}", deviceId);
+            final String deviceId = attempt.result().getDeviceId();
+            LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
+                    credentials.getTenantId(), credentials.getAuthId(), deviceId);
 
             endpoint.publishHandler(message -> {
 
@@ -323,10 +324,10 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
             });
 
             endpoint.closeHandler(v -> {
-                LOG.debug("connection closed to device [tenantId: {}, authId: {}, deviceId: {}]",
+                LOG.debug("connection closed to device [tenant-id: {}, auth-id: {}, device-id: {}]",
                         credentials.getTenantId(), credentials.getAuthId(), deviceId);
                 if (registrationAssertions.remove(endpoint) != null) {
-                    LOG.trace("removed registration assertion for device [tenantId: {}, authId: {}, deviceId: {}]",
+                    LOG.trace("removed registration assertion for device [tenant-id: {}, auth-id: {}, device-id: {}]",
                             credentials.getTenantId(), credentials.getAuthId(), deviceId);
                 }
             });
@@ -334,8 +335,8 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
             endpoint.accept(false);
 
         } else {
-            LOG.debug("authentication failed for device [tenantId: {}, authId: {}, cause: {}]",
-                    credentials.getTenantId(), credentials.getAuthId(), MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+            LOG.debug("authentication failed for device [tenant-id: {}, auth-id: {}, cause: {}]",
+                    credentials.getTenantId(), credentials.getAuthId(), attempt.cause().getMessage());
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
         }
     }

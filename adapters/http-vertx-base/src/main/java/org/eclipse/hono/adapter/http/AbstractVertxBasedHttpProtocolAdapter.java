@@ -55,21 +55,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     /**
      * The <em>application/json</em> content type.
      */
-    protected static final String CONTENT_TYPE_JSON = "application/json";
+    protected static final String CONTENT_TYPE_JSON              = "application/json";
     /**
      * The <em>application/json; charset=utf-8</em> content type.
      */
-    protected static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
+    protected static final String CONTENT_TYPE_JSON_UFT8         = "application/json; charset=utf-8";
 
     /**
      * Default file uploads directory used by Vert.x Web
      */
-    protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
+    protected static final String DEFAULT_UPLOADS_DIRECTORY      = "/tmp";
 
     /**
-     * The name of the cookie used to store a device's registration assertion JWT token.
+     * The name of the HTTP header field used to convey a device's registration status assertion.
      */
     protected static final String HEADER_REGISTRATION_ASSERTION = "Hono-Reg-Assertion";
+
     private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
     @Value("${spring.profiles.active:}")
@@ -175,7 +176,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             .compose(s -> {
                 connectToMessaging(null);
                 connectToDeviceRegistration(null);
-                connectToCredentialsService(null);
                 try {
                     onStartupSuccess();
                     startFuture.complete();
@@ -468,6 +468,23 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
         headers.put(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "text/plain");
         headers.put(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
         endWithStatus(response, HTTP_UNAVAILABLE, headers, detail, contentType);
+    }
+
+    /**
+     * Ends a response with HTTP status code 401 (Unauthorized) and an optional message.
+     *
+     * @param response The HTTP response to write to.
+     * @param authenticateHeaderValue The value to send to the client in the <em>WWW-Authenticate</em> header.
+     * @throws NullPointerException if response is {@code null}.
+     */
+    protected static void unauthorized(final HttpServerResponse response, final String authenticateHeaderValue) {
+
+        Objects.requireNonNull(response);
+        Objects.requireNonNull(authenticateHeaderValue);
+        LOG.debug("client is required to authenticate [{}]", authenticateHeaderValue);
+        Map<CharSequence, CharSequence> headers = new HashMap<>();
+        headers.put("WWW-Authenticate", authenticateHeaderValue);
+        endWithStatus(response, HTTP_UNAUTHORIZED, headers, null, null);
     }
 
     /**
