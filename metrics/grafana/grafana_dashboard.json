@@ -2965,7 +2965,6 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "DEFAULT_TENANT",
           "value": "DEFAULT_TENANT"
         },
@@ -3019,5 +3018,5 @@
   },
   "timezone": "browser",
   "title": "Hono",
-  "version": 3
+  "version": 6
 }
