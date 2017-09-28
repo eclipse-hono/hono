@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "editable": true,
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
   "hideControls": false,
@@ -147,7 +147,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Messaging instances",
+          "title": "Messaging Instances",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -252,7 +252,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Toal Processed Telemetry Per Sec (Ø/min)",
+          "title": "Total Processed Telemetry Per Sec (Ø/min)",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -357,7 +357,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Toal Processed Events Per Sec (Ø/min)",
+          "title": "Total Processed Events Per Sec (Ø/min)",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -454,7 +454,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Processed Telemetry Per Second (In Time Frame)",
+          "title": "Processed Telemetry Per Second (Ø/min)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -559,7 +559,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Processed Events Per Second (In Time Frame)",
+          "title": "Processed Events Per Second (Ø/min)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1102,7 +1102,7 @@
             }
           ],
           "thresholds": "",
-          "title": "MQTT Adapter instances",
+          "title": "MQTT Adapter Instances",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -1207,7 +1207,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Toal Processed Telemetry Per Sec (Ø/min)",
+          "title": "Total Processed Telemetry Per Sec (Ø/min)",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -1312,7 +1312,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Toal Processed Events Per Sec (Ø/min)",
+          "title": "Total Processed Events Per Sec (Ø/min)",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -1417,7 +1417,7 @@
             }
           ],
           "thresholds": "",
-          "title": "REST Adapter instances",
+          "title": "REST Adapter Instances",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -1522,7 +1522,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Toal Processed Telemetry Per Sec (Ø/min)",
+          "title": "Total Processed Telemetry Per Sec (Ø/min)",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -1627,7 +1627,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Toal Processed Events Per Sec (Ø/min)",
+          "title": "Total Processed Events Per Sec (Ø/min)",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -1724,7 +1724,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Processed MQTT Telemetry Per Second (In Time Frame)",
+          "title": "Processed MQTT Telemetry Per Second (Ø/min)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1830,7 +1830,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Processed REST Telemetry Per Second (In Time Frame)",
+          "title": "Processed REST Telemetry Per Second (Ø/min)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1947,7 +1947,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Processed MQTT Events Per Second (In Time Frame)",
+          "title": "Processed MQTT Events Per Second (Ø/min)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2052,7 +2052,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Processed REST Events Per Second (In Time Frame)",
+          "title": "Processed REST Events Per Second (Ø/min)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -3018,5 +3018,5 @@
   },
   "timezone": "browser",
   "title": "Hono",
-  "version": 6
+  "version": 8
 }
