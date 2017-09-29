@@ -20,7 +20,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -50,7 +49,7 @@ import io.vertx.ext.web.handler.BodyHandler;
  * 
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceConfigProperties> extends AbstractProtocolAdapterBase<T> {
+public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtocolAdapterProperties> extends AbstractProtocolAdapterBase<T> {
 
     /**
      * The <em>application/json</em> content type.
@@ -707,10 +706,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * Gets a registration assertion for a device.
      * <p>
      * This method first tries to retrieve the assertion from request header {@link #HEADER_REGISTRATION_ASSERTION}.
-     * If the header exists and contains a value representing a non-expired assertion, a completed future
-     * containing the header field's value is returned.
-     * Otherwise a new assertion is retrieved from the Device Registration service and included in the response
-     * using the same header name.
+     * If the header exists and contains a value representing a non-expired assertion the returned future will
+     * be completed with the value from the header.
+     * Otherwise a new assertion is retrieved from the Device Registration service and used to complete the future.
+     * If the <em>regAssertionEnabled</em> configuration property is set, the newly created token is included in
+     * the HTTP response using the same header name.
      * 
      * @param ctx The routing context to use for getting/setting the cookie.
      * @param tenantId The tenant that the device belongs to.
@@ -725,7 +725,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             return Future.succeededFuture(assertion);
         } else {
             return getRegistrationAssertion(tenantId, deviceId).compose(token -> {
-                ctx.response().putHeader(HEADER_REGISTRATION_ASSERTION, token);
+                if (getConfig().isRegAssertionEnabled()) {
+                    ctx.response().putHeader(HEADER_REGISTRATION_ASSERTION, token);
+                }
                 return Future.succeededFuture(token);
             });
         }

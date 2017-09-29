@@ -12,9 +12,9 @@
 
 package org.eclipse.hono.adapter.rest;
 
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
@@ -76,8 +76,8 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.http")
-    public ProtocolAdapterProperties adapterProperties() {
-        return new ProtocolAdapterProperties();
+    public HttpProtocolAdapterProperties adapterProperties() {
+        return new HttpProtocolAdapterProperties();
     }
 
     /**

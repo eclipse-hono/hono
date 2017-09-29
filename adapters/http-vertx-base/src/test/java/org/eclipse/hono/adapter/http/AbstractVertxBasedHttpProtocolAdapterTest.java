@@ -12,11 +12,15 @@
 
 package org.eclipse.hono.adapter.http;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,10 +29,14 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
@@ -41,10 +49,10 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     HonoClient messagingClient;
     HonoClient registrationClient;
     HonoClientBasedAuthProvider credentialsAuthProvider;
-    ServiceConfigProperties config;
+    HttpProtocolAdapterProperties config;
 
     /**
-     * Creates a 
+     * Sets up common fixture.
      */
     @Before
     public void setup() {
@@ -52,7 +60,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
-        config = new ServiceConfigProperties();
+        config = new HttpProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
     }
 
@@ -68,13 +76,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter with a client provided http server
         HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(mock(Router.class), null);
-        adapter.setConfig(config);
-        adapter.setInsecureHttpServer(server);
-        adapter.setHonoMessagingClient(messagingClient);
-        adapter.setRegistrationServiceClient(registrationClient);
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
         adapter.setCredentialsAuthProvider(credentialsAuthProvider);
-        adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         // WHEN starting the adapter
         Async startup = ctx.async();
@@ -105,7 +108,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         HttpServer server = getHttpServer(false);
         Async onStartupSuccess = ctx.async();
 
-        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(server, s -> onStartupSuccess.complete());
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, s -> onStartupSuccess.complete());
         adapter.setCredentialsAuthProvider(credentialsAuthProvider);
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
@@ -133,9 +136,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter with a client provided http server
         HttpServer server = getHttpServer(false);
-
-        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = getAdapter(server, s -> ctx.fail("should not have invoked onStartupSuccess"));
-        adapter.setMetrics(mock(HttpAdapterMetrics.class));
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, s -> ctx.fail("should not have invoked onStartupSuccess"));
 
         // WHEN starting the adapter
         Async startup = ctx.async();
@@ -150,40 +151,16 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the <me>onStartupSuccess</em> method is invoked if the http server has been started successfully.
+     * Verifies that the <me>onStartupSuccess</em> method is not invoked if a client provided http server fails to start.
      * 
      * @param ctx The helper to use for running async tests on vertx.
-     * @throws Exception if the test fails.
      */
     @Test
-    public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final TestContext ctx) throws Exception {
+    public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final TestContext ctx) {
 
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
         HttpServer server = getHttpServer(true);
-
-        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
-
-            @Override
-            public void setConfig(final ServiceConfigProperties configuration) {
-                setSpecificConfig(configuration);
-            }
-
-            @Override
-            protected void addRoutes(final Router router) {
-            }
-
-            @Override
-            protected void onStartupSuccess() {
-                ctx.fail("should not invoke onStartupSuccess");
-            }
-        };
-
-        adapter.setConfig(config);
-        adapter.setHttpServer(server);
-        adapter.setHonoMessagingClient(messagingClient);
-        adapter.setRegistrationServiceClient(registrationClient);
-        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
-        adapter.setMetrics(mock(HttpAdapterMetrics.class));
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, s -> ctx.fail("should not invoke onStartupSuccess"));
 
         // WHEN starting the adapter
         Async startupFailed = ctx.async();
@@ -196,6 +173,70 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // THEN the onStartupSuccess method has been invoked
         startupFailed.await(300);
+    }
+
+    /**
+     * Verifies that the adapter does not include a device registration assertion in an HTTP response by default.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetRegistrationAssertionHeaderDoesNotIncludeAssertionInResponse(final TestContext ctx) {
+
+        // GIVEN an adapter connected to the Device Registration service
+        HttpServer server = getHttpServer(false);
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
+
+        Async startup = ctx.async();
+        Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> startup.complete()));
+        adapter.start(startupTracker);
+        startup.await(300);
+
+        // WHEN a request to publish telemetry data is processed
+        HttpServerRequest req = mock(HttpServerRequest.class);
+        HttpServerResponse response = mock(HttpServerResponse.class);
+        RoutingContext context = mock(RoutingContext.class);
+        when(context.request()).thenReturn(req);
+        when(context.response()).thenReturn(response);
+        adapter.getRegistrationAssertionHeader(context, "tenant", "device");
+
+        // THEN the response does NOT contain a registration assertion header
+        verify(response, never()).putHeader(eq(AbstractVertxBasedHttpProtocolAdapter.HEADER_REGISTRATION_ASSERTION), anyString());
+    }
+
+    /**
+     * Verifies that the adapter adds a device registration assertion in an HTTP response if configured.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetRegistrationAssertionHeaderAddsAssertionToResponse(final TestContext ctx) {
+
+        // GIVEN an adapter connected to the Device Registration service that is configured to include
+        // device registration assertions in responses
+        config.setRegAssertionEnabled(true);
+        HttpServer server = getHttpServer(false);
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
+
+        Async startup = ctx.async();
+        Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> startup.complete()));
+        adapter.start(startupTracker);
+        startup.await(300);
+
+        // WHEN a request to publish telemetry data is processed
+        HttpServerRequest req = mock(HttpServerRequest.class);
+        HttpServerResponse response = mock(HttpServerResponse.class);
+        RoutingContext context = mock(RoutingContext.class);
+        when(context.request()).thenReturn(req);
+        when(context.response()).thenReturn(response);
+        adapter.getRegistrationAssertionHeader(context, "tenant", "device");
+
+        // THEN the response contains a registration assertion header
+        verify(response).putHeader(AbstractVertxBasedHttpProtocolAdapter.HEADER_REGISTRATION_ASSERTION, "token");
     }
 
     @SuppressWarnings("unchecked")
@@ -215,13 +256,18 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         });
         return server;
     }
-    private AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> getAdapter(final HttpServer server, final Handler<Void> onStartupSuccess) {
-        AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
 
-            @Override
-            public void setConfig(final ServiceConfigProperties configuration) {
-                setSpecificConfig(configuration);
-            }
+    /**
+     * Creates a protocol adapter for a given HTTP server.
+     * 
+     * @param server The HTTP server to start.
+     * @param onStartupSuccess The handler to invoke on successful startup.
+     * @return The adapter.
+     */
+    @SuppressWarnings("unchecked")
+    private AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> getAdapter(final HttpServer server, final Handler<Void> onStartupSuccess) {
+
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties>() {
 
             @Override
             protected void addRoutes(final Router router) {
@@ -229,7 +275,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
             @Override
             protected void onStartupSuccess() {
-                onStartupSuccess.handle(null);
+                if (onStartupSuccess != null) {
+                    onStartupSuccess.handle(null);
+                }
             }
         };
 
@@ -238,30 +286,21 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationClient);
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
+
+        RegistrationClient regClient = mock(RegistrationClient.class);
+        doAnswer(invocation -> {
+            Handler<AsyncResult<RegistrationResult>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
+            resultHandler.handle(Future.succeededFuture(RegistrationResult.from(200, result)));
+            return null;
+        }).when(regClient).assertRegistration(anyString(), any(Handler.class));
+
+        doAnswer(invocation -> {
+            Handler<AsyncResult<RegistrationClient>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            resultHandler.handle(Future.succeededFuture(regClient));
+            return registrationClient;
+        }).when(registrationClient).getOrCreateRegistrationClient(anyString(), any(Handler.class));
+
         return adapter;
-    }
-
-    private AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> getAdapter(final Router router, final Handler<Router> routeRegistrator) {
-
-        return new AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties>() {
-
-            @Override
-            public void setConfig(final ServiceConfigProperties configuration) {
-                setSpecificConfig(configuration);
-            }
-
-            @Override
-            protected void addRoutes(final Router router) {
-
-                if (routeRegistrator != null) {
-                    routeRegistrator.handle(router);
-                }
-            }
-
-            @Override
-            protected Router createRouter() {
-                return router;
-            }
-        };
     }
 }

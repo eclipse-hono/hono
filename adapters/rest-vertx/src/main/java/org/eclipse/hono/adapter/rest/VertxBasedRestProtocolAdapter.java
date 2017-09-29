@@ -15,8 +15,8 @@ package org.eclipse.hono.adapter.rest;
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +28,7 @@ import io.vertx.ext.web.handler.BasicAuthHandler;
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using REST.
  */
-public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<ProtocolAdapterProperties> {
+public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);
     private static final String PARAM_TENANT = "tenant";
@@ -47,7 +47,7 @@ public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpP
     }
 
     private void setupBasicAuth(final Router router) {
-        router.route().handler(BasicAuthHandler.create(getCredentialsAuthProvider(), "default"));
+        router.route().handler(BasicAuthHandler.create(getCredentialsAuthProvider(), getConfig().getRealm()));
     }
 
     private void addTelemetryApiRoutes(final Router router) {
@@ -99,7 +99,7 @@ public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpP
     }
 
     private void handle401(final RoutingContext ctx) {
-        unauthorized(ctx.response(), "Basic realm=\"default\"");
+        unauthorized(ctx.response(), "Basic realm=\"" + getConfig().getRealm() + "\"");
     }
 
     void handlePostTelemetry(final RoutingContext ctx) {

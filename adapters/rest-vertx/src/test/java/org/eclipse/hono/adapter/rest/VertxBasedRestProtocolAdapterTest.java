@@ -13,14 +13,15 @@
 package org.eclipse.hono.adapter.rest;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.http.HttpEndpointUtils;
@@ -52,7 +53,7 @@ public class VertxBasedRestProtocolAdapterTest {
     private static HonoClient messagingClient;
     private static HonoClient registrationClient;
     private static HonoClientBasedAuthProvider credentialsAuthProvider;
-    private static ProtocolAdapterProperties config;
+    private static HttpProtocolAdapterProperties config;
     private static VertxBasedRestProtocolAdapter restAdapter;
 
     private static Vertx vertx;
@@ -73,7 +74,7 @@ public class VertxBasedRestProtocolAdapterTest {
         registrationClient = mock(HonoClient.class);
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
 
-        config = new ProtocolAdapterProperties();
+        config = new HttpProtocolAdapterProperties();
         config.setInsecurePort(0);
         config.setInsecurePortEnabled(true);
         config.setAuthenticationRequired(true);
