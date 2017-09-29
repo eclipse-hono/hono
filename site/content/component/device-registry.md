@@ -298,7 +298,7 @@ The response will look similar to this:
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `DELETE`
 * Status Codes:
-  * 200 (OK): Device registration has been deleted. The payload contains the data that had been registered for the device.
+  * 204 (No Content): Device registration has been deleted. There is no payload in the response.
   * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
@@ -307,18 +307,8 @@ The response will look similar to this:
 
 The response will look similar to this:
 
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 35
-
-    {
-      "data" : {
-         "enabled": true,
-         "ep": "IMEI4711",
-         "psk-id": "psk4711"
-      },
-      "device-id" : "4711"
-    }
+    HTTP/1.1 204 No Content
+    Content-Length: 0
     
 ## Using the Credentials API via HTTP (Draft)
     
