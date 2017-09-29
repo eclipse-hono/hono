@@ -23,7 +23,13 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.eclipse.hono.config.KeyLoader;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwsHeader;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.JwtParser;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.SigningKeyResolverAdapter;
 import io.vertx.core.Vertx;
 
 /**
@@ -47,6 +53,17 @@ public abstract class JwtHelper {
      * The lifetime of created tokens.
      */
     protected Duration tokenLifetime;
+
+    /**
+     * see {@link JwtParser#setAllowedClockSkewSeconds}
+     */
+    protected int allowedClockSkew = 10;
+
+    /**
+     * Specifies the maximum number of entries the validation cache may contain.
+     * This directly reflects the performance of registration token validation.
+     */
+    protected Long validationCacheMaxSize;
 
     /**
      * Creates a new helper for a vertx instance.
@@ -198,5 +215,20 @@ public abstract class JwtHelper {
         } else {
             return result.get();
         }
+    }
+
+    /**
+     * Sets the maximum number of entries the validation cache may contain.
+     * This directly reflects the performance of registration token validation.
+     *
+     * @param validationCacheMaxSize number of cache entries
+     * @throws IllegalArgumentException if the given max cache size is negative
+     */
+    public void setValidationCacheMaxSize(final Long validationCacheMaxSize) {
+        Objects.requireNonNull(validationCacheMaxSize);
+        if (validationCacheMaxSize < 0L) {
+            throw new IllegalArgumentException("Validation cache size must not be negative.");
+        }
+        this.validationCacheMaxSize = validationCacheMaxSize;
     }
 }

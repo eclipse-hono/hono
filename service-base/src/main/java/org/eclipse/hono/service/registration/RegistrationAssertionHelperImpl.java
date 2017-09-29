@@ -15,12 +15,20 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.JwtHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.UncheckedExecutionException;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.vertx.core.Vertx;
@@ -33,6 +41,8 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
 
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationAssertionHelperImpl.class);
 
+    private LoadingCache<RegistrationAssertionCacheKey, Instant> validationCache;
+
     private RegistrationAssertionHelperImpl() {
         this(null);
     }
@@ -43,7 +53,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
 
     /**
      * Creates a helper for creating registration assertions.
-     * 
+     *
      * @param vertx The vertx instance to use for accessing the file system.
      * @param config The configuration properties to determine the signing key material from.
      * @return The helper.
@@ -56,7 +66,8 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
             throw new IllegalArgumentException("configuration does not specify any signing key material");
         } else {
             RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl(vertx);
-            result.tokenLifetime = Duration.ofMinutes(config.getTokenExpiration());
+            result.tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
+            result.setValidationCacheMaxSize(config.getValidationCacheMaxSize());
             if (config.getSharedSecret() != null) {
                 byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
@@ -71,7 +82,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
 
     /**
      * Creates a helper for validating registration assertions.
-     * 
+     *
      * @param vertx The vertx instance to use for accessing the file system.
      * @param config The configuration properties to determine the signing key material from.
      * @return The helper.
@@ -84,6 +95,8 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
             throw new IllegalArgumentException("configuration does not specify any key material for validating signatures");
         } else {
             RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl(vertx);
+            result.tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
+            result.setValidationCacheMaxSize(config.getValidationCacheMaxSize());
             if (config.getSharedSecret() != null) {
                 byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
@@ -98,17 +111,19 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
 
     /**
      * Creates a helper for creating/validating HmacSHA256 based registration assertions.
-     * 
+     *
      * @param sharedSecret The shared secret.
      * @param tokenExpiration The number of minutes after which tokens expire.
+     * @param validationCacheMaxSize max size for validation cache holding the registration assertions requests
      * @return The helper.
      * @throws NullPointerException if sharedSecret is {@code null}.
      */
-    public static RegistrationAssertionHelper forSharedSecret(final String sharedSecret, final long tokenExpiration) {
+    public static RegistrationAssertionHelper forSharedSecret(final String sharedSecret, final long tokenExpiration, final long validationCacheMaxSize) {
         Objects.requireNonNull(sharedSecret);
         RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl();
         result.setSharedSecret(getBytes(sharedSecret));
         result.tokenLifetime = Duration.ofMinutes(tokenExpiration);
+        result.setValidationCacheMaxSize(validationCacheMaxSize);
         return result;
     }
 
@@ -129,18 +144,55 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
     @Override
     public boolean isValid(final String token, final String tenantId, final String deviceId) {
 
+        if (validationCache == null) {
+            initValidationCache();
+        }
+
         try {
-            Jwts.parser()
-                .setSigningKey(key)
-                .requireSubject(Objects.requireNonNull(deviceId))
-                .require("ten", Objects.requireNonNull(tenantId))
-                .setAllowedClockSkewSeconds(10)
-                .parse(token);
-            return true;
-        } catch (JwtException e) {
+            RegistrationAssertionCacheKey cacheKey = new RegistrationAssertionCacheKey(token, tenantId, deviceId);
+            Instant expirationTime = validationCache.get(cacheKey);
+            return isNotExpired(expirationTime);
+        } catch (ExecutionException | UncheckedExecutionException | JwtException e) {
             // token is invalid for some reason
             LOG.debug("failed to validate token", e);
             return false;
         }
+    }
+
+    private boolean isNotExpired(final Instant expirationTime) {
+        Instant now = Instant.now().minus(Duration.ofSeconds(allowedClockSkew));
+
+        if (expirationTime.isBefore(now)) {
+            LOG.debug("token is already expired");
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    private void initValidationCache() {
+
+        /*
+         * Using LoadingCache, which works with "if cached, return; otherwise create, cache and return" pattern
+         */
+        validationCache = CacheBuilder.newBuilder()
+            .maximumSize(validationCacheMaxSize)
+            .expireAfterWrite(tokenLifetime.getSeconds(), TimeUnit.SECONDS)
+            .build(new CacheLoader<RegistrationAssertionCacheKey, Instant>() {
+                @Override
+                public Instant load(RegistrationAssertionCacheKey cacheKey) throws Exception {
+
+                    // validate token
+                    Jws<Claims> claimsJws = Jwts.parser()
+                        .setSigningKey(key)
+                        .requireSubject(Objects.requireNonNull(cacheKey.getDeviceId()))
+                        .require("ten", Objects.requireNonNull(cacheKey.getTenantId()))
+                        .setAllowedClockSkewSeconds(allowedClockSkew)
+                        .parseClaimsJws(cacheKey.getToken());
+
+                    // save expiration time
+                    return claimsJws.getBody().getExpiration().toInstant();
+                }
+            });
     }
 }

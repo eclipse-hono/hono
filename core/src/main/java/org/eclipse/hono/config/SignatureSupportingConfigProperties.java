@@ -24,6 +24,7 @@ public class SignatureSupportingConfigProperties {
     private String keyPath;
     private long tokenExpirationSeconds = 600L;
     private String certificatePath;
+    private long validationCacheMaxSize = 100_000L;
 
     /**
      * Gets the secret used for creating and validating HmacSHA256 based signatures.
@@ -134,6 +135,16 @@ public class SignatureSupportingConfigProperties {
      */
     public final boolean isAppropriateForValidating() {
         return sharedSecret != null || certificatePath != null;
+    }
+
+    /**
+     * Gets the maximum number of entries the validation cache may contain.
+     * This directly reflects the performance of registration token validation.
+     *
+     * @return number of maximum entries the validation cache can store
+     */
+    public long getValidationCacheMaxSize() {
+        return validationCacheMaxSize;
     }
 
 }

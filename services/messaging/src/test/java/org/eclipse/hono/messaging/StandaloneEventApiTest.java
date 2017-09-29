@@ -27,12 +27,12 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.event.impl.EventEndpoint;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -80,7 +80,7 @@ public class StandaloneEventApiTest {
     @BeforeClass
     public static void prepareHonoServer(final TestContext ctx) {
 
-        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
+        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10, 100_000L);
         downstreamAdapter = new MessageDiscardingDownstreamAdapter(vertx);
         server = new HonoMessaging();
         server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx, TestSupport.createAuthenticationService(createUser())));

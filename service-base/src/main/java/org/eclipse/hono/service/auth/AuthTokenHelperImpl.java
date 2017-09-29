@@ -62,6 +62,7 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
         } else {
             AuthTokenHelperImpl result = new AuthTokenHelperImpl(vertx);
             result.tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
+            result.setValidationCacheMaxSize(config.getValidationCacheMaxSize());
             if (config.getSharedSecret() != null) {
                 byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
@@ -89,6 +90,7 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
             throw new IllegalArgumentException("configuration does not specify any key material for validating signatures");
         } else {
             AuthTokenHelperImpl result = new AuthTokenHelperImpl(vertx);
+            result.setValidationCacheMaxSize(config.getValidationCacheMaxSize());
             if (config.getSharedSecret() != null) {
                 byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
