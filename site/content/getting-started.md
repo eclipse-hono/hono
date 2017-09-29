@@ -161,14 +161,14 @@ Content-Length: 35
 ### Uploading Telemetry Data using the REST Adapter
 
 ~~~sh
-$ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
-> http://localhost:8080/telemetry/DEFAULT_TENANT/4711
+$ curl -X PUT -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+> --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4711
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http PUT http://localhost:8080/telemetry/DEFAULT_TENANT/4711 temp:=5
+$ http --auth sensor1@DEFAULT_TENANT:hono-secret PUT http://localhost:8080/telemetry/DEFAULT_TENANT/4711 temp:=5
 ~~~
 
 When you first invoke any of the two commands above after you have started up your Hono instance, you may get the following response:
@@ -202,14 +202,14 @@ Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}
 In a similar way you can upload event data, using curl
 
 ~~~sh
-$ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
-> http://localhost:8080/event/DEFAULT_TENANT/4711
+$ curl -X PUT -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+> --data-binary '{"temp": 5}' http://localhost:8080/event/DEFAULT_TENANT/4711
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http PUT http://localhost:8080/event/DEFAULT_TENANT/4711 temp:=5
+$ http --auth sensor1@DEFAULT_TENANT:hono-secret PUT http://localhost:8080/event/DEFAULT_TENANT/4711 temp:=5
 ~~~
 
 ## Stopping Hono
@@ -217,7 +217,7 @@ $ http PUT http://localhost:8080/event/DEFAULT_TENANT/4711 temp:=5
 The Hono instance's services can be stopped and removed using the following command:
 
 ~~~sh
-~/hono/example/target/hono$ ./swarm_undeploy.sh
+~/hono/example/target/deploy/docker$ ./swarm_undeploy.sh
 ~~~
 
 Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of individual services.
@@ -227,7 +227,7 @@ Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/
 In order to start up the instance again:
 
 ~~~sh
-~/hono/example/target/hono$ ./swarm_deploy.sh
+~/hono/example/target/deploy/docker$ ./swarm_deploy.sh
 ~~~
 
 ## View metrics

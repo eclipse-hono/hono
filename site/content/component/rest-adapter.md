@@ -81,6 +81,8 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_HTTP_KEY_STORE_PATH`<br>`--hono.http.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the protocol adapter should use for authenticating to clients. Either this option or the `HONO_HTTP_KEY_PATH` and `HONO_HTTP_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_HTTP_MAX_PAYLOAD_SIZE`<br>`--hono.http.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming HTTP request's body in bytes. Requests with a larger body size are rejected with a 413 `Request entity too large` response. |
 | `HONO_HTTP_PORT`<br>`--hono.http.port` | no | `8443` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_HTTP_REALM`<br>`--hono.http.realm` | no | `Hono` | The name of the *realm* that unauthenticated devices are prompted to provide credentials for. The realm is used in the *WWW-Authenticate* header returned to devices in response to unauthenticated requests. |
+| `HONO_HTTP_REG_ASSERTION_ENABLED`<br>`--hono.http.regAssertionEnabled` | no | `false` | If set to `true` the protocol adapter includes a Java Web Token in the *Hono-Reg-Assertion* header of the HTTP response to *publish* requests which asserts the device's registration status. The device MAY include this token in subsequent requests to prevent the adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This will reduce the overall latency of the request. However, results may vary depending on the deployment scenario. |
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -197,15 +199,57 @@ value of the *--hono.messaging.host* option to the IP address (or name) of the D
 The same holds true analogously for the *hono-service-device-registry.hono* address.
 {{% /note %}}
 
-## Using the Telemetry API
+## Using the API
 
-### Upload Telemetry Data
+The REST adapter by default requires devices to authenticate during connection establishment. The adapter supports the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). The *username* provided in the header must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the device against the credentials that the [configured Credentials service]({{< relref "#credentials-service-configuration" >}}) has on record for the device. The adapter uses the Credentials API's *get* operation to retrieve the credentials-on-record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
+
+When running the Hono example installation as described in the [Getting Started guide]({{< relref "getting-started.md" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for device `4711` of tenant `DEFAULT_TENANT` having an *auth-id* of `sensor1` and (hashed) *password* `hono-secret`. These credentials are used in the following examples illustrating the usage of the adapter. Please refer to the [Credentials API]({{< relref "api/Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
+
+{{% note %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for a discussion of the concepts.
+{{% /note %}}
+
+### Publish Telemetry Data
+
+* URI: `/telemetry`
+* Method: `POST`
+* Request Headers:
+  * (required) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
+  * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})).
+* Request Body:
+  * (required) Arbitrary payload encoded according to the given content type.
+* Status Codes:
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
+  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
+* Response Headers:
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
+
+This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
+
+**Examples**
+
+Publish some JSON data for device `4711`:
+
+    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
+
+Response:
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+### Publish Telemetry Data (unauthenticated devices)
 
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
+  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}))
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})) and its identity.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -214,11 +258,15 @@ The same holds true analogously for the *hono-service-device-registry.hono* addr
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 * Response Headers:
-  * `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client should include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued by the *Registration Service*.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
-**Example**
+This URI MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
-Upload a JSON string for device `4711`:
+For reasons of completeness, this URI MAY also be used by devices that do have authenticated to the protocol adapter. In this case the protocol adapter verifies that the values provided in the path parameters match the credentials that the device has provided during authentication. If they do not match, the adapter responds with a 403 status code.
+
+**Examples**
+
+Publish some JSON data for device `4711`:
 
     $ curl -i -X PUT -H 'Content-Type: application/json' \
     $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
@@ -227,21 +275,56 @@ Response:
 
     HTTP/1.1 202 Accepted
     Content-Length: 0
-    Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0
 
-Subsequent request:
+An authenticated device may also use this URI. In this case the device needs to know both the *auth-id* as well as the corresponding *device identifier*:
 
-    $ curl -i -X PUT -H 'Content-Type: application/json' \
-    $ -H 'Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0' \
-    $ --data-binary '{"temp": 10}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+    $ curl -i -X PUT -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
 
-## Using the Event API
+In real world scenarios this would usually only make sense if the *device identifier* is also used as the *auth-id*, i.e.
 
-### Send an Event
+    $ curl -i -X PUT -u 4711@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+
+### Publish an Event
+
+* URI: `/event`
+* Method: `POST`
+* Request Headers:
+  * (required) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
+  * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})) and its identity. Including this header only makes sense if the adapter's `HONO_HTTP_REG_ASSERTION_ENABLED` property has been set to `true`.
+* Request Body:
+  * (required) Arbitrary payload encoded according to the given content type.
+* Status Codes:
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
+  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
+* Response Headers:
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client MAY include this token on subsequent telemetry or event requests for the same device in order to prevent the adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
+
+This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
+
+**Example**
+
+Publish some JSON data for device `4711`:
+
+    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"alarm": true}' http://127.0.0.1:8080/event
+
+Response:
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+### Publish an Event (unauthenticated devices)
 
 * URI: `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
+  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
   * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}))
 * Request Body:
@@ -252,23 +335,30 @@ Subsequent request:
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 * Response Headers:
-  * `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client should include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued by the *Registration Service*.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
-**Example**
+This URI MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
-Upload a JSON string for device `4711`:
+For reasons of completeness, this URI MAY also be used by devices that do have authenticated to the protocol adapter. In this case the protocol adapter verifies that the values provided in the path parameters match the credentials that the device has provided during authentication. If they do not match, the adapter responds with a 403 status code.
+
+**Examples**
+
+Publish some JSON data for device `4711`:
 
     $ curl -i -X PUT -H 'Content-Type: application/json' \
-    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+    $ --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
 
 Response:
 
     HTTP/1.1 202 Accepted
     Content-Length: 0
-    Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0
 
-Subsequent request:
+An authenticated device may also use this URI. In this case the device needs to know both the *auth-id* as well as the corresponding *device identifier*:
 
-    $ curl -i -X PUT -H 'Content-Type: application/json' \
-    $ -H 'Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0' \
-    $ --data-binary '{"temp": 10}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+    $ curl -i -X PUT -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+
+In real world scenarios this would usually only make sense if the *device identifier* is also used as the *auth-id*, i.e.
+
+    $ curl -i -X PUT -u 4711@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711

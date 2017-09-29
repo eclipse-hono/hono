@@ -72,6 +72,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
 | `HONO_APP_HEALTH_CHECK_PORT`<br>`--hono.app.healthCheckPort` | no | - | The port that the HTTP server, which exposes the service's health check resources, should bind to. If set, the adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
 | `HONO_APP_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.app.healthCheckBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the HTTP server, which exposes the service's health check resources, should be bound to. The HTTP server will only be started if `HONO_APP_HEALTH_CHECK_BIND_ADDRESS` is set explicitly. |
+| `HONO_MQTT_AUTHENTICATION_REQUIRED`<br>`--hono.mqtt.authenticationRequired` | no | `true` | If set to `true` the protocol adapter requires devices to authenticate when connecting to the adapter. The credentials provided by the device are verified using the configured [Credentials Service]({{< relref "#credentials-service-configuration" >}}). Devices that have failed to authenticate are not allowed to publish any data to Hono. |
 | `HONO_MQTT_BIND_ADDRESS`<br>`--hono.mqtt.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MQTT_CERT_PATH`<br>`--hono.mqtt.certPath` | no | - | The absolute path to the PEM file containing the certificate that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_MQTT_KEY_PATH`.<br>Alternatively, the `HONO_MQTT_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_MQTT_INSECURE_PORT`<br>`--hono.mqtt.insecurePort` | no | - | The insecure port the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
@@ -82,7 +83,6 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_MQTT_KEY_STORE_PATH`<br>`--hono.mqtt.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the protocol adapter should use for authenticating to clients. Either this option or the `HONO_MQTT_KEY_PATH` and `HONO_MQTT_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_MQTT_MAX_PAYLOAD_SIZE`<br>`--hono.mqtt.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming MQTT message's payload in bytes. When a client sends a message with a larger payload, the message is discarded and the connection to the client gets closed. |
 | `HONO_MQTT_PORT`<br>`--hono.mqtt.port` | no | `8883` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_MQTT_AUTHENTICATION_REQUIRED`<br>`--hono.mqtt.authenticationRequired` | no | `true` | If set to `true` the protocol adapter demands the authentication of devices by using the [Credentials Service]({{< relref "#credentials-service-configuration" >}}) before they are allowed to publish messages. |
 
 The variables only need to be set if the default values do not match your environment.
 
@@ -199,57 +199,63 @@ value of the *--hono.messaging.host* option to the IP address (or name) of the D
 The same holds true analogously for the *hono-service-device-registry.hono* address.
 {{% /note %}}
 
-## Using the Telemetry Topic Hierarchy
+## Using the MQTT Adapter Topic Hierarchy
 
-The following examples use a username and password for connecting to MQTT. The username reflects the auth-id of the [Credentals API]({{< relref "api/Credentials-API.md" >}}) and usually represents a device. It may be identical to the device-id.
+The MQTT adapter by default requires devices to authenticate during connection establishment. In order to do so, clients need to provide a *username* and a *password* in the MQTT *CONNECT* packet. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the device against the credentials the [configured Credentials service]({{< relref "#credentials-service-configuration" >}}) has on record for the device. The adapter uses the Credentials API's *get* operation to retrieve the credentials-on-record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
 
-**NB** The standard setup of the [Device Registry component]({{< relref "component/device-registry.md" >}}) provides the example auth-id `sensor1@DEFAULT_TENANT` with the password `hono-secret` 
-and the device-id `4711` which are used here. Some devices may not know their device-id but only their auth-id - this case is covered in the examples as well. 
+When running the Hono example installation as described in the [Getting Started guide]({{< relref "getting-started.md" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for device `4711` of tenant `DEFAULT_TENANT` having an *auth-id* of `sensor1` and (hashed) *password* `hono-secret`. These credentials are used in the following examples illustrating the usage of the adapter. Please refer to the [Credentials API]({{< relref "api/Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
 
+{{% note %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for a discussion of the concepts.
+{{% /note %}}
 
-### Upload Telemetry Data (authenticated devices)
+### Publish Telemetry Data
 
 * Topic: `telemetry`
 * Payload:
   * (required) Arbitrary payload
 
-**NB** If the device knows its *device-id*, it may also use the full qualified topic address `telemetry/${tenant-id}/${device-id}`
+This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
 **Example**
 
-Upload a JSON string for device-id `4711`:
+Publish some JSON data for device `4711`:
 
     $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
 
-or using the full qualified topic address:
-
-    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
-
-
-
-### Upload Telemetry Data (unauthenticated devices)
+### Publish Telemetry Data (unauthenticated devices)
 
 * Topic: `telemetry/${tenant-id}/${device-id}`
 * Payload:
   * (required) Arbitrary payload
 
-To create a setup without authentication, please ensure that the `HONO_MQTT_AUTHENTICATION_REQUIRED` property is set to false.
+This topic can be used by devices that have not authenticated to the protocol adapter. Note that this requires the
+`HONO_MQTT_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
-**Example**
+For reasons of completeness, this topic can also be used by devices that do have been authenticated. In this case the protocol adapter verifies that the values provided in the path parameters match the credentials that the device has provided during authentication. If they do not match, the connection to the client is closed.
 
-Upload a JSON string for device-id `4711`:
+**Examples**
+
+Publish some JSON data for device `4711`:
 
     $ mosquitto_pub -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 
-## Using the Event Topic Hierarchy
+An authenticated device may also use this topic. In this case the device needs to know both the *auth ID* as well as the corresponding *device identifier*:
 
-### Send Event Message (authenticated devices)
+    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+
+In real world scenarios this would usually only make sense if the *device identifier* is also used as the *auth ID*, i.e.
+
+    $ mosquitto_pub -u '4711@DEFAULT_TENANT' -P hono-secret -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+
+
+### Publish an Event
 
 * Topic: `event`
 * Payload:
   * (required) Arbitrary payload
 
-**NB** If the device knows its *device-id*, it may also use the full qualified topic address `event/${tenant-id}/${device-id}`
+This is the preferred way for devices to publish events. It is available only if the protocol adapter has been configured to require devices to authenticate (which is the default).
 
 **Example**
 
@@ -257,20 +263,27 @@ Upload a JSON string for device `4711`:
 
     $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event -m '{"alarm": 1}'
     
-or using the full qualified topic address:
-
-    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
-
-### Send Event Message (unauthenticated devices)
+### Publish an Event (unauthenticated devices)
 
 * Topic: `event/${tenant-id}/${device-id}`
 * Payload:
   * (required) Arbitrary payload
 
-To create a setup without authentication, please ensure that the `HONO_MQTT_AUTHENTICATION_REQUIRED` property is set to false.
+This topic can be used by devices that have not authenticated to the protocol adapter. Note that this requires the
+`HONO_MQTT_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
-**Example**
+For reasons of completeness, this topic can also be used by devices that do have been authenticated. In this case the protocol adapter verifies that the values provided in the path parameters match the credentials that the device has provided during authentication. If they do not match, the connection to the client is closed.
 
-Upload a JSON string for device `4711`:
+**Examples**
+
+Publish some JSON data for device `4711`:
 
     $ mosquitto_pub -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
+
+An authenticated device may also use this topic. In this case the device needs to know both the *auth ID* as well as the corresponding *device identifier*:
+
+    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
+
+In real world scenarios this would usually only make sense if the *device identifier* is also used as the *auth ID*, i.e.
+
+    $ mosquitto_pub -u '4711@DEFAULT_TENANT' -P hono-secret -t event/DEFAULT_TENANT/4711 -m '{"alarm": 1}'
