@@ -150,7 +150,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                         response
                                 .putHeader(
                                         HttpHeaders.LOCATION,
-                                        String.format("/%s/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, deviceId, type, authId));
+                                        String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, authId, type));
                         default:
                             response.end();
                     }
