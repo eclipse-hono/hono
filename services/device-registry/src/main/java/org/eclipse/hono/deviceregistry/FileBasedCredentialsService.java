@@ -212,7 +212,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
                     data.getString(FIELD_DEVICE_ID),
                     data.getString(FIELD_TYPE),
                     data.getString(FIELD_AUTH_ID),
-                    data.getBoolean(FIELD_ENABLED),
+                    data.getBoolean(FIELD_ENABLED, Boolean.TRUE),
                     data.getJsonArray(FIELD_SECRETS)
             );
             return CredentialsResult.from(HTTP_OK, resultPayload);
@@ -233,7 +233,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
                         jsonObject.getString(FIELD_DEVICE_ID),
                         jsonObject.getString(FIELD_TYPE),
                         jsonObject.getString(FIELD_AUTH_ID),
-                        jsonObject.getBoolean(FIELD_ENABLED),
+                        jsonObject.getBoolean(FIELD_ENABLED, Boolean.TRUE),
                         jsonObject.getJsonArray(FIELD_SECRETS));
                 returnCredentialsArray.add(resultPayload);
             });
@@ -311,14 +311,12 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         // check if credentials already exist with the type and auth-id for the device-id from the payload.
         for (Object credentialsObj: authIdCredentials) {
             JsonObject credentials = (JsonObject) credentialsObj;
-            if (credentials.getString(FIELD_TYPE).equals(otherKeys.getString(FIELD_TYPE)) &&
-                credentials.getString(FIELD_DEVICE_ID).equals(otherKeys.getString(FIELD_DEVICE_ID))) {
+            if (credentials.getString(FIELD_TYPE).equals(otherKeys.getString(FIELD_TYPE))) {
                 return CredentialsResult.from(HTTP_CONFLICT);
             }
         }
 
         authIdCredentials.add(otherKeys);
-        credentialsForTenant.put(authId, authIdCredentials);
         dirty = true;
         return CredentialsResult.from(HTTP_CREATED);
     }

@@ -330,7 +330,7 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
 
 The following command add credentials for a device with ID `4720`, the type `hashed-password` and the auth-id `sensor20`:
 
-    $ curl -i -X POST -d '{"device-id": "4720", "type" : "hashed-password","auth-id":"sensor20", "secrets": [{"hash-function" : "sha-512","salt": "aG9ubw==","pwd-hash" : "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' -H 'Content-Type: application/json'  http://localhost:28080/credentials/DEFAULT_TENANT
+    $ curl -i -X POST -d '{"device-id": "4720", "type": "hashed-password", "auth-id": "sensor20", "secrets": [{"hash-function": "sha-512", "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' -H 'Content-Type: application/json'  http://localhost:28080/credentials/DEFAULT_TENANT
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:
