@@ -208,8 +208,8 @@ The following sections describe the resources representing the operations of the
 * URI: `/registration/${tenantId}`
 * Method: `POST`
 * Headers:
-  * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
-* Parameters (encoded as payload according to the content type):
+  * (required) `Content-Type`: `application/json`
+* Parameters (encoded as a JSON object in the request body):
   * (required) `device-id`: The ID of the device to register.
   * (optional) Arbitrary key/value pairs containing additional data to be registered with the device.
 * Status Codes:
@@ -221,11 +221,7 @@ The following sections describe the resources representing the operations of the
 
 The following command registers a device with ID `4711`
 
-    $ curl -i -X POST -d device-id=4711 -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT
-
-or equivalently using JSON
-
-    $ curl -i -X POST -d '{"device-id":"4711","ep":"IMEI4711"}' -H 'Content-Type: application/json' http://localhost:8080/registration/DEFAULT_TENANT
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{"device-id": "4711", "ep": "IMEI4711"}' http://localhost:28080/registration/DEFAULT_TENANT
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:
@@ -246,7 +242,7 @@ like this:
 
 The following command retrieves registration data for device `4711`:
 
-    $ curl -i http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
+    $ curl -i http://localhost:28080/registration/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
@@ -267,43 +263,34 @@ The response will look similar to this:
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Headers:
-  * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
-* Parameters (encoded as payload according to content type):
+  * (required) `Content-Type`: `application/json`
+* Parameters (encoded as a JSON object in the request body):
   * (optional) Arbitrary key/value pairs containing additional data to be registered with the device. The existing key/value pairs will be replaced with these key/values.
 * Status Codes:
-  * 200 (OK): Device registration data has been updated. The body contains the *previous* data registered for the device.
+  * 204 (No Content): Device registration data has been updated.
   * 400 (Bad Request): Device registration has not been updated because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
   * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
 
-    $ curl -i -X PUT -d ep=IMEI4711 -d psk-id=psk4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"ep": "IMEI4711", "psk-id": "psk4711"}' http://localhost:28080/registration/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 35
-
-    {
-      "data" : {
-         "enabled": true,
-         "ep": "IMEI4711"
-      },
-      "device-id" : "4711"
-    }
+    HTTP/1.1 204 No Content
+    Content-Length: 0
 
 ### Delete Registration
 
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `DELETE`
 * Status Codes:
-  * 204 (No Content): Device registration has been deleted. There is no payload in the response.
+  * 204 (No Content): Device registration has been deleted.
   * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
 
-    $ curl -i -X DELETE http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
+    $ curl -i -X DELETE http://localhost:28080/registration/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
@@ -343,7 +330,7 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
 
 The following command add credentials for a device with ID `4720`, the type `hashed-password` and the auth-id `sensor20`:
 
-    $ curl -i -X POST -d '{"device-id": "4720", "type" : "hashed-password","auth-id":"sensor20", "secrets": [{"hash-function" : "sha-512","salt": "aG9ubw==","pwd-hash" : "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' -H 'Content-Type: application/json'  http://localhost:8080/credentials/DEFAULT_TENANT
+    $ curl -i -X POST -d '{"device-id": "4720", "type" : "hashed-password","auth-id":"sensor20", "secrets": [{"hash-function" : "sha-512","salt": "aG9ubw==","pwd-hash" : "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' -H 'Content-Type: application/json'  http://localhost:28080/credentials/DEFAULT_TENANT
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:
@@ -367,7 +354,7 @@ like this:
 
 The following command retrieves credentials data of type `hashed-password` for the authId `sensor1`:
 
-    $ curl -i http://localhost:8080/credentials/DEFAULT_TENANT/sensor1/hashed-password 
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor1/hashed-password 
 
 The response will look similar to this:
 
@@ -414,7 +401,7 @@ The response will look similar to this:
 
 The following command retrieves credentials data of all types for the authId `sensor1`:
 
-    $ curl -i http://localhost:8080/credentials/DEFAULT_TENANT/sensor1
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor1
 
 The response will look similar to this:
 
@@ -476,7 +463,7 @@ The response will look similar to this:
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:8080/credentials/DEFAULT_TENANT/4711
+    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
@@ -494,7 +481,7 @@ The response will look similar to this:
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:8080/credentials/DEFAULT_TENANT/4711/hashed-password
+    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4711/hashed-password
 
 The response will look similar to this:
 
@@ -511,7 +498,7 @@ The response will look similar to this:
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:8080/credentials/DEFAULT_TENANT/4711/hashed-password/sensor1
+    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4711/hashed-password/sensor1
 
 The response will look similar to this:
 
