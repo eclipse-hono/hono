@@ -65,10 +65,7 @@ public class FileBasedCredentialsServiceTest {
         svc.setConfig(config);
 
         vertx.deployVerticle(svc, ctx.asyncAssertSuccess(s -> {
-            svc.getCredentials(Constants.DEFAULT_TENANT, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "sensor1",
-                    ctx.asyncAssertSuccess(creds -> {
-                        assertThat(creds.getStatus(), is(200));
-                    }));
+            assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
         }));
     }
 
@@ -83,17 +80,12 @@ public class FileBasedCredentialsServiceTest {
         FileBasedCredentialsService svc = new FileBasedCredentialsService();
         svc.setConfig(config);
 
-        final JsonObject payload1 = new JsonObject()
-                .put(CredentialsConstants.FIELD_DEVICE_ID, "device")
-                .put(CredentialsConstants.FIELD_AUTH_ID, "myId")
-                .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY)
-                .put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
-        register(svc, "tenant", payload1, ctx);
+        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
 
         final JsonObject payload2 = new JsonObject()
                 .put(CredentialsConstants.FIELD_DEVICE_ID, "other-device")
                 .put(CredentialsConstants.FIELD_AUTH_ID, "myId")
-                .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY)
+                .put(CredentialsConstants.FIELD_TYPE, "myType")
                 .put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
         svc.addCredentials("tenant", payload2, ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_CONFLICT));
@@ -111,7 +103,7 @@ public class FileBasedCredentialsServiceTest {
         FileBasedCredentialsService svc = new FileBasedCredentialsService();
         svc.setConfig(config);
 
-        svc.getCredentials("tenant", "myType", "non-existing", ctx.asyncAssertSuccess(s -> {
+        svc.get("tenant", "myType", "non-existing", ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
                 }));
     }
@@ -122,26 +114,95 @@ public class FileBasedCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test(timeout = 300)
-    public void testGetCredentialsSucceedsdForExistingCredentials(final TestContext ctx) {
+    public void testGetCredentialsSucceedsForExistingCredentials(final TestContext ctx) {
 
         FileBasedCredentialsService svc = new FileBasedCredentialsService();
         svc.setConfig(config);
-        final JsonObject payload1 = new JsonObject()
-                .put(CredentialsConstants.FIELD_DEVICE_ID, "device")
-                .put(CredentialsConstants.FIELD_AUTH_ID, "myId")
-                .put(CredentialsConstants.FIELD_TYPE, "myType")
-                .put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
-        register(svc, "tenant", payload1, ctx);
+        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
 
-
-        svc.getCredentials("tenant", "myType", "myId", ctx.asyncAssertSuccess(s -> {
+        svc.get("tenant", "myType", "myId", ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
                     assertThat(s.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID), is("myId"));
                     assertThat(s.getPayload().getString(CredentialsConstants.FIELD_TYPE), is("myType"));
                 }));
 
     }
-    private static void register(final CredentialsService svc, final String tenant, final JsonObject data, final TestContext ctx) {
+
+    /**
+     * Verifies that the service removes credentials for a given auth-id and type.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test(timeout = 300)
+    public void testRemoveCredentialsByAuthIdAndTypeSucceeds(final TestContext ctx) {
+
+        FileBasedCredentialsService svc = new FileBasedCredentialsService();
+        svc.setConfig(config);
+        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+
+        svc.remove("tenant", "myType", "myId", ctx.asyncAssertSuccess(s -> {
+            assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
+            assertNotRegistered(svc, "tenant", "myId", "myType", ctx);
+        }));
+
+    }
+
+    /**
+     * Verifies that the service removes all credentials for a device but keeps credentials
+     * of other devices.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test(timeout = 300)
+    public void testRemoveCredentialsByDeviceSucceeds(final TestContext ctx) {
+
+        FileBasedCredentialsService svc = new FileBasedCredentialsService();
+        svc.setConfig(config);
+        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+        register(svc, "tenant", "device", "myOtherId", "myOtherType", new JsonArray(), ctx);
+        register(svc, "tenant", "other-device", "thirdId", "myType", new JsonArray(), ctx);
+
+        svc.removeAll("tenant", "device", ctx.asyncAssertSuccess(s -> {
+            assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
+            assertNotRegistered(svc, "tenant", "myId", "myType", ctx);
+            assertNotRegistered(svc, "tenant", "myOtherId", "myOtherType", ctx);
+            assertRegistered(svc, "tenant", "thirdId", "myType", ctx);
+        }));
+
+    }
+
+    private static void assertRegistered(final CredentialsService svc, final String tenant, final String authId, final String type, final TestContext ctx) {
+        Async registration = ctx.async();
+        svc.get(tenant, type, authId, ctx.asyncAssertSuccess(t -> {
+            assertThat(t.getStatus(), is(HttpURLConnection.HTTP_OK));
+            registration.complete();
+        }));
+        registration.await(300);
+    }
+
+    private static void assertNotRegistered(final CredentialsService svc, final String tenant, final String authId, final String type, final TestContext ctx) {
+        Async registration = ctx.async();
+        svc.get(tenant, type, authId, ctx.asyncAssertSuccess(t -> {
+            assertThat(t.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
+            registration.complete();
+        }));
+        registration.await(300);
+    }
+
+    private static void register(
+            final CredentialsService svc,
+            final String tenant,
+            final String deviceId,
+            final String authId,
+            final String type,
+            final JsonArray secrets,
+            final TestContext ctx) {
+
+        JsonObject data = new JsonObject()
+                .put(CredentialsConstants.FIELD_DEVICE_ID, deviceId)
+                .put(CredentialsConstants.FIELD_AUTH_ID, authId)
+                .put(CredentialsConstants.FIELD_TYPE, type)
+                .put(CredentialsConstants.FIELD_SECRETS, secrets);
 
         Async registration = ctx.async();
         svc.addCredentials("tenant", data, ctx.asyncAssertSuccess(s -> {
@@ -149,6 +210,5 @@ public class FileBasedCredentialsServiceTest {
             registration.complete();
         }));
         registration.await(300);
-
     }
 }

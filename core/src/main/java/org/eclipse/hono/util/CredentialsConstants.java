@@ -11,10 +11,13 @@
  */
 package org.eclipse.hono.util;
 
-import io.vertx.core.json.JsonObject;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+
 import org.apache.qpid.proton.message.Message;
 
-import java.util.*;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Constants &amp; utility methods used throughout the Credentials API.
@@ -88,23 +91,31 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * Clients use this object to build their request that is sent to the processing service.
      *
      * @param tenantId The tenant for which the message was processed.
+     * @param deviceId The device that the message relates to.
      * @param authId The authId of the device that the message relates to.
      * @param type The type of credentials that the message relates to.
      * @param payload The payload from the request that is passed to the processing service. Must not be null.
      * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
+     * @throws NullPointerException if tenant or payload is {@code null}.
      */
-    public static JsonObject getServiceGetRequestAsJson(final String tenantId, final String authId,
+    public static JsonObject getServiceGetRequestAsJson(final String tenantId, final String deviceId, final String authId,
                                                         final String type, final JsonObject payload) {
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(payload);
-        
+
         final JsonObject msg = new JsonObject();
         msg.put(MessageHelper.SYS_PROPERTY_SUBJECT, OPERATION_GET);
         msg.put(FIELD_TENANT_ID, tenantId);
-        payload.put(FIELD_AUTH_ID, authId);
+        if (deviceId != null) {
+            payload.put(FIELD_DEVICE_ID, deviceId);
+        }
+        if (authId != null) {
+            payload.put(FIELD_AUTH_ID, authId);
+        }
         if (type != null) {
             payload.put(FIELD_TYPE, type);
         }
-        msg.put(RegistrationConstants.FIELD_PAYLOAD, payload);
+        msg.put(FIELD_PAYLOAD, payload);
 
         return msg;
     }

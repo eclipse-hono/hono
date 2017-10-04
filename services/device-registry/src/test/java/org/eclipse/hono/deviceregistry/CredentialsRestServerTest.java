@@ -22,6 +22,7 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -30,6 +31,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,26 +43,27 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RunWith(VertxUnitRunner.class)
 public class CredentialsRestServerTest {
 
-    private static final String HOST = "localhost";
-
+    private static final String HOST = InetAddress.getLoopbackAddress().getHostAddress();
     private static final String TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "4711";
     private static final String TEST_AUTH_ID = "sensor20";
-
-    private static Vertx vertx;
+    private static final long TEST_TIMEOUT_MILLIS = 500;
+    private static final Vertx vertx = Vertx.vertx();
     private static FileBasedCredentialsService credentialsService;
     private static DeviceRegistryRestServer deviceRegistryRestServer;
 
+    /**
+     * Deploys the server to vert.x.
+     * 
+     * @param context The vert.x test context.
+     */
     @BeforeClass
     public static void setUp(final TestContext context) {
-        vertx = Vertx.vertx();
-
-        final Future<String> setupTracker = Future.future();
-        setupTracker.setHandler(context.asyncAssertSuccess());
 
         final ServiceConfigProperties restServerProps = new ServiceConfigProperties();
         restServerProps.setInsecurePortEnabled(true);
         restServerProps.setInsecurePort(0);
+        restServerProps.setInsecurePortBindAddress(HOST);
 
         final CredentialsHttpEndpoint credentialsHttpEndpoint = new CredentialsHttpEndpoint(vertx);
         deviceRegistryRestServer = new DeviceRegistryRestServer();
@@ -73,20 +76,29 @@ public class CredentialsRestServerTest {
 
         final Future<String> restServerDeploymentTracker = Future.future();
         vertx.deployVerticle(deviceRegistryRestServer, restServerDeploymentTracker.completer());
-        restServerDeploymentTracker.compose(s -> {
-            Future<String> credentialsServiceDeploymentTracker = Future.future();
-            vertx.deployVerticle(credentialsService, credentialsServiceDeploymentTracker.completer());
-            return credentialsServiceDeploymentTracker;
-        }).compose(c -> setupTracker.complete(), setupTracker);
+        final Future<String> credentialsServiceDeploymentTracker = Future.future();
+        vertx.deployVerticle(credentialsService, credentialsServiceDeploymentTracker.completer());
+
+        CompositeFuture.all(restServerDeploymentTracker, credentialsServiceDeploymentTracker)
+                .setHandler(context.asyncAssertSuccess());
+
     }
 
+    /**
+     * Shuts down the server.
+     * 
+     * @param context The vert.x test context.
+     */
     @AfterClass
     public static void tearDown(final TestContext context) {
         vertx.close(context.asyncAssertSuccess());
     }
 
+    /**
+     * Removes all entries from the Credentials service.
+     */
     @After
-    public void clearRegistry() throws InterruptedException {
+    public void clearRegistry() {
         credentialsService.clear();
     }
 
@@ -98,7 +110,7 @@ public class CredentialsRestServerTest {
      * Verify that a correctly filled json payload to add credentials is responded with {@link HttpURLConnection#HTTP_CREATED}
      * and an empty response message.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentials(final TestContext context)  {
         final String requestUri = buildCredentialsPostUri();
 
@@ -120,7 +132,7 @@ public class CredentialsRestServerTest {
      * responded with {@link HttpURLConnection#HTTP_CONFLICT} and a non empty error response message.
      .
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsConflictReported(final TestContext context)  {
         final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
         final Future<Integer> addCredentialsFuture = Future.future();
@@ -146,7 +158,7 @@ public class CredentialsRestServerTest {
      * Verify that a Content-Type for form-urlencoded data is not accepted and responded with {@link HttpURLConnection#HTTP_BAD_REQUEST}
      * and a non empty error response message.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsWrongContentType(final TestContext context)  {
         final String requestUri = buildCredentialsPostUri();
         final String contentType = "application/x-www-form-urlencoded";
@@ -163,7 +175,7 @@ public class CredentialsRestServerTest {
      * Verify that an empty json payload to add credentials is not accepted and responded with {@link HttpURLConnection#HTTP_BAD_REQUEST}
      * and a non empty error response message.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsWrongJsonPayloadEmpty(final TestContext context) {
         final String requestUri = buildCredentialsPostUri();
 
@@ -180,7 +192,7 @@ public class CredentialsRestServerTest {
      * is not accepted and responded with {@link HttpURLConnection#HTTP_BAD_REQUEST}
      * and a non empty error response message.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsWrongJsonPayloadPartsMissingDeviceId(final TestContext context) {
         testPostWithMissingPayloadParts(context, FIELD_DEVICE_ID);
     }
@@ -190,7 +202,7 @@ public class CredentialsRestServerTest {
      * is not accepted and responded with {@link HttpURLConnection#HTTP_BAD_REQUEST}
      * and a non empty error response message.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsWrongJsonPayloadPartsMissingType(final TestContext context) {
         testPostWithMissingPayloadParts(context, FIELD_TYPE);
     }
@@ -200,7 +212,7 @@ public class CredentialsRestServerTest {
      * is not accepted and responded with {@link HttpURLConnection#HTTP_BAD_REQUEST}
      * and a non empty error response message.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsWrongJsonPayloadPartsMissingAuthId(final TestContext context) {
         testPostWithMissingPayloadParts(context, FIELD_AUTH_ID);
     }
@@ -208,20 +220,9 @@ public class CredentialsRestServerTest {
     /**
      * Verify that a correctly added credentials record can be successfully deleted again by using the device-id.
      */
-    @Test
-    public void testRenoveAddedCredentialsByDeviceId(final TestContext context) {
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    public void testRemoveAddedCredentialsByDeviceId(final TestContext context) {
         final String requestUri = String.format("/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT, TEST_DEVICE_ID);
-
-        addAndRemoveCredentialsAgain(context, requestUri, HttpURLConnection.HTTP_NO_CONTENT);
-    }
-
-    /**
-     * Verify that a correctly added credentials record can be successfully deleted again by using the type.
-     */
-    @Test
-    public void testRenoveAddedCredentialsByType(final TestContext context)  {
-        final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                TEST_DEVICE_ID, SECRETS_TYPE_HASHED_PASSWORD);
 
         addAndRemoveCredentialsAgain(context, requestUri, HttpURLConnection.HTTP_NO_CONTENT);
     }
@@ -229,19 +230,19 @@ public class CredentialsRestServerTest {
     /**
      * Verify that a correctly added credentials record can be successfully deleted again by using the type and authId.
      */
-    @Test
-    public void testRenoveAddedCredentialsByTypeAndAuthId(final TestContext context) {
-        final String requestUri = String.format("/%s/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                TEST_DEVICE_ID, SECRETS_TYPE_HASHED_PASSWORD, TEST_AUTH_ID);
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    public void testRemoveAddedCredentialsByTypeAndAuthId(final TestContext context) {
+        final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                TEST_AUTH_ID, SECRETS_TYPE_HASHED_PASSWORD);
 
         addAndRemoveCredentialsAgain(context, requestUri, HttpURLConnection.HTTP_NO_CONTENT);
     }
 
     /**
-     * Verify that a correctly added credentials record can not be deleted by using the correct authId but a not matching type.
+     * Verify that a correctly added credentials record can not be deleted by using the correct authId but a non matching type.
      */
-    @Test
-    public void testRenoveAddedCredentialsByNotExistingTypeButWithAuthId(final TestContext context) {
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    public void testRemoveAddedCredentialsByNonExistingTypeButWithAuthId(final TestContext context) {
         final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
 
         final Future<Integer> addCredentialsFuture = Future.future();
@@ -249,8 +250,8 @@ public class CredentialsRestServerTest {
 
         final Future<Void> done = Future.future();
         done.setHandler(context.asyncAssertSuccess());
-        final String deleteRequestUri = String.format("/%s/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                TEST_DEVICE_ID, "notExistingType", TEST_AUTH_ID);
+        final String deleteRequestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
+                TEST_AUTH_ID, "notExistingType");
 
         addCredentialsFuture.compose(ar -> {
             context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
@@ -266,8 +267,8 @@ public class CredentialsRestServerTest {
     /**
      * Verify that a non existing credentials record cannot be successfully deleted by using the device-id.
      */
-    @Test
-    public void testRenoveNonExistingCredentialsByDeviceId(final TestContext context) {
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    public void testRemoveNonExistingCredentialsByDeviceId(final TestContext context) {
         final String requestUri = String.format("/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT, TEST_DEVICE_ID);
         final Async async = context.async();
 
@@ -279,33 +280,9 @@ public class CredentialsRestServerTest {
     }
 
     /**
-     * Verify that a non existing credentials record cannot be successfully deleted by using an existing device-id but
-     * a non-existing type.
-     */
-    @Test
-    public void testRemoveNonExistingCredentialsByDeviceIdAndType(final TestContext context) {
-        final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                TEST_DEVICE_ID, "invalid-type");
-
-        addAndRemoveCredentialsAgain(context, requestUri, HttpURLConnection.HTTP_NOT_FOUND);
-    }
-
-    /**
-     * Verify that a non existing credentials record cannot be successfully deleted by using an existing device-id and
-     * an existing type but with an invalid auth-id.
-     */
-    @Test
-    public void testRenoveNonExistingCredentialsByDeviceIdAndTypeAndAuthId(final TestContext context) {
-        final String requestUri = String.format("/%s/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                TEST_DEVICE_ID, SECRETS_TYPE_HASHED_PASSWORD, "invalid-auth-id");
-
-        addAndRemoveCredentialsAgain(context, requestUri, HttpURLConnection.HTTP_NOT_FOUND);
-    }
-
-    /**
      * Verify that a correctly added credentials record can be successfully looked up again by using the type and authId.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetAddedCredentials(final TestContext context)  {
         final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
         final Future<Integer> addCredentialsFuture = Future.future();
@@ -328,7 +305,7 @@ public class CredentialsRestServerTest {
      * Verify that multiple (2) correctly added credentials records of the same authId can be successfully looked up by single
      * requests using their type and authId again.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetAddedCredentialsMultipleTypesSingleRequests(final TestContext context) throws InterruptedException {
         final Future<Void> done = Future.future();
         done.setHandler(context.asyncAssertSuccess());
@@ -359,66 +336,67 @@ public class CredentialsRestServerTest {
     }
 
     /**
-     * Verify that multiple correctly added credentials records of the same authId can be successfully looked up again
-     * by using just authId.
+     * Verifies that the service returns all credentials registered for a given device regardless of authentication identifier.
+     * <p>
      * The returned JsonObject must consist of the total number of entries and contain all previously added credentials
      * in the provided JsonArray that is found under the key of the endpoint {@link CredentialsConstants#CREDENTIALS_ENDPOINT}.
+     * 
+     * @param context The vert.x test context.
+     * @throws InterruptedException if registration of credentials is interrupted.
      */
-    @Test
-    public void testGetAddedCredentialsMultipleTypesMultipleRequests(final TestContext context) throws InterruptedException {
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    public void testGetCredentialsForDeviceRegardlessOfAuthId(final TestContext context) throws InterruptedException {
+
         final Future<Void> done = Future.future();
         done.setHandler(context.asyncAssertSuccess());
 
-        final JsonObject requestBodyAddCredentialsHashedPassword = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final List<JsonObject> credentialsListToAdd = new ArrayList<>();
+        credentialsListToAdd.add(buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, "auth"));
+        credentialsListToAdd.add(buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, "other-auth"));
 
-        final JsonObject requestBodyAddCredentialsPresharedKey = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID,
-                TEST_AUTH_ID);
-
-        final ArrayList<JsonObject> credentialsListToAdd = new ArrayList();
-        credentialsListToAdd.add(requestBodyAddCredentialsHashedPassword);
-        credentialsListToAdd.add(requestBodyAddCredentialsPresharedKey);
-        addMultipleCredentials(context, credentialsListToAdd
-        ).compose(ar -> {
+        addMultipleCredentials(context, credentialsListToAdd).compose(ar -> {
             context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
             // now try to get all these credentials again
             final String requestUriAuthId = String.format("/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                    TEST_AUTH_ID);
+                    TEST_DEVICE_ID);
             validateCredentialsGetMultipleRequest(context, requestUriAuthId, credentialsListToAdd, done);
         }, done);
     }
 
     /**
-     * Verify that multiple correctly added credentials records of the same authId can be successfully looked up again
-     * by using just authId.
+     * Verifies that the service returns all credentials registered for a given device regardless of type.
+     * <p>
      * The returned JsonObject must consist of the total number of entries and contain all previously added credentials
      * in the provided JsonArray that is found under the key of the endpoint {@link CredentialsConstants#CREDENTIALS_ENDPOINT}.
+     * 
+     * @param context The vert.x test context.
+     * @throws InterruptedException if registration of credentials is interrupted.
      */
-    @Test
-    public void testGetAddedCredentialsMultipleTypesMultipleRequests2(final TestContext context) throws InterruptedException {
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    public void testGetCredentialsForDeviceRegardlessOfType(final TestContext context) throws InterruptedException {
+
         final Future<Void> done = Future.future();
         done.setHandler(context.asyncAssertSuccess());
 
-        final ArrayList<JsonObject> credentialsListToAdd = new ArrayList();
-        for(int i = 0; i < 20; i++) {
-            final JsonObject requestBodyAddCredentialsPresharedKey = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID,
-                    TEST_AUTH_ID);
-            requestBodyAddCredentialsPresharedKey.put(FIELD_TYPE, "type" + i);
-            credentialsListToAdd.add(requestBodyAddCredentialsPresharedKey);
+        final List<JsonObject> credentialsToAdd = new ArrayList<>();
+        for(int i = 0; i < 5; i++) {
+            final JsonObject requestBody = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+            requestBody.put(FIELD_TYPE, "type" + i);
+            credentialsToAdd.add(requestBody);
         }
-        addMultipleCredentials(context, credentialsListToAdd
-        ).compose(ar -> {
+        addMultipleCredentials(context, credentialsToAdd).compose(ar -> {
             context.assertTrue(ar == HttpURLConnection.HTTP_CREATED);
             // now try to get all these credentials again
             final String requestUriAuthId = String.format("/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
-                    TEST_AUTH_ID);
-            validateCredentialsGetMultipleRequest(context, requestUriAuthId, credentialsListToAdd, done);
+                    TEST_DEVICE_ID);
+            validateCredentialsGetMultipleRequest(context, requestUriAuthId, credentialsToAdd, done);
         }, done);
     }
 
     /**
      * Verify that a correctly added credentials record is not found when looking it up again with a wrong type.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetAddedCredentialsButWithWrongType(final TestContext context)  {
         final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
                 "notExistingType", TEST_AUTH_ID);
@@ -428,7 +406,7 @@ public class CredentialsRestServerTest {
     /**
      * Verify that a correctly added credentials record is not found when looking it up again with a wrong authId.
      */
-    @Test
+    @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetAddedCredentialsButWithWrongAuthId(final TestContext context)  {
         final String requestUri = String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT,
                 SECRETS_TYPE_HASHED_PASSWORD, "wrongAuthId");

@@ -297,15 +297,11 @@ The response will look similar to this:
     HTTP/1.1 204 No Content
     Content-Length: 0
     
-## Using the Credentials API via HTTP (Draft)
-    
-The Device Registry also exposes RESTful resources for invoking operations of the Credentials API via HTTP. Please note that this mapping to RESTful resources is **not** part of the *official* definition of the Credential API yet but has been implemented for convenient access to the credentials using command line tools like *curl* or *HTTPie*.
+## Using the Credentials API via HTTP
 
-**NB** It is planned for the near future that the Credentials API will be defined as an official REST API.
+The Device Registry also exposes RESTful resources for invoking operations of the Credentials API via HTTP. Please note that this mapping to RESTful resources is **not** part of the *official* of the Credentials API but is provided for convenient access to credentials data using command line tools like *curl* or *HTTPie*.
 
-**NB** The implementation of the API described here is not fully finished yet, so there might be changes in the near future. This holds especially true for the URIs that currently are not fully following the REST principles.
-
-**NB** The PUT method is not yet implemented!
+**NB** The *update credentials* operation is not implemented (yet). As a workaround, the *remove credentials* in combination with *add credentials* can be used instead.
 
 The following sections describe the resources representing the REST operations of the Credentials API and how they can be used to e.g. add credentials for a device.
 Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) for the specific elements that are explained in detail there.
@@ -314,35 +310,37 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
 
 * URI: `/credentials/${tenantId}`
 * Method: `POST`
-* Headers:
+* Request Headers:
   * (required) `Content-Type`: `application/json` (no other type supported)
-* Parameters (encoded as payload):
-  * (required) `device-id`: The ID of the device for that credentials are to be added.
+* Request Body (encoded as a JSON object):
+  * (required) `device-id`: The ID of the device to add the credentials for.
   * (required) `type`: The type of the credentials to add.
-  * (required) `auth-id`: The auth-id of the credentials to add.
-  * (required) `secrets`: The secrets of the credentials to add. This is a JsonArray and must contain at least one element. The content of each element is defined in the [Credentials API]({{< relref "api/Credentials-API.md" >}}).
+  * (required) `auth-id`: The identity that the device will use for authentication.
+  * (required) `secrets`: The secrets of the credentials to add. This is a JSON array and must contain at least one element. The content of each element is defined in the [Credentials API]({{< relref "api/Credentials-API.md" >}}).
 * Status Codes:
   * 201 (Created): Credentials have been added successfully under the resource indicated by `Location` header.
   * 400 (Bad Request): Credentials have not been added because the request was malformed, e .g. the payload did not contain required values (the body may contain hints regarding the problem).
-  * 409 (Conflict): Credentials already exist for the given parameters. The request has not been processed.
+  * 409 (Conflict): Credentials of the given type for the given *auth-id* already exist for the device. The request has not been processed.
+* Response Headers:
+  * `Location`: the URI the newly created resource can be accessed at.
 
 **Example**
 
-The following command add credentials for a device with ID `4720`, the type `hashed-password` and the auth-id `sensor20`:
+The following command adds credentials for device `4720` using type `hashed-password` and auth-id `sensor20`:
 
-    $ curl -i -X POST -d '{"device-id": "4720", "type": "hashed-password", "auth-id": "sensor20", "secrets": [{"hash-function": "sha-512", "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' -H 'Content-Type: application/json'  http://localhost:28080/credentials/DEFAULT_TENANT
+    $ curl -i -X POST -H 'Content-Type: application/json' \
+    > --data-binary '{"device-id": "4720", "type": "hashed-password", "auth-id": "sensor20", "secrets": [{"hash-function" : "sha-512", \
+    > "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' \
+    > http://localhost:28080/credentials/DEFAULT_TENANT
 
-The response will contain a `Location` header containing the resource path created for the device. In this example it will look
-like this:
+The response will look like this:
 
     HTTP/1.1 201 Created
     Location: /credentials/DEFAULT_TENANT/sensor20/hashed-password
     Content-Length: 0
 
 
-
-
-### Read Credentials of a specific type for a device with a specific authId 
+### Get Credentials by Type and Authentication Identifier 
 
 * URI: `/credentials/${tenantId}/${authId}/${type}`
 * Method: `GET`
@@ -354,7 +352,7 @@ like this:
 
 The following command retrieves credentials data of type `hashed-password` for the authId `sensor1`:
 
-    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor1/hashed-password 
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor1/hashed-password
 
 The response will look similar to this:
 
@@ -388,20 +386,20 @@ The response will look similar to this:
       } ]
     }
  
-### Read Credentials of all types for a device with a specific authId
+### Get all Credentials for a Device
 
-* URI: `/credentials/${tenantId}/${authId}`
+* URI: `/credentials/${tenantId}/${deviceId}`
 * Method: `GET`
 * Status Codes:
-  * 200 (OK): Credentials for the given parameters have been found, body contains the credentials data.
-  The body differs from the body for a specific type since it may contain an arbitrary number of credentials. It contains the key "`total`" that specifies how many credentials are returned. Additionally it contains the key "`credentials`" with a JsonArray as value that contains the credentials themselves.
-  * 404 (Not Found): No credentials for the given parameters are registered for the given tenant.
+  * 200 (OK): Credentials for the device have been found, body contains the credentials.
+  The body differs from the body for a specific type since it may contain an arbitrary number of credentials. It contains a property `total` indicating the total number of credentials returned. The credentials are containing in property `credentials`.
+  * 404 (Not Found): No credentials for the device are registered.
 
 **Example**
 
-The following command retrieves credentials data of all types for the authId `sensor1`:
+The following command retrieves credentials for device `4711`:
 
-    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor1
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
@@ -453,7 +451,25 @@ The response will look similar to this:
     }
 
 
-### Delete all Credentials for a device
+### Delete Credentials by Type and Authentication Identifier
+
+* URI: `/credentials/${tenantId}/${authId}/${type}`
+* Method: `DELETE`
+* Status Codes:
+  * 204 (No Content): The Credentials with the given identifier and type have been deleted.
+  * 404 (Not Found): No credentials matching the criteria have been found.
+
+**Example**
+
+    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/sensor1/hashed-password
+
+The response will look similar to this:
+
+    HTTP/1.1 204 No Content
+    Content-Length: 0
+
+
+### Delete all Credentials for a Device
 
 * URI: `/credentials/${tenantId}/${deviceId}`
 * Method: `DELETE`
@@ -469,39 +485,3 @@ The response will look similar to this:
 
     HTTP/1.1 204 No Content
     Content-Length: 0
-
-
-### Delete Credentials of a specific type for a device
-
-* URI: `/credentials/${tenantId}/${deviceId}/${type}`
-* Method: `DELETE`
-* Status Codes:
-  * 204 (No Content): All Credentials for the device with the specified type have been deleted. There is no payload in the response.
-  * 404 (Not Found): No credentials have been found for the device of the given type and the given tenant.
-
-**Example**
-
-    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4711/hashed-password
-
-The response will look similar to this:
-
-    HTTP/1.1 204 No Content
-    Content-Length: 0
-
-### Delete Credentials of a specific type and a specific authId for a device
-
-* URI: `/credentials/${tenantId}/${deviceId}/${type}/${authId}`
-* Method: `DELETE`
-* Status Codes:
-  * 204 (No Content): All Credentials for the device with the specified type have been deleted. There is no payload in the response.
-  * 404 (Not Found): No credentials have been found for the device of the given type and the given tenant.
-
-**Example**
-
-    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4711/hashed-password/sensor1
-
-The response will look similar to this:
-
-    HTTP/1.1 204 No Content
-    Content-Length: 0
-    
