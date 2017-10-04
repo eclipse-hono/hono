@@ -8,9 +8,9 @@ weight = 800
 
 ### New Features
 
-* Metrics could be used in all services now. New metrics from MQTT Adapter and REST Adapter are there and will be written to InfluxDB and shown in Grafana in the example deployment.
-* The Credentials API is implemented and available as AMQP endpoint in the Device Registry component. The example deployment offers a file based implementation which implements the mandatory GET operation of the Credentials API. The optional parts are checked for valid parameters but are responded by the file based implementation with *not implemented*. This way the implementation of a production ready credentials store is eased, since only the defined methods need to be implemented by a Spring component (like the FileBasedCredentialsService class).
-* The MQTT adapter requires a username/password authentication by default now. The example file based credentials implementation offers one documented combination of username/password ("sensor1"/"hono-secret") to use. Additionally, for special test scenarios the authentication of devices can be switched off in the MQTT adapter by configuration, in which case the adapter is open to all clients (like it was before).
+* Support for publishing Metrics from any component has been added. New metrics for number of published/discarded messages have been added to MQTT Adapter and REST Adapter.
+* The *Device Registry* component now also implements the Credentials API and exposes its operations via an AMQP 1.0 endpoint (as defined by the API specification) and an HTTP endpoint providing a set of RESTful resources for managing credentials. The HTTP endpoint is provided for convenience only, so that it is easier to e.g. register credentials for a device from the command line using tools like *curl* and/or *HTTPie*. See the Device Registry documentation for details regarding the API.
+* The MQTT and the REST adapter now require devices to authenticate using a username and password by default. The example file based credentials implementation includes a set of (*hashed-password*) credentials ("sensor1"/"hono-secret") which can be used for demonstration purposes. Additionally, for special test scenarios the authentication of devices can be disabled in adapters using a configuration property, in which case the adapter is open to all clients (like it was before).
 
 ### API Changes
 
@@ -20,7 +20,7 @@ weight = 800
 
 ### New Features
 
-* As already hinted at by the change log for 0.5-M7, the *Device Registry* now exposes RESTful resources accessible via HTTP which represent the operations of the Device Registration API. This is in addition to the standard AMQP 1.0 based Device Registration endpoint. In exchange, the REST Adapter no longer exposes these resources, i.e. device can no longer be registered using the REST Adapter. In subsequent milestones the Device Registry will be extended to also expose the Credentials API by means of RESTful resources accessible via HTTP. Please note that the RESTful resources do **not** constitue an *official* Hono API, i.e. the Device Registration API and the Credentials API are still defined by means of AMQP 1.0 message exchanges only. The REST API is simply provided for convenience, so that it is easier to e.g. register a device from the command line using tools like *curl* and/or *HTTPie*. 
+* As already hinted at by the change log for 0.5-M7, the *Device Registry* now exposes RESTful resources accessible via HTTP which represent the operations of the Device Registration API. This is in addition to the standard AMQP 1.0 based Device Registration endpoint. In exchange, the REST Adapter no longer exposes these resources, i.e. device can no longer be registered using the REST Adapter. In subsequent milestones the Device Registry will be extended to also expose the Credentials API by means of RESTful resources accessible via HTTP. Please note that the RESTful resources do **not** constitute an *official* Hono API, i.e. the Device Registration API and the Credentials API are still defined by means of AMQP 1.0 message exchanges only. The REST API is simply provided for convenience, so that it is easier to e.g. register a device from the command line using tools like *curl* and/or *HTTPie*.
 
 ### Fixes & Enhancements
 
