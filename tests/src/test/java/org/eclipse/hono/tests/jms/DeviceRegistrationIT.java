@@ -137,7 +137,7 @@ public class DeviceRegistrationIT {
         String deviceId = getRandomDeviceId();
         registration.register(deviceId, HTTP_CREATED).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         registration.retrieve(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
-        registration.deregister(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
+        registration.deregister(deviceId, HTTP_NO_CONTENT).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         registration.retrieve(deviceId, HTTP_NOT_FOUND).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
     }
