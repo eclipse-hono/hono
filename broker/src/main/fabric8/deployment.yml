@@ -7,6 +7,10 @@ spec:
           secretName: ${project.artifactId}-conf
       containers:
       - image: ${artemis.image.name}
+        command:
+        - /opt/artemis/bin/artemis
+        - run
+        - xml:/run/secrets/artemis-bootstrap.xml
         env:
         - name: ARTEMIS_CONFIGURATION
           value: /run/secrets

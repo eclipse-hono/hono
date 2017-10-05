@@ -72,6 +72,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-demo-certs</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-artemis</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <profiles>
@@ -94,9 +100,17 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <goal>unpack-dependencies</goal>
                 </goals>
                 <configuration>
-                  <includeArtifactIds>hono-demo-certs,hono-dispatch-router</includeArtifactIds>
+                  <includeArtifactIds>hono-demo-certs,hono-dispatch-router,hono-artemis</includeArtifactIds>
                   <outputDirectory>${project.build.directory}/config</outputDirectory>
-                  <includes>*.pem,qpid/*,sasl/*,META-INF/fabric8/**/*</includes>
+                  <includes>
+                    *.pem,
+                    *.p12,
+                    *.jks,
+                    qpid/*,
+                    sasl/*,
+                    etc/*,
+                    META-INF/fabric8/**/*
+                    </includes>
                   <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
                   <stripClassifier>true</stripClassifier>
                   <stripVersion>true</stripVersion>
@@ -214,17 +228,53 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
-                  <name>eclipsehono/hono-artemis:${project.version}</name>
+                  <name>eclipsehono/hono-artemis-test:${project.version}</name>
                   <alias>artemis</alias>
+                  <build>
+                    <from>${artemis.image.name}</from>
+                    <ports>
+                      <port>5671</port>
+                    </ports>
+                    <entryPoint>
+                      <shell>/opt/artemis/bin/artemis run xml:/run/secrets/artemis-bootstrap.xml</shell>
+                    </entryPoint>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/run/secrets</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/config/hono-artemis-jar/etc</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/config/hono-demo-certs-jar</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>artemisKeyStore.p12</include>
+                              <include>trustStore.jks</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
                   <run>
                     <ports>
-                      <port>+broker.ip:broker.amqp.port:5672</port>
+                      <port>+broker.ip:broker.amqp.port:5671</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
                       <alias>hono-artemis.hono</alias>
                     </network>
+                    <env>
+                      <ARTEMIS_CONFIGURATION>/run/secrets</ARTEMIS_CONFIGURATION>
+                    </env>
                     <log>
                       <prefix>ARTEMIS</prefix>
                       <color>magenta</color>
@@ -395,7 +445,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <goal>remove</goal>
                 </goals>
                 <configuration>
-                  <filter>auth,device-registry,messaging,qdrouter</filter>
+                  <filter>auth,device-registry,messaging,qdrouter,artemis</filter>
                   <removeAll>true</removeAll>
                 </configuration>
               </execution>

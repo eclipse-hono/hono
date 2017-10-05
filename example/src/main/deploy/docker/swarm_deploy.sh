@@ -36,8 +36,8 @@ echo ... done
 
 echo
 echo Deploying Artemis broker ...
-docker secret create -l $NS artemis-broker.xml $CONFIG/hono-artemis-jar/etc/broker.xml
-docker secret create -l $NS artemis-bootstrap.xml $CONFIG/hono-artemis-jar/etc/bootstrap.xml
+docker secret create -l $NS artemis-broker.xml $CONFIG/hono-artemis-jar/etc/artemis-broker.xml
+docker secret create -l $NS artemis-bootstrap.xml $CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml
 docker secret create -l $NS artemis-users.properties $CONFIG/hono-artemis-jar/etc/artemis-users.properties
 docker secret create -l $NS artemis-roles.properties $CONFIG/hono-artemis-jar/etc/artemis-roles.properties
 docker secret create -l $NS login.config $CONFIG/hono-artemis-jar/etc/login.config

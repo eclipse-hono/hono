@@ -34,8 +34,8 @@ echo ... done
 echo
 echo Deploying Artemis broker ...
 kubectl create secret generic hono-artemis-conf \
-  --from-file=$CONFIG/hono-artemis-jar/etc/broker.xml \
-  --from-file=$CONFIG/hono-artemis-jar/etc/bootstrap.xml \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-broker.xml \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml \
   --from-file=$CONFIG/hono-artemis-jar/etc/artemis-users.properties \
   --from-file=$CONFIG/hono-artemis-jar/etc/artemis-roles.properties \
   --from-file=$CONFIG/hono-artemis-jar/etc/login.config \
