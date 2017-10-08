@@ -182,7 +182,7 @@ public class BaseCredentialsServiceTest {
         return new BaseCredentialsService<ServiceConfigProperties>() {
 
             @Override
-            public void addCredentials(String tenantId, JsonObject credentialsObject,
+            public void add(String tenantId, JsonObject credentialsObject,
                     Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HTTP_CREATED, (JsonObject) null)));
             }

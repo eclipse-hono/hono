@@ -283,7 +283,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     }
 
     @Override
-    public void addCredentials(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    public void add(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
         CredentialsResult<JsonObject> credentialsResult = addCredentialsResult(tenantId, otherKeys);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
@@ -309,6 +309,42 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         authIdCredentials.add(otherKeys);
         dirty = true;
         return CredentialsResult.from(HttpURLConnection.HTTP_CREATED);
+    }
+
+    @Override
+    public void update(final String tenantId, final JsonObject newCredentials, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+
+        final String authId = newCredentials.getString(CredentialsConstants.FIELD_AUTH_ID);
+        final String type = newCredentials.getString(CredentialsConstants.FIELD_TYPE);
+
+        Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
+        if (credentialsForTenant == null) {
+            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+        } else {
+            final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
+            if (credentialsForAuthId == null) {
+                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+            } else {
+                // find credentials of given type
+                boolean removed = false;
+                Iterator<Object> credentialsIterator = credentialsForAuthId.iterator();
+                while (credentialsIterator.hasNext()) {
+                    JsonObject creds = (JsonObject) credentialsIterator.next();
+                    if (creds.getString(CredentialsConstants.FIELD_TYPE).equals(type)) {
+                        credentialsIterator.remove();
+                        removed = true;
+                        break;
+                    }
+                }
+                if (removed) {
+                    credentialsForAuthId.add(newCredentials);
+                    dirty = true;
+                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
+                } else {
+                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                }
+            }
+        }
     }
 
     @Override

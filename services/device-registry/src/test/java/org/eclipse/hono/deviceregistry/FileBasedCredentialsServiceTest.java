@@ -87,7 +87,7 @@ public class FileBasedCredentialsServiceTest {
                 .put(CredentialsConstants.FIELD_AUTH_ID, "myId")
                 .put(CredentialsConstants.FIELD_TYPE, "myType")
                 .put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
-        svc.addCredentials("tenant", payload2, ctx.asyncAssertSuccess(s -> {
+        svc.add("tenant", payload2, ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_CONFLICT));
         }));
     }
@@ -205,7 +205,7 @@ public class FileBasedCredentialsServiceTest {
                 .put(CredentialsConstants.FIELD_SECRETS, secrets);
 
         Async registration = ctx.async();
-        svc.addCredentials("tenant", data, ctx.asyncAssertSuccess(s -> {
+        svc.add("tenant", data, ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_CREATED));
             registration.complete();
         }));

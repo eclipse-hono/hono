@@ -39,7 +39,7 @@ public interface CredentialsService extends Verticle {
      *         Otherwise the operation is successful and the <em>status</em> will be {@link HttpURLConnection#HTTP_CREATED}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void addCredentials(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+    void add(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
     /**
      * Gets credentials for a device.
@@ -88,7 +88,7 @@ public interface CredentialsService extends Verticle {
      *         Otherwise the operation is successful and the status will be {@link HttpURLConnection#HTTP_NO_CONTENT}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void updateCredentials(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+    void update(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
     /**
      * Removes credentials by authentication identifier and type.

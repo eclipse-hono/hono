@@ -9,9 +9,10 @@ The Device Registration API is used by other services to assert a device's regis
 Furthermore, the Device Registry component exposes an AMQP 1.0 based service endpoint implementing Eclipse Hono&trade;'s [Credentials]({{< relref "api/Credentials-API.md" >}}) API.
 The Credentials API is used by protocol adapters to authenticate a device before the adapter processes any transfered data.
 
+<!--more-->
+
 There is no particular technical reason to implement these two API's in one component, so for production scenarios there might be two different components each implementing one of the API's.
 
-<!--more-->
 
 ## Configuration
 
@@ -313,24 +314,23 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
 * Request Headers:
   * (required) `Content-Type`: `application/json` (no other type supported)
 * Request Body (encoded as a JSON object):
-  * (required) `device-id`: The ID of the device to add the credentials for.
-  * (required) `type`: The type of the credentials to add.
   * (required) `auth-id`: The identity that the device will use for authentication.
+  * (required) `type`: The type of the credentials to add.
+  * (required) `device-id`: The ID of the device to add the credentials for.
   * (required) `secrets`: The secrets of the credentials to add. This is a JSON array and must contain at least one element. The content of each element is defined in the [Credentials API]({{< relref "api/Credentials-API.md" >}}).
 * Status Codes:
   * 201 (Created): Credentials have been added successfully under the resource indicated by `Location` header.
-  * 400 (Bad Request): Credentials have not been added because the request was malformed, e .g. the payload did not contain required values (the body may contain hints regarding the problem).
-  * 409 (Conflict): Credentials of the given type for the given *auth-id* already exist for the device. The request has not been processed.
+  * 400 (Bad Request): The credentials have not been updated because the request was malformed, e .g. because the payload did not contain required values. The response body may contain hints regarding the cause of the problem.
+  * 409 (Conflict): Credentials of the given type for the given *auth-id* already exist for the tenant. The request has not been processed.
 * Response Headers:
-  * `Location`: the URI the newly created resource can be accessed at.
+  * `Location`: The URI under which the newly created resource can be accessed.
 
 **Example**
 
-The following command adds credentials for device `4720` using type `hashed-password` and auth-id `sensor20`:
+The following command adds some `hashed-password` credentials for device `4720` using authentication identifier `sensor20`:
 
-    $ curl -i -X POST -H 'Content-Type: application/json' \
-    > --data-binary '{"device-id": "4720", "type": "hashed-password", "auth-id": "sensor20", "secrets": [{"hash-function" : "sha-512", \
-    > "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' \
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary \
+    > '{"device-id": "4720", "type": "hashed-password", "auth-id": "sensor20", "secrets": [{"hash-function" : "sha-512", "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' \
     > http://localhost:28080/credentials/DEFAULT_TENANT
 
 The response will look like this:
@@ -451,6 +451,38 @@ The response will look similar to this:
     }
 
 
+### Update Credentials
+
+* URI: `/credentials/${tenantId}/${authId}/${type}`
+* Method: `PUT`
+* Request Headers:
+  * (required) `Content-Type`: `application/json` (no other type supported)
+* Request Body (encoded as a JSON object):
+  * (required) `auth-id`: The identity that the device uses for authentication (MUST match the value of the corresponding URI path parameter).
+  * (required) `type`: The type of the credentials to update (MUST match the value of the corresponding URI path parameter).
+  * (required) `device-id`: The ID of the device that the credentials belong to.
+  * (required) `secrets`: The secrets of the credentials to update. This is a JSON array and must contain at least one element. The content of each element is defined in the [Credentials API]({{< relref "api/Credentials-API.md" >}}).
+* Status Codes:
+  * 204 (No Content): The credentials have been updated successfully.
+  * 400 (Bad Request): The credentials have not been updated because the request was malformed, e .g. because the payload did not contain required values or the type and auth-id in the payload do not match the path parameters. The response body may contain hints regarding the cause of the problem.
+  * 404 (Not Found): The request could not be processed because there exist no credentials of the given type and authentication identifier.
+
+This resource can be used to change values of a particular set of credentials. However, it cannot be used to change the type or authentication identifier of the credentials.
+
+**Example**
+
+The following command adds an expiration date to the `hashed-password` credentials for authentication identifier `sensor20`:
+
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary \
+    > '{"device-id": "4711", "type": "hashed-password", "auth-id": "sensor1", "secrets": [{"hash-function" : "sha-512", "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA==", "not-after": "2018-01-01T00:00:00+01:00"}]}' \
+    > http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
+
+The response will look like this:
+
+    HTTP/1.1 204 No Content
+    Content-Length: 0
+
+
 ### Delete Credentials by Type and Authentication Identifier
 
 * URI: `/credentials/${tenantId}/${authId}/${type}`
@@ -469,13 +501,15 @@ The response will look similar to this:
     Content-Length: 0
 
 
-### Delete all Credentials for a Device
+### Delete all Credentials of a Device
 
 * URI: `/credentials/${tenantId}/${deviceId}`
 * Method: `DELETE`
 * Status Codes:
   * 204 (No Content): All Credentials for the device have been deleted. There is no payload in the response.
   * 404 (Not Found): No credentials have been found for the device and the given tenant.
+
+Removes all credentials registered for a particular device.
 
 **Example**
 
