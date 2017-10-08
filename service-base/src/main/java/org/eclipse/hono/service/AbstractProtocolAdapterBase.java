@@ -385,9 +385,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     public void registerReadinessChecks(final HealthCheckHandler handler) {
         handler.register("connection-to-services", status -> {
             if (isConnected()) {
-                status.complete(Status.OK());
+                status.tryComplete(Status.OK());
             } else {
-                status.complete(Status.KO());
+                status.tryComplete(Status.KO());
             }
         });
         if (credentialsAuthProvider != null) {

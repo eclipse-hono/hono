@@ -84,9 +84,9 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         readinessHandler.register("connected-to-credentials-service", status -> {
             if (credentialsClient != null && credentialsClient.isConnected()) {
-                status.complete(Status.OK());
+                status.tryComplete(Status.OK());
             } else {
-                status.complete(Status.KO());
+                status.tryComplete(Status.KO());
             }
         });
     }
