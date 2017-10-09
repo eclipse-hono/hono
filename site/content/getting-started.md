@@ -114,7 +114,7 @@ The first thing to do is registering a device identity with Hono. Hono uses this
 The following command registers a device with ID `4711` with the Device Registry.
 
 ~~~sh
-$ curl -X POST -i -d 'device-id=4711' http://localhost:28080/registration/DEFAULT_TENANT
+$ curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' http://localhost:28080/registration/DEFAULT_TENANT
 ~~~
 
 or (using HTTPie):

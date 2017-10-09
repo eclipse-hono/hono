@@ -108,13 +108,13 @@ In order to upload telemetry data to Hono, the device needs to be registered wit
 *Device Registry* by running the following command (i.e. for a device with ID `4711`):
 
 ~~~sh
-$ curl -X POST -i -d 'device-id=4711' http://<IP_ADDRESS>:31080/registration/DEFAULT_TENANT
+$ curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' http://<IP_ADDRESS>:31080/registration/DEFAULT_TENANT
 ~~~
 
 After having the device registered, uploading telemetry is just a simple HTTP PUT command to the *REST Adapter*:
 
 ~~~sh
-$ curl -X PUT -i -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
+$ curl -X PUT -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' \
 > http://<IP_ADDRESS>:30080/telemetry/DEFAULT_TENANT/4711
 ~~~
 
