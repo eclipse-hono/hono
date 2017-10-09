@@ -161,15 +161,17 @@ Content-Length: 35
 ### Uploading Telemetry Data using the REST Adapter
 
 ~~~sh
-$ curl -X PUT -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-> --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4711
+$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+> --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http --auth sensor1@DEFAULT_TENANT:hono-secret PUT http://localhost:8080/telemetry/DEFAULT_TENANT/4711 temp:=5
+$ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/telemetry temp:=5
 ~~~
+
+The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for an explanation of how devices are identified in Hono and how device identity is related to authentication.
 
 When you first invoke any of the two commands above after you have started up your Hono instance, you may get the following response:
 
@@ -187,8 +189,6 @@ You can simply ignore this response and re-submit the command. You should then g
 ~~~
 HTTP/1.1 202 Accepted
 Content-Length: 0
-Hono-Reg-Assertion: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE0OTQ1OTg5Njl9.SefIa2UjNYiWwBfPOkizIlMPb3H2-hy7BHGjTgbX_I0
-
 ~~~
 
 If you have started the consumer as described above, you should now see the telemetry message being logged to the console. You can publish more data simply by issuing additional requests.
@@ -202,14 +202,14 @@ Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}
 In a similar way you can upload event data, using curl
 
 ~~~sh
-$ curl -X PUT -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-> --data-binary '{"temp": 5}' http://localhost:8080/event/DEFAULT_TENANT/4711
+$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+> --data-binary '{"temp": 5}' http://localhost:8080/event
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http --auth sensor1@DEFAULT_TENANT:hono-secret PUT http://localhost:8080/event/DEFAULT_TENANT/4711 temp:=5
+$ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event temp:=5
 ~~~
 
 ## Stopping Hono
