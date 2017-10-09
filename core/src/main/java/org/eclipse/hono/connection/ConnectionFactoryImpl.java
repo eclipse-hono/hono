@@ -18,6 +18,7 @@ import java.util.UUID;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -34,11 +35,12 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 /**
  * A <em>vertx-proton</em> based connection factory.
  */
-public class ConnectionFactoryImpl implements ConnectionFactory {
+public final class ConnectionFactoryImpl implements ConnectionFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionFactoryImpl.class);
     private final Vertx vertx;
     private final ClientConfigProperties config;
+    private ProtonClient protonClient;
 
     /**
      * Constructor with the Vert.x instance to use and the configuration 
@@ -54,6 +56,19 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
     public ConnectionFactoryImpl(final Vertx vertx, final ClientConfigProperties config) {
         this.vertx = Objects.requireNonNull(vertx);
         this.config = Objects.requireNonNull(config);
+    }
+
+    /**
+     * Sets the client object to use for creating the AMQP 1.0 connection.
+     * <p>
+     * If not set, a client instance will be created when any of the <em>connect</em>
+     * methods is invoked.
+     * 
+     * @param protonClient The client.
+     * @throws NullPointerException if the client is {@code null}.
+     */
+    public void setProtonClient(final ProtonClient protonClient) {
+        this.protonClient = Objects.requireNonNull(protonClient);
     }
 
     @Override
@@ -106,7 +121,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
         final String effectivePassword = password == null ? config.getPassword() : password;
         addOptions(clientOptions, effectiveUsername, effectivePassword);
 
-        final ProtonClient client = ProtonClient.create(vertx);
+        final ProtonClient client = protonClient != null ? protonClient : ProtonClient.create(vertx);
         logger.debug("connecting to AMQP 1.0 container [{}://{}:{}]", clientOptions.isSsl() ? "amqps" : "amqp",
                 config.getHost(), config.getPort());
         client.connect(
@@ -159,7 +174,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory {
     private void addOptions(final ProtonClientOptions clientOptions, final String username, final String password) {
 
         addTlsTrustOptions(clientOptions);
-        if (username != null && password != null) {
+        if (!StringUtils.isEmpty(username) && !StringUtils.isEmpty(password)) {
             clientOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
         } else {
             addTlsKeyCertOptions(clientOptions);
