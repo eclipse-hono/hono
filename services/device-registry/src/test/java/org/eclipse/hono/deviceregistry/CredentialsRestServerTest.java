@@ -57,7 +57,7 @@ public class CredentialsRestServerTest {
     private static final String TEMPLATE_URI_CREDENTIALS_BY_DEVICE = String.format("/%s/%s/%%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT);
     private static final String TEST_DEVICE_ID = "4711";
     private static final String TEST_AUTH_ID = "sensor20";
-    private static final long TEST_TIMEOUT_MILLIS = 500;
+    private static final long TEST_TIMEOUT_MILLIS = 1000;
     private static final Vertx vertx = Vertx.vertx();
     private static FileBasedCredentialsService credentialsService;
     private static DeviceRegistryRestServer deviceRegistryRestServer;
