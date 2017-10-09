@@ -95,7 +95,7 @@ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.u
 Replace *localhost* with the name or IP address of the host that Docker is running on.
 {{% /warning %}}
 
-## Uploading Telemetry Data
+## Publishing Data
 
 Now that the Hono instance is up and running you can use Hono's protocol adapters to upload some telemetry data and watch it being forwarded to the downstream consumer.
 
@@ -203,13 +203,13 @@ In a similar way you can upload event data, using curl
 
 ~~~sh
 $ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-> --data-binary '{"temp": 5}' http://localhost:8080/event
+> --data-binary '{"alarm": "fire"}' http://localhost:8080/event
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event temp:=5
+$ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event alarm=fire
 ~~~
 
 ## Stopping Hono

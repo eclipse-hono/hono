@@ -10,9 +10,9 @@ This component serves as a default implementation of the *Authentication* API on
 
 In a production environment, a more sophisticated implementation should be used instead.
 
-## Configuration
-
 The Auth Server is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image (`eclipsehono/hono-service-auth`) created from it.
+
+## Service Configuration
 
 The server can be configured by means of environment variables or corresponding command line options.
 The following table provides an overview of the configuration variables and corresponding command line options that the server supports:
@@ -25,17 +25,18 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_AUTH_AMQP_INSECURE_PORT`<br>`--hono.auth.amqp.insecurePort` | no | - | The insecure port the server should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_AUTH_AMQP_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.auth.amqp.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_AUTH_AMQP_INSECURE_PORT_ENABLED`<br>`--hono.auth.amqp.insecurePortEnabled` | no | `false` | If set to `true` the server will open an insecure port (not secured by TLS) using either the port number set via `HONO_AUTH_AMQP_INSECURE_PORT` or the default AMQP port number (`5672`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_AUTH_AMQP_KEY_PATH`<br>`--hono.auth.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_AUTH_CERT_PATH`. Alternatively, the `HONO_AUTH_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
+| `HONO_AUTH_AMQP_KEY_PATH`<br>`--hono.auth.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for authenticating to clients. Note that the private key is not protected by a password. You should therefore make sure that the key file can only be read by the user that the server process is running under. This option must be used in conjunction with `HONO_AUTH_CERT_PATH`.<br>Alternatively, the `HONO_AUTH_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_AUTH_AMQP_KEY_STORE_PASSWORD`<br>`--hono.auth.amqp.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_AUTH_AMQP_KEY_STORE_PATH`<br>`--hono.auth.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_AUTH_AMQP_KEY_PATH` and `HONO_AUTH_AMQP_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_AUTH_AMQP_PORT`<br>`--hono.auth.port` | no | `5671` | The secure port that the server should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_AUTH_AMQP_TRUST_STORE_PASSWORD`<br>`--hono.auth.amqp.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_AUTH_AMQP_TRUST_STORE_PATH`<br>`--hono.auth.amqp.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
+| `HONO_AUTH_AMQP_TRUST_STORE_PATH`<br>`--hono.auth.amqp.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
 | `HONO_AUTH_SVC_PERMISSIONS_PATH`<br>`--hono.auth.svc.permissionsPath` | no | `classpath:/`<br>`permissions.json` | The Spring resource URI of the JSON file defining the identities and corresponding authorities on Hono's endpoint resources. The default file bundled with the Auth Server defines authorities required by protocol adapters and downstream consumer. The default permissions file should **only be used for evaluation purposes**. |
 | `HONO_AUTH_SVC_SIGNING_KEY_PATH`<br>`--hono.auth.svc.signing.keyPath` | no  | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for signing tokens asserting an authenticated client's identity and authorities. When using this variable, other services that need to validate the tokens issued by this service need to be configured with the corresponding certificate/public key. Alternatively, a symmetric key can be used for signing (and validating) by setting the `HONO_AUTH_SVC_SIGNING_SHARED_SECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_AUTH_AMQP_KEY_PATH` variable. If that variable is also not set, startup of the server fails. |
 | `HONO_AUTH_SVC_SIGNING_SHARED_SECRET`<br>`--hono.auth.svc.signing.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for signing tokens asserting an authenticated client's identity and authorities. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the signing key using this variable, other services that need to validate the tokens issued by this service need to be configured with the same key. Alternatively, an asymmetric key pair can be used for signing (and validating) by setting the `HONO_AUTH_SVC_SIGNING_KEY_PATH` variable. If none of these variables is set, startup of the server fails. |
 
 The variables only need to be set if the default value does not match your environment.
+
 
 ## Port Configuration
 
@@ -49,12 +50,14 @@ The server will fail to start if none of the ports is configured properly.
 
 ### Secure Port Only
 
-The server needs to be configured with a private key and certificate in order to open a TLS secured port.
+The server needs to be configured with a private key, a certificate holding the public key and a trust store in order to open a TLS secured port.
 
-There are two alternative ways for doing so:
+There are two alternative ways for setting the private key and certificate:
 
-1. either setting the `HONO_AUTH_AMQP_KEY_STORE_PATH` and the `HONO_AUTH_AMQP_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
+1. Setting the `HONO_AUTH_AMQP_KEY_STORE_PATH` and the `HONO_AUTH_AMQP_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
 1. setting the `HONO_AUTH_AMQP_KEY_PATH` and `HONO_AUTH_AMQP_CERT_PATH` variables in order to load the key and certificate from two separate PEM files in PKCS8 format.
+
+In order to set the trust store, the `HONO_AUTH_AMQP_TRUST_STORE_PATH` variable needs to be set to a key store containing the trusted root CA certificates. The `HONO_AUTH_AMQP_TRUST_STORE_PASSWORD` variable needs to be set if the key store requires a pass phrase for reading its contents.
 
 When starting up, the server will bind a TLS secured socket to the default secure AMQP port 5671. The port number can also be set explicitly using the `HONO_AUTH_AMQP_PORT` variable.
 
@@ -85,6 +88,7 @@ This can be used to narrow the visibility of the insecure port to a local networ
 ### Ephemeral Ports
 
 The server may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
+
 
 ## Run as a Docker Swarm Service
 
