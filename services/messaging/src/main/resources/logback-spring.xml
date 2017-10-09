@@ -13,6 +13,19 @@
     <appender-ref ref="STDOUT" />
   </root>
 
+  <springProfile name="trace">
+    <logger name="org.eclipse.hono" level="TRACE"/>
+    <logger name="org.eclipse.hono.event" level="TRACE"/>
+    <logger name="org.eclipse.hono.server" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.auth" level="TRACE"/>
+    <logger name="org.eclipse.hono.telemetry" level="TRACE"/>
+
+    <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
+
+    <logger name="io.vertx.proton.impl" level="INFO"/>
+    <logger name="io.vertx.core.net.impl" level="INFO"/>
+  </springProfile>
+
   <springProfile name="dev">
     <logger name="org.eclipse.hono" level="DEBUG"/>
     <logger name="org.eclipse.hono.event" level="DEBUG"/>
