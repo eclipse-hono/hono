@@ -23,7 +23,7 @@ import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,15 +54,13 @@ public class VertxBasedMqttProtocolAdapterTest {
     private HonoClient registrationClient;
     private HonoClientBasedAuthProvider credentialsAuthProvider;
     private ProtocolAdapterProperties config;
-    private Vertx vertx;
+    private static Vertx vertx = Vertx.vertx();
 
     /**
      * Creates clients for the needed microservices and sets the configuration to enable the insecure port.
      */
     @Before
     public void setup() {
-
-        vertx = Vertx.vertx();
 
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
@@ -74,8 +72,8 @@ public class VertxBasedMqttProtocolAdapterTest {
     /**
      * Cleans up fixture.
      */
-    @After
-    public void shutDown() {
+    @AfterClass
+    public static void shutDown() {
         vertx.close();
     }
 
@@ -221,6 +219,10 @@ public class VertxBasedMqttProtocolAdapterTest {
         verify(endpoint).closeHandler(any(Handler.class));
     }
 
+    /**
+     * Verifies that the adapter registers message handlers on client connections
+     * when device authentication is disabled.
+     */
     @SuppressWarnings("unchecked")
     @Test
     public void testUnauthenticatedMqttAdapterCreatesMessageHandlersForAllDevices() {
@@ -264,6 +266,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         return endpoint;
     }
 
+    @SuppressWarnings("unchecked")
     private static MqttServer getMqttServer(final boolean startupShouldFail) {
 
         MqttServer server = mock(MqttServer.class);
@@ -283,7 +286,8 @@ public class VertxBasedMqttProtocolAdapterTest {
     }
 
     private VertxBasedMqttProtocolAdapter getAdapter(final MqttServer server) {
-        VertxBasedMqttProtocolAdapter adapter = spy(VertxBasedMqttProtocolAdapter.class);
+
+        VertxBasedMqttProtocolAdapter adapter = new VertxBasedMqttProtocolAdapter();
         adapter.setMqttInsecureServer(server);
         adapter.setConfig(config);
         adapter.setHonoMessagingClient(messagingClient);
