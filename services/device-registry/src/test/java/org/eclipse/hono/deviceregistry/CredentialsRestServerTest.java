@@ -18,6 +18,7 @@ import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -125,7 +126,8 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsSucceeds(final TestContext context)  {
 
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(requestBodyAddCredentials).setHandler(context.asyncAssertSuccess(r -> {
             context.assertNotNull(r.getHeader(HttpHeaders.LOCATION));
         }));
@@ -140,7 +142,8 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsRejectsDuplicateRegistration(final TestContext context)  {
 
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
 
         addCredentials(requestBodyAddCredentials).compose(ar -> {
             // now try to add credentials again
@@ -157,8 +160,9 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testAddCredentialsFailsForWrongContentType(final TestContext context)  {
 
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
         addCredentials(
-                buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID),
+                buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId),
                 "application/x-www-form-urlencoded",
                 HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
@@ -218,15 +222,16 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testUpdateCredentialsSucceeds(final TestContext context) {
 
-        final JsonObject orig = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject orig = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         final JsonObject altered = orig.copy();
         altered.put(FIELD_DEVICE_ID, "other-device");
 
         addCredentials(orig).compose(ar -> {
-            return updateCredentials(TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY, altered);
+            return updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered);
         }).compose(ur -> {
             context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, ur.statusCode());
-            return getCredentials(TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY, b -> {
+            return getCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, b -> {
                 context.assertEquals("other-device", b.toJsonObject().getString(FIELD_DEVICE_ID));
             });
         }).setHandler(context.asyncAssertSuccess(gr -> {
@@ -242,9 +247,10 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testUpdateCredentialsFailsForNonExistingCredentials(final TestContext context) {
 
-        final JsonObject altered = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject altered = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
 
-        updateCredentials(TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_NOT_FOUND)
+        updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_NOT_FOUND)
             .setHandler(context.asyncAssertSuccess());
     }
 
@@ -256,11 +262,12 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testUpdateCredentialsFailsForNonMatchingTypeInPayload(final TestContext context) {
 
-        final JsonObject orig = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject orig = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         final JsonObject altered = orig.copy().put(FIELD_TYPE, "non-matching-type");
 
         addCredentials(orig).compose(ar -> {
-            return updateCredentials(TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_BAD_REQUEST);
+            return updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_BAD_REQUEST);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -273,11 +280,12 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testUpdateCredentialsFailsForNonMatchingAuthIdInPayload(final TestContext context) {
 
-        final JsonObject orig = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject orig = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         final JsonObject altered = orig.copy().put(FIELD_AUTH_ID, "non-matching-auth-id");
 
         addCredentials(orig).compose(ar -> {
-            return updateCredentials(TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_BAD_REQUEST);
+            return updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_BAD_REQUEST);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -289,7 +297,8 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testRemoveCredentialsForDeviceSucceeds(final TestContext context) {
 
-        final JsonObject credentials = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject credentials = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
             return removeCredentials(TEST_DEVICE_ID, HttpURLConnection.HTTP_NO_CONTENT);
         }).setHandler(context.asyncAssertSuccess());
@@ -303,10 +312,11 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testRemoveCredentialsSucceeds(final TestContext context) {
 
-        final JsonObject credentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject credentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
             // now try to remove credentials again
-            return removeCredentials(TEST_AUTH_ID, SECRETS_TYPE_HASHED_PASSWORD);
+            return removeCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD);
         }).setHandler(context.asyncAssertSuccess(rr -> {
             context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, rr.statusCode());
         }));
@@ -320,11 +330,12 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testRemoveCredentialsFailsForWrongType(final TestContext context) {
 
-        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject requestBodyAddCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
 
         addCredentials(requestBodyAddCredentials).compose(ar -> {
             // now try to remove credentials again
-            return removeCredentials(TEST_AUTH_ID, "wrong-type");
+            return removeCredentials(authId, "wrong-type");
         }).setHandler(context.asyncAssertSuccess(rr -> {
             context.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, rr.statusCode());
         }));
@@ -350,11 +361,12 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetAddedCredentials(final TestContext context)  {
 
-        final JsonObject requestBody = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject requestBody = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
 
         addCredentials(requestBody).compose(ar -> {
             // now try to get credentials again
-            return getCredentials(TEST_AUTH_ID, SECRETS_TYPE_HASHED_PASSWORD, b -> {
+            return getCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD, b -> {
                 context.assertTrue(testJsonObjectToBeContained(b.toJsonObject(), requestBody));
             });
         }).setHandler(context.asyncAssertSuccess());
@@ -369,19 +381,20 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetAddedCredentialsMultipleTypesSingleRequests(final TestContext context) {
 
-        final JsonObject hashedPasswordCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
-        final JsonObject presharedKeyCredentials = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject hashedPasswordCredentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject presharedKeyCredentials = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
 
         final List<JsonObject> credentialsListToAdd = new ArrayList<>();
         credentialsListToAdd.add(hashedPasswordCredentials);
         credentialsListToAdd.add(presharedKeyCredentials);
 
         addMultipleCredentials(credentialsListToAdd).compose(ar -> {
-            return getCredentials(TEST_AUTH_ID, SECRETS_TYPE_HASHED_PASSWORD, b -> {
+            return getCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD, b -> {
                 context.assertTrue(testJsonObjectToBeContained(b.toJsonObject(), hashedPasswordCredentials));
             });
         }).compose(gr -> {
-            return getCredentials(TEST_AUTH_ID, SECRETS_TYPE_PRESHARED_KEY, b -> {
+            return getCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, b -> {
                 context.assertTrue(testJsonObjectToBeContained(b.toJsonObject(), presharedKeyCredentials));
             });
         }).setHandler(context.asyncAssertSuccess());
@@ -423,9 +436,10 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetCredentialsForDeviceRegardlessOfType(final TestContext context) throws InterruptedException {
 
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
         final List<JsonObject> credentialsToAdd = new ArrayList<>();
         for(int i = 0; i < 5; i++) {
-            final JsonObject requestBody = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+            final JsonObject requestBody = buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
             requestBody.put(FIELD_TYPE, "type" + i);
             credentialsToAdd.add(requestBody);
         }
@@ -445,9 +459,10 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetAddedCredentialsButWithWrongType(final TestContext context)  {
 
-        final JsonObject credentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject credentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
-            return getCredentials(TEST_AUTH_ID, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND, null);
+            return getCredentials(authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND, null);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -459,7 +474,8 @@ public class CredentialsRestServerTest {
     @Test(timeout = TEST_TIMEOUT_MILLIS)
     public void testGetAddedCredentialsButWithWrongAuthId(final TestContext context)  {
 
-        final JsonObject credentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final String authId = getRandomAuthId(TEST_AUTH_ID);
+        final JsonObject credentials = buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
             return getCredentials("wrong-auth-id", SECRETS_TYPE_HASHED_PASSWORD, HttpURLConnection.HTTP_NOT_FOUND, null);
         }).setHandler(context.asyncAssertSuccess());
@@ -527,6 +543,10 @@ public class CredentialsRestServerTest {
                 put(FIELD_AUTH_ID, authId).
                 put(FIELD_SECRETS, new JsonArray().add(secret));
         return credPayload;
+    }
+
+    private static String getRandomAuthId(final String authIdPrefix) {
+        return authIdPrefix + "." + UUID.randomUUID();
     }
 
     /**
