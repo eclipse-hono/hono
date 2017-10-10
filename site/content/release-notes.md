@@ -10,11 +10,12 @@ weight = 800
 
 * Support for publishing Metrics from any component has been added. New metrics for number of published/discarded messages have been added to MQTT Adapter and REST Adapter.
 * The *Device Registry* component now also implements the Credentials API and exposes its operations via an AMQP 1.0 endpoint (as defined by the API specification) and an HTTP endpoint providing a set of RESTful resources for managing credentials. The HTTP endpoint is provided for convenience only, so that it is easier to e.g. register credentials for a device from the command line using tools like *curl* and/or *HTTPie*. See the Device Registry documentation for details regarding the API.
-* The MQTT and the REST adapter now require devices to authenticate using a username and password by default. The example file based credentials implementation includes a set of (*hashed-password*) credentials ("sensor1"/"hono-secret") which can be used for demonstration purposes. Additionally, for special test scenarios the authentication of devices can be disabled in adapters using a configuration property, in which case the adapter is open to all clients (like it was before).
+* The MQTT and the REST adapter now **require devices to authenticate** using a username and password by default. The example file based credentials implementation includes a set of (*hashed-password*) credentials ("sensor1"/"hono-secret") which can be used for demonstration purposes. Additionally, for special test scenarios the authentication of devices can be disabled in adapters using a configuration property, in which case the adapter is open to all clients (like it was before).
 
 ### API Changes
 
 * The Device Registration API's *update* and *deregister* operations have been adapted to match the semantics of the Credentials API. Both operations now return a status code of 204 (*No Content*) on successful execution and do no longer contain the previous value in the response body.
+* The `org.eclipse.hono.service.credentials.CredentialsService` interface's methods have been renamed to better reflect their purpose. Users implementing this interface should adapt their code accordingly.
 
 ## 0.5-M8
 
