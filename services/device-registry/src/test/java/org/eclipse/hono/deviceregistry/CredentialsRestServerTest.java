@@ -29,6 +29,9 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.CompositeFuture;
@@ -62,6 +65,13 @@ public class CredentialsRestServerTest {
     private static final Vertx vertx = Vertx.vertx();
     private static FileBasedCredentialsService credentialsService;
     private static DeviceRegistryRestServer deviceRegistryRestServer;
+
+    /**
+     * Set the timeout for all test methods by using a JUnit Rule (instead of providing the timeout at every @Test annotation).
+     * See {@link Test#timeout} for details about improved thread safety regarding the @After annotation for each test.
+     */
+    @Rule
+    public final TestRule timeoutForAllMethods = Timeout.millis(TEST_TIMEOUT_MILLIS);
 
     /**
      * Deploys the server to vert.x.
@@ -123,7 +133,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testAddCredentialsSucceeds(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -139,7 +149,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testAddCredentialsRejectsDuplicateRegistration(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -157,7 +167,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testAddCredentialsFailsForWrongContentType(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -172,7 +182,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testAddCredentialsFailsForEmptyBody(final TestContext context) {
 
         addCredentials(null, HttpEndpointUtils.CONTENT_TYPE_JSON, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
@@ -185,7 +195,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testAddCredentialsFailsForMissingDeviceId(final TestContext context) {
         testAddCredentialsWithMissingPayloadParts(context, FIELD_DEVICE_ID);
     }
@@ -197,7 +207,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testAddCredentialsFailsForMissingType(final TestContext context) {
         testAddCredentialsWithMissingPayloadParts(context, FIELD_TYPE);
     }
@@ -209,7 +219,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testAddCredentialsFailsForMissingAuthId(final TestContext context) {
         testAddCredentialsWithMissingPayloadParts(context, FIELD_AUTH_ID);
     }
@@ -219,7 +229,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testUpdateCredentialsSucceeds(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -244,7 +254,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testUpdateCredentialsFailsForNonExistingCredentials(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -259,7 +269,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testUpdateCredentialsFailsForNonMatchingTypeInPayload(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -277,7 +287,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testUpdateCredentialsFailsForNonMatchingAuthIdInPayload(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -294,7 +304,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testRemoveCredentialsForDeviceSucceeds(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -309,7 +319,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testRemoveCredentialsSucceeds(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -327,7 +337,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testRemoveCredentialsFailsForWrongType(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -347,7 +357,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testRemoveCredentialsForDeviceFailsForNonExistingCredentials(final TestContext context) {
 
         removeCredentials("non-existing-device", HttpURLConnection.HTTP_NOT_FOUND).setHandler(context.asyncAssertSuccess());
@@ -358,7 +368,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testGetAddedCredentials(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -378,7 +388,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testGetAddedCredentialsMultipleTypesSingleRequests(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -409,7 +419,7 @@ public class CredentialsRestServerTest {
      * @param context The vert.x test context.
      * @throws InterruptedException if registration of credentials is interrupted.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testGetAllCredentialsForDeviceSucceeds(final TestContext context) throws InterruptedException {
 
         final List<JsonObject> credentialsListToAdd = new ArrayList<>();
@@ -433,7 +443,7 @@ public class CredentialsRestServerTest {
      * @param context The vert.x test context.
      * @throws InterruptedException if registration of credentials is interrupted.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testGetCredentialsForDeviceRegardlessOfType(final TestContext context) throws InterruptedException {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -456,7 +466,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testGetAddedCredentialsButWithWrongType(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -471,7 +481,7 @@ public class CredentialsRestServerTest {
      * 
      * @param context The vert.x test context.
      */
-    @Test(timeout = TEST_TIMEOUT_MILLIS)
+    @Test
     public void testGetAddedCredentialsButWithWrongAuthId(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
@@ -484,20 +494,18 @@ public class CredentialsRestServerTest {
     private static Future<Integer> addMultipleCredentials(final List<JsonObject> credentialsList) {
 
         final Future<Integer> result = Future.future();
-        vertx.runOnContext(go -> {
-            @SuppressWarnings("rawtypes")
-            final List<Future> addTrackers = new ArrayList<>();
-            for (JsonObject creds : credentialsList) {
-                addTrackers.add(addCredentials(creds));
-            }
+        @SuppressWarnings("rawtypes")
+        final List<Future> addTrackers = new ArrayList<>();
+        for (JsonObject creds : credentialsList) {
+            addTrackers.add(addCredentials(creds));
+        }
 
-            CompositeFuture.all(addTrackers).setHandler(r -> {
-                if (r.succeeded()) {
-                    result.complete(HttpURLConnection.HTTP_CREATED);
-                } else {
-                    result.fail(r.cause());
-                }
-            });
+        CompositeFuture.all(addTrackers).setHandler(r -> {
+            if (r.succeeded()) {
+                result.complete(HttpURLConnection.HTTP_CREATED);
+            } else {
+                result.fail(r.cause());
+            }
         });
         return result;
     }
