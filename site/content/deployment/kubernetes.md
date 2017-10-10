@@ -91,7 +91,7 @@ influxdb                       10.0.0.217   <none>        2003/TCP,8083/TCP,8086
 ~~~
 
 These services are accessible using the Minikube VM's IP address (which you can get with the `minikube ip` command) and the so called *node ports* (i.e. 30080, 30671, ...).
-In the following sections `<IP_ADDRESS>` needs to be replaced with the IP address of the Minikube VM.
+In the following sections the `$(minikube ip)` is used  in order to put the IP address of the Minikube VM into the command to execute.
 
 ### Starting a Consumer
 
@@ -99,7 +99,7 @@ As described in the [Getting Started]({{< relref "getting-started.md" >}}) guide
 You can start the client from the `example` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=<IP_ADDRESS>,--hono.client.port=30671,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(minikube ip),--hono.client.port=30671,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
 ~~~
 
 ### Uploading Telemetry
@@ -108,19 +108,19 @@ In order to upload telemetry data to Hono, the device needs to be registered wit
 *Device Registry* by running the following command (i.e. for a device with ID `4711`):
 
 ~~~sh
-$ curl -X POST -i -H 'Content-Type: application/json' --data-binary '{"device-id": "4711"}' http://<IP_ADDRESS>:31080/registration/DEFAULT_TENANT
+$ curl -X POST -i -H 'Content-Type: application/json' --data-binary '{"device-id": "4711"}' http://$(minikube ip):31080/registration/DEFAULT_TENANT
 ~~~
 
 After having the device registered, uploading telemetry is just a simple HTTP POST command to the *REST Adapter*:
 
 ~~~sh
-$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://<IP_ADDRESS>:30080/telemetry
+$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$(minikube ip):30080/telemetry
 ~~~
 
 Other than using the *REST Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
 
 ~~~sh
-mosquitto_pub -h <IP_ADDRESS> -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
+mosquitto_pub -h $(minikube ip) -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
 ~~~
 
 The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for an explanation of how devices are identified in Hono and how device identity is related to authentication.
