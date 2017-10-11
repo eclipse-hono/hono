@@ -41,7 +41,7 @@ import io.vertx.proton.ProtonConnection;
 
 
 /**
- * A base class for implementing authentication providers that verify credentials provided by devics
+ * A base class for implementing authentication providers that verify credentials provided by devices
  * against information on record retrieved using Hono's <em>Credentials</em> API.
  *
  */
