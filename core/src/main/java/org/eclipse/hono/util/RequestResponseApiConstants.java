@@ -30,6 +30,11 @@ import org.eclipse.hono.util.MessageHelper;
  */
 public class RequestResponseApiConstants {
 
+    /**
+     * The MIME type representing the String representation of a JSON Object.
+     */
+    public static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
+
     /* message payload fields */
     public static final String FIELD_PAYLOAD                     = "payload";
     public static final String FIELD_ENABLED                     = "enabled";
