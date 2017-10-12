@@ -159,41 +159,43 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
     private void saveToFile(final Future<Void> writeResult) {
 
-        if (!dirty) {
+        if (dirty) {
+            final FileSystem fs = vertx.fileSystem();
+            String filename = getConfig().getCredentialsFilename();
+
+            if (!fs.existsBlocking(filename)) {
+                fs.createFileBlocking(filename);
+            }
+            final AtomicInteger idCount = new AtomicInteger();
+            JsonArray tenants = new JsonArray();
+            for (Entry<String, Map<String, JsonArray>> entry : credentials.entrySet()) {
+                JsonArray credentialsArray = new JsonArray();
+                for (Entry<String, JsonArray> credentialEntry : entry.getValue().entrySet()) { // authId -> full json
+                    // attributes object
+                    JsonArray singleAuthIdCredentials = credentialEntry.getValue(); // from one authId
+                    credentialsArray.addAll(singleAuthIdCredentials);
+                    idCount.incrementAndGet();
+                }
+                tenants.add(
+                        new JsonObject()
+                                .put(FIELD_TENANT, entry.getKey())
+                                .put(ARRAY_CREDENTIALS, credentialsArray));
+            }
+            fs.writeFile(getConfig().getCredentialsFilename(), Buffer.factory.buffer(tenants.encodePrettily()),
+                    writeAttempt -> {
+                        if (writeAttempt.succeeded()) {
+                            dirty = false;
+                            log.trace("successfully wrote {} credentials to file {}", idCount.get(), filename);
+                            writeResult.complete();
+                        } else {
+                            log.warn("could not write credentials to file {}", filename, writeAttempt.cause());
+                            writeResult.fail(writeAttempt.cause());
+                        }
+                    });
+        } else {
             log.trace("credentials registry does not need to be persisted");
-            return;
+            writeResult.complete();
         }
-
-        final FileSystem fs = vertx.fileSystem();
-        String filename = getConfig().getCredentialsFilename();
-
-        if (!fs.existsBlocking(filename)) {
-            fs.createFileBlocking(filename);
-        }
-        final AtomicInteger idCount = new AtomicInteger();
-        JsonArray tenants = new JsonArray();
-        for (Entry<String, Map<String, JsonArray>> entry : credentials.entrySet()) {
-            JsonArray credentialsArray = new JsonArray();
-            for (Entry<String, JsonArray> credentialEntry : entry.getValue().entrySet()) { // authId -> full json attributes object
-                JsonArray singleAuthIdCredentials = credentialEntry.getValue(); // from one authId
-                credentialsArray.addAll(singleAuthIdCredentials);
-                idCount.incrementAndGet();
-            }
-            tenants.add(
-                    new JsonObject()
-                            .put(FIELD_TENANT, entry.getKey())
-                            .put(ARRAY_CREDENTIALS, credentialsArray));
-        }
-        fs.writeFile(getConfig().getCredentialsFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
-            if (writeAttempt.succeeded()) {
-                dirty = false;
-                log.trace("successfully wrote {} credentials to file {}", idCount.get(), filename);
-                writeResult.complete();
-            } else {
-                log.warn("could not write credentials to file {}", filename, writeAttempt.cause());
-                writeResult.fail(writeAttempt.cause());
-            }
-        });
     }
 
     @Override
