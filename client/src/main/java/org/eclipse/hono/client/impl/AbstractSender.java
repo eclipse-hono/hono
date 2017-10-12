@@ -34,10 +34,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -163,6 +161,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     public final boolean send(final Message rawMessage, final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
         Objects.requireNonNull(rawMessage);
         Objects.requireNonNull(dispositionHandler);
+
         if (sender.sendQueueFull()) {
             return false;
         } else {
@@ -338,51 +337,4 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         }
     }
 
-    /**
-     * Creates a sender link.
-     * 
-     * @param ctx The vertx context to use for establishing the link.
-     * @param con The connection to create the link for.
-     * @param targetAddress The target address of the link.
-     * @param qos The quality of service to use for the link.
-     * @param closeHook The handler to invoke when the link is closed by the peer.
-     * @return A future for the created link.
-     */
-    protected static final Future<ProtonSender> createSender(
-            final Context ctx,
-            final ProtonConnection con,
-            final String targetAddress,
-            final ProtonQoS qos,
-            final Handler<String> closeHook) {
-
-        final Future<ProtonSender> result = Future.future();
-
-        ctx.runOnContext(create -> {
-            final ProtonSender sender = con.createSender(targetAddress);
-            sender.setQoS(qos);
-            sender.openHandler(senderOpen -> {
-                if (senderOpen.succeeded()) {
-                    LOG.debug("sender open [{}]", sender.getRemoteTarget());
-                    result.complete(senderOpen.result());
-                } else {
-                    LOG.debug("opening sender [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
-                    result.fail(senderOpen.cause());
-                }
-            });
-            sender.closeHandler(senderClosed -> {
-                if (senderClosed.succeeded()) {
-                    LOG.debug("sender [{}] closed", targetAddress);
-                } else {
-                    LOG.debug("sender [{}] closed: {}", targetAddress, senderClosed.cause().getMessage());
-                }
-                sender.close();
-                if (closeHook != null) {
-                    closeHook.handle(targetAddress);
-                }
-            });
-            sender.open();
-        });
-
-        return result;
-    }
 }

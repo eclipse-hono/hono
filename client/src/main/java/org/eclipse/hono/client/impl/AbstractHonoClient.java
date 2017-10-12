@@ -25,6 +25,9 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonMessageHandler;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -118,7 +121,7 @@ public abstract class AbstractHonoClient {
      * @throws NullPointerException if the message passed in is null.
      * @throws IllegalArgumentException if the properties contain any value that AMQP 1.0 disallows.
      */
-    protected final void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
+    protected static final void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
         if (properties != null) {
 
             // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
@@ -135,5 +138,101 @@ public abstract class AbstractHonoClient {
             final ApplicationProperties applicationProperties = new ApplicationProperties(properties);
             msg.setApplicationProperties(applicationProperties);
         }
+    }
+
+    /**
+     * Creates a sender link.
+     * 
+     * @param ctx The vert.x context to use for establishing the link.
+     * @param con The connection to create the link for.
+     * @param targetAddress The target address of the link.
+     * @param qos The quality of service to use for the link.
+     * @param closeHook The handler to invoke when the link is closed by the peer.
+     * @return A future for the created link. The future will be completed once the link is open.
+     *         The future will fail if the link cannot be opened.
+     */
+    protected static final Future<ProtonSender> createSender(
+            final Context ctx,
+            final ProtonConnection con,
+            final String targetAddress,
+            final ProtonQoS qos,
+            final Handler<String> closeHook) {
+
+        final Future<ProtonSender> result = Future.future();
+
+        ctx.runOnContext(create -> {
+            final ProtonSender sender = con.createSender(targetAddress);
+            sender.setQoS(qos);
+            sender.openHandler(senderOpen -> {
+                if (senderOpen.succeeded()) {
+                    LOG.debug("sender open [{}]", sender.getRemoteTarget());
+                    result.complete(senderOpen.result());
+                } else {
+                    LOG.debug("opening sender [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
+                    result.fail(senderOpen.cause());
+                }
+            });
+            sender.closeHandler(senderClosed -> {
+                if (senderClosed.succeeded()) {
+                    LOG.debug("sender [{}] closed by peer", targetAddress);
+                } else {
+                    LOG.debug("sender [{}] closed by peer: {}", targetAddress, senderClosed.cause().getMessage());
+                }
+                sender.close();
+                if (closeHook != null) {
+                    closeHook.handle(targetAddress);
+                }
+            });
+            sender.open();
+        });
+
+        return result;
+    }
+
+    /**
+     * Creates a receiver link.
+     * <p>
+     * The receiver will be created with its <em>autoAccept</em> property set to {@code true}
+     * and with its <em>prefetch</em> property being set to {@link #DEFAULT_SENDER_CREDITS}.
+     * 
+     * @param ctx The vert.x context to use for establishing the link.
+     * @param con The connection to create the link for.
+     * @param sourceAddress The address to receive messages from.
+     * @param qos The quality of service to use for the link.
+     * @param messageHandler The handler to invoke with every message received.
+     * @param closeHook The handler to invoke when the link is closed by the peer.
+     * @return A future for the created link. The future will be completed once the link is open.
+     *         The future will fail if the link cannot be opened.
+     */
+    protected static final Future<ProtonReceiver> createReceiver(
+            final Context ctx,
+            final ProtonConnection con,
+            final String sourceAddress,
+            final ProtonQoS qos,
+            final ProtonMessageHandler messageHandler,
+            final Handler<String> closeHook) {
+
+        Future<ProtonReceiver> result = Future.future();
+        ctx.runOnContext(go -> {
+            final ProtonReceiver receiver = con.createReceiver(sourceAddress);
+            receiver.setAutoAccept(true);
+            receiver.setPrefetch(DEFAULT_SENDER_CREDITS);
+            receiver.handler(messageHandler);
+            receiver.openHandler(result.completer());
+            receiver.closeHandler(remoteClosed -> {
+                if (remoteClosed.succeeded()) {
+                    LOG.debug("receiver [{}] closed by peer [{}]", sourceAddress, con.getRemoteContainer());
+                } else {
+                    LOG.debug("receiver [{}] closed by peer [{}]: {}", sourceAddress, con.getRemoteContainer(), remoteClosed.cause().getMessage());
+                }
+                receiver.close();
+                if (closeHook != null) {
+                    closeHook.handle(sourceAddress);
+                }
+            });
+            receiver.open();
+        });
+        return result;
+
     }
 }

@@ -90,17 +90,11 @@ public final class HonoClientImpl implements HonoClient {
         this.context = context;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#isConnected()
-     */
     @Override
     public boolean isConnected() {
         return connection != null && !connection.isDisconnected();
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#getConnectionStatus()
-     */
     @Override
     public Map<String, Object> getConnectionStatus() {
 
@@ -113,9 +107,6 @@ public final class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#getSenderStatus()
-     */
     @Override
     public JsonArray getSenderStatus() {
 
@@ -234,17 +225,11 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#getOrCreateTelemetrySender(java.lang.String, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient getOrCreateTelemetrySender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
         return getOrCreateTelemetrySender(tenantId, null, resultHandler);
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#getOrCreateTelemetrySender(java.lang.String, java.lang.String, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient getOrCreateTelemetrySender(final String tenantId, final String deviceId, final Handler<AsyncResult<MessageSender>> resultHandler) {
         Objects.requireNonNull(tenantId);
@@ -255,17 +240,11 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#getOrCreateEventSender(java.lang.String, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient getOrCreateEventSender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
         return getOrCreateEventSender(tenantId, null, resultHandler);
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#getOrCreateEventSender(java.lang.String, java.lang.String, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient getOrCreateEventSender(
             final String tenantId,
@@ -338,10 +317,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createTelemetryConsumer(java.lang.String, java.util.function.Consumer, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient createTelemetryConsumer(
             final String tenantId,
@@ -351,9 +326,6 @@ public final class HonoClientImpl implements HonoClient {
                 creationHandler);
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createTelemetryConsumer(java.lang.String, int, java.util.function.Consumer, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient createTelemetryConsumer(
             final String tenantId,
@@ -380,9 +352,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, int, java.util.function.Consumer, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient createEventConsumer(
             final String tenantId,
@@ -393,9 +362,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, int, java.util.function.Consumer, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient createEventConsumer(
             final String tenantId,
@@ -407,9 +373,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, java.util.function.BiConsumer, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient createEventConsumer(
             final String tenantId,
@@ -420,9 +383,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createEventConsumer(java.lang.String, java.util.function.BiConsumer, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient createEventConsumer(
             final String tenantId,
@@ -474,9 +434,6 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#getOrCreateRegistrationClient(java.lang.String, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient getOrCreateRegistrationClient(
             final String tenantId,
@@ -492,9 +449,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createRegistrationClient(java.lang.String, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient createRegistrationClient(
             final String tenantId,
@@ -512,23 +466,26 @@ public final class HonoClientImpl implements HonoClient {
             creationRequests.add(connectionFailureHandler);
 
             LOG.debug("creating new registration client for [{}]", tenantId);
-            RegistrationClientImpl.create(context, connection, tenantId, creationAttempt -> {
-                if (creationAttempt.succeeded()) {
-                    activeRegClients.put(tenantId, creationAttempt.result());
-                    LOG.debug("successfully created registration client for [{}]", tenantId);
-                } else {
-                    LOG.debug("failed to create registration client for [{}]", tenantId, creationAttempt.cause());
-                }
-                creationRequests.remove(connectionFailureHandler);
-                creationHandler.handle(creationAttempt);
-            });
+            RegistrationClientImpl.create(
+                    context,
+                    connection,
+                    tenantId,
+                    this::removeRegistrationClient,
+                    this::removeRegistrationClient,
+                    creationAttempt -> {
+                        if (creationAttempt.succeeded()) {
+                            activeRegClients.put(tenantId, creationAttempt.result());
+                            LOG.debug("successfully created registration client for [{}]", tenantId);
+                        } else {
+                            LOG.debug("failed to create registration client for [{}]", tenantId, creationAttempt.cause());
+                        }
+                        creationRequests.remove(connectionFailureHandler);
+                        creationHandler.handle(creationAttempt);
+                    });
         }
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#getOrCreateCredentialsClient(java.lang.String, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient getOrCreateCredentialsClient(final String tenantId, final Handler<AsyncResult<CredentialsClient>> resultHandler) {
         final CredentialsClient credClient = activeCredClients.get(tenantId);
@@ -541,9 +498,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#createCredentialsClient(java.lang.String, io.vertx.core.Handler)
-     */
     @Override
     public HonoClient createCredentialsClient(final String tenantId, final Handler<AsyncResult<CredentialsClient>> creationHandler) {
         Objects.requireNonNull(tenantId);
@@ -559,23 +513,42 @@ public final class HonoClientImpl implements HonoClient {
             creationRequests.add(connectionFailureHandler);
 
             LOG.debug("creating new credentials client for [{}]", tenantId);
-            CredentialsClientImpl.create(context, connection, tenantId, creationAttempt -> {
-                if (creationAttempt.succeeded()) {
-                    activeCredClients.put(tenantId, creationAttempt.result());
-                    LOG.debug("successfully created credentials client for [{}]", tenantId);
-                } else {
-                    LOG.debug("failed to create credentials client for [{}]", tenantId, creationAttempt.cause());
-                }
-                creationRequests.remove(connectionFailureHandler);
-                creationHandler.handle(creationAttempt);
-            });
+            CredentialsClientImpl.create(
+                    context,
+                    connection,
+                    tenantId,
+                    this::removeCredentialsClient,
+                    this::removeCredentialsClient,
+                    creationAttempt -> {
+                        if (creationAttempt.succeeded()) {
+                            activeCredClients.put(tenantId, creationAttempt.result());
+                            LOG.debug("successfully created credentials client for [{}]", tenantId);
+                        } else {
+                            LOG.debug("failed to create credentials client for [{}]", tenantId, creationAttempt.cause());
+                        }
+                        creationRequests.remove(connectionFailureHandler);
+                        creationHandler.handle(creationAttempt);
+                    });
         }
         return this;
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#shutdown()
-     */
+    private void removeCredentialsClient(final String tenantId) {
+        CredentialsClient client = activeCredClients.remove(tenantId);
+        if (client != null) {
+            client.close(s -> {});
+            LOG.debug("closed and removed credentials client for [{}]", tenantId);
+        }
+    }
+
+    private void removeRegistrationClient(final String tenantId) {
+        RegistrationClient client = activeRegClients.remove(tenantId);
+        if (client != null) {
+            client.close(s -> {});
+            LOG.debug("closed and removed registration client for [{}]", tenantId);
+        }
+    }
+
     @Override
     public void shutdown() {
         final CountDownLatch latch = new CountDownLatch(1);
@@ -595,9 +568,6 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.eclipse.hono.client.HonoClient#shutdown(io.vertx.core.Handler)
-     */
     @Override
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         shutdown = true;
