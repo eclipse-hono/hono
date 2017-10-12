@@ -16,8 +16,8 @@ then
 fi
 if [ $1 ]
 then
-  hugo --theme hugo-material-docs -d $1
+  hugo --theme hugo-material-docs -d $1 --baseURL https://iot-hub.dev.saz.bosch-si.com/hono-site
 else
-  hugo --theme hugo-material-docs
+  hugo --theme hugo-material-docs --baseURL https://iot-hub.dev.saz.bosch-si.com/hono-site
 fi
 

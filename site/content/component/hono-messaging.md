@@ -4,49 +4,14 @@ weight = 320
 +++
 
 The Hono Messaging component exposes service endpoints implementing the *south bound* part of Eclipse Hono&trade;'s [Telemetry]({{< relref "api/Telemetry-API.md" >}}) and [Event]({{< relref "api/Event-API.md" >}}) APIs.
-The south bound API is used by devices and protocol adapters to upload telemetry data and events to be forwarded
-to downstream consumers.
+The south bound API is used by protocol adapters to upload telemetry data and events to be forwarded to downstream consumers.
 <!--more-->
-
-## Configuration Variables
 
 The component is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image created from it.
 
-The component can be configured by means of environment variables or corresponding command line options.
+## Service Configuration
 
-### Authentication Service Connection Configuration
-
-The Hono Messaging component requires a connection to an implementation of Hono's Authentication API in order to authenticate and authorize client requests. 
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the Authentication service.
-
-| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
-| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_AUTH_HOST`<br>`--hono.auth.host` | yes | `localhost` | The IP address or name of the Authentication service host. NB: This needs to be set to an address that can be resolved within the network the service runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Hono Messaging container to the Docker network that the Authentication service container is running on. |
-| `HONO_AUTH_CERT_PATH`<br>`--hono.auth.certPath` | no | - | The absolute path to the PEM file containing the public key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_KEY_PATH`. |
-| `HONO_AUTH_KEY_PATH`<br>`--hono.auth.keyPath` | no | - | The absolute path to the PEM file containing the private key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_CERT_PATH`. |
-| `HONO_AUTH_PORT`<br>`--hono.auth.port` | yes | `5671` | The port that the Authentication service is listening on for connections. |
-| `HONO_AUTH_TRUST_STORE_PASSWORD`<br>`--hono.auth.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_AUTH_TRUST_STORE_PATH`<br>`--hono.auth.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating the Authentication service. This property **must** be set if the Authentication service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
-| `HONO_AUTH_VALIDATION_CERT_PATH`<br>`--hono.auth.validation.certPath` | no  | - | The absolute path to the PEM file containing the public key that the service should use for validating tokens issued by the Authentication service. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHARED_SECRET` variable. If none of these variables is set, the service falls back to the key indicated by the `HONO_AUTH_CERT_PATH` variable. If that variable is also not set, startup of the service fails. |
-| `HONO_AUTH_VALIDATION_SHARED_SECRET`<br>`--hono.auth.validation.sharedSecret` | no  | - | A string to derive a symmetric key from which is used for validating tokens issued by the Authentication service. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the Authentication service **must** be configured with the same key. Alternatively, an asymmetric key pair can be used for validating (and signing) by setting the `HONO_AUTH_VALIDATION_CERT_PATH` variable. If none of these variables is set, startup of the service fails. |
-
-### AMQP 1.0 Messaging Network Connection Configuration
-
-The Hono Messaging component forwards telemetry data and events produced by devices to an *AMQP 1.0 Messaging Network* for delivery to downstream consumers.
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the *AMQP 1.0 Messaging Network*.
-
-| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
-| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_DOWNSTREAM_HOST`<br>`--hono.downstream.host` | yes | `localhost` | The IP address or name of the downstream *AMQP 1.0 Messaging Network* host. NB: This needs to be set to an address that can be resolved within the network the service runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Hono Messaging container to the Docker network that the *AMQP 1.0 Messaging Network* containers are running on. |
-| `HONO_DOWNSTREAM_PASSWORD`<br>`--hono.downstream.password` | no | - | The password to use for authenticating to the *AMQP 1.0 Messaging Network*. This property (and the corresponding *username*) needs to be set only if the Messaging Network is configured to use `SASL PLAIN` for authenticating the Hono Messaging component. |
-| `HONO_DOWNSTREAM_PORT`<br>`--hono.downstream.port` | yes | `5671` | The port that the *AMQP 1.0 Messaging Network* is listening on for connections from the Hono Messaging component.<br>**NB** When using the Dispatch Router image with the example configuration then this property needs to be set to `5673`. This is because in the example configuration the Dispatch Router's *internal* listener used for accepting connections from the Hono Messaging component is configured to attach to port 5673. |
-| `HONO_DOWNSTREAM_TRUST_STORE_PASSWORD`<br>`--hono.downstream.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_DOWNSTREAM_TRUST_STORE_PATH`<br>`--hono.downstream.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono Messaging component uses for authenticating the downstream AMQP 1.0 Messaging Network. This property **must** be set if the Messaging Network has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
-| `HONO_DOWNSTREAM_USERNAME`<br>`--hono.downstream.username` | no | - | The username to use for authenticating to the downstream *AMQP 1.0 Messaging Network*. This property (and the corresponding *password*) needs to be set only if the Messaging Network is configured to use `SASL PLAIN` for authenticating the Hono Messaging component. |
-
-### Service Configuration
-
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the Hono Messaging component.
+The following table provides an overview of the environment variables and corresponding command line options for configuring the Hono Messaging component.
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
@@ -58,12 +23,10 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_MESSAGING_INSECURE_PORT`<br>`--hono.messaging.insecurePort` | no | - | The insecure port the service should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.messaging.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_MESSAGING_INSECURE_PORT_ENABLED`<br>`--hono.messaging.insecurePortEnabled` | no | `false` | If set to `true` the service will open an insecure port (not secured by TLS) using either the port number set via `HONO_MESSAGING_INSECURE_PORT` or the default AMQP port number (`5672`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_MESSAGING_KEY_PATH`<br>`--hono.messaging.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the service should use for authenticating to clients. This option must be used in conjunction with `HONO_MESSAGING_CERT_PATH`. Alternatively, the `HONO_MESSAGING_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
+| `HONO_MESSAGING_KEY_PATH`<br>`--hono.messaging.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the service should use for authenticating to clients. Note that the private key is not protected by a password. You should therefore make sure that the key file can only be read by the user that the server process is running under. This option must be used in conjunction with `HONO_MESSAGING_CERT_PATH`. Alternatively, the `HONO_MESSAGING_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_MESSAGING_KEY_STORE_PASSWORD`<br>`--hono.messaging.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_MESSAGING_KEY_STORE_PATH`<br>`--hono.messaging.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the service should use for authenticating to clients. Either this option or the `HONO_MESSAGING_KEY_PATH` and `HONO_MESSAGING_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_MESSAGING_PORT`<br>`--hono.messaging.port` | no | `5671` | The secure port that the service should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_MESSAGING_TRUST_STORE_PASSWORD`<br>`--hono.messaging.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_MESSAGING_TRUST_STORE_PATH`<br>`--hono.messaging.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
 | `HONO_MESSAGING_VALIDATION_CERT_PATH`<br>`--hono.messaging.validation.certPath` | yes | - | The path to a PEM file containing the *Device Registration* service's certificate. The public key contained in the certificate is used to validate RSA based registration assertion tokens issued by the *Device Registration* service. Either this variable or `HONO_MESSAGING_VALIDATION_SHARED_SECRET` must be set in order for the Hono Messaging component being able to process telemetry data and events received from devices. |
 | `HONO_MESSAGING_VALIDATION_SHARED_SECRET`<br>`--hono.messaging.validation.sharedSecret` | yes | - | The secret to use for validating tokens asserting the registration status of devices using HmacSHA256. The secret's UTF8 encoding must consist of at least 32 bytes. Either this variable or `HONO_MESSAGING_VALIDATION_CERT_PATH` must be set in order for the Hono Messaging component being able to process telemetry data and events received from devices. |
 | `HONO_METRIC_REPORTER_GRAPHITE_ACTIVE`<br>`--hono.metric.reporter.graphite.active` | no  | `false` | Activates the metrics reporter to Graphite (or a graphite compatible system - we use InfluxDB in the `example`). |
@@ -95,7 +58,7 @@ The service needs to be configured with a private key and certificate in order t
 
 There are two alternative ways for doing so:
 
-1. either setting the `HONO_MESSAGING_KEY_STORE_PATH` and the `HONO_MESSAGING_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
+1. Setting the `HONO_MESSAGING_KEY_STORE_PATH` and the `HONO_MESSAGING_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
 1. setting the `HONO_MESSAGING_KEY_PATH` and `HONO_MESSAGING_CERT_PATH` variables in order to load the key and certificate from two separate PEM files in PKCS8 format.
 
 When starting up, the service will bind a TLS secured socket to the default secure AMQP port 5671. The port number can also be set explicitly using the `HONO_MESSAGING_PORT` variable.
@@ -127,6 +90,39 @@ This can be used to narrow the visibility of the insecure port to a local networ
 ### Ephemeral Ports
 
 The service may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
+
+
+## Authentication Service Connection Configuration
+
+The Hono Messaging component requires a connection to an implementation of Hono's Authentication API in order to authenticate and authorize client requests.
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the Authentication service.
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
+| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_AUTH_HOST`<br>`--hono.auth.host` | yes | `localhost` | The IP address or name of the Authentication service host. NB: This needs to be set to an address that can be resolved within the network the service runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Hono Messaging container to the Docker network that the Authentication service container is running on. |
+| `HONO_AUTH_CERT_PATH`<br>`--hono.auth.certPath` | no | - | The absolute path to the PEM file containing the public key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_KEY_PATH`. |
+| `HONO_AUTH_KEY_PATH`<br>`--hono.auth.keyPath` | no | - | The absolute path to the PEM file containing the private key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_CERT_PATH`. |
+| `HONO_AUTH_PORT`<br>`--hono.auth.port` | yes | `5671` | The port that the Authentication service is listening on for connections. |
+| `HONO_AUTH_TRUST_STORE_PASSWORD`<br>`--hono.auth.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+| `HONO_AUTH_TRUST_STORE_PATH`<br>`--hono.auth.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating the Authentication service. This property **must** be set if the Authentication service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_AUTH_VALIDATION_CERT_PATH`<br>`--hono.auth.validation.certPath` | no  | - | The absolute path to the PEM file containing the public key that the service should use for validating tokens issued by the Authentication service. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHARED_SECRET` variable. If none of these variables is set, startup of the service fails. |
+| `HONO_AUTH_VALIDATION_SHARED_SECRET`<br>`--hono.auth.validation.sharedSecret` | no  | - | A string to derive a symmetric key from which is used for validating tokens issued by the Authentication service. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the Authentication service **must** be configured with the same key. Alternatively, an asymmetric key pair can be used for validating (and signing) by setting the `HONO_AUTH_VALIDATION_CERT_PATH` variable. If none of these variables is set, startup of the service fails. |
+
+## AMQP 1.0 Messaging Network Connection Configuration
+
+The Hono Messaging component forwards telemetry data and events produced by devices to an *AMQP 1.0 Messaging Network* for delivery to downstream consumers.
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the *AMQP 1.0 Messaging Network*.
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
+| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_DOWNSTREAM_HOST`<br>`--hono.downstream.host` | yes | `localhost` | The IP address or name of the downstream *AMQP 1.0 Messaging Network* host. NB: This needs to be set to an address that can be resolved within the network the service runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Hono Messaging container to the Docker network that the *AMQP 1.0 Messaging Network* containers are running on. |
+| `HONO_DOWNSTREAM_PASSWORD`<br>`--hono.downstream.password` | no | - | The password to use for authenticating to the *AMQP 1.0 Messaging Network*. This property (and the corresponding *username*) needs to be set only if the Messaging Network is configured to use `SASL PLAIN` for authenticating the Hono Messaging component. |
+| `HONO_DOWNSTREAM_PORT`<br>`--hono.downstream.port` | yes | `5671` | The port that the *AMQP 1.0 Messaging Network* is listening on for connections from the Hono Messaging component.<br>**NB** When using the Dispatch Router image with the example configuration then this property needs to be set to `5673`. This is because in the example configuration the Dispatch Router's *internal* listener used for accepting connections from the Hono Messaging component is configured to attach to port 5673. |
+| `HONO_DOWNSTREAM_TRUST_STORE_PASSWORD`<br>`--hono.downstream.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+| `HONO_DOWNSTREAM_TRUST_STORE_PATH`<br>`--hono.downstream.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono Messaging component uses for authenticating the downstream AMQP 1.0 Messaging Network. This property **must** be set if the Messaging Network has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_DOWNSTREAM_USERNAME`<br>`--hono.downstream.username` | no | - | The username to use for authenticating to the downstream *AMQP 1.0 Messaging Network*. This property (and the corresponding *password*) needs to be set only if the Messaging Network is configured to use `SASL PLAIN` for authenticating the Hono Messaging component. |
+
+
 
 ## Run as a Docker Swarm Service
 

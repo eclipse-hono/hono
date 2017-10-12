@@ -29,7 +29,7 @@
   <description>A &quot;bill-of-materials&quot; for Hono.</description>
 
   <properties>
-    <artemis.version>2.1.0</artemis.version>
+    <artemis.image.name>enmasseproject/activemq-artemis:2.2.0-1</artemis.image.name>
     <assertj-core.version>3.2.0</assertj-core.version>
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:0.8.0-1</dispatch-router.image.name>
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>

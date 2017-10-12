@@ -15,20 +15,19 @@ package org.eclipse.hono.service.registration;
 import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
 
 import java.net.HttpURLConnection;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpointUtils;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -59,19 +58,6 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         super(Objects.requireNonNull(vertx));
     }
 
-    private static JsonObject getPayloadForParams(final HttpServerRequest request) {
-        JsonObject payload = new JsonObject();
-        for (Entry<String, String> param : request.params()) {
-            if (PARAM_DEVICE_ID.equalsIgnoreCase(param.getKey())) {
-                // add device param captured from URI path - use same name as in JSON structures for that
-                payload.put(FIELD_DEVICE_ID, param.getValue());
-            } else if (!PARAM_TENANT_ID.equalsIgnoreCase(param.getKey())) { // filter out tenant param captured from URI path
-                payload.put(param.getKey(), param.getValue());
-            }
-        }
-        return payload;
-    }
-
     @Override
     public String getName() {
         return RegistrationConstants.REGISTRATION_ENDPOINT;
@@ -84,8 +70,6 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         // ADD device registration
         router.route(HttpMethod.POST, pathWithTenant).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
                 .handler(this::doRegisterDeviceJson);
-        router.route(HttpMethod.POST, pathWithTenant).consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-                .handler(this::doRegisterDeviceForm);
         router.route(HttpMethod.POST, pathWithTenant)
                 .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
 
@@ -97,8 +81,6 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         // UPDATE existing registration
         router.route(HttpMethod.PUT, pathWithTenantAndDeviceId).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
                 .handler(this::doUpdateRegistrationJson);
-        router.route(HttpMethod.PUT, pathWithTenantAndDeviceId).consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-                .handler(this::doUpdateRegistrationForm);
         router.route(HttpMethod.PUT, pathWithTenantAndDeviceId)
                 .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
 
@@ -115,7 +97,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     }
 
     private static void setResponseBody(final JsonObject registrationResult, final HttpServerResponse response) {
-        JsonObject msg = registrationResult.getJsonObject("payload");
+        JsonObject msg = registrationResult.getJsonObject(RegistrationConstants.FIELD_PAYLOAD);
         if (msg != null) {
             String body = msg.encodePrettily();
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
@@ -135,7 +117,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
             response.setStatusCode(status);
             switch (status) {
                 case HttpURLConnection.HTTP_OK:
-                    final String msg = registrationResult.getJsonObject("payload").encodePrettily();
+                    final String msg = registrationResult.getJsonObject(RegistrationConstants.FIELD_PAYLOAD).encodePrettily();
                     response
                             .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
                             .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
@@ -156,11 +138,6 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         } catch (DecodeException e) {
             HttpEndpointUtils.badRequest(ctx.response(), "body does not contain a valid JSON object");
         }
-    }
-
-    private void doRegisterDeviceForm(final RoutingContext ctx) {
-
-        registerDevice(ctx, getPayloadForParams(ctx.request()));
     }
 
     private void registerDevice(final RoutingContext ctx, final JsonObject payload) {
@@ -204,11 +181,6 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         } catch (DecodeException e) {
             HttpEndpointUtils.badRequest(ctx.response(), "body does not contain a valid JSON object");
         }
-    }
-
-    private void doUpdateRegistrationForm(final RoutingContext ctx) {
-
-        updateRegistration(getDeviceIdParam(ctx), getPayloadForParams(ctx.request()), ctx);
     }
 
     private void updateRegistration(final String deviceId, final JsonObject payload, final RoutingContext ctx) {
@@ -255,7 +227,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                         HttpEndpointUtils.serviceUnavailable(response, 2);
                     } else {
                         final JsonObject registrationResult = (JsonObject) invocation.result().body();
-                        final Integer status = Integer.valueOf(registrationResult.getString("status"));
+                        final Integer status = Integer.valueOf(registrationResult.getString(MessageHelper.APP_PROPERTY_STATUS));
                         responseHandler.accept(status, registrationResult);
                     }
                 });

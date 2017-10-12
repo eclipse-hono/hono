@@ -1,0 +1,132 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="REST Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea">
+      <pattern>
+        <option name="PATTERN" value="org.eclipse.hono.adapter.rest.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="SPRING_BOOT_MAIN_CLASS" value="org.eclipse.hono.adapter.rest.Application" />
+    <option name="ACTIVE_PROFILES" value="dev" />
+    <option name="WORKING_DIRECTORY" value="file://$MODULE_DIR$" />
+    <option name="ALTERNATIVE_JRE_PATH" />
+    <additionalParameters>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.app.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckPort" />
+        <option name="value" value="8090" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.name" />
+        <option name="value" value="Hono REST Adapter" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.host" />
+        <option name="value" value="localhost" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.port" />
+        <option name="value" value="5671" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.username" />
+        <option name="value" value="rest-adapter@HONO" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.password" />
+        <option name="value" value="rest-secret" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.trustStorePath" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.hostnameVerificationRequired" />
+        <option name="value" value="false" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.name" />
+        <option name="value" value="Hono REST Adapter" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.host" />
+        <option name="value" value="localhost" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.port" />
+        <option name="value" value="26671" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.username" />
+        <option name="value" value="rest-adapter@HONO" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.password" />
+        <option name="value" value="rest-secret" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.trustStorePath" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.hostnameVerificationRequired" />
+        <option name="value" value="false" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.bindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.insecurePort" />
+        <option name="value" value="8080" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.insecurePortBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.insecurePortEnabled" />
+        <option name="value" value="true" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.keyPath" />
+        <option name="value" value="../../demo-certs/certs/rest-adapter-key.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.http.certPath" />
+        <option name="value" value="../../demo-certs/certs/rest-adapter-cert.pem" />
+      </param>
+    </additionalParameters>
+    <module name="hono-adapter-rest-vertx" />
+    <envs />
+    <method />
+  </configuration>
+</component>

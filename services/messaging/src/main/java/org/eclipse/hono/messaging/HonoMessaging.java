@@ -114,15 +114,15 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
         }
         handler.register("authentication-service-connection", status -> {
             if (authenticationService == null) {
-                status.complete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
+                status.tryComplete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
             } else {
                 LOG.debug("checking connection to Authentication service");
                 authenticationService.connect(null, null, null, s -> {
                     if (s.succeeded()) {
                         s.result().close();
-                        status.complete(Status.OK());
+                        status.tryComplete(Status.OK());
                     } else {
-                        status.complete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
+                        status.tryComplete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
                     }
                 });
             }

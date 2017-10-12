@@ -34,7 +34,7 @@ pluralizeListTitles = "false"
 	highlight_css  = ""
 
 [params.palette]
-	primary = "orange"
+	primary = "indigo"
 	accent  = "teal"
 
 [params.font]
@@ -48,6 +48,12 @@ pluralizeListTitles = "false"
 	email   = "hono-dev@eclipse.org"
 	mailinglist = "https://dev.eclipse.org/mailman/listinfo/hono-dev"
 
+
+[[menu.main]]
+  name   = "Concepts"
+  identifier = "Concepts"
+  url    = "/concepts/"
+  weight = 180
 
 [[menu.main]]
 	name   = "User Guide"

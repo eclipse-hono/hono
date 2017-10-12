@@ -13,30 +13,35 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
-import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
-import io.vertx.core.*;
-import io.vertx.mqtt.MqttAuth;
-import io.vertx.mqtt.MqttEndpoint;
-import io.vertx.mqtt.MqttServer;
-
-import org.eclipse.hono.auth.DeviceCredentials;
-import org.eclipse.hono.auth.UsernamePasswordCredentials;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.util.Constants;
-import org.junit.After;
+import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.auth.device.DeviceCredentials;
+import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
+import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.mqtt.MqttAuth;
+import io.vertx.mqtt.MqttEndpoint;
+import io.vertx.mqtt.MqttServer;
 import io.vertx.proton.ProtonClientOptions;
-import org.mockito.ArgumentCaptor;
 
 /**
  * Verifies behavior of {@link VertxBasedMqttProtocolAdapter}.
@@ -47,9 +52,9 @@ public class VertxBasedMqttProtocolAdapterTest {
 
     private HonoClient messagingClient;
     private HonoClient registrationClient;
-    private HonoClient credentialsClient;
+    private HonoClientBasedAuthProvider credentialsAuthProvider;
     private ProtocolAdapterProperties config;
-    private Vertx vertx;
+    private static Vertx vertx = Vertx.vertx();
 
     /**
      * Creates clients for the needed microservices and sets the configuration to enable the insecure port.
@@ -57,11 +62,9 @@ public class VertxBasedMqttProtocolAdapterTest {
     @Before
     public void setup() {
 
-        vertx = Vertx.vertx();
-
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
-        credentialsClient = mock(HonoClient.class);
+        credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
         config = new ProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
     }
@@ -69,8 +72,8 @@ public class VertxBasedMqttProtocolAdapterTest {
     /**
      * Cleans up fixture.
      */
-    @After
-    public void shutDown() {
+    @AfterClass
+    public static void shutDown() {
         vertx.close();
     }
 
@@ -101,7 +104,6 @@ public class VertxBasedMqttProtocolAdapterTest {
         verify(server).endpointHandler(any(Handler.class));
         verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
         verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
-        verify(credentialsClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
     }
 
     // TODO: startup fail test
@@ -121,23 +123,6 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         adapter.handleEndpointConnection(endpoint);
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testCredentialsHandlerSetsPublishAndCloseHandlers() {
-
-        // GIVEN an adapter
-        MqttServer server = getMqttServer(false);
-        VertxBasedMqttProtocolAdapter adapter = getAdapter(server);
-        forceClientMocksToConnected();
-
-        UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create("sensor1@DEFAULT_TENANT", "test", false);
-        MqttEndpoint endpoint = getMqttEndpointAuthenticated();
-        adapter.handleCredentialsResult(Future.succeededFuture("4711"), endpoint, credentials);
-
-        verify(endpoint).publishHandler(any(Handler.class));
-        verify(endpoint).closeHandler(any(Handler.class));
     }
 
     /**
@@ -199,18 +184,26 @@ public class VertxBasedMqttProtocolAdapterTest {
         MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);
 
-        verify(credentialsClient).getOrCreateCredentialsClient(matches(Constants.DEFAULT_TENANT), any(Handler.class));
+        verify(credentialsAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * Verifies that on successful authentication the adapter sets appropriate message and close
+     * handlers on the client endpoint.
+     */
+    @SuppressWarnings({ "unchecked" })
     @Test
     public void testAuthenticatedMqttAdapterCreatesMessageHandlersForAuthenticatedDevices() {
 
         // GIVEN an adapter
         MqttServer server = getMqttServer(false);
         VertxBasedMqttProtocolAdapter adapter = getAdapter(server);
-        doReturn(Future.succeededFuture("4711")).when(adapter).validateCredentialsForDevice(any(DeviceCredentials.class));
         forceClientMocksToConnected();
+        doAnswer(invocation -> {
+            Handler<AsyncResult<Device>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "4711")));
+            return null;
+        }).when(credentialsAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
 
         // WHEN a device tries to connect with valid credentials
         MqttEndpoint endpoint = getMqttEndpointAuthenticated();
@@ -218,15 +211,18 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // THEN the device's logical ID is successfully established and corresponding handlers
         // are registered
-        ArgumentCaptor<AsyncResult> resultArgumentCaptor = ArgumentCaptor.forClass(AsyncResult.class);
-        verify(adapter).handleCredentialsResult(resultArgumentCaptor.capture(), anyObject(), anyObject());
-        AsyncResult<String> asyncResult = resultArgumentCaptor.getValue();
-        assertThat(asyncResult.result(), is("4711"));
+        ArgumentCaptor<DeviceCredentials> credentialsCaptor = ArgumentCaptor.forClass(DeviceCredentials.class);
+        verify(credentialsAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
+        assertThat(credentialsCaptor.getValue().getAuthId(), is("sensor1"));
         verify(endpoint).accept(false);
         verify(endpoint).publishHandler(any(Handler.class));
         verify(endpoint).closeHandler(any(Handler.class));
     }
 
+    /**
+     * Verifies that the adapter registers message handlers on client connections
+     * when device authentication is disabled.
+     */
     @SuppressWarnings("unchecked")
     @Test
     public void testUnauthenticatedMqttAdapterCreatesMessageHandlersForAllDevices() {
@@ -243,6 +239,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is established and handlers are registered
+        verify(credentialsAuthProvider, never()).authenticate(any(DeviceCredentials.class), any(Handler.class));
         verify(endpoint).publishHandler(any(Handler.class));
         verify(endpoint).closeHandler(any(Handler.class));
         verify(endpoint).accept(false);
@@ -251,7 +248,6 @@ public class VertxBasedMqttProtocolAdapterTest {
     private void forceClientMocksToConnected() {
         when(messagingClient.isConnected()).thenReturn(true);
         when(registrationClient.isConnected()).thenReturn(true);
-        when(credentialsClient.isConnected()).thenReturn(true);
     }
 
     private MqttEndpoint getMqttEndpointAuthenticated() {
@@ -270,6 +266,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         return endpoint;
     }
 
+    @SuppressWarnings("unchecked")
     private static MqttServer getMqttServer(final boolean startupShouldFail) {
 
         MqttServer server = mock(MqttServer.class);
@@ -289,12 +286,13 @@ public class VertxBasedMqttProtocolAdapterTest {
     }
 
     private VertxBasedMqttProtocolAdapter getAdapter(final MqttServer server) {
-        VertxBasedMqttProtocolAdapter adapter = spy(VertxBasedMqttProtocolAdapter.class);
+
+        VertxBasedMqttProtocolAdapter adapter = new VertxBasedMqttProtocolAdapter();
         adapter.setMqttInsecureServer(server);
         adapter.setConfig(config);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationClient);
-        adapter.setCredentialsServiceClient(credentialsClient);
+        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
         adapter.init(vertx, mock(Context.class));
 
         return adapter;

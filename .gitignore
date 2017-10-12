@@ -1,10 +1,21 @@
 **/target/
-**/.idea/
+#**/.idea/
 **/*.iml
 **/bin/
 **/.vertx/
-*.flattened-pom.xml
+**/.flattened-pom.xml
+
 # Eclipse files
 **/.classpath
 **/.project
 **/.settings/
+
+.idea/*
+!/.idea/runConfigurations
+/.idea/runConfigurations/*
+!/.idea/runConfigurations/Auth_Application.xml
+!/.idea/runConfigurations/Device_Registry_Application.xml
+!/.idea/runConfigurations/Hono_Application.xml
+!/.idea/runConfigurations/REST_Application.xml
+!/.idea/runConfigurations/MQTT_Application.xml
+

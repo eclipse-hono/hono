@@ -1,0 +1,54 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Auth Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" singleton="false">
+    <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea">
+      <pattern>
+        <option name="PATTERN" value="org.eclipse.hono.application.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="SPRING_BOOT_MAIN_CLASS" value="org.eclipse.hono.service.auth.impl.Application" />
+    <option name="ACTIVE_PROFILES" value="authentication-impl,dev" />
+    <option name="WORKING_DIRECTORY" value="file://$MODULE_DIR$" />
+    <option name="ALTERNATIVE_JRE_PATH" />
+    <additionalParameters>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.app.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.auth.amqp.bindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.auth.amqp.port" />
+        <option name="value" value="25671" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.auth.amqp.keyPath" />
+        <option name="value" value="../../demo-certs/certs/auth-server-key.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.auth.amqp.certPath" />
+        <option name="value" value="../../demo-certs/certs/auth-server-cert.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.auth.amqp.trustStorePath" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="logging.config" />
+        <option name="value" value="classpath:logback-spring.xml" />
+      </param>
+    </additionalParameters>
+    <module name="hono-service-auth" />
+    <envs />
+    <method />
+  </configuration>
+</component>

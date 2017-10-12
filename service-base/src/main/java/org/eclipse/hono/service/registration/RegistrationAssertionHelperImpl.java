@@ -56,7 +56,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
             throw new IllegalArgumentException("configuration does not specify any signing key material");
         } else {
             RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl(vertx);
-            result.tokenLifetime = Duration.ofMinutes(config.getTokenExpiration());
+            result.tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
             if (config.getSharedSecret() != null) {
                 byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
@@ -100,7 +100,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
      * Creates a helper for creating/validating HmacSHA256 based registration assertions.
      * 
      * @param sharedSecret The shared secret.
-     * @param tokenExpiration The number of minutes after which tokens expire.
+     * @param tokenExpiration The number of seconds after which tokens expire.
      * @return The helper.
      * @throws NullPointerException if sharedSecret is {@code null}.
      */
@@ -108,7 +108,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
         Objects.requireNonNull(sharedSecret);
         RegistrationAssertionHelperImpl result = new RegistrationAssertionHelperImpl();
         result.setSharedSecret(getBytes(sharedSecret));
-        result.tokenLifetime = Duration.ofMinutes(tokenExpiration);
+        result.tokenLifetime = Duration.ofSeconds(tokenExpiration);
         return result;
     }
 

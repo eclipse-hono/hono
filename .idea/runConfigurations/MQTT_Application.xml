@@ -1,0 +1,122 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="MQTT Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="org.eclipse.hono.adapter.mqtt.Application" />
+    <option name="ACTIVE_PROFILES" value="dev" />
+    <option name="WORKING_DIRECTORY" value="file://$MODULE_DIR$" />
+    <option name="ALTERNATIVE_JRE_PATH" />
+    <additionalParameters>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.app.maxInstances" />
+        <option name="value" value="1" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckPort" />
+        <option name="value" value="8090" />
+      </param>
+      <param>
+        <option name="name" value="hono.app.healthCheckBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.name" />
+        <option name="value" value="Hono MQTT Adapter" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.host" />
+        <option name="value" value="localhost" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.port" />
+        <option name="value" value="5671" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.username" />
+        <option name="value" value="mqtt-adapter@HONO" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.password" />
+        <option name="value" value="mqtt-secret" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.trustStorePath" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.messaging.hostnameVerificationRequired" />
+        <option name="value" value="false" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.name" />
+        <option name="value" value="Hono MQTT Adapter" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.host" />
+        <option name="value" value="localhost" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.port" />
+        <option name="value" value="26671" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.username" />
+        <option name="value" value="mqtt-adapter@HONO" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.password" />
+        <option name="value" value="mqtt-secret" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.trustStorePath" />
+        <option name="value" value="../../demo-certs/certs/trusted-certs.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.registration.hostnameVerificationRequired" />
+        <option name="value" value="false" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.bindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.insecurePortBindAddress" />
+        <option name="value" value="0.0.0.0" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.insecurePortEnabled" />
+        <option name="value" value="true" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.keyPath" />
+        <option name="value" value="../../demo-certs/certs/mqtt-adapter-key.pem" />
+      </param>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="hono.mqtt.certPath" />
+        <option name="value" value="../../demo-certs/certs/mqtt-adapter-cert.pem" />
+      </param>
+    </additionalParameters>
+    <module name="hono-adapter-mqtt-vertx" />
+    <envs />
+    <method />
+  </configuration>
+</component>

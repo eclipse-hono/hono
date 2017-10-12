@@ -21,7 +21,7 @@ The following diagram provides an overview of the components involved in use cas
 
 ### Device Auth
 
-Hono does not (yet) support authentication of devices using any of the protocol adapters that come with Hono. This capability will be added once the default implementation of the [Credentials API]({{< relref "api/Credentials-API.md" >}}) is ready. In the meantime, custom protocol adapters may authenticate devices using whatever means are available, e.g. HTTP Basic auth or client certificate based authentication.
+Both the REST adapter as well as the MQTT adapter require devices to authenticate during connection establishment by default. Both rely on the [Credentials API]({{< relref "api/Credentials-API.md" >}}) to help in verifying credentials provided by a device. See [Device Authentication]({{< relref "concepts/device-identity.md" >}}) for a general overview of Hono's approach to authenticating devices and [REST adapter]({{< relref "component/rest-adapter.md" >}}) and [MQTT adapter]({{< relref "component/mqtt-adapter.md" >}}) for specifics regarding how devices using HTTP and MQTT can authenticate to the corresponding protocol adapters.
 
 ### System Component Auth
 

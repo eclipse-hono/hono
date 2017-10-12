@@ -19,6 +19,7 @@
   <logger name="org.eclipse.hono.service.auth" level="INFO"/>
   <logger name="org.eclipse.hono.deviceregistry" level="INFO"/>
   <logger name="org.eclipse.hono.service.auth.delegating" level="INFO"/>
+  <logger name="org.eclipse.hono.service.credentials" level="INFO"/>
 
   <logger name="io.vertx.proton.impl" level="INFO"/>
   <logger name="io.vertx.proton.sasl.impl" level="INFO"/>
