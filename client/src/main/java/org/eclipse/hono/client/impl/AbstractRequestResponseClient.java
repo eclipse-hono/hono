@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A Vertx-Proton based parent class for the implementation of API clients that follow the request response pattern.
- * The class is a generic that expects two classes:
  * <p>
  * Subclasses only need to implement some abstract helper methods (see the method descriptions) and their own
  * API specific methods. This allows for implementation classes that focus on the API specific code.
@@ -45,10 +44,13 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         extends AbstractHonoClient implements RequestResponseClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractRequestResponseClient.class);
+    private static final long DEFAULT_TIMEOUT_MILLIS = 200L;
 
     private final Map<String, Handler<AsyncResult<R>>> replyMap = new ConcurrentHashMap<>();
     private final String replyToAddress;
     private final String targetAddress;
+
+    private long requestTimeoutMillis = DEFAULT_TIMEOUT_MILLIS;
 
     /**
      * Creates a request-response client.
@@ -78,6 +80,31 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         this(context, tenantId);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
+    }
+
+    /**
+     * Sets the period of time after which any requests are considered to have timed out.
+     * <p>
+     * The client will fail the result handler passed in to any of the operations if no response
+     * has been received from the peer after the given amount of time.
+     * <p>
+     * When setting this property to 0, requests do not time out at all. Note that this will
+     * allow for unanswered requests piling up in the client, which eventually may cause the
+     * client to run out of memory.
+     * <p>
+     * The default value of this property is 200 milliseconds.
+     * 
+     * @param timoutMillis The number of milliseconds after which a request is considered to have timed out.
+     * @throws IllegalArgumentException if the value is &lt; 0
+     */
+    @Override
+    public final void setRequestTimeout(final long timoutMillis) {
+
+        if (timoutMillis < 0) {
+            throw new IllegalArgumentException("request timeout must be >= 0");
+        } else {
+            this.requestTimeoutMillis = timoutMillis;
+        }
     }
 
     /**
@@ -180,6 +207,30 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         }
     }
 
+    /**
+     * Cancels an outstanding request with a given result.
+     * 
+     * @param correlationId The correlation id of the request to cancel.
+     * @param result The result to pass to the request's result handler.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the result has not failed.
+     */
+    protected final void cancelRequest(final String correlationId, final AsyncResult<R> result) {
+
+        Objects.requireNonNull(correlationId);
+        Objects.requireNonNull(result);
+        if (!result.failed()) {
+            throw new IllegalArgumentException("result must be failed");
+        } else {
+            Handler<AsyncResult<R>> responseHandler = replyMap.remove(correlationId);
+            if (responseHandler != null) {
+                LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
+                        targetAddress, correlationId, result.cause().getMessage());
+                responseHandler.handle(result);
+            }
+        }
+    }
+
     private R getRequestResponseResult(final Message message) {
         final String status = MessageHelper.getApplicationProperty(
                 message.getApplicationProperties(),
@@ -247,12 +298,16 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         Objects.requireNonNull(action);
         Objects.requireNonNull(resultHandler);
 
-        final Message request = createMessage(action, properties);
-        if (payload != null) {
-            request.setContentType(RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON);
-            request.setBody(new AmqpValue(payload.encode()));
+        if (isOpen()) {
+            final Message request = createMessage(action, properties);
+            if (payload != null) {
+                request.setContentType(RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON);
+                request.setBody(new AmqpValue(payload.encode()));
+            }
+            sendRequest(request, resultHandler);
+        } else {
+            resultHandler.handle(Future.failedFuture(new IllegalStateException("sender and/or receiver link is not open")));
         }
-        sendRequest(request, resultHandler);
     }
 
     /**
@@ -268,8 +323,14 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
         context.runOnContext(req -> {
             if (sender.getCredit() > 0) {
-                replyMap.put((String) request.getMessageId(), resultHandler);
+                final String messageId = (String) request.getMessageId();
+                replyMap.put(messageId, resultHandler);
                 sender.send(request);
+                if (requestTimeoutMillis > 0) {
+                    context.owner().setTimer(requestTimeoutMillis, tid -> {
+                        cancelRequest(messageId, Future.failedFuture(String.format("request timed out after %d ms", requestTimeoutMillis)));
+                    });
+                }
             } else {
                 LOG.debug("cannot send request to peer, no credit left for link [target: {}]", sender.getRemoteTarget().getAddress());
                 resultHandler.handle(Future.failedFuture("no credit to send request to peer"));
