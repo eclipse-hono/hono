@@ -24,12 +24,6 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-autoconfigure</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 
