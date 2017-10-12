@@ -50,6 +50,12 @@ pluralizeListTitles = "false"
 
 
 [[menu.main]]
+  name   = "Concepts"
+  identifier = "Concepts"
+  url    = "/concepts/"
+  weight = 180
+
+[[menu.main]]
 	name   = "User Guide"
 	identifier = "User Guide"
 	url    = "/user-guide/"

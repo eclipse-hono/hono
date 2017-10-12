@@ -32,6 +32,14 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <includes>
+          <include>etc/*</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <!--
@@ -75,44 +83,6 @@
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>fabric8-maven-plugin</artifactId>
-            <configuration>
-              <images>
-                <image>
-                  <build>
-                    <from>enmasseproject/activemq-artemis:${artemis.version}-1</from>
-                    <ports>
-                      <port>5671</port>
-                    </ports>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/opt/artemis</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.basedir}/etc</directory>
-                            <outputDirectory>etc</outputDirectory>
-                            <includes>
-                              <include>broker.xml</include>
-                              <include>artemis-users.properties</include>
-                              <include>artemis-roles.properties</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc</outputDirectory>
-                            <includes>
-                              <include>artemisKeyStore.p12</include>
-                              <include>trustStore.jks</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-              </images>
-            </configuration>
           </plugin>
         </plugins>
       </build>

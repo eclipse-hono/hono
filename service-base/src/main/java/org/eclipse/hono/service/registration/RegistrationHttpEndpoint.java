@@ -12,21 +12,22 @@
 
 package org.eclipse.hono.service.registration;
 
+import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
+
 import java.net.HttpURLConnection;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpointUtils;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -42,7 +43,8 @@ import io.vertx.ext.web.RoutingContext;
  */
 public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
-    private static final String PARAM_TENANT = "tenant";
+    // path parameters for capturing parts of the URI path
+    private static final String PARAM_TENANT_ID = "tenant_id";
     private static final String PARAM_DEVICE_ID = "device_id";
 
     /**
@@ -56,17 +58,6 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         super(Objects.requireNonNull(vertx));
     }
 
-    private static JsonObject getPayloadForParams(final HttpServerRequest request) {
-        JsonObject payload = new JsonObject();
-        for (Entry<String, String> param : request.params()) {
-            // filter out tenant param captured from URI path
-            if (!PARAM_TENANT.equalsIgnoreCase(param.getKey())) {
-                payload.put(param.getKey(), param.getValue());
-            }
-        }
-        return payload;
-    }
-
     @Override
     public String getName() {
         return RegistrationConstants.REGISTRATION_ENDPOINT;
@@ -75,41 +66,44 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     @Override
     public void addRoutes(final Router router) {
 
+        final String pathWithTenant = String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID);
         // ADD device registration
-        router.route(HttpMethod.POST, String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT))
-            .consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
-            .handler(this::doRegisterDeviceJson);
-        router.route(HttpMethod.POST, String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT))
-            .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-            .handler(this::doRegisterDeviceForm);
-        router.route(HttpMethod.POST, String.format("/%s/*/*", RegistrationConstants.REGISTRATION_ENDPOINT))
-            .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+        router.route(HttpMethod.POST, pathWithTenant).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
+                .handler(this::doRegisterDeviceJson);
+        router.route(HttpMethod.POST, pathWithTenant)
+                .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
 
+        final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s",
+                RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID);
         // GET device registration
-        router.route(HttpMethod.GET, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(this::doGetDevice);
+        router.route(HttpMethod.GET, pathWithTenantAndDeviceId).handler(this::doGetDevice);
 
         // UPDATE existing registration
-        router.route(HttpMethod.PUT, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
-            .consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
-            .handler(this::doUpdateRegistrationJson);
-        router.route(HttpMethod.PUT, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
-            .consumes(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-            .handler(this::doUpdateRegistrationForm);
-        router.route(HttpMethod.PUT, String.format("/%s/*/*", RegistrationConstants.REGISTRATION_ENDPOINT))
-            .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+        router.route(HttpMethod.PUT, pathWithTenantAndDeviceId).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
+                .handler(this::doUpdateRegistrationJson);
+        router.route(HttpMethod.PUT, pathWithTenantAndDeviceId)
+                .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
 
         // REMOVE registration
-        router.route(HttpMethod.DELETE, String.format("/%s/:%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(this::doUnregisterDevice);
+        router.route(HttpMethod.DELETE, pathWithTenantAndDeviceId).handler(this::doUnregisterDevice);
     }
 
     private static String getTenantParam(final RoutingContext ctx) {
-        return ctx.request().getParam(PARAM_TENANT);
+        return ctx.request().getParam(PARAM_TENANT_ID);
     }
 
     private static String getDeviceIdParam(final RoutingContext ctx) {
         return ctx.request().getParam(PARAM_DEVICE_ID);
+    }
+
+    private static void setResponseBody(final JsonObject registrationResult, final HttpServerResponse response) {
+        JsonObject msg = registrationResult.getJsonObject(RegistrationConstants.FIELD_PAYLOAD);
+        if (msg != null) {
+            String body = msg.encodePrettily();
+            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+                .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
+                .write(body);
+        }
     }
 
     private void doGetDevice(final RoutingContext ctx) {
@@ -123,7 +117,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
             response.setStatusCode(status);
             switch (status) {
                 case HttpURLConnection.HTTP_OK:
-                    final String msg = registrationResult.getJsonObject("payload").encodePrettily();
+                    final String msg = registrationResult.getJsonObject(RegistrationConstants.FIELD_PAYLOAD).encodePrettily();
                     response
                             .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
                             .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
@@ -146,21 +140,16 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         }
     }
 
-    private void doRegisterDeviceForm(final RoutingContext ctx) {
-
-        registerDevice(ctx, getPayloadForParams(ctx.request()));
-    }
-
     private void registerDevice(final RoutingContext ctx, final JsonObject payload) {
 
         if (payload == null) {
             HttpEndpointUtils.badRequest(ctx.response(), "missing body");
         } else {
-            Object deviceId = payload.remove(PARAM_DEVICE_ID);
+            Object deviceId = payload.remove(FIELD_DEVICE_ID);
             if (deviceId == null) {
-                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", PARAM_DEVICE_ID));
+                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", FIELD_DEVICE_ID));
             } else if (!(deviceId instanceof String)) {
-                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' must be a string", PARAM_DEVICE_ID));
+                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' must be a string", FIELD_DEVICE_ID));
             } else {
                 final String tenantId = getTenantParam(ctx);
                 logger.debug("registering data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
@@ -170,8 +159,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                         response.setStatusCode(status);
                         switch(status) {
                         case HttpURLConnection.HTTP_CREATED:
-                            response
-                                .putHeader(
+                            response.putHeader(
                                         HttpHeaders.LOCATION,
                                         String.format("/%s/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId));
                         default:
@@ -195,15 +183,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         }
     }
 
-    private void doUpdateRegistrationForm(final RoutingContext ctx) {
-
-        updateRegistration(getDeviceIdParam(ctx), getPayloadForParams(ctx.request()), ctx);
-    }
-
     private void updateRegistration(final String deviceId, final JsonObject payload, final RoutingContext ctx) {
 
         if (payload != null) {
-            payload.remove(PARAM_DEVICE_ID);
+            payload.remove(FIELD_DEVICE_ID);
         }
         final String tenantId = getTenantParam(ctx);
         logger.debug("updating registration data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
@@ -212,16 +195,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
 
         doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
                 response.setStatusCode(status);
-                switch(status) {
-                case HttpURLConnection.HTTP_OK:
-                    String msg = registrationResult.getJsonObject("payload").encodePrettily();
-                    response
-                        .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
-                        .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
-                        .write(msg);
-                default:
-                    response.end();
+                if (status >=400) {
+                    setResponseBody(registrationResult, response);
                 }
+                response.end();
         });
     }
 
@@ -234,16 +211,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_DEREGISTER, tenantId, deviceId);
         doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
                 response.setStatusCode(status);
-                switch(status) {
-                case HttpURLConnection.HTTP_OK:
-                    String msg = registrationResult.getJsonObject("payload").encodePrettily();
-                    response
-                        .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
-                        .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
-                        .write(msg);
-                default:
-                    response.end();
+                if (status >= 400) {
+                    setResponseBody(registrationResult, response);
                 }
+                response.end();
         });
     }
 
@@ -256,7 +227,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                         HttpEndpointUtils.serviceUnavailable(response, 2);
                     } else {
                         final JsonObject registrationResult = (JsonObject) invocation.result().body();
-                        final Integer status = Integer.valueOf(registrationResult.getString("status"));
+                        final Integer status = Integer.valueOf(registrationResult.getString(MessageHelper.APP_PROPERTY_STATUS));
                         responseHandler.accept(status, registrationResult);
                     }
                 });

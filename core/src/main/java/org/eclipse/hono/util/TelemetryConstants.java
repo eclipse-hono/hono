@@ -9,9 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.telemetry;
-
-import org.eclipse.hono.util.Constants;
+package org.eclipse.hono.util;
 
 /**
  * Constants &amp; utility methods used throughout the Telemetry API.

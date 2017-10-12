@@ -6,15 +6,11 @@ weight = 435
 The *Credentials API* is used by *Protocol Adapters* to retrieve credentials used to authenticate *Devices* connecting to the adapter. In particular, the API supports the storage, look up and deletion of *shared secrets* which are often used by IoT devices by means of *username/password* based authentication schemes.
 <!--more-->
 
-Credentials are of a certain *type* which indicates which authentication mechanism the credentials can be used with. Each set of credentials also contains an *authentication identity* which is the identity claimed by the device during authentication. This authentication identity is usually different from the *logical* ID the device has been registered with using Hono's [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}). Multiple sets of credentials (including arbitrary *authentication identities*) can be registered for each *logical* device ID.
+Credentials are of a certain *type* which indicates which authentication mechanism the credentials can be used with. Each set of credentials also contains an *authentication identity* which is the identity claimed by the device during authentication. This authentication identity is usually different from the *device-id* the device has been registered with using Hono's [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}). Multiple sets of credentials (including arbitrary *authentication identities*) can be registered for each *device-id*.
 
 Note, however, that in real world applications the device credentials will probably be kept and managed by an existing *system of record*, using e.g. a database for persisting the credentials. The Credential API accounts for this fact by means of defining only the [Get Credentials]({{< relref "#get-credentials" >}}) operation as *mandatory*, meaning that this operation is strictly required by a Hono instance for it to work properly. The remaining operations are defined as *optional* from Hono's perspective.
 
 The Credentials API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
-
-{{% note %}}
-This API is not yet implemented in Hono.
-{{% /note %}}
 
 ## Preconditions
 
@@ -32,9 +28,12 @@ All operations are scoped to the *tenant* specified by the `${tenant_id}` parame
 
 ### Add Credentials
 
-Clients may use this command to initially *add* credentials for a device that has already been registered with Hono. The credentials to be added may be of arbitrary type. However, [Standard Credential Types]({{< relref "#standard-credential-types" >}}) contains an overview of some common types that are used by Hono's protocol adapters and which may be useful to others as well.
+Clients may use this command to initially *add* credentials for a device. The credentials to be added may be of arbitrary type. However, [Standard Credential Types]({{< relref "#standard-credential-types" >}}) contains an overview of some common types that are used by Hono's protocol adapters and which may be useful to others as well.
 
 This operation is *optional*, implementors of this API may provide other means for adding credential information, e.g. a RESTful API or a configuration file.
+
+*Optional check* : Implementors of this API may check first if the device has already been registered with Hono and respond with a non successful error code (see Response Message Format below) if the device was not found.
+This check is not mandatory and for some scenarios it might be desired to provide credentials for devices that are registered later (e.g. devices provisioned with pre-shared keys that are registered during their first time being connected to Hono).
 
 **Message Flow**
 
@@ -61,8 +60,8 @@ The response message's *status* property may contain the following codes:
 | Code  | Description |
 | :---- | :---------- |
 | *201* | Created, the credentials have been added successfully. |
-| *409* | Conflict, there already exist credentials with the *type* and *auth-id* for the *device-id* from the payload. |
-| *412* | Precondition Failed, there is no device registered with the given *device-id* within the tenant. |
+| *409* | Conflict, there already exist credentials of the given *type* for the given *auth-id*. |
+| *412* | Precondition Failed, there is no device registered with the given *device-id* within the tenant. **NB** This status is only used when the implementation checks the registration of the device (see optional check in [Add Credentials description]({{< relref "#add-credentials" >}})).|
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -91,12 +90,12 @@ The body of the request MUST consist of a single *AMQP Value* section containing
 | *type*           | *yes*     | *string*   | The type of credentials to look up. Potential values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   | The authentication identifier to look up credentials for. |
 
-The following request payload may be used to look up the hashed password for user `billie`:
+The following request payload may be used to look up the hashed password for a device with the authentication identifier `sensor1`:
 
 ~~~json
 {
   "type": "hashed-password",
-  "auth-id": "billie"
+  "auth-id": "sensor1"
 }
 ~~~
 
@@ -251,7 +250,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *type*           | *yes*     | *string*   |               | The credential type name. The value may be arbitrarily chosen by clients but SHOULD reflect the particular type of authentication mechanism the credentials are to be used with. Possible values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   |               | The identity that the device should be authenticated as. |
 | *enabled*        | *no*      | *boolean*  | *true*        | If set to *false* the credentials are not supposed to be used to authenticate devices any longer. This may e.g. be used to disable a particular mechanism for authenticating the device. **NB** It is up to the discretion of the protocol adapter to make use of this information. |
-| *secrets*        | *yes*     | *array*    |               | A list of secrets scoped to a particular time period. See [Secrets Format]({{< relref "#secrets-format" >}}) for details. |
+| *secrets*        | *yes*     | *array*    |               | A list of secrets scoped to a particular time period. See [Secrets Format]({{< relref "#secrets-format" >}}) for details. **NB** This array must contain at least one element - an empty array is handled as an error.|
 
 For each set of credentials the combination of *auth-id* and *type* MUST be unique within a tenant.
 
@@ -268,30 +267,30 @@ The table below contains the properties used to define the validity period of a 
 
 ### Examples
 
-Below is an example for a payload containing [a hashed password]({{< relref "#hashed-password" >}}) for device `4711` with username `billie` using SHA512 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`). Note that the payload does not contain a `not-before` property, thus it may be used immediately up until X-mas eve 2017.
+Below is an example for a payload containing [a hashed password]({{< relref "#hashed-password" >}}) for device `4711` with auth-id `sensor1` using SHA512 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`). Note that the payload does not contain a `not-before` property, thus it may be used immediately up until X-mas eve 2017.
 
 ~~~json
 {
   "device-id": "4711",
   "type": "hashed-password",
-  "auth-id": "billie",
+  "auth-id": "sensor1",
   "enabled": true,
   "secrets": [{
     "not-after": "20171224T1900Z+0100",
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
-    "hash-function": "sha512"
+    "hash-function": "sha-512"
   }]
 }
 ~~~
 
-The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" >}}) with overlapping validity periods for device `myDevice` with PSK identity `jane`.
+The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" >}}) with overlapping validity periods for device `myDevice` with PSK identity `little-sensor2`.
 
 ~~~json
 {
   "device-id": "myDevice",
   "type": "psk",
-  "auth-id": "jane",
+  "auth-id": "little-sensor2",
   "enabled": true,
   "secrets": [{
     "not-after": "20170701T0000Z+0100",
@@ -325,7 +324,7 @@ All credential types used with Hono MUST contain `device-id`, `type`, `auth-id`,
 
 ### Hashed Password
 
-A credential type for storing a (hashed) password for a user.
+A credential type for storing a (hashed) password for a device.
 
 Example:
 
@@ -333,11 +332,11 @@ Example:
 {
   "device-id": "4711",
   "type": "hashed-password",
-  "auth-id": "billie",
+  "auth-id": "sensor1",
   "secrets": [{
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
-    "hash-function": "sha512"
+    "hash-function": "sha-512"
   }]
 }
 ~~~
@@ -345,12 +344,12 @@ Example:
 | Name             | Mandatory | Type       | Default   | Description |
 | :--------------- | :-------: | :--------- | :-------- | :---------- |
 | *type*           | *yes*     | *string*   |           | The credential type name, always `hashed-password`. |
-| *auth-id*        | *yes*     | *string*   |           | The *username* |
-| *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. |
+| *auth-id*        | *yes*     | *string*   |           | The identity that the device should be authenticated as. |
+| *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. The password hash MUST be computed by applying the hash function to the byte array consisting of the salt bytes (if a salt is used) and the UTF-8 encoding of the clear text password. |
 | *salt*           | *no*      | *string*   |           | The Base64 encoded bytes used as *salt* for the password hash. If not set then the password hash has been created without salt. |
-| *hash-function*  | *no*      | *string*   | `sha256`  | The name of the hash function used to create the password hash. Examples include `sha256`, `sha512` etc. |
+| *hash-function*  | *no*      | *string*   | `sha-256` | The name of the hash function used to create the password hash. Examples include `sha-256`, `sha-512` etc. |
 
-**NB** It is strongly recommended to only use salted password hashes. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
+**NB** It is strongly recommended to use salted password hashes only. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
 Whenever a password is updated for a user, the salt should change as well.
 
 **NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
@@ -365,7 +364,7 @@ Example:
 {
   "device-id": "4711",
   "type": "psk",
-  "auth-id": "little-sensor",
+  "auth-id": "little-sensor2",
   "secrets": [{
     "key": "AQIDBAUGBwg="
   }]

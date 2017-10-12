@@ -12,39 +12,74 @@
 
 package org.eclipse.hono.adapter.rest;
 
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BasicAuthHandler;
 
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using REST.
  */
-public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<ServiceConfigProperties> {
+public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
 
     @Override
-    protected void addRoutes(final Router router) {
+    protected final void addRoutes(final Router router) {
+        if (!getConfig().isAuthenticationRequired()) {
+            LOG.warn("device authentication has been disabled");
+            LOG.warn("any device may publish data on behalf of all other devices");
+        } else {
+            setupBasicAuth(router);
+        }
         addTelemetryApiRoutes(router);
         addEventApiRoutes(router);
     }
 
+    private void setupBasicAuth(final Router router) {
+        router.route().handler(BasicAuthHandler.create(getCredentialsAuthProvider(), getConfig().getRealm()));
+    }
+
     private void addTelemetryApiRoutes(final Router router) {
+
+        if (getConfig().isAuthenticationRequired()) {
+            // route for posting telemetry data using tenant and device ID determined as part of
+            // device authentication
+            router.route(HttpMethod.POST, "/telemetry").handler(this::handlePostTelemetry);
+            // route for asserting that authenticated identity matches path variables
+            router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
+                .handler(this::assertDeviceIdentity);
+        }
 
         // route for uploading telemetry data
         router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(ctx -> uploadTelemetryMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
+                .handler(ctx -> uploadTelemetryMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
     private void addEventApiRoutes(final Router router) {
 
+        if (getConfig().isAuthenticationRequired()) {
+            // route for posting events using tenant and device ID determined as part of
+            // device authentication
+            router.route(HttpMethod.POST, "/event").handler(this::handlePostEvent);
+            // route for asserting that authenticated identity matches path variables
+            router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
+                .handler(this::assertDeviceIdentity);
+        }
+
         // route for sending event messages
         router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-            .handler(ctx -> uploadEventMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
+                .handler(ctx -> uploadEventMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
     private static String getTenantParam(final RoutingContext ctx) {
@@ -59,7 +94,45 @@ public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpP
      * Returns {@code null} to disable status resource.
      */
     @Override
-    protected String getStatusResourcePath() {
+    protected final String getStatusResourcePath() {
         return null;
+    }
+
+    private void handle401(final RoutingContext ctx) {
+        unauthorized(ctx.response(), "Basic realm=\"" + getConfig().getRealm() + "\"");
+    }
+
+    void handlePostTelemetry(final RoutingContext ctx) {
+
+        if (Device.class.isInstance(ctx.user())) {
+            Device device = (Device) ctx.user();
+            uploadTelemetryMessage(ctx, device.getTenantId(), device.getDeviceId());
+        } else {
+            handle401(ctx);
+        }
+    }
+
+    void handlePostEvent(final RoutingContext ctx) {
+
+        if (Device.class.isInstance(ctx.user())) {
+            Device device = (Device) ctx.user();
+            uploadEventMessage(ctx, device.getTenantId(), device.getDeviceId());
+        } else {
+            handle401(ctx);
+        }
+    }
+
+    void assertDeviceIdentity(final RoutingContext ctx) {
+
+        if (Device.class.isInstance(ctx.user())) {
+            Device device = (Device) ctx.user();
+            if (device.getTenantId().equals(getTenantParam(ctx)) && device.getDeviceId().equals(getDeviceIdParam(ctx))) {
+                ctx.next();
+            } else {
+                endWithStatus(ctx.response(), HttpURLConnection.HTTP_FORBIDDEN, null, null, null);
+            }
+        } else {
+            handle401(ctx);
+        }
     }
 }

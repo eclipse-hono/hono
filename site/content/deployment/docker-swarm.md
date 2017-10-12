@@ -14,7 +14,7 @@ The only requirement for this guide is a working cluster of Docker Engine nodes 
 
 ## Deployment
 
-It is very easy to deploy the containers comprising a Hono instance to an existing Docker Swarm based on a [Docker *compose* file](https://docs.docker.com/compose/compose-file/). The remainder of this guide will use the example deploy script created in the `example/target/deploy/docker` folder during the build process for that purpose. Once the build has finished, the process of deploying Hono to a cloud based, multi-node cluster is similar to the way described in the [Getting started guide]({{< relref "getting-started.md" >}}):
+It is very easy to deploy the containers comprising a Hono instance to an existing Docker Swarm based on a script. The remainder of this guide will use the example deploy script created in the `example/target/deploy/docker` folder during the build process for that purpose. Once the build has finished, the process of deploying Hono to a cloud based, multi-node cluster is similar to the way described in the [Getting started guide]({{< relref "getting-started.md" >}}):
 
 ~~~sh
 ~/hono/example$ export DOCKER_HOST=tcp://my-swarm.my-domain.com:2375
@@ -109,7 +109,7 @@ The `swarm_deploy.sh` script already creates and uses Docker secrets for providi
 
 ### Modifying the Deploy Script
 
-1. Open the default `~/hono/example/src/main/deploy/docker/swarm_deploy.sh` file in a text editor and add a `create secret` command for `my-permissions.json` to the already existing ones for the Auth Service. Make sure to specify the correct path to the `my-permissions.json` file you have created.
+1. Open the default `~/hono/example/src/main/deploy/docker/swarm_deploy.sh` file in a text editor and add a `docker secret create` command for `my-permissions.json` to the already existing ones for the Auth Service. Make sure to specify the correct path to the `my-permissions.json` file you have created.
 
        ~~~sh
        ...
@@ -139,7 +139,7 @@ The `swarm_deploy.sh` script already creates and uses Docker secrets for providi
        ...
        ~~~
 
-    The newly added `create secret` command defines the secret that the service should get access to during runtime.
+    The newly added `docker secret create` command defines the secret that the service should get access to during runtime.
 
 1. Save the file.
 

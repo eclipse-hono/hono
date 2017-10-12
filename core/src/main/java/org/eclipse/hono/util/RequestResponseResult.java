@@ -12,33 +12,42 @@
 package org.eclipse.hono.util;
 
 
-import io.vertx.core.json.JsonObject;
-
 /**
  * A container for the result returned by a Hono API that implements the request response pattern.
  *
+ * @param <T> denotes the concrete type of the payload that is part of the result
  */
-public class RequestResponseResult {
+public class RequestResponseResult<T> {
 
     private final int status;
-    private final JsonObject payload;
+    private final T payload;
 
-    protected RequestResponseResult(final int status, final JsonObject payload) {
+    /**
+     * Creates a new result for a status code and payload.
+     * 
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to convey to the sender of the request.
+     */
+    protected RequestResponseResult(final int status, final T payload) {
         this.status = status;
         this.payload = payload;
     }
 
     /**
-     * @return the status
+     * Gets the status code indicating the outcome of the request.
+     * 
+     * @return The code.
      */
     public final int getStatus() {
         return status;
     }
 
     /**
-     * @return the payload
+     * Gets the payload to convey to the sender of the request.
+     * 
+     * @return The payload.
      */
-    public final JsonObject getPayload() {
+    public final T getPayload() {
         return payload;
     }
 }

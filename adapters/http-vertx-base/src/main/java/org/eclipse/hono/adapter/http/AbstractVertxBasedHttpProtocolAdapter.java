@@ -20,10 +20,11 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.JwtHelper;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,26 +49,27 @@ import io.vertx.ext.web.handler.BodyHandler;
  * 
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceConfigProperties> extends AbstractProtocolAdapterBase<T> {
+public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtocolAdapterProperties> extends AbstractProtocolAdapterBase<T> {
 
     /**
      * The <em>application/json</em> content type.
      */
-    protected static final String CONTENT_TYPE_JSON = "application/json";
+    protected static final String CONTENT_TYPE_JSON              = "application/json";
     /**
      * The <em>application/json; charset=utf-8</em> content type.
      */
-    protected static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
+    protected static final String CONTENT_TYPE_JSON_UFT8         = "application/json; charset=utf-8";
 
     /**
      * Default file uploads directory used by Vert.x Web
      */
-    protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
+    protected static final String DEFAULT_UPLOADS_DIRECTORY      = "/tmp";
 
     /**
-     * The name of the cookie used to store a device's registration assertion JWT token.
+     * The name of the HTTP header field used to convey a device's registration status assertion.
      */
     protected static final String HEADER_REGISTRATION_ASSERTION = "Hono-Reg-Assertion";
+
     private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
     @Value("${spring.profiles.active:}")
@@ -75,6 +77,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
 
     private HttpServer server;
     private HttpServer insecureServer;
+
+    private HttpAdapterMetrics metrics;
+
+    /**
+     * Sets the metrics for this service
+     *
+     * @param metrics The metrics
+     */
+    @Autowired
+    public final void setMetrics(final HttpAdapterMetrics metrics) {
+        this.metrics = metrics;
+    }
 
     /**
      * @return 8443
@@ -145,7 +159,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     }
 
     @Override
-    public final void doStart(Future<Void> startFuture) {
+    public final void doStart(final Future<Void> startFuture) {
 
         checkPortConfiguration()
             .compose(s -> preStartup())
@@ -161,7 +175,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             .compose(s -> {
                 connectToMessaging(null);
                 connectToDeviceRegistration(null);
-                connectToCredentialsService(null);
                 try {
                     onStartupSuccess();
                     startFuture.complete();
@@ -325,7 +338,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     }
 
     @Override
-    public final void doStop(Future<Void> stopFuture) {
+    public final void doStop(final Future<Void> stopFuture) {
 
         try {
             preShutdown();
@@ -457,6 +470,23 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
     }
 
     /**
+     * Ends a response with HTTP status code 401 (Unauthorized) and an optional message.
+     *
+     * @param response The HTTP response to write to.
+     * @param authenticateHeaderValue The value to send to the client in the <em>WWW-Authenticate</em> header.
+     * @throws NullPointerException if response is {@code null}.
+     */
+    protected static void unauthorized(final HttpServerResponse response, final String authenticateHeaderValue) {
+
+        Objects.requireNonNull(response);
+        Objects.requireNonNull(authenticateHeaderValue);
+        LOG.debug("client is required to authenticate [{}]", authenticateHeaderValue);
+        Map<CharSequence, CharSequence> headers = new HashMap<>();
+        headers.put("WWW-Authenticate", authenticateHeaderValue);
+        endWithStatus(response, HTTP_UNAUTHORIZED, headers, null, null);
+    }
+
+    /**
      * Ends a response with a given HTTP status code and detail message.
      *
      * @param response The HTTP response to write to.
@@ -467,7 +497,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * @throws NullPointerException if response is {@code null}.
      */
     protected static void endWithStatus(final HttpServerResponse response, final int status,
-            Map<CharSequence, CharSequence> headers, final String detail, final String contentType) {
+            final Map<CharSequence, CharSequence> headers, final String detail, final String contentType) {
 
         Objects.requireNonNull(response);
         response.setStatusCode(status);
@@ -569,7 +599,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
                 Objects.requireNonNull(deviceId),
                 payload,
                 contentType,
-                getTelemetrySender(tenant));
+                getTelemetrySender(tenant),
+                TelemetryConstants.TELEMETRY_ENDPOINT);
     }
 
     /**
@@ -620,16 +651,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
                 Objects.requireNonNull(deviceId),
                 payload,
                 contentType,
-                getEventSender(tenant));
+                getEventSender(tenant),
+                EventConstants.EVENT_ENDPOINT);
     }
 
     private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
-            final Buffer payload, final String contentType, final Future<MessageSender> senderTracker) {
+            final Buffer payload, final String contentType, final Future<MessageSender> senderTracker,
+            final String endpointName) {
 
         if (contentType == null) {
             badRequest(ctx.response(), String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
+            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
         } else if (payload == null || payload.length() == 0) {
             badRequest(ctx.response(), "missing body");
+            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
         } else {
             
             final Future<String> tokenTracker = getRegistrationAssertionHeader(ctx, tenant, deviceId);
@@ -642,23 +677,28 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
                     } else {
                         serviceUnavailable(ctx.response(), 5);
                     }
+                    metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
                 } else {
-                    sendToHono(ctx.response(), deviceId, payload, contentType, tokenTracker.result(), senderTracker.result());
+                    sendToHono(ctx.response(), deviceId, payload, contentType, tokenTracker.result(),
+                            senderTracker.result(), tenant, endpointName);
                 }
             });
         }
     }
 
     private void sendToHono(final HttpServerResponse response, final String deviceId, final Buffer payload,
-            final String contentType, final String token, final MessageSender sender) {
+            final String contentType, final String token, final MessageSender sender, final String tenant,
+            final String endpointName) {
 
         boolean accepted = sender.send(deviceId, payload.getBytes(), contentType, token);
         if (accepted) {
             response.setStatusCode(HTTP_ACCEPTED).end();
+            metrics.incrementProcessedHttpMessages(endpointName,tenant);
         } else {
             serviceUnavailable(response, 2,
                     "resource limit exceeded, please try again later",
                     "text/plain");
+            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
         }
     }
 
@@ -666,10 +706,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
      * Gets a registration assertion for a device.
      * <p>
      * This method first tries to retrieve the assertion from request header {@link #HEADER_REGISTRATION_ASSERTION}.
-     * If the header exists and contains a value representing a non-expired assertion, a completed future
-     * containing the header field's value is returned.
-     * Otherwise a new assertion is retrieved from the Device Registration service and included in the response
-     * using the same header name.
+     * If the header exists and contains a value representing a non-expired assertion the returned future will
+     * be completed with the value from the header.
+     * Otherwise a new assertion is retrieved from the Device Registration service and used to complete the future.
+     * If the <em>regAssertionEnabled</em> configuration property is set, the newly created token is included in
+     * the HTTP response using the same header name.
      * 
      * @param ctx The routing context to use for getting/setting the cookie.
      * @param tenantId The tenant that the device belongs to.
@@ -684,7 +725,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends ServiceCon
             return Future.succeededFuture(assertion);
         } else {
             return getRegistrationAssertion(tenantId, deviceId).compose(token -> {
-                ctx.response().putHeader(HEADER_REGISTRATION_ASSERTION, token);
+                if (getConfig().isRegAssertionEnabled()) {
+                    ctx.response().putHeader(HEADER_REGISTRATION_ASSERTION, token);
+                }
                 return Future.succeededFuture(token);
             });
         }

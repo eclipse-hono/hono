@@ -27,11 +27,8 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
-import org.eclipse.hono.event.EventConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.event.impl.EventEndpoint;
-import org.eclipse.hono.messaging.HonoMessaging;
-import org.eclipse.hono.messaging.HonoMessagingConfigProperties;
-import org.eclipse.hono.messaging.MessageDiscardingDownstreamAdapter;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -92,6 +89,7 @@ public class StandaloneEventApiTest {
         configProperties.setInsecurePort(0);
         server.setConfig(configProperties);
         EventEndpoint eventEndpoint = new EventEndpoint(vertx);
+        eventEndpoint.setMetrics(mock(MessagingMetrics.class));
         eventEndpoint.setEventAdapter(downstreamAdapter);
         eventEndpoint.setRegistrationAssertionValidator(assertionHelper);
         server.addEndpoint(eventEndpoint);
@@ -175,7 +173,7 @@ public class StandaloneEventApiTest {
             eventSender = creationAttempt.result();
             sender.complete();
         });
-        sender.await(1000L);
+        sender.await(2000L);
 
         String registrationAssertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, DEVICE_1);
         LOG.debug("got registration assertion for device [{}]: {}", DEVICE_1, registrationAssertion);
@@ -189,7 +187,7 @@ public class StandaloneEventApiTest {
                 ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()), "message has not been accepted");
             });
             LOG.trace("sender's send queue full: {}", eventSender.sendQueueFull());
-            waitForCredit.await(100);
+            waitForCredit.await();
         });
 
     }

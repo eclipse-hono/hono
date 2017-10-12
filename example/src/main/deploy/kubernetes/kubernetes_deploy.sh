@@ -33,6 +33,17 @@ echo ... done
 
 echo
 echo Deploying Artemis broker ...
+kubectl create secret generic hono-artemis-conf \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-broker.xml \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-users.properties \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-roles.properties \
+  --from-file=$CONFIG/hono-artemis-jar/etc/login.config \
+  --from-file=$CONFIG/hono-artemis-jar/etc/logging.properties \
+  --from-file=$CONFIG/hono-artemis-jar/etc/artemis.profile \
+  --from-file=$CERTS/artemisKeyStore.p12 \
+  --from-file=$CERTS/trustStore.jks \
+  --namespace $NS
 kubectl create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
@@ -67,6 +78,7 @@ kubectl create secret generic hono-service-device-registry-conf \
   --from-file=$CERTS/device-registry-cert.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
+  --from-file=$CONFIG/example-credentials.json \
   --from-file=application.yml=$CONFIG/hono-service-device-registry-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/kubernetes.yml --namespace $NS

@@ -20,6 +20,7 @@ import static org.mockito.Mockito.*;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.messaging.MessagingMetrics;
 import org.eclipse.hono.messaging.UpstreamReceiver;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
@@ -81,6 +82,7 @@ public class ForwardingEventDownstreamAdapterTest {
             return null;
         });
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        adapter.setMetrics(mock(MessagingMetrics.class));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());
         adapter.addSender(client, sender);
@@ -112,6 +114,7 @@ public class ForwardingEventDownstreamAdapterTest {
         ProtonSender sender = newMockSender(false);
         when(sender.sendQueueFull()).thenReturn(true);
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        adapter.setMetrics(mock(MessagingMetrics.class));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());
         adapter.addSender(client, sender);

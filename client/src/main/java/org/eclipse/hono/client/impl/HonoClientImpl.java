@@ -207,6 +207,7 @@ public final class HonoClientImpl implements HonoClient {
             connection.disconnect();
             activeSenders.clear();
             activeRegClients.clear();
+            activeCredClients.clear();
             failAllCreationRequests();
             connection = null;
 

@@ -139,7 +139,7 @@ public final class KeyLoader {
     private void loadPublicKeyFromFile(final String certPath) {
 
         if (!vertx.fileSystem().existsBlocking(Objects.requireNonNull(certPath))) {
-            throw new IllegalArgumentException("certificate file does not exist");
+            throw new IllegalArgumentException("certificate file does not exist: " + certPath);
         } else if (AbstractConfig.hasPemFileSuffix(certPath)) {
             try {
 

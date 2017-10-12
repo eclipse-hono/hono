@@ -34,7 +34,7 @@ import io.vertx.proton.ProtonClientOptions;
 abstract class AbstractExampleClient {
 
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
-    protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 200;
+    protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
 
     protected Context ctx;
     @Value(value = "${tenant.id}")

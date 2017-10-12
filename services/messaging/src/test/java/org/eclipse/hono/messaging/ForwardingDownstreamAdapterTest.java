@@ -24,9 +24,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.messaging.ForwardingDownstreamAdapter;
-import org.eclipse.hono.messaging.SenderFactory;
-import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
@@ -349,6 +347,7 @@ public class ForwardingDownstreamAdapterTest {
                 // nothing to do
             }
         };
+        adapter.setMetrics(mock(MessagingMetrics.class));
     }
 
     private class HandlerCapturingConnectionFactory implements ConnectionFactory {

@@ -5,30 +5,18 @@ weight = 340
 
 The Device Registry component exposes an AMQP 1.0 based service endpoint implementing Eclipse Hono&trade;'s [Device Registration]({{< relref "api/Device-Registration-API.md" >}}) API. In addition, it can also be configured to expose RESTful resources representing the operations of the Device Registration API which can be accessed via HTTP.
 The Device Registration API is used by other services to assert a device's registration status, e.g. if it is enabled and if it is registered with a particular tenant.
+
+Furthermore, the Device Registry component exposes an AMQP 1.0 based service endpoint implementing Eclipse Hono&trade;'s [Credentials]({{< relref "api/Credentials-API.md" >}}) API.
+The Credentials API is used by protocol adapters to authenticate a device before the adapter processes any transfered data.
+
 <!--more-->
 
-## Configuration
+There is no particular technical reason to implement these two API's in one component, so for production scenarios there might be two different components each implementing one of the API's.
 
 The Device Registry is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image (`eclipsehono/hono-service-device-registry`) created from it.
 
-The service can be configured by means of environment variables or corresponding command line options.
 
-### Authentication Service Connection Configuration
-
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the service's connection to the Authentication service.
-
-| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
-| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_AUTH_HOST`<br>`--hono.auth.host` | yes | `localhost` | The IP address or name of the Authentication service host. NB: This needs to be set to an address that can be resolved within the network the service runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Device Registry container to the Docker network that the Authentication service container is running on. |
-| `HONO_AUTH_CERT_PATH`<br>`--hono.auth.certPath` | no | - | The absolute path to the PEM file containing the public key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_KEY_PATH`. |
-| `HONO_AUTH_KEY_PATH`<br>`--hono.auth.keyPath` | no | - | The absolute path to the PEM file containing the private key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_CERT_PATH`. |
-| `HONO_AUTH_PORT`<br>`--hono.auth.port` | yes | `5671` | The port that the Authentication service is listening on for connections. |
-| `HONO_AUTH_TRUST_STORE_PASSWORD`<br>`--hono.auth.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_AUTH_TRUST_STORE_PATH`<br>`--hono.auth.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating the Authentication service. This property **must** be set if the Authentication service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
-| `HONO_AUTH_VALIDATION_CERT_PATH`<br>`--hono.auth.validation.certPath` | no  | - | The absolute path to the PEM file containing the public key that the service should use for validating tokens issued by the Authentication service. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHARED_SECRET` variable. If none of these variables is set, the service falls back to the key indicated by the `HONO_AUTH_CERT_PATH` variable. If that variable is also not set, startup of the service fails. |
-| `HONO_AUTH_VALIDATION_SHARED_SECRET`<br>`--hono.auth.validation.sharedSecret` | no  | - | A string to derive a symmetric key from which is used for validating tokens issued by the Authentication service. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the Authentication service **must** be configured with the same key. Alternatively, an asymmetric key pair can be used for validating (and signing) by setting the `HONO_AUTH_SIGNING_CERT_PATH` variable. If none of these variables is set, startup of the service fails. |
-
-### Service Configuration
+## Service Configuration
 
 The following table provides an overview of the configuration variables and corresponding command line options for configuring the Device Registry.
 
@@ -46,8 +34,6 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_REGISTRY_AMQP_KEY_STORE_PASSWORD`<br>`--hono.registry.amqp.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_REGISTRY_AMQP_KEY_STORE_PATH`<br>`--hono.registry.amqp.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_REGISTRY_AMQP_KEY_PATH` and `HONO_REGISTRY_AMQP_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_REGISTRY_AMQP_PORT`<br>`--hono.registry.amqp.port` | no | `5671` | The secure port that the server should listen on for AMQP 1.0 connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_REGISTRY_AMQP_TRUST_STORE_PASSWORD`<br>`--hono.registry.amqp.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_REGISTRY_AMQP_TRUST_STORE_PATH`<br>`--hono.registry.amqp.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
 | `HONO_REGISTRY_REST_BIND_ADDRESS`<br>`--hono.registry.rest.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure HTTP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_REGISTRY_REST_CERT_PATH`<br>`--hono.registry.rest.certPath` | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_REST_KEY_PATH`.<br>Alternatively, the `HONO_REGISTRY_REST_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_REGISTRY_REST_INSECURE_PORT`<br>`--hono.registry.rest.insecurePort` | no | - | The insecure port the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
@@ -57,8 +43,6 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_REGISTRY_REST_KEY_STORE_PASSWORD`<br>`--hono.registry.rest.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_REGISTRY_REST_KEY_STORE_PATH`<br>`--hono.registry.rest.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_REGISTRY_REST_KEY_PATH` and `HONO_REGISTRY_REST_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_REGISTRY_REST_PORT`<br>`--hono.registry.rest.port` | no | `5671` | The secure port that the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_REGISTRY_REST_TRUST_STORE_PASSWORD`<br>`--hono.registry.rest.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-| `HONO_REGISTRY_REST_TRUST_STORE_PATH`<br>`--hono.registry.rest.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono server uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
 | `HONO_REGISTRY_SVC_FILENAME`<br>`--hono.registry.svc.filename` | no | `/home/hono/registration/`<br>`device-identities.json` | The path to the file where the server stores identities of registered devices. Hono tries to read device identities from this file during start-up and writes out all identities to this file periodically if property `HONO_REGISTRY_SVC_SAVE_TO_FILE` is set to `true`. The `eclipsehono/hono-service-device-registry` Docker image creates a volume under `/home/hono/registration` so that registration information survives container restarts and/or image updates. If you are running the Hono server from the command line you will probably want to set this variable to a path using an existing folder since Hono will not try to create the path. |
 | `HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT`<br>`--hono.registry.svc.maxDevicesPerTenant` | no | `100` | The number of devices that can be registered for each tenant. It is an error to set this property to a value <= 0. |
 | `HONO_REGISTRY_SVC_MODIFICATION_ENABLED`<br>`--hono.registry.svc.modificationEnabled` | no | `true` | When set to `false` the device information registered cannot be updated nor removed from the registry. |
@@ -66,12 +50,15 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_REGISTRY_SVC_SIGNING_KEY_PATH`<br>`--hono.registry.svc.signing.keyPath` | no  | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for signing tokens asserting a device's registration status. When using this variable, other services that need to validate the tokens issued by this service need to be configured with the corresponding certificate/public key. Alternatively, a symmetric key can be used for signing (and validating) by setting the `HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_REGISTRY_AMP_KEY_PATH` variable. If that variable is also not set, startup of the server fails. |
 | `HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET`<br>`--hono.registry.svc.signing.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for signing tokens asserting a device's registration status. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the signing key using this variable, other services that need to validate the tokens issued by this service need to be configured with the same key. Alternatively, an asymmetric key pair can be used for signing (and validating) by setting the `HONO_REGISTRY_SVC_SIGNING_KEY_PATH` variable. If none of these variables is set, startup of the server fails. |
 | `HONO_REGISTRY_SVC_SIGNING_TOKEN_EXPIRATION`<br>`--hono.registry.svc.signing.tokenExpiration` | no | `10` | The expiration period to use for the tokens asserting the registration status of devices. |
+| `HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME`<br>`--hono.credentials.svc.credentialsFilename` | no | `/home/hono/registration/`<br>`credentials.json` | The path to the file where the server stores credentials of devices. Hono tries to read credentials from this file during start-up and writes out all identities to this file periodically if property `HONO_CREDENTIALS_SVC_SAVE_TO_FILE` is set to `true`. The `eclipsehono/hono-service-device-registry` Docker image creates a volume under `/home/hono/registration` so that credentials information survives container restarts and/or image updates. If you are running the Hono server from the command line you will probably want to set this variable to a path using an existing folder since Hono will not try to create the path. |
+| `HONO_CREDENTIALS_SVC_MODIFICATION_ENABLED`<br>`--hono.credentials.svc.modificationEnabled` | no | `true` | When set to `false` the credentials stored cannot be updated nor removed. |
+| `HONO_CREDENTIALS_SVC_SAVE_TO_FILE`<br>`--hono.credentials.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered credentials to the file specified by the `HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME` property. |
 
 The variables only need to be set if the default value does not match your environment.
 
 ## Port Configuration
 
-The Device Registry can be configured to listen for connections on
+The Device Registry supports configuration of both, an AMQP based endpoint as well as an HTTP based endpoint proving RESTful resources for managing registration information and credentials. Both endpoints can be configured to listen for connections on
 
 * a secure port only (default) or
 * an insecure port only or
@@ -79,13 +66,15 @@ The Device Registry can be configured to listen for connections on
 
 The server will fail to start if none of the ports is configured properly.
 
+The following sections apply to configuring both, the AMQP endpoint as well as the REST endpoint. The environment variables to use for configuring the REST endpoint are the same as the ones for the AMQP endpoint, substituting `_AMQP_` with `_REST_`, e.g. `HONO_REGISTRY_REST_KEY_PATH` instead of `HONO_REGISTRY_AMQP_KEY_PATH`.
+
 ### Secure Port Only
 
 The server needs to be configured with a private key and certificate in order to open a TLS secured port.
 
 There are two alternative ways for doing so:
 
-1. either setting the `HONO_REGISTRY_AMQP_KEY_STORE_PATH` and the `HONO_REGISTRY_AMQP_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
+1. Setting the `HONO_REGISTRY_AMQP_KEY_STORE_PATH` and the `HONO_REGISTRY_AMQP_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
 1. setting the `HONO_REGISTRY_AMQP_KEY_PATH` and `HONO_REGISTRY_AMQP_CERT_PATH` variables in order to load the key and certificate from two separate PEM files in PKCS8 format.
 
 When starting up, the server will bind a TLS secured socket to the default secure AMQP port 5671. The port number can also be set explicitly using the `HONO_REGISTRY_AMQP_PORT` variable.
@@ -118,6 +107,23 @@ This can be used to narrow the visibility of the insecure port to a local networ
 
 The server may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
 
+## Authentication Service Connection Configuration
+
+The Device Registry requires a connection to an implementation of Hono's Authentication API in order to authenticate and authorize client requests.
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the service's connection to the Authentication service.
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
+| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_AUTH_HOST`<br>`--hono.auth.host` | yes | `localhost` | The IP address or name of the Authentication service host. NB: This needs to be set to an address that can be resolved within the network the service runs on. When running as a Docker container, use Docker's `--network` command line option to attach the Device Registry container to the Docker network that the Authentication service container is running on. |
+| `HONO_AUTH_CERT_PATH`<br>`--hono.auth.certPath` | no | - | The absolute path to the PEM file containing the public key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_KEY_PATH`. |
+| `HONO_AUTH_KEY_PATH`<br>`--hono.auth.keyPath` | no | - | The absolute path to the PEM file containing the private key that the service should use to authenticate when verifying reachability of the Authentication service as part of a periodic health check. The health check needs to be enabled explicitly by means of setting the `HONO_APP_HEALTH_CHECK_PORT` variable. This variable needs to be set in conjunction with `HONO_AUTH_CERT_PATH`. |
+| `HONO_AUTH_PORT`<br>`--hono.auth.port` | yes | `5671` | The port that the Authentication service is listening on for connections. |
+| `HONO_AUTH_TRUST_STORE_PASSWORD`<br>`--hono.auth.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+| `HONO_AUTH_TRUST_STORE_PATH`<br>`--hono.auth.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating the Authentication service. This property **must** be set if the Authentication service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_AUTH_VALIDATION_CERT_PATH`<br>`--hono.auth.validation.certPath` | no  | - | The absolute path to the PEM file containing the public key that the service should use for validating tokens issued by the Authentication service. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHARED_SECRET` variable. If none of these variables is set, the service falls back to the key indicated by the `HONO_AUTH_CERT_PATH` variable. If that variable is also not set, startup of the service fails. |
+| `HONO_AUTH_VALIDATION_SHARED_SECRET`<br>`--hono.auth.validation.sharedSecret` | no  | - | A string to derive a symmetric key from which is used for validating tokens issued by the Authentication service. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the Authentication service **must** be configured with the same key. Alternatively, an asymmetric key pair can be used for validating (and signing) by setting the `HONO_AUTH_SIGNING_CERT_PATH` variable. If none of these variables is set, startup of the service fails. |
+
+
 ## Run as a Docker Swarm Service
 
 The Device Registry can be run as a Docker container from the command line. The following commands create and start the Device Registry as a Docker Swarm service using the default keys and configuration files contained in the `demo-certs` and `services/device-registry` modules:
@@ -136,6 +142,7 @@ The Device Registry can be run as a Docker container from the command line. The 
 > --secret device-registry-cert.pem \
 > --secret trusted-certs.pem \
 > --secret device-identities.json \
+> --secret credentials.json \
 > -e 'HONO_AUTH_HOST=<name or address of the auth-server>' \
 > -e 'HONO_AUTH_NAME=device-registry' \
 > -e 'HONO_AUTH_VALIDATION_CERT_PATH=/run/secrets/auth-server-cert.pem' \
@@ -144,6 +151,7 @@ The Device Registry can be run as a Docker container from the command line. The 
 > -e 'HONO_REGISTRY_AMQP_KEY_PATH=/run/secrets/device-registry-key.pem' \
 > -e 'HONO_REGISTRY_AMQP_CERT_PATH=/run/secrets/device-registry-cert.pem' \
 > -e 'HONO_REGISTRY_SVC_FILENAME=file:/run/secrets/device-identities.json' \
+> -e 'HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME=file:/run/secrets/credentials.json' \
 > -e 'HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=asharedsecretforvalidatingassertions' \
 > eclipsehono/hono-service-device-registry:latest
 ~~~
@@ -197,9 +205,9 @@ The following sections describe the resources representing the operations of the
 * URI: `/registration/${tenantId}`
 * Method: `POST`
 * Headers:
-  * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
-* Parameters (encoded as payload according to the content type):
-  * (required) `device_id`: The ID of the device to register.
+  * (required) `Content-Type`: `application/json`
+* Parameters (encoded as a JSON object in the request body):
+  * (required) `device-id`: The ID of the device to register.
   * (optional) Arbitrary key/value pairs containing additional data to be registered with the device.
 * Status Codes:
   * 201 (Created): Device has been registered successfully under resource indicated by `Location` header.
@@ -210,11 +218,7 @@ The following sections describe the resources representing the operations of the
 
 The following command registers a device with ID `4711`
 
-    $ curl -i -X POST -d device_id=4711 -d ep=IMEI4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT
-
-or equivalently using JSON
-
-    $ curl -i -X POST -d '{"device_id":"4711","ep":"IMEI4711"}' -H 'Content-Type: application/json' http://localhost:8080/registration/DEFAULT_TENANT
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{"device-id": "4711", "ep": "IMEI4711"}' http://localhost:28080/registration/DEFAULT_TENANT
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:
@@ -235,7 +239,7 @@ like this:
 
 The following command retrieves registration data for device `4711`:
 
-    $ curl -i http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
+    $ curl -i http://localhost:28080/registration/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
@@ -248,7 +252,7 @@ The response will look similar to this:
          "enabled": true,
          "ep": "IMEI4711"
       },
-      "id" : "4711"
+      "device-id" : "4711"
     }
 
 ### Update Registration
@@ -256,55 +260,258 @@ The response will look similar to this:
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Headers:
-  * (required) `Content-Type`: either `application/x-www-url-encoded` or `application/json`
-* Parameters (encoded as payload according to content type):
+  * (required) `Content-Type`: `application/json`
+* Parameters (encoded as a JSON object in the request body):
   * (optional) Arbitrary key/value pairs containing additional data to be registered with the device. The existing key/value pairs will be replaced with these key/values.
 * Status Codes:
-  * 200 (OK): Device registration data has been updated. The body contains the *previous* data registered for the device.
+  * 204 (No Content): Device registration data has been updated.
   * 400 (Bad Request): Device registration has not been updated because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
   * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
 
-    $ curl -i -X PUT -d ep=IMEI4711 -d psk-id=psk4711 http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"ep": "IMEI4711", "psk-id": "psk4711"}' http://localhost:28080/registration/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    Content-Length: 35
-
-    {
-      "data" : {
-         "enabled": true,
-         "ep": "IMEI4711"
-      },
-      "id" : "4711"
-    }
+    HTTP/1.1 204 No Content
+    Content-Length: 0
 
 ### Delete Registration
 
 * URI: `/registration/${tenantId}/${deviceId}`
 * Method: `DELETE`
 * Status Codes:
-  * 200 (OK): Device registration has been deleted. The payload contains the data that had been registered for the device.
+  * 204 (No Content): Device registration has been deleted.
   * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
 
-    $ curl -i -X DELETE http://127.0.0.1:8080/registration/DEFAULT_TENANT/4711
+    $ curl -i -X DELETE http://localhost:28080/registration/DEFAULT_TENANT/4711
+
+The response will look similar to this:
+
+    HTTP/1.1 204 No Content
+    Content-Length: 0
+    
+## Using the Credentials API via HTTP
+
+The Device Registry also exposes RESTful resources for invoking operations of the Credentials API via HTTP. Please note that this mapping to RESTful resources is **not** part of the *official* of the Credentials API but is provided for convenient access to credentials data using command line tools like *curl* or *HTTPie*.
+
+**NB** The *update credentials* operation is not implemented (yet). As a workaround, the *remove credentials* in combination with *add credentials* can be used instead.
+
+The following sections describe the resources representing the REST operations of the Credentials API and how they can be used to e.g. add credentials for a device.
+Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) for the specific elements that are explained in detail there.
+
+### Add Credentials for a Device
+
+* URI: `/credentials/${tenantId}`
+* Method: `POST`
+* Request Headers:
+  * (required) `Content-Type`: `application/json` (no other type supported)
+* Request Body (encoded as a JSON object):
+  * (required) `auth-id`: The identity that the device will use for authentication.
+  * (required) `type`: The type of the credentials to add.
+  * (required) `device-id`: The ID of the device to add the credentials for.
+  * (required) `secrets`: The secrets of the credentials to add. This is a JSON array and must contain at least one element. The content of each element is defined in the [Credentials API]({{< relref "api/Credentials-API.md" >}}).
+* Status Codes:
+  * 201 (Created): Credentials have been added successfully under the resource indicated by `Location` header.
+  * 400 (Bad Request): The credentials have not been updated because the request was malformed, e .g. because the payload did not contain required values. The response body may contain hints regarding the cause of the problem.
+  * 409 (Conflict): Credentials of the given type for the given *auth-id* already exist for the tenant. The request has not been processed.
+* Response Headers:
+  * `Location`: The URI under which the newly created resource can be accessed.
+
+**Example**
+
+The following command adds some `hashed-password` credentials for device `4720` using authentication identifier `sensor20`:
+
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary \
+    > '{"device-id": "4720", "type": "hashed-password", "auth-id": "sensor20", "secrets": [{"hash-function" : "sha-512", "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' \
+    > http://localhost:28080/credentials/DEFAULT_TENANT
+
+The response will look like this:
+
+    HTTP/1.1 201 Created
+    Location: /credentials/DEFAULT_TENANT/sensor20/hashed-password
+    Content-Length: 0
+
+
+### Get Credentials by Type and Authentication Identifier 
+
+* URI: `/credentials/${tenantId}/${authId}/${type}`
+* Method: `GET`
+* Status Codes:
+  * 200 (OK): Credentials for the given parameters have been found, body contains the credentials data.
+  * 404 (Not Found): No credentials for the given parameters are registered for the given tenant.
+
+**Example**
+
+The following command retrieves credentials data of type `hashed-password` for the authId `sensor1`:
+
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor1/hashed-password
 
 The response will look similar to this:
 
     HTTP/1.1 200 OK
     Content-Type: application/json; charset=utf-8
-    Content-Length: 35
-
+    Content-Length: 927
+    
     {
-      "data" : {
-         "enabled": true,
-         "ep": "IMEI4711",
-         "psk-id": "psk4711"
-      },
-      "id" : "4711"
+      "device-id" : "4711",
+      "type" : "hashed-password",
+      "auth-id" : "sensor1",
+      "enabled" : true,
+      "secrets" : [ {
+        "not-before" : "2017-05-01T14:00:00+01:00",
+        "not-after" : "2037-06-01T14:00:00+01:00",
+        "hash-function" : "sha-512",
+        "salt" : "aG9ubw==",
+        "pwd-hash" : "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="
+      }, {
+        "not-before" : "2017-05-15T14:00:00+01:00",
+        "not-after" : "2037-05-01T14:00:00+01:00",
+        "hash-function" : "sha-unknown",
+        "salt" : "aG9ubzI=",
+        "pwd-hash" : "QDhkSQcm0HNBybnuc5irvPIgNUJn0iVoQnFSoltLOsDlfxhcQWa99l8Dhh67jSKBr7fXeSvFZ1mEojReAXz18A=="
+      }, {
+        "not-before" : "2017-05-15T14:00:00+01:00",
+        "not-after" : "2037-05-01T14:00:00+01:00",
+        "hash-function" : "sha-256",
+        "salt" : "aG9ubzI=",
+        "pwd-hash" : "QDhkSQcm0HNBybnuc5irvPIgNUJn0iVoQnFSoltLOsDlfxhcQWa99l8Dhh67jSKBr7fXeSvFZ1mEojReAXz18A=="
+      } ]
     }
+ 
+### Get all Credentials for a Device
+
+* URI: `/credentials/${tenantId}/${deviceId}`
+* Method: `GET`
+* Status Codes:
+  * 200 (OK): Credentials for the device have been found, body contains the credentials.
+  The body differs from the body for a specific type since it may contain an arbitrary number of credentials. It contains a property `total` indicating the total number of credentials returned. The credentials are containing in property `credentials`.
+  * 404 (Not Found): No credentials for the device are registered.
+
+**Example**
+
+The following command retrieves credentials for device `4711`:
+
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4711
+
+The response will look similar to this:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/json; charset=utf-8
+    Content-Length: 1406
+    
+    {
+      "total" : 2,
+      "credentials" : [ {
+        "device-id" : "4711",
+        "type" : "hashed-password",
+        "auth-id" : "sensor1",
+        "enabled" : true,
+        "secrets" : [ {
+          "not-before" : "2017-05-01T14:00:00+01:00",
+          "not-after" : "2037-06-01T14:00:00+01:00",
+          "hash-function" : "sha-512",
+          "salt" : "aG9ubw==",
+          "pwd-hash" : "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M    +GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="
+        }, {
+          "not-before" : "2017-05-15T14:00:00+01:00",
+          "not-after" : "2037-05-01T14:00:00+01:00",
+          "hash-function" : "sha-unknown",
+          "salt" : "aG9ubzI=",
+          "pwd-hash" :     "QDhkSQcm0HNBybnuc5irvPIgNUJn0iVoQnFSoltLOsDlfxhcQWa99l8Dhh67jSKBr7fXeSvFZ1mEojReAXz18A=="
+        }, {
+          "not-before" : "2017-05-15T14:00:00+01:00",
+          "not-after" : "2037-05-01T14:00:00+01:00",
+          "hash-function" : "sha-256",
+          "salt" : "aG9ubzI=",
+          "pwd-hash" :     "QDhkSQcm0HNBybnuc5irvPIgNUJn0iVoQnFSoltLOsDlfxhcQWa99l8Dhh67jSKBr7fXeSvFZ1mEojReAXz18A=="
+        } ]
+        }, {
+        "device-id" : "4711",
+        "type" : "psk",
+        "auth-id" : "sensor1",
+        "enabled" : true,
+        "secrets" : [ {
+          "not-before" : "2017-05-01T14:00:00+01:00",
+          "not-after" : "2037-06-01T14:00:00+01:00",
+          "key" : "secretKey"
+        }, {
+          "not-before" : "2017-06-15T14:00:00+01:00",
+          "not-after" : "2037-05-01T14:00:00+01:00",
+          "key" : "secretKey2"
+        } ]
+      } ]
+    }
+
+
+### Update Credentials
+
+* URI: `/credentials/${tenantId}/${authId}/${type}`
+* Method: `PUT`
+* Request Headers:
+  * (required) `Content-Type`: `application/json` (no other type supported)
+* Request Body (encoded as a JSON object):
+  * (required) `auth-id`: The identity that the device uses for authentication (MUST match the value of the corresponding URI path parameter).
+  * (required) `type`: The type of the credentials to update (MUST match the value of the corresponding URI path parameter).
+  * (required) `device-id`: The ID of the device that the credentials belong to.
+  * (required) `secrets`: The secrets of the credentials to update. This is a JSON array and must contain at least one element. The content of each element is defined in the [Credentials API]({{< relref "api/Credentials-API.md" >}}).
+* Status Codes:
+  * 204 (No Content): The credentials have been updated successfully.
+  * 400 (Bad Request): The credentials have not been updated because the request was malformed, e .g. because the payload did not contain required values or the type and auth-id in the payload do not match the path parameters. The response body may contain hints regarding the cause of the problem.
+  * 404 (Not Found): The request could not be processed because there exist no credentials of the given type and authentication identifier.
+
+This resource can be used to change values of a particular set of credentials. However, it cannot be used to change the type or authentication identifier of the credentials.
+
+**Example**
+
+The following command adds an expiration date to the `hashed-password` credentials for authentication identifier `sensor20`:
+
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary \
+    > '{"device-id": "4711", "type": "hashed-password", "auth-id": "sensor1", "secrets": [{"hash-function" : "sha-512", "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA==", "not-after": "2018-01-01T00:00:00+01:00"}]}' \
+    > http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
+
+The response will look like this:
+
+    HTTP/1.1 204 No Content
+    Content-Length: 0
+
+
+### Delete Credentials by Type and Authentication Identifier
+
+* URI: `/credentials/${tenantId}/${authId}/${type}`
+* Method: `DELETE`
+* Status Codes:
+  * 204 (No Content): The Credentials with the given identifier and type have been deleted.
+  * 404 (Not Found): No credentials matching the criteria have been found.
+
+**Example**
+
+    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/sensor1/hashed-password
+
+The response will look similar to this:
+
+    HTTP/1.1 204 No Content
+    Content-Length: 0
+
+
+### Delete all Credentials of a Device
+
+* URI: `/credentials/${tenantId}/${deviceId}`
+* Method: `DELETE`
+* Status Codes:
+  * 204 (No Content): All Credentials for the device have been deleted. There is no payload in the response.
+  * 404 (Not Found): No credentials have been found for the device and the given tenant.
+
+Removes all credentials registered for a particular device.
+
+**Example**
+
+    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4711
+
+The response will look similar to this:
+
+    HTTP/1.1 204 No Content
+    Content-Length: 0

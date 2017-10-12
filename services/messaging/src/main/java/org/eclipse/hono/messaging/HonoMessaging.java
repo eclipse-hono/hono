@@ -17,11 +17,11 @@ import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.*;
 
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.event.EventConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
-import org.eclipse.hono.telemetry.TelemetryConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -114,15 +114,15 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
         }
         handler.register("authentication-service-connection", status -> {
             if (authenticationService == null) {
-                status.complete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
+                status.tryComplete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
             } else {
                 LOG.debug("checking connection to Authentication service");
                 authenticationService.connect(null, null, null, s -> {
                     if (s.succeeded()) {
                         s.result().close();
-                        status.complete(Status.OK());
+                        status.tryComplete(Status.OK());
                     } else {
-                        status.complete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
+                        status.tryComplete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
                     }
                 });
             }

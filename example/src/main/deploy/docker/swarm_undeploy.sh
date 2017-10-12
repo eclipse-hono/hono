@@ -39,7 +39,8 @@ docker service rm hono-service-device-registry
 docker secret rm \
   device-registry-key.pem \
   device-registry-cert.pem \
-  hono-service-device-registry-config.yml
+  hono-service-device-registry-config.yml \
+  example-credentials.json
 
 docker service rm hono-service-auth
 docker secret rm \
@@ -56,6 +57,16 @@ docker secret rm \
   qdrouterd.sasldb
 
 docker service rm hono-artemis
+docker secret rm \
+  artemis-broker.xml \
+  artemis-bootstrap.xml \
+  artemis-users.properties \
+  artemis-roles.properties \
+  login.config \
+  logging.properties \
+  artemis.profile \
+  artemisKeyStore.p12 \
+  trustStore.jks
 
 docker service rm grafana influxdb
 docker secret rm influxdb.conf

@@ -16,7 +16,7 @@ HONO_HOME=$SCRIPTPATH/../../../..
 CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
-CREATE_OPTIONS="-l project=$NS --network $NS --detach"
+CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
 
 echo DEPLOYING ECLIPSE HONO TO DOCKER SWARM
 
@@ -36,7 +36,28 @@ echo ... done
 
 echo
 echo Deploying Artemis broker ...
-docker service create $CREATE_OPTIONS --name hono-artemis eclipsehono/hono-artemis:${project.version}
+docker secret create -l $NS artemis-broker.xml $CONFIG/hono-artemis-jar/etc/artemis-broker.xml
+docker secret create -l $NS artemis-bootstrap.xml $CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml
+docker secret create -l $NS artemis-users.properties $CONFIG/hono-artemis-jar/etc/artemis-users.properties
+docker secret create -l $NS artemis-roles.properties $CONFIG/hono-artemis-jar/etc/artemis-roles.properties
+docker secret create -l $NS login.config $CONFIG/hono-artemis-jar/etc/login.config
+docker secret create -l $NS logging.properties $CONFIG/hono-artemis-jar/etc/logging.properties
+docker secret create -l $NS artemis.profile $CONFIG/hono-artemis-jar/etc/artemis.profile
+docker secret create -l $NS artemisKeyStore.p12 $CERTS/artemisKeyStore.p12
+docker secret create -l $NS trustStore.jks $CERTS/trustStore.jks
+docker service create $CREATE_OPTIONS --name hono-artemis \
+  --env ARTEMIS_CONFIGURATION=/run/secrets \
+  --secret artemis-broker.xml \
+  --secret artemis-bootstrap.xml \
+  --secret artemis-users.properties \
+  --secret artemis-roles.properties \
+  --secret login.config \
+  --secret logging.properties \
+  --secret artemis.profile \
+  --secret artemisKeyStore.p12 \
+  --secret trustStore.jks \
+  --entrypoint "/opt/artemis/bin/artemis run xml:/run/secrets/artemis-bootstrap.xml" \
+  ${artemis.image.name}
 echo ... done
 
 echo
@@ -77,12 +98,14 @@ echo Deploying Device Registry ...
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
 docker secret create -l project=$NS hono-service-device-registry-config.yml $CONFIG/hono-service-device-registry-config.yml
+docker secret create -l project=$NS example-credentials.json $CONFIG/example-credentials.json
 docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 25671:5671 -p 28080:8080 -p 28443:8443 \
   --secret device-registry-key.pem \
   --secret device-registry-cert.pem \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
   --secret hono-service-device-registry-config.yml \
+  --secret example-credentials.json \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \

@@ -78,15 +78,15 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         readinessHandler.register("authentication-service-connection", status -> {
             if (factory == null) {
-                status.complete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
+                status.tryComplete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
             } else {
                 log.debug("checking connection to Authentication service");
                 factory.connect(null, null, null, s -> {
                     if (s.succeeded()) {
                         s.result().close();
-                        status.complete(Status.OK());
+                        status.tryComplete(Status.OK());
                     } else {
-                        status.complete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
+                        status.tryComplete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
                     }
                 });
             }

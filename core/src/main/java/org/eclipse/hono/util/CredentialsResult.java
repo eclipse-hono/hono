@@ -12,22 +12,35 @@
 
 package org.eclipse.hono.util;
 
-import io.vertx.core.json.JsonObject;
-
 /**
  * A container for the result returned by Hono's credentials API.
  *
+ * @param <T> denotes the concrete type of the payload that is conveyed in the result
  */
-public final class CredentialsResult extends RequestResponseResult {
-    private CredentialsResult(final int status, final JsonObject payload) {
+public final class CredentialsResult<T> extends RequestResponseResult<T> {
+
+    private CredentialsResult(final int status, final T payload) {
         super(status, payload);
     }
 
-    public static CredentialsResult from(final int status) {
-        return new CredentialsResult(status, null);
+    /**
+     * Creates a new result for a status code.
+     * 
+     * @param status The status code indicating the outcome of the request.
+     * @return The result.
+     */
+    public static <T> CredentialsResult<T> from(final int status) {
+        return new CredentialsResult<T>(status, null);
     }
 
-    public static CredentialsResult from(final int status, final JsonObject payload) {
-        return new CredentialsResult(status, payload);
+    /**
+     * Creates a new result for a status code and payload.
+     * 
+     * @param status The status code indicating the outcome of the request.
+     * @param payload The payload to convey to the sender of the request.
+     * @return The result.
+     */
+    public static <T> CredentialsResult<T> from(final int status, final T payload) {
+        return new CredentialsResult<T>(status, payload);
     }
 }

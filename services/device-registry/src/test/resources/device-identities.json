@@ -1,7 +1,7 @@
 [ {
   "tenant" : "DEFAULT_TENANT",
   "devices" : [ {
-    "id" : "4711",
+    "device-id" : "4711",
     "data" : { }
   } ]
 } ]

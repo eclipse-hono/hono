@@ -11,10 +11,13 @@
  */
 package org.eclipse.hono.util;
 
-import io.vertx.core.json.JsonObject;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+
 import org.apache.qpid.proton.message.Message;
 
-import java.util.*;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Constants &amp; utility methods used throughout the Credentials API.
@@ -30,11 +33,13 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     public static final String FIELD_TYPE                        = "type";
     public static final String FIELD_AUTH_ID                     = "auth-id";
     public static final String FIELD_SECRETS                     = "secrets";
+    public static final String FIELD_CREDENTIALS_TOTAL           = "total";
 
     /* secrets fields */
     public static final String FIELD_SECRETS_PWD_HASH            = "pwd-hash";
     public static final String FIELD_SECRETS_SALT                = "salt";
     public static final String FIELD_SECRETS_HASH_FUNCTION       = "hash-function";
+    public static final String FIELD_SECRETS_KEY                 = "key";
     public static final String FIELD_SECRETS_NOT_BEFORE          = "not-before";
     public static final String FIELD_SECRETS_NOT_AFTER           = "not-after";
 
@@ -42,6 +47,12 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     public static final String SECRETS_TYPE_HASHED_PASSWORD      = "hashed-password";
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
+    public static final String SPECIFIER_WILDCARD                = "*";
+
+    /**
+     * The name of the default hash function to use for hashed passwords if not set explicitly.
+     */
+    public static final String DEFAULT_HASH_FUNCTION             ="sha-256";
 
     private static final List<String> OPERATIONS = Arrays.asList(OPERATION_GET, OPERATION_ADD, OPERATION_UPDATE, OPERATION_REMOVE);
 
@@ -58,20 +69,55 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
         Objects.requireNonNull(message);
         final String subject = message.getSubject();
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
+        final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getServiceRequestAsJson(subject, tenantId, null, payload);
+        return getServiceRequestAsJson(subject, tenantId, deviceId, payload);
     }
 
     /**
-     * Build a Json object as a reply to a credentials request via the vert.x event bus.
+     * Gets a JSON object representing the reply to a credentials request via the vert.x event bus.
      *
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to.
-     * @param result The {@link RegistrationResult} object with the payload for the reply object.
-     * @return JsonObject The json reply object that is to be sent back via the vert.x event bus.
+     * @param result The result to return to the sender of the request.
+     * @return JsonObject The JSON reply object.
      */
-    public static JsonObject getServiceReplyAsJson(final String tenantId, final String deviceId, final CredentialsResult result) {
-        return getServiceReplyAsJson(result.getStatus(), tenantId, deviceId, result.getPayload());
+    public static JsonObject getServiceReplyAsJson(final String tenantId, final String deviceId, final CredentialsResult<JsonObject> result) {
+        return RequestResponseApiConstants.getServiceReplyAsJson(result.getStatus(), tenantId, deviceId, result.getPayload());
+    }
+
+    /**
+     * Build a Json object as a request for internal communication via the vert.x event bus.
+     * Clients use this object to build their request that is sent to the processing service.
+     *
+     * @param tenantId The tenant for which the message was processed.
+     * @param deviceId The device that the message relates to.
+     * @param authId The authId of the device that the message relates to.
+     * @param type The type of credentials that the message relates to.
+     * @param payload The payload from the request that is passed to the processing service. Must not be null.
+     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
+     * @throws NullPointerException if tenant or payload is {@code null}.
+     */
+    public static JsonObject getServiceGetRequestAsJson(final String tenantId, final String deviceId, final String authId,
+                                                        final String type, final JsonObject payload) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(payload);
+
+        final JsonObject msg = new JsonObject();
+        msg.put(MessageHelper.SYS_PROPERTY_SUBJECT, OPERATION_GET);
+        msg.put(FIELD_TENANT_ID, tenantId);
+        if (deviceId != null) {
+            payload.put(FIELD_DEVICE_ID, deviceId);
+        }
+        if (authId != null) {
+            payload.put(FIELD_AUTH_ID, authId);
+        }
+        if (type != null) {
+            payload.put(FIELD_TYPE, type);
+        }
+        msg.put(FIELD_PAYLOAD, payload);
+
+        return msg;
     }
 
     public static boolean isValidSubject(final String subject) {

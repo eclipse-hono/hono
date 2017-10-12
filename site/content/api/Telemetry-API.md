@@ -51,11 +51,11 @@ The following table provides an overview of the properties a client needs to set
 | :------------- | :-------: | :----------------------- | :-------- | :---------- |
 | *content-type* | yes       | *properties*             | *symbol*  | SHOULD be set to *application/octet-stream* if the message payload is to be considered *opaque* binary data. In most cases though, the client should be able to set a more specific content type indicating the type and characteristics of the data contained in the payload, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. |
 | *device_id*    | yes       | *application-properties* | *string*  | MUST contain the ID of the device the data in the payload has been reported by. |
-| *assertion*    | yes       | *application-properties* | *string*  | A [JSON Web Token](https://jwt.io/introduction/) issued by the [Device Registration service]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}) asserting the device's registration status. |
+| *reg_assertion*| yes       | *application-properties* | *string*  | A [JSON Web Token](https://jwt.io/introduction/) issued by the [Device Registration service]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}) asserting the device's registration status. |
 
 The body of the message MUST consist of a single AMQP *Data* section containing the telemetry data. The format and encoding of the data MUST be indicated by the *content-type* and (optional) *content-encoding* properties of the message.
 
-Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers. However, the *assertion* contained in the *application-properties* will **not** be propagated downstream.
+Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers. However, the *reg_assertion* contained in the *application-properties* will **not** be propagated downstream.
 
 Note that Hono does not return any *application layer* message back to the client in order to signal the outcome of the operation. Instead, Hono signals reception of the message by means of the AMQP `ACCEPTED` outcome if the message complies with the formal requirements. Note that this does **not** mean that the telemetry message has been successfully forwarded to the AMQP 1.0 messaging network.
 

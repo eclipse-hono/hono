@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  *
  */
-package org.eclipse.hono.event;
+package org.eclipse.hono.util;
 
 /**
  * Constants &gt; utility methods used throughout the Event API.
