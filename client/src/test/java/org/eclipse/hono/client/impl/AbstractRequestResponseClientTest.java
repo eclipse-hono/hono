@@ -31,6 +31,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -52,6 +53,8 @@ public class AbstractRequestResponseClientTest {
     private ProtonReceiver recv;
     private ProtonSender sender;
     private Context context;
+    private Vertx vertx;
+    private AbstractRequestResponseClient<SimpleRequestResponseResult> client;
 
     /**
      * Sets up the fixture.
@@ -59,14 +62,28 @@ public class AbstractRequestResponseClientTest {
     @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
+        vertx = mock(Vertx.class);
         context = mock(Context.class);
         doAnswer(invocation -> {
             Handler<Void> handler = invocation.getArgumentAt(0, Handler.class);
             handler.handle(null);
             return null;
         }).when(context).runOnContext(any(Handler.class));
+        when(context.owner()).thenReturn(vertx);
+
+        Target target = mock(Target.class);
+        when(target.getAddress()).thenReturn("peer/tenant");
+
         recv = mock(ProtonReceiver.class);
+        when(recv.isOpen()).thenReturn(Boolean.TRUE);
         sender = mock(ProtonSender.class);
+        when(sender.getCredit()).thenReturn(10);
+        when(sender.getRemoteTarget()).thenReturn(target);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
+
+        client = getClient("tenant", sender, recv);
+        // do not time out requests by default
+        client.setRequestTimeout(0);
     }
 
     /**
@@ -79,11 +96,7 @@ public class AbstractRequestResponseClientTest {
     public void testCreateAndSendRequestFailsIfNoCreditAvailable(final TestContext ctx) {
 
         // GIVEN a request-response client with no credit left for the link to the peer service
-        Target target = mock(Target.class);
-        when(target.getAddress()).thenReturn("peer/tenant");
         when(sender.getCredit()).thenReturn(0);
-        when(sender.getRemoteTarget()).thenReturn(target);
-        AbstractRequestResponseClient<SimpleRequestResponseResult> client = getClient("tenant", sender, recv);
 
         // WHEN sending a request message
         final Async sendFailure = ctx.async();
@@ -97,19 +110,17 @@ public class AbstractRequestResponseClientTest {
     }
 
     /**
-     * Verifies that the client creates and sends a message based on provided headers and payload.
+     * Verifies that the client creates and sends a message based on provided headers and payload
+     * and sets a timer for canceling the request if no response is received.
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testCreateAndSendRequestSendsProperRequestMessage(final TestContext ctx) {
 
-        // GIVEN a request-response client with some credit for the sender link to the peer service
-        Target target = mock(Target.class);
-        when(target.getAddress()).thenReturn("peer/tenant");
-        when(sender.getCredit()).thenReturn(10);
-        when(sender.getRemoteTarget()).thenReturn(target);
-        AbstractRequestResponseClient<SimpleRequestResponseResult> client = getClient("tenant", sender, recv);
+        // GIVEN a request-response client that times out requests after 200 ms
+        client.setRequestTimeout(200);
 
         // WHEN sending a request message with some headers and payload
         final JsonObject payload = new JsonObject().put("key", "value");
@@ -126,6 +137,8 @@ public class AbstractRequestResponseClientTest {
         assertThat(body.getValue(), is(payload.encode()));
         assertThat(messageCaptor.getValue().getApplicationProperties(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key"), is("test-value"));
+        // and a timer has been set to time out the request after 200 ms
+        verify(vertx).setTimer(eq(200L), any(Handler.class));
     }
 
     /**
@@ -134,15 +147,11 @@ public class AbstractRequestResponseClientTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testHandleResponseInvokesHandlerForMatchingCorrelationId(final TestContext ctx) {
 
         // GIVEN a request message that has been sent to a peer
-        Target target = mock(Target.class);
-        when(target.getAddress()).thenReturn("peer/tenant");
-        when(sender.getCredit()).thenReturn(10);
-        when(sender.getRemoteTarget()).thenReturn(target);
-        AbstractRequestResponseClient<SimpleRequestResponseResult> client = getClient("tenant", sender, recv);
         final Async responseReceived = ctx.async();
         client.createAndSendRequest("request", null, null, ctx.asyncAssertSuccess(s -> {
             ctx.assertEquals(200, s.getStatus());
@@ -160,7 +169,73 @@ public class AbstractRequestResponseClientTest {
 
         // THEN the response is passed to the handler registered with the request
         responseReceived.await(1000);
-        
+        verify(vertx, never()).setTimer(anyLong(), any(Handler.class));
+    }
+
+    /**
+     * Verifies that the client cancels a request for which no response has been received
+     * after a certain amount of time.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCancelRequestFailsResponseHandler(final TestContext ctx) {
+
+        // GIVEN a request-response client which times out requests after 200 ms
+        client.setRequestTimeout(200);
+
+        // WHEN no response is received for a request sent to the peer
+        doAnswer(invocation -> {
+            // do not wait 200ms before running the timeout task but instead
+            // run it immediately
+            Handler<Long> task = invocation.getArgumentAt(1, Handler.class);
+            task.handle(1L);
+            return null;
+        }).when(vertx).setTimer(anyLong(), any(Handler.class));
+        final Async requestFailure = ctx.async();
+        client.createAndSendRequest("request", null, null, ctx.asyncAssertFailure(s -> requestFailure.complete()));
+
+        // THEN the request handler is failed
+        requestFailure.await(1000);
+    }
+
+    /**
+     * Verifies that a response handler is immediately failed when the sender link is not open (yet).
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateAndSendRequestFailsIfSenderIsNotOpen(final TestContext ctx) {
+
+        // GIVEN a client whose sender and receiver are not open
+        when(sender.isOpen()).thenReturn(Boolean.FALSE);
+
+        // WHEN sending a request
+        Async requestFailure = ctx.async();
+        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(s -> requestFailure.complete()));
+
+        // THEN the request fails immediately
+        requestFailure.await(1000);
+    }
+
+    /**
+     * Verifies that a response handler is immediately failed when the receiver link is not open (yet).
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateAndSendRequestFailsIfReceiverIsNotOpen(final TestContext ctx) {
+
+        // GIVEN a client whose sender and receiver are not open
+        when(recv.isOpen()).thenReturn(Boolean.FALSE);
+
+        // WHEN sending a request
+        Async requestFailure = ctx.async();
+        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(s -> requestFailure.complete()));
+
+        // THEN the request fails immediately
+        requestFailure.await(1000);
     }
 
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {
