@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
@@ -15,56 +16,6 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-handler</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-resolver-dns</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-codec-http2</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-resolver</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-buffer</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-common</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-codec-http</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-codec</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-handler-proxy</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-codec-dns</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-transport</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-codec-socks</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -79,38 +30,26 @@
       <artifactId>junit</artifactId>
     </dependency>
     <dependency>
-    	<groupId>org.eclipse.hono</groupId>
-    	<artifactId>hono-legal</artifactId>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-autoconfigure</artifactId>
     </dependency>
     <dependency>
-     <groupId>io.netty</groupId>
-     <artifactId>netty-handler</artifactId>
-     <version>${netty.version}</version>
-     <scope>test</scope>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
-     <groupId>io.netty</groupId>
-     <artifactId>netty-resolver-dns</artifactId>
-     <version>${netty.version}</version>
-     <scope>test</scope>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt</artifactId>
     </dependency>
     <dependency>
-     <groupId>ch.qos.logback</groupId>
-     <artifactId>logback-classic</artifactId>
-     <scope>test</scope>
-    </dependency>
-    <dependency>
-     <groupId>io.jsonwebtoken</groupId>
-     <artifactId>jjwt</artifactId>
-    </dependency>
-    <dependency>
-     <groupId>com.fasterxml.jackson.core</groupId>
-     <artifactId>jackson-databind</artifactId>
-     <version>${jackson.version}</version>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

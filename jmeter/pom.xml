@@ -19,6 +19,12 @@
     <dependency>
       <groupId>org.apache.jmeter</groupId>
       <artifactId>ApacheJMeter_core</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+      </exclusions>
       <scope>provided</scope>
     </dependency>
     <dependency>

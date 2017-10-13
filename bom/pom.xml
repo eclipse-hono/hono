@@ -35,7 +35,7 @@
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
     <grafana.version>4.2.0</grafana.version>
     <influxdb.version>1.2.4-alpine</influxdb.version>
-    <jackson.version>2.7.4</jackson.version>
+    <jackson.version>2.9.0</jackson.version>
     <java-base-image.name>openjdk:8-jre-alpine</java-base-image.name>
     <jjwt.version>0.7.0</jjwt.version>
     <junit.version>4.12</junit.version>
@@ -68,14 +68,28 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
-       <groupId>io.vertx</groupId>
-       <artifactId>vertx-core</artifactId>
-       <version>${vertx.version}</version>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-core</artifactId>
+        <version>${vertx.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
-       <groupId>io.vertx</groupId>
-       <artifactId>vertx-proton</artifactId>
-       <version>${vertx.version}</version>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-proton</artifactId>
+        <version>${vertx.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.qpid</groupId>
@@ -93,10 +107,10 @@
         <version>${spring-boot.version}</version>
       </dependency>
       <dependency>
-      	<groupId>org.springframework.boot</groupId>
-      	<artifactId>spring-boot-starter-logging</artifactId>
-      	<version>${spring-boot.version}</version>
-      	<scope>runtime</scope>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-logging</artifactId>
+        <version>${spring-boot.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -130,33 +144,33 @@
         <version>${vertx.version}</version>
       </dependency>
       <dependency>
-       <groupId>org.slf4j</groupId>
-       <artifactId>slf4j-api</artifactId>
-       <version>${slf4j.version}</version>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
-       <groupId>org.slf4j</groupId>
-       <artifactId>jcl-over-slf4j</artifactId>
-       <version>${slf4j.version}</version>
-       <scope>runtime</scope>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <version>${slf4j.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
-       <groupId>org.slf4j</groupId>
-       <artifactId>jul-to-slf4j</artifactId>
-       <version>${slf4j.version}</version>
-       <scope>runtime</scope>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jul-to-slf4j</artifactId>
+        <version>${slf4j.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
-       <groupId>org.slf4j</groupId>
-       <artifactId>log4j-over-slf4j</artifactId>
-       <version>${slf4j.version}</version>
-       <scope>runtime</scope>
+        <groupId>org.slf4j</groupId>
+        <artifactId>log4j-over-slf4j</artifactId>
+        <version>${slf4j.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
-      	<groupId>org.eclipse.hono</groupId>
-      	<artifactId>hono-demo-certs</artifactId>
-      	<version>${project.version}</version>
-      	<scope>provided</scope>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-demo-certs</artifactId>
+        <version>${project.version}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
@@ -164,21 +178,21 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
-      	<groupId>org.eclipse.hono</groupId>
-      	<artifactId>hono-core</artifactId>
-      	<version>${project.version}</version>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-core</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
-      	<groupId>org.yaml</groupId>
-      	<artifactId>snakeyaml</artifactId>
-      	<version>${snakeyaml.version}</version>
-      	<scope>runtime</scope>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>${snakeyaml.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
-      	<groupId>org.objenesis</groupId>
-      	<artifactId>objenesis</artifactId>
-      	<version>${objenesis.version}</version>
-      	<scope>test</scope>
+        <groupId>org.objenesis</groupId>
+        <artifactId>objenesis</artifactId>
+        <version>${objenesis.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.qpid</groupId>
@@ -217,10 +231,10 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-      	<groupId>org.eclipse.hono</groupId>
-      	<artifactId>hono-legal</artifactId>
-      	<version>${project.version}</version>
-      	<scope>provided</scope>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-legal</artifactId>
+        <version>${project.version}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.springframework</groupId>
@@ -248,9 +262,9 @@
         <version>${spring.version}</version>
       </dependency>
       <dependency>
-       <groupId>io.jsonwebtoken</groupId>
-       <artifactId>jjwt</artifactId>
-       <version>${jjwt.version}</version>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt</artifactId>
+        <version>${jjwt.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.jmeter</groupId>
