@@ -46,11 +46,12 @@ public final class HonoClientImpl implements HonoClient {
     private final Map<String, Boolean> senderCreationLocks = new ConcurrentHashMap<>();
     private final List<Handler<Void>> creationRequests = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
+    private final ConnectionFactory connectionFactory;
+    private final Vertx vertx;
+    private volatile boolean shutdown = false;
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
-    private Vertx vertx;
     private Context context;
-    private ConnectionFactory connectionFactory;
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -143,12 +144,13 @@ public final class HonoClientImpl implements HonoClient {
 
         Objects.requireNonNull(connectionHandler);
 
-        if (isConnected()) {
+        if (shutdown) {
+            connectionHandler.handle(Future.failedFuture("client was already shutdown"));
+        } else if (isConnected()) {
             LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             connectionHandler.handle(Future.succeededFuture(this));
         } else if (connecting.compareAndSet(false, true)) {
 
-            setConnection(null);
             if (options == null) {
                 clientOptions = new ProtonClientOptions();
             } else {
@@ -166,7 +168,13 @@ public final class HonoClientImpl implements HonoClient {
                         } else {
                             setConnection(conAttempt.result());
                             setContext(Vertx.currentContext());
-                            connectionHandler.handle(Future.succeededFuture(this));
+                            if (shutdown) {
+                                // if client was already shutdown in the meantime we give our best to cleanup connection
+                                shutdownConnection(result -> {});
+                                connectionHandler.handle(Future.failedFuture("client was already shutdown"));
+                            } else {
+                                connectionHandler.handle(Future.succeededFuture(this));
+                            }
                         }
                     });
         } else {
@@ -209,7 +217,6 @@ public final class HonoClientImpl implements HonoClient {
             activeRegClients.clear();
             activeCredClients.clear();
             failAllCreationRequests();
-            connection = null;
 
             if (nextHandler != null) {
                 nextHandler.handle(con);
@@ -593,26 +600,30 @@ public final class HonoClientImpl implements HonoClient {
      */
     @Override
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
-
+        shutdown = true;
         if (connection == null || connection.isDisconnected()) {
             LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
             completionHandler.handle(Future.succeededFuture());
         } else {
-            context.runOnContext(close -> {
-                LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
-                connection.disconnectHandler(null); // make sure we are not trying to re-connect
-                connection.closeHandler(closedCon -> {
-                    if (closedCon.succeeded()) {
-                        LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-                    } else {
-                        LOG.info("could not close connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
-                    }
-                    connection.disconnect();
-                    if (completionHandler != null) {
-                        completionHandler.handle(Future.succeededFuture());
-                    }
-                }).close();
-            });
+            shutdownConnection(completionHandler);
         }
+    }
+
+    private void shutdownConnection(final Handler<AsyncResult<Void>> completionHandler) {
+        context.runOnContext(close -> {
+            LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
+            connection.disconnectHandler(null); // make sure we are not trying to re-connect
+            connection.closeHandler(closedCon -> {
+                if (closedCon.succeeded()) {
+                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                } else {
+                    LOG.info("could not close connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
+                }
+                connection.disconnect();
+                if (completionHandler != null) {
+                    completionHandler.handle(Future.succeededFuture());
+                }
+            }).close();
+        });
     }
 }

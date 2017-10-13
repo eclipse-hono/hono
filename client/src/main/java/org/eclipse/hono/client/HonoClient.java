@@ -73,7 +73,8 @@ public interface HonoClient {
      * Connects to the Hono server using given options.
      * 
      * @param options The options to use (may be {@code null}).
-     * @param connectionHandler The handler to notify about the outcome of the connection attempt.
+     * @param connectionHandler The handler to notify about the outcome of the connection attempt. Always fails if one
+     *            of the shutdown methods was called before.
      * @return This client for command chaining.
      * @throws NullPointerException if the connection handler is {@code null}.
      */
@@ -83,8 +84,9 @@ public interface HonoClient {
      * Connects to the Hono server using given options.
      * 
      * @param options The options to use (may be {@code null}).
-     * @param connectionHandler The handler to notify about the outcome of the connection attempt.
-     * @param disconnectHandler A  handler to notify about connection loss (may be {@code null}).
+     * @param connectionHandler The handler to notify about the outcome of the connection attempt. Always fails if one
+     *            of the shutdown methods was called before.
+     * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
      * @return This client for command chaining.
      * @throws NullPointerException if the connection handler is {@code null}.
      */
@@ -289,14 +291,16 @@ public interface HonoClient {
     /**
      * Closes this client's connection to the Hono server.
      * <p>
-     * This method waits for at most 5 seconds for the connection to be closed properly.
+     * This method waits for at most 5 seconds for the connection to be closed properly. Any subsequent attempts to 
+     * connect this client again will fail.
      */
     void shutdown();
 
     /**
      * Closes this client's connection to the Hono server.
      * <p>
-     * Any senders or consumers opened by this client will be implicitly closed as well.
+     * Any senders or consumers opened by this client will be implicitly closed as well. Any subsequent attempts to 
+     * connect this client again will fail.
      * 
      * @param completionHandler The handler to invoke with the result of the operation.
      */
