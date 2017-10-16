@@ -20,6 +20,10 @@ The preconditions for invoking any of the Credential API's operations are as fol
 2. Client has established an AMQP link in role *sender* with Hono using target address `credentials/${tenant_id}`. This link is used by the client to send commands to Hono.
 3. Client has established an AMQP link in role *receiver* with Hono using source address `credentials/${tenant_id}/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the requests it has sent to Hono. This link's source address is also referred to as the *reply-to* address for the request messages.
 
+This is illustrated by the following sequence diagram:
+
+![Credentials message flow preconditions](../connectToCredentials.png)
+
 ## Operations
 
 The operations described in the following sections can be used by clients to manage credentials for authenticating devices connected to protocol adapters.
@@ -73,7 +77,15 @@ This operation is *mandatory* to implement.
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving credentials.
+
+![Get Credentials message flow](../getCredentials_Success.png)
+
+1. The *Client* uses the previously established sender link (see [Preconditions]({{< relref "#Preconditions" >}})) to send the get operation via AMQP.
+   1. The implementation of the Credentials API that receives the AMQP frame is invoked for the operation *Get Credentials*
+1. The *Credentials API Implmentation* continues by transfering the credentials data to the ReceiverLink of the *Client* by using the *${reply-to}* address provided in the message.
+   1. The *Client* continues with arbitrary processing of the retrieved credentials (e.g. compares it against otherwise received credentials).
+
 
 **Request Message Format**
 
@@ -212,7 +224,7 @@ The following table provides an overview of the properties shared by all request
 | *subject*        | yes       | *properties*             | UTF-8 *string* | MUST be set to the value defined by the particular operation being invoked. |
 | *correlation-id* | no        | *properties*             | *message-id*   | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
 | *message-id*     | yes       | *properties*             | UTF-8 *string* | MUST contain an identifier that uniquely identifies the message at the sender side. |
-| *reply-to*       | yes       | *properties*             | UTF-8 *string*  | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
+| *reply-to*       | yes       | *properties*             | UTF-8 *string*  | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#Preconditions" >}})). |
 
 ### Standard Response Properties
 
