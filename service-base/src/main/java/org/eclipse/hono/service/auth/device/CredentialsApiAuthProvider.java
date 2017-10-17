@@ -108,11 +108,11 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
         if (credentialsClient == null) {
             log.error("Credentials service client is not set");
         } else if (credentialsClient.isConnected()) {
-            log.debug("already connected to Credentials service");
+            log.info("already connected to Credentials service");
         } else {
             credentialsClient.connect(
                     createClientOptions(),
-                    connectAttempt -> log.debug("connected to Credentials service"),
+                    connectAttempt -> log.info("connected to Credentials service"),
                     this::onDisconnectCredentialsService);
         }
     }
@@ -125,10 +125,10 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     private void onDisconnectCredentialsService(final ProtonConnection con) {
 
         vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-            log.debug("attempting to reconnect to Credentials service");
+            log.info("attempting to reconnect to Credentials service");
             credentialsClient.connect(createClientOptions(), connectAttempt -> {
                 if (connectAttempt.succeeded()) {
-                    log.debug("reconnected to Credentials service");
+                    log.info("reconnected to Credentials service");
                 } else {
                     log.debug("cannot reconnect to Credentials service");
                 }
