@@ -135,6 +135,11 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
         <targetPath>${project.build.directory}/config</targetPath>
         <filtering>true</filtering>
       </resource>
+      <resource>
+        <directory>${project.basedir}/src/main/sandbox</directory>
+        <targetPath>${project.build.directory}/sandbox</targetPath>
+        <filtering>true</filtering>
+      </resource>
     </resources>
     <plugins>
       <plugin>
