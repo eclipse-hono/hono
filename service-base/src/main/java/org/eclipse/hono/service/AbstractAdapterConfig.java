@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service;
 
-import io.vertx.core.metrics.MetricsOptions;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -25,7 +24,6 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
@@ -33,6 +31,7 @@ import org.springframework.context.annotation.Scope;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
+import io.vertx.core.metrics.MetricsOptions;
 
 /**
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
@@ -83,9 +82,6 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public ClientConfigProperties messagingClientConfig() {
         ClientConfigProperties config = new ClientConfigProperties();
-        if (config.getAmqpHostname() == null) {
-            config.setAmqpHostname("hono-messaging");
-        }
         customizeMessagingClientConfigProperties(config);
         return config;
     }
@@ -141,9 +137,6 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public ClientConfigProperties registrationServiceClientConfig() {
         ClientConfigProperties config = new ClientConfigProperties();
-        if (config.getAmqpHostname() == null) {
-            config.setAmqpHostname("hono-device-registry");
-        }
         customizeRegistrationServiceClientConfigProperties(config);
         return config;
     }
@@ -198,9 +191,6 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public ClientConfigProperties credentialsServiceClientConfig() {
         ClientConfigProperties config = new ClientConfigProperties();
-        if (config.getAmqpHostname() == null) {
-            config.setAmqpHostname("hono-device-registry");
-        }
         customizeCredentialsServiceClientConfigProperties(config);
         return config;
     }
@@ -226,7 +216,6 @@ public abstract class AbstractAdapterConfig {
      */
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Bean
-    @ConditionalOnProperty(prefix = "hono.credentials", name = "host")
     public ConnectionFactory credentialsServiceConnectionFactory() {
         return new ConnectionFactoryImpl(vertx(), credentialsServiceClientConfig());
     }
@@ -241,7 +230,6 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
-    @ConditionalOnProperty(prefix = "hono.credentials", name = "host")
     public HonoClient credentialsServiceClient() {
         return new HonoClientImpl(vertx(), credentialsServiceConnectionFactory());
     }
