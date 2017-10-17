@@ -25,13 +25,19 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 /**
- * Configuration class
+ * Spring Boot configuration for the MQTT protocol adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
+    private static final String CONTAINER_ID_HONO_MQTT_ADAPTER = "Hono MQTT Adapter";
     private static final String BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER = "vertxBasedMqttProtocolAdapter";
 
+    /**
+     * Creates a new MQTT protocol adapter instance.
+     * 
+     * @return The new instance.
+     */
     @Bean(name = BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER)
     @Scope("prototype")
     public VertxBasedMqttProtocolAdapter vertxBasedMqttProtocolAdapter(){
@@ -41,26 +47,26 @@ public class Config extends AbstractAdapterConfig {
     @Override
     protected void customizeMessagingClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName("Hono MQTT Adapter");
+            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
         }
     }
 
     @Override
-    protected void customizeRegistrationServiceClientConfigProperties(ClientConfigProperties props) {
+    protected void customizeRegistrationServiceClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName("Hono MQTT Adapter");
+            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
         }
     }
 
     @Override
     protected void customizeCredentialsServiceClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName("Hono MQTT Adapter");
+            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
         }
     }
 
     /**
-     * Exposes an authentication provider for verifying device credentials as aSpring bean.
+     * Exposes an authentication provider for verifying device credentials as a Spring bean.
      * 
      * @return The authentication provider.
      */
