@@ -47,27 +47,17 @@
     "saslMechanisms": "EXTERNAL"
   }],
 
-  ["address", {
-    "prefix": "telemetry/",
-    "distribution": "balanced"
-  }],
-
-  ["address", {
-    "prefix": "event/",
-    "distribution": "balanced"
-  }],
-
   ["policy", {
-    "maxConnections": 1000,
+    "maxConnections": 220,
     "enableVhostPolicy": true,
     "defaultVhost": "hono"
   }],
 
   ["vhost", {
       "id": "hono",
-      "maxConnections": 50,
-      "maxConnectionsPerUser": 50,
-      "maxConnectionsPerHost": 2,
+      "maxConnections": 200,
+      "maxConnectionsPerUser": 200,
+      "maxConnectionsPerHost": 50,
       "groups": {
         "consumers": {
           "users": "consumer@HONO",
