@@ -1,0 +1,16 @@
+title Protocol Adapter Device Authentication (success)
+
+
+Device->PA: 1.0 provideAuthData(tenant, auth-id, secret)
+note over Device: the device provides it's authentication data for the
+note over Device: used protocol (e.g. connect in MQTT, basicAuth in HTTP, etc.)
+
+PA->AuthProvider: 1.1 authenticate(tenant, auth-id, secret)
+
+AuthProvider->Credentials AMQP Endpoint: 1.2 Get Credentials(tenant, type, auth-id)
+
+Credentials AMQP Endpoint->AuthProvider: 1.3 credentials
+note over AuthProvider: Verify retrieved credentials against provided auth data
+AuthProvider->AuthProvider: verify credentials
+AuthProvider->PA: 1.4 successful
+PA->Device: 1.5 success (or failure)
