@@ -24,13 +24,19 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 /**
- * Spring Beans used by the Hono REST protocol adapter.
+ * Spring Boot configuration for the REST protocol adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
+    private static final String CONTAINER_ID_HONO_REST_ADAPTER = "Hono REST Adapter";
     private static final String BEAN_NAME_VERTX_BASED_REST_PROTOCOL_ADAPTER = "vertxBasedRestProtocolAdapter";
 
+    /**
+     * Creates a new REST protocol adapter instance.
+     * 
+     * @return The new instance.
+     */
     @Bean(name = BEAN_NAME_VERTX_BASED_REST_PROTOCOL_ADAPTER)
     @Scope("prototype")
     public VertxBasedRestProtocolAdapter vertxBasedRestProtocolAdapter(){
@@ -40,21 +46,21 @@ public class Config extends AbstractAdapterConfig {
     @Override
     protected void customizeMessagingClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName("Hono REST Adapter");
+            props.setName(CONTAINER_ID_HONO_REST_ADAPTER);
         }
     }
 
     @Override
     protected void customizeRegistrationServiceClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName("Hono REST Adapter");
+            props.setName(CONTAINER_ID_HONO_REST_ADAPTER);
         }
     }
 
     @Override
     protected void customizeCredentialsServiceClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName("Hono REST Adapter");
+            props.setName(CONTAINER_ID_HONO_REST_ADAPTER);
         }
     }
 

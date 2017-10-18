@@ -152,41 +152,41 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
 
     private void saveToFile(final Future<Void> writeResult) {
 
-        if (!dirty) {
-            log.trace("registry does not need to be persisted");
-            return;
-        }
-
-        final FileSystem fs = vertx.fileSystem();
-        if (!fs.existsBlocking(getConfig().getFilename())) {
-            fs.createFileBlocking(getConfig().getFilename());
-        }
-        final AtomicInteger idCount = new AtomicInteger();
-        JsonArray tenants = new JsonArray();
-        for (Entry<String, Map<String, JsonObject>> entry : identities.entrySet()) {
-            JsonArray devices = new JsonArray();
-            for (Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
-                devices.add(
+        if (dirty) {
+            final FileSystem fs = vertx.fileSystem();
+            if (!fs.existsBlocking(getConfig().getFilename())) {
+                fs.createFileBlocking(getConfig().getFilename());
+            }
+            final AtomicInteger idCount = new AtomicInteger();
+            JsonArray tenants = new JsonArray();
+            for (Entry<String, Map<String, JsonObject>> entry : identities.entrySet()) {
+                JsonArray devices = new JsonArray();
+                for (Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
+                    devices.add(
+                            new JsonObject()
+                                    .put(FIELD_DEVICE_ID, deviceEntry.getKey())
+                                    .put(FIELD_DATA, deviceEntry.getValue()));
+                    idCount.incrementAndGet();
+                }
+                tenants.add(
                         new JsonObject()
-                            .put(FIELD_DEVICE_ID, deviceEntry.getKey())
-                            .put(FIELD_DATA, deviceEntry.getValue()));
-                idCount.incrementAndGet();
+                                .put(FIELD_TENANT, entry.getKey())
+                                .put(ARRAY_DEVICES, devices));
             }
-            tenants.add(
-                    new JsonObject()
-                        .put(FIELD_TENANT, entry.getKey())
-                        .put(ARRAY_DEVICES, devices));
+            fs.writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
+                if (writeAttempt.succeeded()) {
+                    dirty = false;
+                    log.trace("successfully wrote {} device identities to file {}", idCount.get(), getConfig().getFilename());
+                    writeResult.complete();
+                } else {
+                    log.warn("could not write device identities to file {}", getConfig().getFilename(), writeAttempt.cause());
+                    writeResult.fail(writeAttempt.cause());
+                }
+            });
+        } else {
+            log.trace("registry does not need to be persisted");
+            writeResult.complete();
         }
-        fs.writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
-            if (writeAttempt.succeeded()) {
-                dirty = false;
-                log.trace("successfully wrote {} device identities to file {}", idCount.get(), getConfig().getFilename());
-                writeResult.complete();
-            } else {
-                log.warn("could not write device identities to file {}", getConfig().getFilename(), writeAttempt.cause());
-                writeResult.fail(writeAttempt.cause());
-            }
-        });
     }
 
     @Override

@@ -16,17 +16,16 @@ import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
@@ -35,22 +34,17 @@ import io.vertx.proton.ProtonConnection;
  * A Vertx-Proton based client for Hono's Registration API.
  *
  */
-public final class RegistrationClientImpl extends AbstractRequestResponseClient<RegistrationClient, RegistrationResult> implements RegistrationClient {
+public final class RegistrationClientImpl extends AbstractRequestResponseClient<RegistrationResult> implements RegistrationClient {
 
-    private static final String REGISTRATION_NAME = "registration";
-    private static final Logger LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
+    private RegistrationClientImpl(final Context context, final String tenantId) {
 
-    private RegistrationClientImpl(final Context context, final ProtonConnection con, final String tenantId,
-                                   final Handler<AsyncResult<RegistrationClient>> creationHandler) {
-
-        super(context,con,tenantId,creationHandler);
+        super(context, tenantId);
     }
-
 
     @Override
     protected String getName() {
 
-        return REGISTRATION_NAME;
+        return RegistrationConstants.REGISTRATION_ENDPOINT;
     }
 
     @Override
@@ -71,17 +65,27 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * @param context The vert.x context to run all interactions with the server on.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant to consumer events for.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static void create(final Context context, final ProtonConnection con, final String tenantId,
+    public static void create(
+            final Context context,
+            final ProtonConnection con,
+            final String tenantId,
+            final Handler<String> senderCloseHook,
+            final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
 
-        new RegistrationClientImpl(
-                Objects.requireNonNull(context),
-                Objects.requireNonNull(con),
-                Objects.requireNonNull(tenantId),
-                Objects.requireNonNull(creationHandler));
+        final RegistrationClientImpl client = new RegistrationClientImpl(context, tenantId);
+        client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
+            if (s.succeeded()) {
+                creationHandler.handle(Future.succeededFuture(client));
+            } else {
+                creationHandler.handle(Future.failedFuture(s.cause()));
+            }
+        });
     }
 
     private Map<String, Object> createDeviceIdProperties(final String deviceId) {

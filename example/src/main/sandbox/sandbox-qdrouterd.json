@@ -1,8 +1,8 @@
 [
   ["router", {
-    "id": "Hono.Example.Router",
+    "id": "Hono.Sandbox.Router",
     "mode": "standalone",
-    "workerThreads": 4,
+    "workerThreads": 3,
     "saslConfigName": "qdrouter-sasl",
     "saslConfigPath": "/run/secrets/"
   }],
@@ -47,30 +47,13 @@
     "saslMechanisms": "EXTERNAL"
   }],
 
-  ["connector", {
-    "sslProfile": "external",
-    "name": "broker",
-    "host": "hono-artemis.hono",
-    "port": 5671,
-    "role": "route-container",
-    "saslUsername": "artemis",
-    "saslPassword": "artemis"
-  }],
-
-  ["linkRoute", {
-    "prefix": "event/",
-    "dir": "in",
-    "connection": "broker"
-  }],
-
-  ["linkRoute", {
-    "prefix": "event/",
-    "dir": "out",
-    "connection": "broker"
+  ["address", {
+    "prefix": "telemetry/",
+    "distribution": "balanced"
   }],
 
   ["address", {
-    "prefix": "telemetry/",
+    "prefix": "event/",
     "distribution": "balanced"
   }],
 
@@ -82,36 +65,30 @@
 
   ["vhost", {
       "id": "hono",
-      "maxConnections": 500,
-      "maxConnectionsPerUser": 20,
-      "maxConnectionsPerHost": 10,
+      "maxConnections": 50,
+      "maxConnectionsPerUser": 50,
+      "maxConnectionsPerHost": 2,
       "groups": {
         "consumers": {
           "users": "consumer@HONO",
           "remoteHosts": "*",
           "maxSessions": 10,
           "sources": "telemetry/*, event/*"
-        },
-        "DEFAULT_TENANT": {
-          "users": "user1@HONO",
-          "remoteHosts": "*",
-          "maxSessions": 10,
-          "sources": "telemetry/DEFAULT_TENANT, event/DEFAULT_TENANT"
         }
       }
   }],
 
   ["vhost", {
       "id": "hono-internal",
-      "maxConnections": 6,
+      "maxConnections": 4,
       "groups": {
         "Hono": {
           "users": "Eclipse IoT;Hono;hono-messaging",
           "remoteHosts": "*",
           "maxSessions": 2,
-          "maxFrameSize": 32768,
-          "maxSessionWindow": 3276800,
-          "maxMessageSize": 131072,
+          "maxFrameSize": 10000,
+          "maxSessionWindow": 2000000,
+          "maxMessageSize": 8096,
           "allowUserIdProxy": true,
           "targets": "telemetry/*, event/*"
         }

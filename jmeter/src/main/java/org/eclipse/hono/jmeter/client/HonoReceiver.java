@@ -49,8 +49,8 @@ public class HonoReceiver extends AbstractClient {
     private HonoClient amqpNetworkClient;
 
     private long sampleStart;
-    private long sampleEnd;
     private int messageCount;
+    private long totalSampleDeliveryTime;
     private long messageSize;
     private HonoReceiverSampler sampler;
     private Vertx vertx = vertx();
@@ -130,8 +130,8 @@ public class HonoReceiver extends AbstractClient {
                     MessageFormat.format("count: {0}, bytes received: {1}, period: {2}", messageCount,
                             messageSize, elapsed));
             if (sampler.isUseSenderTime() && messageCount > 0) {
-                    elapsed = sampleEnd - sampleStart;
-                    result.setStampAndTime(sampleStart, elapsed);
+                elapsed = totalSampleDeliveryTime / messageCount;
+                result.setStampAndTime(sampleStart, elapsed);
             } else if (sampleStart != 0 && messageCount > 0) { // sampling is started only when a message with a
                                                                // timestamp is received.
                 elapsed = System.currentTimeMillis() - sampleStart;
@@ -143,6 +143,7 @@ public class HonoReceiver extends AbstractClient {
             LOGGER.info("{}: received batch of {} messages in {} milliseconds", sampler.getThreadName(), messageCount,
                     elapsed);
             // reset all counters
+            totalSampleDeliveryTime = 0;
             messageSize = 0;
             messageCount = 0;
             sampleStart = 0;
@@ -154,10 +155,14 @@ public class HonoReceiver extends AbstractClient {
         result.setIdleTime(0);
     }
 
-    private void verifySenderTimeAndSetSamplingTime(final Long time, boolean senderTimeInPayload) {
-        if (time != null) {
-            sampleStart = time;
-            LOGGER.debug("Message sent time : {}", sampleStart);
+    private void verifySenderTimeAndSetSamplingTime(final Long senderTime, long sampleReceivedTime) {
+        if (senderTime != null) {
+            if (sampleStart == 0) { // set sample start only once when the first message is received.
+                sampleStart = senderTime;
+            }
+            long sampleDeliveryTime = sampleReceivedTime - senderTime;
+            LOGGER.debug("Message delivered in : {}", sampleDeliveryTime);
+            totalSampleDeliveryTime += sampleDeliveryTime;
         } else {
             throw new IllegalArgumentException("No Timestamp variable found in message");
         }
@@ -198,15 +203,15 @@ public class HonoReceiver extends AbstractClient {
             messageSize += messageBody.length;
 
             if (sampler.isUseSenderTime()) {
-                sampleEnd = System.currentTimeMillis();
-                LOGGER.debug("Message received time : {}", sampleEnd);
+                long sampleReceivedTime = System.currentTimeMillis();
+                LOGGER.debug("Message received time : {}", sampleReceivedTime);
                 if (sampler.isSenderTimeInPayload()) {
                     final Long time = (Long) getJSONValue(message.getBody())
                             .get(sampler.getSenderTimeVariableName());
-                    verifySenderTimeAndSetSamplingTime(time, sampler.isSenderTimeInPayload());
+                    verifySenderTimeAndSetSamplingTime(time, sampleReceivedTime);
                 } else {
                     final Long time = (Long) message.getApplicationProperties().getValue().get("timeStamp");
-                    verifySenderTimeAndSetSamplingTime(time, sampler.isSenderTimeInPayload());
+                    verifySenderTimeAndSetSamplingTime(time, sampleReceivedTime);
                 }
             } else {
                 if (sampleStart == 0) {

@@ -53,7 +53,6 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
 
-
     private MqttServer server;
     private MqttServer insecureServer;
     private Map<MqttEndpoint, String> registrationAssertions = new HashMap<>();
@@ -262,12 +261,12 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
             if (resource.getResourceId() == null) {
                 // if MQTT client doesn't specify device-id then closing connection (MQTT has no way for errors)
                 close(endpoint);
-            }
-            if (resource.getTenantId() == null) {
+            } else if (resource.getTenantId() == null) {
                 // if MQTT client doesn't specify tenant-id then closing connection (MQTT has no way for errors)
                 close(endpoint);
+            } else {
+                publishMessage(endpoint, resource.getTenantId(), resource.getResourceId(), message, resource);
             }
-            publishMessage(endpoint, resource.getTenantId(), resource.getResourceId(), message, resource);
         });
         LOG.debug("successfully connected with client [clientId: {}]", endpoint.clientIdentifier());
         endpoint.accept(false);
@@ -354,7 +353,6 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
                             tenantId, deviceId,
                             resource, message.qosLevel(), s.cause().getMessage());
                     metrics.incrementUndeliverableMqttMessages(resource.getEndpoint(), tenantId);
-                    close(endpoint);
                 } else {
                     LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, topic: {}, QoS: {}]",
                             tenantId, deviceId,

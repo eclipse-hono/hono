@@ -12,13 +12,13 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
@@ -43,7 +43,6 @@ import io.vertx.proton.ProtonConnection;
  */
 @RunWith(VertxUnitRunner.class)
 public class HonoClientImplTest {
-
     Vertx vertx;
 
     /**
@@ -310,6 +309,61 @@ public class HonoClientImplTest {
 
         // THEN the client invokes the disconnect handler provided in the original connect method call
         disconnectHandlerInvocation.await(500);
+    }
+    
+    /**
+     * Verifies that it fails to connect after client was shutdown.
+     * 
+     * @param ctx The test context.
+     *
+     */
+    @Test
+    public void testConnectFailsAfterShutdown(final TestContext ctx) {
+
+        // GIVEN a shutdown client
+        ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
+        HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+        client.shutdown();
+        
+        // WHEN client connects
+        Async connectionHandlerInvocation = ctx.async();
+        Handler<AsyncResult<HonoClient>> connectionHandler = result -> {
+            if (result.failed()) {
+                connectionHandlerInvocation.complete();
+            }
+        };
+        client.connect(new ProtonClientOptions(), connectionHandler );
+        
+        //THEN connect fails
+        connectionHandlerInvocation.await(500);
+    }
+    
+    /**
+     * Verifies that the client does not try to re-connect to a server instance if the client was shutdown.
+     * 
+     * @param ctx The test context.
+     *
+     */
+    @Test
+    public void testDoesNotTriggerReconnectionAfterShutdown(final TestContext ctx) {
+
+        // GIVEN a client that tries to connect to a server but does not succeed
+        ProtonConnection con = mock(ProtonConnection.class);
+        DisconnectHandlerProvidingConnectionFactory connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 1, Integer.MAX_VALUE);
+        HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+        Async connectionHandlerInvocation = ctx.async();
+        Handler<AsyncResult<HonoClient>> connectionHandler = result -> {
+            if (result.failed()) {
+                connectionHandlerInvocation.complete();
+            }
+        };
+        client.connect(new ProtonClientOptions().setReconnectAttempts(1), connectionHandler);
+
+        // WHEN client gets shutdown
+        client.shutdown();
+
+        // THEN reconnect gets stopped, i.e. connection fails
+        connectionHandlerInvocation.await(1000);
     }
 
     private class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {

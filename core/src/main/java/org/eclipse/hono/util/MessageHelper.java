@@ -61,15 +61,21 @@ public final class MessageHelper {
      * The name of the AMQP 1.0 message application property containing the resource a message is addressed at.
      */
     public static final String APP_PROPERTY_RESOURCE               = "resource";
+    /**
+     * The name of the AMQP 1.0 message application property containing the status code indicating the outcome of processing a request.
+     */
+    public static final String APP_PROPERTY_STATUS                 = "status";
 
     /**
-     * The name of the AMQP 1.0 message system property 'subject'.
+     * The AMQP 1.0 <em>subject</em> message property.
      */
     public static final String SYS_PROPERTY_SUBJECT                = "subject";
+    /**
+     * The AMQP 1.0 <em>correlation-id</em> message property.
+     */
     public static final String SYS_PROPERTY_CORRELATION_ID         = "correlation-id";
 
     public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID = "x-opt-app-correlation-id";
-    public static final String APP_PROPERTY_STATUS                 = "status";
 
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);

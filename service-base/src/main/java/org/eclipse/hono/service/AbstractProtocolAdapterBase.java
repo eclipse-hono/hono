@@ -183,7 +183,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 connectHandler.handle(Future.failedFuture("Hono Messaging client not set"));
             }
         } else if (messaging.isConnected()) {
-            LOG.debug("already connected to Hono Messaging");
+            LOG.info("already connected to Hono Messaging");
             if (connectHandler != null) {
                 connectHandler.handle(Future.succeededFuture(messaging));
             }
@@ -192,7 +192,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 if (connectHandler != null) {
                     connectHandler.handle(connectAttempt);
                 } else {
-                    LOG.debug("connected to Hono Messaging");
+                    LOG.info("connected to Hono Messaging");
                 }
             }, this::onDisconnectMessaging
             );
@@ -210,9 +210,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             LOG.info("attempting to reconnect to Hono Messaging");
             messaging.connect(createClientOptions(), connectAttempt -> {
                 if (connectAttempt.succeeded()) {
-                    LOG.debug("reconnected to Hono Messaging");
+                    LOG.info("reconnected to Hono Messaging");
                 } else {
-                    LOG.debug("cannot reconnect to Hono Messaging");
+                    LOG.debug("cannot reconnect to Hono Messaging: {}", connectAttempt.cause().getMessage());
                 }
             }, this::onDisconnectMessaging);
         });
@@ -232,7 +232,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 connectHandler.handle(Future.failedFuture("Device Registration client not set"));
             }
         } else if (registration.isConnected()) {
-            LOG.debug("already connected to Device Registration service");
+            LOG.info("already connected to Device Registration service");
             if (connectHandler != null) {
                 connectHandler.handle(Future.succeededFuture(registration));
             }
@@ -241,7 +241,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 if (connectHandler != null) {
                     connectHandler.handle(connectAttempt);
                 } else {
-                    LOG.debug("connected to Device Registration service");
+                    LOG.info("connected to Device Registration service");
                 }
             }, this::onDisconnectDeviceRegistry);
         }
@@ -258,9 +258,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             LOG.info("attempting to reconnect to Device Registration service");
             registration.connect(createClientOptions(), connectAttempt -> {
                 if (connectAttempt.succeeded()) {
-                    LOG.debug("reconnected to Device Registration service");
+                    LOG.info("reconnected to Device Registration service");
                 } else {
-                    LOG.debug("cannot reconnect to Device Registration service");
+                    LOG.debug("cannot reconnect to Device Registration service: {}", connectAttempt.cause().getMessage());
                 }
             }, this::onDisconnectDeviceRegistry);
         });

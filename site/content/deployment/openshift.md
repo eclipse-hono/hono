@@ -59,7 +59,7 @@ $ minishift dashboard
 ~~~
 
 You can login with username `developer` and password `developer`.
-Be sure to switch to the `Hono` project in the UI in order to see the components deployed as part of Hono.
+Be sure to switch to the `Eclipse Hono` project in the UI in order to see the components deployed as part of Hono.
 
 The screen shots below show Hono's components deployed to OpenShift.
 

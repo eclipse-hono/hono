@@ -661,12 +661,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         if (contentType == null) {
             badRequest(ctx.response(), String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
-            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
+            metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
         } else if (payload == null || payload.length() == 0) {
             badRequest(ctx.response(), "missing body");
-            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
+            metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
         } else {
-            
+
             final Future<String> tokenTracker = getRegistrationAssertionHeader(ctx, tenant, deviceId);
 
             CompositeFuture.all(tokenTracker, senderTracker).setHandler(s -> {
@@ -675,6 +675,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         LOG.debug("could not get registration assertion [tenant: {}, device: {}]", tenant, deviceId, s.cause());
                         endWithStatus(ctx.response(), HTTP_FORBIDDEN, null, null, null);
                     } else {
+                        // sender tracker has failed
                         serviceUnavailable(ctx.response(), 5);
                     }
                     metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
@@ -693,12 +694,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         boolean accepted = sender.send(deviceId, payload.getBytes(), contentType, token);
         if (accepted) {
             response.setStatusCode(HTTP_ACCEPTED).end();
-            metrics.incrementProcessedHttpMessages(endpointName,tenant);
+            metrics.incrementProcessedHttpMessages(endpointName, tenant);
         } else {
             serviceUnavailable(response, 2,
                     "resource limit exceeded, please try again later",
                     "text/plain");
-            metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
+            metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
         }
     }
 
