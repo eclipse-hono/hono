@@ -58,17 +58,17 @@ docker secret rm \
   qdrouter-sasl.conf \
   qdrouterd.sasldb
 
-#docker service rm hono-artemis
-#docker secret rm \
-#  artemis-broker.xml \
-#  artemis-bootstrap.xml \
-#  artemis-users.properties \
-#  artemis-roles.properties \
-#  login.config \
-#  logging.properties \
-#  artemis.profile \
-#  artemisKeyStore.p12 \
-#  trustStore.jks
+docker service rm hono-artemis
+docker secret rm \
+  artemis-broker.xml \
+  artemis-bootstrap.xml \
+  artemis-users.properties \
+  artemis-roles.properties \
+  login.config \
+  logging.properties \
+  artemis.profile \
+  artemisKeyStore.p12 \
+  trustStore.jks
 
 docker service rm grafana influxdb
 docker secret rm influxdb.conf

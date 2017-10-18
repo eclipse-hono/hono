@@ -33,31 +33,31 @@ docker service create $CREATE_OPTIONS --name influxdb \
 docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 eclipsehono/grafana:${project.version}
 echo ... done
 
-#echo
-#echo Deploying Artemis broker ...
-#docker secret create -l $NS artemis-broker.xml $CONFIG/hono-artemis-jar/etc/artemis-broker.xml
-#docker secret create -l $NS artemis-bootstrap.xml $CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml
-#docker secret create -l $NS artemis-users.properties $CONFIG/hono-artemis-jar/etc/artemis-users.properties
-#docker secret create -l $NS artemis-roles.properties $CONFIG/hono-artemis-jar/etc/artemis-roles.properties
-#docker secret create -l $NS login.config $CONFIG/hono-artemis-jar/etc/login.config
-#docker secret create -l $NS logging.properties $CONFIG/hono-artemis-jar/etc/logging.properties
-#docker secret create -l $NS artemis.profile $CONFIG/hono-artemis-jar/etc/artemis.profile
-#docker secret create -l $NS artemisKeyStore.p12 $CERTS/artemisKeyStore.p12
-#docker secret create -l $NS trustStore.jks $CERTS/trustStore.jks
-#docker service create $CREATE_OPTIONS --name hono-artemis \
-#  --env ARTEMIS_CONFIGURATION=/run/secrets \
-#  --secret artemis-broker.xml \
-#  --secret artemis-bootstrap.xml \
-#  --secret artemis-users.properties \
-#  --secret artemis-roles.properties \
-#  --secret login.config \
-#  --secret logging.properties \
-#  --secret artemis.profile \
-#  --secret artemisKeyStore.p12 \
-#  --secret trustStore.jks \
-#  --entrypoint "/opt/artemis/bin/artemis run xml:/run/secrets/artemis-bootstrap.xml" \
-#  ${artemis.image.name}
-#echo ... done
+echo
+echo Deploying Artemis broker ...
+docker secret create -l $NS artemis-broker.xml $SCRIPTPATH/artemis/artemis-broker.xml
+docker secret create -l $NS artemis-bootstrap.xml $CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml
+docker secret create -l $NS artemis-users.properties $CONFIG/hono-artemis-jar/etc/artemis-users.properties
+docker secret create -l $NS artemis-roles.properties $CONFIG/hono-artemis-jar/etc/artemis-roles.properties
+docker secret create -l $NS login.config $CONFIG/hono-artemis-jar/etc/login.config
+docker secret create -l $NS logging.properties $CONFIG/hono-artemis-jar/etc/logging.properties
+docker secret create -l $NS artemis.profile $SCRIPTPATH/artemis/artemis.profile
+docker secret create -l $NS artemisKeyStore.p12 $CERTS/artemisKeyStore.p12
+docker secret create -l $NS trustStore.jks $CERTS/trustStore.jks
+docker service create $CREATE_OPTIONS --name hono-artemis \
+  --env ARTEMIS_CONFIGURATION=/run/secrets \
+  --secret artemis-broker.xml \
+  --secret artemis-bootstrap.xml \
+  --secret artemis-users.properties \
+  --secret artemis-roles.properties \
+  --secret login.config \
+  --secret logging.properties \
+  --secret artemis.profile \
+  --secret artemisKeyStore.p12 \
+  --secret trustStore.jks \
+  --entrypoint "/opt/artemis/bin/artemis run xml:/run/secrets/artemis-bootstrap.xml" \
+  ${artemis.image.name}
+echo ... done
 
 echo
 echo Deploying Qpid Dispatch Router ...

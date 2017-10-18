@@ -47,6 +47,28 @@
     "saslMechanisms": "EXTERNAL"
   }],
 
+  ["connector", {
+    "sslProfile": "external",
+    "name": "broker",
+    "host": "hono-artemis.hono",
+    "port": 5671,
+    "role": "route-container",
+    "saslUsername": "artemis",
+    "saslPassword": "artemis"
+  }],
+
+  ["linkRoute", {
+    "prefix": "event/",
+    "dir": "in",
+    "connection": "broker"
+  }],
+
+  ["linkRoute", {
+    "prefix": "event/",
+    "dir": "out",
+    "connection": "broker"
+  }],
+
   ["policy", {
     "maxConnections": 220,
     "enableVhostPolicy": true,
