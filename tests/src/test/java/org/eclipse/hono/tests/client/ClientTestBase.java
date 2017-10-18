@@ -62,7 +62,7 @@ public abstract class ClientTestBase {
     private static final String TEST_TENANT_ID = System.getProperty(IntegrationTestSupport.PROPERTY_TENANT, Constants.DEFAULT_TENANT);
     private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
     private static final Vertx  vertx = Vertx.vertx();
-    private static final long   DEFAULT_TEST_TIMEOUT = 5000; // ms
+    private static final long   DEFAULT_TEST_TIMEOUT = 15000; // ms
 
     /**
      * A logger to be used by subclasses.
