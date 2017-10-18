@@ -3,8 +3,6 @@ node('iothub') {
 
     def mvnHome = tool 'mvn3.3.9'
     env.JAVA_HOME = tool 'jdk8u74'
-    env.DOCKER_HOST = 'tcp://10.56.22.164:2376'
-    env.DOCKER_TLS_VERIFY = '1'
 
     def startTime = new Date()
     def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd")
@@ -29,7 +27,6 @@ node('iothub') {
                         org.sonarsource.scanner.maven:sonar-maven-plugin:3.3.0.603:sonar deploy -Pbuild-docker-image,run-tests scm:tag \\
                         -Drevision=${buildVersion} -DskipStaging=true \\
                         -DconnectionUrl='scm:git:https://${USER_ID}:${USER_PW}@products.bosch-si.com/stash/scm/iothub/eclipse-hono.git' \\
-                        -Ddocker.host.name=sazvl0062.saz.bosch-si.com\\
                         """.stripIndent()
                 }
                 // deploy documentation to nginx
