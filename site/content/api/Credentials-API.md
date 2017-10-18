@@ -20,7 +20,7 @@ The preconditions for invoking any of the Credential API's operations are as fol
 2. Client has established an AMQP link in role *sender* with Hono using target address `credentials/${tenant_id}`. This link is used by the client to send commands to Hono.
 3. Client has established an AMQP link in role *receiver* with Hono using source address `credentials/${tenant_id}/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the requests it has sent to Hono. This link's source address is also referred to as the *reply-to* address for the request messages.
 
-This is illustrated by the following sequence diagram:
+This flow of messages is illustrated by the following sequence diagram:
 
 ![Credentials message flow preconditions](../connectToCredentials.png)
 
