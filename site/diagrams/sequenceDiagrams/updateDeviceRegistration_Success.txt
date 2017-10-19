@@ -1,0 +1,13 @@
+title Update Device Registration (success)
+
+Client->+Device Registration Service: transfer("registration/TENANT", "update", device-id, metadata)
+note right of Client:
+metadata part of
+optional JSON body
+end note
+
+note over Device Registration Service:
+update device registration
+end note
+
+Device Registration Service->-Client: transfer("registration/TENANT/${reply-to}", "204")
