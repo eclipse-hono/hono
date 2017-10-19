@@ -8,6 +8,7 @@
   </parent>
   <artifactId>hono-adapter-http-vertx-base</artifactId>
   <name>Hono HTTP Adapter base</name>
+  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

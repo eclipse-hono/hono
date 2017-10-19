@@ -11,6 +11,7 @@
   <name>Hono Core</name>
   <description>Basic classes used by all other modules.</description>
   <inceptionYear>2016</inceptionYear>
+  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

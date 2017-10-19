@@ -10,6 +10,7 @@
   <artifactId>hono-service-messaging</artifactId>
   <name>Hono Messaging</name>
   <description>The Messaging service implements Hono's Telemetry and Event APIs.</description>
+  <url>https://www.eclipse.org/hono</url>
 
   <properties>
     <vertx.health.port>8088</vertx.health.port>

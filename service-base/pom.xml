@@ -9,6 +9,8 @@
   </parent>
   <artifactId>hono-service-base</artifactId>
   <name>Hono Service base</name>
+  <description>Base classes for implementing Hono services.</description>
+  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

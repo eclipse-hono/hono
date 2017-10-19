@@ -8,6 +8,9 @@
   <artifactId>hono-adapter-mqtt-vertx</artifactId>
   <name>Hono MQTT Adapter</name>
 
+  <description>A protocol adapter exposing Hono's Telemetry &amp; Event APIs as a set of MQTT topics.</description>
+  <url>https://www.eclipse.org/hono</url>
+
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>

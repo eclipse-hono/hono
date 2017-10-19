@@ -26,13 +26,14 @@
 
   <organization>
     <name>Eclipse Foundation</name>
-    <url>http://www.eclipse.org/</url>
+    <url>https://www.eclipse.org/</url>
   </organization>
 
   <licenses>
     <license>
       <name>Eclipse Public License - Version 1.0</name>
-      <url>http://www.eclipse.org/org/documents/epl-v10.php</url>
+      <url>http://www.eclipse.org/legal/epl-v10.html</url>
+      <comments>SPDX-License-Identifier: EPL-1.0</comments>
     </license>
   </licenses>
 
@@ -336,7 +337,7 @@
               </goals>
               <configuration>
                 <includeArtifactIds>hono-legal</includeArtifactIds>
-                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                <outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
                 <excludes>META-INF/**</excludes>
               </configuration>
             </execution>

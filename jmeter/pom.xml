@@ -14,6 +14,7 @@
   <artifactId>hono-jmeter</artifactId>
   <name>Hono JMeter Plugin</name>
   <description>JMeter Plugin for Hono with sender and receiver samplers using the Hono Client</description>
+  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

@@ -28,6 +28,7 @@
   <name>Hono Examples</name>
   <description>A collection of example code for sending and receiving telemetry data using HonoClient.
 Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kubernetes or an Openshift cluster using example configuration properties.</description>
+  <url>https://www.eclipse.org/hono</url>
 
   <properties>
     <docker.skip.build>true</docker.skip.build>
