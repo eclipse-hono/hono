@@ -1,0 +1,6 @@
+title Connect to Device Registration Service
+
+Client->+Device Registration Service: 2.1 attach("sender", "registration/${tenant_id}")
+Device Registration Service->-Client: 2.2 attach("receiver", "registration/${tenant_id}")
+Client->+Device Registration Service: 3.1 attach("receiver", "registration/${tenant_id}/${reply-to}")
+Device Registration Service->-Client: 3.2 attach("sender", "registration/${tenant_id}/${reply-to}")

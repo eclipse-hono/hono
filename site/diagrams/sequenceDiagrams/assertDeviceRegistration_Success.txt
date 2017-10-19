@@ -1,0 +1,12 @@
+title Assert Device Registration (success)
+
+Client->+Device Registration Service: transfer("registration/tenant", "assert", device-id)
+note over Device Registration Service:
+lookup device and check enabled flag
+generate assertion
+end note
+Device Registration Service->Client: transfer("registration/tenant/${reply-to}", device-id, assertion)
+note right of Client:
+device-id and assertion
+contained in JSON body
+end note
