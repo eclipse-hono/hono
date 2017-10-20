@@ -237,7 +237,7 @@ The following table provides an overview of the properties shared by all respons
 | *correlation-id* | yes       | *properties*             | *message-id*    | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
 | *device_id*      | yes       | *application-properties* | UTF-8 *string*  | Contains the ID of the device. |
 | *tenant_id*      | yes       | *application-properties* | UTF-8 *string*  | Contains the ID of the tenant to which the device belongs. |
-| *status*         | yes       | *application-properties* | *int*           | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
+| *status*         | yes       | *application-properties* | UTF-8 *string*  | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
 
 ## Delivery States
 
