@@ -240,24 +240,24 @@ Due to the nature of the request/response message pattern of the operations of t
 
 The following table provides an overview of the properties shared by all request messages regardless of the particular operation being invoked.
 
-| Name             | Mandatory | Location                 | Type         | Description |
-| :--------------- | :-------: | :----------------------- | :----------- | :---------- |
-| *subject*        | yes       | *properties*             | *string*     | MUST be set to the value defined by the particular operation being invoked. |
-| *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
-| *message-id*     | yes       | *properties*             | *string*     | MUST contain an identifier that uniquely identifies the message at the sender side. |
-| *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
-| *device_id*      | yes       | *application-properties* | *string*     | MUST contain the ID of the device that is subject to the operation. |
+| Name             | Mandatory | Location                 | Type            | Description |
+| :--------------- | :-------: | :----------------------- | :-------------- | :---------- |
+| *subject*        | yes       | *properties*             | UTF-8 *string*  | MUST be set to the value defined by the particular operation being invoked. |
+| *correlation-id* | no        | *properties*             | *message-id*    | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
+| *message-id*     | yes       | *properties*             | UTF-8 *string*  | MUST contain an identifier that uniquely identifies the message at the sender side. |
+| *reply-to*       | yes       | *properties*             | UTF-8 *string*  | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
+| *device_id*      | yes       | *application-properties* | UTF-8 *string*  | MUST contain the ID of the device that is subject to the operation. |
 
 ## Standard Response Properties
 
 The following table provides an overview of the properties shared by all response messages regardless of the particular operation being invoked.
 
-| Name             | Mandatory | Location                 | Type         | Description |
-| :--------------- | :-------: | :----------------------- | :----------- | :---------- |
-| *correlation-id* | yes       | *properties*             | *message-id* | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
-| *device_id*      | yes       | *application-properties* | *string*     | Contains the ID of the device. |
-| *tenant_id*      | yes       | *application-properties* | *string*     | Contains the ID of the tenant to which the device belongs. |
-| *status*         | yes       | *application-properties* | *int*        | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
+| Name             | Mandatory | Location                 | Type           | Description |
+| :--------------- | :-------: | :----------------------- | :------------- | :---------- |
+| *correlation-id* | yes       | *properties*             | *message-id*   | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
+| *device_id*      | yes       | *application-properties* | UTF-8 *string* | Contains the ID of the device. |
+| *tenant_id*      | yes       | *application-properties* | UTF-8 *string* | Contains the ID of the tenant to which the device belongs. |
+| *status*         | yes       | *application-properties* | UTF-8 *string* | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
 
 # Delivery States
 
