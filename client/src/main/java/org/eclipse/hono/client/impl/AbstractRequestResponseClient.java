@@ -232,12 +232,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     private R getRequestResponseResult(final Message message) {
-        final String status = MessageHelper.getApplicationProperty(
+        final Integer status = MessageHelper.getApplicationProperty(
                 message.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_STATUS,
-                String.class);
+                Integer.class);
         final String payload = MessageHelper.getPayload(message);
-        return getResult(Integer.valueOf(status), payload);
+        return getResult(status, payload);
     }
 
     /**

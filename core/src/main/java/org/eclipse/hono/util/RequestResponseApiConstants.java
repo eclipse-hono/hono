@@ -55,7 +55,7 @@ public class RequestResponseApiConstants {
     public static final Message getAmqpReply(final String endpoint, final JsonObject payload) {
         final String tenantId = payload.getString(FIELD_TENANT_ID);
         final String deviceId = payload.getString(FIELD_DEVICE_ID);
-        final String status = payload.getString(MessageHelper.APP_PROPERTY_STATUS);
+        final Integer status = payload.getInteger(MessageHelper.APP_PROPERTY_STATUS);
         final JsonObject correlationIdJson = payload.getJsonObject(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
         final Object correlationId = MessageHelper.decodeIdFromJson(correlationIdJson);
         final boolean isApplCorrelationId = payload.getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
@@ -76,7 +76,7 @@ public class RequestResponseApiConstants {
      * @param payload The payload of the message reply as json object.
      * @return Message The built Proton message. Maybe null. In that case, the message reply will not contain a body.
      */
-    public static final Message getAmqpReply(final String endpoint, final String status, final Object correlationId,
+    public static final Message getAmqpReply(final String endpoint, final Integer status, final Object correlationId,
                                              final String tenantId, final String deviceId, final boolean isApplCorrelationId,
                                              final JsonObject payload) {
 
@@ -135,7 +135,7 @@ public class RequestResponseApiConstants {
         if (deviceId != null) {
             jsonObject.put(FIELD_DEVICE_ID, deviceId);
         }
-        jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, Integer.toString(status));
+        jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, status);
         if (payload != null) {
             jsonObject.put(FIELD_PAYLOAD, payload);
         }

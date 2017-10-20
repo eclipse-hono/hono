@@ -227,7 +227,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                         HttpEndpointUtils.serviceUnavailable(response, 2);
                     } else {
                         final JsonObject registrationResult = (JsonObject) invocation.result().body();
-                        final Integer status = Integer.valueOf(registrationResult.getString(MessageHelper.APP_PROPERTY_STATUS));
+                        final Integer status = registrationResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);
                         responseHandler.accept(status, registrationResult);
                     }
                 });

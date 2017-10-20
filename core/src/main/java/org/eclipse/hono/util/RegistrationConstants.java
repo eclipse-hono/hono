@@ -112,7 +112,7 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      */
     public static boolean hasStatus(final JsonObject msg, final int expectedStatus) {
 
-        return Objects.requireNonNull(msg).getString(MessageHelper.APP_PROPERTY_STATUS, "none").equals(Integer.toString(expectedStatus));
+        return Objects.requireNonNull(msg).getInteger(MessageHelper.APP_PROPERTY_STATUS).equals(expectedStatus);
     }
 
 

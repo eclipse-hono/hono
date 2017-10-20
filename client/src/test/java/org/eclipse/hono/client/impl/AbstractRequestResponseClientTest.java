@@ -163,7 +163,7 @@ public class AbstractRequestResponseClientTest {
         // WHEN a response is received for the request
         final Message response = ProtonHelper.message("payload");
         response.setCorrelationId(MESSAGE_ID);
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, "200");
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, 200);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
 

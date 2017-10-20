@@ -144,12 +144,12 @@ class RegistrationTestSupport {
             LOGGER.debug("adding response handler for request [correlation ID: {}]", correlationId);
             final CompletableFuture<RegistrationResult> result = c.add(correlationId, response -> {
 
-                final String status = getStringProperty(response, MessageHelper.APP_PROPERTY_STATUS);
+                final Integer status = getIntProperty(response, MessageHelper.APP_PROPERTY_STATUS);
                 LOGGER.debug("received response [type: {}, status: {}] for request [correlation ID: {}]", response.getClass().getName(), status, correlationId);
-                final int httpStatus = toInt(status, 0);
-                if (status == null || status.isEmpty() || httpStatus <= 0) {
+                int httpStatus = status;
+                if (status == null || httpStatus <= 0) {
                     throw new IllegalStateException(
-                            "Response to " + getMessageID(response) + " contained no valid status: " + status);
+                            "Response to " + getMessageID(response) + " contained no valid status: " + httpStatus);
                 }
 
                 if (expectedStatus != null && expectedStatus != httpStatus) {
@@ -186,6 +186,14 @@ class RegistrationTestSupport {
     private static String getStringProperty(final Message message, final String name)  {
         try {
             return message.getStringProperty(name);
+        } catch (final JMSException e) {
+            return null;
+        }
+    }
+
+    private static Integer getIntProperty(final Message message, final String name)  {
+        try {
+            return message.getIntProperty(name);
         } catch (final JMSException e) {
             return null;
         }

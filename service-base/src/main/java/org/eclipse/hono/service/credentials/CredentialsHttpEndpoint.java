@@ -312,7 +312,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                 HttpEndpointUtils.serviceUnavailable(response, 2);
             } else {
                 final JsonObject credentialsResult = (JsonObject) invocation.result().body();
-                final Integer status = Integer.valueOf(credentialsResult.getString(MessageHelper.APP_PROPERTY_STATUS));
+                final Integer status = credentialsResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);
                 responseHandler.accept(status, credentialsResult);
             }
         });
