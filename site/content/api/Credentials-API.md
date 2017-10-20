@@ -320,9 +320,9 @@ The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" 
 
 Protocol Adapters are responsible for authenticating devices when they connect. The Credentials API provides the [Get Credentials]({{< relref "#get-credentials" >}}) operation to support Protocol Adapters in doing so as illustrated below:
 
-The following sequence diagram illustrates the flow of messages involved in a *Protocol Adapter* authenticating a device that provides it's authentication data.
-This is denoted as a (not directly existing) method call **authenticate** which is meant as a placeholder for the process of authentication. The details
-of providing the authentication data are protocol specific. 
+The following sequence diagram illustrates the flow of messages involved in a *Protocol Adapter* authenticating a device.
+This is shown for the *MQTT Protocol Adapter* as example how a device authenticates with a username and a hashed-password.
+The mechanism can be transfered to other protocols in a similar manner.
 
 ![Protocol Adapter authenticating Devices message flow](../protocolAdapterDeviceAuthentication_Success.png)
 

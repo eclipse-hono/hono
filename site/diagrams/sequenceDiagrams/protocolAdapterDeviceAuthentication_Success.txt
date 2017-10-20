@@ -1,19 +1,13 @@
-title Protocol Adapter Device Authentication (success)
+title Protocol Adapter Device Authentication (MQTT, success)
 
-Device->+Protocol Adapter: authenticate(type, auth-id, secrets)
-note over Device:
-Denotes the process of authentication
-(that differs for every protocol)
-end note
+Device->+MQTT Protocol Adapter: CONNECT(username, hashed-password)
 
-Protocol Adapter->+Credentials Service: transfer("credentials/TENANT", "get", type, auth-id)
+MQTT Protocol Adapter->+Credentials Service: transfer("credentials/TENANT", "get", "hashed-password", username)
 note over Credentials Service: lookup credentials
-Credentials Service->-Protocol Adapter: transfer("credentials/TENANT", "200", credentials)
+Credentials Service->-MQTT Protocol Adapter: transfer("credentials/TENANT", "200", credentials)
 
-Protocol Adapter->Protocol Adapter: verify(credentials, secrets)
-note over Protocol Adapter:
+note over MQTT Protocol Adapter:
 Verify retrieved credentials
-against device secrets
-(e.g. compare hashed passwords)
+against hashed-password
 end note
-Protocol Adapter->-Device: OK
+MQTT Protocol Adapter->-Device: CONNACK
