@@ -30,4 +30,4 @@ hono:
   credentials:
     svc:
       credentialsFilename: /run/secrets/example-credentials.json
-
+      modificationEnabled: false
