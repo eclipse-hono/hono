@@ -171,6 +171,58 @@ public class FileBasedCredentialsServiceTest {
 
     }
 
+    /**
+     * Verifies that the <em>modificationEnabled</em> property prevents updating an existing entry.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUpdateCredentialsFailsIfModificationIsDisabled(final TestContext ctx) {
+
+        // GIVEN a registry containing a set of credentials
+        // that has been configured to not allow modification of entries
+        config.setModificationEnabled(false);
+        FileBasedCredentialsService svc = new FileBasedCredentialsService();
+        svc.setConfig(config);
+        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+
+        // WHEN trying to update the credentials
+        Async updateFailure = ctx.async();
+        svc.update("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+            updateFailure.complete();
+        }));
+
+        // THEN the update fails
+        updateFailure.await(2000);
+    }
+
+    /**
+     * Verifies that the <em>modificationEnabled</em> property prevents removing an existing entry.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testRemoveDeviceFailsIfModificationIsDisabled(final TestContext ctx) {
+
+        // GIVEN a registry containing a set of credentials
+        // that has been configured to not allow modification of entries
+        config.setModificationEnabled(false);
+        FileBasedCredentialsService svc = new FileBasedCredentialsService();
+        svc.setConfig(config);
+        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+
+        // WHEN trying to remove the credentials
+        Async removeFailure = ctx.async();
+        svc.update("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+            removeFailure.complete();
+        }));
+
+        // THEN the removal fails
+        removeFailure.await(2000);
+    }
+
     private static void assertRegistered(final CredentialsService svc, final String tenant, final String authId, final String type, final TestContext ctx) {
         Async registration = ctx.async();
         svc.get(tenant, type, authId, ctx.asyncAssertSuccess(t -> {

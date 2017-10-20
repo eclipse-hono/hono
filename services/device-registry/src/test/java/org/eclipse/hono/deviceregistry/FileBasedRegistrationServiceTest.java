@@ -47,8 +47,11 @@ public class FileBasedRegistrationServiceTest
    Vertx vertx;
    EventBus eventBus;
 
+   /**
+    * Sets up the fixture.
+    */
    @Before
-   public void setUp() throws Exception {
+   public void setUp() {
       vertx = mock(Vertx.class);
       Context ctx = mock(Context.class);
       eventBus = mock(EventBus.class);
