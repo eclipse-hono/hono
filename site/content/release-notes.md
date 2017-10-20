@@ -6,13 +6,17 @@ weight = 800
 
 # 0.5-M10 (not yet released)
 
+### New Features
+
+* We have set up a [Sandbox server]({{< relref "sandbox.md" >}}) at `hono.eclipse.org` which can be used to connect devices and consumers for testing purposes without the need to run a Hono instance locally.
+
 ### Fixes & Enhancements
 
-* Enhanced internal flow control for telemetry messages.
+See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue%20milestone%3A0.5-M10) for the list of issues addressed.
 
 ### Configuration Changes
 
-* The example *Dispatch Router* is configured to balanced for consumers (vs. multicast before). For full AMQP flow control, this is the preferred option.
+* The example *Dispatch Router* is configured to use balanced distribution of messages to consumers (vs. multicast before). For full AMQP flow control, this is the preferred option.
 
 ## 0.5-M9
 
