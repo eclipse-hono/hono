@@ -313,8 +313,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Sends a request message via this client's sender link to the peer.
      * <p>
-     * This method first checks if the sender has credits left and if not, immediately
-     * fails the result handler.
+     * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
+     * Otherwise, the request message is sent and a timer is started which fails the result handler,
+     * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
      * 
      * @param request The message to send.
      * @param resultHandler The handler to notify about the outcome of the request.
@@ -322,7 +323,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     private final void sendRequest(final Message request, final Handler<AsyncResult<R>> resultHandler) {
 
         context.runOnContext(req -> {
-            if (sender.getCredit() > 0) {
+            if (sender.sendQueueFull()) {
+                LOG.debug("cannot send request to peer, no credit left for link [target: {}]", sender.getRemoteTarget().getAddress());
+                resultHandler.handle(Future.failedFuture("no credit"));
+            } else {
                 final String messageId = (String) request.getMessageId();
                 replyMap.put(messageId, resultHandler);
                 sender.send(request);
@@ -331,9 +335,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         cancelRequest(messageId, Future.failedFuture(String.format("request timed out after %d ms", requestTimeoutMillis)));
                     });
                 }
-            } else {
-                LOG.debug("cannot send request to peer, no credit left for link [target: {}]", sender.getRemoteTarget().getAddress());
-                resultHandler.handle(Future.failedFuture("no credit to send request to peer"));
             }
         });
     }
