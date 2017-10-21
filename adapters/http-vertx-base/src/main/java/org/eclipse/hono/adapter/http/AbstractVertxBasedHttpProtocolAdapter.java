@@ -12,10 +12,10 @@
 
 package org.eclipse.hono.adapter.http;
 
-import static java.net.HttpURLConnection.*;
-
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -511,32 +511,30 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
-            final Buffer payload, final String contentType, final Future<MessageSender> senderTracker,
-            final String endpointName) {
+            final Buffer payload, final String contentType, final Future<MessageSender> senderTracker, final String endpointName) {
 
         if (contentType == null) {
             HttpUtils.badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
-            metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
         } else if (payload == null || payload.length() == 0) {
             HttpUtils.badRequest(ctx, "missing body");
-            metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
         } else {
 
-            final Future<String> tokenTracker = getRegistrationAssertionHeader(ctx, tenant, deviceId);
+            final Future<String> tokenTracker = getRegistrationAssertion(tenant, deviceId);
 
             CompositeFuture.all(tokenTracker, senderTracker).setHandler(s -> {
-                if (s.failed()) {
-                    if (tokenTracker.failed()) {
-                        LOG.debug("could not get registration assertion [tenant: {}, device: {}]", tenant, deviceId, s.cause());
-                        ctx.fail(HTTP_FORBIDDEN);
-                    } else {
-                        // sender tracker has failed
-                        HttpUtils.serviceUnavailable(ctx, 5);
-                    }
-                    metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
-                } else {
+                if (s.succeeded()) {
                     sendToHono(ctx, deviceId, payload, contentType, tokenTracker.result(),
                             senderTracker.result(), tenant, endpointName);
+                } else if (ClientErrorException.class.isInstance(s.cause())) {
+                    ClientErrorException e = (ClientErrorException) s.cause();
+                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}, cause: {} - {}]",
+                            tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
+                    ctx.fail(HttpURLConnection.HTTP_FORBIDDEN);
+                } else {
+                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}, cause: {}]",
+                            tenant, deviceId, endpointName, s.cause().getMessage());
+                    metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
+                    HttpUtils.serviceUnavailable(ctx, 2);
                 }
             });
         }
@@ -546,14 +544,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String contentType, final String token, final MessageSender sender, final String tenant,
             final String endpointName) {
 
-        boolean accepted = sender.send(deviceId, payload.getBytes(), contentType, token);
-        if (accepted) {
-            ctx.response().setStatusCode(HTTP_ACCEPTED).end();
+        if (sender.send(deviceId, payload.getBytes(), contentType, token)) {
+            LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                    tenant, deviceId, endpointName);
             metrics.incrementProcessedHttpMessages(endpointName, tenant);
+            ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
         } else {
-            HttpUtils.serviceUnavailable(ctx, 2,
-                    "resource limit exceeded, please try again later");
             metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
+            HttpUtils.serviceUnavailable(ctx, 2, "resource limit exceeded");
         }
     }
 
@@ -567,24 +565,25 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * If the <em>regAssertionEnabled</em> configuration property is set, the newly created token is included in
      * the HTTP response using the same header name.
      * 
-     * @param ctx The routing context to use for getting/setting the cookie.
+     * @param ctx The routing context to retrieve the assertion request header from.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
      * @return A future containing the assertion.
      */
-    protected final Future<String> getRegistrationAssertionHeader(final RoutingContext ctx, final String tenantId,
+    protected final Future<String> getRegistrationAssertion(final RoutingContext ctx, final String tenantId,
             final String deviceId) {
 
-        String assertion = ctx.request().getHeader(HEADER_REGISTRATION_ASSERTION);
+        final String assertion = ctx.request().getHeader(HEADER_REGISTRATION_ASSERTION);
         if (assertion != null && !JwtHelper.isExpired(assertion, 5)) {
             return Future.succeededFuture(assertion);
         } else {
-            return getRegistrationAssertion(tenantId, deviceId).compose(token -> {
+            return getRegistrationAssertion(tenantId, deviceId).map(token -> {
                 if (getConfig().isRegAssertionEnabled()) {
                     ctx.response().putHeader(HEADER_REGISTRATION_ASSERTION, token);
                 }
-                return Future.succeededFuture(token);
+                return token;
             });
         }
     }
+
 }

@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -342,17 +343,23 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
 
     private void publishMessage(final MqttEndpoint endpoint, final String tenantId, final String deviceId,
             final MqttPublishMessage message, final ResourceIdentifier resource) {
+
         LOG.trace("received message for device [tenantId: {}, deviceId: {}, topic: {}, QoS: {}]",
                 tenantId, deviceId, message.topicName(), message.qosLevel());
 
         try {
+            final Future<String> assertionTracker = getRegistrationAssertion(endpoint, tenantId, deviceId);
+            final Future<MessageSender> senderTracker = getSenderTracker(message, resource, tenantId);
+
             Future<Void> messageTracker = Future.future();
             messageTracker.setHandler(s -> {
                 if (s.failed()) {
                     LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, topic: {}, QoS: {}, cause: {}]",
                             tenantId, deviceId,
                             resource, message.qosLevel(), s.cause().getMessage());
-                    metrics.incrementUndeliverableMqttMessages(resource.getEndpoint(), tenantId);
+                    if (!ClientErrorException.class.isInstance(s.cause())) {
+                        metrics.incrementUndeliverableMqttMessages(resource.getEndpoint(), tenantId);
+                    }
                 } else {
                     LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, topic: {}, QoS: {}]",
                             tenantId, deviceId,
@@ -360,9 +367,6 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
                     metrics.incrementProcessedMqttMessages(resource.getEndpoint(), tenantId);
                 }
             });
-
-            Future<String> assertionTracker = getRegistrationAssertion(endpoint, tenantId, deviceId);
-            Future<MessageSender> senderTracker = getSenderTracker(message, resource, tenantId);
 
             CompositeFuture.all(assertionTracker, senderTracker).compose(ok -> {
                 doUploadMessage(deviceId, assertionTracker.result(), endpoint, message,
@@ -403,13 +407,13 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
     }
 
     private Future<String> getRegistrationAssertion(final MqttEndpoint endpoint, final String tenantId, final String deviceId) {
+
         String token = registrationAssertions.get(endpoint);
         if (token != null && !RegistrationAssertionHelperImpl.isExpired(token, 10)) {
             return Future.succeededFuture(token);
         } else {
             registrationAssertions.remove(endpoint);
-            Future<String> result = Future.future();
-            getRegistrationAssertion(tenantId, deviceId).compose(t -> {
+            return getRegistrationAssertion(tenantId, deviceId).map(t -> {
                 // if the client closes the connection right after publishing the messages and before that
                 // the registration assertion has been returned, avoid to put it into the map
                 if (endpoint.isConnected()) {
@@ -417,9 +421,8 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
                             tenantId, deviceId);
                     registrationAssertions.put(endpoint, t);
                 }
-                result.complete(t);
-            }, result);
-            return result;
+                return t;
+            });
         }
     }
 
