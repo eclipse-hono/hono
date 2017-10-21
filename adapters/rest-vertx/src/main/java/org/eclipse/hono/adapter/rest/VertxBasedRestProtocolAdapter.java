@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +100,7 @@ public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpP
     }
 
     private void handle401(final RoutingContext ctx) {
-        unauthorized(ctx.response(), "Basic realm=\"" + getConfig().getRealm() + "\"");
+        HttpUtils.unauthorized(ctx, "Basic realm=\"" + getConfig().getRealm() + "\"");
     }
 
     void handlePostTelemetry(final RoutingContext ctx) {
@@ -129,7 +130,7 @@ public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpP
             if (device.getTenantId().equals(getTenantParam(ctx)) && device.getDeviceId().equals(getDeviceIdParam(ctx))) {
                 ctx.next();
             } else {
-                endWithStatus(ctx.response(), HttpURLConnection.HTTP_FORBIDDEN, null, null, null);
+                ctx.fail(HttpURLConnection.HTTP_FORBIDDEN);
             }
         } else {
             handle401(ctx);

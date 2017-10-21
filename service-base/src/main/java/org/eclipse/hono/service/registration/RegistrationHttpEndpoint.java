@@ -20,7 +20,7 @@ import java.util.function.BiConsumer;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.service.http.HttpEndpointUtils;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,10 +68,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
 
         final String pathWithTenant = String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID);
         // ADD device registration
-        router.route(HttpMethod.POST, pathWithTenant).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
+        router.route(HttpMethod.POST, pathWithTenant).consumes(HttpUtils.CONTENT_TYPE_JSON)
                 .handler(this::doRegisterDeviceJson);
         router.route(HttpMethod.POST, pathWithTenant)
-                .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+                .handler(ctx -> HttpUtils.badRequest(ctx, "missing or unsupported content-type"));
 
         final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s",
                 RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID);
@@ -79,10 +79,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         router.route(HttpMethod.GET, pathWithTenantAndDeviceId).handler(this::doGetDevice);
 
         // UPDATE existing registration
-        router.route(HttpMethod.PUT, pathWithTenantAndDeviceId).consumes(HttpEndpointUtils.CONTENT_TYPE_JSON)
+        router.route(HttpMethod.PUT, pathWithTenantAndDeviceId).consumes(HttpUtils.CONTENT_TYPE_JSON)
                 .handler(this::doUpdateRegistrationJson);
         router.route(HttpMethod.PUT, pathWithTenantAndDeviceId)
-                .handler(ctx -> HttpEndpointUtils.badRequest(ctx.response(), "missing or unsupported content-type"));
+                .handler(ctx -> HttpUtils.badRequest(ctx, "missing or unsupported content-type"));
 
         // REMOVE registration
         router.route(HttpMethod.DELETE, pathWithTenantAndDeviceId).handler(this::doUnregisterDevice);
@@ -100,7 +100,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         JsonObject msg = registrationResult.getJsonObject(RegistrationConstants.FIELD_PAYLOAD);
         if (msg != null) {
             String body = msg.encodePrettily();
-            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
                 .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
                 .write(body);
         }
@@ -119,7 +119,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                 case HttpURLConnection.HTTP_OK:
                     final String msg = registrationResult.getJsonObject(RegistrationConstants.FIELD_PAYLOAD).encodePrettily();
                     response
-                            .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+                            .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
                             .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
                             .write(msg);
                 default:
@@ -136,20 +136,20 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
             }
             registerDevice(ctx, payload);
         } catch (DecodeException e) {
-            HttpEndpointUtils.badRequest(ctx.response(), "body does not contain a valid JSON object");
+            HttpUtils.badRequest(ctx, "body does not contain a valid JSON object");
         }
     }
 
     private void registerDevice(final RoutingContext ctx, final JsonObject payload) {
 
         if (payload == null) {
-            HttpEndpointUtils.badRequest(ctx.response(), "missing body");
+            HttpUtils.badRequest(ctx, "missing body");
         } else {
             Object deviceId = payload.remove(FIELD_DEVICE_ID);
             if (deviceId == null) {
-                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' param is required", FIELD_DEVICE_ID));
+                HttpUtils.badRequest(ctx, String.format("'%s' param is required", FIELD_DEVICE_ID));
             } else if (!(deviceId instanceof String)) {
-                HttpEndpointUtils.badRequest(ctx.response(), String.format("'%s' must be a string", FIELD_DEVICE_ID));
+                HttpUtils.badRequest(ctx, String.format("'%s' must be a string", FIELD_DEVICE_ID));
             } else {
                 final String tenantId = getTenantParam(ctx);
                 logger.debug("registering data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
@@ -179,7 +179,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
             }
             updateRegistration(getDeviceIdParam(ctx), payload, ctx);
         } catch (DecodeException e) {
-            HttpEndpointUtils.badRequest(ctx.response(), "body does not contain a valid JSON object");
+            HttpUtils.badRequest(ctx, "body does not contain a valid JSON object");
         }
     }
 
@@ -222,9 +222,8 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
 
         vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, requestMsg,
                 invocation -> {
-                    HttpServerResponse response = ctx.response();
                     if (invocation.failed()) {
-                        HttpEndpointUtils.serviceUnavailable(response, 2);
+                        HttpUtils.serviceUnavailable(ctx, 2);
                     } else {
                         final JsonObject registrationResult = (JsonObject) invocation.result().body();
                         final Integer status = registrationResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);

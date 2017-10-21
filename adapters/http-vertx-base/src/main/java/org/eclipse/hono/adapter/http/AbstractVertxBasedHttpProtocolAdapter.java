@@ -14,13 +14,11 @@ package org.eclipse.hono.adapter.http;
 
 import static java.net.HttpURLConnection.*;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.JwtHelper;
@@ -37,7 +35,6 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -50,15 +47,6 @@ import io.vertx.ext.web.handler.BodyHandler;
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtocolAdapterProperties> extends AbstractProtocolAdapterBase<T> {
-
-    /**
-     * The <em>application/json</em> content type.
-     */
-    protected static final String CONTENT_TYPE_JSON              = "application/json";
-    /**
-     * The <em>application/json; charset=utf-8</em> content type.
-     */
-    protected static final String CONTENT_TYPE_JSON_UFT8         = "application/json; charset=utf-8";
 
     /**
      * Default file uploads directory used by Vert.x Web
@@ -222,7 +210,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        router.route().handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize()).setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY));
+        router.route().handler(BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY).setBodyLimit(getConfig().getMaxPayloadSize()));
 
         String statusResourcePath = getStatusResourcePath();
         if (statusResourcePath != null) {
@@ -398,133 +386,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         return Future.succeededFuture();
     }
 
-    /**
-     * Ends a response with HTTP status code 400 (Bad Request) and an optional message.
-     * <p>
-     * The content type of the message will be <em>text/plain</em>.
-     * 
-     * @param response The HTTP response to write to.
-     * @param msg The message to write to the response's body (may be {@code null}).
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void badRequest(final HttpServerResponse response, final String msg) {
-        badRequest(response, msg, null);
-    }
-
-    /**
-     * Ends a response with HTTP status code 400 (Bad Request) and an optional message.
-     *
-     * @param response The HTTP response to write to.
-     * @param msg The message to write to the response's body (may be {@code null}).
-     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void badRequest(final HttpServerResponse response, final String msg, final String contentType) {
-        LOG.debug("Bad request: {}", msg);
-        endWithStatus(response, HTTP_BAD_REQUEST, null, msg, contentType);
-    }
-
-    /**
-     * Ends a response with HTTP status code 500 (Internal Error) and an optional message.
-     * <p>
-     * The content type of the message will be <em>text/plain</em>.
-     *
-     * @param response The HTTP response to write to.
-     * @param msg The message to write to the response's body (may be {@code null}).
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void internalServerError(final HttpServerResponse response, final String msg) {
-        LOG.debug("Internal server error: {}", msg);
-        endWithStatus(response, HTTP_INTERNAL_ERROR, null, msg, null);
-    }
-
-    /**
-     * Ends a response with HTTP status code 503 (Service Unavailable) and sets the <em>Retry-After</em> HTTP header
-     * to a given number of seconds.
-     * 
-     * @param response The HTTP response to write to.
-     * @param retryAfterSeconds The number of seconds to set in the header.
-     */
-    protected static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds) {
-        serviceUnavailable(response, retryAfterSeconds, null, null);
-    }
-
-    /**
-     * Ends a response with HTTP status code 503 (Service Unavailable) and sets the <em>Retry-After</em> HTTP header
-     * to a given number of seconds.
-     * 
-     * @param response The HTTP response to write to.
-     * @param retryAfterSeconds The number of seconds to set in the header.
-     * @param detail The message to write to the response's body (may be {@code null}).
-     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void serviceUnavailable(final HttpServerResponse response, final int retryAfterSeconds,
-            final String detail, final String contentType) {
-
-        LOG.debug("Service unavailable: {}", detail);
-        Map<CharSequence, CharSequence> headers = new HashMap<>(2);
-        headers.put(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "text/plain");
-        headers.put(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
-        endWithStatus(response, HTTP_UNAVAILABLE, headers, detail, contentType);
-    }
-
-    /**
-     * Ends a response with HTTP status code 401 (Unauthorized) and an optional message.
-     *
-     * @param response The HTTP response to write to.
-     * @param authenticateHeaderValue The value to send to the client in the <em>WWW-Authenticate</em> header.
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void unauthorized(final HttpServerResponse response, final String authenticateHeaderValue) {
-
-        Objects.requireNonNull(response);
-        Objects.requireNonNull(authenticateHeaderValue);
-        LOG.debug("client is required to authenticate [{}]", authenticateHeaderValue);
-        Map<CharSequence, CharSequence> headers = new HashMap<>();
-        headers.put("WWW-Authenticate", authenticateHeaderValue);
-        endWithStatus(response, HTTP_UNAUTHORIZED, headers, null, null);
-    }
-
-    /**
-     * Ends a response with a given HTTP status code and detail message.
-     *
-     * @param response The HTTP response to write to.
-     * @param status The status code to write to the response.
-     * @param headers HTTP headers to set on the response (may be {@code null}).
-     * @param detail The message to write to the response's body (may be {@code null}).
-     * @param contentType The content type of the message (if {@code null}, then <em>text/plain</em> is used}.
-     * @throws NullPointerException if response is {@code null}.
-     */
-    protected static void endWithStatus(final HttpServerResponse response, final int status,
-            final Map<CharSequence, CharSequence> headers, final String detail, final String contentType) {
-
-        Objects.requireNonNull(response);
-        response.setStatusCode(status);
-        if (headers != null) {
-            for (Entry<CharSequence, CharSequence> header : headers.entrySet()) {
-                response.putHeader(header.getKey(), header.getValue());
-            }
-        }
-        if (detail != null) {
-            if (contentType != null) {
-                response.putHeader(HttpHeaders.CONTENT_TYPE, contentType);
-            } else {
-                response.putHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
-            }
-            response.end(detail);
-        } else {
-            response.end();
-        }
-    }
-
     private void doGetStatus(final RoutingContext ctx) {
         JsonObject result = new JsonObject(getHonoMessagingClient().getConnectionStatus());
         result.put("active profiles", activeProfiles);
         result.put("senders", getHonoMessagingClient().getSenderStatus());
         adaptStatusResource(result);
         ctx.response()
-            .putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON)
+            .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
             .end(result.encodePrettily());
     }
 
@@ -536,19 +404,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected void adaptStatusResource(final JsonObject status) {
         // empty
-    }
-
-    /**
-     * Gets the value of the <em>Content-Type</em> HTTP header for a request.
-     * 
-     * @param ctx The routing context containing the HTTP request.
-     * @return The content type or {@code null} if the request doesn't contain a
-     *         <em>Content-Type</em> header.
-     * @throws NullPointerException if context is {@code null}.
-     */
-    protected static String getContentType(final RoutingContext ctx) {
-
-        return Objects.requireNonNull(ctx).request().getHeader(HttpHeaders.CONTENT_TYPE);
     }
 
     /**
@@ -569,7 +424,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
                 ctx.getBody(),
-                getContentType(ctx));
+                HttpUtils.getContentType(ctx));
     }
 
     /**
@@ -621,7 +476,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
                 ctx.getBody(),
-                getContentType(ctx));
+                HttpUtils.getContentType(ctx));
     }
 
     /**
@@ -660,10 +515,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String endpointName) {
 
         if (contentType == null) {
-            badRequest(ctx.response(), String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
+            HttpUtils.badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
             metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
         } else if (payload == null || payload.length() == 0) {
-            badRequest(ctx.response(), "missing body");
+            HttpUtils.badRequest(ctx, "missing body");
             metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
         } else {
 
@@ -673,32 +528,31 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 if (s.failed()) {
                     if (tokenTracker.failed()) {
                         LOG.debug("could not get registration assertion [tenant: {}, device: {}]", tenant, deviceId, s.cause());
-                        endWithStatus(ctx.response(), HTTP_FORBIDDEN, null, null, null);
+                        ctx.fail(HTTP_FORBIDDEN);
                     } else {
                         // sender tracker has failed
-                        serviceUnavailable(ctx.response(), 5);
+                        HttpUtils.serviceUnavailable(ctx, 5);
                     }
                     metrics.incrementUndeliverableHttpMessages(endpointName,tenant);
                 } else {
-                    sendToHono(ctx.response(), deviceId, payload, contentType, tokenTracker.result(),
+                    sendToHono(ctx, deviceId, payload, contentType, tokenTracker.result(),
                             senderTracker.result(), tenant, endpointName);
                 }
             });
         }
     }
 
-    private void sendToHono(final HttpServerResponse response, final String deviceId, final Buffer payload,
+    private void sendToHono(final RoutingContext ctx, final String deviceId, final Buffer payload,
             final String contentType, final String token, final MessageSender sender, final String tenant,
             final String endpointName) {
 
         boolean accepted = sender.send(deviceId, payload.getBytes(), contentType, token);
         if (accepted) {
-            response.setStatusCode(HTTP_ACCEPTED).end();
+            ctx.response().setStatusCode(HTTP_ACCEPTED).end();
             metrics.incrementProcessedHttpMessages(endpointName, tenant);
         } else {
-            serviceUnavailable(response, 2,
-                    "resource limit exceeded, please try again later",
-                    "text/plain");
+            HttpUtils.serviceUnavailable(ctx, 2,
+                    "resource limit exceeded, please try again later");
             metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
         }
     }

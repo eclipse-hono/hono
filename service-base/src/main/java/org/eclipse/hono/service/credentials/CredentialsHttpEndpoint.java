@@ -18,7 +18,7 @@ import java.util.function.BiConsumer;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.service.http.HttpEndpointUtils;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -125,7 +125,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         if (contentType == null) {
             ctx.response().setStatusMessage("Missing Content-Type header");
             ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
-        } else if (!HttpEndpointUtils.CONTENT_TYPE_JSON.equalsIgnoreCase(contentType.value())) {
+        } else if (!HttpUtils.CONTENT_TYPE_JSON.equalsIgnoreCase(contentType.value())) {
             ctx.response().setStatusMessage("Unsupported Content-Type");
             ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
         } else {
@@ -307,9 +307,8 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, requestMsg, invocation -> {
 
-            final HttpServerResponse response = ctx.response();
             if (invocation.failed()) {
-                HttpEndpointUtils.serviceUnavailable(response, 2);
+                HttpUtils.serviceUnavailable(ctx, 2);
             } else {
                 final JsonObject credentialsResult = (JsonObject) invocation.result().body();
                 final Integer status = credentialsResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);
@@ -322,7 +321,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         JsonObject msg = registrationResult.getJsonObject(CredentialsConstants.FIELD_PAYLOAD);
         if (msg != null) {
             String body = msg.encodePrettily();
-            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON_UFT8)
+            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
                     .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
                     .write(body);
         }

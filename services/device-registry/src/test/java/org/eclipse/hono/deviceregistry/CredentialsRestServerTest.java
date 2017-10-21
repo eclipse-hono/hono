@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
-import org.eclipse.hono.service.http.HttpEndpointUtils;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -185,7 +185,7 @@ public class CredentialsRestServerTest {
     @Test
     public void testAddCredentialsFailsForEmptyBody(final TestContext context) {
 
-        addCredentials(null, HttpEndpointUtils.CONTENT_TYPE_JSON, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+        addCredentials(null, HttpUtils.CONTENT_TYPE_JSON, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -610,7 +610,7 @@ public class CredentialsRestServerTest {
 
         addCredentials(
                 requestBodyAddCredentials,
-                HttpEndpointUtils.CONTENT_TYPE_JSON,
+                HttpUtils.CONTENT_TYPE_JSON,
                 HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
 
@@ -619,7 +619,7 @@ public class CredentialsRestServerTest {
     }
 
     private static Future<HttpClientResponse> addCredentials(final JsonObject requestPayload, final int expectedStatusCode) {
-        return addCredentials(requestPayload, HttpEndpointUtils.CONTENT_TYPE_JSON, expectedStatusCode);
+        return addCredentials(requestPayload, HttpUtils.CONTENT_TYPE_JSON, expectedStatusCode);
     }
 
     private static Future<HttpClientResponse> addCredentials(final JsonObject requestPayload, final String contentType, final int expectedStatusCode) {
@@ -694,7 +694,7 @@ public class CredentialsRestServerTest {
         final String uri = String.format(TEMPLATE_URI_CREDENTIALS_INSTANCE, authId, type);
 
         final HttpClientRequest req = vertx.createHttpClient().put(getPort(), HOST, uri)
-                .putHeader(HttpHeaders.CONTENT_TYPE, HttpEndpointUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .handler(response -> {
                     if (response.statusCode() == expectedResult) {
                         result.complete(response);
