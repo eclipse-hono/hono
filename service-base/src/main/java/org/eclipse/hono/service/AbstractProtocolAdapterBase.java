@@ -14,9 +14,11 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
@@ -364,14 +366,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
 
         Future<String> result = Future.future();
         getRegistrationClient(tenantId).compose(client -> {
-            Future<RegistrationResult> tokenTracker = Future.future();
-            client.assertRegistration(deviceId, tokenTracker.completer());
-            return tokenTracker;
-        }).compose(regResult -> {
-            if (regResult.getStatus() == HttpURLConnection.HTTP_OK) {
-                result.complete(regResult.getPayload().getString(RegistrationConstants.FIELD_ASSERTION));
-            } else {
-                result.fail(String.format("cannot assert registration status [status: %d]", regResult.getStatus()));
+            Future<RegistrationResult> regResult = Future.future();
+            client.assertRegistration(deviceId, regResult.completer());
+            return regResult;
+        }).compose(response -> {
+            switch(response.getStatus()) {
+            case HttpURLConnection.HTTP_OK:
+                final String assertion = response.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
+                result.complete(assertion);
+                break;
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                result.fail(new ClientErrorException(response.getStatus(), "device unknown or disabled"));
+                break;
+            default:
+                result.fail(new ServiceInvocationException(response.getStatus(), "failed to assert registration"));
             }
         }, result);
         return result;
