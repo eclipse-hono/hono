@@ -4,26 +4,19 @@ menu = "main"
 weight = 160
 +++
 
-You find our Eclipse hosted Hono sandbox under 
+We are providing a publicly accessible Eclipse Hono&trade; *sandbox* environment at `hono.eclipse.org`.
+The main purpose of the system is to provide an environment for experimenting with devices and how to connect them to Hono without the need for setting up a local instance.
 
-`hono.eclipse.org`  
+The sandbox hosts a Hono instance consisting of the same components as described in the [Getting started Guide]({{< relref "getting-started.md" >}}).
+All services are exposed via the same ports as used in the guide.
 
-From the browser with port 80 you will be redirected to this documentation page, you are just reading.
+## Take note
 
-### Purpose
+* The *sandbox* is intended for **testing purposes only**. Under no circumstances it should be used for any real life use cases.
+* **Play fair!** The sandbox's computing resources are (quite) limited. The number of devices that can be registered per tenant is therefore limited to 100.
+* We will update the sandbox to a recent Hono nightly build frequently and without further notice. All device registration data and credentials will be scrubbed as part of teh update process. 
+* Devices and credentials can be added but the **cannot be updated or removed**. This is to prevent others from tampering with your devices/credentials.
+* The Grafana dashboard is not publicly available.
+* In order to minimize the risk of collisions of device identities and credentials, you should use a **non-trivial, not easy to guess tenant name** (e.g. a UUID).
+* The Artemis broker we use for brokering events is configured to limit queue size to 1MB, i.e. you can only buffer up to 1 MB of events without having any consumer connected that actually processes the events. Once that limit is reached, no more events will be accepted by the protocol adapters.
 
-The sandbox hosts a publicly available Hono installation, which consists of the Hono docker installation, as described in the [Getting started]({{< relref "getting-started.md" >}}).
-
-You could use it the same way without the need to install it yourself. The ports for all components are the same.
-
-### Take note
-
-- This is just a **sandbox**. It will be rolled out often and **all data will be lost**.   
-
-- Devices and credentials could be created but not updated/deleted.
-
-- The Grafana dashboard is not publicly available.
-
-- The events are not backed by a broker, at the moment.
-
-- You should choose a unique tenant name (e.g. a UUID), to be sure you do not interfere with other users on this test installation.  
