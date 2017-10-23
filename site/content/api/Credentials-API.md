@@ -276,8 +276,8 @@ The table below contains the properties used to define the validity period of a 
 
 | Name             | Mandatory | Type       | Default Value | Description |
 | :--------------- | :-------: | :--------- | :------------ | :---------- |
-| *not-before*     | *no*      | *string*   | `null`        | The point in time from which on the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
-| *not-after*      | *no*      | *string*   | `null`        | The point in time until which the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
+| *not-before*     | *no*      | *string*   | `null`        | The point in time from which on the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
+| *not-after*      | *no*      | *string*   | `null`        | The point in time until which the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
 
 ### Examples
 
@@ -290,7 +290,7 @@ Below is an example for a payload containing [a hashed password]({{< relref "#ha
   "auth-id": "sensor1",
   "enabled": true,
   "secrets": [{
-    "not-after": "20171224T1900Z+0100",
+    "not-after": "2017-12-24T19:00:00+0100",
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
     "hash-function": "sha-512"
@@ -307,10 +307,10 @@ The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" 
   "auth-id": "little-sensor2",
   "enabled": true,
   "secrets": [{
-    "not-after": "20170701T0000Z+0100",
+    "not-after": "2017-07-01T00:00:00+0100",
     "key": "cGFzc3dvcmRfb2xk"
   },{
-    "not-before": "20170629T0000Z+0100",
+    "not-before": "2017-06-29T00:00:00+0100",
     "key": "cGFzc3dvcmRfbmV3"
   }]
 }
