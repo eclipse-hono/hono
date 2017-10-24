@@ -4,7 +4,7 @@ menu = "main"
 weight = 800
 +++
 
-# 0.5-M10 (not yet released)
+# 0.5-M10
 
 ### New Features
 
