@@ -39,18 +39,12 @@ public final class ResourceIdentifier {
     private String resource;
 
     private ResourceIdentifier(final String resource, final boolean assumeDefaultTenant) {
+        String[] path = resource.split("\\/");
+        List<String> pathSegments = new ArrayList(Arrays.asList(path));
         if (assumeDefaultTenant) {
-            String[] path = resource.split("\\/", 2);
-            setResourcePath(new String[]{path[0], Constants.DEFAULT_TENANT, path.length == 2 ? path[1] : null});
-        } else {
-            String[] path = resource.split("\\/", 3);
-            if (path.length == 1) {
-                // no tenant given, leave path "as is"
-                setResourcePath(new String[]{ path[0] });
-            } else {
-                setResourcePath(new String[]{path[0], path[1], path.length == 3 ? path[2] : null});
-            }
+            pathSegments.add(1, Constants.DEFAULT_TENANT);
         }
+        setResourcePath(pathSegments.toArray(new String[pathSegments.size()]));
     }
 
     private ResourceIdentifier(final String endpoint, final String tenantId, final String resourceId) {
@@ -197,6 +191,16 @@ public final class ResourceIdentifier {
         } else {
             return null;
         }
+    }
+
+    /**
+     *
+     * Gets a full resource path of this identifier, including extended elements
+     *
+     * @return the full resource path
+     */
+    public String[] getResourcePath() {
+        return resourcePath;
     }
 
     /**
