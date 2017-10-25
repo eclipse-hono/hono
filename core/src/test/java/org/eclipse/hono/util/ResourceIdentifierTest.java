@@ -42,6 +42,18 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.toString(), is("telemetry/" + Constants.DEFAULT_TENANT));
     }
 
+    @Test
+    public void testFromStringWithExtendedPath() {
+        ResourceIdentifier resourceId = ResourceIdentifier.fromString("telemetry/myTenant/deviceId/what/ever");
+        assertNotNull(resourceId);
+        assertThat(resourceId.getEndpoint(), is("telemetry"));
+        assertThat(resourceId.getTenantId(), is("myTenant"));
+        assertThat(resourceId.getResourceId(), is("deviceId"));
+        assertThat(resourceId.toString(), is("telemetry/myTenant/deviceId/what/ever"));
+        assertThat(resourceId.getResourcePath()[3], is("what"));
+        assertThat(resourceId.getResourcePath()[4], is("ever"));
+    }
+
     /**
      * Verifies that a resource identifier may consist of a single segment only.
      */
