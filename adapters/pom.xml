@@ -30,6 +30,7 @@
     <module>http-vertx-base</module>
     <module>rest-vertx</module>
     <module>mqtt-vertx</module>
+    <module>mqtt-vertx-base</module>
   </modules>
 
   <name>Hono Protocol Adapters</name>

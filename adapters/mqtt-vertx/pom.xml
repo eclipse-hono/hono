@@ -28,6 +28,11 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-unit</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-adapter-mqtt-vertx-base</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
