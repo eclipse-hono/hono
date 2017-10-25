@@ -439,7 +439,7 @@ public class VertxBasedMqttProtocolAdapter extends AbstractProtocolAdapterBase<P
     void doUploadMessage(final String deviceId, final String registrationAssertion, final MqttEndpoint endpoint, final MqttPublishMessage message,
             final MessageSender sender, final Future<Void> uploadHandler) {
 
-        HashMap properties = new HashMap();
+        final Map<String, Object> properties = new HashMap<>();
         properties.put("original-address", message.topicName());
 
         boolean accepted = sender.send(deviceId, properties, message.payload().getBytes(), CONTENT_TYPE_OCTET_STREAM, registrationAssertion, (messageId, delivery) -> {
