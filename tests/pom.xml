@@ -18,6 +18,7 @@
   <name>Hono Integration Tests</name>
   <description>Integration tests verifying Hono's APIs.
 Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch Router and ActiveMQ Artemis broker).</description>
+  <url>https://www.eclipse.org/hono</url>
 
   <properties>
     <maven.javadoc.skip>true</maven.javadoc.skip>

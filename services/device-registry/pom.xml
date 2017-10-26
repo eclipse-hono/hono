@@ -7,7 +7,8 @@
   </parent>
   <artifactId>hono-service-device-registry</artifactId>
   <name>Hono Device Registry</name>
-  <description>A default device registry for Hono implementing the device registration and credentials API.</description>
+  <description>A default device registry for Hono implementing the Device Registration and Credentials APIs.</description>
+  <url>https://www.eclipse.org/hono</url>
 
   <properties>
     <vertx.health.port>8088</vertx.health.port>

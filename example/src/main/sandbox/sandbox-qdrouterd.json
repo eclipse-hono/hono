@@ -47,27 +47,39 @@
     "saslMechanisms": "EXTERNAL"
   }],
 
-  ["address", {
-    "prefix": "telemetry/",
-    "distribution": "balanced"
+  ["connector", {
+    "sslProfile": "external",
+    "name": "broker",
+    "host": "hono-artemis.hono",
+    "port": 5671,
+    "role": "route-container",
+    "saslUsername": "artemis",
+    "saslPassword": "artemis"
   }],
 
-  ["address", {
+  ["linkRoute", {
     "prefix": "event/",
-    "distribution": "balanced"
+    "dir": "in",
+    "connection": "broker"
+  }],
+
+  ["linkRoute", {
+    "prefix": "event/",
+    "dir": "out",
+    "connection": "broker"
   }],
 
   ["policy", {
-    "maxConnections": 1000,
+    "maxConnections": 220,
     "enableVhostPolicy": true,
     "defaultVhost": "hono"
   }],
 
   ["vhost", {
       "id": "hono",
-      "maxConnections": 50,
-      "maxConnectionsPerUser": 50,
-      "maxConnectionsPerHost": 2,
+      "maxConnections": 200,
+      "maxConnectionsPerUser": 200,
+      "maxConnectionsPerHost": 50,
       "groups": {
         "consumers": {
           "users": "consumer@HONO",

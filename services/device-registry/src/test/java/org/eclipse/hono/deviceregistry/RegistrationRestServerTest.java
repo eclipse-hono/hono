@@ -12,7 +12,7 @@
 package org.eclipse.hono.deviceregistry;
 
 import static java.net.HttpURLConnection.*;
-import static org.eclipse.hono.service.http.HttpEndpointUtils.CONTENT_TYPE_JSON;
+import static org.eclipse.hono.service.http.HttpUtils.CONTENT_TYPE_JSON;
 import static org.eclipse.hono.util.RegistrationConstants.REGISTRATION_ENDPOINT;
 import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
 

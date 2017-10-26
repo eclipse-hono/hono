@@ -200,7 +200,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         RoutingContext context = mock(RoutingContext.class);
         when(context.request()).thenReturn(req);
         when(context.response()).thenReturn(response);
-        adapter.getRegistrationAssertionHeader(context, "tenant", "device");
+        adapter.getRegistrationAssertion(context, "tenant", "device");
 
         // THEN the response does NOT contain a registration assertion header
         verify(response, never()).putHeader(eq(AbstractVertxBasedHttpProtocolAdapter.HEADER_REGISTRATION_ASSERTION), anyString());
@@ -233,7 +233,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         RoutingContext context = mock(RoutingContext.class);
         when(context.request()).thenReturn(req);
         when(context.response()).thenReturn(response);
-        adapter.getRegistrationAssertionHeader(context, "tenant", "device");
+        adapter.getRegistrationAssertion(context, "tenant", "device");
 
         // THEN the response contains a registration assertion header
         verify(response).putHeader(AbstractVertxBasedHttpProtocolAdapter.HEADER_REGISTRATION_ASSERTION, "token");

@@ -133,14 +133,6 @@
          </address-setting>
       </address-settings>
 
-      <addresses>
-         <address name="event/DEFAULT_TENANT">
-            <anycast>
-               <queue name="event.DEFAULT_TENANT"/>
-            </anycast>
-         </address>
-      </addresses>
-
        <wildcard-addresses>
            <delimiter>/</delimiter>
        </wildcard-addresses>

@@ -20,6 +20,10 @@ The preconditions for invoking any of the Credential API's operations are as fol
 2. Client has established an AMQP link in role *sender* with Hono using target address `credentials/${tenant_id}`. This link is used by the client to send commands to Hono.
 3. Client has established an AMQP link in role *receiver* with Hono using source address `credentials/${tenant_id}/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the requests it has sent to Hono. This link's source address is also referred to as the *reply-to* address for the request messages.
 
+The flow of messages for creating the links is illustrated by the following sequence diagram (showing the AMQP performatives):
+
+![Credentials message flow preconditions](../connectToCredentials.png)
+
 ## Operations
 
 The operations described in the following sections can be used by clients to manage credentials for authenticating devices connected to protocol adapters.
@@ -37,15 +41,17 @@ This check is not mandatory and for some scenarios it might be desired to provid
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* adding credentials.
+
+![Add Credentials message flow](../addCredentials_Success.png)
 
 **Request Message Format**
 
 The following table provides an overview of the properties a client needs to set on an *add credentials* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name             | Mandatory | Location                 | Type            | Description                         |
-| :--------------- | :-------: | :----------------------- | :-------------- | :---------------------------------- |
-| *subject*        | yes       | *properties*             | UTF-8 *string*  | MUST contain the value `add`.      |
+| Name             | Mandatory | Location                 | Type     | Description                         |
+| :--------------- | :-------: | :----------------------- | :------- | :---------------------------------- |
+| *subject*        | yes       | *properties*             | *string* | MUST contain the value `add`.      |
 
 The request message payload MUST contain credential information as defined in [Credentials Format]({{< relref "#credentials-format" >}}).
 
@@ -73,15 +79,18 @@ This operation is *mandatory* to implement.
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving credentials.
+
+![Get Credentials message flow](../getCredentials_Success.png)
+
 
 **Request Message Format**
 
 The following table provides an overview of the properties a client needs to set on an *get credentials* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name             | Mandatory | Location                 | Type            | Description                   |
-| :--------------- | :-------: | :----------------------- | :-------------- | :---------------------------- |
-| *subject*        | yes       | *properties*             | UTF-8 *string*  | MUST contain the value `get`. |
+| Name             | Mandatory | Location                 | Type      | Description                   |
+| :--------------- | :-------: | :----------------------- | :-------- | :---------------------------- |
+| *subject*        | yes       | *properties*             | *string*  | MUST contain the value `get`. |
 
 The body of the request MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following members:
 
@@ -122,15 +131,18 @@ This operation is *optional*, implementors of this API may provide other means f
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* updating existing credentials.
+
+![Update existing Credentials message flow](../updateCredentials_Success.png)
+
 
 **Request Message Format**
 
 The following table provides an overview of the properties a client needs to set on an *update credentials* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name             | Mandatory | Location                 | Type           | Description |
-| :--------------- | :-------: | :----------------------- | :------------- | :---------- |
-| *subject*        | yes       | *properties*             | UTF-8 *string* | MUST contain the value `update`. |
+| Name             | Mandatory | Location                 | Type     | Description |
+| :--------------- | :-------: | :----------------------- | :------- | :---------- |
+| *subject*        | yes       | *properties*             | *string* | MUST contain the value `update`. |
 
 The request message payload MUST contain credential information as defined in [Credentials Format]({{< relref "#credentials-format" >}}).
 
@@ -157,15 +169,17 @@ This operation is *optional*, implementors of this API may provide other means f
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* removing existing credentials.
+
+![Remove existing Credentials message flow](../removeCredentials_Success.png)
 
 **Request Message Format**
 
 The following table provides an overview of the properties a client needs to set on a *remove credentials* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name             | Mandatory | Location                 | Type           | Description |
-| :--------------- | :-------: | :----------------------- | :------------- | :---------- |
-| *subject*        | yes       | *properties*             | UTF-8 *string* | MUST contain the value `remove`. |
+| Name             | Mandatory | Location                 | Type     | Description |
+| :--------------- | :-------: | :----------------------- | :------- | :---------- |
+| *subject*        | yes       | *properties*             | *string* | MUST contain the value `remove`. |
 
 The body of the message MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following properties:
 
@@ -207,23 +221,23 @@ Due to the nature of the request/response message pattern of the operations of t
 
 The following table provides an overview of the properties shared by all request messages regardless of the particular operation being invoked.
 
-| Name             | Mandatory | Location                 | Type           | Description |
-| :--------------- | :-------: | :----------------------- | :------------- | :---------- |
-| *subject*        | yes       | *properties*             | UTF-8 *string* | MUST be set to the value defined by the particular operation being invoked. |
-| *correlation-id* | no        | *properties*             | *message-id*   | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
-| *message-id*     | yes       | *properties*             | UTF-8 *string* | MUST contain an identifier that uniquely identifies the message at the sender side. |
-| *reply-to*       | yes       | *properties*             | UTF-8 *string*  | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
+| Name             | Mandatory | Location                 | Type        | Description |
+| :--------------- | :-------: | :----------------------- | :---------- | :---------- |
+| *subject*        | yes       | *properties*             | *string*    | MUST be set to the value defined by the particular operation being invoked. |
+| *correlation-id* | no        | *properties*             | *message-id | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
+| *message-id*     | yes       | *properties*             | *string*    | MUST contain an identifier that uniquely identifies the message at the sender side. |
+| *reply-to*       | yes       | *properties*             | *string*    | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#Preconditions" >}})). |
 
 ### Standard Response Properties
 
 The following table provides an overview of the properties shared by all response messages regardless of the particular operation being invoked.
 
-| Name             | Mandatory | Location                 | Type            | Description |
-| :--------------- | :-------: | :----------------------- | :-------------- | :---------- |
-| *correlation-id* | yes       | *properties*             | *message-id*    | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
-| *device_id*      | yes       | *application-properties* | UTF-8 *string*  | Contains the ID of the device. |
-| *tenant_id*      | yes       | *application-properties* | UTF-8 *string*  | Contains the ID of the tenant to which the device belongs. |
-| *status*         | yes       | *application-properties* | *int*           | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
+| Name             | Mandatory | Location                 | Type         | Description |
+| :--------------- | :-------: | :----------------------- | :----------- | :---------- |
+| *correlation-id* | yes       | *properties*             | *message-id* | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
+| *device_id*      | yes       | *application-properties* | *string*     | Contains the ID of the device. |
+| *tenant_id*      | yes       | *application-properties* | *string*     | Contains the ID of the tenant to which the device belongs. |
+| *status*         | yes       | *application-properties* | *int*        | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
 
 ## Delivery States
 
@@ -262,8 +276,8 @@ The table below contains the properties used to define the validity period of a 
 
 | Name             | Mandatory | Type       | Default Value | Description |
 | :--------------- | :-------: | :--------- | :------------ | :---------- |
-| *not-before*     | *no*      | *string*   | `null`        | The point in time from which on the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
-| *not-after*      | *no*      | *string*   | `null`        | The point in time until which the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
+| *not-before*     | *no*      | *string*   | `null`        | The point in time from which on the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
+| *not-after*      | *no*      | *string*   | `null`        | The point in time until which the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
 
 ### Examples
 
@@ -276,7 +290,7 @@ Below is an example for a payload containing [a hashed password]({{< relref "#ha
   "auth-id": "sensor1",
   "enabled": true,
   "secrets": [{
-    "not-after": "20171224T1900Z+0100",
+    "not-after": "2017-12-24T19:00:00+0100",
     "pwd-hash": "AQIDBAUGBwg=",
     "salt": "Mq7wFw==",
     "hash-function": "sha-512"
@@ -293,10 +307,10 @@ The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" 
   "auth-id": "little-sensor2",
   "enabled": true,
   "secrets": [{
-    "not-after": "20170701T0000Z+0100",
+    "not-after": "2017-07-01T00:00:00+0100",
     "key": "cGFzc3dvcmRfb2xk"
   },{
-    "not-before": "20170629T0000Z+0100",
+    "not-before": "2017-06-29T00:00:00+0100",
     "key": "cGFzc3dvcmRfbmV3"
   }]
 }

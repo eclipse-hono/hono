@@ -93,10 +93,10 @@ public class AbstractRequestResponseClientTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestFailsIfNoCreditAvailable(final TestContext ctx) {
+    public void testCreateAndSendRequestFailsIfSendQueueFull(final TestContext ctx) {
 
-        // GIVEN a request-response client with no credit left for the link to the peer service
-        when(sender.getCredit()).thenReturn(0);
+        // GIVEN a request-response client with a full send queue
+        when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
 
         // WHEN sending a request message
         final Async sendFailure = ctx.async();
@@ -105,7 +105,7 @@ public class AbstractRequestResponseClientTest {
         }));
 
         // THEN the message is not sent and the request result handler is failed
-        sendFailure.await(100);
+        sendFailure.await(2000);
         verify(sender, never()).send(any(Message.class));
     }
 
@@ -163,7 +163,7 @@ public class AbstractRequestResponseClientTest {
         // WHEN a response is received for the request
         final Message response = ProtonHelper.message("payload");
         response.setCorrelationId(MESSAGE_ID);
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, "200");
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, 200);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
 

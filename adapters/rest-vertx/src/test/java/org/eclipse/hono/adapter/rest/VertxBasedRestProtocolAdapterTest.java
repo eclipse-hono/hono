@@ -24,7 +24,7 @@ import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
-import org.eclipse.hono.service.http.HttpEndpointUtils;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -95,7 +95,7 @@ public class VertxBasedRestProtocolAdapterTest {
         final Async async = context.async();
 
         vertx.createHttpClient().get(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
-                .putHeader("content-type", HttpEndpointUtils.CONTENT_TYPE_JSON).handler(response -> {
+                .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
             response.bodyHandler(totalBuffer -> {
                 async.complete();
@@ -117,7 +117,7 @@ public class VertxBasedRestProtocolAdapterTest {
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
         vertx.createHttpClient().put(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
-                .putHeader("content-type", HttpEndpointUtils.CONTENT_TYPE_JSON)
+                .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
             response.bodyHandler(totalBuffer -> {
@@ -140,7 +140,7 @@ public class VertxBasedRestProtocolAdapterTest {
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
         vertx.createHttpClient().get(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
-                .putHeader("content-type", HttpEndpointUtils.CONTENT_TYPE_JSON)
+                .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
             response.bodyHandler(totalBuffer -> {

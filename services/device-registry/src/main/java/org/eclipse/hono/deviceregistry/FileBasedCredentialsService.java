@@ -316,36 +316,40 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     @Override
     public void update(final String tenantId, final JsonObject newCredentials, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
 
-        final String authId = newCredentials.getString(CredentialsConstants.FIELD_AUTH_ID);
-        final String type = newCredentials.getString(CredentialsConstants.FIELD_TYPE);
+        if (getConfig().isModificationEnabled()) {
+            final String authId = newCredentials.getString(CredentialsConstants.FIELD_AUTH_ID);
+            final String type = newCredentials.getString(CredentialsConstants.FIELD_TYPE);
 
-        Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
-        if (credentialsForTenant == null) {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-        } else {
-            final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
-            if (credentialsForAuthId == null) {
+            Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
+            if (credentialsForTenant == null) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
             } else {
-                // find credentials of given type
-                boolean removed = false;
-                Iterator<Object> credentialsIterator = credentialsForAuthId.iterator();
-                while (credentialsIterator.hasNext()) {
-                    JsonObject creds = (JsonObject) credentialsIterator.next();
-                    if (creds.getString(CredentialsConstants.FIELD_TYPE).equals(type)) {
-                        credentialsIterator.remove();
-                        removed = true;
-                        break;
+                final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
+                if (credentialsForAuthId == null) {
+                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                } else {
+                    // find credentials of given type
+                    boolean removed = false;
+                    Iterator<Object> credentialsIterator = credentialsForAuthId.iterator();
+                    while (credentialsIterator.hasNext()) {
+                        JsonObject creds = (JsonObject) credentialsIterator.next();
+                        if (creds.getString(CredentialsConstants.FIELD_TYPE).equals(type)) {
+                            credentialsIterator.remove();
+                            removed = true;
+                            break;
+                        }
+                    }
+                    if (removed) {
+                        credentialsForAuthId.add(newCredentials);
+                        dirty = true;
+                        resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
+                    } else {
+                        resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
                     }
                 }
-                if (removed) {
-                    credentialsForAuthId.add(newCredentials);
-                    dirty = true;
-                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
-                } else {
-                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-                }
             }
+        } else {
+            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_FORBIDDEN)));
         }
     }
 
@@ -357,21 +361,25 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         Objects.requireNonNull(authId);
         Objects.requireNonNull(resultHandler);
 
-        final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
-        if (credentialsForTenant == null) {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-        } else {
-            final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
-            if (credentialsForAuthId == null) {
+        if (getConfig().isModificationEnabled()) {
+            final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
+            if (credentialsForTenant == null) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-            } else if (removeCredentialsFromCredentialsArray(null, type, credentialsForAuthId)) {
-                if (credentialsForAuthId.isEmpty()) {
-                    credentialsForTenant.remove(authId); // do not leave empty array as value
-                }
-                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
             } else {
-                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
+                if (credentialsForAuthId == null) {
+                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                } else if (removeCredentialsFromCredentialsArray(null, type, credentialsForAuthId)) {
+                    if (credentialsForAuthId.isEmpty()) {
+                        credentialsForTenant.remove(authId); // do not leave empty array as value
+                    }
+                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
+                } else {
+                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                }
             }
+        } else {
+            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_FORBIDDEN)));
         }
     }
 
@@ -382,29 +390,33 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resultHandler);
 
-        boolean removedAnyElement = false;
+        if (getConfig().isModificationEnabled()) {
+            boolean removedAnyElement = false;
 
-        final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
-        if (credentialsForTenant == null) {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-        } else {
-            // delete based on type (no authId provided) - this might consume more time on large data sets and is thus
-            // handled explicitly
-            for (JsonArray credentialsForAuthId : credentialsForTenant.values()) {
-                if (removeCredentialsFromCredentialsArray(deviceId, CredentialsConstants.SPECIFIER_WILDCARD, credentialsForAuthId)) {
-                    removedAnyElement = true;
+            final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
+            if (credentialsForTenant == null) {
+                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+            } else {
+                // delete based on type (no authId provided) - this might consume more time on large data sets and is thus
+                // handled explicitly
+                for (JsonArray credentialsForAuthId : credentialsForTenant.values()) {
+                    if (removeCredentialsFromCredentialsArray(deviceId, CredentialsConstants.SPECIFIER_WILDCARD, credentialsForAuthId)) {
+                        removedAnyElement = true;
+                    }
                 }
+
+                // there might be empty credentials arrays left now, so remove them in a second run
+                cleanupEmptyCredentialsArrays(credentialsForTenant);
             }
 
-            // there might be empty credentials arrays left now, so remove them in a second run
-            cleanupEmptyCredentialsArrays(credentialsForTenant);
-        }
-
-        if (removedAnyElement) {
-            dirty = true;
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
+            if (removedAnyElement) {
+                dirty = true;
+                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
+            } else {
+                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+            }
         } else {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_FORBIDDEN)));
         }
     }
 

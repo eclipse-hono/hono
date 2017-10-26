@@ -42,6 +42,7 @@ You can find all the details in the [Contributing via Git](http://wiki.eclipse.o
 * Fork the repository on GitHub
 * Create a new branch for your changes
 * Make your changes
+* When you create new files make sure you include a proper license header at the top of the file (see License Header section below).
 * Make sure you include test cases for non-trivial features
 * Make sure the test suite passes after your changes
 * Commit your changes into that branch
@@ -58,3 +59,39 @@ Submit a pull request via the normal GitHub UI.
 
 * Do not use your branch for any other development, otherwise further changes that you make will be visible in the PR.
 
+## License Header
+
+Please make sure any file you newly create contains a proper license header like this:
+
+````
+/**
+ * Copyright (c) 2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 1.0 which is available at
+ * https://www.eclipse.org/legal/epl-v10.html
+ *
+ * SPDX-License-Identifier: EPL-1.0
+ */
+````
+You should, of course, adapt this header to use the specific mechanism for comments pertaining to the type of file you create, e.g. using something like
+
+````
+<!--
+ Copyright (c) 2017 Contributors to the Eclipse Foundation
+
+ See the NOTICE file(s) distributed with this work for additional
+ information regarding copyright ownership.
+
+ This program and the accompanying materials are made available under the
+ terms of the Eclipse Public License 1.0 which is available at
+ https://www.eclipse.org/legal/epl-v10.html
+
+ SPDX-License-Identifier: EPL-1.0
+-->
+````
+
+when adding an XML file.

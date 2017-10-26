@@ -140,7 +140,7 @@ public class BaseCredentialsServiceTest {
     private JsonObject resultWithStatusCode(int statusCode) {
         final JsonObject result = new JsonObject();
         result.put(RequestResponseApiConstants.FIELD_TENANT_ID, TEST_TENANT);
-        result.put(MessageHelper.APP_PROPERTY_STATUS, String.valueOf(statusCode));
+        result.put(MessageHelper.APP_PROPERTY_STATUS, statusCode);
         
         return result;
     }

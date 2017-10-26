@@ -20,6 +20,10 @@ The preconditions for performing any of the operations are as follows:
 2. Client has established an AMQP link in role *sender* with Hono using target address `registration/${tenant_id}`. This link is used by the client to send registration commands to Hono.
 3. Client has established an AMQP link in role *receiver* with Hono using source address `registration/${tenant_id}/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the registration requests it has sent to Hono. This link's source address is also referred to as the *reply-to* address for the request messages.
 
+This flow of messages is illustrated by the following sequence diagram (showing the AMQP performatives):
+
+![Device Registration message flow preconditions](../connectToDeviceRegistration.png)
+
 # Operations
 
 The operations described in the following sections can be used by clients to manage device registration information. In real world scenarios the provisioning of devices will most likely be an orchestrated process spanning multiple components of which Hono will only be one.
@@ -35,7 +39,10 @@ This operation is *optional*, implementors of this API may provide other means f
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* registering a device.
+
+![Register Device message flow](../registerDeviceInformation_Success.png)
+
 
 **Request Message Format**
 
@@ -70,7 +77,11 @@ This operation is *optional*, implementors of this API may provide other means f
 
 **Message Flow**
 
-*TODO* add sequence diagram
+
+The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving registration information.
+
+![Get Registration Information message flow](../getDeviceInformation_Success.png)
+
 
 **Request Message Format**
 
@@ -105,7 +116,10 @@ This operation is *mandatory* to implement.
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* getting an assertion of a device registration.
+
+![Assert Device Registration message flow](../assertDeviceRegistration_Success.png)
+
 
 **Request Message Format**
 
@@ -153,7 +167,10 @@ This operation is *optional*, implementors of this API may provide other means f
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* updating registration information.
+
+![Update Registration Information message flow](../updateDeviceInformation_Success.png)
+
 
 **Request Message Format**
 
@@ -186,7 +203,10 @@ This operation is *optional*, implementors of this API may provide other means f
 
 **Message Flow**
 
-*TODO* add sequence diagram
+The following sequence diagram illustrates the flow of messages involved in a *Client* deregistering a device.
+
+![Deregister Device message flow](../deregisterDeviceInformation_Success.png)
+
 
 **Request Message Format**
 

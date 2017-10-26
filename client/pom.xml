@@ -27,6 +27,7 @@
 
   <name>Hono Client</name>
   <description>A library providing a Vert.x based client for accessing Hono's APIs.</description>
+  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

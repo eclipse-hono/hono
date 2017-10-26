@@ -1,0 +1,13 @@
+title Get Registration Information (success)
+
+Client->+Device Registration Service: transfer("registration/TENANT", "get", device-id)
+
+note over Device Registration Service:
+lookup device
+end note
+
+Device Registration Service->-Client: transfer("registration/TENANT/${reply-to}", "200", device-id, enabled, metadata)
+note right of Client:
+device-id, enabled and metadata
+contained in JSON body
+end note

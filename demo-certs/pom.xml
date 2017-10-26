@@ -10,6 +10,7 @@
 
   <name>Hono Demo Certs</name>
   <description>Hono demo certificates and keys for TLS support</description>
+  <url>https://www.eclipse.org/hono</url>
 
   <build>
     <resources>
