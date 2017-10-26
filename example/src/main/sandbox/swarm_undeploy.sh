@@ -46,6 +46,7 @@ docker secret rm \
 
 docker service rm hono-service-auth
 docker secret rm \
+  sandbox-permissions.json \
   auth-server-key.pem \
   auth-server-cert.pem \
   hono-service-auth-config.yml
