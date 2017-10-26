@@ -166,7 +166,7 @@ echo
 echo "Deploying NGINX for redirecting to Hono web site"
 docker service create --detach=false --name hono-nginx -p 80:80 \
   --env SERVER_REDIRECT=www.eclipse.org \
-  --env SERVER_REDIRECT_PATH=/hono/sandbox \
+  --env SERVER_REDIRECT_PATH=/hono/sandbox/ \
   schmunk42/nginx-redirect
 echo ... done
 
