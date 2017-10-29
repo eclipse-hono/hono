@@ -29,7 +29,7 @@ import io.vertx.proton.ProtonSender;
  */
 public final class TelemetrySenderImpl extends AbstractSender {
 
-    private static final String TELEMETRY_ENDPOINT_NAME  = "telemetry/";
+    private static final String TELEMETRY_ENDPOINT_NAME  = "telemetry";
 
     private TelemetrySenderImpl(final ProtonSender sender, final String tenantId, final String targetAddress,
             final Context context, final Handler<String> closeHook) {
@@ -46,11 +46,16 @@ public final class TelemetrySenderImpl extends AbstractSender {
      * @throws NullPointerException if tenant is {@code null}.
      */
     public static String getTargetAddress(final String tenantId, final String deviceId) {
-        StringBuilder targetAddress = new StringBuilder(TELEMETRY_ENDPOINT_NAME).append(Objects.requireNonNull(tenantId));
+        StringBuilder targetAddress = new StringBuilder(TELEMETRY_ENDPOINT_NAME).append("/").append(Objects.requireNonNull(tenantId));
         if (deviceId != null && deviceId.length() > 0) {
             targetAddress.append("/").append(deviceId);
         }
         return targetAddress.toString();
+    }
+
+    @Override
+    public String getEndpoint() {
+        return TELEMETRY_ENDPOINT_NAME;
     }
 
     @Override

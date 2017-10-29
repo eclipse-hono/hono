@@ -31,7 +31,7 @@ import io.vertx.proton.ProtonSender;
  */
 public final class EventSenderImpl extends AbstractSender {
 
-    private static final String EVENT_ENDPOINT_NAME = "event/";
+    private static final String EVENT_ENDPOINT_NAME = "event";
 
     private EventSenderImpl(final ProtonSender sender, final String tenantId, final String targetAddress,
             final Context context, final Handler<String> closeHook) {
@@ -48,11 +48,16 @@ public final class EventSenderImpl extends AbstractSender {
      * @throws NullPointerException if tenant is {@code null}.
      */
     public static String getTargetAddress(final String tenantId, final String deviceId) {
-        StringBuilder address = new StringBuilder(EVENT_ENDPOINT_NAME).append(tenantId);
+        StringBuilder address = new StringBuilder(EVENT_ENDPOINT_NAME).append("/").append(tenantId);
         if (deviceId != null && deviceId.length() > 0) {
             address.append("/").append(deviceId);
         }
         return address.toString();
+    }
+
+    @Override
+    public String getEndpoint() {
+        return EVENT_ENDPOINT_NAME;
     }
 
     @Override
