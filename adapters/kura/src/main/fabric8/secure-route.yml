@@ -1,0 +1,10 @@
+metadata:
+  name: ${project.artifactId}-sec
+spec:
+  to:
+    kind: Service
+    name: ${project.artifactId}
+  port:
+    targetPort: 8883
+  tls:
+    termination: passthrough

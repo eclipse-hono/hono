@@ -4,6 +4,12 @@ menu = "main"
 weight = 800
 +++
 
+# 0.5 (not released yet)
+
+### New Features
+
+* We have added a protocol adapter for allowing Eclipse Kura gateways to publish *control* and *data* messages to Hono's Telemetry and Event API. See [Kura Adapter]({{< relref "component/kura-adapter.md" >}}) for details.
+
 # 0.5-M10
 
 ### New Features
