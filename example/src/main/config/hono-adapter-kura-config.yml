@@ -1,0 +1,44 @@
+hono:
+  app:
+    maxInstances: 1
+    healthCheckPort: 8088
+    healthCheckBindAddress: 0.0.0.0
+  kura:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    keyPath: /run/secrets/kura-adapter-key.pem
+    certPath: /run/secrets/kura-adapter-cert.pem
+  messaging:
+    name: 'Hono Kura Adapter'
+    host: ${hono.messaging.host}
+    port: 5671
+    username: ${hono.adapter.kura.username}
+    password: ${hono.adapter.kura.password}
+    trustStorePath: ${hono.trustStore.path}
+  registration:
+    name: 'Hono Kura Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.kura.username}
+    password: ${hono.adapter.kura.password}
+    trustStorePath: ${hono.trustStore.path}
+  credentials:
+    name: 'Hono Kura Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.kura.username}
+    password: ${hono.adapter.kura.password}
+    trustStorePath: ${hono.trustStore.path}
+  metric:
+    reporter:
+      graphite:
+        active: true
+        host: influxdb.hono
+        port: 2003
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: true
+

@@ -17,6 +17,12 @@ NS=hono
 
 echo UNDEPLOYING ECLIPSE HONO FROM DOCKER SWARM
 
+docker service rm hono-adapter-kura
+docker secret rm \
+  kura-adapter-key.pem \
+  kura-adapter-cert.pem \
+  hono-adapter-kura-config.yml
+
 docker service rm hono-adapter-rest-vertx
 docker secret rm \
   rest-adapter-key.pem \

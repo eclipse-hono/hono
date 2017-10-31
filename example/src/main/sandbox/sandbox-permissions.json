@@ -48,14 +48,19 @@
     ]
   },
   "users": {
-    "rest-adapter@HONO": {
+    "${hono.adapter.rest.username}": {
       "mechanism": "PLAIN",
-      "password": "rest-secret",
+      "password": "${hono.adapter.rest.password}",
       "authorities": [ "hono-component", "protocol-adapter" ]
     },
-    "mqtt-adapter@HONO": {
+    "${hono.adapter.mqtt.username}": {
       "mechanism": "PLAIN",
-      "password": "mqtt-secret",
+      "password": "${hono.adapter.mqtt.password}",
+      "authorities": [ "hono-component", "protocol-adapter" ]
+    },
+    "${hono.adapter.kura.username}": {
+      "mechanism": "PLAIN",
+      "password": "${hono.adapter.kura.password}",
       "authorities": [ "hono-component", "protocol-adapter" ]
     },
     "hono-messaging": {

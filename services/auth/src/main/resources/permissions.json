@@ -51,11 +51,16 @@
     "rest-adapter@HONO": {
       "mechanism": "PLAIN",
       "password": "rest-secret",
-      "authorities": [ "hono-component", "protocol-adapter", "device-manager" ]
+      "authorities": [ "hono-component", "protocol-adapter" ]
     },
     "mqtt-adapter@HONO": {
       "mechanism": "PLAIN",
       "password": "mqtt-secret",
+      "authorities": [ "hono-component", "protocol-adapter" ]
+    },
+    "kura-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "kura-secret",
       "authorities": [ "hono-component", "protocol-adapter" ]
     },
     "hono-client@HONO": {
