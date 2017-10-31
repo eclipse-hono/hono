@@ -8,93 +8,102 @@
  *
  * Contributors:
  *    Red Hat - initial creation
+ *    Bosch Software Innovations GmbH - add Eclipse Kura support
  */
 
 package org.eclipse.hono.adapter.mqtt;
 
-import org.eclipse.hono.client.MessageSender;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
 /**
- * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry API using MQTT.
+ * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using MQTT.
  */
 public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> {
 
-    /**
-     * Gets a sender for forwarding a message that has been published by an unauthenticated device.
-     * <p>
-     * Verifies that topic that the message has been published to has
-     * contains a <em>tenantId</em> and a <em>deviceId</em>.
-     * If it does, a sender is returned that corresponds to the <em>endpoint</em> of the topic.
-     * Otherwise the returned future is failed.
-     * 
-     * @param message The message to get the sender for.
-     * @param topic The topic that the message has been published to.
-     * @return A future containing the sender.
-     */
-    protected Future<MessageSender> getSender(final MqttPublishMessage message, final ResourceIdentifier topic) {
-
-        if (topic.getTenantId() == null || topic.getResourceId() == null) {
-            LOG.debug("discarding message published to unsupported topic [{}]", message.topicName());
-            return Future.failedFuture("unsupported topic name");
-        } else {
-            return getSenderForTopic(message.qosLevel(), topic.getEndpoint(), topic.getTenantId());
-        }
-    }
+    private MqttAdapterMetrics metrics;
 
     /**
-     * Gets a sender for forwarding a message that has been published by an authenticated device.
-     * <p>
-     * Verifies that the <em>tenantId</em> and <em>deviceId</em> contained
-     * in the topic match the authenticated device by means of the
-     * {@link #validateCredentialsWithTopicStructure(ResourceIdentifier, String, String)} method.
-     * If they do, a sender is returned that corresponds to the <em>endpoint</em> of the topic.
-     * Otherwise the returned future is failed.
-     * 
-     * @param message The message to get the sender for.
-     * @param topic The topic that the message has been published to.
-     * @param authenticatedDevice The authenticated device that has published the message.
-     * @return A future containing the sender.
+     * Sets the metrics for this service
+     *
+     * @param metrics The metrics
      */
-    protected Future<MessageSender> getSender(final MqttPublishMessage message, final ResourceIdentifier topic,
-            final Device authenticatedDevice) {
-
-        if (validateCredentialsWithTopicStructure(topic, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId())) {
-            return getSenderForTopic(message.qosLevel(), topic.getEndpoint(), authenticatedDevice.getTenantId());
-        } else {
-            LOG.debug("discarding message published by device [tenant-id: {}, device-id: {}] to unauthorized topic [{}]",
-                    authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), message.topicName());
-            return Future.failedFuture("unauthorized ");
-        }
+    @Autowired
+    public final void setMetrics(final MqttAdapterMetrics metrics) {
+        this.metrics = metrics;
     }
 
-    private Future<MessageSender> getSenderForTopic(final MqttQoS qosLevel, final String endpoint, final String tenantId) {
-
-        if (endpoint.equals(TELEMETRY_ENDPOINT)) {
-            if (!MqttQoS.AT_MOST_ONCE.equals(qosLevel)) {
-                // client tries to send telemetry message using QoS 1 or 2
-                return Future.failedFuture("Only QoS 0 supported for telemetry messages");
-            } else {
-                return getTelemetrySender(tenantId);
-            }
-        } else if (endpoint.equals(EVENT_ENDPOINT)) {
-            if (!MqttQoS.AT_LEAST_ONCE.equals(qosLevel)) {
-                // client tries to send event message using QoS 0 or 2
-                return Future.failedFuture("Only QoS 1 supported for event messages");
-            } else {
-                return getEventSender(tenantId);
-            }
-        } else {
-            // MQTT client is trying to publish on a not supported endpoint
-            LOG.debug("no such endpoint [{}]", endpoint);
-            return Future.failedFuture("no such endpoint");
-        }
+    @Override
+    protected void onMessageSent(final ResourceIdentifier downstreamAddress) {
+        metrics.incrementProcessedMqttMessages(downstreamAddress.getEndpoint(), downstreamAddress.getTenantId());
     }
 
+    @Override
+    protected void onMessageUndeliverable(final ResourceIdentifier downstreamAddress) {
+        metrics.incrementUndeliverableMqttMessages(downstreamAddress.getEndpoint(), downstreamAddress.getTenantId());
+    }
+
+    @Override
+    protected Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice) {
+
+        return mapTopic(messageFromDevice).map(address -> {
+            if (address.getTenantId() == null || address.getResourceId() == null) {
+                throw new IllegalArgumentException("topic of unauthenticated message must contain tenant and device IDs");
+            } else {
+                return newMessage(address.getBasePath(), CONTENT_TYPE_OCTET_STREAM);
+            }
+        });
+    }
+
+    @Override
+    protected Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice, final Device deviceIdentity) {
+
+        return mapTopic(messageFromDevice).map(address -> {
+            if (address.getTenantId() != null && address.getResourceId() == null) {
+                throw new IllegalArgumentException("topic of authenticated message must not contain tenant ID only");
+            } else if (address.getTenantId() == null && address.getResourceId() == null) {
+                // use authenticated device's tenant to fill in missing information
+                final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address.getEndpoint(),
+                        deviceIdentity.getTenantId(), deviceIdentity.getDeviceId());
+                return newMessage(downstreamAddress.getBasePath(), CONTENT_TYPE_OCTET_STREAM);
+            } else {
+                return newMessage(address.getBasePath(), CONTENT_TYPE_OCTET_STREAM);
+            }
+        });
+    }
+
+    private Future<ResourceIdentifier> mapTopic(final MqttPublishMessage message) {
+
+        try {
+            final ResourceIdentifier topic = ResourceIdentifier.fromString(message.topicName());
+            if (TELEMETRY_ENDPOINT.equals(topic.getEndpoint())) {
+                if (!MqttQoS.AT_MOST_ONCE.equals(message.qosLevel())) {
+                    // client tries to send telemetry message using QoS 1 or 2
+                    return Future.failedFuture("Only QoS 0 supported for telemetry messages");
+                } else {
+                    return Future.succeededFuture(topic);
+                }
+            } else if (EVENT_ENDPOINT.equals(topic.getEndpoint())) {
+                if (!MqttQoS.AT_LEAST_ONCE.equals(message.qosLevel())) {
+                    // client tries to send event message using QoS 0 or 2
+                    return Future.failedFuture("Only QoS 1 supported for event messages");
+                } else {
+                    return Future.succeededFuture(topic);
+                }
+            } else {
+                // MQTT client is trying to publish on a not supported endpoint
+                LOG.debug("no such endpoint [{}]", topic.getEndpoint());
+                return Future.failedFuture("no such endpoint");
+            }
+        } catch (IllegalArgumentException e) {
+            return Future.failedFuture(e);
+        }
+    }
 }

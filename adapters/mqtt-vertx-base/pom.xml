@@ -6,7 +6,7 @@
     <version>0.5-M11-SNAPSHOT</version>
   </parent>
   <artifactId>hono-adapter-mqtt-vertx-base</artifactId>
-  <name>MQTT Adapter Base Classes</name>
+  <name>Hono MQTT Adapter base</name>
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>

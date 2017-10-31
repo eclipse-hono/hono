@@ -46,6 +46,24 @@ import io.vertx.proton.ProtonConnection;
  */
 public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
 
+    /**
+     * The name of the AMQP 1.0 application property that is used to convey the
+     * address that a message has been originally published to by a device.
+     */
+    public static final String PROPERTY_HONO_ORIG_ADDRESS = "hono-orig-address";
+    /**
+     * The <em>telemetry</em> endpoint name.
+     */
+    public static final String TELEMETRY_ENDPOINT = "telemetry";
+    /**
+     * The <em>event</em> endpoint name.
+     */
+    public static final String EVENT_ENDPOINT = "event";
+    /**
+     * The <em>application/octet-stream</em> content type.
+     */
+    protected static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
+
     private HonoClient messaging;
     private HonoClient registration;
     private HonoClientBasedAuthProvider credentialsAuthProvider;

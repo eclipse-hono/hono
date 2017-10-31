@@ -17,14 +17,13 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,6 +44,7 @@ import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedMqttProtocolAdapter}.
@@ -293,21 +293,23 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = new AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties>() {
 
             @Override
-            protected Future<MessageSender> getSender(final MqttPublishMessage message, final ResourceIdentifier topic) {
-                return Future.failedFuture("no sender");
+            protected Future<Message> getDownstreamMessage(final MqttPublishMessage message) {
+                return Future.succeededFuture(ProtonHelper.message());
             }
 
             @Override
-            protected Future<MessageSender> getSender(MqttPublishMessage message, ResourceIdentifier topic, Device authenticatedDevice) {
-                return Future.failedFuture("no sender");
+            protected Future<Message> getDownstreamMessage(final MqttPublishMessage message, final Device authenticatedDevice) {
+                return Future.succeededFuture(ProtonHelper.message());
             }
         };
-        adapter.setMqttInsecureServer(server);
         adapter.setConfig(config);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationClient);
         adapter.setCredentialsAuthProvider(credentialsAuthProvider);
-        adapter.init(vertx, mock(Context.class));
+        if (server != null) {
+            adapter.setMqttInsecureServer(server);
+            adapter.init(vertx, mock(Context.class));
+        }
 
         return adapter;
     }
