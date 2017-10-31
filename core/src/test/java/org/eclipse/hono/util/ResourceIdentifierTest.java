@@ -52,6 +52,7 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.toString(), is("telemetry/myTenant/deviceId/what/ever"));
         assertThat(resourceId.getResourcePath()[3], is("what"));
         assertThat(resourceId.getResourcePath()[4], is("ever"));
+        assertThat(resourceId.getBasePath(), is("telemetry/myTenant"));
     }
 
     /**

@@ -37,10 +37,11 @@ public final class ResourceIdentifier {
     private static final int IDX_RESOURCE_ID = 2;
     private String[] resourcePath;
     private String resource;
+    private String basePath;
 
     private ResourceIdentifier(final String resource, final boolean assumeDefaultTenant) {
         String[] path = resource.split("\\/");
-        List<String> pathSegments = new ArrayList(Arrays.asList(path));
+        List<String> pathSegments = new ArrayList<>(Arrays.asList(path));
         if (assumeDefaultTenant) {
             pathSegments.add(1, Constants.DEFAULT_TENANT);
         }
@@ -80,15 +81,26 @@ public final class ResourceIdentifier {
         return Arrays.copyOf(resourcePath, resourcePath.length);
     }
 
-    private void createStringRepresentation() {
-        StringBuilder b = new StringBuilder();
-        for (int i = 0; i < resourcePath.length; i++) {
+    private String createStringRepresentation(final int startIdx) {
+
+        final StringBuilder b = new StringBuilder();
+        for (int i = startIdx; i < resourcePath.length; i++) {
             b.append(resourcePath[i]);
             if (i < resourcePath.length - 1) {
                 b.append("/");
             }
         }
-        resource = b.toString();
+        return b.toString();
+    }
+
+    private void createStringRepresentation() {
+        resource = createStringRepresentation(0);
+
+        final StringBuilder b = new StringBuilder(getEndpoint());
+        if (getTenantId() != null) {
+            b.append("/").append(getTenantId());
+        }
+        basePath = b.toString();
     }
 
     /**
@@ -194,13 +206,12 @@ public final class ResourceIdentifier {
     }
 
     /**
+     * Gets a copy of the full resource path of this identifier, including extended elements.
      *
-     * Gets a full resource path of this identifier, including extended elements
-     *
-     * @return the full resource path
+     * @return The full resource path.
      */
     public String[] getResourcePath() {
-        return resourcePath;
+        return Arrays.copyOf(resourcePath, resourcePath.length);
     }
 
     /**
@@ -215,6 +226,16 @@ public final class ResourceIdentifier {
     @Override
     public String toString() {
         return resource;
+    }
+
+    /**
+     * Gets a string representation of this resource identifier's
+     * <em>endpoint</em> and <em>tenantId</em>.
+     * 
+     * @return A string consisting of the properties separated by a forward slash.
+     */
+    public String getBasePath() {
+        return basePath;
     }
 
     @Override
