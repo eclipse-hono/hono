@@ -28,5 +28,5 @@ hono:
     reporter:
       graphite:
         active: true
-        host: influxdb.hono
+        host: influxdb
         port: 2003
