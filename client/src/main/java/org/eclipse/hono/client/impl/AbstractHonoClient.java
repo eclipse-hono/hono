@@ -165,8 +165,16 @@ public abstract class AbstractHonoClient {
             sender.setQoS(qos);
             sender.openHandler(senderOpen -> {
                 if (senderOpen.succeeded()) {
-                    LOG.debug("sender open [{}]", sender.getRemoteTarget());
-                    result.complete(senderOpen.result());
+                    LOG.info("sender open [{}] sendQueueFull [{}]", sender.getRemoteTarget(), sender.sendQueueFull());
+                    // wait on credits a little time, if not already given TODO: configurable waiting time
+                    if (sender.sendQueueFull()) {
+                        ctx.owner().setTimer(10, timerID -> {
+                            LOG.info("waited 10ms on credits [{}]", sender.getCredit());
+                            result.complete(senderOpen.result());
+                        });
+                    } else {
+                        result.complete(senderOpen.result());
+                    }
                 } else {
                     LOG.debug("opening sender [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
                     result.fail(senderOpen.cause());
