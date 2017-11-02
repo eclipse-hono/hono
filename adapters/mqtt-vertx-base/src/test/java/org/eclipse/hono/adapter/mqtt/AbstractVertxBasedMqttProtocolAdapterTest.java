@@ -18,12 +18,15 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,7 +63,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private static Vertx vertx = Vertx.vertx();
 
     /**
-     * Creates clients for the needed microservices and sets the configuration to enable the insecure port.
+     * Creates clients for the needed micro services and sets the configuration to enable the insecure port.
      */
     @Before
     public void setup() {
@@ -248,6 +251,69 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(endpoint).accept(false);
     }
 
+    /**
+     * Verifies that the adapter does not forward a message published by an authenticated
+     * device, if the device identity does not match the downstream message's address and
+     * device ID.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testOnUnauthenticatedMessageFailsAuthorization(final TestContext ctx) {
+
+        // GIVEN an adapter
+        MqttServer server = getMqttServer(false);
+        AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        // WHEN an anonymous device publishes a message to a topic that does not contain
+        // a device ID
+        final MqttEndpoint endpoint = mock(MqttEndpoint.class);
+        final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
+        when(messageFromDevice.topicName()).thenReturn("telemetry/my-tenant");
+        final Async sendingFailed = ctx.async();
+        Future<Void> result = adapter.onUnauthenticatedMessage(endpoint, messageFromDevice).recover(t -> {
+            sendingFailed.complete();
+            return Future.failedFuture(t);
+        });
+
+        // THEN the message has not been sent downstream because the device is not authorized
+        sendingFailed.await(2000);
+        ctx.assertTrue(IllegalArgumentException.class.isInstance(result.cause()));
+
+    }
+
+    /**
+     * Verifies that the adapter does not forward a message published by an authenticated
+     * device, if the device identity does not match the downstream message's address and
+     * device ID.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testOnAuthenticatedMessageFailsAuthorization(final TestContext ctx) {
+
+        // GIVEN an adapter
+        MqttServer server = getMqttServer(false);
+        AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        // WHEN an authenticated device publishes a message to a topic
+        // that does not match the device's identity
+        final Device authenticatedDevice = new Device("my-tenant", "4711");
+        final MqttEndpoint endpoint = mock(MqttEndpoint.class);
+        final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
+        when(messageFromDevice.topicName()).thenReturn("telemetry/my-tenant/4712");
+        final Async sendingFailed = ctx.async();
+        Future<Void> result = adapter.onAuthenticatedMessage(endpoint, messageFromDevice, authenticatedDevice).recover(t -> {
+            sendingFailed.complete();
+            return Future.failedFuture(t);
+        });
+
+        // THEN the message has not been sent downstream because the device is not authorized
+        sendingFailed.await(2000);
+        ctx.assertTrue(ClientErrorException.class.isInstance(result.cause()));
+
+    }
+
     private void forceClientMocksToConnected() {
         when(messagingClient.isConnected()).thenReturn(true);
         when(registrationClient.isConnected()).thenReturn(true);
@@ -294,12 +360,16 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
             @Override
             protected Future<Message> getDownstreamMessage(final MqttPublishMessage message) {
-                return Future.succeededFuture(ProtonHelper.message());
+                final ResourceIdentifier topic = ResourceIdentifier.fromString(message.topicName());
+                final Message result = ProtonHelper.message();
+                result.setAddress(topic.getBasePath());
+                MessageHelper.addDeviceId(result, topic.getResourceId());
+                return Future.succeededFuture(result);
             }
 
             @Override
             protected Future<Message> getDownstreamMessage(final MqttPublishMessage message, final Device authenticatedDevice) {
-                return Future.succeededFuture(ProtonHelper.message());
+                return getDownstreamMessage(message);
             }
         };
         adapter.setConfig(config);

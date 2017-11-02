@@ -23,6 +23,7 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
@@ -289,16 +290,24 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             final DeviceCredentials credentials = getCredentials(endpoint.auth());
 
             if (credentials == null) {
-                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
                 LOG.debug("cannot authenticate device [clientId: {}] rejected [cause: {}]",
                         endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                close(endpoint);
             } else {
                 getCredentialsAuthProvider().authenticate(credentials, attempt -> {
                     if (attempt.failed()) {
 
                         LOG.debug("cannot authenticate device [tenant-id: {}, auth-id: {}], cause: {}",
                                 credentials.getTenantId(), credentials.getAuthId(), attempt.cause().getMessage());
-                        endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                        if (ServerErrorException.class.isInstance(attempt.cause())) {
+                            // credentials service might not be available (yet)
+                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                        } else {
+                            // validation of credentials has failed
+                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                        }
+                        close(endpoint);
 
                     } else {
 
@@ -338,12 +347,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * 
      * @param endpoint The connection over which the message has been received.
      * @param messageFromDevice The message received over the connection.
+     * @return A future indicating the outcome of processing the message. The future will be succeeded
+     *         if and only if the message has been sent downstream.
      */
-    protected final void onUnauthenticatedMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice) {
+    protected final Future<Void> onUnauthenticatedMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice) {
 
         LOG.trace("received message [topic: {}, QoS: {}] from unauthenticated device", messageFromDevice.topicName(), messageFromDevice.qosLevel());
         final Future<Message> messageTracker = getDownstreamMessage(messageFromDevice);
-        messageTracker.compose(message -> authorize(message, null)).compose(authorizedAddress -> {
+        return messageTracker.compose(message -> authorize(message, null)).compose(authorizedAddress -> {
             return publishMessage(endpoint, messageFromDevice, messageTracker.result(), null).map(s -> {
                 LOG.trace("successfully processed message [topic: {}, QoS: {}] from unauthenticated device", messageFromDevice.topicName(), messageFromDevice.qosLevel());
                 onMessageSent(authorizedAddress);
@@ -353,6 +364,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         messageFromDevice.topicName(), messageFromDevice.qosLevel(), f.getMessage());
                 if (!ClientErrorException.class.isInstance(f)) {
                     onMessageUndeliverable(authorizedAddress);
+                    close(endpoint);
                 }
                 return Future.failedFuture(f);
             });
@@ -371,8 +383,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param endpoint The connection over which the message has been received.
      * @param messageFromDevice The message received over the connection.
      * @param authenticatedDevice The authenticated device that has published the message.
+     * @return A future indicating the outcome of processing the message. The future will be succeeded
+     *         if and only if the message has been sent downstream.
      */
-    protected final void onAuthenticatedMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice,
+    protected final Future<Void> onAuthenticatedMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice,
             final Device authenticatedDevice) {
 
         LOG.trace("received message [topic: {}, QoS: {}] from authenticated device [tenant-id: {}, device-id: {}]",
@@ -380,7 +394,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         final Future<Message> mappedMessage = getDownstreamMessage(messageFromDevice, authenticatedDevice);
 
-        mappedMessage.compose(message -> authorize(message, authenticatedDevice)).compose(authorizedResource -> {
+        return mappedMessage.compose(message -> authorize(message, authenticatedDevice)).compose(authorizedResource -> {
 
             return publishMessage(endpoint, messageFromDevice, mappedMessage.result(), authorizedResource).map(s -> {
 
@@ -395,6 +409,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         messageFromDevice.topicName(), messageFromDevice.qosLevel(), authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), f.getMessage());
                 if (!ClientErrorException.class.isInstance(f)) {
                     onMessageUndeliverable(authorizedResource);
+                    close(endpoint);
                 }
                 return Future.failedFuture(f);
             });
@@ -435,13 +450,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             try {
                 final ResourceIdentifier address = ResourceIdentifier.fromString(to + "/" + deviceId);
                 if (authenticatedDevice == null) {
-                    return Future.succeededFuture(address);
-                } else if (validateCredentialsWithTopicStructure(address, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId())) {
+                    if (address.getResourcePath().length != 3) {
+                        return Future.failedFuture(new IllegalArgumentException("message has malformed address"));
+                    } else {
+                        return Future.succeededFuture(address);
+                    }
+                } else if (validateCredentialsWithTopicStructure(address, authenticatedDevice)) {
                     return Future.succeededFuture(address);
                 } else {
                     LOG.debug("discarding message published by authenticated device [tenant-id: {}, device-id: {}] to unauthorized topic [{}]",
                             authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), address);
-                    return Future.failedFuture(new SecurityException("device is not authorized to publish to topic"));
+                    return Future.failedFuture(new ClientErrorException(403, "device is not authorized to publish to topic"));
                 }
             } catch (IllegalArgumentException e) {
                 LOG.debug("discarding message mapped to malformed address [to: {}]", message.getAddress());
@@ -540,7 +559,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
             endpoint.close();
         } else {
-            LOG.debug("client has already closed connection");
+            LOG.trace("client has already closed connection");
         }
     }
 
