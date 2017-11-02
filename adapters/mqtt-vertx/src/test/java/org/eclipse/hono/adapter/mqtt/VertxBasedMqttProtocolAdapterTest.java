@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
@@ -184,6 +185,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         final ResourceIdentifier downstreamAddress = ResourceIdentifier.fromString(downstreamMessage.result().getAddress());
         assertThat(downstreamAddress.getEndpoint(), is(VertxBasedMqttProtocolAdapter.TELEMETRY_ENDPOINT));
         assertThat(downstreamAddress.getTenantId(), is("my-tenant"));
+        assertThat(MessageHelper.getDeviceId(downstreamMessage.result()), is("4711"));
     }
 
     private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic) {

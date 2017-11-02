@@ -377,33 +377,39 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         LOG.trace("received message [topic: {}, QoS: {}] from authenticated device [tenant-id: {}, device-id: {}]",
                 messageFromDevice.topicName(), messageFromDevice.qosLevel(), authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+
         final Future<Message> mappedMessage = getDownstreamMessage(messageFromDevice, authenticatedDevice);
-        mappedMessage.compose(message -> authorize(message, authenticatedDevice)).compose(authorizedAddress -> {
-            return publishMessage(endpoint, messageFromDevice, mappedMessage.result(), authorizedAddress).map(s -> {
+
+        mappedMessage.compose(message -> authorize(message, authenticatedDevice)).compose(authorizedResource -> {
+
+            return publishMessage(endpoint, messageFromDevice, mappedMessage.result(), authorizedResource).map(s -> {
+
                 LOG.trace("successfully processed message [topic: {}, QoS: {}] from authenticated device [tenantId: {}, deviceId: {}]",
                         messageFromDevice.topicName(), messageFromDevice.qosLevel(), authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-                onMessageSent(authorizedAddress);
+                onMessageSent(authorizedResource);
                 return (Void) null;
+
             }).recover(f -> {
+
                 LOG.debug("error processing message [topic: {}, QoS: {}] from authenticated device [tenantId: {}, deviceId: {}]: {}",
                         messageFromDevice.topicName(), messageFromDevice.qosLevel(), authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), f.getMessage());
                 if (!ClientErrorException.class.isInstance(f)) {
-                    onMessageUndeliverable(authorizedAddress);
+                    onMessageUndeliverable(authorizedResource);
                 }
                 return Future.failedFuture(f);
             });
         });
     }
 
-    private Future<Void> publishMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice, final Message message, final ResourceIdentifier authorizedAddress) {
+    private Future<Void> publishMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice, final Message message, final ResourceIdentifier authorizedResource) {
 
-        final Future<String> assertionTracker = getRegistrationAssertion(endpoint, authorizedAddress.getTenantId(), authorizedAddress.getResourceId());
-        final Future<MessageSender> senderTracker = getSenderForEndpoint(authorizedAddress.getEndpoint(), authorizedAddress.getTenantId());
+        final Future<String> assertionTracker = getRegistrationAssertion(endpoint, authorizedResource.getTenantId(), authorizedResource.getResourceId());
+        final Future<MessageSender> senderTracker = getSenderForEndpoint(authorizedResource.getEndpoint(), authorizedResource.getTenantId());
 
         return CompositeFuture.all(assertionTracker, senderTracker).recover(t -> {
             return Future.failedFuture(t);
         }).compose(ok -> {
-            addProperties(messageFromDevice, message, assertionTracker.result(), authorizedAddress.getResourceId());
+            addProperties(messageFromDevice, message, assertionTracker.result());
             return doUploadMessage(message, endpoint, messageFromDevice, senderTracker.result());
         });
     }
@@ -413,24 +419,34 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * 
      * @param message The message to authorize.
      * @param authenticatedDevice The authenticated device or {@code null} if the device has not been authenticated.
-     * @return A succeeded future containing the authorized message's address.
+     * @return A succeeded future containing a resource identifier for the authorized message. The future will
+     *         be failed if the message does not contain a <em>device_id</em> application property or has a
+     *         malformed address.
      */
     private Future<ResourceIdentifier> authorize(final Message message, final Device authenticatedDevice) {
 
-        try {
-            final ResourceIdentifier address = ResourceIdentifier.fromString(message.getAddress());
-            if (authenticatedDevice == null) {
-                return Future.succeededFuture(address);
-            } else if (validateCredentialsWithTopicStructure(address, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId())) {
-                return Future.succeededFuture(address);
-            } else {
-                LOG.debug("discarding message published by authenticated device [tenant-id: {}, device-id: {}] to unauthorized topic [{}]",
-                        authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), address);
-                return Future.failedFuture("unauthorized ");
+        final String deviceId = MessageHelper.getDeviceId(message);
+        final String to = message.getAddress();
+        if (deviceId == null) {
+            return Future.failedFuture(new IllegalArgumentException("message contains no device_id property"));
+        } else if (to == null) {
+                return Future.failedFuture(new IllegalArgumentException("message has no address"));
+        } else {
+            try {
+                final ResourceIdentifier address = ResourceIdentifier.fromString(to + "/" + deviceId);
+                if (authenticatedDevice == null) {
+                    return Future.succeededFuture(address);
+                } else if (validateCredentialsWithTopicStructure(address, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId())) {
+                    return Future.succeededFuture(address);
+                } else {
+                    LOG.debug("discarding message published by authenticated device [tenant-id: {}, device-id: {}] to unauthorized topic [{}]",
+                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), address);
+                    return Future.failedFuture(new SecurityException("device is not authorized to publish to topic"));
+                }
+            } catch (IllegalArgumentException e) {
+                LOG.debug("discarding message mapped to malformed address [to: {}]", message.getAddress());
+                return Future.failedFuture(e);
             }
-        } catch (IllegalArgumentException e) {
-            LOG.debug("discarding message mapped to malformed address [to: {}]", message.getAddress());
-            return Future.failedFuture(e);
         }
     }
 
@@ -457,13 +473,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
     }
 
-    private void addProperties(final MqttPublishMessage messageFromDevice, final Message message, final String registrationAssertion, final String deviceId) {
+    private void addProperties(final MqttPublishMessage messageFromDevice, final Message message, final String registrationAssertion) {
 
         if (message.getContentType() == null) {
             message.setContentType(CONTENT_TYPE_OCTET_STREAM);
         }
         message.setBody(new Data(new Binary(messageFromDevice.payload().getBytes())));
-        MessageHelper.addDeviceId(message, deviceId);
         MessageHelper.addRegistrationAssertion(message, registrationAssertion);
         MessageHelper.addProperty(message, PROPERTY_HONO_ORIG_ADDRESS, messageFromDevice.topicName());
     }
@@ -530,20 +545,23 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
-     * Creates a new AMQP 1.0 message for an address and content type.
+     * Creates a new AMQP 1.0 message for an address, device ID and content type.
      * 
      * @param address The receiver of the message.
+     * @param deviceId The identifier of the device that the message originates from.
      * @param contentType The content type describing the message's payload.
      * @return The message.
-     * @throws NullPointerException if address or content type are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected static Message newMessage(final String address, final String contentType) {
+    protected static Message newMessage(final String address, final String deviceId, final String contentType) {
 
         Objects.requireNonNull(address);
+        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(contentType);
 
         final Message msg = ProtonHelper.message();
         msg.setAddress(address.toString());
+        MessageHelper.addDeviceId(msg, deviceId);
         msg.setContentType(contentType);
         return msg;
     }
