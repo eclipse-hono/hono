@@ -331,7 +331,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     /**
      * Processes a message that has been published via an unauthenticated connection.
-     * <p>
      * <ol>
      * <li>{@linkplain #getDownstreamMessage(MqttPublishMessage) Maps the message from the device to a message to be sent downstream}.</li>
      * <li>Forwards the message to the API endpoint corresponding to the downstream address.</li>
@@ -362,7 +361,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     /**
      * Processes a message that has been published via an authenticated connection.
-     * <p>
      * <ol>
      * <li>{@linkplain #getDownstreamMessage(MqttPublishMessage, Device) Maps the message} from the device to a message
      * to be sent downstream.</li>
@@ -562,10 +560,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
-     * Extracts credentials from a client's MQTT <em>CONNECT</em> <packet.
+     * Extracts credentials from a client's MQTT <em>CONNECT</em> packet.
      * <p>
      * This default implementation returns {@link UsernamePasswordCredentials} created
-     * from the <em>username</em> and <em>password</em> fields of the <em>CONNECT</em> <packet.
+     * from the <em>username</em> and <em>password</em> fields of the <em>CONNECT</em> packet.
      * <p>
      * Subclasses should override this method if the device uses credentials that do not
      * comply with the format expected by {@link UsernamePasswordCredentials}.
