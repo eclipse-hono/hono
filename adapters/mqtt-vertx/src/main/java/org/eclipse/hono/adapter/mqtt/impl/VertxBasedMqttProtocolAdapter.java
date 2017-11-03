@@ -11,9 +11,10 @@
  *    Bosch Software Innovations GmbH - add Eclipse Kura support
  */
 
-package org.eclipse.hono.adapter.mqtt;
+package org.eclipse.hono.adapter.mqtt.impl;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.ResourceIdentifier;

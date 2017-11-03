@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.mqtt;
+package org.eclipse.hono.adapter.mqtt.impl;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -18,6 +18,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
+import org.eclipse.hono.adapter.mqtt.impl.VertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.MessageHelper;

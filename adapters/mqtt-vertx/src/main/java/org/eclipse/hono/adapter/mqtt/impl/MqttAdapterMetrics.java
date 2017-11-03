@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.mqtt;
+package org.eclipse.hono.adapter.mqtt.impl;
 
 import org.eclipse.hono.service.metric.Metrics;
 import org.springframework.stereotype.Component;
