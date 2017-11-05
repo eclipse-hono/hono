@@ -20,6 +20,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
@@ -364,7 +365,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         messageFromDevice.topicName(), messageFromDevice.qosLevel(), f.getMessage());
                 if (!ClientErrorException.class.isInstance(f)) {
                     onMessageUndeliverable(authorizedAddress);
-                    close(endpoint);
                 }
                 return Future.failedFuture(f);
             });
@@ -409,7 +409,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         messageFromDevice.topicName(), messageFromDevice.qosLevel(), authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), f.getMessage());
                 if (!ClientErrorException.class.isInstance(f)) {
                     onMessageUndeliverable(authorizedResource);
-                    close(endpoint);
                 }
                 return Future.failedFuture(f);
             });
@@ -422,10 +421,25 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         final Future<MessageSender> senderTracker = getSenderForEndpoint(authorizedResource.getEndpoint(), authorizedResource.getTenantId());
 
         return CompositeFuture.all(assertionTracker, senderTracker).recover(t -> {
+            if (assertionTracker.failed()) {
+                LOG.debug("error getting registration assertion for device [tenant ID: {}, device ID: {}]: {}",
+                        authorizedResource.getTenantId(), authorizedResource.getResourceId(), t.getMessage());
+            } else {
+                LOG.debug("error getting {} sender for device [tenant ID: {}, device ID: {}]: {}",
+                        authorizedResource.getEndpoint(), authorizedResource.getTenantId(), authorizedResource.getResourceId(),
+                        t.getMessage());
+            }
             return Future.failedFuture(t);
         }).compose(ok -> {
-            addProperties(messageFromDevice, message, assertionTracker.result());
-            return doUploadMessage(message, endpoint, messageFromDevice, senderTracker.result());
+            final MessageSender sender = senderTracker.result();
+            if (sender.sendQueueFull()) {
+                // cannot send message downstream
+                return Future.failedFuture(new ServerErrorException(503, "no credit available for sender [" +
+                        message.getAddress() + "]"));
+            } else {
+                addProperties(messageFromDevice, message, assertionTracker.result());
+                return doUploadMessage(message, endpoint, messageFromDevice, sender);
+            }
         });
     }
 
@@ -488,7 +502,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         } else {
             // MQTT client is trying to publish on a not supported endpoint
             LOG.debug("no such endpoint [{}]", endpoint);
-            return Future.failedFuture("no such endpoint");
+            return Future.failedFuture(new IllegalArgumentException("no such endpoint"));
         }
     }
 
@@ -537,13 +551,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         endpoint.publishAcknowledge(messageFromDevice.messageId());
                     }
                     result.complete();
+                } else if (Rejected.class.isInstance(delivery.getRemoteState())) {
+                    Rejected remoteState = (Rejected) delivery.getRemoteState();
+                    LOG.debug("message from device has been rejected: {}, {}", remoteState.getError().getCondition(), remoteState.getError().getDescription());
+                    result.fail("message rejected: " + remoteState.getError().getCondition());
                 } else {
-                    result.fail("message not accepted by remote");
+                    result.fail("message not accepted by remote: " + delivery.getRemoteState().getClass().getSimpleName());
                 }
             }
         });
         if (!accepted) {
-            result.fail("no credit available for sending message");
+            result.fail(new ServerErrorException(503, "no credit available for sending message"));
         }
         return result;
     }
