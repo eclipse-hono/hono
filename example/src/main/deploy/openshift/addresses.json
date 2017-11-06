@@ -1,0 +1,22 @@
+{
+    "apiVersion": "enmasse.io/v1",
+    "kind": "AddressList",
+    "items": [
+      {
+        "metadata": {
+          "name": "event/DEFAULT_TENANT"
+        },
+        "spec": {
+          "type": "topic"
+        }
+      },
+      {
+        "metadata": {
+          "name": "telemetry/DEFAULT_TENANT"
+        },
+        "spec": {
+          "type": "anycast"
+        }
+      }
+    ]
+  }
