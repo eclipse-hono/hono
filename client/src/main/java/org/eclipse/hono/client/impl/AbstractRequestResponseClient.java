@@ -62,7 +62,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} only.
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection, int, long)} only.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param tenantId The identifier of the tenant that the client is scoped to.
@@ -142,11 +142,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * and receiving responses.
      * 
      * @param con The AMQP 1.0 connection to the peer.
+     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
+     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
+     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
+     * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
      */
-    protected final Future<Void> createLinks(final ProtonConnection con) {
-        return createLinks(con, null, null);
+    protected final Future<Void> createLinks(final ProtonConnection con, final int receiverPrefetchCredits, final long waitForInitialCredits) {
+        return createLinks(con, receiverPrefetchCredits, waitForInitialCredits, null, null);
     }
 
     /**
@@ -154,16 +158,21 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * and receiving responses.
      * 
      * @param con The AMQP 1.0 connection to the peer.
+     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
+     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
+     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
+     * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
      */
-    protected final Future<Void> createLinks(final ProtonConnection con, final Handler<String> senderCloseHook, final Handler<String> receiverCloseHook) {
+    protected final Future<Void> createLinks(final ProtonConnection con, final int receiverPrefetchCredits, final long waitForInitialCredits,
+                                             final Handler<String> senderCloseHook, final Handler<String> receiverCloseHook) {
         Future<Void> result = Future.future();
-        createReceiver(con, replyToAddress, receiverCloseHook).compose(recv -> {
+        createReceiver(con, replyToAddress, receiverPrefetchCredits, receiverCloseHook).compose(recv -> {
             this.receiver = recv;
-            return createSender(con, targetAddress, senderCloseHook);
+            return createSender(con, targetAddress, waitForInitialCredits, senderCloseHook);
         }).setHandler(s -> {
             if (s.succeeded()) {
                 LOG.debug("request-response client for peer [{}] created", con.getRemoteContainer());
@@ -176,13 +185,14 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         return result;
     }
 
-    private Future<ProtonSender> createSender(final ProtonConnection con, final String targetAddress, final Handler<String> closeHook) {
-        return AbstractHonoClient.createSender(context, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook);
+    private Future<ProtonSender> createSender(final ProtonConnection con, final String targetAddress, final long waitForInitialCredits, final Handler<String> closeHook) {
+
+        return AbstractHonoClient.createSender(context, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, waitForInitialCredits, closeHook);
     }
 
-    private Future<ProtonReceiver> createReceiver(final ProtonConnection con, final String sourceAddress, final Handler<String> closeHook) {
+    private Future<ProtonReceiver> createReceiver(final ProtonConnection con, final String sourceAddress, int prefetchCredits, final Handler<String> closeHook) {
 
-        return AbstractHonoClient.createReceiver(context, con, sourceAddress, ProtonQoS.AT_LEAST_ONCE, this::handleResponse, closeHook);
+        return AbstractHonoClient.createReceiver(context, con, sourceAddress, ProtonQoS.AT_LEAST_ONCE, prefetchCredits, this::handleResponse, closeHook);
     }
 
     /**

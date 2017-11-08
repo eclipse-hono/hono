@@ -27,10 +27,15 @@ public class ClientConfigProperties extends AbstractConfig {
     private String username;
     private char[] password;
     private String amqpHostname;
+    private long waitMillisForCredits = 10L;
+    private int initialCredits = 1000;
+    private long requestTimeoutMillis = 200L;
 
     /**
      * Gets the name or literal IP address of the host that the client is configured to connect to.
-     * 
+     * <p>
+     * The default value of this property is "localhost".
+     *
      * @return The host name.
      */
     public final String getHost() {
@@ -156,5 +161,65 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public final void setAmqpHostname(String amqpHostname) {
         this.amqpHostname = amqpHostname;
+    }
+
+    /**
+     * Gets millis to wait for a receivers AMQP <em>flow</em> frame after sender link creation.
+     * <p>
+     * The default value of this property is 10.
+     *
+     * @return The millis to wait after sender link creation, if there are no credits directly
+     */
+    public final long getWaitMillisForInitialCredits() {
+        return waitMillisForCredits;
+    }
+
+    /**
+     * Sets millis to wait for a receivers AMQP <em>flow</em> frame after sender link creation.
+     *
+     * @param waitMillisForCredits The millis to set
+     */
+    public void setWaitMillisForInitialCredits(final long waitMillisForCredits) {
+        this.waitMillisForCredits = waitMillisForCredits;
+    }
+
+    /**
+     * Gets the number of initial credits, that will be given from a receiver to a sender at link creation.
+     * <p>
+     * The default value of this property is 1000.
+     *
+     * @return The number of inital credits.
+     */
+    public final int getInitialCredits() {
+        return initialCredits;
+    }
+
+    /**
+     * Sets the number of initial credits, that will be given from a receiver to a sender at link creation.
+     *
+     * @param initialCredits The initial credits to set.
+     */
+    public void setInitialCredits(final int initialCredits) {
+        this.initialCredits = initialCredits;
+    }
+
+    /**
+     * Gets the timeout in millis between a request and the awaited response in a request/response style communication
+     * <p>
+     * The default value of this property is 200.
+     *
+     * @return The timeout in millis
+     */
+    public final long getRequestTimeoutMillis() {
+        return requestTimeoutMillis;
+    }
+
+    /**
+     * Sets the timeout in millis between a request and the awaited response in a request/response style communication
+     *
+     * @param requestTimeoutMillis The timeout in millis to set.
+     */
+    public void setRequestTimeoutMillis(final long requestTimeoutMillis) {
+        this.requestTimeoutMillis = requestTimeoutMillis;
     }
 }

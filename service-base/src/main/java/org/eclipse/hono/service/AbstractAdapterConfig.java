@@ -53,7 +53,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes a Vert.x instance as a Spring bean.
-     * 
+     *
      * @return The Vert.x instance.
      */
     @Bean
@@ -74,7 +74,7 @@ public abstract class AbstractAdapterConfig {
      * Exposes client configuration properties as a Spring bean.
      * <p>
      * Sets the <em>amqpHostname</em> to {@code hono-messaging} if not set explicitly.
-     * 
+     *
      * @return The properties.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
@@ -92,7 +92,7 @@ public abstract class AbstractAdapterConfig {
      * <p>
      * This method does nothing by default. Subclasses may override this method to set additional
      * properties programmatically.
-     * 
+     *
      * @param config The client configuration to customize.
      */
     protected void customizeMessagingClientConfigProperties(final ClientConfigProperties config) {
@@ -102,7 +102,7 @@ public abstract class AbstractAdapterConfig {
     /**
      * Exposes a factory for connections to the Hono Messaging component
      * as a Spring bean.
-     * 
+     *
      * @return The connection factory.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
@@ -122,7 +122,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public HonoClient messagingClient() {
-        return new HonoClientImpl(vertx(), messagingConnectionFactory());
+        return new HonoClientImpl(vertx(), messagingConnectionFactory(), messagingClientConfig());
     }
 
     /**
@@ -155,7 +155,7 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for connections to the registration service 
+     * Exposes a factory for connections to the registration service
      * as a Spring bean.
      *
      * @return The connection factory.
@@ -175,7 +175,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public HonoClient registrationServiceClient() {
-        return new HonoClientImpl(vertx(), registrationServiceConnectionFactory());
+        return new HonoClientImpl(vertx(), registrationServiceConnectionFactory(), registrationServiceClientConfig());
     }
 
     /**
@@ -231,6 +231,6 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public HonoClient credentialsServiceClient() {
-        return new HonoClientImpl(vertx(), credentialsServiceConnectionFactory());
+        return new HonoClientImpl(vertx(), credentialsServiceConnectionFactory(), credentialsServiceClientConfig());
     }
 }

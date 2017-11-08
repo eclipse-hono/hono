@@ -76,21 +76,27 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
      * @param context The vert.x context to run all interactions with the server on.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant for which credentials are handled.
+     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
+     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
+     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
      */
     public static void create(
             final Context context,
             final ProtonConnection con,
             final String tenantId,
+            final int receiverPrefetchCredits,
+            final long waitForInitialCredits,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<CredentialsClient>> creationHandler) {
 
         final CredentialsClientImpl client = new CredentialsClientImpl(context, tenantId);
-        client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
+        client.createLinks(con, receiverPrefetchCredits, waitForInitialCredits, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(client));
             } else {
