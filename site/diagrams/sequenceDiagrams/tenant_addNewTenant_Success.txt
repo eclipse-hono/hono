@@ -1,0 +1,8 @@
+title Add tenant (success)
+
+Client->+Tenant Service: transfer("tenant", "add", "${tenant_id}", tenantMetaData)
+note over Tenant Service:
+add tenant
+end note
+
+Tenant Service->-Client: transfer("tenant/${reply-to}", "201")
