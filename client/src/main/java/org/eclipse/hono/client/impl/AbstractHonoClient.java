@@ -39,11 +39,6 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class AbstractHonoClient {
 
-    /**
-     * The number of credits to flow to senders by default.
-     */
-    protected static final int DEFAULT_SENDER_CREDITS = 1000;
-
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**
@@ -147,15 +142,18 @@ public abstract class AbstractHonoClient {
      * @param con The connection to create the link for.
      * @param targetAddress The target address of the link.
      * @param qos The quality of service to use for the link.
+     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @param closeHook The handler to invoke when the link is closed by the peer.
      * @return A future for the created link. The future will be completed once the link is open.
      *         The future will fail if the link cannot be opened.
+     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
      */
     protected static final Future<ProtonSender> createSender(
             final Context ctx,
             final ProtonConnection con,
             final String targetAddress,
             final ProtonQoS qos,
+            final long waitForInitialCredits,
             final Handler<String> closeHook) {
 
         final Future<ProtonSender> result = Future.future();
@@ -166,14 +164,14 @@ public abstract class AbstractHonoClient {
             sender.openHandler(senderOpen -> {
                 if (senderOpen.succeeded()) {
                     LOG.info("sender open [{}] sendQueueFull [{}]", sender.getRemoteTarget(), sender.sendQueueFull());
-                    // wait on credits a little time, if not already given TODO: configurable waiting time
+                    // wait on credits a little time, if not already given
                     if (sender.sendQueueFull()) {
-                        ctx.owner().setTimer(10, timerID -> {
-                            LOG.info("waited 10ms on credits [{}]", sender.getCredit());
-                            result.complete(senderOpen.result());
+                        ctx.owner().setTimer(waitForInitialCredits, timerID -> {
+                            LOG.info("waited [{}] ms on credits [{}]", waitForInitialCredits, sender.getCredit());
+                            result.complete(sender);
                         });
                     } else {
-                        result.complete(senderOpen.result());
+                        result.complete(sender);
                     }
                 } else {
                     LOG.debug("opening sender [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
@@ -200,23 +198,25 @@ public abstract class AbstractHonoClient {
     /**
      * Creates a receiver link.
      * <p>
-     * The receiver will be created with its <em>autoAccept</em> property set to {@code true}
-     * and with its <em>prefetch</em> property being set to {@link #DEFAULT_SENDER_CREDITS}.
-     * 
+     * The receiver will be created with its <em>autoAccept</em> property set to {@code true}.
+     *
      * @param ctx The vert.x context to use for establishing the link.
      * @param con The connection to create the link for.
      * @param sourceAddress The address to receive messages from.
      * @param qos The quality of service to use for the link.
+     * @param prefetchCredits Number of credits, given initially from receiver to sender.
      * @param messageHandler The handler to invoke with every message received.
      * @param closeHook The handler to invoke when the link is closed by the peer.
      * @return A future for the created link. The future will be completed once the link is open.
      *         The future will fail if the link cannot be opened.
+     * @throws IllegalArgumentException if prefetchCredits is {@code < 0}.
      */
     protected static final Future<ProtonReceiver> createReceiver(
             final Context ctx,
             final ProtonConnection con,
             final String sourceAddress,
             final ProtonQoS qos,
+            final int prefetchCredits,
             final ProtonMessageHandler messageHandler,
             final Handler<String> closeHook) {
 
@@ -224,7 +224,8 @@ public abstract class AbstractHonoClient {
         ctx.runOnContext(go -> {
             final ProtonReceiver receiver = con.createReceiver(sourceAddress);
             receiver.setAutoAccept(true);
-            receiver.setPrefetch(DEFAULT_SENDER_CREDITS);
+            receiver.setQoS(qos);
+            receiver.setPrefetch(prefetchCredits);
             receiver.handler(messageHandler);
             receiver.openHandler(result.completer());
             receiver.closeHandler(remoteClosed -> {
