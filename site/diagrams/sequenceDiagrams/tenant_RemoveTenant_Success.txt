@@ -1,0 +1,9 @@
+title Remove Tenant (success)
+
+Client->+Tenant Service: transfer("tenant", "remove", "${tenant_id}")
+
+note over Tenant Service:
+remove credentials
+end note
+
+Tenant Service->-Client: transfer("tenant/${reply-to}", "204")
