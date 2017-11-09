@@ -21,3 +21,8 @@ spec:
           value: dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
+        - name: HONO_REGISTRY_SVC_SAVE_TO_FILE
+          value: true
+        - name: HONO_CREDENTIALS_SVC_SAVE_TO_FILE
+          value: true
+
