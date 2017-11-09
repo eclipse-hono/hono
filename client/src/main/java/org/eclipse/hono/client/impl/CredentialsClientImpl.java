@@ -17,12 +17,15 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.util.CredentialsConstants.OPERATION_GET;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,6 +42,7 @@ import io.vertx.proton.ProtonConnection;
  */
 public final class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsResult<CredentialsObject>> implements CredentialsClient {
 
+    private static Logger LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private CredentialsClientImpl(final Context context, final String tenantId) {
@@ -71,6 +75,17 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
     }
 
     /**
+     * Gets the AMQP <em>target</em> address to use for sending requests to Hono's Credentials API endpoint.
+     * 
+     * @param tenantId The tenant to upload data for.
+     * @return The target address.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public static String getTargetAddress(final String tenantId) {
+        return String.format("%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, Objects.requireNonNull(tenantId));
+    }
+
+    /**
      * Creates a new credentials client for a tenant.
      *
      * @param context The vert.x context to run all interactions with the server on.
@@ -95,18 +110,21 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<CredentialsClient>> creationHandler) {
 
+        LOG.debug("creating new credentials client for [{}]", tenantId);
         final CredentialsClientImpl client = new CredentialsClientImpl(context, tenantId);
         client.createLinks(con, receiverPrefetchCredits, waitForInitialCredits, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
+                LOG.debug("successfully created credentials client for [{}]", tenantId);
                 creationHandler.handle(Future.succeededFuture(client));
             } else {
+                LOG.debug("failed to create credentials client for [{}]", tenantId, s.cause());
                 creationHandler.handle(Future.failedFuture(s.cause()));
             }
         });
     }
 
     @Override
-    public final void get(final String type, final String authId, final Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler) {
+    public void get(final String type, final String authId, final Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler) {
         JsonObject specification = new JsonObject().put(CredentialsConstants.FIELD_TYPE, type).put(CredentialsConstants.FIELD_AUTH_ID, authId);
         createAndSendRequest(OPERATION_GET, specification, resultHandler);
     }

@@ -42,9 +42,8 @@ public final class HonoClientImpl implements HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClientImpl.class);
     private final Map<String, MessageSender> activeSenders = new ConcurrentHashMap<>();
-    private final Map<String, RegistrationClient> activeRegClients = new ConcurrentHashMap<>();
-    private final Map<String, CredentialsClient> activeCredClients = new ConcurrentHashMap<>();
-    private final Map<String, Boolean> senderCreationLocks = new ConcurrentHashMap<>();
+    private final Map<String, RequestResponseClient> activeRequestResponseClients = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> creationLocks = new ConcurrentHashMap<>();
     private final List<Handler<Void>> creationRequests = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
@@ -116,7 +115,7 @@ public final class HonoClientImpl implements HonoClient {
         result.put("name", connectionFactory.getName());
         result.put("connected", isConnected());
         result.put("server", String.format("%s:%d", connectionFactory.getHost(), connectionFactory.getPort()));
-        result.put("#regClients", activeRegClients.size());
+        result.put("#clients", activeRequestResponseClients.size());
         result.put("senders", getSenderStatus());
         return result;
     }
@@ -219,8 +218,7 @@ public final class HonoClientImpl implements HonoClient {
             LOG.debug("lost connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             connection.disconnect();
             activeSenders.clear();
-            activeRegClients.clear();
-            activeCredClients.clear();
+            activeRequestResponseClients.clear();
             failAllCreationRequests();
 
             if (nextHandler != null) {
@@ -281,17 +279,17 @@ public final class HonoClientImpl implements HonoClient {
         if (sender != null && sender.isOpen()) {
             LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
             resultHandler.handle(Future.succeededFuture(sender));
-        } else if (!senderCreationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+        } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
 
             // register a handler to be notified if the underlying connection to the server fails
             // so that we can fail the result handler passed in
             final Handler<Void> connectionFailureHandler = connectionLost -> {
                 // remove lock so that next attempt to open a sender doesn't fail
-                senderCreationLocks.remove(key);
+                creationLocks.remove(key);
                 resultHandler.handle(Future.failedFuture("connection to server lost"));
             };
             creationRequests.add(connectionFailureHandler);
-            senderCreationLocks.put(key, Boolean.TRUE);
+            creationLocks.put(key, Boolean.TRUE);
             LOG.debug("creating new message sender for {}", key);
 
             newSenderSupplier.accept(creationAttempt -> {
@@ -303,7 +301,7 @@ public final class HonoClientImpl implements HonoClient {
                     LOG.debug("failed to create new message sender for {}", key, creationAttempt.cause());
                     activeSenders.remove(key);
                 }
-                senderCreationLocks.remove(key);
+                creationLocks.remove(key);
                 creationRequests.remove(connectionFailureHandler);
                 resultHandler.handle(creationAttempt);
             });
@@ -450,37 +448,87 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
+    /**
+     * Gets an existing or creates a new request-response client for a particular service.
+     * 
+     * @param key The key to look-up the client by.
+     * @param clientSupplier A consumer for an attempt to create a new client.
+     * @param resultHandler The handler to inform about the outcome of the operation.
+     */
+    void getOrCreateRequestResponseClient(
+            final String key, 
+            final Consumer<Handler<AsyncResult<RequestResponseClient>>> clientSupplier,
+            final Handler<AsyncResult<RequestResponseClient>> resultHandler) {
+
+        final RequestResponseClient client = activeRequestResponseClients.get(key);
+        if (client != null && client.isOpen()) {
+            LOG.debug("reusing existing client [target: {}]", key);
+            resultHandler.handle(Future.succeededFuture(client));
+        } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+
+            // register a handler to be notified if the underlying connection to the server fails
+            // so that we can fail the result handler passed in
+            final Handler<Void> connectionFailureHandler = connectionLost -> {
+                // remove lock so that next attempt to open a sender doesn't fail
+                creationLocks.remove(key);
+                resultHandler.handle(Future.failedFuture("connection to server lost"));
+            };
+            creationRequests.add(connectionFailureHandler);
+            creationLocks.put(key, Boolean.TRUE);
+            LOG.debug("creating new client for {}", key);
+
+            clientSupplier.accept(creationAttempt -> {
+                if (creationAttempt.succeeded()) {
+                    RequestResponseClient newClient = creationAttempt.result();
+                    LOG.debug("successfully created new client for {}", key);
+                    activeRequestResponseClients.put(key, newClient);
+                } else {
+                    LOG.debug("failed to create new client for {}", key, creationAttempt.cause());
+                    activeRequestResponseClients.remove(key);
+                }
+                creationLocks.remove(key);
+                creationRequests.remove(connectionFailureHandler);
+                resultHandler.handle(creationAttempt);
+            });
+
+        } else {
+            LOG.debug("already trying to create a client for {}", key);
+            resultHandler.handle(Future.failedFuture("request-response links not established yet"));
+        }
+    }
+
     @Override
     public HonoClient getOrCreateRegistrationClient(
             final String tenantId,
             final Handler<AsyncResult<RegistrationClient>> resultHandler) {
 
-        final RegistrationClient regClient = activeRegClients.get(Objects.requireNonNull(tenantId));
-        if (regClient != null && regClient.isOpen()) {
-            LOG.debug("reusing existing registration client for [{}]", tenantId);
-            resultHandler.handle(Future.succeededFuture(regClient));
-        } else {
-            createRegistrationClient(tenantId, resultHandler);
-        }
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(resultHandler);
+        getOrCreateRequestResponseClient(
+                RegistrationClientImpl.getTargetAddress(tenantId),
+                (creationResult) -> createRegistrationClient(tenantId, creationResult),
+                attempt -> {
+                    if (attempt.succeeded()) {
+                        resultHandler.handle(Future.succeededFuture((RegistrationClient) attempt.result()));
+                    } else {
+                        resultHandler.handle(Future.failedFuture(attempt.cause()));
+                    }
+                });
         return this;
     }
 
-    public HonoClient createRegistrationClient(
+    private void createRegistrationClient(
             final String tenantId,
-            final Handler<AsyncResult<RegistrationClient>> creationHandler) {
+            final Handler<AsyncResult<RequestResponseClient>> creationHandler) {
 
         Objects.requireNonNull(tenantId);
-        if (connection == null || connection.isDisconnected()) {
-            creationHandler.handle(Future.failedFuture("client is not connected to server (yet)"));
-        } else {
-            // register a handler to be notified if the underlying connection to the server fails
-            // so that we can fail the result handler passed in
-            final Handler<Void> connectionFailureHandler = connectionLost -> {
-                creationHandler.handle(Future.failedFuture("connection to server lost"));
-            };
-            creationRequests.add(connectionFailureHandler);
+        Objects.requireNonNull(creationHandler);
 
-            LOG.debug("creating new registration client for [{}]", tenantId);
+        Future<RequestResponseClient> clientTracker = Future.future();
+        clientTracker.setHandler(creationHandler);
+
+        checkConnection().compose(connected -> {
+
             RegistrationClientImpl.create(
                     context,
                     connection,
@@ -493,44 +541,47 @@ public final class HonoClientImpl implements HonoClient {
                         if (creationAttempt.succeeded()) {
                             RegistrationClient registrationClient = creationAttempt.result();
                             registrationClient.setRequestTimeout(clientConfigProperties.getRequestTimeoutMillis());
-                            activeRegClients.put(tenantId, registrationClient);
-                            LOG.debug("successfully created registration client for [{}]", tenantId);
+                            clientTracker.complete(registrationClient);
                         } else {
-                            LOG.debug("failed to create registration client for [{}]", tenantId, creationAttempt.cause());
+                            clientTracker.fail(creationAttempt.cause());
                         }
-                        creationRequests.remove(connectionFailureHandler);
-                        creationHandler.handle(creationAttempt);
                     });
-        }
-        return this;
+        }, clientTracker);
     }
 
     @Override
-    public HonoClient getOrCreateCredentialsClient(final String tenantId, final Handler<AsyncResult<CredentialsClient>> resultHandler) {
-        final CredentialsClient credClient = activeCredClients.get(tenantId);
-        if (credClient != null && credClient.isOpen()) {
-            LOG.debug("reusing existing credentials client for [{}]", tenantId);
-            resultHandler.handle(Future.succeededFuture(credClient));
-        } else {
-            createCredentialsClient(tenantId, resultHandler);
-        }
+    public HonoClient getOrCreateCredentialsClient(
+            final String tenantId,
+            final Handler<AsyncResult<CredentialsClient>> resultHandler) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(resultHandler);
+        getOrCreateRequestResponseClient(
+                CredentialsClientImpl.getTargetAddress(tenantId),
+                (creationResult) -> createCredentialsClient(tenantId, creationResult),
+                attempt -> {
+                    if (attempt.succeeded()) {
+                        resultHandler.handle(Future.succeededFuture((CredentialsClient) attempt.result()));
+                    } else {
+                        resultHandler.handle(Future.failedFuture(attempt.cause()));
+                    }
+                });
         return this;
+
     }
 
-    public HonoClient createCredentialsClient(final String tenantId, final Handler<AsyncResult<CredentialsClient>> creationHandler) {
+    private void createCredentialsClient(
+            final String tenantId,
+            final Handler<AsyncResult<RequestResponseClient>> creationHandler) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(creationHandler);
-        if (connection == null || connection.isDisconnected()) {
-            creationHandler.handle(Future.failedFuture("client is not connected to server (yet)"));
-        } else {
-            // register a handler to be notified if the underlying connection to the server fails
-            // so that we can fail the result handler passed in
-            final Handler<Void> connectionFailureHandler = connectionLost -> {
-                creationHandler.handle(Future.failedFuture("connection to server lost"));
-            };
-            creationRequests.add(connectionFailureHandler);
 
-            LOG.debug("creating new credentials client for [{}]", tenantId);
+        Future<RequestResponseClient> clientTracker = Future.future();
+        clientTracker.setHandler(creationHandler);
+
+        checkConnection().compose(connected -> {
+
             CredentialsClientImpl.create(
                     context,
                     connection,
@@ -543,20 +594,17 @@ public final class HonoClientImpl implements HonoClient {
                         if (creationAttempt.succeeded()) {
                             CredentialsClient credentialsClient = creationAttempt.result();
                             credentialsClient.setRequestTimeout(clientConfigProperties.getRequestTimeoutMillis());
-                            activeCredClients.put(tenantId, credentialsClient);
-                            LOG.debug("successfully created credentials client for [{}]", tenantId);
+                            clientTracker.complete(credentialsClient);
                         } else {
-                            LOG.debug("failed to create credentials client for [{}]", tenantId, creationAttempt.cause());
+                            clientTracker.fail(creationAttempt.cause());
                         }
-                        creationRequests.remove(connectionFailureHandler);
-                        creationHandler.handle(creationAttempt);
                     });
-        }
-        return this;
+        }, clientTracker);
     }
 
     private void removeCredentialsClient(final String tenantId) {
-        CredentialsClient client = activeCredClients.remove(tenantId);
+        String key = CredentialsClientImpl.getTargetAddress(tenantId);
+        RequestResponseClient client = activeRequestResponseClients.remove(key);
         if (client != null) {
             client.close(s -> {});
             LOG.debug("closed and removed credentials client for [{}]", tenantId);
@@ -564,7 +612,8 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     private void removeRegistrationClient(final String tenantId) {
-        RegistrationClient client = activeRegClients.remove(tenantId);
+        String key = RegistrationClientImpl.getTargetAddress(tenantId);
+        RequestResponseClient client = activeRequestResponseClients.remove(key);
         if (client != null) {
             client.close(s -> {});
             LOG.debug("closed and removed registration client for [{}]", tenantId);
