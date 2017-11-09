@@ -121,7 +121,7 @@ public class StandaloneCredentialsApiTest {
             client.connect(new ProtonClientOptions(), clientTracker.completer());
             return clientTracker;
         }).compose(c -> {
-            c.createCredentialsClient(DEFAULT_TENANT, setupTracker.completer());
+            c.getOrCreateCredentialsClient(DEFAULT_TENANT, setupTracker.completer());
         }, setupTracker);
     }
 

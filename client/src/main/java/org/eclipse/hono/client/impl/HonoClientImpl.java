@@ -465,7 +465,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    @Override
     public HonoClient createRegistrationClient(
             final String tenantId,
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
@@ -518,7 +517,6 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    @Override
     public HonoClient createCredentialsClient(final String tenantId, final Handler<AsyncResult<CredentialsClient>> creationHandler) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(creationHandler);

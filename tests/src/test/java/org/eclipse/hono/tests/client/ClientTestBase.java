@@ -145,7 +145,7 @@ public abstract class ClientTestBase {
             // step 3
             // create registration client
             Future<RegistrationClient> regTracker = Future.future();
-            honoDeviceRegistry.createRegistrationClient(TEST_TENANT_ID, regTracker.completer());
+            honoDeviceRegistry.getOrCreateRegistrationClient(TEST_TENANT_ID, regTracker.completer());
             return regTracker;
         }).compose(regClient -> {
             // step 4
