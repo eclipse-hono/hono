@@ -163,11 +163,11 @@ public abstract class AbstractHonoClient {
             sender.setQoS(qos);
             sender.openHandler(senderOpen -> {
                 if (senderOpen.succeeded()) {
-                    LOG.info("sender open [{}] sendQueueFull [{}]", sender.getRemoteTarget(), sender.sendQueueFull());
+                    LOG.debug("sender open [{}] sendQueueFull [{}]", sender.getRemoteTarget(), sender.sendQueueFull());
                     // wait on credits a little time, if not already given
                     if (sender.sendQueueFull()) {
                         ctx.owner().setTimer(waitForInitialCredits, timerID -> {
-                            LOG.info("waited [{}] ms on credits [{}]", waitForInitialCredits, sender.getCredit());
+                            LOG.debug("waited [{}] ms on credits [{}]", waitForInitialCredits, sender.getCredit());
                             result.complete(sender);
                         });
                     } else {
