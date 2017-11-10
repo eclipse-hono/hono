@@ -45,7 +45,6 @@ public class ExampleSender extends AbstractExampleClient {
 
     @Value(value = "${device.id}")
     private String deviceId;
-    private String token;
 
     /**
      * Connects to the Hono server.
@@ -157,9 +156,6 @@ public class ExampleSender extends AbstractExampleClient {
     private Future<String> getRegistrationAssertion() {
 
         final Future<String> result = Future.future();
-        if (token != null) {
-            
-        }
         getRegistrationClient().compose(regClient -> {
             Future<RegistrationResult> tokenTracker = Future.future();
             regClient.assertRegistration(deviceId, tokenTracker.completer());
