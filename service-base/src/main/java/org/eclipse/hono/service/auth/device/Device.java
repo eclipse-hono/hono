@@ -91,7 +91,7 @@ public class Device implements User {
      * @param resultHandler The handler to notify about the outcome of the check.
      */
     @Override
-    public User isAuthorised(final String authority, final Handler<AsyncResult<Boolean>> resultHandler) {
+    public User isAuthorized(final String authority, final Handler<AsyncResult<Boolean>> resultHandler) {
         for (Object item : authorities) {
             if (authority.equals(item)) {
                 resultHandler.handle(Future.succeededFuture(Boolean.TRUE));

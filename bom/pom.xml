@@ -50,7 +50,7 @@
     <spring.version>4.3.12.RELEASE</spring.version>
     <spring-boot.version>1.5.8.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
-    <vertx.version>3.4.1</vertx.version>
+    <vertx.version>3.5.0</vertx.version>
     <jmeter.version>3.2</jmeter.version>
   </properties>
 
@@ -274,7 +274,7 @@
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
-        <artifactId>vertx-mqtt-server</artifactId>
+        <artifactId>vertx-mqtt</artifactId>
         <version>${vertx.version}</version>
       </dependency>
       <dependency>

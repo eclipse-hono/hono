@@ -321,17 +321,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     private MqttEndpoint getMqttEndpointAuthenticated() {
         MqttEndpoint endpoint = mock(MqttEndpoint.class);
-        when(endpoint.auth()).thenReturn(new MqttAuth() {
-            @Override
-            public String userName() {
-                return "sensor1@DEFAULT_TENANT";
-            }
-
-            @Override
-            public String password() {
-                return "test";
-            }
-        });
+        when(endpoint.auth()).thenReturn(new MqttAuth("sensor1@DEFAULT_TENANT","test"));
         return endpoint;
     }
 

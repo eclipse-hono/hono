@@ -10,7 +10,7 @@
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
-      <artifactId>vertx-mqtt-server</artifactId>
+      <artifactId>vertx-mqtt</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
