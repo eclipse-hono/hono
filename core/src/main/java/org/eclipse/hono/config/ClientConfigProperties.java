@@ -24,7 +24,7 @@ public class ClientConfigProperties extends AbstractConfig {
     /**
      * The default amount of time to wait for credits after link creation.
      */
-    public static final long DEFAULT_WAIT_MILLIS_FOR_CREDIT = 20L;
+    public static final long DEFAULT_FLOW_LATENCY = 20L; //ms
     /**
      * The default number of credits issued by the receiver side of a link.
      */
@@ -32,7 +32,7 @@ public class ClientConfigProperties extends AbstractConfig {
     /**
      * The default amount of time to wait for a response before a request times out.
      */
-    public static final long DEFAULT_REQUEST_TIMEOUT_MILLIS = 200L;
+    public static final long DEFAULT_REQUEST_TIMEOUT = 200L; // ms
 
     private String name;
     private String host = "localhost";
@@ -40,9 +40,9 @@ public class ClientConfigProperties extends AbstractConfig {
     private String username;
     private char[] password;
     private String amqpHostname;
-    private long waitMillisForCredits = DEFAULT_WAIT_MILLIS_FOR_CREDIT;
+    private long flowLatency = DEFAULT_FLOW_LATENCY;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
-    private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT_MILLIS;
+    private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
 
     /**
      * Gets the name or literal IP address of the host that the client is configured to connect to.
@@ -186,12 +186,12 @@ public class ClientConfigProperties extends AbstractConfig {
      * This property can be used to <em>tune</em> the time period to wait according to the network
      * latency involved with the communication link between the client and the service.
      * <p>
-     * The default value of this property is {@link #DEFAULT_WAIT_MILLIS_FOR_CREDIT}.
+     * The default value of this property is {@link #DEFAULT_FLOW_LATENCY}.
      *
      * @return The number of milliseconds to wait.
      */
-    public final long getWaitMillisForInitialCredits() {
-        return waitMillisForCredits;
+    public final long getFlowLatency() {
+        return flowLatency;
     }
 
     /**
@@ -204,16 +204,16 @@ public class ClientConfigProperties extends AbstractConfig {
      * This property can be used to <em>tune</em> the time period to wait according to the network
      * latency involved with the communication link between the client and the service.
      * <p>
-     * The default value of this property is {@link #DEFAULT_WAIT_MILLIS_FOR_CREDIT}.
+     * The default value of this property is {@link #DEFAULT_FLOW_LATENCY}.
      * 
-     * @param waitMillisForCredits The number of milliseconds to wait.
-     * @throws IllegalArgumentException if the number is negative.
+     * @param latency The number of milliseconds to wait.
+     * @throws IllegalArgumentException if latency is negative.
      */
-    public final void setWaitMillisForInitialCredits(final long waitMillisForCredits) {
-        if (waitMillisForCredits < 0) {
-            throw new IllegalArgumentException("time to wait must not be negative");
+    public final void setFlowLatency(final long latency) {
+        if (latency < 0) {
+            throw new IllegalArgumentException("latency must not be negative");
         } else {
-            this.waitMillisForCredits = waitMillisForCredits;
+            this.flowLatency = latency;
         }
     }
 
@@ -248,11 +248,11 @@ public class ClientConfigProperties extends AbstractConfig {
      * Gets the maximum amount of time a client should wait for a response to a request before the request
      * is failed.
      * <p>
-     * The default value of this property is {@link #DEFAULT_REQUEST_TIMEOUT_MILLIS}.
+     * The default value of this property is {@link #DEFAULT_REQUEST_TIMEOUT}.
      *
      * @return The maximum number of milliseconds to wait.
      */
-    public final long getRequestTimeoutMillis() {
+    public final long getRequestTimeout() {
         return requestTimeoutMillis;
     }
 
@@ -260,12 +260,12 @@ public class ClientConfigProperties extends AbstractConfig {
      * Sets the maximum amount of time a client should wait for a response to a request before the request
      * is failed.
      * <p>
-     * The default value of this property is {@link #DEFAULT_REQUEST_TIMEOUT_MILLIS}.
+     * The default value of this property is {@link #DEFAULT_REQUEST_TIMEOUT}.
      *
      * @param requestTimeoutMillis The maximum number of milliseconds to wait.
-     * @throws IllegalArgumentException if the number is negative.
+     * @throws IllegalArgumentException if request timeout is negative.
      */
-    public final void setRequestTimeoutMillis(final long requestTimeoutMillis) {
+    public final void setRequestTimeout(final long requestTimeoutMillis) {
         if (requestTimeoutMillis < 0) {
             throw new IllegalArgumentException("request timeout must not be negative");
         } else {

@@ -247,7 +247,7 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(tenantId);
         getOrCreateSender(
                 TelemetrySenderImpl.getTargetAddress(tenantId, deviceId),
-                (creationResult) -> createTelemetrySender(tenantId, deviceId, clientConfigProperties.getWaitMillisForInitialCredits(), creationResult),
+                (creationResult) -> createTelemetrySender(tenantId, deviceId, clientConfigProperties.getFlowLatency(), creationResult),
                 resultHandler);
         return this;
     }
@@ -267,7 +267,7 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(resultHandler);
         getOrCreateSender(
                 EventSenderImpl.getTargetAddress(tenantId, deviceId),
-                (creationResult) -> createEventSender(tenantId, deviceId, clientConfigProperties.getWaitMillisForInitialCredits(), creationResult),
+                (creationResult) -> createEventSender(tenantId, deviceId, clientConfigProperties.getFlowLatency(), creationResult),
                 resultHandler);
         return this;
     }
@@ -534,13 +534,13 @@ public final class HonoClientImpl implements HonoClient {
                     connection,
                     tenantId,
                     clientConfigProperties.getInitialCredits(),
-                    clientConfigProperties.getWaitMillisForInitialCredits(),
+                    clientConfigProperties.getFlowLatency(),
                     this::removeRegistrationClient,
                     this::removeRegistrationClient,
                     creationAttempt -> {
                         if (creationAttempt.succeeded()) {
                             RegistrationClient registrationClient = creationAttempt.result();
-                            registrationClient.setRequestTimeout(clientConfigProperties.getRequestTimeoutMillis());
+                            registrationClient.setRequestTimeout(clientConfigProperties.getRequestTimeout());
                             clientTracker.complete(registrationClient);
                         } else {
                             clientTracker.fail(creationAttempt.cause());
@@ -587,13 +587,13 @@ public final class HonoClientImpl implements HonoClient {
                     connection,
                     tenantId,
                     clientConfigProperties.getInitialCredits(),
-                    clientConfigProperties.getWaitMillisForInitialCredits(),
+                    clientConfigProperties.getFlowLatency(),
                     this::removeCredentialsClient,
                     this::removeCredentialsClient,
                     creationAttempt -> {
                         if (creationAttempt.succeeded()) {
                             CredentialsClient credentialsClient = creationAttempt.result();
-                            credentialsClient.setRequestTimeout(clientConfigProperties.getRequestTimeoutMillis());
+                            credentialsClient.setRequestTimeout(clientConfigProperties.getRequestTimeout());
                             clientTracker.complete(credentialsClient);
                         } else {
                             clientTracker.fail(creationAttempt.cause());
