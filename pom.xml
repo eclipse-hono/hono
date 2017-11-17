@@ -183,12 +183,12 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.21.0</version>
+          <version>0.23.0</version>
         </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>fabric8-maven-plugin</artifactId>
-          <version>3.4.2</version>
+          <version>3.5.33</version>
           <configuration>
             <mode>kubernetes</mode>
             <profile>minimal</profile>
