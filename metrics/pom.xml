@@ -57,7 +57,7 @@
               <images>
                 <image>
                   <alias>grafana</alias>
-                  <name>eclipsehono/grafana:%v</name>
+                  <name>${docker.image.org-name}/hono-grafana:%v</name>
                   <build>
                     <dockerFileDir>${project.basedir}/grafana</dockerFileDir>
                     <args>

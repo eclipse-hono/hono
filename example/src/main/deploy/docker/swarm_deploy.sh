@@ -28,10 +28,11 @@ docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 echo
 echo Deploying Influx DB and Grafana ...
 docker secret create -l project=$NS influxdb.conf $CONFIG/influxdb.conf
-docker service create $CREATE_OPTIONS --name influxdb \
+docker service create $CREATE_OPTIONS --name influxdb -p 8086:8086 \
   --secret influxdb.conf \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
-docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 eclipsehono/grafana:${project.version}
+docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
+  ${docker.image.org-name}/hono-grafana:${project.version}
 echo ... done
 
 echo
@@ -90,7 +91,7 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-service-auth:${project.version}
+  ${docker.image.org-name}/hono-service-auth:${project.version}
 echo ... done
 
 echo
@@ -109,7 +110,7 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
-  eclipsehono/hono-service-device-registry:${project.version}
+  ${docker.image.org-name}/hono-service-device-registry:${project.version}
 echo ... done
 
 echo
@@ -126,7 +127,7 @@ docker service create $CREATE_OPTIONS --name hono-service-messaging -p 5671:5671
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
-  eclipsehono/hono-service-messaging:${project.version}
+  ${docker.image.org-name}/hono-service-messaging:${project.version}
 echo ... done
 
 echo
@@ -142,7 +143,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-rest-vertx -p 8080:808
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-rest-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-adapter-rest-vertx:${project.version}
+  ${docker.image.org-name}/hono-adapter-rest-vertx:${project.version}
 echo ... done
 
 echo
@@ -158,7 +159,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-adapter-mqtt-vertx:${project.version}
+  ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
 echo ... done
 
 echo
@@ -174,7 +175,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-adapter-kura:${project.version}
+  ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED TO DOCKER SWARM

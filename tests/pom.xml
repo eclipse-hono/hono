@@ -130,10 +130,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <images>
                 <!-- ##### Authentication service ##### -->
                 <image>
-                  <name>eclipsehono/hono-service-auth-test</name>
+                  <name>${docker.image.org-name}/hono-service-auth-test</name>
                   <alias>auth</alias>
                   <build>
-                    <from>eclipsehono/hono-service-auth:${project.version}</from>
+                    <from>${docker.image.org-name}/hono-service-auth:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
@@ -177,10 +177,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### Device Registration service ##### -->
                 <image>
-                  <name>eclipsehono/hono-service-device-registry-test</name>
+                  <name>${docker.image.org-name}/hono-service-device-registry-test</name>
                   <alias>device-registry</alias>
                   <build>
-                    <from>eclipsehono/hono-service-device-registry:${project.version}</from>
+                    <from>${docker.image.org-name}/hono-service-device-registry:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
@@ -229,7 +229,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
-                  <name>eclipsehono/hono-artemis-test:${project.version}</name>
+                  <name>${docker.image.org-name}/hono-artemis-test:${project.version}</name>
                   <alias>artemis</alias>
                   <build>
                     <from>${artemis.image.name}</from>
@@ -289,7 +289,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### Qpid Dispatch Router ##### -->
                 <image>
-                  <name>eclipsehono/hono-dispatch-router-test:${project.version}</name>
+                  <name>${docker.image.org-name}/hono-dispatch-router-test:${project.version}</name>
                   <alias>qdrouter</alias>
                   <build>
                     <from>${dispatch-router.image.name}</from>
@@ -360,10 +360,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </image>
                 <!-- ##### Messaging service ##### -->
                 <image>
-                  <name>eclipsehono/hono-service-messaging-test</name>
+                  <name>${docker.image.org-name}/hono-service-messaging-test</name>
                   <alias>messaging</alias>
                   <build>
-                    <from>eclipsehono/hono-service-messaging:${project.version}</from>
+                    <from>${docker.image.org-name}/hono-service-messaging:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/etc/hono</basedir>
