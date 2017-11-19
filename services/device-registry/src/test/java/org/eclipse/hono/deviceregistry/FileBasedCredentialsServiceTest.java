@@ -14,8 +14,12 @@ package org.eclipse.hono.deviceregistry;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.util.Constants;
@@ -23,9 +27,15 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -40,33 +50,229 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class FileBasedCredentialsServiceTest {
 
-    Vertx vertx = Vertx.vertx();
-    Context context;
-    FileBasedCredentialsConfigProperties config;
+    private static final String filename = "test-credentials.json";
+
+    private Vertx vertx;
+    private EventBus eventBus;
+    private FileSystem fileSystem;
+    private FileBasedCredentialsConfigProperties props;
+    private FileBasedCredentialsService svc;
 
     /**
      * Sets up fixture.
      */
     @Before
     public void setUp() {
-        config = new FileBasedCredentialsConfigProperties();
-        config.setCredentialsFilename("credentials.json");
+        fileSystem = mock(FileSystem.class);
+        Context ctx = mock(Context.class);
+        eventBus = mock(EventBus.class);
+        vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
+        when(vertx.fileSystem()).thenReturn(fileSystem);
+
+        props = new FileBasedCredentialsConfigProperties();
+        svc = new FileBasedCredentialsService();
+        svc.setConfig(props);
+        svc.init(vertx, ctx);
     }
 
     /**
-     * Verifies that credentials are successfully loaded from file.
-     *  
+     * Verifies that the credentials service creates a file for persisting credentials
+     * data if it does not exist yet during startup.
+     * 
+     * @param ctx The vert.x context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testDoStartCreatesFile(final TestContext ctx) {
+
+        // GIVEN a registration service configured to persist data to a not yet existing file
+        props.setSaveToFile(true);
+        props.setCredentialsFilename(filename);
+        when(fileSystem.existsBlocking(filename)).thenReturn(Boolean.FALSE);
+        doAnswer(invocation -> {
+            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            handler.handle(Future.succeededFuture());
+            return null;
+        }).when(fileSystem).createFile(eq(props.getCredentialsFilename()), any(Handler.class));
+        doAnswer(invocation -> {
+            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            handler.handle(Future.failedFuture("malformed file"));
+            return null;
+        }).when(fileSystem).readFile(eq(props.getCredentialsFilename()), any(Handler.class));
+
+        // WHEN starting the service
+        Async startup = ctx.async();
+        Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
+            startup.complete();
+        }));
+        svc.doStart(startupTracker);
+
+        // THEN the file gets created
+        startup.await(2000);
+        verify(fileSystem).createFile(eq(filename), any(Handler.class));
+    }
+
+    /**
+     * Verifies that the credentials service fails to start if it cannot create the file for
+     * persisting credentials data during startup.
+     * 
+     * @param ctx The vert.x context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testDoStartFailsIfFileCannotBeCreated(final TestContext ctx) {
+
+        // GIVEN a registration service configured to persist data to a not yet existing file
+        props.setSaveToFile(true);
+        props.setCredentialsFilename(filename);
+        when(fileSystem.existsBlocking(filename)).thenReturn(Boolean.FALSE);
+
+        // WHEN starting the service but the file cannot be created
+        doAnswer(invocation -> {
+            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            handler.handle(Future.failedFuture("no access"));
+            return null;
+        }).when(fileSystem).createFile(eq(props.getCredentialsFilename()), any(Handler.class));
+        Async startup = ctx.async();
+        Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertFailure(started -> {
+            startup.complete();
+        }));
+        svc.doStart(startupTracker);
+
+        // THEN startup has failed
+        startup.await(2000);
+    }
+
+    /**
+     * Verifies that the credentials service successfully starts up even if
+     * the file to read credentials from contains malformed JSON.
+     * 
+     * @param ctx The vert.x context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testDoStartIgnoresMalformedJson(final TestContext ctx) {
+
+        // GIVEN a registration service configured to read data from a file
+        // that contains malformed JSON
+        props.setCredentialsFilename(filename);
+        when(fileSystem.existsBlocking(filename)).thenReturn(Boolean.TRUE);
+        doAnswer(invocation -> {
+            final Buffer data = mock(Buffer.class);
+            when(data.getBytes()).thenReturn("NO JSON".getBytes(StandardCharsets.UTF_8));
+            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            handler.handle(Future.succeededFuture(data));
+            return null;
+        }).when(fileSystem).readFile(eq(props.getCredentialsFilename()), any(Handler.class));
+
+        // WHEN starting the service
+        Async startup = ctx.async();
+        Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
+            startup.complete();
+        }));
+        svc.doStart(startupTracker);
+
+        // THEN startup succeeds
+        startup.await(2000);
+    }
+
+    /**
+     * Verifies that credentials are successfully loaded from file during startup.
+     * 
      * @param ctx The test context.
      */
-    @Test()
-    public void testLoadCredentials(final TestContext ctx) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testDoStartLoadsCredentials(final TestContext ctx) {
 
-        FileBasedCredentialsService svc = new FileBasedCredentialsService();
-        svc.setConfig(config);
+        // GIVEN a service configured with a file name
+        props.setCredentialsFilename(filename);
+        when(fileSystem.existsBlocking(props.getCredentialsFilename())).thenReturn(Boolean.TRUE);
+        doAnswer(invocation -> {
+            final Buffer data = newCredentialsFile(Constants.DEFAULT_TENANT, "sensor1");
+            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            handler.handle(Future.succeededFuture(data));
+            return null;
+        }).when(fileSystem).readFile(eq(props.getCredentialsFilename()), any(Handler.class));
 
-        vertx.deployVerticle(svc, ctx.asyncAssertSuccess(s -> {
-            assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
+        // WHEN the service is started
+        Async startup = ctx.async();
+        Future<Void> startFuture = Future.future();
+        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
+            startup.complete();
         }));
+        svc.doStart(startFuture);
+
+        // THEN the credentials from the file are loaded
+        startup.await(2000);
+        assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
+    }
+
+    /**
+     * Verifies that the file written by the registry when persisting the registry's contents can
+     * be loaded in again.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testLoadCredentialsCanReadOutputOfSaveToFile(final TestContext ctx) {
+
+        // GIVEN a service configured to persist credentials to file
+        // that contains some credentials
+        props.setCredentialsFilename(filename);
+        props.setSaveToFile(true);
+        when(fileSystem.existsBlocking(filename)).thenReturn(Boolean.TRUE);
+        final Async add = ctx.async(2);
+        svc.add(
+                Constants.DEFAULT_TENANT,
+                CredentialsTestUtils.buildCredentialsPayloadPresharedKey("4711", "sensor1"),
+                ctx.asyncAssertSuccess(s -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
+                    add.countDown();
+                }));
+        svc.add(
+                "OTHER_TENANT",
+                CredentialsTestUtils.buildCredentialsPayloadHashedPassword("4700", "bumlux"),
+                ctx.asyncAssertSuccess(s -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
+                    add.countDown();
+                }));
+        add.await(2000);
+
+        // WHEN saving the registry content to the file and clearing the registry
+        final Async write = ctx.async();
+        doAnswer(invocation -> {
+            Handler handler = invocation.getArgumentAt(2, Handler.class);
+            handler.handle(Future.succeededFuture());
+            write.complete();
+            return null;
+        }).when(fileSystem).writeFile(eq(filename), any(Buffer.class), any(Handler.class));
+
+        svc.saveToFile();
+        write.await(2000);
+        ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
+        verify(fileSystem).writeFile(eq(filename), buffer.capture(), any(Handler.class));
+        svc.clear();
+        assertNotRegistered(svc, Constants.DEFAULT_PATH_SEPARATOR, "sensor1", CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
+
+        // THEN the credentials can be loaded back in from the file
+        final Async read = ctx.async();
+        doAnswer(invocation -> {
+            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            handler.handle(Future.succeededFuture(buffer.getValue()));
+            read.complete();
+            return null;
+        }).when(fileSystem).readFile(eq(filename), any(Handler.class));
+        svc.loadCredentials();
+        read.await(2000);
+        assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
+        assertRegistered(svc, "OTHER_TENANT", "bumlux", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
+
     }
 
     /**
@@ -74,11 +280,8 @@ public class FileBasedCredentialsServiceTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @Test(timeout = 600)
+    @Test
     public void testAddCredentialsRefusesDuplicateRegistration(final TestContext ctx) {
-
-        FileBasedCredentialsService svc = new FileBasedCredentialsService();
-        svc.setConfig(config);
 
         register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
 
@@ -87,9 +290,12 @@ public class FileBasedCredentialsServiceTest {
                 .put(CredentialsConstants.FIELD_AUTH_ID, "myId")
                 .put(CredentialsConstants.FIELD_TYPE, "myType")
                 .put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
+        final Async add = ctx.async();
         svc.add("tenant", payload2, ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_CONFLICT));
+            add.complete();
         }));
+        add.await(2000);
     }
 
     /**
@@ -97,15 +303,15 @@ public class FileBasedCredentialsServiceTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @Test(timeout = 300)
+    @Test
     public void testGetCredentialsFailsForNonExistingCredentials(final TestContext ctx) {
 
-        FileBasedCredentialsService svc = new FileBasedCredentialsService();
-        svc.setConfig(config);
-
+        final Async get = ctx.async();
         svc.get("tenant", "myType", "non-existing", ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
+                    get.complete();
                 }));
+        get.await(2000);
     }
 
     /**
@@ -113,19 +319,19 @@ public class FileBasedCredentialsServiceTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @Test(timeout = 300)
+    @Test
     public void testGetCredentialsSucceedsForExistingCredentials(final TestContext ctx) {
 
-        FileBasedCredentialsService svc = new FileBasedCredentialsService();
-        svc.setConfig(config);
         register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
 
+        final Async get = ctx.async();
         svc.get("tenant", "myType", "myId", ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
                     assertThat(s.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID), is("myId"));
                     assertThat(s.getPayload().getString(CredentialsConstants.FIELD_TYPE), is("myType"));
+                    get.complete();
                 }));
-
+        get.await(2000);
     }
 
     /**
@@ -133,18 +339,18 @@ public class FileBasedCredentialsServiceTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @Test(timeout = 300)
+    @Test
     public void testRemoveCredentialsByAuthIdAndTypeSucceeds(final TestContext ctx) {
 
-        FileBasedCredentialsService svc = new FileBasedCredentialsService();
-        svc.setConfig(config);
         register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
 
+        final Async remove = ctx.async();
         svc.remove("tenant", "myType", "myId", ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
             assertNotRegistered(svc, "tenant", "myId", "myType", ctx);
+            remove.complete();
         }));
-
+        remove.await(2000);
     }
 
     /**
@@ -153,22 +359,22 @@ public class FileBasedCredentialsServiceTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @Test(timeout = 300)
+    @Test
     public void testRemoveCredentialsByDeviceSucceeds(final TestContext ctx) {
 
-        FileBasedCredentialsService svc = new FileBasedCredentialsService();
-        svc.setConfig(config);
         register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
         register(svc, "tenant", "device", "myOtherId", "myOtherType", new JsonArray(), ctx);
         register(svc, "tenant", "other-device", "thirdId", "myType", new JsonArray(), ctx);
 
+        final Async remove = ctx.async();
         svc.removeAll("tenant", "device", ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
             assertNotRegistered(svc, "tenant", "myId", "myType", ctx);
             assertNotRegistered(svc, "tenant", "myOtherId", "myOtherType", ctx);
             assertRegistered(svc, "tenant", "thirdId", "myType", ctx);
+            remove.complete();
         }));
-
+        remove.await(2000);
     }
 
     /**
@@ -181,9 +387,7 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
-        config.setModificationEnabled(false);
-        FileBasedCredentialsService svc = new FileBasedCredentialsService();
-        svc.setConfig(config);
+        props.setModificationEnabled(false);
         register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
 
         // WHEN trying to update the credentials
@@ -207,9 +411,7 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
-        config.setModificationEnabled(false);
-        FileBasedCredentialsService svc = new FileBasedCredentialsService();
-        svc.setConfig(config);
+        props.setModificationEnabled(false);
         register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
 
         // WHEN trying to remove the credentials
@@ -262,5 +464,15 @@ public class FileBasedCredentialsServiceTest {
             registration.complete();
         }));
         registration.await(300);
+    }
+
+    private static Buffer newCredentialsFile(final String tenantId, final String authId) {
+
+        JsonObject creds = CredentialsTestUtils.buildCredentialsPayloadHashedPassword("4711", authId);
+        JsonArray top = new JsonArray();
+        top.add(new JsonObject()
+                .put(FileBasedCredentialsService.FIELD_TENANT, tenantId)
+                .put(FileBasedCredentialsService.ARRAY_CREDENTIALS, new JsonArray().add(creds)));
+        return top.toBuffer();
     }
 }

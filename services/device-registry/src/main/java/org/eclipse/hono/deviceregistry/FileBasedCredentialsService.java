@@ -13,6 +13,7 @@
 package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -30,7 +31,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.file.FileSystem;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -39,14 +40,20 @@ import io.vertx.core.json.JsonObject;
 /**
  * A credentials service that keeps all data in memory but is backed by a file.
  * <p>
- * On startup this adapter loads all added credentials from a file. On shutdown all
- * credentials kept in memory are written to the file.
+ * On startup this adapter tries to load credentials from a file (if configured).
+ * On shutdown all credentials kept in memory are written to the file (if configured).
  */
 @Repository
 public final class FileBasedCredentialsService extends BaseCredentialsService<FileBasedCredentialsConfigProperties> {
 
-    private static final String ARRAY_CREDENTIALS = "credentials";
-    private static final String FIELD_TENANT = "tenant";
+    /**
+     * The name of the JSON array within a tenant that contains the credentials.
+     */
+    public static final String ARRAY_CREDENTIALS = "credentials";
+    /**
+     * The name of the JSON property containing the tenant's ID.
+     */
+    public static final String FIELD_TENANT = "tenant";
 
     // <tenantId, <authId, credentialsData[]>>
     private Map<String, Map<String, JsonArray>> credentials = new HashMap<>();
@@ -59,142 +66,163 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         setSpecificConfig(configuration);
     }
 
+    private Future<Void> checkFileExists(final boolean createIfMissing) {
+
+        Future<Void> result = Future.future();
+        if (getConfig().getCredentialsFilename() == null) {
+            result.fail("no filename set");
+        } else if (vertx.fileSystem().existsBlocking(getConfig().getCredentialsFilename())) {
+            result.complete();
+        } else if (createIfMissing) {
+            vertx.fileSystem().createFile(getConfig().getCredentialsFilename(), result.completer());
+        } else {
+            log.debug("no such file [{}]", getConfig().getCredentialsFilename());
+            result.complete();
+        }
+        return result;
+    }
+
     @Override
     protected void doStart(final Future<Void> startFuture) {
 
         if (running) {
             startFuture.complete();
-        } else if (getConfig().getCredentialsFilename() != null) {
-            loadCredentials().compose(s -> {
-                if (getConfig().isSaveToFile()) {
-                    log.info("saving credentials to file every 3 seconds");
-                    vertx.setPeriodic(3000, saveIdentities -> {
-                        saveToFile(Future.future());
-                    });
-                } else {
-                    log.info("persistence is disabled, will not save credentials to file");
-                }
+        } else {
+
+            if (!getConfig().isModificationEnabled()) {
+                log.info("modification of credentials has been disabled");
+            }
+
+            if (getConfig().getCredentialsFilename() == null) {
+                log.debug("credentials filename is not set, no credentials will be loaded");
                 running = true;
                 startFuture.complete();
-            }, startFuture);
-        } else {
-            log.debug("credentials filename is not set, no credentials will be loaded");
-            startFuture.complete();
+            } else {
+                checkFileExists(getConfig().isSaveToFile()).compose(ok -> {
+                    return loadCredentials();
+                }).compose(s -> {
+                    if (getConfig().isSaveToFile()) {
+                        log.info("saving credentials to file every 3 seconds");
+                        vertx.setPeriodic(3000, saveIdentities -> {
+                            saveToFile();
+                        });
+                    } else {
+                        log.info("persistence is disabled, will not save credentials to file");
+                    }
+                    running = true;
+                    startFuture.complete();
+                }, startFuture);
+            }
         }
     }
 
     Future<Void> loadCredentials() {
 
-        Future<Void> result = Future.future();
         if (getConfig().getCredentialsFilename() == null) {
-            result.fail(new IllegalStateException("credentials filename is not set"));
+            // no need to load anything
+            return Future.succeededFuture();
         } else {
-            final FileSystem fs = vertx.fileSystem();
-            log.debug("trying to load credentials information from file {}", getConfig().getCredentialsFilename());
-
-            if (fs.existsBlocking(getConfig().getCredentialsFilename())) {
-                log.info("loading credentials from file [{}]", getConfig().getCredentialsFilename());
-                fs.readFile(getConfig().getCredentialsFilename(), readAttempt -> {
-                    if (readAttempt.succeeded()) {
-                        JsonArray allObjects = readAttempt.result().toJsonArray();
-                        parseCredentials(allObjects);
-                        result.complete();
-                    } else {
-                        result.fail(readAttempt.cause());
-                    }
-                });
-            } else {
-                log.debug("credentials file [{}] does not exist (yet)", getConfig().getCredentialsFilename());
-                result.complete();
-            }
+            final Future<Buffer> readResult = Future.future();
+            log.debug("trying to load credentials from file {}", getConfig().getCredentialsFilename());
+            vertx.fileSystem().readFile(getConfig().getCredentialsFilename(), readResult.completer());
+            return readResult.compose(buffer -> {
+                return addAll(buffer);
+            }).recover(t -> {
+                log.debug("cannot load credentials from file [{}]: {}", getConfig().getCredentialsFilename(), t.getMessage());
+                return Future.succeededFuture();
+            });
         }
-        return result;
     }
 
-    private void parseCredentials(final JsonArray credentialsObject) {
-
-        int credentialsCount = 0;
-
-        log.debug("trying to load credentials for {} tenants", credentialsObject.size());
-        for (Object obj : credentialsObject) {
-            JsonObject tenant = (JsonObject) obj;
-            String tenantId = tenant.getString(FIELD_TENANT);
-            Map<String, JsonArray> credentialsMap = new HashMap<>();
-            for (Object credentialsObj : tenant.getJsonArray(ARRAY_CREDENTIALS)) {
-                JsonObject credentials = (JsonObject) credentialsObj;
-                JsonArray authIdCredentials;
-                if (credentialsMap.containsKey(credentials.getString(CredentialsConstants.FIELD_AUTH_ID))) {
-                    authIdCredentials = credentialsMap.get(credentials.getString(CredentialsConstants.FIELD_AUTH_ID));
-                } else {
-                    authIdCredentials = new JsonArray();
+    private Future<Void> addAll(final Buffer credentials) {
+        Future<Void> result = Future.future();
+        try {
+            int credentialsCount = 0;
+            JsonArray allObjects = credentials.toJsonArray();
+            log.debug("trying to load credentials for {} tenants", allObjects.size());
+            for (Object obj : allObjects) {
+                if (JsonObject.class.isInstance(obj)) {
+                    credentialsCount += addCredentialsForTenant((JsonObject) obj);
                 }
-                authIdCredentials.add(credentials);
-                credentialsMap.put(credentials.getString(CredentialsConstants.FIELD_AUTH_ID), authIdCredentials);
-                credentialsCount++;
             }
-            credentials.put(tenantId, credentialsMap);
+            log.info("successfully loaded {} credentials from file [{}]", credentialsCount, getConfig().getCredentialsFilename());
+            result.complete();
+        } catch (DecodeException e) {
+            log.warn("cannot read malformed JSON from credentials file [{}]", getConfig().getCredentialsFilename());
+            result.fail(e);
         }
-        log.info("successfully loaded {} credentials from file [{}]", credentialsCount, getConfig().getCredentialsFilename());
+        return result;
+    };
+
+    int addCredentialsForTenant(final JsonObject tenant) {
+        int count = 0;
+        String tenantId = tenant.getString(FIELD_TENANT);
+        Map<String, JsonArray> credentialsMap = new HashMap<>();
+        for (Object credentialsObj : tenant.getJsonArray(ARRAY_CREDENTIALS)) {
+            JsonObject credentials = (JsonObject) credentialsObj;
+            JsonArray authIdCredentials;
+            if (credentialsMap.containsKey(credentials.getString(CredentialsConstants.FIELD_AUTH_ID))) {
+                authIdCredentials = credentialsMap.get(credentials.getString(CredentialsConstants.FIELD_AUTH_ID));
+            } else {
+                authIdCredentials = new JsonArray();
+            }
+            authIdCredentials.add(credentials);
+            credentialsMap.put(credentials.getString(CredentialsConstants.FIELD_AUTH_ID), authIdCredentials);
+            count++;
+        }
+        credentials.put(tenantId, credentialsMap);
+        return count;
     }
 
     @Override
     protected void doStop(final Future<Void> stopFuture) {
 
         if (running) {
-            Future<Void> stopTracker = Future.future();
-            stopTracker.setHandler(stopAttempt -> {
+            saveToFile().compose(s -> {
                 running = false;
                 stopFuture.complete();
-            });
-
-            if (getConfig().isSaveToFile()) {
-                saveToFile(stopTracker);
-            } else {
-                stopTracker.complete();
-            }
+            }, stopFuture);
         } else {
             stopFuture.complete();
         }
     }
 
-    private void saveToFile(final Future<Void> writeResult) {
+    Future<Void> saveToFile() {
 
-        if (dirty) {
-            final FileSystem fs = vertx.fileSystem();
-            String filename = getConfig().getCredentialsFilename();
-
-            if (!fs.existsBlocking(filename)) {
-                fs.createFileBlocking(filename);
-            }
-            final AtomicInteger idCount = new AtomicInteger();
-            JsonArray tenants = new JsonArray();
-            for (Entry<String, Map<String, JsonArray>> entry : credentials.entrySet()) {
-                JsonArray credentialsArray = new JsonArray();
-                for (Entry<String, JsonArray> credentialEntry : entry.getValue().entrySet()) { // authId -> full json
-                    // attributes object
-                    JsonArray singleAuthIdCredentials = credentialEntry.getValue(); // from one authId
-                    credentialsArray.addAll(singleAuthIdCredentials);
-                    idCount.incrementAndGet();
+        if (!getConfig().isSaveToFile()) {
+            return Future.succeededFuture();
+        } else if (dirty) {
+            return checkFileExists(true).compose(s -> {
+                final AtomicInteger idCount = new AtomicInteger();
+                JsonArray tenants = new JsonArray();
+                for (Entry<String, Map<String, JsonArray>> entry : credentials.entrySet()) {
+                    JsonArray credentialsArray = new JsonArray();
+                    for (JsonArray singleAuthIdCredentials : entry.getValue().values()) {
+                        credentialsArray.addAll(singleAuthIdCredentials.copy());
+                        idCount.incrementAndGet();
+                    }
+                    tenants.add(
+                            new JsonObject()
+                                    .put(FIELD_TENANT, entry.getKey())
+                                    .put(ARRAY_CREDENTIALS, credentialsArray));
                 }
-                tenants.add(
-                        new JsonObject()
-                                .put(FIELD_TENANT, entry.getKey())
-                                .put(ARRAY_CREDENTIALS, credentialsArray));
-            }
-            fs.writeFile(getConfig().getCredentialsFilename(), Buffer.factory.buffer(tenants.encodePrettily()),
-                    writeAttempt -> {
-                        if (writeAttempt.succeeded()) {
-                            dirty = false;
-                            log.trace("successfully wrote {} credentials to file {}", idCount.get(), filename);
-                            writeResult.complete();
-                        } else {
-                            log.warn("could not write credentials to file {}", filename, writeAttempt.cause());
-                            writeResult.fail(writeAttempt.cause());
-                        }
-                    });
+                Future<Void> writeHandler = Future.future();
+                vertx.fileSystem().writeFile(
+                        getConfig().getCredentialsFilename(),
+                        Buffer.buffer(tenants.encodePrettily(), StandardCharsets.UTF_8.name()),
+                        writeHandler.completer());
+                return writeHandler.map(ok -> {
+                    dirty = false;
+                    log.trace("successfully wrote {} credentials to file {}", idCount.get(), getConfig().getCredentialsFilename());
+                    return (Void) null;
+                }).otherwise(t -> {
+                    log.warn("could not write credentials to file {}", getConfig().getCredentialsFilename(), t);
+                    return (Void) null;
+                });
+            });
         } else {
             log.trace("credentials registry does not need to be persisted");
-            writeResult.complete();
+            return Future.succeededFuture();
         }
     }
 
