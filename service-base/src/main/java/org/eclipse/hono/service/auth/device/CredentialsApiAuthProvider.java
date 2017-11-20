@@ -17,6 +17,7 @@ import java.util.Objects;
 
 import javax.annotation.PostConstruct;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.util.Constants;
@@ -179,8 +180,8 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
                     CredentialsObject payload = credResult.getPayload();
                     result.complete(payload);
                 } else if (credResult.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                    result.fail(String.format("no credentials found for device [tenant: %s, type: %s, authId: %s]",
-                            deviceCredentials.getTenantId(), deviceCredentials.getType(), deviceCredentials.getAuthId()));
+                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, String.format("no credentials found for device [tenant: %s, type: %s, authId: %s]",
+                            deviceCredentials.getTenantId(), deviceCredentials.getType(), deviceCredentials.getAuthId())));
                 } else {
                     result.fail(String.format("cannot retrieve credentials [status: %d]", credResult.getStatus()));
                 }
@@ -204,7 +205,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
             if (deviceCredentials.validate(credentialsOnRecord)) {
                 validationResult.complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
             } else {
-                validationResult.fail("credentials invalid - not validated");
+                validationResult.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "credentials invalid - not validated"));
             }
         }, validationResult);
     }
