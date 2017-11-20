@@ -37,20 +37,15 @@ public final class ResourceIdentifier {
     private static final int IDX_RESOURCE_ID = 2;
     private String[] resourcePath;
     private String resource;
+    private String basePath;
 
     private ResourceIdentifier(final String resource, final boolean assumeDefaultTenant) {
+        String[] path = resource.split("\\/");
+        List<String> pathSegments = new ArrayList<>(Arrays.asList(path));
         if (assumeDefaultTenant) {
-            String[] path = resource.split("\\/", 2);
-            setResourcePath(new String[]{path[0], Constants.DEFAULT_TENANT, path.length == 2 ? path[1] : null});
-        } else {
-            String[] path = resource.split("\\/", 3);
-            if (path.length == 1) {
-                // no tenant given, leave path "as is"
-                setResourcePath(new String[]{ path[0] });
-            } else {
-                setResourcePath(new String[]{path[0], path[1], path.length == 3 ? path[2] : null});
-            }
+            pathSegments.add(1, Constants.DEFAULT_TENANT);
         }
+        setResourcePath(pathSegments.toArray(new String[pathSegments.size()]));
     }
 
     private ResourceIdentifier(final String endpoint, final String tenantId, final String resourceId) {
@@ -86,15 +81,26 @@ public final class ResourceIdentifier {
         return Arrays.copyOf(resourcePath, resourcePath.length);
     }
 
-    private void createStringRepresentation() {
-        StringBuilder b = new StringBuilder();
-        for (int i = 0; i < resourcePath.length; i++) {
+    private String createStringRepresentation(final int startIdx) {
+
+        final StringBuilder b = new StringBuilder();
+        for (int i = startIdx; i < resourcePath.length; i++) {
             b.append(resourcePath[i]);
             if (i < resourcePath.length - 1) {
                 b.append("/");
             }
         }
-        resource = b.toString();
+        return b.toString();
+    }
+
+    private void createStringRepresentation() {
+        resource = createStringRepresentation(0);
+
+        final StringBuilder b = new StringBuilder(getEndpoint());
+        if (getTenantId() != null) {
+            b.append("/").append(getTenantId());
+        }
+        basePath = b.toString();
     }
 
     /**
@@ -200,6 +206,15 @@ public final class ResourceIdentifier {
     }
 
     /**
+     * Gets a copy of the full resource path of this identifier, including extended elements.
+     *
+     * @return The full resource path.
+     */
+    public String[] getResourcePath() {
+        return Arrays.copyOf(resourcePath, resourcePath.length);
+    }
+
+    /**
      * Gets a string representation of this resource identifier.
      * <p>
      * The string representation consists of all path segments separated by a
@@ -211,6 +226,16 @@ public final class ResourceIdentifier {
     @Override
     public String toString() {
         return resource;
+    }
+
+    /**
+     * Gets a string representation of this resource identifier's
+     * <em>endpoint</em> and <em>tenantId</em>.
+     * 
+     * @return A string consisting of the properties separated by a forward slash.
+     */
+    public String getBasePath() {
+        return basePath;
     }
 
     @Override

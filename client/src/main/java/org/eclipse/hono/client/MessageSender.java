@@ -29,6 +29,13 @@ import io.vertx.proton.ProtonDelivery;
 public interface MessageSender {
 
     /**
+     * Gets the name of the endpoint this sender sends messages to.
+     * 
+     * @return The endpoint name.
+     */
+    public String getEndpoint();
+
+    /**
      * Gets the number of messages this sender can send based on its current number of credits.
      * 
      * @return The number of messages.

@@ -11,25 +11,32 @@
  */
 package org.eclipse.hono.client.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
-import io.vertx.proton.*;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RequestResponseClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.RequestResponseResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
  * A Vertx-Proton based parent class for the implementation of API clients that follow the request response pattern.
@@ -55,7 +62,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} only.
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection, int, long)} only.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param tenantId The identifier of the tenant that the client is scoped to.
@@ -135,11 +142,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * and receiving responses.
      * 
      * @param con The AMQP 1.0 connection to the peer.
+     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
+     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
+     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
+     * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
      */
-    protected final Future<Void> createLinks(final ProtonConnection con) {
-        return createLinks(con, null, null);
+    protected final Future<Void> createLinks(final ProtonConnection con, final int receiverPrefetchCredits, final long waitForInitialCredits) {
+        return createLinks(con, receiverPrefetchCredits, waitForInitialCredits, null, null);
     }
 
     /**
@@ -147,16 +158,21 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * and receiving responses.
      * 
      * @param con The AMQP 1.0 connection to the peer.
+     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
+     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
+     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
+     * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
      */
-    protected final Future<Void> createLinks(final ProtonConnection con, final Handler<String> senderCloseHook, final Handler<String> receiverCloseHook) {
+    protected final Future<Void> createLinks(final ProtonConnection con, final int receiverPrefetchCredits, final long waitForInitialCredits,
+                                             final Handler<String> senderCloseHook, final Handler<String> receiverCloseHook) {
         Future<Void> result = Future.future();
-        createReceiver(con, replyToAddress, receiverCloseHook).compose(recv -> {
+        createReceiver(con, replyToAddress, receiverPrefetchCredits, receiverCloseHook).compose(recv -> {
             this.receiver = recv;
-            return createSender(con, targetAddress, senderCloseHook);
+            return createSender(con, targetAddress, waitForInitialCredits, senderCloseHook);
         }).setHandler(s -> {
             if (s.succeeded()) {
                 LOG.debug("request-response client for peer [{}] created", con.getRemoteContainer());
@@ -169,13 +185,14 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         return result;
     }
 
-    private Future<ProtonSender> createSender(final ProtonConnection con, final String targetAddress, final Handler<String> closeHook) {
-        return AbstractHonoClient.createSender(context, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook);
+    private Future<ProtonSender> createSender(final ProtonConnection con, final String targetAddress, final long waitForInitialCredits, final Handler<String> closeHook) {
+
+        return AbstractHonoClient.createSender(context, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, waitForInitialCredits, closeHook);
     }
 
-    private Future<ProtonReceiver> createReceiver(final ProtonConnection con, final String sourceAddress, final Handler<String> closeHook) {
+    private Future<ProtonReceiver> createReceiver(final ProtonConnection con, final String sourceAddress, int prefetchCredits, final Handler<String> closeHook) {
 
-        return AbstractHonoClient.createReceiver(context, con, sourceAddress, ProtonQoS.AT_LEAST_ONCE, this::handleResponse, closeHook);
+        return AbstractHonoClient.createReceiver(context, con, sourceAddress, ProtonQoS.AT_LEAST_ONCE, prefetchCredits, this::handleResponse, closeHook);
     }
 
     /**
@@ -287,8 +304,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
      * @param payload The payload to include in the request message as a an AMQP Value section.
-     * @param resultHandler The handler to notify about the outcome of the request.
-     * @throws NullPointerException if any of action or result handler is {@code null}.
+     * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
+     *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
+     *                      e.g. because there is no connection to the service or there are no credits available
+     *                      for sending the request or the request timed out.
+     * @throws NullPointerException if action or result handler are {@code null}.
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
      * @see AbstractHonoClient#setApplicationProperties(Message, Map)
      */
@@ -306,7 +326,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             }
             sendRequest(request, resultHandler);
         } else {
-            resultHandler.handle(Future.failedFuture(new IllegalStateException("sender and/or receiver link is not open")));
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(503, "sender and/or receiver link is not open")));
         }
     }
 
@@ -324,16 +344,20 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
         context.runOnContext(req -> {
             if (sender.sendQueueFull()) {
-                LOG.debug("cannot send request to peer, no credit left for link [target: {}]", sender.getRemoteTarget().getAddress());
-                resultHandler.handle(Future.failedFuture("no credit"));
+                LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
+                resultHandler.handle(Future.failedFuture(new ServerErrorException(503, "no credit available for sending request")));
             } else {
                 final String messageId = (String) request.getMessageId();
                 replyMap.put(messageId, resultHandler);
                 sender.send(request);
                 if (requestTimeoutMillis > 0) {
                     context.owner().setTimer(requestTimeoutMillis, tid -> {
-                        cancelRequest(messageId, Future.failedFuture(String.format("request timed out after %d ms", requestTimeoutMillis)));
+                        cancelRequest(messageId, Future.failedFuture(new ServerErrorException(503, "request timed out after " + requestTimeoutMillis + "ms")));
                     });
+                }
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("sent request [target address: {}, action: {}, device ID: {}, message-id: {}] to service",
+                            targetAddress, request.getSubject(), MessageHelper.getDeviceId(request), messageId);
                 }
             }
         });

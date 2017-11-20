@@ -11,7 +11,7 @@
  *    Bosch Software Innovations GmbH - extend AbtractApplication
  */
 
-package org.eclipse.hono.adapter.mqtt;
+package org.eclipse.hono.adapter.mqtt.impl;
 
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;

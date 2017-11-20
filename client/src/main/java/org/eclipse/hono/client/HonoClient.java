@@ -254,17 +254,6 @@ public interface HonoClient {
             Handler<AsyncResult<RegistrationClient>> resultHandler);
 
     /**
-     * Creates a new client for interacting with Hono's <em>Registration</em> API.
-     * 
-     * @param tenantId The tenant to manage device registration data for.
-     * @param creationHandler The handler to invoke with the result of the operation.
-     * @return This client for command chaining.
-     */
-    HonoClient createRegistrationClient(
-            String tenantId,
-            Handler<AsyncResult<RegistrationClient>> creationHandler);
-
-    /**
      * Gets a client for interacting with Hono's <em>Credentials</em> API.
      *
      * @param tenantId The tenant to manage device credentials data for.
@@ -275,18 +264,6 @@ public interface HonoClient {
     HonoClient getOrCreateCredentialsClient(
             String tenantId,
             Handler<AsyncResult<CredentialsClient>> resultHandler);
-
-    /**
-     * Creates a new client for interacting with Hono's <em>Credentials</em> API.
-     *
-     * @param tenantId The tenant to manage device credentials data for.
-     * @param creationHandler The handler to invoke with the result of the operation.
-     * @return This client for command chaining.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    HonoClient createCredentialsClient(
-            String tenantId,
-            Handler<AsyncResult<CredentialsClient>> creationHandler);
 
     /**
      * Closes this client's connection to the Hono server.

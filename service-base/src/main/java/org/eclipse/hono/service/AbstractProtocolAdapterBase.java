@@ -20,6 +20,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -45,6 +46,24 @@ import io.vertx.proton.ProtonConnection;
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
+
+    /**
+     * The name of the AMQP 1.0 application property that is used to convey the
+     * address that a message has been originally published to by a device.
+     */
+    public static final String PROPERTY_HONO_ORIG_ADDRESS = "hono-orig-address";
+    /**
+     * The <em>telemetry</em> endpoint name.
+     */
+    public static final String TELEMETRY_ENDPOINT = "telemetry";
+    /**
+     * The <em>event</em> endpoint name.
+     */
+    public static final String EVENT_ENDPOINT = "event";
+    /**
+     * The <em>application/octet-stream</em> content type.
+     */
+    protected static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
 
     private HonoClient messaging;
     private HonoClient registration;
@@ -414,21 +433,52 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
-     * Validates that the resource identifier for a protocol adapter message does not contradict to the given tenantIds
-     * and deviceIds. It is not considered an error if the resource identifier does not contain segments for tenantId
-     * and/or deviceId.
+     * Checks if the tenant and device from a given resource identifier match an authenticated device's identity.
      *
-     * @param resource The resource identifier (built from the MQTT topic name).
-     * @param tenantId The tenantId to validate.
-     * @param deviceId The deviceId to validate.
+     * @param resource The resource to match.
+     * @param authenticatedDevice The authenticated device identity.
      * 
-     * @return True if the validation was successful, false otherwise.
+     * @return {@code true} if tenantId and deviceId are {@code null} or (if not null) match the authenticated
+     *         device identity.
      */
-    protected final boolean validateCredentialsWithTopicStructure(final ResourceIdentifier resource, final String tenantId, final String deviceId) {
-        if (resource.getTenantId() != null && !resource.getTenantId().equals(tenantId)) {
+    protected final boolean validateCredentialsWithTopicStructure(final ResourceIdentifier resource, final Device authenticatedDevice) {
+        return validateCredentialsWithTopicStructure(resource.getTenantId(), resource.getResourceId(),
+                authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+    }
+
+    /**
+     * Checks if the tenant and device from a given resource identifier match an authenticated device's identity.
+     *
+     * @param resource The resource to match.
+     * @param authenticatedTenantId The identifier of the tenant that the authenticated device belongs to.
+     * @param authenticatedDeviceId The authenticated device's identifier.
+     * 
+     * @return {@code true} if tenantId and deviceId are {@code null} or (if not null) match the authenticated
+     *         device's tenant and device identifier.
+     */
+    protected final boolean validateCredentialsWithTopicStructure(final ResourceIdentifier resource,
+            final String authenticatedTenantId, final String authenticatedDeviceId) {
+        return validateCredentialsWithTopicStructure(resource.getTenantId(), resource.getResourceId(),
+                authenticatedTenantId, authenticatedDeviceId);
+    }
+
+    /**
+     * Checks if a given tenant and device identifier match an authenticated device's identity.
+     *
+     * @param tenantId The tenant identifier to match.
+     * @param deviceId The device identifier to match.
+     * @param authenticatedTenantId The identifier of the tenant that the authenticated device belongs to.
+     * @param authenticatedDeviceId The authenticated device's identifier.
+     * 
+     * @return {@code true} if tenantId and deviceId are {@code null} or (if not null) match the authenticated
+     *         device's tenant and device identifier.
+     */
+    protected final boolean validateCredentialsWithTopicStructure(final String tenantId, final String deviceId,
+            final String authenticatedTenantId, final String authenticatedDeviceId) {
+        if (tenantId != null && !tenantId.equals(authenticatedTenantId)) {
             return false;
         }
-        if (resource.getResourceId() != null && !resource.getResourceId().equals(deviceId)) {
+        if (deviceId != null && !deviceId.equals(authenticatedDeviceId)) {
             return false;
         }
         return true;

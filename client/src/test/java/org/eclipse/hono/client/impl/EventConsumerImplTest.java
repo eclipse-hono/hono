@@ -19,6 +19,7 @@ import java.util.function.BiConsumer;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -90,7 +91,7 @@ public class EventConsumerImplTest {
             return receiver;
         });
         Async consumerCreation = ctx.async();
-        EventConsumerImpl.create(vertx.getOrCreateContext(), con, "tenant", AbstractHonoClient.DEFAULT_SENDER_CREDITS, eventConsumer, ctx.asyncAssertSuccess(s -> {
+        EventConsumerImpl.create(vertx.getOrCreateContext(), con, "tenant", new ClientConfigProperties().getInitialCredits(), eventConsumer, ctx.asyncAssertSuccess(s -> {
             consumerCreation.complete();
         }));
         consumerCreation.await(500);

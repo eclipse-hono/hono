@@ -1,27 +1,28 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017 Contributors to the Eclipse Foundation
  *
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
  *
- * Contributors:
- *    Bosch Software Innovations GmbH - initial creation
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 1.0 which is available at
+ * https://www.eclipse.org/legal/epl-v10.html
+ *
+ * SPDX-License-Identifier: EPL-1.0
  */
 
-package org.eclipse.hono.adapter.mqtt;
+package org.eclipse.hono.adapter.kura;
 
 import org.eclipse.hono.service.metric.Metrics;
 import org.springframework.stereotype.Component;
 
 /**
- * Metrics for the MQTT adapter
+ * Metrics for the Kura adapter
  */
 @Component
-public class MqttAdapterMetrics extends Metrics {
+public class KuraAdapterMetrics extends Metrics {
 
-    private static final String SERVICE_PREFIX = "hono.mqtt";
+    private static final String SERVICE_PREFIX = "hono.kura";
 
     @Override
     protected String getPrefix() {

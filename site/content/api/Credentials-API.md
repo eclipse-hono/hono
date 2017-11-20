@@ -320,13 +320,19 @@ The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" 
 
 Protocol Adapters are responsible for authenticating devices when they connect. The Credentials API provides the [Get Credentials]({{< relref "#get-credentials" >}}) operation to support Protocol Adapters in doing so as illustrated below:
 
-**TBD sequence diagram**
+The following sequence diagram illustrates the flow of messages involved in a *Protocol Adapter* authenticating a device.
+This is shown for the *MQTT Protocol Adapter* as example how a device authenticates with a username and a hashed-password.
+The mechanism can be transfered to other protocols in a similar manner.
 
-Credentials that have their `enabled` property set to `false` MUST NOT be used for authenticating a device.
-A Protocol Adapter MUST only use `secrets` for authentication which have
+![Protocol Adapter authenticating Devices message flow](../protocolAdapterDeviceAuthentication_Success.png)
 
-* their `not-before` property set to either `null` or the current or a past point in time **and**
-* their `not-after` property set to either `null` or the current or a future point in time.
+Retrieved credentials have to be verified by the *Protocol Adapter*:
+
+* credentials that have their `enabled` property set to `false` MUST NOT be used for authenticating a device
+* the adapter MUST only use `secrets` for authentication which have
+
+   * their `not-before` property set to either `null` or the current or a past point in time **and**
+   * their `not-after` property set to either `null` or the current or a future point in time.
 
 ## Standard Credential Types
 

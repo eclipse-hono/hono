@@ -117,7 +117,7 @@ echo
 echo Deploying Hono Messaging ...
 docker secret create -l project=$NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
 docker secret create -l project=$NS hono-messaging-cert.pem $CERTS/hono-messaging-cert.pem
-docker secret create -l project=$NS hono-service-messaging-config.yml $CONFIG/hono-service-messaging-config.yml
+docker secret create -l project=$NS hono-service-messaging-config.yml $SCRIPTPATH/hono-service-messaging-config.yml
 docker service create $CREATE_OPTIONS --name hono-service-messaging \
   --secret hono-messaging-key.pem \
   --secret hono-messaging-cert.pem \
@@ -163,10 +163,26 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
 echo ... done
 
 echo
+echo Deploying Kura adapter ...
+docker secret create -l project=$NS kura-adapter-key.pem $CERTS/kura-adapter-key.pem
+docker secret create -l project=$NS kura-adapter-cert.pem $CERTS/kura-adapter-cert.pem
+docker secret create -l project=$NS hono-adapter-kura-config.yml $CONFIG/hono-adapter-kura-config.yml
+docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
+  --secret kura-adapter-key.pem \
+  --secret kura-adapter-cert.pem \
+  --secret trusted-certs.pem \
+  --secret hono-adapter-kura-config.yml \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
+  --env SPRING_PROFILES_ACTIVE=prod \
+  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  eclipsehono/hono-adapter-kura:${project.version}
+echo ... done
+
+echo
 echo "Deploying NGINX for redirecting to Hono web site"
 docker service create --detach=false --name hono-nginx -p 80:80 \
   --env SERVER_REDIRECT=www.eclipse.org \
-  --env SERVER_REDIRECT_PATH=/hono/sandbox \
+  --env SERVER_REDIRECT_PATH=/hono/sandbox/ \
   schmunk42/nginx-redirect
 echo ... done
 

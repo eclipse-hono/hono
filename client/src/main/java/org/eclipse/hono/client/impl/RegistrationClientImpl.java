@@ -16,12 +16,15 @@ import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -36,9 +39,22 @@ import io.vertx.proton.ProtonConnection;
  */
 public final class RegistrationClientImpl extends AbstractRequestResponseClient<RegistrationResult> implements RegistrationClient {
 
+    private static final Logger LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
+
     private RegistrationClientImpl(final Context context, final String tenantId) {
 
         super(context, tenantId);
+    }
+
+    /**
+     * Gets the AMQP <em>target</em> address to use for sending requests to Hono's Device Registration API endpoint.
+     * 
+     * @param tenantId The tenant to upload data for.
+     * @return The target address.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public static String getTargetAddress(final String tenantId) {
+        return String.format("%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, Objects.requireNonNull(tenantId));
     }
 
     @Override
@@ -65,24 +81,33 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * @param context The vert.x context to run all interactions with the server on.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant to consumer events for.
+     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
+     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.*
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
+     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
      */
     public static void create(
             final Context context,
             final ProtonConnection con,
             final String tenantId,
+            final int receiverPrefetchCredits,
+            final long waitForInitialCredits,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
 
+        LOG.debug("creating new registration client for [{}]", tenantId);
         final RegistrationClientImpl client = new RegistrationClientImpl(context, tenantId);
-        client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
+        client.createLinks(con, receiverPrefetchCredits, waitForInitialCredits, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
+                LOG.debug("successfully created registration client for [{}]", tenantId);
                 creationHandler.handle(Future.succeededFuture(client));
             } else {
+                LOG.debug("failed to create registration client for [{}]", tenantId, s.cause());
                 creationHandler.handle(Future.failedFuture(s.cause()));
             }
         });

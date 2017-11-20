@@ -358,6 +358,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
      * @param payload The object to get the property from.
      * @param field The name of the property.
      * @param type The expected type of the property.
+     * @param <T> The type of the field.
      * @return The property value or {@code null} if no such property exists or is not of the expected type.
      * @throws NullPointerException if any of the params is {@code null}.
      */

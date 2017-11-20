@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
 import org.junit.After;
@@ -63,6 +65,71 @@ public class HonoClientImplTest {
         if (vertx != null) {
             vertx.close(ctx.asyncAssertSuccess());
         }
+    }
+    /**
+     * Verifies that a concurrent request to create a request-response client fails the given
+     * future for tracking the attempt.
+     * 
+     * @param ctx The helper to use for running async tests.
+     */
+    @Test
+    public void testGetOrCreateRequestResponseClientFailsIfInvokedConcurrently(final TestContext ctx) {
+
+        // GIVEN a client that already tries to create a registration client for "tenant"
+        ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
+        HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+        final Future<RequestResponseClient> firstClientTracker = Future.future();
+        client.getOrCreateRequestResponseClient("registration/tenant", handler -> {
+            firstClientTracker.setHandler(creationAttempt -> {
+                handler.handle(creationAttempt);
+            });
+        }, result -> {});
+
+        // WHEN an additional, concurrent attempt is made to create a client for "tenant"
+        final Async creationFailure = ctx.async();
+        client.getOrCreateRequestResponseClient("registration/tenant", handler -> {
+            handler.handle(Future.succeededFuture(mock(RegistrationClient.class)));
+        }, creationAttempt -> {
+            ctx.assertFalse(creationAttempt.succeeded());
+            creationFailure.complete();
+        });
+
+        // THEN the concurrent attempt fails immediately without any attempt being made to create another client
+        creationFailure.await(2000);
+
+        // succeed first creation attempt, thus invoking result handler
+        firstClientTracker.complete(mock(RegistrationClient.class));
+    }
+
+    /**
+     * Verifies that a request to create a request-response client is failed immediately when the
+     * underlying connection to the server fails.
+     * 
+     * @param ctx The Vertx test context.
+     */
+    @Test
+    public void testGetOrCreateRequestResponseClientFailsOnConnectionFailure(final TestContext ctx) {
+
+        // GIVEN a client that tries to create a registration client for "tenant"
+        ProtonConnection con = mock(ProtonConnection.class);
+        DisconnectHandlerProvidingConnectionFactory connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
+        final Async connected = ctx.async();
+        final Async disconnected = ctx.async();
+        HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+        client.connect(new ProtonClientOptions(), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        connected.await(200);
+
+        client.getOrCreateRequestResponseClient("registration/tenant", creationResultHandler -> {
+            ctx.assertFalse(disconnected.isCompleted());
+        }, ctx.asyncAssertFailure(cause -> {
+            disconnected.complete();
+        }));
+
+        // WHEN the underlying connection fails
+        connectionFactory.getDisconnectHandler().handle(con);
+
+        // THEN all creation requests are failed
+        disconnected.await(200);
     }
 
     /**
@@ -108,7 +175,7 @@ public class HonoClientImplTest {
     @Test
     public void testGetOrCreateSenderFailsOnConnectionFailure(final TestContext ctx) {
 
-        // GIVEN a client that already tries to create a telemetry sender for "tenant"
+        // GIVEN a client that tries to create a telemetry sender for "tenant"
         ProtonConnection con = mock(ProtonConnection.class);
         DisconnectHandlerProvidingConnectionFactory connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
         final Async connected = ctx.async();

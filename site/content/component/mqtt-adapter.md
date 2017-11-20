@@ -32,52 +32,6 @@ The following table provides an overview of the configuration variables and corr
 The variables only need to be set if the default values do not match your environment.
 
 
-## Hono Messaging Connection Configuration
-
-The adapter requires a connection to the Hono Messaging component in order to forward telemetry data and events received from devices to downstream consumers.
-
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the Hono Messaging component.
-
-| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
-| :------------------------------------------ | :-------: | :------------ | :------------|
-| `HONO_MESSAGING_HOST`<br>`--hono.messaging.host` | yes | `localhost` | The IP address or name of the Hono Messaging host to connect to. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the Docker network that the *Hono Server* container is running on. |
-| `HONO_MESSAGING_PORT`<br>`--hono.messaging.port` | yes | `5671` | The port that the Hono Messaging component is listening on. |
-| `HONO_MESSAGING_USERNAME`<br>`--hono.messaging.username` | yes | - | The username to use for authenticating to the Hono Messaging component. |
-| `HONO_MESSAGING_PASSWORD`<br>`--hono.messaging.password` | yes | - | The password to use for authenticating to the Hono Messaging component. |
-| `HONO_MESSAGING_TRUST_STORE_PATH`<br>`--hono.messaging.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Hono Messaging component. This property **must** be set if the Hono Messaging component has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
-| `HONO_MESSAGING_TRUST_STORE_PASSWORD`<br>`--hono.messaging.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-
-## Device Registration Service Connection Configuration
-
-The adapter requires a connection to an implementation of Hono's Device Registration API in order to retrieve registration status assertions for connected devices.
-
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the Device Registration service.
-
-| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
-| :------------------------------------------ | :-------: | :------------ | :------------|
-| `HONO_REGISTRATION_HOST`<br>`--hono.registration.host` | yes | `localhost` | The IP address or name of the Device Registration service. The adapter uses this service to get an assertion regarding a device's registration status, i.e. whether it is enabled and if it is registered with a particular tenant. NB: This variable needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the same network the Device Registration service container is running on. |
-| `HONO_REGISTRATION_PORT`<br>`--hono.registration.port` | yes | `5671` | The port that the Device Registration service is listening on. |
-| `HONO_REGISTRATION_USERNAME`<br>`--hono.registration.username` | yes | - | The username to use for authenticating to the Device Registration service. |
-| `HONO_REGISTRATION_PASSWORD`<br>`--hono.registration.password` | yes | - | The password to use for authenticating to the Device Registration service. |
-| `HONO_REGISTRATION_TRUST_STORE_PATH`<br>`--hono.registration.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Device Registration service. This property **must** be set if the Device Registration service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
-| `HONO_REGISTRATION_TRUST_STORE_PASSWORD`<br>`--hono.registration.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-
-## Credentials Service Connection Configuration
-
-The adapter requires a connection to an implementation of Hono's Credentials API in order to retrieve credentials stored for devices that need to be authenticated.
-
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the Credentials service.
-
-| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
-| :------------------------------------------ | :-------: | :------------ | :------------|
-| `HONO_CREDENTIALS_HOST`<br>`--hono.credentials.host` | yes | `localhost` | The IP address or name of the Credentials service. The adapter uses this service to get credentials stored for a device to authenticate it. NB: This variable needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the same network the Credentials service container is running on. |
-| `HONO_CREDENTIALS_PORT`<br>`--hono.credentials.port` | yes | `5671` | The port that the Credentials service is listening on. |
-| `HONO_CREDENTIALS_USERNAME`<br>`--hono.credentials.username` | yes | - | The username to use for authenticating to the Credentials service. |
-| `HONO_CREDENTIALS_PASSWORD`<br>`--hono.credentials.password` | yes | - | The password to use for authenticating to the Credentials service. |
-| `HONO_CREDENTIALS_TRUST_STORE_PATH`<br>`--hono.credentials.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Credentials service. This property **must** be set if the Credentials service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
-| `HONO_CREDENTIALS_TRUST_STORE_PASSWORD`<br>`--hono.credentials.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
-
-
 ## Port Configuration
 
 The MQTT protocol adapter can be configured to listen for connections on
@@ -121,6 +75,56 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 ### Ephemeral Ports
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
+
+## Hono Messaging Connection Configuration
+
+The adapter requires a connection to the Hono Messaging component in order to forward telemetry data and events received from devices to downstream consumers.
+
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the Hono Messaging component.
+
+| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
+| :------------------------------------------ | :-------: | :------------ | :------------|
+| `HONO_MESSAGING_HOST`<br>`--hono.messaging.host` | yes | `localhost` | The IP address or name of the Hono Messaging host to connect to. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the Docker network that the *Hono Server* container is running on. |
+| `HONO_MESSAGING_PORT`<br>`--hono.messaging.port` | yes | `5671` | The port that the Hono Messaging component is listening on. |
+| `HONO_MESSAGING_USERNAME`<br>`--hono.messaging.username` | yes | - | The username to use for authenticating to the Hono Messaging component. |
+| `HONO_MESSAGING_PASSWORD`<br>`--hono.messaging.password` | yes | - | The password to use for authenticating to the Hono Messaging component. |
+| `HONO_MESSAGING_TRUST_STORE_PATH`<br>`--hono.messaging.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Hono Messaging component. This property **must** be set if the Hono Messaging component has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
+| `HONO_MESSAGING_TRUST_STORE_PASSWORD`<br>`--hono.messaging.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+
+## Device Registration Service Connection Configuration
+
+The adapter requires a connection to an implementation of Hono's Device Registration API in order to retrieve registration status assertions for connected devices.
+
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the Device Registration service.
+
+| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
+| :------------------------------------------ | :-------: | :------------ | :------------|
+| `HONO_REGISTRATION_FLOW_LATENCY`<br>`--hono.registration.flowLatency` | no | `20` | The maximum amount of time (milliseconds) that the adapter should wait for *credits* after a link to the Device Registration service has been established. In system environments where the network connection between the individual Hono services is slow or has a high latency, increasing the value of this property will increase a device's chance of successfully publishing the first message for the tenant it belongs to. |
+| `HONO_REGISTRATION_HOST`<br>`--hono.registration.host` | yes | `localhost` | The IP address or name of the Device Registration service. The adapter uses this service to get an assertion regarding a device's registration status, i.e. whether it is enabled and if it is registered with a particular tenant. NB: This variable needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the same network the Device Registration service container is running on. |
+| `HONO_REGISTRATION_PORT`<br>`--hono.registration.port` | yes | `5671` | The port that the Device Registration service is listening on. |
+| `HONO_REGISTRATION_USERNAME`<br>`--hono.registration.username` | yes | - | The username to use for authenticating to the Device Registration service. |
+| `HONO_REGISTRATION_PASSWORD`<br>`--hono.registration.password` | yes | - | The password to use for authenticating to the Device Registration service. |
+| `HONO_REGISTRATION_REQUEST_TIMEOUT`<br>`--hono.registration.requestTimeout` | no | `200` | The maximum amount of time (milliseconds) that the adapter should wait for a response to its requests to the Device Registration service. In cases where the registration service takes more time to respond to requests, this value needs to be adjusted accordingly in order for the adapter to successfully authorize devices publishing messages. |
+| `HONO_REGISTRATION_TRUST_STORE_PATH`<br>`--hono.registration.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Device Registration service. This property **must** be set if the Device Registration service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_REGISTRATION_TRUST_STORE_PASSWORD`<br>`--hono.registration.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+
+## Credentials Service Connection Configuration
+
+The adapter requires a connection to an implementation of Hono's Credentials API in order to retrieve credentials stored for devices that need to be authenticated.
+
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the Credentials service.
+
+| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
+| :------------------------------------------ | :-------: | :------------ | :------------|
+| `HONO_CREDENTIALS_FLOW_LATENCY`<br>`--hono.credentials.flowLatency` | no | `20` | The maximum amount of time (milliseconds) that the adapter should wait for *credits* after a link to the Credentials service has been established. In system environments where the network connection between the individual Hono services is slow or has a high latency, increasing the value of this property will increase a device's chance of successfully publishing the first message for the tenant it belongs to. |
+| `HONO_CREDENTIALS_HOST`<br>`--hono.credentials.host` | yes | `localhost` | The IP address or name of the Credentials service. The adapter uses this service to get credentials stored for a device to authenticate it. NB: This variable needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the same network the Credentials service container is running on. |
+| `HONO_CREDENTIALS_PORT`<br>`--hono.credentials.port` | yes | `5671` | The port that the Credentials service is listening on. |
+| `HONO_CREDENTIALS_USERNAME`<br>`--hono.credentials.username` | yes | - | The username to use for authenticating to the Credentials service. |
+| `HONO_CREDENTIALS_PASSWORD`<br>`--hono.credentials.password` | yes | - | The password to use for authenticating to the Credentials service. |
+| `HONO_CREDENTIALS_REQUEST_TIMEOUT`<br>`--hono.credentials.requestTimeout` | no | `200` | The maximum amount of time (milliseconds) that the adapter should wait for a response to its requests to the Credentials service. In cases where the credentials service takes more time to respond to requests, this value needs to be adjusted accordingly in order for the adapter to successfully authenticate devices connecting to the adapter. |
+| `HONO_CREDENTIALS_TRUST_STORE_PATH`<br>`--hono.credentials.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the Credentials service. This property **must** be set if the Credentials service has been configured to use TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
+| `HONO_CREDENTIALS_TRUST_STORE_PASSWORD`<br>`--hono.credentials.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
+
 
 ## Run as a Docker Swarm Service
 

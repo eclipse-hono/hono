@@ -1,0 +1,13 @@
+title Protocol Adapter Device Authentication (MQTT, success)
+
+Device->+MQTT Protocol Adapter: CONNECT(username, password)
+
+MQTT Protocol Adapter->+Credentials Service: transfer("credentials/TENANT", "get", "hashed-password", username)
+note over Credentials Service: lookup credentials
+Credentials Service->-MQTT Protocol Adapter: transfer("credentials/TENANT", "200", credentials)
+
+note over MQTT Protocol Adapter:
+1.) Apply (salted) hash-algorithm to password
+2.) Compare result with the hashed-password from credentials
+end note
+MQTT Protocol Adapter->-Device: CONNACK

@@ -21,16 +21,34 @@ import org.eclipse.hono.util.Constants;
  */
 public class ClientConfigProperties extends AbstractConfig {
 
+    /**
+     * The default amount of time to wait for credits after link creation.
+     */
+    public static final long DEFAULT_FLOW_LATENCY = 20L; //ms
+    /**
+     * The default number of credits issued by the receiver side of a link.
+     */
+    public static final int  DEFAULT_INITIAL_CREDITS = 200;
+    /**
+     * The default amount of time to wait for a response before a request times out.
+     */
+    public static final long DEFAULT_REQUEST_TIMEOUT = 200L; // ms
+
     private String name;
     private String host = "localhost";
     private int port = Constants.PORT_AMQPS;
     private String username;
     private char[] password;
     private String amqpHostname;
+    private long flowLatency = DEFAULT_FLOW_LATENCY;
+    private int initialCredits = DEFAULT_INITIAL_CREDITS;
+    private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
 
     /**
      * Gets the name or literal IP address of the host that the client is configured to connect to.
-     * 
+     * <p>
+     * The default value of this property is "localhost".
+     *
      * @return The host name.
      */
     public final String getHost() {
@@ -156,5 +174,102 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public final void setAmqpHostname(String amqpHostname) {
         this.amqpHostname = amqpHostname;
+    }
+
+    /**
+     * Gets the maximum amount of time that a client should wait for credits after <em>sender link</em>
+     * creation.
+     * <p>
+     * The AMQP 1.0 protocol requires the receiver side of a <em>link</em> to explicitly send a <em>flow</em>
+     * frame containing credits granted to the sender after the link has been established.
+     * <p>
+     * This property can be used to <em>tune</em> the time period to wait according to the network
+     * latency involved with the communication link between the client and the service.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_FLOW_LATENCY}.
+     *
+     * @return The number of milliseconds to wait.
+     */
+    public final long getFlowLatency() {
+        return flowLatency;
+    }
+
+    /**
+     * Sets the maximum amount of time that a client should wait for credits after <em>sender link</em>
+     * creation.
+     * <p>
+     * The AMQP 1.0 protocol requires the receiver side of a <em>link</em> to explicitly send a <em>flow</em>
+     * frame containing credits granted to the sender after the link has been established.
+     * <p>
+     * This property can be used to <em>tune</em> the time period to wait according to the network
+     * latency involved with the communication link between the client and the service.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_FLOW_LATENCY}.
+     * 
+     * @param latency The number of milliseconds to wait.
+     * @throws IllegalArgumentException if latency is negative.
+     */
+    public final void setFlowLatency(final long latency) {
+        if (latency < 0) {
+            throw new IllegalArgumentException("latency must not be negative");
+        } else {
+            this.flowLatency = latency;
+        }
+    }
+
+    /**
+     * Gets the number of initial credits, that will be given from a receiver to a sender at link creation.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_INITIAL_CREDITS}.
+     *
+     * @return The number of inital credits.
+     */
+    public final int getInitialCredits() {
+        return initialCredits;
+    }
+
+    /**
+     * Sets the number of initial credits, that will be given from a receiver to a sender at link creation.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_INITIAL_CREDITS}.
+     *
+     * @param initialCredits The initial credits to set.
+     * @throws IllegalArgumentException if the number is negative.
+     */
+    public final void setInitialCredits(final int initialCredits) {
+        if (initialCredits < 0) {
+            throw new IllegalArgumentException("initial credits must not be negative");
+        } else {
+            this.initialCredits = initialCredits;
+        }
+    }
+
+    /**
+     * Gets the maximum amount of time a client should wait for a response to a request before the request
+     * is failed.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_REQUEST_TIMEOUT}.
+     *
+     * @return The maximum number of milliseconds to wait.
+     */
+    public final long getRequestTimeout() {
+        return requestTimeoutMillis;
+    }
+
+    /**
+     * Sets the maximum amount of time a client should wait for a response to a request before the request
+     * is failed.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_REQUEST_TIMEOUT}.
+     *
+     * @param requestTimeoutMillis The maximum number of milliseconds to wait.
+     * @throws IllegalArgumentException if request timeout is negative.
+     */
+    public final void setRequestTimeout(final long requestTimeoutMillis) {
+        if (requestTimeoutMillis < 0) {
+            throw new IllegalArgumentException("request timeout must not be negative");
+        } else {
+            this.requestTimeoutMillis = requestTimeoutMillis;
+        }
     }
 }

@@ -29,7 +29,7 @@ import io.vertx.proton.ProtonSender;
  */
 public final class TelemetrySenderImpl extends AbstractSender {
 
-    private static final String TELEMETRY_ENDPOINT_NAME  = "telemetry/";
+    private static final String TELEMETRY_ENDPOINT_NAME  = "telemetry";
 
     private TelemetrySenderImpl(final ProtonSender sender, final String tenantId, final String targetAddress,
             final Context context, final Handler<String> closeHook) {
@@ -46,11 +46,16 @@ public final class TelemetrySenderImpl extends AbstractSender {
      * @throws NullPointerException if tenant is {@code null}.
      */
     public static String getTargetAddress(final String tenantId, final String deviceId) {
-        StringBuilder targetAddress = new StringBuilder(TELEMETRY_ENDPOINT_NAME).append(Objects.requireNonNull(tenantId));
+        StringBuilder targetAddress = new StringBuilder(TELEMETRY_ENDPOINT_NAME).append("/").append(Objects.requireNonNull(tenantId));
         if (deviceId != null && deviceId.length() > 0) {
             targetAddress.append("/").append(deviceId);
         }
         return targetAddress.toString();
+    }
+
+    @Override
+    public String getEndpoint() {
+        return TELEMETRY_ENDPOINT_NAME;
     }
 
     @Override
@@ -67,16 +72,19 @@ public final class TelemetrySenderImpl extends AbstractSender {
      * @param deviceId The device that the telemetry data will be uploaded for or {@code null}
      *                 if the data to be uploaded will be produced by arbitrary devices of the
      *                 tenant.
+     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
      *                  target address is provided as an argument to the handler.
      * @param creationHandler The handler to invoke with the result of the creation attempt.
      * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
+     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
      */
     public static void create(
             final Context context,
             final ProtonConnection con,
             final String tenantId,
             final String deviceId,
+            final long waitForInitialCredits,
             final Handler<String> closeHook,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
@@ -86,7 +94,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
         Objects.requireNonNull(creationHandler);
 
         final String targetAddress = getTargetAddress(tenantId, deviceId);
-        createSender(context, con, targetAddress, ProtonQoS.AT_MOST_ONCE, closeHook).setHandler(created -> {
+        createSender(context, con, targetAddress, ProtonQoS.AT_MOST_ONCE, waitForInitialCredits, closeHook).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
                         new TelemetrySenderImpl(created.result(), tenantId, targetAddress, context, closeHook)));

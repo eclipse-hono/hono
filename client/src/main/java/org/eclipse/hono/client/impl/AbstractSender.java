@@ -173,6 +173,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     private void sendMessage(final Message rawMessage, final BiConsumer<Object, ProtonDelivery> dispositionHandler) {
+        rawMessage.setMessageId(String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement()));
         sender.send(rawMessage, deliveryUpdated -> dispositionHandler.accept(rawMessage.getMessageId(), deliveryUpdated));
         LOG.trace("sent message, remaining credit: {}, queued messages: {}", sender.getCredit(), sender.getQueued());
     }
@@ -252,6 +253,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         Objects.requireNonNull(registrationAssertion);
         Objects.requireNonNull(dispositionHandler);
         final Message msg = ProtonHelper.message();
+        msg.setAddress(getTo(deviceId));
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, contentType, registrationAssertion);
@@ -306,7 +308,6 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     protected abstract String getTo(final String deviceId);
 
     private void addProperties(final Message msg, final String deviceId, final String contentType, final String registrationAssertion) {
-        msg.setMessageId(String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement()));
         msg.setContentType(contentType);
         MessageHelper.addDeviceId(msg, deviceId);
         MessageHelper.addRegistrationAssertion(msg, registrationAssertion);

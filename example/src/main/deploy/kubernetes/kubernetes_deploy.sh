@@ -118,4 +118,15 @@ kubectl create secret generic hono-adapter-mqtt-vertx-conf \
 kubectl create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
 
+echo
+echo Deploying Kura adapter ...
+kubectl create secret generic hono-adapter-kura-conf \
+  --from-file=$CERTS/kura-adapter-key.pem \
+  --from-file=$CERTS/kura-adapter-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=application.yml=$CONFIG/hono-adapter-kura-config.yml \
+  --namespace $NS
+kubectl create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+echo ... done
+
 echo ECLIPSE HONO DEPLOYED TO KUBERNETES

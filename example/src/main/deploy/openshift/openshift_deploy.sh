@@ -116,4 +116,13 @@ oc create secret generic hono-adapter-mqtt-vertx-conf \
 oc create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
+echo Deploying Kura adapter ...
+oc create secret generic hono-adapter-kura-conf \
+  --from-file=$CERTS/kura-adapter-key.pem \
+  --from-file=$CERTS/kura-adapter-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=application.yml=$CONFIG/hono-adapter-kura-config.yml
+oc create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/openshift.yml
+echo ... done
+
 echo ECLIPSE HONO DEPLOYED ON OPENSHIFT
