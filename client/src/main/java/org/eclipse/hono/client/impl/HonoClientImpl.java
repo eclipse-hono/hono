@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.client.impl;
 
+import java.net.HttpURLConnection;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -442,7 +443,7 @@ public final class HonoClientImpl implements HonoClient {
 
     private Future<ProtonConnection> checkConnection() {
         if (connection == null || connection.isDisconnected()) {
-            return Future.failedFuture("client is not connected to server (yet)");
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "client is not connected to server (yet)"));
         } else {
             return Future.succeededFuture(connection);
         }
