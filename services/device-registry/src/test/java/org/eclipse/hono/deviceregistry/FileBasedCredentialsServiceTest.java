@@ -50,7 +50,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class FileBasedCredentialsServiceTest {
 
-    private static final String filename = "test-credentials.json";
+    private static final String FILE_NAME = "/credentials.json";
 
     private Vertx vertx;
     private EventBus eventBus;
@@ -88,8 +88,8 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a registration service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
-        props.setCredentialsFilename(filename);
-        when(fileSystem.existsBlocking(filename)).thenReturn(Boolean.FALSE);
+        props.setCredentialsFilename(FILE_NAME);
+        when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
             Handler handler = invocation.getArgumentAt(1, Handler.class);
             handler.handle(Future.succeededFuture());
@@ -111,7 +111,7 @@ public class FileBasedCredentialsServiceTest {
 
         // THEN the file gets created
         startup.await(2000);
-        verify(fileSystem).createFile(eq(filename), any(Handler.class));
+        verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
     }
 
     /**
@@ -126,8 +126,8 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a registration service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
-        props.setCredentialsFilename(filename);
-        when(fileSystem.existsBlocking(filename)).thenReturn(Boolean.FALSE);
+        props.setCredentialsFilename(FILE_NAME);
+        when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.FALSE);
 
         // WHEN starting the service but the file cannot be created
         doAnswer(invocation -> {
@@ -158,8 +158,8 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a registration service configured to read data from a file
         // that contains malformed JSON
-        props.setCredentialsFilename(filename);
-        when(fileSystem.existsBlocking(filename)).thenReturn(Boolean.TRUE);
+        props.setCredentialsFilename(FILE_NAME);
+        when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
             final Buffer data = mock(Buffer.class);
             when(data.getBytes()).thenReturn("NO JSON".getBytes(StandardCharsets.UTF_8));
@@ -190,10 +190,10 @@ public class FileBasedCredentialsServiceTest {
     public void testDoStartLoadsCredentials(final TestContext ctx) {
 
         // GIVEN a service configured with a file name
-        props.setCredentialsFilename(filename);
+        props.setCredentialsFilename(FILE_NAME);
         when(fileSystem.existsBlocking(props.getCredentialsFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
-            final Buffer data = newCredentialsFile(Constants.DEFAULT_TENANT, "sensor1");
+            final Buffer data = DeviceRegistryTestUtils.readFile(FILE_NAME);
             Handler handler = invocation.getArgumentAt(1, Handler.class);
             handler.handle(Future.succeededFuture(data));
             return null;
@@ -224,20 +224,20 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a service configured to persist credentials to file
         // that contains some credentials
-        props.setCredentialsFilename(filename);
+        props.setCredentialsFilename(FILE_NAME);
         props.setSaveToFile(true);
-        when(fileSystem.existsBlocking(filename)).thenReturn(Boolean.TRUE);
+        when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
         final Async add = ctx.async(2);
         svc.add(
                 Constants.DEFAULT_TENANT,
-                CredentialsTestUtils.buildCredentialsPayloadPresharedKey("4711", "sensor1"),
+                DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey("4711", "sensor1"),
                 ctx.asyncAssertSuccess(s -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
                     add.countDown();
                 }));
         svc.add(
                 "OTHER_TENANT",
-                CredentialsTestUtils.buildCredentialsPayloadHashedPassword("4700", "bumlux"),
+                DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword("4700", "bumlux"),
                 ctx.asyncAssertSuccess(s -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
                     add.countDown();
@@ -251,12 +251,12 @@ public class FileBasedCredentialsServiceTest {
             handler.handle(Future.succeededFuture());
             write.complete();
             return null;
-        }).when(fileSystem).writeFile(eq(filename), any(Buffer.class), any(Handler.class));
+        }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
 
         svc.saveToFile();
         write.await(2000);
         ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
-        verify(fileSystem).writeFile(eq(filename), buffer.capture(), any(Handler.class));
+        verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
         svc.clear();
         assertNotRegistered(svc, Constants.DEFAULT_PATH_SEPARATOR, "sensor1", CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
 
@@ -267,7 +267,7 @@ public class FileBasedCredentialsServiceTest {
             handler.handle(Future.succeededFuture(buffer.getValue()));
             read.complete();
             return null;
-        }).when(fileSystem).readFile(eq(filename), any(Handler.class));
+        }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
         svc.loadCredentials();
         read.await(2000);
         assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
@@ -464,15 +464,5 @@ public class FileBasedCredentialsServiceTest {
             registration.complete();
         }));
         registration.await(300);
-    }
-
-    private static Buffer newCredentialsFile(final String tenantId, final String authId) {
-
-        JsonObject creds = CredentialsTestUtils.buildCredentialsPayloadHashedPassword("4711", authId);
-        JsonArray top = new JsonArray();
-        top.add(new JsonObject()
-                .put(FileBasedCredentialsService.FIELD_TENANT, tenantId)
-                .put(FileBasedCredentialsService.ARRAY_CREDENTIALS, new JsonArray().add(creds)));
-        return top.toBuffer();
     }
 }

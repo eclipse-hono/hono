@@ -19,13 +19,12 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.file.FileSystem;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
-import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,9 +47,9 @@ import java.nio.charset.StandardCharsets;
 @RunWith(VertxUnitRunner.class)
 public class FileBasedRegistrationServiceTest
 {
-   private static final String TENANT = "tenant";
-   private static final String DEVICE = "device";
-   private static final String FILE_NAME = "/home/hono/devices.json";
+   private static final String TENANT = Constants.DEFAULT_TENANT;
+   private static final String DEVICE = "4711";
+   private static final String FILE_NAME = "/device-identities.json";
 
    private FileBasedRegistrationConfigProperties props;
    private FileBasedRegistrationService registrationService;
@@ -226,7 +225,7 @@ public class FileBasedRegistrationServiceTest
        // GIVEN a service configured with a file name
        when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
        doAnswer(invocation -> {
-           final Buffer data = newDeviceIdentitiesFile(TENANT, DEVICE);
+           final Buffer data = DeviceRegistryTestUtils.readFile(FILE_NAME);
            Handler handler = invocation.getArgumentAt(1, Handler.class);
            handler.handle(Future.succeededFuture(data));
            return null;
@@ -447,15 +446,4 @@ public class FileBasedRegistrationServiceTest
        verify(request).reply(expectedResponse);
    }
 
-   private static Buffer newDeviceIdentitiesFile(final String tenantId, final String deviceId) {
-
-       final JsonObject device = new JsonObject()
-               .put(RegistrationConstants.FIELD_DEVICE_ID, deviceId);
-
-       final JsonObject tenant = new JsonObject()
-               .put(FileBasedRegistrationService.FIELD_TENANT, tenantId)
-               .put(FileBasedRegistrationService.ARRAY_DEVICES, new JsonArray().add(device));
-
-       return new JsonArray().add(tenant).toBuffer();
-   }
 }

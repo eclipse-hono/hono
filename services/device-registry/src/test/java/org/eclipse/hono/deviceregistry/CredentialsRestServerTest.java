@@ -136,7 +136,7 @@ public class CredentialsRestServerTest {
     public void testAddCredentialsSucceeds(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject requestBodyAddCredentials = CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject requestBodyAddCredentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(requestBodyAddCredentials).setHandler(context.asyncAssertSuccess(r -> {
             context.assertNotNull(r.getHeader(HttpHeaders.LOCATION));
         }));
@@ -152,7 +152,7 @@ public class CredentialsRestServerTest {
     public void testAddCredentialsRejectsDuplicateRegistration(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject requestBodyAddCredentials = CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject requestBodyAddCredentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
 
         addCredentials(requestBodyAddCredentials).compose(ar -> {
             // now try to add credentials again
@@ -171,7 +171,7 @@ public class CredentialsRestServerTest {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
         addCredentials(
-                CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId),
+                DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId),
                 "application/x-www-form-urlencoded",
                 HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
@@ -232,7 +232,7 @@ public class CredentialsRestServerTest {
     public void testUpdateCredentialsSucceeds(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject orig = CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
+        final JsonObject orig = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         final JsonObject altered = orig.copy();
         altered.put(FIELD_DEVICE_ID, "other-device");
 
@@ -257,7 +257,7 @@ public class CredentialsRestServerTest {
     public void testUpdateCredentialsFailsForNonExistingCredentials(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject altered = CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
+        final JsonObject altered = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
 
         updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_NOT_FOUND)
             .setHandler(context.asyncAssertSuccess());
@@ -272,7 +272,7 @@ public class CredentialsRestServerTest {
     public void testUpdateCredentialsFailsForNonMatchingTypeInPayload(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject orig = CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
+        final JsonObject orig = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         final JsonObject altered = orig.copy().put(FIELD_TYPE, "non-matching-type");
 
         addCredentials(orig).compose(ar -> {
@@ -290,7 +290,7 @@ public class CredentialsRestServerTest {
     public void testUpdateCredentialsFailsForNonMatchingAuthIdInPayload(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject orig = CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
+        final JsonObject orig = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         final JsonObject altered = orig.copy().put(FIELD_AUTH_ID, "non-matching-auth-id");
 
         addCredentials(orig).compose(ar -> {
@@ -307,7 +307,7 @@ public class CredentialsRestServerTest {
     public void testRemoveCredentialsForDeviceSucceeds(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject credentials = CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
+        final JsonObject credentials = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
             return removeCredentials(TEST_DEVICE_ID, HttpURLConnection.HTTP_NO_CONTENT);
         }).setHandler(context.asyncAssertSuccess());
@@ -322,7 +322,7 @@ public class CredentialsRestServerTest {
     public void testRemoveCredentialsSucceeds(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject credentials = CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject credentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
             // now try to remove credentials again
             return removeCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD);
@@ -340,7 +340,7 @@ public class CredentialsRestServerTest {
     public void testRemoveCredentialsFailsForWrongType(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject requestBodyAddCredentials = CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject requestBodyAddCredentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
 
         addCredentials(requestBodyAddCredentials).compose(ar -> {
             // now try to remove credentials again
@@ -371,7 +371,7 @@ public class CredentialsRestServerTest {
     public void testGetAddedCredentials(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject requestBody = CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject requestBody = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
 
         addCredentials(requestBody).compose(ar -> {
             // now try to get credentials again
@@ -391,8 +391,8 @@ public class CredentialsRestServerTest {
     public void testGetAddedCredentialsMultipleTypesSingleRequests(final TestContext context) {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject hashedPasswordCredentials = CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
-        final JsonObject presharedKeyCredentials = CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
+        final JsonObject hashedPasswordCredentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject presharedKeyCredentials = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
 
         final List<JsonObject> credentialsListToAdd = new ArrayList<>();
         credentialsListToAdd.add(hashedPasswordCredentials);
@@ -422,8 +422,8 @@ public class CredentialsRestServerTest {
     public void testGetAllCredentialsForDeviceSucceeds(final TestContext context) throws InterruptedException {
 
         final List<JsonObject> credentialsListToAdd = new ArrayList<>();
-        credentialsListToAdd.add(CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, "auth"));
-        credentialsListToAdd.add(CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, "other-auth"));
+        credentialsListToAdd.add(DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, "auth"));
+        credentialsListToAdd.add(DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, "other-auth"));
 
         addMultipleCredentials(credentialsListToAdd).compose(ar -> {
             // now try to get all these credentials again
@@ -448,7 +448,7 @@ public class CredentialsRestServerTest {
         final String authId = getRandomAuthId(TEST_AUTH_ID);
         final List<JsonObject> credentialsToAdd = new ArrayList<>();
         for(int i = 0; i < 5; i++) {
-            final JsonObject requestBody = CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
+            final JsonObject requestBody = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
             requestBody.put(FIELD_TYPE, "type" + i);
             credentialsToAdd.add(requestBody);
         }
@@ -469,7 +469,7 @@ public class CredentialsRestServerTest {
     public void testGetAddedCredentialsButWithWrongType(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject credentials = CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject credentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
             return getCredentials(authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND, null);
         }).setHandler(context.asyncAssertSuccess());
@@ -484,7 +484,7 @@ public class CredentialsRestServerTest {
     public void testGetAddedCredentialsButWithWrongAuthId(final TestContext context)  {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
-        final JsonObject credentials = CredentialsTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
+        final JsonObject credentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
             return getCredentials("wrong-auth-id", SECRETS_TYPE_HASHED_PASSWORD, HttpURLConnection.HTTP_NOT_FOUND, null);
         }).setHandler(context.asyncAssertSuccess());
@@ -576,7 +576,7 @@ public class CredentialsRestServerTest {
 
     private static void testAddCredentialsWithMissingPayloadParts(final TestContext context, final String fieldMissing) {
 
-        final JsonObject requestBodyAddCredentials = CredentialsTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
+        final JsonObject requestBodyAddCredentials = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, TEST_AUTH_ID);
         requestBodyAddCredentials.remove(fieldMissing);
 
         addCredentials(
