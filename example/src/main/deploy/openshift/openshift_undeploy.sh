@@ -23,7 +23,4 @@ oc delete pv hono
 
 oc login -u developer
 
-# deleting the directory for hosting persistent volume
-rm -rf /tmp/hono
-
 echo ECLIPSE HONO UNDEPLOYED FROM OPENSHIFT

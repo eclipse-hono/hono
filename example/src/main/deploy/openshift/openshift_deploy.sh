@@ -19,14 +19,6 @@ HONO_HOME=$SCRIPTPATH/../../../..
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
 
-# creating the directory for Hono Server persistent volume
-if [ ! -d /tmp/hono ]; then
-    mkdir /tmp/hono
-    chmod 777 /tmp/hono
-else
-    echo /tmp/hono already exists!
-fi
-
 # creating Hono persistent volume (admin needed)
 oc login -u system:admin
 oc create -f $SCRIPTPATH/hono-pv.yml

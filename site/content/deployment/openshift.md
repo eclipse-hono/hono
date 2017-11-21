@@ -25,20 +25,27 @@ the host Docker registry will be used for getting built images.
  
 ### Minishift
 
-Minishift is a tool that helps you run OpenShift locally by running a single-node OpenShift cluster inside a VM. Follow [this guide](https://docs.openshift.org/latest/minishift/getting-started/index.html)
-for installing and having Minishift up and running.
-After launching Minishift and before building the Eclipse Hono images, it's necessary to execute the following command :
+Minishift is a tool that helps you run OpenShift locally by running a single-node OpenShift cluster inside a VM. Follow [this guide](https://docs.openshift.org/latest/minishift/getting-started/index.html) for installing and having Minishift up and running.
 
-~~~sh
-$ eval $(minishift docker-env)
-~~~
+After Minishift has been started up, the following steps need to be performed:
 
-In this way, the `DOCKER_HOST` environment variable is set to the Docker daemon running inside the Minishift VM. Launching the following command for building the Eclipse Hono images,
-such daemon will be used and the final images will be available inside the Minishift VM, ready for the deployment.
+1. Create a directory within the Minishift VM that can be used by Hono's services for persisting data that should prevail the restart of Minishift
 
-~~~sh
-~/hono$ mvn clean install -Pbuild-docker-image
-~~~
+    ~~~sh
+    $ minishift ssh -- sudo mkdir -p -m 777 /mnt/sda1/var/lib/minishift/openshift.local.pv/hono
+    ~~~
+
+1. Set the `DOCKER_HOST` environment variable to point to the Docker daemon running inside the Minishift VM
+
+    ~~~sh
+    $ eval $(minishift docker-env)
+    ~~~
+
+1. Build the Hono Docker images and deploy them to the Docker registry in the Minishift VM
+
+    ~~~sh
+    ~/hono$ mvn clean install -Pbuild-docker-image
+    ~~~
 
 ## Script based Deployment
 

@@ -17,6 +17,10 @@ See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue
 ### Configuration Changes
 
 * All Hono Docker images after 0.5-M10 now use `eclipse/` instead of `eclipsehono/` as the prefix in the image repository name.
+* The default names of the files used by the Device Registry component for persisting data have changed:
+   * `/home/hono/registration/device-identities.json` has been changed to `/var/lib/hono/device-registry/device-identities.json`
+   * `/home/hono/registration/credentials.json` has been changed to `/var/lib/hono/device-registry/credentials.json`
+* The Device Registry used in the *Getting started* guide now by default persists data to a file system volume.
 
 # 0.5-M10
 

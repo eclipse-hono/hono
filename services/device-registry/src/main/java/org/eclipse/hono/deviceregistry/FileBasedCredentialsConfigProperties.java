@@ -24,7 +24,7 @@ import io.vertx.core.json.JsonObject;
  */
 public final class FileBasedCredentialsConfigProperties {
 
-    private static final String DEFAULT_CREDENTIALS_FILENAME = "/home/hono/device-registry/credentials.json";
+    private static final String DEFAULT_CREDENTIALS_FILENAME = "/var/lib/hono/device-registry/credentials.json";
 
     private String credentialsFilename = DEFAULT_CREDENTIALS_FILENAME;
     private boolean saveToFile = false;
