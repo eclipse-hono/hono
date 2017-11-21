@@ -8,7 +8,15 @@ weight = 800
 
 ### New Features
 
-* We have added a protocol adapter for allowing Eclipse Kura gateways to publish *control* and *data* messages to Hono's Telemetry and Event API. See [Kura Adapter]({{< relref "component/kura-adapter.md" >}}) for details.
+* We have added a protocol adapter for allowing [Eclipse Kura](https://www.eclipse.com/kura) gateways to publish *control* and *data* messages to Hono's Telemetry and Event API. See [Kura Adapter]({{< relref "component/kura-adapter.md" >}}) for details.
+
+### Fixes & Enhancements
+
+See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue%20milestone%3A0.5) for the list of issues addressed.
+
+### Configuration Changes
+
+* All Hono Docker images after 0.5-M10 now use `eclipse/` instead of `eclipsehono/` as the prefix in the image repository name.
 
 # 0.5-M10
 
