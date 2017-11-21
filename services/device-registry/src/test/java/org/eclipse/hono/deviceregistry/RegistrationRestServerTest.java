@@ -16,6 +16,8 @@ import static org.eclipse.hono.service.http.HttpUtils.CONTENT_TYPE_JSON;
 import static org.eclipse.hono.util.RegistrationConstants.REGISTRATION_ENDPOINT;
 import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
 
+import java.net.InetAddress;
+
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -23,9 +25,13 @@ import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -40,46 +46,52 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class RegistrationRestServerTest {
 
-    private static final String HOST = "localhost";
+    private static final String HOST = InetAddress.getLoopbackAddress().getHostAddress();
+    private static final long TEST_TIMEOUT_MILLIS = 2000;
 
     private static final String TENANT = "testTenant";
     private static final String DEVICE_ID = "testDeviceId";
 
-    private static Vertx vertx;
+    private static Vertx vertx = Vertx.vertx();
     private static FileBasedRegistrationService registrationService;
     private static DeviceRegistryRestServer deviceRegistryRestServer;
 
-    @BeforeClass
-    public static void setUp(final TestContext context) {
-        vertx = Vertx.vertx();
+    /**
+     * Set the timeout for all test methods by using a JUnit Rule (instead of providing the timeout at every @Test annotation).
+     * See {@link Test#timeout} for details about improved thread safety regarding the @After annotation for each test.
+     */
+    @Rule
+    public final TestRule timeoutForAllMethods = Timeout.millis(TEST_TIMEOUT_MILLIS);
 
-        Future<String> setupTracker = Future.future();
-        setupTracker.setHandler(context.asyncAssertSuccess());
+    /**
+     * Sets up fixture.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @BeforeClass
+    public static void setUp(final TestContext ctx) {
+
+        Future<String> restServerDeploymentTracker = Future.future();
+        Future<String> registrationServiceDeploymentTracker = Future.future();
+
+        registrationService = new FileBasedRegistrationService();
+        registrationService.setConfig(new FileBasedRegistrationConfigProperties());
+        SignatureSupportingConfigProperties signatureSupportingConfProps = new SignatureSupportingConfigProperties();
+        signatureSupportingConfProps.setSharedSecret("DeviceRegistrySharedSecret_HasToBe32CharsOrLonger");
+        registrationService.setRegistrationAssertionFactory(
+                RegistrationAssertionHelperImpl.forSigning(vertx, signatureSupportingConfProps));
+        vertx.deployVerticle(registrationService, registrationServiceDeploymentTracker.completer());
 
         ServiceConfigProperties restServerProps = new ServiceConfigProperties();
         restServerProps.setInsecurePortEnabled(true);
         restServerProps.setInsecurePort(0);
 
-        RegistrationHttpEndpoint registrationHttpEndpoint = new RegistrationHttpEndpoint(vertx);
         deviceRegistryRestServer = new DeviceRegistryRestServer();
-        deviceRegistryRestServer.addEndpoint(registrationHttpEndpoint);
+        deviceRegistryRestServer.addEndpoint(new RegistrationHttpEndpoint(vertx));
         deviceRegistryRestServer.setConfig(restServerProps);
-
-        FileBasedRegistrationConfigProperties regServiceProps = new FileBasedRegistrationConfigProperties();
-        registrationService = new FileBasedRegistrationService();
-        registrationService.setConfig(regServiceProps);
-        SignatureSupportingConfigProperties signatureSupportingConfProps = new SignatureSupportingConfigProperties();
-        signatureSupportingConfProps.setSharedSecret("DeviceRegistrySharedSecret_HasToBe32CharsOrLonger");
-        registrationService.setRegistrationAssertionFactory(
-                RegistrationAssertionHelperImpl.forSigning(vertx, signatureSupportingConfProps));
-
-        Future<String> restServerDeploymentTracker = Future.future();
         vertx.deployVerticle(deviceRegistryRestServer, restServerDeploymentTracker.completer());
-        restServerDeploymentTracker.compose(s -> {
-            Future<String> registrationServiceDeploymentTracker = Future.future();
-            vertx.deployVerticle(registrationService, registrationServiceDeploymentTracker.completer());
-            return registrationServiceDeploymentTracker;
-        }).compose(c -> setupTracker.complete(), setupTracker);
+
+        CompositeFuture.all(restServerDeploymentTracker, registrationServiceDeploymentTracker).setHandler(ctx.asyncAssertSuccess());
     }
 
     @AfterClass

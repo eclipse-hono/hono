@@ -32,7 +32,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.file.FileSystem;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -45,8 +45,14 @@ import io.vertx.core.json.JsonObject;
 @Repository
 public final class FileBasedRegistrationService extends BaseRegistrationService<FileBasedRegistrationConfigProperties> {
 
-    private static final String ARRAY_DEVICES = "devices";
-    private static final String FIELD_TENANT = "tenant";
+    /**
+     * The name of the JSON array containing device registration information for a tenant.
+     */
+    public static final String ARRAY_DEVICES = "devices";
+    /**
+     * The name of the JSON property containing the tenant ID.
+     */
+    public static final String FIELD_TENANT = "tenant";
 
     // <tenantId, <deviceId, registrationData>>
     private Map<String, Map<String, JsonObject>> identities = new HashMap<>();
@@ -62,16 +68,26 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     @Override
     protected void doStart(Future<Void> startFuture) {
 
-        if (!running) {
+        if (running) {
+            startFuture.complete();
+        } else {
+
             if (!getConfig().isModificationEnabled()) {
                 log.info("modification of registered devices has been disabled");
             }
-            if (getConfig().getFilename() != null) {
-                loadRegistrationData().compose(s -> {
+
+            if (getConfig().getFilename() == null) {
+                log.debug("device identity filename is not set, no identity information will be loaded");
+                running = true;
+                startFuture.complete();
+            } else {
+                checkFileExists(getConfig().isSaveToFile()).compose(ok -> {
+                    return loadRegistrationData();
+                }).compose(s -> {
                     if (getConfig().isSaveToFile()) {
                         log.info("saving device identities to file every 3 seconds");
-                        vertx.setPeriodic(3000, saveIdentities -> {
-                            saveToFile(Future.future());
+                        vertx.setPeriodic(3000, tid -> {
+                            saveToFile();
                         });
                     } else {
                         log.info("persistence is disabled, will not save device identities to file");
@@ -79,113 +95,136 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
                     running = true;
                     startFuture.complete();
                 }, startFuture);
-            } else {
-                startFuture.complete();
             }
-        } else {
-            startFuture.complete();
         }
     }
 
     Future<Void> loadRegistrationData() {
-        Future<Void> result = Future.future();
 
         if (getConfig().getFilename() == null) {
-            result.fail(new IllegalStateException("device identity filename is not set"));
+            return Future.succeededFuture();
         } else {
+            Future<Buffer> readResult = Future.future();
+            vertx.fileSystem().readFile(getConfig().getFilename(), readResult.completer());
+            return readResult.compose(buffer -> {
+                return addAll(buffer);
+            }).recover(t -> {
+                log.debug("cannot load device identities from file [{}]: {}", getConfig().getFilename(), t.getMessage());
+                return Future.succeededFuture();
+            });
+        }
+    }
 
-            final FileSystem fs = vertx.fileSystem();
-            log.debug("trying to load device registration information from file {}", getConfig().getFilename());
-            if (fs.existsBlocking(getConfig().getFilename())) {
-                final AtomicInteger deviceCount = new AtomicInteger();
-                fs.readFile(getConfig().getFilename(), readAttempt -> {
-                   if (readAttempt.succeeded()) {
-                       JsonArray allObjects = new JsonArray(new String(readAttempt.result().getBytes()));
-                       for (Object obj : allObjects) {
-                           JsonObject tenant = (JsonObject) obj;
-                           String tenantId = tenant.getString(FIELD_TENANT);
-                           log.debug("loading devices for tenant [{}]", tenantId);
-                           Map<String, JsonObject> deviceMap = new HashMap<>();
-                           for (Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
-                               JsonObject device = (JsonObject) deviceObj;
-                               String deviceId = device.getString(FIELD_DEVICE_ID);
-                               log.debug("loading device [{}]", deviceId);
-                               deviceMap.put(deviceId, device.getJsonObject(FIELD_DATA));
-                               deviceCount.incrementAndGet();
-                           }
-                           identities.put(tenantId, deviceMap);
-                       }
-                       log.info("successfully loaded {} device identities from file [{}]", deviceCount.get(), getConfig().getFilename());
-                       result.complete();
-                   } else {
-                       log.warn("could not load device identities from file [{}]", getConfig().getFilename());
-                       result.fail(readAttempt.cause());
-                   }
-                });
-            } else {
-                log.debug("device identity file [{}] does not exist (yet)", getConfig().getFilename());
-                result.complete();
-            }
+    private Future<Void> checkFileExists(final boolean createIfMissing) {
+
+        Future<Void> result = Future.future();
+        if (getConfig().getFilename() == null) {
+            result.fail("no filename set");
+        } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
+            result.complete();
+        } else if (createIfMissing) {
+            vertx.fileSystem().createFile(getConfig().getFilename(), result.completer());
+        } else {
+            log.debug("no such file [{}]", getConfig().getFilename());
+            result.complete();
         }
         return result;
+    }
+
+    private Future<Void> addAll(final Buffer deviceIdentities) {
+
+        Future<Void> result = Future.future();
+        try {
+            int deviceCount = 0;
+            JsonArray allObjects = deviceIdentities.toJsonArray();
+            for (Object obj : allObjects) {
+                if (JsonObject.class.isInstance(obj)) {
+                    deviceCount += addDevicesForTenant((JsonObject) obj);
+                }
+            }
+            log.info("successfully loaded {} device identities from file [{}]", deviceCount, getConfig().getFilename());
+            result.complete();
+        } catch (DecodeException e) {
+            log.warn("cannot read malformed JSON from device identity file [{}]", getConfig().getFilename());
+            result.fail(e);
+        }
+        return result;
+    }
+
+    private int addDevicesForTenant(final JsonObject tenant) {
+        int count = 0;
+        final String tenantId = tenant.getString(FIELD_TENANT);
+        if (tenantId != null) {
+            log.debug("loading devices for tenant [{}]", tenantId);
+            final Map<String, JsonObject> deviceMap = new HashMap<>();
+            for (Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
+                if (JsonObject.class.isInstance(deviceObj)) {
+                    JsonObject device = (JsonObject) deviceObj;
+                    String deviceId = device.getString(FIELD_DEVICE_ID);
+                    if (deviceId != null) {
+                        log.debug("loading device [{}]", deviceId);
+                        JsonObject data = device.getJsonObject(FIELD_DATA, new JsonObject().put(FIELD_ENABLED, Boolean.TRUE));
+                        deviceMap.put(deviceId, data);
+                        count++;
+                    }
+                }
+            }
+            identities.put(tenantId, deviceMap);
+        }
+        return count;
     }
 
     @Override
     protected void doStop(final Future<Void> stopFuture) {
 
         if (running) {
-            Future<Void> stopTracker = Future.future();
-            stopTracker.setHandler(stopAttempt -> {
+            saveToFile().compose(s -> {
                 running = false;
                 stopFuture.complete();
-            });
-
-            if (getConfig().isSaveToFile()) {
-                saveToFile(stopTracker);
-            } else {
-                stopTracker.complete();
-            }
+            }, stopFuture);
         } else {
             stopFuture.complete();
         }
     }
 
-    private void saveToFile(final Future<Void> writeResult) {
+    Future<Void> saveToFile() {
 
-        if (dirty) {
-            final FileSystem fs = vertx.fileSystem();
-            if (!fs.existsBlocking(getConfig().getFilename())) {
-                fs.createFileBlocking(getConfig().getFilename());
-            }
-            final AtomicInteger idCount = new AtomicInteger();
-            JsonArray tenants = new JsonArray();
-            for (Entry<String, Map<String, JsonObject>> entry : identities.entrySet()) {
-                JsonArray devices = new JsonArray();
-                for (Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
-                    devices.add(
+        if (!getConfig().isSaveToFile()) {
+            return Future.succeededFuture();
+        } else if (dirty) {
+            return checkFileExists(true).compose(s -> {
+                final AtomicInteger idCount = new AtomicInteger();
+                final JsonArray tenants = new JsonArray();
+                for (Entry<String, Map<String, JsonObject>> entry : identities.entrySet()) {
+                    final JsonArray devices = new JsonArray();
+                    for (Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
+                        devices.add(
+                                new JsonObject()
+                                        .put(FIELD_DEVICE_ID, deviceEntry.getKey())
+                                        .put(FIELD_DATA, deviceEntry.getValue()));
+                        idCount.incrementAndGet();
+                    }
+                    tenants.add(
                             new JsonObject()
-                                    .put(FIELD_DEVICE_ID, deviceEntry.getKey())
-                                    .put(FIELD_DATA, deviceEntry.getValue()));
-                    idCount.incrementAndGet();
+                                    .put(FIELD_TENANT, entry.getKey())
+                                    .put(ARRAY_DEVICES, devices));
                 }
-                tenants.add(
-                        new JsonObject()
-                                .put(FIELD_TENANT, entry.getKey())
-                                .put(ARRAY_DEVICES, devices));
-            }
-            fs.writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeAttempt -> {
-                if (writeAttempt.succeeded()) {
+
+                Future<Void> writeHandler = Future.future();
+                vertx.fileSystem().writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeHandler.completer());
+                return writeHandler.map(ok -> {
                     dirty = false;
                     log.trace("successfully wrote {} device identities to file {}", idCount.get(), getConfig().getFilename());
-                    writeResult.complete();
-                } else {
-                    log.warn("could not write device identities to file {}", getConfig().getFilename(), writeAttempt.cause());
-                    writeResult.fail(writeAttempt.cause());
-                }
+                    return (Void) null;
+                }).otherwise(t -> {
+                    log.warn("could not write device identities to file {}", getConfig().getFilename(), t);
+                    return (Void) null;
+                });
             });
+            
         } else {
             log.trace("registry does not need to be persisted");
-            writeResult.complete();
+            return Future.succeededFuture();
         }
     }
 

@@ -157,6 +157,11 @@
       Build images defined in modules with packaging type "pom".
      -->
     <fabric8.skip.build.pom>false</fabric8.skip.build.pom>
+
+    <!-- 
+      The organization name to use for our Docker image names.
+     -->
+     <docker.image.org-name>eclipse</docker.image.org-name>
   </properties>
 
   <modules>
@@ -184,19 +189,19 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.21.0</version>
+          <version>0.23.0</version>
         </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>fabric8-maven-plugin</artifactId>
-          <version>3.4.2</version>
+          <version>3.5.33</version>
           <configuration>
             <mode>kubernetes</mode>
             <profile>minimal</profile>
             <verbose>true</verbose>
             <images>
               <image>
-                <name>eclipsehono/%a:%v</name>
+                <name>${docker.image.org-name}/%a:%v</name>
                 <build>
                   <maintainer>The Eclipse Hono project</maintainer>
                 </build>

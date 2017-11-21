@@ -15,6 +15,8 @@ package org.eclipse.hono.adapter.rest;
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
+import org.eclipse.hono.adapter.http.HonoAuthHandlerImpl;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
@@ -24,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BasicAuthHandler;
 
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using REST.
@@ -48,7 +49,16 @@ public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpP
     }
 
     private void setupBasicAuth(final Router router) {
-        router.route().handler(BasicAuthHandler.create(getCredentialsAuthProvider(), getConfig().getRealm()));
+        router.route().handler(new HonoAuthHandlerImpl(getCredentialsAuthProvider(), getConfig().getRealm()) {
+            @Override
+            protected void processException(RoutingContext ctx, Throwable exception) {
+                if (exception instanceof ServiceInvocationException) {
+                    ctx.fail(((ServiceInvocationException) exception).getErrorCode());
+                } else {
+                    super.processException(ctx, exception);
+                }
+            }
+        });
     }
 
     private void addTelemetryApiRoutes(final Router router) {

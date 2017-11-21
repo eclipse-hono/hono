@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
@@ -112,7 +113,7 @@ public class VertxBasedRestProtocolAdapterTest {
 
         doAnswer(invocation -> {
             Handler<AsyncResult<User>> resultHandler = invocation.getArgumentAt(1, Handler.class);
-            resultHandler.handle(Future.failedFuture("bad credentials"));
+            resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials")));
             return null;
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
