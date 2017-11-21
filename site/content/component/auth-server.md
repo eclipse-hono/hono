@@ -10,7 +10,7 @@ This component serves as a default implementation of the *Authentication* API on
 
 In a production environment, a more sophisticated implementation should be used instead.
 
-The Auth Server is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image (`eclipsehono/hono-service-auth`) created from it.
+The Auth Server is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image (`eclipse/hono-service-auth`) created from it.
 
 ## Service Configuration
 
@@ -104,7 +104,7 @@ The Auth Server can be run as a Docker container from the command line. The foll
 > -e 'HONO_AUTH_AMQP_KEY_PATH=/run/secrets/auth-server-key.pem' \
 > -e 'HONO_AUTH_AMQP_CERT_PATH=/run/secrets/auth-server-cert.pem' \
 > -e 'SPRING_PROFILES_ACTIVE=authentication-impl' \
-> eclipsehono/hono-service-auth:latest
+> eclipse/hono-service-auth:latest
 ~~~
 
 {{% note %}}

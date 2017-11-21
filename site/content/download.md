@@ -20,7 +20,11 @@ After downloading the archive, extract it to a local folder, change into that fo
 eclipse-hono-example-0.5-M10$ deploy/docker/swarm_deploy.sh
 ~~~
 
-You may also want to consider other [deployment options]({{< relref "deployment/openshift.md" >}}).
+You may also want to consider other deployment options:
+
+* [Kubernetes]({{< relref "deployment/kubernetes.md" >}})
+* [OpenShift]({{< relref "deployment/openshift.md" >}})
+* [Docker Swarm]({{< relref "deployment/docker-swarm.md" >}})
 
 ### Older Versions
 
