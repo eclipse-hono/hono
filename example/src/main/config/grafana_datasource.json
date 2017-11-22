@@ -1,0 +1,8 @@
+{
+  "name": "hono_data",
+  "type": "influxdb",
+  "database": "graphite",
+  "url": "http://influxdb.hono:8086",
+  "access": "proxy",
+  "basicAuth": false
+}

@@ -32,8 +32,7 @@ docker secret create -l project=$NS influxdb.conf $CONFIG/influxdb.conf
 docker service create $CREATE_OPTIONS --name influxdb -p 8086:8086 \
   --secret influxdb.conf \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
-docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
-  ${docker.image.org-name}/hono-grafana:${project.version}
+docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 grafana/grafana:${grafana.version}
 echo ... done
 
 echo
@@ -185,6 +184,12 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
+echo ... done
+
+echo
+echo Configuring Grafana ...
+chmod +x $SCRIPTPATH/../configure_grafana.sh
+$SCRIPTPATH/../configure_grafana.sh ${DOCKER_IP}
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED TO DOCKER SWARM

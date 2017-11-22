@@ -117,4 +117,19 @@ oc create secret generic hono-adapter-kura-conf \
 oc create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
+echo
+echo Configuring Grafana ...
+# Grafana needs to run as root
+oc create serviceaccount useroot
+oc adm policy add-scc-to-user anyuid -z useroot -n hono --as system:admin
+oc patch dc/grafana --patch '{"spec":{"template":{"spec":{"serviceAccountName": "useroot"}}}}'
+chmod +x $SCRIPTPATH/../configure_grafana.sh
+HOST=$(oc get nodes --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}' --as system:admin)
+GRAFANA_PORT='NaN'
+until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do echo "Waiting for OpenShift cluster to come up...";
+GRAFANA_PORT=$(oc get service grafana --output='jsonpath={.spec.ports[0].nodePort}' --as system:admin); sleep 1;
+done;
+$SCRIPTPATH/../configure_grafana.sh ${HOST} ${GRAFANA_PORT}
+echo ... done
+
 echo ECLIPSE HONO DEPLOYED ON OPENSHIFT
