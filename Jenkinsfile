@@ -8,6 +8,7 @@ node('iothub') {
     def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd")
     def buildDate = sdf.format(startTime)
     def buildVersion = "${buildDate}_${BUILD_NUMBER}_BOSCH"
+    def dockerImageOrgName = "eclipse"
 
     stage('Checkout') {
         git poll: true, url: 'https://products.bosch-si.com/stash/scm/iothub/eclipse-hono.git', branch: 'develop'
@@ -39,16 +40,16 @@ node('iothub') {
     stage('Push to Docker Hub') {
         withCredentials([usernamePassword(credentialsId: 'cred-dockerhub-iothubtech', usernameVariable: 'DOCKERHUB_USER_ID', passwordVariable: 'DOCKERHUB_USER_PW')]) {
             // rename/tag images
-            sh "docker tag eclipsehono/hono-service-messaging:${buildVersion} bsinno/hono-service-messaging:${buildVersion}"
-            sh "docker tag eclipsehono/hono-service-messaging:${buildVersion} bsinno/hono-service-messaging:latest"
-            sh "docker tag eclipsehono/hono-service-auth:${buildVersion} bsinno/hono-service-auth:${buildVersion}"
-            sh "docker tag eclipsehono/hono-service-auth:${buildVersion} bsinno/hono-service-auth:latest"
-            sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:${buildVersion}"
-            sh "docker tag eclipsehono/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
-            sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
-            sh "docker tag eclipsehono/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:latest"
-            sh "docker tag eclipsehono/grafana:${buildVersion} bsinno/hono-grafana:${buildVersion}"
-            sh "docker tag eclipsehono/grafana:${buildVersion} bsinno/hono-grafana:latest"
+            sh "docker tag ${dockerImageOrgName}/hono-service-messaging:${buildVersion} bsinno/hono-service-messaging:${buildVersion}"
+            sh "docker tag ${dockerImageOrgName}/hono-service-messaging:${buildVersion} bsinno/hono-service-messaging:latest"
+            sh "docker tag ${dockerImageOrgName}/hono-service-auth:${buildVersion} bsinno/hono-service-auth:${buildVersion}"
+            sh "docker tag ${dockerImageOrgName}/hono-service-auth:${buildVersion} bsinno/hono-service-auth:latest"
+            sh "docker tag ${dockerImageOrgName}/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:${buildVersion}"
+            sh "docker tag ${dockerImageOrgName}/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
+            sh "docker tag ${dockerImageOrgName}/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
+            sh "docker tag ${dockerImageOrgName}/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:latest"
+            sh "docker tag ${dockerImageOrgName}/grafana:${buildVersion} bsinno/hono-grafana:${buildVersion}"
+            sh "docker tag ${dockerImageOrgName}/grafana:${buildVersion} bsinno/hono-grafana:latest"
 
             // push to dockerhub
             sh "docker login -u $DOCKERHUB_USER_ID -p $DOCKERHUB_USER_PW"
