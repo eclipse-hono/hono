@@ -48,8 +48,8 @@ node('iothub') {
             sh "docker tag ${dockerImageOrgName}/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
             sh "docker tag ${dockerImageOrgName}/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
             sh "docker tag ${dockerImageOrgName}/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:latest"
-            sh "docker tag ${dockerImageOrgName}/grafana:${buildVersion} bsinno/hono-grafana:${buildVersion}"
-            sh "docker tag ${dockerImageOrgName}/grafana:${buildVersion} bsinno/hono-grafana:latest"
+            sh "docker tag ${dockerImageOrgName}/hono-grafana:${buildVersion} bsinno/hono-grafana:${buildVersion}"
+            sh "docker tag ${dockerImageOrgName}/hono-grafana:${buildVersion} bsinno/hono-grafana:latest"
 
             // push to dockerhub
             sh "docker login -u $DOCKERHUB_USER_ID -p $DOCKERHUB_USER_PW"
