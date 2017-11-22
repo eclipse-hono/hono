@@ -43,7 +43,6 @@
     <profile>
       <id>build-docker-image</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
         <property>
           <name>docker.host</name>
         </property>
@@ -51,25 +50,16 @@
       <build>
         <plugins>
           <plugin>
+            <!--
+              we are only running this plugin in order to automatically create
+              k8s/OpenShift deployment descriptors from src/main/fabric8/*.yml
+             -->
             <groupId>io.fabric8</groupId>
             <artifactId>fabric8-maven-plugin</artifactId>
-            <configuration>
-              <images>
-                <image>
-                  <alias>grafana</alias>
-                  <name>${docker.image.org-name}/hono-grafana:%v</name>
-                  <build>
-                    <dockerFileDir>${project.basedir}/grafana</dockerFileDir>
-                    <args>
-                      <DOWNLOAD_URL>https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_${grafana.version}_amd64.deb</DOWNLOAD_URL>
-                    </args>
-                  </build>
-                </image>
-              </images>
-            </configuration>
           </plugin>
         </plugins>
       </build>
     </profile>
   </profiles>
+
 </project>

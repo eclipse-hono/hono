@@ -10,7 +10,9 @@ spec:
       - name: grafana-data
         emptyDir: {}
       containers:
-      - readinessProbe:
+      - image: grafana/grafana:${grafana.version}
+        name: eclipsehono-grafana
+        readinessProbe:
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 1
