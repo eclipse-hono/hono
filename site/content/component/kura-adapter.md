@@ -154,7 +154,7 @@ The adapter can be run as a Docker container from the command line. The followin
 > -e 'HONO_KURA_CERT_PATH=/run/secrets/kura-adapter-cert.pem' \
 > -e 'HONO_KURA_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_KURA_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> eclipsehono/hono-adapter-kura:latest
+> eclipse/hono-adapter-kura:latest
 ~~~
 
 {{% note %}}

@@ -4,7 +4,7 @@ menu = "main"
 weight = 100
 +++
 
-Eclipse Hono&trade; consists of a set of micro services provided as Docker images. You can either build the Docker images yourself from the source code or you can run Hono by means of the pre-built Docker images available from our [Docker Hub repositories](https://hub.docker.com/u/eclipsehono/).
+Eclipse Hono&trade; consists of a set of micro services provided as Docker images. You can either build the Docker images yourself from the source code or you can run Hono by means of the pre-built Docker images available from our [Docker Hub repositories](https://hub.docker.com/u/eclipse/).
 
 This guide will walk you through building the images and example code from source, starting a Hono instance on your local computer and interacting with Hono via its REST adapter.
 

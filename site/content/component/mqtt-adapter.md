@@ -151,7 +151,7 @@ The MQTT adapter can be run as a Docker container from the command line. The fol
 > -e 'HONO_MQTT_CERT_PATH=/run/secrets/mqtt-adapter-cert.pem' \
 > -e 'HONO_MQTT_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_MQTT_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> eclipsehono/hono-adapter-mqtt-vertx:latest
+> eclipse/hono-adapter-mqtt-vertx:latest
 ~~~
 
 {{% note %}}

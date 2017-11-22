@@ -38,9 +38,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Combination of the original classes
- * {@link io.vertx.ext.web.handler.impl.AuthHandlerImpl}
- * {@link io.vertx.ext.web.handler.impl.AuthorizationAuthHandler}
- * {@link io.vertx.ext.web.handler.impl.BasicAuthHandlerImpl}
+ * <ul>
+ * <li>io.vertx.ext.web.handler.impl.AuthHandlerImpl</li>
+ * <li>io.vertx.ext.web.handler.impl.AuthorizationAuthHandler</li>
+ * <li>io.vertx.ext.web.handler.impl.BasicAuthHandlerImpl</li>
+ * </ul>
  * together with the fix of https://github.com/vert-x3/vertx-web/issues/756
  * to have a workaround until this is fixed in vertx-web
  */

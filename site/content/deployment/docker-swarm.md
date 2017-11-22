@@ -25,7 +25,7 @@ Make sure to replace `my-swarm.my-domain.com:2375` with the host name or IP addr
 
 ## Custom Configuration
 
-The Hono *Auth Server* Docker image (`eclipsehono/hono-service-auth`) contains a default `permissions.json` file from the `services/auth` module which defines the identities and authorizations of clients connecting to any of the Hono service endpoints. During the build process this file is packaged into a JAR file and copied to the Docker image. The *Auth Server* component loads the file from its default resource location (`classpath:/permissions.json` when starting up.
+The Hono *Auth Server* Docker image (`eclipse/hono-service-auth`) contains a default `permissions.json` file from the `services/auth` module which defines the identities and authorizations of clients connecting to any of the Hono service endpoints. During the build process this file is packaged into a JAR file and copied to the Docker image. The *Auth Server* component loads the file from its default resource location (`classpath:/permissions.json` when starting up.
 
 In the remainder of this guide we will employ [Docker Swarm's *Secret*](https://docs.docker.com/engine/swarm/secrets/) mechanism for configuring an *Auth Server* Docker container to load a custom permissions file from a file system resource instead of the default one.
 
@@ -55,7 +55,7 @@ docker service create -l $NS --detach --name hono-service-auth --network $NS \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-service-auth:${project.version}
+  eclipse/hono-service-auth:${project.version}
 echo ... done
 
 ...
@@ -134,7 +134,7 @@ The `swarm_deploy.sh` script already creates and uses Docker secrets for providi
          --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
          --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
          --env LOGGING_CONFIG=classpath:logback-spring.xml \
-         eclipsehono/hono-service-auth:${project.version}
+         eclipse/hono-service-auth:${project.version}
        echo ... done
        ...
        ~~~

@@ -151,7 +151,7 @@ Hono Messaging can be run as a Docker container from the command line. The follo
 > -e 'HONO_MESSAGING_CERT_PATH=/run/secrets/hono-messaging-cert.pem' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
-> eclipsehono/hono-server:latest
+> eclipse/hono-server:latest
 ~~~
 
 {{% note %}}

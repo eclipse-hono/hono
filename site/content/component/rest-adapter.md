@@ -155,7 +155,7 @@ The REST adapter can be run as a Docker container from the command line. The fol
 > -e 'HONO_HTTP_CERT_PATH=/run/secrets/rest-adapter-cert.pem' \
 > -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> eclipsehono/hono-adapter-rest-vertx:latest
+> eclipse/hono-adapter-rest-vertx:latest
 ~~~
 
 {{% note %}}
