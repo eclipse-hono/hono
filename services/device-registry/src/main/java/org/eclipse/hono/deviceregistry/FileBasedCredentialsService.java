@@ -233,6 +233,10 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
             final String authId,
             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
 
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(authId);
+        Objects.requireNonNull(resultHandler);
         final JsonObject data = getSingleCredentials(tenantId, authId, type);
         if (data == null) {
             resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
@@ -313,16 +317,18 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     }
 
     @Override
-    public void add(final String tenantId, final JsonObject otherKeys, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        CredentialsResult<JsonObject> credentialsResult = addCredentialsResult(tenantId, otherKeys);
+    public void add(final String tenantId, final JsonObject credentials, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(credentials);
+        Objects.requireNonNull(resultHandler);
+        CredentialsResult<JsonObject> credentialsResult = addCredentialsResult(tenantId, credentials);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
-    private CredentialsResult<JsonObject> addCredentialsResult(final String tenantId, final JsonObject otherKeys) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(otherKeys);
+    private CredentialsResult<JsonObject> addCredentialsResult(final String tenantId, final JsonObject credentialsToAdd) {
 
-        String authId = otherKeys.getString(CredentialsConstants.FIELD_AUTH_ID);
+        String authId = credentialsToAdd.getString(CredentialsConstants.FIELD_AUTH_ID);
 
         Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
 
@@ -331,18 +337,22 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         // check if credentials already exist with the type and auth-id for the device-id from the payload.
         for (Object credentialsObj: authIdCredentials) {
             JsonObject credentials = (JsonObject) credentialsObj;
-            if (credentials.getString(CredentialsConstants.FIELD_TYPE).equals(otherKeys.getString(CredentialsConstants.FIELD_TYPE))) {
+            if (credentials.getString(CredentialsConstants.FIELD_TYPE).equals(credentialsToAdd.getString(CredentialsConstants.FIELD_TYPE))) {
                 return CredentialsResult.from(HttpURLConnection.HTTP_CONFLICT);
             }
         }
 
-        authIdCredentials.add(otherKeys);
+        authIdCredentials.add(credentialsToAdd);
         dirty = true;
         return CredentialsResult.from(HttpURLConnection.HTTP_CREATED);
     }
 
     @Override
-    public void update(final String tenantId, final JsonObject newCredentials, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    public void update(final String tenantId, final JsonObject newCredentials, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(newCredentials);
+        Objects.requireNonNull(resultHandler);
 
         if (getConfig().isModificationEnabled()) {
             final String authId = newCredentials.getString(CredentialsConstants.FIELD_AUTH_ID);
