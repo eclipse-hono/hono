@@ -184,34 +184,6 @@ public class StandaloneCredentialsApiTest {
     }
 
     /**
-     * Verify that a null type is responded with HTTP_BAD_REQUEST.
-     */
-    @Test(timeout = TIMEOUT)
-    public void testGetCredentialsNullType(final TestContext ctx) {
-        final Async ok = ctx.async();
-
-        credentialsClient.get(null, "notExisting", s -> {
-            ctx.assertTrue(s.succeeded());
-            ctx.assertEquals(s.result().getStatus(), HTTP_BAD_REQUEST);
-            ok.complete();
-        });
-    }
-
-    /**
-     * Verify that a null authId is responded with HTTP_BAD_REQUEST.
-     */
-    @Test(timeout = TIMEOUT)
-    public void testGetCredentialsNullAuthId(final TestContext ctx) {
-        final Async ok = ctx.async();
-
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, null, s -> {
-            ctx.assertTrue(s.succeeded());
-            ctx.assertEquals(s.result().getStatus(), HTTP_BAD_REQUEST);
-            ok.complete();
-        });
-    }
-
-    /**
      * Verify that setting authId and type to existing credentials is responded with HTTP_OK.
      * Check that the payload contains exactly the given type and authId afterwards.
      */
