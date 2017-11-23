@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
@@ -38,8 +37,6 @@ public abstract class AbstractHonoSender {
 
     private RegistrationClient registrationClient;
     private MessageSender messageSender;
-
-    private AtomicInteger dispositionHandlerCalled = new AtomicInteger(0);
 
     private boolean eventMode = false;
 
@@ -82,24 +79,32 @@ public abstract class AbstractHonoSender {
         vertx.close();
     }
 
-    private boolean sendMessageToHono(final int value, final String token) {
+    private Future<Void> sendMessageToHono(final int value, final String token) {
+        Future<Void> result = Future.future();
         final Map<String, Object> properties = new HashMap<>();
         properties.put("my_prop_string", "I'm a string");
         properties.put("my_prop_int", value);
 
+        boolean messageWasSent;
         if (eventMode) {
+            // define a disposition handler to get information about the delivery
             final BiConsumer<Object, ProtonDelivery> myDispositionHandler = (messageId, delivery) -> {
-                dispositionHandlerCalled.incrementAndGet();
                 if (! (delivery.getRemoteState() instanceof Accepted)) {
                     System.err.println("delivery failed for [message ID: " + messageId + ", new remote state: " + delivery.getRemoteState());
                 } else {
                     System.out.println("delivery accepted for [message ID: " + messageId);
                 }
             };
-            return (messageSender.send(DEVICE_ID, properties, "myMessage" + value, "text/plain", token, myDispositionHandler));
+            messageWasSent = messageSender.send(DEVICE_ID, properties, "myMessage" + value, "text/plain", token, myDispositionHandler);
         } else {
-            return (messageSender.send(DEVICE_ID, properties, "myMessage" + value, "text/plain", token));
+            messageWasSent = messageSender.send(DEVICE_ID, properties, "myMessage" + value, "text/plain", token);
         }
+        if (messageWasSent) {
+            result.complete();
+        } else {
+            result.fail("Sender might have no credits, is a consumer attached?");
+        }
+        return result;
     }
 
     private AtomicBoolean getHonoClients(final CountDownLatch countDownLatch) {
@@ -164,13 +169,11 @@ public abstract class AbstractHonoSender {
             }
             messageSenderLatch.countDown();
         });
-        getRegistrationAssertion().compose(token -> {
-            if (sendMessageToHono(value, token)) {
-                senderTracker.complete();
-            } else {
-                senderTracker.fail("Sender might have no credits, is a consumer attached?");
-            }
-        }, senderTracker);
+        getRegistrationAssertion().compose(token ->
+                sendMessageToHono(value, token)
+        ).compose(v -> senderTracker.complete(),
+                senderTracker);
+
         try {
             messageSenderLatch.await();
         } catch (InterruptedException e) {

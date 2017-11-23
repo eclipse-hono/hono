@@ -69,15 +69,17 @@ public abstract class AbstractHonoConsumer {
 
         latch.await();
 
-        if (consumerFuture.succeeded())
+        if (consumerFuture.succeeded()) {
             System.in.read();
+        }
         vertx.close();
     }
 
     private void handleMessage(final Message msg) {
         final Section body = msg.getBody();
-        if (!(body instanceof Data))
+        if (!(body instanceof Data)) {
             return;
+        }
 
         final String content = ((Data) msg.getBody()).getValue().toString();
 
