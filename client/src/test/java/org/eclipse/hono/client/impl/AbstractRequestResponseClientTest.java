@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Test;
@@ -87,20 +88,21 @@ public class AbstractRequestResponseClientTest {
     }
 
     /**
-     * Verifies that the client fails the handler for sending a request message if the link to the
-     * peer has no credit left.
+     * Verifies that the client fails the handler for sending a request message
+     * with a {@link ServerErrorException} if the link to the peer has no credit left.
      * 
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestFailsIfSendQueueFull(final TestContext ctx) {
+    public void testCreateAndSendRequestFailsWithServerErrorExceptionIfSendQueueFull(final TestContext ctx) {
 
         // GIVEN a request-response client with a full send queue
         when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
 
         // WHEN sending a request message
         final Async sendFailure = ctx.async();
-        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(s -> {
+        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ServerErrorException.class.isInstance(t));
             sendFailure.complete();
         }));
 
@@ -173,8 +175,9 @@ public class AbstractRequestResponseClientTest {
     }
 
     /**
-     * Verifies that the client cancels a request for which no response has been received
-     * after a certain amount of time.
+     * Verifies that the client cancels and fails a request for which no response
+     * has been received after a certain amount of time. The request is then
+     * failed with a {@link ServerErrorException}.
      * 
      * @param ctx The vert.x test context.
      */
@@ -194,14 +197,18 @@ public class AbstractRequestResponseClientTest {
             return null;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
         final Async requestFailure = ctx.async();
-        client.createAndSendRequest("request", null, null, ctx.asyncAssertFailure(s -> requestFailure.complete()));
+        client.createAndSendRequest("request", null, null, ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ServerErrorException.class.isInstance(t));
+            requestFailure.complete();
+        }));
 
         // THEN the request handler is failed
         requestFailure.await(1000);
     }
 
     /**
-     * Verifies that a response handler is immediately failed when the sender link is not open (yet).
+     * Verifies that a response handler is immediately failed with a
+     * {@link ServerErrorException} when the sender link is not open (yet).
      * 
      * @param ctx The vert.x test context.
      */
@@ -213,14 +220,18 @@ public class AbstractRequestResponseClientTest {
 
         // WHEN sending a request
         Async requestFailure = ctx.async();
-        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(s -> requestFailure.complete()));
+        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ServerErrorException.class.isInstance(t));
+            requestFailure.complete();
+        }));
 
         // THEN the request fails immediately
         requestFailure.await(1000);
     }
 
     /**
-     * Verifies that a response handler is immediately failed when the receiver link is not open (yet).
+     * Verifies that a response handler is immediately failed with a
+     * {@link ServerErrorException} when the receiver link is not open (yet).
      * 
      * @param ctx The vert.x test context.
      */
@@ -232,7 +243,10 @@ public class AbstractRequestResponseClientTest {
 
         // WHEN sending a request
         Async requestFailure = ctx.async();
-        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(s -> requestFailure.complete()));
+        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ServerErrorException.class.isInstance(t));
+            requestFailure.complete();
+        }));
 
         // THEN the request fails immediately
         requestFailure.await(1000);
