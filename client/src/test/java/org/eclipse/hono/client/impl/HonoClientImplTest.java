@@ -22,6 +22,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
 import org.junit.After;
@@ -89,16 +90,16 @@ public class HonoClientImplTest {
         final Async creationFailure = ctx.async();
         client.getOrCreateRequestResponseClient("registration/tenant", handler -> {
             handler.handle(Future.succeededFuture(mock(RegistrationClient.class)));
-        }, creationAttempt -> {
-            ctx.assertFalse(creationAttempt.succeeded());
+        }, ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ServerErrorException.class.isInstance(t));
             creationFailure.complete();
-        });
-
-        // THEN the concurrent attempt fails immediately without any attempt being made to create another client
-        creationFailure.await(2000);
+        }));
 
         // succeed first creation attempt, thus invoking result handler
         firstClientTracker.complete(mock(RegistrationClient.class));
+
+        // THEN the concurrent attempt fails immediately without any attempt being made to create another client
+        creationFailure.await(2000);
     }
 
     /**
@@ -154,16 +155,16 @@ public class HonoClientImplTest {
         final Async creationFailure = ctx.async();
         client.getOrCreateSender("telemetry/tenant", handler -> {
             handler.handle(Future.succeededFuture(mock(MessageSender.class)));
-        }, creationAttempt -> {
-            ctx.assertFalse(creationAttempt.succeeded());
+        }, ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ServerErrorException.class.isInstance(t));
             creationFailure.complete();
-        });
-
-        // THEN the concurrent attempt fails immediately without any attempt being made to create another sender
-        creationFailure.await(2000);
+        }));
 
         // succeed first creation attempt, thus invoking result handler
         firstSenderTracker.complete(mock(MessageSender.class));
+
+        // THEN the concurrent attempt fails immediately without any attempt being made to create another sender
+        creationFailure.await(2000);
     }
 
     /**

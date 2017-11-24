@@ -29,7 +29,7 @@ public final class FileBasedRegistrationConfigProperties {
      * The default number of devices that can be registered for each tenant.
      */
     public static final int DEFAULT_MAX_DEVICES_PER_TENANT = 100;
-    private static final String DEFAULT_DEVICES_FILENAME = "/home/hono/device-registry/device-identities.json";
+    private static final String DEFAULT_DEVICES_FILENAME = "/var/lib/hono/device-registry/device-identities.json";
     private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
 
     // the name of the file used to persist the registry content

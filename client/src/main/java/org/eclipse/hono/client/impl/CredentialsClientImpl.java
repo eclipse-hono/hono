@@ -123,8 +123,16 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
         });
     }
 
+    /**
+     * Invokes the <em>Get Credentials</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Credentials-API">Credentials API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
     @Override
     public void get(final String type, final String authId, final Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler) {
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(authId);
+        Objects.requireNonNull(resultHandler);
         JsonObject specification = new JsonObject().put(CredentialsConstants.FIELD_TYPE, type).put(CredentialsConstants.FIELD_AUTH_ID, authId);
         createAndSendRequest(OPERATION_GET, specification, resultHandler);
     }

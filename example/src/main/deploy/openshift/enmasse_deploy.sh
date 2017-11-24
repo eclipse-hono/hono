@@ -17,7 +17,17 @@ CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 HONO_HOME=$SCRIPTPATH/../../../..
 
+source $SCRIPTPATH/common.sh
+
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
+
+# creating the directory for Hono Server persistent volume
+if [ ! -d /tmp/hono ]; then
+    mkdir /tmp/hono
+    chmod 777 /tmp/hono
+else
+    echo /tmp/hono already exists!
+fi
 
 # creating Hono persistent volume (admin needed)
 oc login -u system:admin
@@ -25,39 +35,20 @@ oc create -f $SCRIPTPATH/hono-pv.yml
 
 oc login -u developer
 
-# creating new project
-oc new-project hono --description="Open source IoT connectivity" --display-name="Eclipse Hono"
+# use hono project
+oc project hono
+
+echo "Waiting for EnMasse..."
+wait_for_enmasse 7 hono
+
+# create addresses
+curl -X PUT -T addresses.json -H "content-type: application/json" http://$(oc get route restapi -o jsonpath='{.spec.host}')/v1/addresses/default
 
 # starting to deploy Eclipse Hono (developer user)
 echo
 echo "Deploying influxDB & Grafana ..."
 oc create secret generic influxdb-conf --from-file=$CONFIG/influxdb.conf
 oc create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/openshift.yml
-echo ... done
-
-echo Deploying Apache ActiveMQ Artemis Broker ...
-oc create secret generic hono-artemis-conf \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-broker.xml \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-users.properties \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-roles.properties \
-  --from-file=$CONFIG/hono-artemis-jar/etc/login.config \
-  --from-file=$CONFIG/hono-artemis-jar/etc/logging.properties \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis.profile \
-  --from-file=$CERTS/artemisKeyStore.p12 \
-  --from-file=$CERTS/trustStore.jks
-oc create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/openshift.yml
-echo ... done
-
-echo Deploying Qpid Dispatch Router ...
-oc create secret generic hono-dispatch-router-conf \
-  --from-file=$CERTS/qdrouter-key.pem \
-  --from-file=$CERTS/qdrouter-cert.pem \
-  --from-file=$CERTS/trusted-certs.pem \
-  --from-file=$CONFIG/hono-dispatch-router-jar/qpid/qdrouterd-with-broker.json \
-  --from-file=$CONFIG/hono-dispatch-router-jar/sasl/qdrouter-sasl.conf \
-  --from-file=$CONFIG/hono-dispatch-router-jar/sasl/qdrouterd.sasldb
-oc create -f $CONFIG/hono-dispatch-router-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying Authentication Server ...
@@ -86,7 +77,7 @@ oc create secret generic hono-service-messaging-conf \
   --from-file=$CERTS/hono-messaging-cert.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$CONFIG/hono-service-messaging-config.yml
+  --from-file=application.yml=$CONFIG/hono-service-messaging-config-enmasse.yml
 oc create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
@@ -106,15 +97,6 @@ oc create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=application.yml=$CONFIG/hono-adapter-mqtt-vertx-config.yml
 oc create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/openshift.yml
-echo ... done
-
-echo Deploying Kura adapter ...
-oc create secret generic hono-adapter-kura-conf \
-  --from-file=$CERTS/kura-adapter-key.pem \
-  --from-file=$CERTS/kura-adapter-cert.pem \
-  --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$CONFIG/hono-adapter-kura-config.yml
-oc create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED ON OPENSHIFT

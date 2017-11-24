@@ -191,6 +191,11 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
      */
     @Override
     public void assertRegistration(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
+
         getDevice(tenantId, deviceId, getAttempt -> {
             if (getAttempt.failed()) {
                 resultHandler.handle(getAttempt);

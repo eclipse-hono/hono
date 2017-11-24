@@ -8,10 +8,25 @@ spec:
       - name: conf
         secret:
           secretName: ${project.artifactId}-conf
+      initContainers:
+      # we use an init container to populate the registry
+      # with some default credentials
+      - name: copy-example-credentials
+        image: busybox
+        volumeMounts:
+        - name: conf
+          mountPath: /tmp/hono/example-credentials.json
+          subPath: example-credentials.json
+        - name: registry
+          mountPath: /var/lib/hono/device-registry
+        command:
+        - sh
+        - -c
+        - 'cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json'
       containers:
       - volumeMounts:
         - name: registry
-          mountPath: /home/hono/device-registry
+          mountPath: /var/lib/hono/device-registry
         - name: conf
           mountPath: /run/secrets
         env:
@@ -21,3 +36,15 @@ spec:
           value: dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: 8088
+            scheme: HTTP
+          initialDelaySeconds: 180
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8088
+            scheme: HTTP
+          initialDelaySeconds: 10

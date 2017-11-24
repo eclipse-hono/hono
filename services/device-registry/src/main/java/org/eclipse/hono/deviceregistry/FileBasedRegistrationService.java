@@ -19,6 +19,7 @@ import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_ENABLED;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -230,6 +231,9 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
 
     @Override
     public void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
         resultHandler.handle(Future.succeededFuture(getDevice(tenantId, deviceId)));
     }
 
@@ -255,10 +259,17 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     @Override
     public void removeDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
+
         resultHandler.handle(Future.succeededFuture(removeDevice(tenantId, deviceId)));
     }
 
     RegistrationResult removeDevice(final String tenantId, final String deviceId) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
 
         if (getConfig().isModificationEnabled()) {
             final Map<String, JsonObject> devices = identities.get(tenantId);
@@ -276,6 +287,10 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     @Override
     public void addDevice(final String tenantId, final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
+
         resultHandler.handle(Future.succeededFuture(addDevice(tenantId, deviceId, data)));
     }
 
@@ -288,6 +303,9 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
      * @return The outcome of the operation indicating success or failure.
      */
     public RegistrationResult addDevice(final String tenantId, final String deviceId, final JsonObject data) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
 
         JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
         Map<String, JsonObject> devices = getDevicesForTenant(tenantId);
@@ -306,10 +324,17 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     @Override
     public void updateDevice(final String tenantId, final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
+
         resultHandler.handle(Future.succeededFuture(updateDevice(tenantId, deviceId, data)));
     }
 
     RegistrationResult updateDevice(final String tenantId, final String deviceId, final JsonObject data) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
 
         if (getConfig().isModificationEnabled()) {
             JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);

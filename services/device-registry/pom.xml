@@ -10,12 +10,6 @@
   <description>A default device registry for Hono implementing the Device Registration and Credentials APIs.</description>
   <url>https://www.eclipse.org/hono</url>
 
-  <properties>
-    <vertx.health.port>8088</vertx.health.port>
-    <vertx.health.path>/liveness</vertx.health.path>
-    <vertx.health.readiness.path>/readiness</vertx.health.readiness.path>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -62,14 +56,6 @@
                       <port>8443</port>
                       <port>${vertx.health.port}</port>
                     </ports>
-                    <runCmds>
-                      <runCmd>adduser -S -D hono nogroup &amp;&amp; mkdir /home/hono/device-registry &amp;&amp; chown -R hono /home/hono</runCmd>
-                    </runCmds>
-                    <user>hono</user>
-                    <workdir>/home/hono</workdir>
-                    <volumes>
-                      <volume>/home/hono/device-registry</volume>
-                    </volumes>
                     <cmd>
                       <exec>
                         <arg>java</arg>

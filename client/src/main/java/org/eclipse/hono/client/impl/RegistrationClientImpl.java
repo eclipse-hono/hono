@@ -119,33 +119,63 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
         return properties;
     }
 
+    /**
+     * Invokes the <em>Register Device</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
     @Override
     public void register(final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
         createAndSendRequest(ACTION_REGISTER, createDeviceIdProperties(deviceId), data, resultHandler);
     }
 
+    /**
+     * Invokes the <em>Update Device Registration</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
     @Override
     public void update(final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
         createAndSendRequest(ACTION_UPDATE, createDeviceIdProperties(deviceId), data, resultHandler);
     }
 
+    /**
+     * Invokes the <em>Deregister Device</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
     @Override
     public void deregister(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
         createAndSendRequest(ACTION_DEREGISTER, createDeviceIdProperties(deviceId), null, resultHandler);
     }
 
+    /**
+     * Invokes the <em>Get Registration Information</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
     @Override
     public void get(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
         createAndSendRequest(ACTION_GET, createDeviceIdProperties(deviceId), null, resultHandler);
     }
 
+    /**
+     * Invokes the <em>Assert Device Registration</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
     @Override
     public void assertRegistration(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
         createAndSendRequest(ACTION_ASSERT, createDeviceIdProperties(deviceId), null, resultHandler);
     }
 }

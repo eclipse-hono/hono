@@ -4,3 +4,7 @@ spec:
   resources:
     requests:
       storage: 1Mi
+  selector:
+    matchLabels:
+      group: ${project.groupId}
+      project: hono-example

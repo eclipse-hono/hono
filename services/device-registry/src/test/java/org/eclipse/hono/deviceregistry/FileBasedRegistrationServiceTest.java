@@ -321,8 +321,8 @@ public class FileBasedRegistrationServiceTest
     * Verifies that the registry returns 400 when issuing a request with an unsupported action.
     */
    @Test
-   public void testProcessRegisterMessageDetectsUnsupportedAction() {
-       processMessageAndExpectResponse(mockMsg("bumlux"), getServiceReplyAsJson(HTTP_BAD_REQUEST, TENANT, DEVICE));
+   public void testProcessRegisterMessageFailsWithUnsupportedAction() {
+       processMessageAndExpectResponse(mockMsg("unknown-action"), getServiceReplyAsJson(HTTP_BAD_REQUEST, TENANT, DEVICE));
    }
 
    /**

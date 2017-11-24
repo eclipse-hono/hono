@@ -17,8 +17,6 @@ import io.vertx.core.Handler;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 
-import java.net.HttpURLConnection;
-
 /**
  * A client for accessing Hono's Credentials API.
  * <p>
@@ -32,15 +30,23 @@ import java.net.HttpURLConnection;
 public interface CredentialsClient extends RequestResponseClient {
 
     /**
-     * Gets credentials data of a specific type by authId of a device.
-     *
-     * @param type The type of the credentials record.
-     * @param authId The auth-id of the device.
-     * @param resultHandler The handler to invoke with the result of the operation. If credentials are existing for the
-     *         given type and authId, the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
-     *         and the <em>payload</em> contains the details as defined
-     *         here <a href="https://www.eclipse.org/hono/api/Credentials-API/#credentials-format">Credentials Format</a>.
-     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * Gets credentials for a device by type and authentication identifier.
+     * 
+     * @param type The type of credentials to retrieve.
+     * @param authId The authentication identifier used in the credentials to retrieve.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *         <p>
+     *         The handler will be invoked with a succeeded future if a response has
+     *         been received from the credentials service. The <em>status</em> and
+     *         <em>payload</em> properties will contain values as defined in
+     *         <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     *         Get Credentials</a>.
+     *         <p>
+     *         If the request could not be sent to the service or the service did not reply
+     *         within the timeout period, the handler will be invoked with
+     *         a failed future containing a {@link ServerErrorException}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
      */
     void get(String type, String authId, Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler);
 }

@@ -72,6 +72,7 @@ public interface CredentialsService extends Verticle {
      *         <em>payload</em> will contain the credentials.</li>
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void getAll(String tenantId, String deviceId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 

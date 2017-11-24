@@ -17,6 +17,7 @@ CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
+DOCKER_IP=$(docker node inspect self --format '{{ .Status.Addr }}')
 
 echo DEPLOYING ECLIPSE HONO TO DOCKER SWARM
 
@@ -96,22 +97,30 @@ echo ... done
 
 echo
 echo Deploying Device Registry ...
+docker volume create --label project=$NS device-registry
+docker run --rm \
+  --mount type=bind,source=$CONFIG/example-credentials.json,target=/tmp/hono/example-credentials.json \
+  --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
+  busybox sh -c 'cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json'
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
 docker secret create -l project=$NS hono-service-device-registry-config.yml $CONFIG/hono-service-device-registry-config.yml
-docker secret create -l project=$NS example-credentials.json $CONFIG/example-credentials.json
 docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 25671:5671 -p 28080:8080 -p 28443:8443 \
   --secret device-registry-key.pem \
   --secret device-registry-cert.pem \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
   --secret hono-service-device-registry-config.yml \
-  --secret example-credentials.json \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
+  --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
-echo ... done
+
+#echo
+#echo Registering default credentials ...
+#curl -X POST -H 'Content-Type: application/json' --data-binary @$CONFIG/example-credentials.json http://$DOCKER_IP:28080/credentials/DEFAULT_TENANT
+#echo ... done
 
 echo
 echo Deploying Hono Messaging ...

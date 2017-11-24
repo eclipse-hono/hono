@@ -70,11 +70,6 @@
                       <port>8883</port>
                       <port>${vertx.health.port}</port>
                     </ports>
-                    <runCmds>
-                      <runCmd>adduser -S -D hono nogroup</runCmd>
-                    </runCmds>
-                    <user>hono</user>
-                    <workdir>/home/hono</workdir>
                     <cmd>
                       <exec>
                         <arg>java</arg>

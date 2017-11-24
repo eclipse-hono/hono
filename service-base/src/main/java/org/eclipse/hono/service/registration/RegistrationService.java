@@ -36,6 +36,7 @@ public interface RegistrationService extends Verticle {
      *         given ID is registered for the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
      *         and the <em>payload</em> will contain the keys registered for the device.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
@@ -49,6 +50,7 @@ public interface RegistrationService extends Verticle {
      *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
      *         and the <em>payload</em> will contain a JWT token asserting the registration status.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void assertRegistration(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
@@ -57,10 +59,11 @@ public interface RegistrationService extends Verticle {
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID the device should be registered under.
-     * @param otherKeys A map containing additional keys and values that the device can be identified by (within the tenant).
+     * @param otherKeys A map containing additional properties to be registered with the device (may be {@code null}).
      * @param resultHandler The handler to invoke with the result of the operation. If a device with the given ID does not
      *         yet exist for the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_CREATED}.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_CONFLICT}.
+     * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
      */
     void addDevice(String tenantId, String deviceId, JsonObject otherKeys, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
@@ -69,12 +72,13 @@ public interface RegistrationService extends Verticle {
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to update the registration for.
-     * @param otherKeys A map containing additional keys and values that the device can be identified by (within the tenant).
-     *                  The keys provided in this parameter will completely replace the former keys registered for the device.
+     * @param otherKeys A map containing additional properties to be registered with the device (may be {@code null}).
+     *                  The properties provided in this map will completely replace any existing properties registered for the device.
      * @param resultHandler The handler to invoke with the result of the operation. If a device with the given ID exists for
      *         the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain
      *         the keys that had originally been registered for the device.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
      */
     void updateDevice(String tenantId, String deviceId, JsonObject otherKeys, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
@@ -87,6 +91,7 @@ public interface RegistrationService extends Verticle {
      *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain the keys
      *         that had been registered for the removed device.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void removeDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
