@@ -150,7 +150,7 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(connectionHandler);
 
         if (shutdown) {
-            connectionHandler.handle(Future.failedFuture("client was already shutdown"));
+            connectionHandler.handle(Future.failedFuture(new IllegalStateException("client was already shutdown")));
         } else if (isConnected()) {
             LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             connectionHandler.handle(Future.succeededFuture(this));
@@ -176,7 +176,7 @@ public final class HonoClientImpl implements HonoClient {
                             if (shutdown) {
                                 // if client was already shutdown in the meantime we give our best to cleanup connection
                                 shutdownConnection(result -> {});
-                                connectionHandler.handle(Future.failedFuture("client was already shutdown"));
+                                connectionHandler.handle(Future.failedFuture(new IllegalStateException("client was already shutdown")));
                             } else {
                                 connectionHandler.handle(Future.succeededFuture(this));
                             }
@@ -191,7 +191,7 @@ public final class HonoClientImpl implements HonoClient {
     private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler, final Handler<ProtonConnection> disconnectHandler) {
 
         if (clientOptions == null || clientOptions.getReconnectAttempts() == 0) {
-            connectionHandler.handle(Future.failedFuture("failed to connect"));
+            connectionHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
         } else {
             LOG.trace("scheduling re-connect attempt ...");
             // give Vert.x some time to clean up NetClient
@@ -287,7 +287,8 @@ public final class HonoClientImpl implements HonoClient {
             final Handler<Void> connectionFailureHandler = connectionLost -> {
                 // remove lock so that next attempt to open a sender doesn't fail
                 creationLocks.remove(key);
-                resultHandler.handle(Future.failedFuture("connection to server lost"));
+                resultHandler.handle(Future.failedFuture(
+                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost")));
             };
             creationRequests.add(connectionFailureHandler);
             creationLocks.put(key, Boolean.TRUE);
@@ -309,7 +310,7 @@ public final class HonoClientImpl implements HonoClient {
 
         } else {
             LOG.debug("already trying to create a message sender for {}", key);
-            resultHandler.handle(Future.failedFuture("sender link not established yet"));
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         }
     }
 
@@ -350,7 +351,8 @@ public final class HonoClientImpl implements HonoClient {
         // register a handler to be notified if the underlying connection to the server fails
         // so that we can fail the result handler passed in
         final Handler<Void> connectionFailureHandler = connectionLost -> {
-            creationHandler.handle(Future.failedFuture("connection to server lost"));
+            creationHandler.handle(Future.failedFuture(
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost")));
         };
         creationRequests.add(connectionFailureHandler);
 
@@ -407,7 +409,8 @@ public final class HonoClientImpl implements HonoClient {
         // register a handler to be notified if the underlying connection to the server fails
         // so that we can fail the result handler passed in
         final Handler<Void> connectionFailureHandler = connectionLost -> {
-            creationHandler.handle(Future.failedFuture("connection to server lost"));
+            creationHandler.handle(Future.failedFuture(
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost")));
         };
         creationRequests.add(connectionFailureHandler);
 
@@ -472,7 +475,8 @@ public final class HonoClientImpl implements HonoClient {
             final Handler<Void> connectionFailureHandler = connectionLost -> {
                 // remove lock so that next attempt to open a sender doesn't fail
                 creationLocks.remove(key);
-                resultHandler.handle(Future.failedFuture("connection to server lost"));
+                resultHandler.handle(Future.failedFuture(
+                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
             };
             creationRequests.add(connectionFailureHandler);
             creationLocks.put(key, Boolean.TRUE);
@@ -494,7 +498,7 @@ public final class HonoClientImpl implements HonoClient {
 
         } else {
             LOG.debug("already trying to create a client for {}", key);
-            resultHandler.handle(Future.failedFuture("request-response links not established yet"));
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         }
     }
 

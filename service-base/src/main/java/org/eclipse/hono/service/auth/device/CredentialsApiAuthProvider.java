@@ -20,6 +20,7 @@ import javax.annotation.PostConstruct;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -121,7 +122,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     /**
      * Attempts a reconnect for the Hono Credentials client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
      *
-     * @param con The connection that was disonnected.
+     * @param con The connection that was disconnected.
      */
     private void onDisconnectCredentialsService(final ProtonConnection con) {
 
@@ -176,14 +177,16 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
                 client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(), credResultFuture.completer());
                 return credResultFuture;
             }).compose(credResult -> {
-                if (credResult.getStatus() == HttpURLConnection.HTTP_OK) {
+                int status = credResult.getStatus();
+                if (status == HttpURLConnection.HTTP_OK) {
                     CredentialsObject payload = credResult.getPayload();
                     result.complete(payload);
-                } else if (credResult.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, String.format("no credentials found for device [tenant: %s, type: %s, authId: %s]",
-                            deviceCredentials.getTenantId(), deviceCredentials.getType(), deviceCredentials.getAuthId())));
+                } else if (status == HttpURLConnection.HTTP_NOT_FOUND) {
+                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
+                } else if (status >= 400 && status < 500){
+                    result.fail(new ClientErrorException(status, "cannot retrieve credentials"));
                 } else {
-                    result.fail(String.format("cannot retrieve credentials [status: %d]", credResult.getStatus()));
+                    result.fail(new ServerErrorException(status, "cannot retrieve credentials"));
                 }
             }, result);
         }
@@ -205,7 +208,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
             if (deviceCredentials.validate(credentialsOnRecord)) {
                 validationResult.complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
             } else {
-                validationResult.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "credentials invalid - not validated"));
+                validationResult.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "invalid credentials"));
             }
         }, validationResult);
     }
@@ -215,7 +218,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
 
         DeviceCredentials credentials = getCredentials(Objects.requireNonNull(authInfo));
         if (credentials == null) {
-            resultHandler.handle(Future.failedFuture("bad credentials"));
+            resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials")));
         } else {
             authenticate(credentials, s -> {
                 if (s.succeeded()) {

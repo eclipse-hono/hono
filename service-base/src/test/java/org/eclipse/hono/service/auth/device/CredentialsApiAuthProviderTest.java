@@ -15,11 +15,17 @@ package org.eclipse.hono.service.auth.device;
 
 import static org.mockito.Mockito.*;
 
+import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
+
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
@@ -42,6 +48,12 @@ public class CredentialsApiAuthProviderTest {
     private HonoClient honoClient;
     private CredentialsClient credentialsClient;
     private Vertx vertx;
+
+    /**
+     * Time out all test after 2 secs.
+     */
+    @Rule
+    public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
 
     /**
      * Sets up the fixture.
@@ -87,11 +99,29 @@ public class CredentialsApiAuthProviderTest {
         }).when(credentialsClient).get(anyString(), anyString(), any(Handler.class));
         Async authenticate = ctx.async();
         provider.authenticate(UsernamePasswordCredentials.create("user@TENANT", "pwd", false), ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(t,  reportedException);
+            ctx.assertEquals(t, reportedException);
+            authenticate.complete();
+        }));
+    }
+
+    /**
+     * Verifies that the auth provider fails an authentication request with a 401
+     * {@code ClientErrorException} if the credentials cannot be parsed.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAuthenticateFailsWith401ForMalformedCredentials(final TestContext ctx) {
+
+        // WHEN trying to authenticate using malformed credentials
+        // that do not contain a tenant
+        final JsonObject authInfo = new JsonObject().put("username", "no-tenant").put("password", "secret");
+        Async authenticate = ctx.async();
+        provider.authenticate(authInfo, ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
             authenticate.complete();
         }));
 
-        authenticate.await(2000);
+        // THEN authentication fails with a client error
     }
-
 }
