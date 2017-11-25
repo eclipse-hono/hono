@@ -12,6 +12,7 @@
 package org.eclipse.hono.messaging;
 
 import org.eclipse.hono.service.AbstractApplication;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +77,19 @@ public class HonoMessagingApplication extends AbstractApplication {
             getVertx().deployVerticle((Verticle) authenticationService, result.completer());
         }
         return result;
+    }
+
+    /**
+     * Registers any additional health checks that the service implementation components provide.
+     * 
+     * @return A succeeded future.
+     */
+    @Override
+    protected Future<Void> postRegisterServiceVerticles() {
+        if (HealthCheckProvider.class.isInstance(authenticationService)) {
+            registerHealthchecks((HealthCheckProvider) authenticationService);
+        }
+        return Future.succeededFuture();
     }
 
     /**
