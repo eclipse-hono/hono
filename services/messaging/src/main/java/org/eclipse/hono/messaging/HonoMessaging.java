@@ -11,32 +11,23 @@
  */
 package org.eclipse.hono.messaging;
 
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
-import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.*;
 
-import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.service.auth.AuthenticationConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.Future;
-
-import java.util.Objects;
 
 /**
  * Hono Messaging is an AMQP 1.0 container that provides nodes for uploading <em>Telemetry</em> and
  * <em>Event</em> messages.
  */
 public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProperties> {
-
-    private ConnectionFactory authenticationService;
 
     @Override
     protected String getServiceName() {
@@ -47,19 +38,6 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
     @Override
     public void setConfig(final HonoMessagingConfigProperties configuration) {
         setSpecificConfig(configuration);
-    }
-
-    /**
-     * Sets the factory to use for creating an AMQP 1.0 connection to
-     * the Authentication service.
-     *
-     * @param factory The factory.
-     * @throws NullPointerException if factory is {@code null}.
-     */
-    @Autowired
-    @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
-    public void setAuthenticationServiceConnectionFactory(final ConnectionFactory factory) {
-        authenticationService = Objects.requireNonNull(factory);
     }
 
     @Override
@@ -112,21 +90,6 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
         for (AmqpEndpoint ep : endpoints()) {
             ep.registerReadinessChecks(handler);
         }
-        handler.register("authentication-service-connection", status -> {
-            if (authenticationService == null) {
-                status.tryComplete(Status.KO(new JsonObject().put("error", "no connection factory set for Authentication service")));
-            } else {
-                LOG.debug("checking connection to Authentication service");
-                authenticationService.connect(null, null, null, s -> {
-                    if (s.succeeded()) {
-                        s.result().close();
-                        status.tryComplete(Status.OK());
-                    } else {
-                        status.tryComplete(Status.KO(new JsonObject().put("error", "cannot connect to Authentication service")));
-                    }
-                });
-            }
-        });
     }
 
     /**
