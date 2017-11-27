@@ -363,6 +363,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             }
         };
         adapter.setConfig(config);
+        adapter.setMetrics(new MqttAdapterMetrics());
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationClient);
         adapter.setCredentialsAuthProvider(credentialsAuthProvider);
