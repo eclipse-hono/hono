@@ -19,6 +19,10 @@ import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.*;
 /**
  * Example base class for consuming data from Hono.
  * <p>
+ * This class implements all necessary code to get Hono's messaging consumer client running.
+ * The code consumes data until it receives
+ * any input on it's console (which finishes it and closes vertx).
+ * <p>
  * By default, this class consumes telemetry data. This can be changed to event data by setting
  * {@link HonoConsumerBase#setEventMode(boolean)} to true.
  */
@@ -31,6 +35,14 @@ public class HonoConsumerBase {
 
     private boolean eventMode = false;
 
+    /**
+     * The consumer needs one connection to the AMQP 1.0 messaging network from which it can consume data.
+     * <p>
+     * The client for receiving data is instantiated here.
+     * <p>
+     * NB: if you want to integrate this code with your own software, it might be necessary to copy the truststore to
+     * your project as well and adopt the file path.
+     */
     public HonoConsumerBase() {
         honoClient = new HonoClientImpl(vertx,
                 ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
@@ -44,6 +56,11 @@ public class HonoConsumerBase {
                         .build());
     }
 
+    /**
+     * Initiate the connection and set the message handling method to treat data that is received.
+     *
+     * @throws Exception Thrown if the latch is interrupted during waiting or if the read from System.in throws an IOException.
+     */
     protected void consumeData() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final Future<MessageConsumer> consumerFuture = Future.future();
@@ -78,6 +95,12 @@ public class HonoConsumerBase {
         vertx.close();
     }
 
+    /**
+     * Handler method for a Message from Hono that was received as telemetry or event data.
+     * <p>
+     * The payload, the content-type and the application properties will be printed to stdout.
+     * @param msg The message that was received.
+     */
     private void handleMessage(final Message msg) {
         final Section body = msg.getBody();
         if (!(body instanceof Data)) {
@@ -98,11 +121,21 @@ public class HonoConsumerBase {
         System.out.println(sb.toString());
     }
 
+    /**
+     * Gets if event data or telemetry data is consumed.
+     *
+     * @return True if only event data is consumed, false if only telemetry data is consumed.
+     */
     public boolean isEventMode() {
         return eventMode;
     }
 
-    public void setEventMode(boolean eventMode) {
-        this.eventMode = eventMode;
+    /**
+     * Sets the consumer to consume event data or telemetry data.
+     *
+     * @param value The new value for the event mode.
+     */
+    public void setEventMode(boolean value) {
+        this.eventMode = value;
     }
 }
