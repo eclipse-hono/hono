@@ -100,9 +100,9 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
      */
     protected void onLinkDetach(final ProtonReceiver client, final ErrorCondition error) {
         if (error == null) {
-            logger.debug("closing proton receiver for client [{}]", MessageHelper.getLinkName(client));
+            logger.debug("closing proton receiver for client [{}]", client.getName());
         } else {
-            logger.debug("closing proton receiver for client [{}]: {}", MessageHelper.getLinkName(client), error.getDescription());
+            logger.debug("closing proton receiver for client [{}]: {}", client.getName(), error.getDescription());
         }
         client.close();
     }

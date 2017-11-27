@@ -335,16 +335,6 @@ public final class MessageHelper {
         }
     }
 
-    public static String getLinkName(final ProtonLink<?> link) {
-        if (link instanceof ProtonReceiverImpl) {
-            return ((ProtonReceiverImpl) link).getName();
-        } else if (link instanceof ProtonSenderImpl) {
-            return ((ProtonSenderImpl) link).getName();
-        } else {
-            return "unknown";
-        }
-    }
-
     /**
      * Encodes the given ID object to JSON representation. Supported types for AMQP 1.0 correlation/messageIds are
      * String, UnsignedLong, UUID and Binary.
