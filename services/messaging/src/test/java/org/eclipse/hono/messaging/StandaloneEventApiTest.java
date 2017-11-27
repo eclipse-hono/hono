@@ -92,6 +92,7 @@ public class StandaloneEventApiTest {
         eventEndpoint.setMetrics(mock(MessagingMetrics.class));
         eventEndpoint.setEventAdapter(downstreamAdapter);
         eventEndpoint.setRegistrationAssertionValidator(assertionHelper);
+        eventEndpoint.setConfiguration(configProperties);
         server.addEndpoint(eventEndpoint);
 
         final Future<HonoClient> setupTracker = Future.future();

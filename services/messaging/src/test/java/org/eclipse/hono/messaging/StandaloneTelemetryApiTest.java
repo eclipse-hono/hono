@@ -83,6 +83,7 @@ public class StandaloneTelemetryApiTest {
         telemetryEndpoint.setMetrics(mock(MessagingMetrics.class));
         telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
         telemetryEndpoint.setRegistrationAssertionValidator(assertionHelper);
+        telemetryEndpoint.setConfiguration(configProperties);
         server.addEndpoint(telemetryEndpoint);
 
         final Future<HonoClient> setupTracker = Future.future();
