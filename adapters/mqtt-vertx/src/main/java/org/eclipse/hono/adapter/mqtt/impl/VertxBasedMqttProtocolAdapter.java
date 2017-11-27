@@ -29,28 +29,6 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  */
 public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> {
 
-    private MqttAdapterMetrics metrics;
-
-    /**
-     * Sets the metrics for this service
-     *
-     * @param metrics The metrics
-     */
-    @Autowired
-    public final void setMetrics(final MqttAdapterMetrics metrics) {
-        this.metrics = metrics;
-    }
-
-    @Override
-    protected void onMessageSent(final ResourceIdentifier downstreamAddress) {
-        metrics.incrementProcessedMqttMessages(downstreamAddress.getEndpoint(), downstreamAddress.getTenantId());
-    }
-
-    @Override
-    protected void onMessageUndeliverable(final ResourceIdentifier downstreamAddress) {
-        metrics.incrementUndeliverableMqttMessages(downstreamAddress.getEndpoint(), downstreamAddress.getTenantId());
-    }
-
     @Override
     protected Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice) {
 

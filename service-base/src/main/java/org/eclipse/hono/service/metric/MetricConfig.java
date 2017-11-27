@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -66,7 +67,7 @@ public class MetricConfig {
 
     @Bean
     @ConditionalOnProperty(prefix = "hono.metric.jvm", name = "memory", havingValue = "true")
-    public MemoryUsageGaugeSet jvmMetricsMemory(final MetricRegistry metricRegistry) {
+    public MemoryUsageGaugeSet jvmMetricsMemory() {
         LOG.info("metrics - jvm/memory activated");
         return metricRegistry.register(prefix + ".jvm.memory", new MemoryUsageGaugeSet());
     }

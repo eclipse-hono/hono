@@ -13,14 +13,14 @@
 
 package org.eclipse.hono.adapter.kura;
 
-import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
 import org.springframework.stereotype.Component;
 
 /**
  * Metrics for the Kura adapter
  */
 @Component
-public class KuraAdapterMetrics extends Metrics {
+public class KuraAdapterMetrics extends MqttAdapterMetrics {
 
     private static final String SERVICE_PREFIX = "hono.kura";
 
@@ -28,13 +28,4 @@ public class KuraAdapterMetrics extends Metrics {
     protected String getPrefix() {
         return SERVICE_PREFIX;
     }
-
-    void incrementProcessedMqttMessages(final String resourceId, final String tenantId) {
-        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + mergeAsMetric(resourceId,tenantId) + PROCESSED);
-    }
-
-    void incrementUndeliverableMqttMessages(final String resourceId, final String tenantId) {
-        counterService.increment(SERVICE_PREFIX + MESSAGES + mergeAsMetric(resourceId,tenantId) + UNDELIVERABLE);
-    }
-
 }

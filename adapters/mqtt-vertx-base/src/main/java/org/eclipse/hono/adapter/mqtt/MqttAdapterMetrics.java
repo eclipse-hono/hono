@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.mqtt.impl;
+package org.eclipse.hono.adapter.mqtt;
 
 import org.eclipse.hono.service.metric.Metrics;
 import org.springframework.stereotype.Component;
@@ -29,11 +29,18 @@ public class MqttAdapterMetrics extends Metrics {
     }
 
     void incrementProcessedMqttMessages(final String resourceId, final String tenantId) {
-        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + mergeAsMetric(resourceId,tenantId) + PROCESSED);
+        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId,tenantId) + PROCESSED);
     }
 
     void incrementUndeliverableMqttMessages(final String resourceId, final String tenantId) {
-        counterService.increment(SERVICE_PREFIX + MESSAGES + mergeAsMetric(resourceId,tenantId) + UNDELIVERABLE);
+        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId,tenantId) + UNDELIVERABLE);
     }
 
+    void incrementMqttConnections(final String tenantId) {
+        counterService.increment(getPrefix() + CONNECTIONS + tenantId);
+    }
+
+    void decrementMqttConnections(final String tenantId) {
+        counterService.increment(getPrefix() + CONNECTIONS + tenantId);
+    }
 }
