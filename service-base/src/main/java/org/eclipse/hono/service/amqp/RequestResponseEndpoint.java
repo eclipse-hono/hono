@@ -147,7 +147,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             receiver.close();
         } else {
 
-            logger.debug("establishing link for receiving messages from client [{}]", MessageHelper.getLinkName(receiver));
+            logger.debug("establishing link for receiving messages from client [{}]", receiver.getName());
             receiver
                     .setQoS(ProtonQoS.AT_LEAST_ONCE)
                     .setAutoAccept(true) // settle received messages if the handler succeeds
@@ -254,7 +254,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                     String.format("link target must not be null but must have the following format %s/<tenant>/<reply-address>", getName())));
             sender.close();
         } else {
-            logger.debug("establishing sender link with client [{}]", MessageHelper.getLinkName(sender));
+            logger.debug("establishing sender link with client [{}]", sender.getName());
             final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(replyToAddress.toString(), message -> {
                 // TODO check for correct session here...?
                 logger.trace("forwarding reply to client: {}", message.body());
@@ -265,8 +265,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             sender.closeHandler(senderClosed -> {
                 replyConsumer.unregister();
                 senderClosed.result().close();
-                final String linkName = MessageHelper.getLinkName(sender);
-                logger.debug("receiver closed link [{}], removing associated event bus consumer [{}]", linkName, replyConsumer.address());
+                logger.debug("receiver closed link [{}], removing associated event bus consumer [{}]", sender.getName(), replyConsumer.address());
             });
 
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
