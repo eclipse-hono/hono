@@ -215,7 +215,7 @@ public class MessageForwardingEndpointTest {
 
     private MessageForwardingEndpoint<ServiceConfigProperties> getEndpoint(final boolean passFormalVerification) {
 
-        MessageForwardingEndpoint endpoint = new MessageForwardingEndpoint<ServiceConfigProperties>(vertx) {
+        MessageForwardingEndpoint<ServiceConfigProperties> endpoint = new MessageForwardingEndpoint<ServiceConfigProperties>(vertx) {
 
             @Override
             public String getName() {
