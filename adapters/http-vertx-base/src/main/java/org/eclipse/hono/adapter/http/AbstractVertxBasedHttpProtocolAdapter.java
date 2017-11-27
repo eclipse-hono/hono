@@ -15,6 +15,9 @@ package org.eclipse.hono.adapter.http;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -22,6 +25,7 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.JwtHelper;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -544,7 +548,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String contentType, final String token, final MessageSender sender, final String tenant,
             final String endpointName) {
 
-        if (sender.send(deviceId, payload.getBytes(), contentType, token)) {
+        final Message msg = newMessage(String.format("%s/%s", endpointName, tenant), deviceId, contentType, payload, token);
+        if (sender.send(msg)) {
             LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                     tenant, deviceId, endpointName);
             metrics.incrementProcessedHttpMessages(endpointName, tenant);
@@ -586,4 +591,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
     }
 
+    private Message newMessage(
+            final String address,
+            final String deviceId,
+            final String contentType,
+            final Buffer payload,
+            final String registrationAssertion) {
+
+        final Message message = newMessage(address, deviceId, contentType);
+        message.setBody(new Data(new Binary(payload.getBytes())));
+        MessageHelper.addRegistrationAssertion(message, registrationAssertion);
+        if (getConfig().isJmsVendorPropsEnabled()) {
+            MessageHelper.addJmsVendorProperties(message);
+        }
+        return message;
+    }
 }

@@ -29,19 +29,23 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonLink;
-import io.vertx.proton.impl.ProtonReceiverImpl;
-import io.vertx.proton.impl.ProtonSenderImpl;
 
 /**
  * Utility methods for working with Proton {@code Message}s.
  *
  */
 public final class MessageHelper {
+
+    /**
+     * The name of the AMQP 1.0 message annotation that is used to indicate the type of
+     * the <em>correlation-id</em>.
+     */
+    public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID = "x-opt-app-correlation-id";
 
     /**
      * The name of the AMQP 1.0 message application property containing the id of the device that has reported the data
@@ -75,19 +79,37 @@ public final class MessageHelper {
      */
     public static final String SYS_PROPERTY_CORRELATION_ID         = "correlation-id";
 
-    public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID = "x-opt-app-correlation-id";
-
+    /**
+     * The {@code JMS_AMQP_CONTENT_ENCODING} vendor property name.
+     */
+    public static final String JMS_VENDOR_PROPERTY_CONTENT_ENCODING = "JMS_AMQP_CONTENT_ENCODING";
+    /**
+     * The {@code JMS_AMQP_CONTENT_TYPE} vendor property name.
+     */
+    public static final String JMS_VENDOR_PROPERTY_CONTENT_TYPE     = "JMS_AMQP_CONTENT_TYPE";
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
 
     private MessageHelper() {
     }
 
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_ID} application property.
+     * 
+     * @param msg The message.
+     * @return The property value or {@code null} if not set.
+     */
     public static String getDeviceId(final Message msg) {
         Objects.requireNonNull(msg);
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_ID, String.class);
     }
 
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_TENANT_ID} application property.
+     * 
+     * @param msg The message.
+     * @return The property value or {@code null} if not set.
+     */
     public static String getTenantId(final Message msg) {
         Objects.requireNonNull(msg);
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID, String.class);
@@ -139,11 +161,23 @@ public final class MessageHelper {
         return assertion;
     }
 
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_ID} annotation.
+     * 
+     * @param msg The message.
+     * @return The annotation value or {@code null} if not set.
+     */
     public static String getDeviceIdAnnotation(final Message msg) {
         Objects.requireNonNull(msg);
         return getAnnotation(msg, APP_PROPERTY_DEVICE_ID, String.class);
     }
 
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_TENANT_ID} annotation.
+     * 
+     * @param msg The message.
+     * @return The annotation value or {@code null} if not set.
+     */
     public static String getTenantIdAnnotation(final Message msg) {
         Objects.requireNonNull(msg);
         return getAnnotation(msg, APP_PROPERTY_TENANT_ID, String.class);
@@ -162,6 +196,15 @@ public final class MessageHelper {
         return value == null ? false : value;
     }
 
+    /**
+     * Gets the value of a specific <em>application property</em>.
+     * 
+     * @param props The application properties to retrieve the value from.
+     * @param name The property name.
+     * @param type The expected value type.
+     * @return The value or {@code null} if the properties do not contain a value of
+     *         the expected type for the given name.
+     */
     @SuppressWarnings("unchecked")
     public static <T> T getApplicationProperty(final ApplicationProperties props, final String name, final Class<T> type) {
         if (props == null) {
@@ -222,10 +265,26 @@ public final class MessageHelper {
         return null;
     }
 
+    /**
+     * Adds a tenant ID to a message's <em>application properties</em>.
+     * <p>
+     * The name of the application property is {@link #APP_PROPERTY_TENANT_ID}.
+     * 
+     * @param msg The message.
+     * @param tenantId The tenant identifier to add.
+     */
     public static void addTenantId(final Message msg, final String tenantId) {
         addProperty(msg, APP_PROPERTY_TENANT_ID, tenantId);
     }
 
+    /**
+     * Adds a device ID to a message's <em>application properties</em>.
+     * <p>
+     * The name of the application property is {@link #APP_PROPERTY_DEVICE_ID}.
+     * 
+     * @param msg The message.
+     * @param deviceId The device identifier to add.
+     */
     public static void addDeviceId(final Message msg, final String deviceId) {
         addProperty(msg, APP_PROPERTY_DEVICE_ID, deviceId);
     }
@@ -294,6 +353,28 @@ public final class MessageHelper {
     }
 
     /**
+     * Adds JMS vendor properties defined by <a href="">AMQP JMS Mapping 1.0</a> as AMQP 1.0
+     * application properties to a given message.
+     * <p>
+     * The following vendor properties are added (if the messages has a corresponding
+     * non-null value set):
+     * <ul>
+     * <li>{@link #JMS_VENDOR_PROPERTY_CONTENT_TYPE}</li>
+     * <li>{@link #JMS_VENDOR_PROPERTY_CONTENT_ENCODING}</li>
+     * </ul>
+     *
+     * @param msg the message to add the vendor properties to.
+     */
+    public static void addJmsVendorProperties(final Message msg) {
+        if (!StringUtils.isEmpty(msg.getContentType())) {
+            MessageHelper.addProperty(msg, JMS_VENDOR_PROPERTY_CONTENT_TYPE, msg.getContentType());
+        }
+        if (!StringUtils.isEmpty(msg.getContentEncoding())) {
+            MessageHelper.addProperty(msg, JMS_VENDOR_PROPERTY_CONTENT_ENCODING, msg.getContentEncoding());
+        }
+    }
+
+    /**
      * Adds a value for a symbol to an AMQP 1.0 message's <em>annotations</em>.
      * 
      * @param msg the message to add the symbol to.
@@ -338,8 +419,9 @@ public final class MessageHelper {
     /**
      * Encodes the given ID object to JSON representation. Supported types for AMQP 1.0 correlation/messageIds are
      * String, UnsignedLong, UUID and Binary.
-     * @param id the id to encode to JSON
-     * @return a JsonObject containing the JSON represenatation
+     * 
+     * @param id The identifier to encode to JSON
+     * @return A JsonObject containing the JSON representation of the identifier.
      * @throws IllegalArgumentException if the type is not supported
      */
     public static JsonObject encodeIdToJson(final Object id) {
