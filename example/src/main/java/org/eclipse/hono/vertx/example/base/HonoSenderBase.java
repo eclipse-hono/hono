@@ -244,11 +244,21 @@ public class HonoSenderBase {
         return result;
     }
 
+    /**
+     * Gets if event data or telemetry data is sent.
+     *
+     * @return True if only event data is sent, false if only telemetry data is sent.
+     */
     public boolean isEventMode() {
         return eventMode;
     }
 
-    public void setEventMode(boolean eventMode) {
-        this.eventMode = eventMode;
+    /**
+     * Sets the sender to send event data or telemetry data.
+     *
+     * @param value The new value for the event mode.
+     */
+    public void setEventMode(boolean value) {
+        this.eventMode = value;
     }
 }
