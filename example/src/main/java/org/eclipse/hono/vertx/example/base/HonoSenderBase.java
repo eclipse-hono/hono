@@ -24,9 +24,15 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.*;
 
 /**
- * Abstract example base class for sending data to Hono.
+ * Example base class for sending data to Hono.
+ * <p>
+ * This class implements all necessary code to get Hono's client running. It sends data 50 times
+ * in sequence and shows the necessary programming patterns for that.
+ * <p>
+ * By default, this class sends telemetry data. This can be changed to event data by setting
+ * {@link HonoSenderBase#setEventMode(boolean)} to true.
  */
-public abstract class AbstractHonoSender {
+public class HonoSenderBase {
     public static final int COUNT = 50;
     public static final String HONO_CLIENT_USER = "hono-client@HONO";
     public static final String HONO_CLIENT_PASSWORD = "secret";
@@ -40,7 +46,19 @@ public abstract class AbstractHonoSender {
 
     private boolean eventMode = false;
 
-    public AbstractHonoSender() {
+    /**
+     * The sender needs two connections to Hono:
+     * <ul>
+     * <li>one to HonoMessaging (to send data downstream),
+     * <li>and one to Hono's Device Registry (to obtain a registration assertion that needs to be sent along with the data).
+     * </ul>
+     * <p>
+     * These clients are instantiated here.
+     * <p>
+     * NB: if you want to integrate this code with your own software, it might be necessary to copy the truststore to
+     * your project as well and adopt the file path.
+     */
+    public HonoSenderBase() {
         honoMessagingClient = new HonoClientImpl(vertx,
                 ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
                         .vertx(vertx)
@@ -63,22 +81,40 @@ public abstract class AbstractHonoSender {
                         .build());
     }
 
-    protected void sendData() throws Exception {
+    /**
+     * Send data to HonoMessaging {@link HonoSenderBase#COUNT} times in a sequence.
+     * First all Hono clients need to be connected before data can be sent.
+     *
+     * @throws InterruptedException If the used latch was interrupted during waiting.
+     */
+    protected void sendData() throws InterruptedException {
+        // use a latch to wait for the Hono clients to be connected.
         final CountDownLatch latch = new CountDownLatch(1);
 
         final AtomicBoolean clientsCreated = getHonoClients(latch);
 
         latch.await();
 
+        // check if the clients were created properly
         if (clientsCreated.get()) {
+            // then send single messages sequentially in a loop
             IntStream.range(0, COUNT).forEach(value -> {
                 handleSingleMessage(value);
             });
         }
 
+        // finally close down vertx.
         vertx.close();
     }
 
+    /**
+     * Use the message sender of Hono that was provided by the Hono client to send data downstream.
+     *
+     * @param value The int value that is combined with a string and send downstream.
+     * @param token The registration assertion that was retrieved for the device to let HonoMessaging verify the
+     *              authorization to send data.
+     * @return A Future that is completed after the message was sent.
+     */
     private Future<Void> sendMessageToHono(final int value, final String token) {
         Future<Void> result = Future.future();
         final Map<String, Object> properties = new HashMap<>();
@@ -107,6 +143,13 @@ public abstract class AbstractHonoSender {
         return result;
     }
 
+    /**
+     * Get both Hono clients and connect them to Hono's microservices.
+     *
+     * @param countDownLatch The latch to count down as soon as the clients are created.
+     *
+     * @return The result of the creation and connection of the Hono clients.
+     */
     private AtomicBoolean getHonoClients(final CountDownLatch countDownLatch) {
         // we need two clients to get it working, define futures for them
         final Future<RegistrationClient> registrationClientTracker = getRegistrationClient();
@@ -180,6 +223,10 @@ public abstract class AbstractHonoSender {
         }
     }
 
+    /**
+     * Get the registration assertion for the device that needs to be sent along with the data downstream to HonoMessaging.
+     * @return The assertion inside the Future if it was successful, the error reason inside the Future if it failed.
+     */
     private Future<String> getRegistrationAssertion() {
         final Future<String> result = Future.future();
         final Future<RegistrationResult> tokenTracker = Future.future();

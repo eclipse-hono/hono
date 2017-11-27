@@ -17,9 +17,12 @@ import io.vertx.proton.ProtonClientOptions;
 import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.*;
 
 /**
- * Abstract example base class for consuming data from Hono.
+ * Example base class for consuming data from Hono.
+ * <p>
+ * By default, this class consumes telemetry data. This can be changed to event data by setting
+ * {@link HonoConsumerBase#setEventMode(boolean)} to true.
  */
-public abstract class AbstractHonoConsumer {
+public class HonoConsumerBase {
     public static final String HONO_CLIENT_USER = "consumer@HONO";
     public static final String HONO_CLIENT_PASSWORD = "verysecret";
 
@@ -28,7 +31,7 @@ public abstract class AbstractHonoConsumer {
 
     private boolean eventMode = false;
 
-    public AbstractHonoConsumer() {
+    public HonoConsumerBase() {
         honoClient = new HonoClientImpl(vertx,
                 ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
                         .vertx(vertx)
