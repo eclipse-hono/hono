@@ -46,7 +46,6 @@ import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
-import io.vertx.proton.ProtonHelper;
 
 /**
  * A base class for implementing Vert.x based Hono protocol adapters
@@ -579,28 +578,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         } else {
             LOG.trace("client has already closed connection");
         }
-    }
-
-    /**
-     * Creates a new AMQP 1.0 message for an address, device ID and content type.
-     * 
-     * @param address The receiver of the message.
-     * @param deviceId The identifier of the device that the message originates from.
-     * @param contentType The content type describing the message's payload.
-     * @return The message.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected static Message newMessage(final String address, final String deviceId, final String contentType) {
-
-        Objects.requireNonNull(address);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(contentType);
-
-        final Message msg = ProtonHelper.message();
-        msg.setAddress(address.toString());
-        MessageHelper.addDeviceId(msg, deviceId);
-        msg.setContentType(contentType);
-        return msg;
     }
 
     /**
