@@ -17,7 +17,7 @@ import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 
 
 /**
- * Configuration properties for a Hono server.
+ * Configuration properties for Hono Messaging.
  *
  */
 public class HonoMessagingConfigProperties extends ServiceConfigProperties {
