@@ -36,6 +36,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -507,12 +508,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private void addProperties(final MqttPublishMessage messageFromDevice, final Message message, final String registrationAssertion) {
 
-        if (message.getContentType() == null) {
+        if (StringUtils.isEmpty(message.getContentType())) {
             message.setContentType(CONTENT_TYPE_OCTET_STREAM);
         }
         message.setBody(new Data(new Binary(messageFromDevice.payload().getBytes())));
         MessageHelper.addRegistrationAssertion(message, registrationAssertion);
         MessageHelper.addProperty(message, PROPERTY_HONO_ORIG_ADDRESS, messageFromDevice.topicName());
+        if (getConfig().isJmsVendorPropsEnabled()) {
+            MessageHelper.addJmsVendorProperties(message);
+        }
     }
 
     private Future<String> getRegistrationAssertion(final MqttEndpoint endpoint, final String tenantId, final String deviceId) {
