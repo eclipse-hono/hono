@@ -35,6 +35,7 @@ abstract public class Metrics {
     protected static final String PROCESSED     = ".processed";
     protected static final String DISCARDED     = ".discarded";
     protected static final String UNDELIVERABLE = ".undeliverable";
+    protected static final String CONNECTIONS   = ".connections.";
 
     protected GaugeService   gaugeService   = NullGaugeService.getInstance();
     protected CounterService counterService = NullCounterService.getInstance();
@@ -76,11 +77,22 @@ abstract public class Metrics {
         this.counterService = counterService;
     }
 
+    /**
+     * Replaces '/' with '.' to transform e.g. <code>telemetry/DEFAULT_TENANT</code> to <code>telemetry.DEFAULT_TENANT</code>
+     *
+     * @param address The address with slashes to transform in an address with points
+     * @return The address with points
+     */
     protected String normalizeAddress(final String address) {
         Objects.requireNonNull(address);
         return address.replace('/', '.');
     }
 
+    /**
+     * Merge the given address parts as a full string, seperated by '.'
+     * @param parts The address parts
+     * @return The full address, separated by points
+     */
     protected String mergeAsMetric(final String... parts ) {
         return String.join(".",parts);
     }

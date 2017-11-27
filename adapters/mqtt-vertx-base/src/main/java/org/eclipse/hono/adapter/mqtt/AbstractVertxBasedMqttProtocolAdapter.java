@@ -47,6 +47,7 @@ import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * A base class for implementing Vert.x based Hono protocol adapters
@@ -63,6 +64,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * A logger to be used by concrete subclasses.
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
+
+    protected MqttAdapterMetrics metrics;
 
     private MqttServer server;
     private MqttServer insecureServer;
@@ -86,6 +89,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     @Override
     protected final int getActualInsecurePort() {
         return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
+    }
+
+    /**
+     * Sets the metrics for this service
+     *
+     * @param metrics The metrics
+     */
+    @Autowired
+    public final void setMetrics(final MqttAdapterMetrics metrics) {
+        this.metrics = metrics;
     }
 
     /**
@@ -316,6 +329,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
                                 authenticatedDevice.getTenantId(), credentials.getAuthId(), authenticatedDevice.getDeviceId());
                         onAuthenticationSuccess(endpoint, authenticatedDevice);
+                        metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
                     }
                 });
                 
@@ -592,7 +606,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param endpoint The connection to be closed.
      */
     protected void onClose(final MqttEndpoint endpoint) {
-        // empty default implementation
+        metrics.decrementMqttConnections(getCredentials(endpoint.auth()).getTenantId());
     }
 
     /**
@@ -623,7 +637,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param downstreamAddress The address that the message has been forwarded to.
      */
     protected void onMessageSent(final ResourceIdentifier downstreamAddress) {
-        // empty default implementation
+        metrics.incrementProcessedMqttMessages(downstreamAddress.getEndpoint(), downstreamAddress.getTenantId());
     }
 
     /**
@@ -642,7 +656,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param downstreamAddress The address that the message has been forwarded to.
      */
     protected void onMessageUndeliverable(final ResourceIdentifier downstreamAddress) {
-        // empty default implementation
+        metrics.incrementUndeliverableMqttMessages(downstreamAddress.getEndpoint(), downstreamAddress.getTenantId());
     }
 
     /**
