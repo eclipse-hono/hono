@@ -135,6 +135,7 @@ public class HonoMessagingApplicationConfig {
      * @return The configuration properties.
      */
     @Bean
+    @Qualifier(Constants.QUALIFIER_AMQP)
     @ConfigurationProperties(prefix = "hono.messaging")
     public HonoMessagingConfigProperties honoMessagingProperties() {
         return new HonoMessagingConfigProperties();
