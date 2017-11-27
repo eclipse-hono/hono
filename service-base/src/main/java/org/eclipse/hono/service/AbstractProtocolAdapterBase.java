@@ -14,6 +14,7 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
@@ -23,6 +24,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -37,6 +39,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * A base class for implementing protocol adapters.
@@ -482,5 +485,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             return false;
         }
         return true;
+    }
+
+    /**
+     * Creates a new AMQP 1.0 message for an address, device ID and content type.
+     * 
+     * @param address The receiver of the message.
+     * @param deviceId The identifier of the device that the message originates from.
+     * @param contentType The content type describing the message's payload.
+     * @return The message.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected static Message newMessage(final String address, final String deviceId, final String contentType) {
+
+        Objects.requireNonNull(address);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(contentType);
+
+        final Message msg = ProtonHelper.message();
+        msg.setAddress(address.toString());
+        MessageHelper.addDeviceId(msg, deviceId);
+        msg.setContentType(contentType);
+        return msg;
     }
 }
