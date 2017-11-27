@@ -7,18 +7,12 @@ To illustrate how Hono can be integrated with Java code, a simple program is pro
 to the default tenant from a device. 
 It shall serve as a blueprint to integrate your existing java source code with Hono. 
 
-The code is found in the example module in the package `org.eclipse.hono.vertx.example`.
+The code is found in the `example` module in the package `org.eclipse.hono.vertx.example`.
 
 The provided classes are kept as simple as possible (in the tradition of a classical "Hello World" implementation).
 This means that they make use of simple constant definitions, deal with exceptions as rarely as possible and use a few `System.out`'s.
 
-This sender example consists of:
-
- - a base class `AbstractHonoSender` that implements all necessary code to get Hono's client running. It sends data 50 times
-   in sequence and shows the necessary programming patterns for that.
- - a base configuration class `HonoExampleConstants` that defines the details where your Hono installation can be found etc.
- - the very short Java main program `HonoTelemetrySender` resp. `HonoEventSender` that derives from `AbstractHonoSender`
-   and invokes the code that sends data.
+Please refer to the javadoc of the classes for details.
 
 
 {{% warning %}}
@@ -30,14 +24,8 @@ Note that production ready code likely has to think more about error handling an
 For simplicity, all configurations are defined as Java constants inside the class `HonoExampleConstants`.
 
 If you have Hono running in Docker under `localhost`, the example should work out of the box.
-Otherwise, please check and change the values to your needs (they are documented inside the class).
+Otherwise, please check and change the values to your needs (they are documented inside the class) and recompile them.
    
-If you changed values, you need to recompile the examples. Please invoke 
-
-`$ mvn compile`
-
-to activate your changes.
-
 
 ## Run the example
 
@@ -72,18 +60,3 @@ If you want to integrate the code with your own software, please copy the provid
     $ cp ${honoProjectDir}/demo-certs/certs/trusted-certs.pem ${yourProjectDir}/src/main/resources/certs
 
 and adopt the code pointing to the file location.
-
-
-
-## Implementation
-
-Instead of describing the full implementation, here are the rough details of what is happening inside the sender example:
-
- - first, the sender needs to get a registration assertion (technically a `token`) for the device. This needs one Hono client
-   that connects to Hono's Device Registry.
- - next, the sender obviously needs a connection to Hono Messaging. This needs a second Hono client.
- - connection details are all configured in the `HonoExampleConstants` class.
- - since Hono's clients are based on vertx, the instantiation is done asynchronously with vertx Futures.
-   Please refer to the [vertx documentation](http://vertx.io/docs/) for any introduction to that.
- - after both Hono clients are connected, the sender sends a payload sequentially to Hono Messaging and finishes
-   after repeating that 50 times.
