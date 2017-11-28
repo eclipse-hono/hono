@@ -1,0 +1,44 @@
+hono:
+  app:
+    maxInstances: 1
+    healthCheckPort: 8088
+    healthCheckBindAddress: 0.0.0.0
+  http:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    keyPath: /run/secrets/rest-adapter-key.pem
+    certPath: /run/secrets/rest-adapter-cert.pem
+    maxPayloadSize: 8096
+  messaging:
+    name: 'Hono REST Adapter'
+    host: ${hono.messaging.host}
+    port: 5671
+    username: ${hono.adapter.rest.username}
+    password: ${hono.adapter.rest.password}
+    trustStorePath: ${hono.trustStore.path}
+  registration:
+    name: 'Hono REST Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.rest.username}
+    password: ${hono.adapter.rest.password}
+    trustStorePath: ${hono.trustStore.path}
+  credentials:
+    name: 'Hono REST Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.rest.username}
+    password: ${hono.adapter.rest.password}
+    trustStorePath: ${hono.trustStore.path}
+  metric:
+    reporter:
+      graphite:
+        active: true
+        host: influxdb.hono
+        port: 2003
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: true

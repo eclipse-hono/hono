@@ -22,6 +22,17 @@ echo DEPLOYING ECLIPSE HONO SANDBOX TO DOCKER SWARM
 # creating Hono network
 docker network create --label project=$NS --driver overlay $NS
 
+# create volume for persisting Device Registry data
+docker volume create --label project=$NS device-registry
+
+# initialize Device Registry volume with default credentials
+docker secret create -l project=$NS sandbox-credentials.json $SCRIPTPATH/sandbox-credentials.json
+docker service create --detach=true --name init-device-registry-data \
+  --secret sandbox-credentials.json \
+  --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
+  --restart-condition=none \
+  busybox sh -c 'cp -u /run/secrets/sandbox-credentials.json /var/lib/hono/device-registry/credentials.json'
+
 docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 
 echo
@@ -30,7 +41,7 @@ docker secret create -l project=$NS influxdb.conf $CONFIG/influxdb.conf
 docker service create $CREATE_OPTIONS --name influxdb \
   --secret influxdb.conf \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
-docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 eclipsehono/grafana:${project.version}
+docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 ${docker.image.org-name}/hono-grafana:${project.version}
 echo ... done
 
 echo
@@ -91,7 +102,7 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-service-auth:${project.version}
+  ${docker.image.org-name}/hono-service-auth:${project.version}
 echo ... done
 
 echo
@@ -99,18 +110,17 @@ echo Deploying Device Registry ...
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
 docker secret create -l project=$NS hono-service-device-registry-config.yml $SCRIPTPATH/hono-service-device-registry-config.yml
-docker secret create -l project=$NS example-credentials.json $CONFIG/example-credentials.json
 docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 25671:5671 -p 28080:8080 -p 28443:8443 \
   --secret device-registry-key.pem \
   --secret device-registry-cert.pem \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
   --secret hono-service-device-registry-config.yml \
-  --secret example-credentials.json \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=prod \
-  eclipsehono/hono-service-device-registry:${project.version}
+  --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
+  ${docker.image.org-name}/hono-service-device-registry:${project.version}
 echo ... done
 
 echo
@@ -127,14 +137,14 @@ docker service create $CREATE_OPTIONS --name hono-service-messaging \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=prod \
-  eclipsehono/hono-service-messaging:${project.version}
+  ${docker.image.org-name}/hono-service-messaging:${project.version}
 echo ... done
 
 echo
 echo Deploying HTTP REST adapter ...
 docker secret create -l project=$NS rest-adapter-key.pem $CERTS/rest-adapter-key.pem
 docker secret create -l project=$NS rest-adapter-cert.pem $CERTS/rest-adapter-cert.pem
-docker secret create -l project=$NS hono-adapter-rest-vertx-config.yml $CONFIG/hono-adapter-rest-vertx-config.yml
+docker secret create -l project=$NS hono-adapter-rest-vertx-config.yml $SCRIPTPATH/hono-adapter-rest-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-rest-vertx -p 8080:8080 -p 8443:8443 \
   --secret rest-adapter-key.pem \
   --secret rest-adapter-cert.pem \
@@ -143,14 +153,14 @@ docker service create $CREATE_OPTIONS --name hono-adapter-rest-vertx -p 8080:808
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-rest-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-adapter-rest-vertx:${project.version}
+  ${docker.image.org-name}/hono-adapter-rest-vertx:${project.version}
 echo ... done
 
 echo
 echo Deploying MQTT adapter ...
 docker secret create -l project=$NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key.pem
 docker secret create -l project=$NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
-docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $CONFIG/hono-adapter-mqtt-vertx-config.yml
+docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
   --secret mqtt-adapter-key.pem \
   --secret mqtt-adapter-cert.pem \
@@ -159,14 +169,14 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-adapter-mqtt-vertx:${project.version}
+  ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
 echo ... done
 
 echo
 echo Deploying Kura adapter ...
 docker secret create -l project=$NS kura-adapter-key.pem $CERTS/kura-adapter-key.pem
 docker secret create -l project=$NS kura-adapter-cert.pem $CERTS/kura-adapter-cert.pem
-docker secret create -l project=$NS hono-adapter-kura-config.yml $CONFIG/hono-adapter-kura-config.yml
+docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
   --secret kura-adapter-key.pem \
   --secret kura-adapter-cert.pem \
@@ -175,7 +185,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipsehono/hono-adapter-kura:${project.version}
+  ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
 
 echo
