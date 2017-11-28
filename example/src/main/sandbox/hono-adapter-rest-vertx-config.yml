@@ -9,6 +9,7 @@ hono:
     insecurePortEnabled: true
     keyPath: /run/secrets/rest-adapter-key.pem
     certPath: /run/secrets/rest-adapter-cert.pem
+    jmsVendorPropsEnabled: true
     maxPayloadSize: 8096
   messaging:
     name: 'Hono REST Adapter'

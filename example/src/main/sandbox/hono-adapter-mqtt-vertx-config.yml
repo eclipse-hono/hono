@@ -9,6 +9,7 @@ hono:
     insecurePortEnabled: true
     keyPath: /run/secrets/mqtt-adapter-key.pem
     certPath: /run/secrets/mqtt-adapter-cert.pem
+    jmsVendorPropsEnabled: true
     maxPayloadSize: 8096
   messaging:
     name: 'Hono MQTT Adapter'
