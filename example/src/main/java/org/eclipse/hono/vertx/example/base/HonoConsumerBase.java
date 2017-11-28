@@ -135,7 +135,7 @@ public class HonoConsumerBase {
      *
      * @param value The new value for the event mode.
      */
-    public void setEventMode(boolean value) {
+    public void setEventMode(final boolean value) {
         this.eventMode = value;
     }
 }
