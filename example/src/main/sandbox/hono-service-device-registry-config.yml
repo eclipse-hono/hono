@@ -24,10 +24,13 @@ hono:
       insecurePortBindAddress: 0.0.0.0
       insecurePortEnabled: true
     svc:
+      filename: /var/lib/hono/device-registry/device-identities.json
+      saveToFile: true
       modificationEnabled: false
       signing:
         sharedSecret: ${hono.regAssertion.sharedSecret}
   credentials:
     svc:
-      credentialsFilename: /run/secrets/example-credentials.json
+      credentialsFilename: /var/lib/hono/device-registry/credentials.json
+      saveToFile: true
       modificationEnabled: false
