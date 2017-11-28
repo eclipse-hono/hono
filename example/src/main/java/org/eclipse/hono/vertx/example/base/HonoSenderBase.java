@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
@@ -27,7 +28,8 @@ import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.*;
  * Example base class for sending data to Hono.
  * <p>
  * This class implements all necessary code to get Hono's client running. It sends data 50 times
- * in sequence and shows the necessary programming patterns for that.
+ * in sequence and shows the necessary programming patterns for that. At the end, it prints a summary of the delivery
+ * of messages.
  * <p>
  * By default, this class sends telemetry data. This can be changed to event data by setting
  * {@link HonoSenderBase#setEventMode(boolean)} to true.
@@ -45,6 +47,19 @@ public class HonoSenderBase {
     private MessageSender messageSender;
 
     private boolean eventMode = false;
+
+    /**
+     * A countdown latch to track if all messages were sent correctly.
+     */
+    private CountDownLatch messageDeliveryCountDown = new CountDownLatch(COUNT);
+    /**
+     * Count failed message deliveries.
+     */
+    private AtomicInteger nrMessageDeliveryFailed = new AtomicInteger(0);
+    /**
+     * Count successful message deliveries.
+     */
+    private AtomicInteger nrMessageDeliverySucceeded = new AtomicInteger(0);
 
     /**
      * The sender needs two connections to Hono:
@@ -103,7 +118,14 @@ public class HonoSenderBase {
             });
         }
 
-        // finally close down vertx.
+        /* Since events are asynchronously acknowledged to validate their delivery, the vertx instance must not be
+           closed before all acknowledgements were processed.
+           Wait for the count down latch here. */
+        messageDeliveryCountDown.await();
+        // print a summary of the message deliveries.
+        System.out.println("All " + COUNT + " messages tried to deliver.");
+        System.out.println("Successful deliveries: " + nrMessageDeliverySucceeded + (eventMode ? " (incl. acknowledge)." : "."));
+        System.out.println("Failed deliveries    : " + nrMessageDeliveryFailed.get());
         vertx.close();
     }
 
@@ -125,19 +147,26 @@ public class HonoSenderBase {
         if (eventMode) {
             // define a disposition handler to get information about the delivery
             final BiConsumer<Object, ProtonDelivery> myDispositionHandler = (messageId, delivery) -> {
+                messageDeliveryCountDown.countDown();
                 if (! (delivery.getRemoteState() instanceof Accepted)) {
                     System.err.println("delivery failed for [message ID: " + messageId + ", new remote state: " + delivery.getRemoteState());
-                } else {
-                    System.out.println("delivery accepted for [message ID: " + messageId);
+                    nrMessageDeliveryFailed.incrementAndGet();
                 }
             };
             messageWasSent = messageSender.send(DEVICE_ID, properties, "myMessage" + value, "text/plain", token, myDispositionHandler);
+            if (!messageWasSent) {
+                // count down latch, since the disposition handler will not be called if message was not sent.
+                messageDeliveryCountDown.countDown();
+            }
         } else {
             messageWasSent = messageSender.send(DEVICE_ID, properties, "myMessage" + value, "text/plain", token);
+            // telemetry has no delivery guarantee, so count the message as delivered now
+            messageDeliveryCountDown.countDown();
         }
         if (messageWasSent) {
             result.complete();
         } else {
+            nrMessageDeliveryFailed.incrementAndGet();
             result.fail("Sender might have no credits, is a consumer attached?");
         }
         return result;
@@ -205,16 +234,19 @@ public class HonoSenderBase {
 
         final Future<Void> senderTracker = Future.future();
         senderTracker.setHandler(v -> {
+            messageSenderLatch.countDown();
             if (senderTracker.failed()) {
                 System.err.println("Failed: Sending message... #" + value + " - " + senderTracker.toString());
             } else {
                 System.out.println("Sending message... #" + value);
             }
-            messageSenderLatch.countDown();
         });
         getRegistrationAssertion().compose(token ->
                 sendMessageToHono(value, token)
-        ).compose(v -> senderTracker.complete(),
+        ).compose(v -> {
+                    nrMessageDeliverySucceeded.incrementAndGet();
+                    senderTracker.complete();
+                },
                 senderTracker);
 
         try {
@@ -258,7 +290,7 @@ public class HonoSenderBase {
      *
      * @param value The new value for the event mode.
      */
-    public void setEventMode(boolean value) {
+    public void setEventMode(final boolean value) {
         this.eventMode = value;
     }
 }
