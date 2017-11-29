@@ -16,14 +16,14 @@ SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 HONO_HOME=$SCRIPTPATH/../../../..
+OPENSHIFT_MASTER=${1:-"https://$(minishift ip):8443"}
+
+
+source $SCRIPTPATH/common.sh
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
 
-# creating Hono persistent volume (admin needed)
-oc login -u system:admin
-oc create -f $SCRIPTPATH/hono-pv.yml
-
-oc login -u developer
+prepare_openshift
 
 # creating new project
 oc new-project hono --description="Open source IoT connectivity" --display-name="Eclipse Hono"

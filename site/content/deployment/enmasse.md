@@ -37,6 +37,12 @@ Now we are ready to deploy Hono. From the `example/target/deploy/openshift` dire
 
 This should start all necessary Hono components, configured to connect to the EnMasse. See the [original OpenShift guide]({{< relref "openshift.md" >}}) to see how to check the status Hono components.
 
+The script will try to use Minishift cluster address by default. If you wish to deploy Hono to some other OpenShift cluster, you should specify the address of the cluster as an argument, like
+
+~~~sh
+~hono/example/target/deploy/openshift$ ./enmasse_deploy.sh https://192.168.64.3:8443
+~~~
+
 ## Extract Certificate
 
 In order to connect the external consumer to EnMasse, we need to use a proper SSL certificate. We can extract one from the OpenShift using the following command (from the `example` directory).

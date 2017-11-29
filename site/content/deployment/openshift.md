@@ -35,10 +35,11 @@ After Minishift has been started up, the following steps need to be performed:
     $ minishift ssh -- sudo mkdir -p -m 777 /mnt/sda1/var/lib/minishift/openshift.local.pv/hono
     ~~~
 
-1. Set the `DOCKER_HOST` environment variable to point to the Docker daemon running inside the Minishift VM
+1. Set the `DOCKER_HOST` environment variable to point to the Docker daemon running inside the Minishift VM and set path to the OpenShift command line utilities
 
     ~~~sh
     $ eval $(minishift docker-env)
+    $ eval $(minishift oc-env)
     ~~~
 
 1. Build the Hono Docker images and deploy them to the Docker registry in the Minishift VM
@@ -57,6 +58,12 @@ After having the OpenShift cluster up and running and the client tools in the PA
 ~~~sh
 ~hono/example/target/deploy/openshift$ chmod +x *.sh
 ~hono/example/target/deploy/openshift$ ./openshift_deploy.sh
+~~~
+
+The script will try to use Minishift cluster address by default. If you wish to deploy Hono to some other OpenShift cluster, you should specify the address of the cluster as an argument, like
+
+~~~sh
+~hono/example/target/deploy/openshift$ ./openshift_deploy.sh https://192.168.64.3:8443
 ~~~
 
 In order to see the deployed components, you can launch OpenShift's web UI in a browser by issuing:
