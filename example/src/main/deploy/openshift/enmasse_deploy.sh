@@ -16,24 +16,13 @@ SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 HONO_HOME=$SCRIPTPATH/../../../..
+OPENSHIFT_MASTER=${1:-"https://$(minishift ip):8443"}
 
 source $SCRIPTPATH/common.sh
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
 
-# creating the directory for Hono Server persistent volume
-if [ ! -d /tmp/hono ]; then
-    mkdir /tmp/hono
-    chmod 777 /tmp/hono
-else
-    echo /tmp/hono already exists!
-fi
-
-# creating Hono persistent volume (admin needed)
-oc login -u system:admin
-oc create -f $SCRIPTPATH/hono-pv.yml
-
-oc login -u developer
+prepare_openshift
 
 # use hono project
 oc project hono
