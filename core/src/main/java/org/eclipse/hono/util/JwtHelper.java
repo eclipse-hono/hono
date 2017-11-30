@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.util;
 
@@ -96,7 +97,7 @@ public abstract class JwtHelper {
         this.algorithm = SignatureAlgorithm.RS256;
         this.key = KeyLoader.fromFiles(vertx, keyPath, null).getPrivateKey();
         if (key == null) {
-            throw new IllegalArgumentException("cannot load private key");
+            throw new IllegalArgumentException("cannot load private key: " + keyPath);
         }
     }
 
@@ -113,7 +114,7 @@ public abstract class JwtHelper {
         this.algorithm = SignatureAlgorithm.RS256;
         this.key = KeyLoader.fromFiles(vertx, null, keyPath).getPublicKey();
         if (key == null) {
-            throw new IllegalArgumentException("cannot load private key");
+            throw new IllegalArgumentException("cannot load public key: " + keyPath);
         }
     }
 
@@ -175,7 +176,7 @@ public abstract class JwtHelper {
             throw new NullPointerException("token must not be null");
         }
 
-        final AtomicReference<Date> result = new AtomicReference<Date>();
+        final AtomicReference<Date> result = new AtomicReference<>();
 
         try {
             Jwts.parser().setSigningKeyResolver(new SigningKeyResolverAdapter(){
