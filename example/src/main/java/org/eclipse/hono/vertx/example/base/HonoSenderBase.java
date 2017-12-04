@@ -116,16 +116,18 @@ public class HonoSenderBase {
             IntStream.range(0, COUNT).forEach(value -> {
                 handleSingleMessage(value);
             });
+
+            /*
+             * Since events are asynchronously acknowledged to validate their delivery, the vertx instance must not be
+             * closed before all acknowledgements were processed. Wait for the count down latch here.
+             */
+            messageDeliveryCountDown.await();
+            // print a summary of the message deliveries.
+            System.out.println("All " + COUNT + " messages tried to deliver.");
+            System.out.println("Successful deliveries: " + nrMessageDeliverySucceeded + (eventMode ? " (incl. acknowledge)." : "."));
+            System.out.println("Failed deliveries    : " + nrMessageDeliveryFailed.get());
         }
 
-        /* Since events are asynchronously acknowledged to validate their delivery, the vertx instance must not be
-           closed before all acknowledgements were processed.
-           Wait for the count down latch here. */
-        messageDeliveryCountDown.await();
-        // print a summary of the message deliveries.
-        System.out.println("All " + COUNT + " messages tried to deliver.");
-        System.out.println("Successful deliveries: " + nrMessageDeliverySucceeded + (eventMode ? " (incl. acknowledge)." : "."));
-        System.out.println("Failed deliveries    : " + nrMessageDeliveryFailed.get());
         vertx.close();
     }
 
