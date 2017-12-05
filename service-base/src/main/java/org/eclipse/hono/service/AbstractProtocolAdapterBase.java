@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.service;
 
@@ -216,7 +217,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 if (connectHandler != null) {
                     connectHandler.handle(connectAttempt);
                 } else {
-                    LOG.info("connected to Hono Messaging");
+                    if (connectAttempt.failed()) {
+                        LOG.warn("failed to connect to Hono Messaging", connectAttempt.cause());
+                    } else {
+                        LOG.info("connected to Hono Messaging");
+                    }
                 }
             }, this::onDisconnectMessaging
             );
@@ -265,7 +270,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
                 if (connectHandler != null) {
                     connectHandler.handle(connectAttempt);
                 } else {
-                    LOG.info("connected to Device Registration service");
+                    if (connectAttempt.failed()) {
+                        LOG.warn("failed to connect to Device Registration service", connectAttempt.cause());
+                    } else {
+                        LOG.info("connected to Device Registration service");
+                    }
                 }
             }, this::onDisconnectDeviceRegistry);
         }
