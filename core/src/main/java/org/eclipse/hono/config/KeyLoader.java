@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,13 +8,18 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.config;
 
+import static java.lang.String.format;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyStore;
@@ -24,15 +29,17 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Base64;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Objects;
 
+import org.eclipse.hono.config.PemReader.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.net.impl.pkcs1.PrivateKeyParser;
 
 /**
  * A utility class for loading keys from files.
@@ -41,12 +48,37 @@ import io.vertx.core.buffer.Buffer;
 public final class KeyLoader {
 
     private static final Logger LOG = LoggerFactory.getLogger(KeyLoader.class);
-    private final Vertx vertx;
-    private PrivateKey privateKey;
-    private PublicKey publicKey;
 
-    private KeyLoader(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
+    @FunctionalInterface
+    private interface PemProcessor<R> {
+
+        public R process(List<PemReader.Entry> pems) throws Exception;
+    }
+
+    private final PrivateKey privateKey;
+    private final PublicKey publicKey;
+
+    private KeyLoader(final PrivateKey privateKey, final PublicKey publicKey) {
+        this.privateKey = privateKey;
+        this.publicKey = publicKey;
+    }
+
+    /**
+     * Get the private key.
+     * 
+     * @return The private key, may be {@code null}
+     */
+    public PrivateKey getPrivateKey() {
+        return this.privateKey;
+    }
+
+    /**
+     * Get the public key.
+     * 
+     * @return The public key, may be {@code null}
+     */
+    public PublicKey getPublicKey() {
+        return this.publicKey;
     }
 
     /**
@@ -62,21 +94,28 @@ public final class KeyLoader {
     public static KeyLoader fromKeyStore(final Vertx vertx, final String keyStorePath, final char[] password) {
 
         Objects.requireNonNull(vertx);
+        Objects.requireNonNull(keyStorePath);
+
         if (!vertx.fileSystem().existsBlocking(Objects.requireNonNull(keyStorePath))) {
             throw new IllegalArgumentException("key store does not exist");
         }
 
-        KeyLoader result = new KeyLoader(vertx);
-        String type = null;
-        if (AbstractConfig.hasJksFileSuffix(keyStorePath)) {
+        final FileFormat format = FileFormat.detect(keyStorePath);
+
+        final String type;
+
+        switch (format) {
+        case JKS:
             type = "JKS";
-        } else if (AbstractConfig.hasPkcsFileSuffix(keyStorePath)) {
+            break;
+        case PKCS12:
             type = "PKCS12";
-        } else {
-            throw new IllegalArgumentException("key store must be JKS or PKCS format");
+            break;
+        default:
+            throw new IllegalArgumentException("key store must be JKS or PKCS format but is: " + format);
         }
-        result.loadKeysFromStore(type, keyStorePath, password);
-        return result;
+
+        return loadKeysFromStore(vertx, type, keyStorePath, password);
     }
 
     /**
@@ -87,82 +126,112 @@ public final class KeyLoader {
      * @param certPath The absolute path to the PEM file containing the certificate.
      * @return The loader.
      * @throws NullPointerException if vertx is {@code null}.
-     * @throws IllegalArgumentException if any of the files does not exist.
+     * @throws IllegalArgumentException if any of the files could not be loaded. Reasons might be things like missing,
+     *             empty or malformed files.
      */
     public static KeyLoader fromFiles(final Vertx vertx, final String keyPath, final String certPath) {
-        KeyLoader result = new KeyLoader(vertx);
-        result.loadKeysFromFiles(keyPath, certPath);
-        return result;
-    }
 
-    public PrivateKey getPrivateKey() {
-        return privateKey;
-    }
-
-    public PublicKey getPublicKey() {
-        return publicKey;
-    }
-
-    private void loadKeysFromFiles(final String keyPath, final String certPath) {
+        PrivateKey privateKey = null;
+        PublicKey publicKey = null;
 
         if (keyPath != null) {
-            loadPrivateKeyFromFile(keyPath);
+            privateKey = loadPrivateKeyFromFile(vertx, keyPath);
         }
-
         if (certPath != null) {
-            loadPublicKeyFromFile(certPath);
+            publicKey = loadPublicKeyFromFile(vertx, certPath);
         }
+
+        return new KeyLoader(privateKey, publicKey);
+
     }
 
-    private void loadPrivateKeyFromFile(final String keyPath) {
+    private static PrivateKey generateRsaKey(final KeySpec keySpec) throws GeneralSecurityException {
+        return KeyFactory
+                .getInstance("RSA")
+                .generatePrivate(keySpec);
+    }
 
-        if (!vertx.fileSystem().existsBlocking(Objects.requireNonNull(keyPath))) {
-            throw new IllegalArgumentException("private key file does not exist");
-        } else if (AbstractConfig.hasPemFileSuffix(keyPath)) {
-            try {
+    private static <R> R processFile(final Vertx vertx, final String pathName, final PemProcessor<R> processor) {
 
-                Buffer buffer = vertx.fileSystem().readFileBlocking(keyPath);
-                String temp = buffer.getString(0, buffer.length());
-                temp = temp.replaceAll("(-+BEGIN PRIVATE KEY-+\\r?\\n|-+END PRIVATE KEY-+\\r?\\n?)", "");
-                KeySpec keySpec = new PKCS8EncodedKeySpec(Base64.getMimeDecoder().decode(temp));
-                KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-                privateKey = keyFactory.generatePrivate(keySpec);
+        final Path path = Paths.get(pathName);
 
-            } catch (GeneralSecurityException e) {
-                LOG.error("cannot load private key", e);
+        if (!vertx.fileSystem().existsBlocking(pathName)) {
+            throw new IllegalArgumentException(format("%s: Private key file does not exist", path));
+        }
+
+        try {
+
+            final List<Entry> pems = PemReader.readAllBlocking(vertx, path);
+
+            if (pems.isEmpty()) {
+                throw new IllegalArgumentException(format("%s: File is empty", path));
             }
-        } else {
-            LOG.error("unsupported private key file format");
+
+            return processor.process(pems);
+
+        } catch (final IllegalArgumentException e) {
+            throw e;
+        } catch (final Exception e) {
+            throw new IllegalArgumentException(format("%s: Failed to load PEM file: ", pathName), e);
         }
+
     }
 
-    private void loadPublicKeyFromFile(final String certPath) {
+    private static PrivateKey loadPrivateKeyFromFile(final Vertx vertx, final String keyPath) {
 
-        if (!vertx.fileSystem().existsBlocking(Objects.requireNonNull(certPath))) {
-            throw new IllegalArgumentException("certificate file does not exist: " + certPath);
-        } else if (AbstractConfig.hasPemFileSuffix(certPath)) {
-            try {
+        return processFile(vertx, keyPath, pems -> {
 
-                Buffer buffer = vertx.fileSystem().readFileBlocking(certPath);
-                CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                Certificate cert = factory.generateCertificate(new ByteArrayInputStream(buffer.getBytes()));
-                publicKey = cert.getPublicKey();
-            } catch (GeneralSecurityException e) {
-                LOG.error("cannot load public key", e);
+            final Entry pem = pems.get(0);
+
+            switch (pem.getType()) {
+
+            case "PRIVATE KEY":
+                return generateRsaKey(new PKCS8EncodedKeySpec(pem.getPayload()));
+
+            case "RSA PRIVATE KEY":
+                return generateRsaKey(PrivateKeyParser.getRSAKeySpec(pem.getPayload()));
+
+            default:
+                throw new IllegalArgumentException(format("%s: Unsupported key type: %s", keyPath, pem.getType()));
+
             }
-        } else {
-            LOG.error("unsupported public key file format");
-        }
+        });
     }
 
-    private void loadKeysFromStore(final String type, final String path, final char[] password) {
+    private static PublicKey loadPublicKeyFromFile(final Vertx vertx, final String certPath) {
+
+        return processFile(vertx, certPath, pems -> {
+
+            final Entry pem = pems.get(0);
+
+            switch (pem.getType()) {
+
+            case "CERTIFICATE": {
+                final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                final Certificate cert = factory.generateCertificate(new ByteArrayInputStream(pem.getPayload()));
+                return cert.getPublicKey();
+            }
+
+            default:
+                throw new IllegalArgumentException(format("%s: Unsupported cert type: %s", certPath, pem.getType()));
+
+            }
+        });
+
+    }
+
+    private static KeyLoader loadKeysFromStore(final Vertx vertx, final String type, final String path,
+            final char[] password) {
+
+        PrivateKey privateKey = null;
+        PublicKey publicKey = null;
 
         Buffer buffer = vertx.fileSystem().readFileBlocking(path);
         try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
             KeyStore store = KeyStore.getInstance(type);
             store.load(is, password);
             LOG.debug("loading keys from key store containing {} entries", store.size());
-            for (Enumeration<String> e = store.aliases(); e.hasMoreElements(); ) {
+            for (Enumeration<String> e = store.aliases(); e.hasMoreElements();) {
                 String alias = e.nextElement();
                 LOG.info("current alias: {}", alias);
                 if (store.isKeyEntry(alias)) {
@@ -171,6 +240,9 @@ public final class KeyLoader {
                     LOG.debug("loading public key [{}]", alias);
                     Certificate[] chain = store.getCertificateChain(alias);
                     publicKey = chain[0].getPublicKey();
+
+                    return new KeyLoader(privateKey, publicKey);
+
                 } else {
                     LOG.debug("skipping non-private key entry");
                 }
@@ -178,5 +250,7 @@ public final class KeyLoader {
         } catch (IOException | GeneralSecurityException e) {
             LOG.error("cannot load keys", e);
         }
+
+        throw new IllegalArgumentException(format("%s: Key store doesn't contain private key", path));
     }
 }

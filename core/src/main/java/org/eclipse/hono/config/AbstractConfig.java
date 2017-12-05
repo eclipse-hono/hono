@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,12 +8,12 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.config;
 
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.PortConfigurationHelper;
@@ -33,10 +33,6 @@ import io.vertx.core.net.TrustOptions;
  */
 public abstract class AbstractConfig {
 
-    private static final Pattern PATTERN_PEM = Pattern.compile("^.*\\.[pP][eE][mM]$");
-    private static final Pattern PATTERN_PKCS = Pattern.compile("^.*\\.[pP](12|[fF][xX])$");
-    private static final Pattern PATTERN_JKS = Pattern.compile("^.*\\.[jJ][kK][sS]$");
-
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
     private String trustStorePath;
@@ -46,6 +42,8 @@ public abstract class AbstractConfig {
     private char[] keyStorePassword;
     private String certPath;
     private String keyPath;
+    private FileFormat trustStoreFormat;
+    private FileFormat keyFormat;
 
     /**
      * Checks if a given port number is valid.
@@ -97,8 +95,7 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Gets the password for accessing the PKCS12 key store containing the certificates
-     * of trusted CAs.
+     * Gets the password for accessing the PKCS12 key store containing the certificates of trusted CAs.
      * 
      * @return The password or {@code null} if no password is set.
      * @see #getTrustStorePath()
@@ -108,8 +105,7 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Sets the password for accessing the PKCS12 key store containing the certificates
-     * of trusted CAs.
+     * Sets the password for accessing the PKCS12 key store containing the certificates of trusted CAs.
      * 
      * @param trustStorePassword The password to set.
      * @see #setTrustStorePath(String)
@@ -131,21 +127,31 @@ public abstract class AbstractConfig {
 
         if (trustStorePath == null) {
             return null;
-        } else if (hasPemFileSuffix(trustStorePath)) {
+        }
+
+        final FileFormat format = FileFormat.orDetect(trustStoreFormat, trustStorePath);
+
+        if (format == null) {
+            LOG.debug("unsupported trust store format");
+            return null;
+        }
+
+        switch (format) {
+        case PEM:
             LOG.debug("using certificates from file [{}] as trust anchor", trustStorePath);
             return new PemTrustOptions().addCertPath(trustStorePath);
-        } else if (hasPkcsFileSuffix(trustStorePath)) {
+        case PKCS12:
             LOG.debug("using certificates from PKCS12 key store [{}] as trust anchor", trustStorePath);
             return new PfxOptions()
-                        .setPath(getTrustStorePath())
-                        .setPassword(getTrustStorePassword());
-        } else if (hasJksFileSuffix(trustStorePath)) {
+                    .setPath(getTrustStorePath())
+                    .setPassword(getTrustStorePassword());
+        case JKS:
             LOG.debug("using certificates from JKS key store [{}] as trust anchor", trustStorePath);
             return new JksOptions()
-                        .setPath(getTrustStorePath())
-                        .setPassword(getTrustStorePassword());
-        } else {
-            LOG.debug("unsupported trust store format");
+                    .setPath(getTrustStorePath())
+                    .setPassword(getTrustStorePassword());
+        default:
+            LOG.debug("unsupported trust store format: {}", format);
             return null;
         }
     }
@@ -161,8 +167,8 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Sets the absolute path to the PKCS12 key store containing the private key
-     * and certificate chain that should be used for authentication to peers.
+     * Sets the absolute path to the PKCS12 key store containing the private key and certificate chain that should be
+     * used for authentication to peers.
      * 
      * @param keyStorePath The path.
      */
@@ -171,8 +177,8 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Gets the password for the PKCS12 key store containing the private key
-     * and certificate chain that should be used for authentication to peers.
+     * Gets the password for the PKCS12 key store containing the private key and certificate chain that should be used
+     * for authentication to peers.
      * 
      * @return The password or {@code null} if no password has been set.
      */
@@ -181,8 +187,8 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Sets the password for the PKCS12 key store containing the private key
-     * and certificate chain that should be used for authentication to peers.
+     * Sets the password for the PKCS12 key store containing the private key and certificate chain that should be used
+     * for authentication to peers.
      * 
      * @param keyStorePassword The password.
      */
@@ -201,26 +207,71 @@ public abstract class AbstractConfig {
      */
     public KeyCertOptions getKeyCertOptions() {
 
-        if (keyPath != null && certPath != null && hasPemFileSuffix(keyPath) && hasPemFileSuffix(certPath)) {
-            LOG.debug("using key [{}] and certificate [{}] for identity", keyPath, certPath);
-            return new PemKeyCertOptions().setKeyPath(keyPath).setCertPath(certPath);
-        } else if (keyStorePath == null) {
-            return null;
-        } else if (hasPkcsFileSuffix(keyStorePath)) {
-            LOG.debug("using key & certificate from PKCS12 key store [{}] for identity", keyStorePath);
-            return new PfxOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
-        } else if (hasJksFileSuffix(keyStorePath)) {
-            LOG.debug("using key & certificate from JKS key store [{}] for server identity", keyStorePath);
-            return new JksOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
+        if (keyPath != null && certPath != null) {
+
+            final FileFormat format = FileFormat.orDetect(keyFormat, keyPath);
+            final FileFormat certFormat = FileFormat.orDetect(keyFormat, certPath);
+
+            // consistency checks
+
+            if (format == null) {
+                LOG.warn("Unable to detect key file format for: {}", keyPath);
+                return null;
+            }
+
+            if (certFormat == null) {
+                LOG.warn("Unable to detect cert file format for: {}", certPath);
+                return null;
+            }
+
+            if (certFormat != format) {
+                LOG.warn("Key file is {}, but cert file is {}, it must be {} as well", format, certFormat, format);
+                return null;
+            }
+
+            // now construct result
+
+            switch (format) {
+            case PEM:
+                LOG.debug("using key [{}] and certificate [{}] for identity", keyPath, certPath);
+                return new PemKeyCertOptions().setKeyPath(keyPath).setCertPath(certPath);
+            default:
+                LOG.warn("unsupported key & cert format: {}", format);
+                return null;
+            }
+
+        } else if (keyStorePath != null) {
+
+            final FileFormat format = FileFormat.orDetect(keyFormat, keyStorePath);
+
+            // construct result
+
+            switch (format) {
+            case PKCS12:
+                LOG.debug("using key & certificate from PKCS12 key store [{}] for identity", keyStorePath);
+                return new PfxOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
+            case JKS:
+                LOG.debug("using key & certificate from JKS key store [{}] for server identity", keyStorePath);
+                return new JksOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
+            default:
+                LOG.warn("unsupported key store format: {}", format);
+                return null;
+            }
+
         } else {
-            LOG.debug("unsupported key store format");
+
+            // no configuration
+
+            LOG.debug("neither key/cert nor keystore is configured");
             return null;
+
         }
+
     }
 
     /**
-     * Gets the absolute path to the PEM file containing the X.509 certificate chain
-     * for the RSA private key that should be used for authentication to peers.
+     * Gets the absolute path to the PEM file containing the X.509 certificate chain for the RSA private key that should
+     * be used for authentication to peers.
      * 
      * @return The path or {@code null} if no path has been set.
      */
@@ -229,12 +280,12 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Sets the absolute path to the PEM file containing the X.509 certificate chain
-     * for the RSA private key that should be used for authentication to peers.
+     * Sets the absolute path to the PEM file containing the X.509 certificate chain for the RSA private key that should
+     * be used for authentication to peers.
      * <p>
-     * In order to use a non-RSA type key (e.g. an ECC based key) a PKCS12 key store
-     * containing the key and certificate chain should be configured by means of the
-     * {@link #setKeyStorePath(String)} and {@link #setKeyStorePassword(String)} methods.
+     * In order to use a non-RSA type key (e.g. an ECC based key) a PKCS12 key store containing the key and certificate
+     * chain should be configured by means of the {@link #setKeyStorePath(String)} and
+     * {@link #setKeyStorePassword(String)} methods.
      * 
      * @param certPath The path.
      */
@@ -243,8 +294,8 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Gets the absolute path to the PEM file containing the RSA private key
-     * that will be used for authentication to peers.
+     * Gets the absolute path to the PEM file containing the RSA private key that will be used for authentication to
+     * peers.
      * 
      * @return The path or {@code null} if no path has been set.
      */
@@ -253,17 +304,53 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Sets the absolute path to the PEM file containing the RSA private key
-     * that should be used for authentication to peers.
+     * Sets the absolute path to the PEM file containing the RSA private key that should be used for authentication to
+     * peers.
      * <p>
-     * In order to use a non-RSA type key (e.g. an ECC based key) a PKCS12 key store
-     * containing the key should be configured by means of the {@link #setKeyStorePath(String)}
-     * and {@link #setKeyStorePassword(String)} methods.
+     * In order to use a non-RSA type key (e.g. an ECC based key) a PKCS12 key store containing the key should be
+     * configured by means of the {@link #setKeyStorePath(String)} and {@link #setKeyStorePassword(String)} methods.
      * 
      * @param keyPath The path.
      */
     public final void setKeyPath(final String keyPath) {
         this.keyPath = keyPath;
+    }
+
+    /**
+     * Specify the format of the trust store explicitly.
+     * 
+     * @param trustStoreFormat The format to use when reading the trust store, may be {@code null} to trigger auto
+     *            detection.
+     */
+    public final void setTrustStoreFormat(final FileFormat trustStoreFormat) {
+        this.trustStoreFormat = trustStoreFormat;
+    }
+
+    /**
+     * Get the specified format of the trust store.
+     * 
+     * @return The format or {@code null} if auto-detection should be tried.
+     */
+    public final FileFormat getTrustStoreFormat() {
+        return trustStoreFormat;
+    }
+
+    /**
+     * Specify the format of the key material explicitly.
+     * 
+     * @param keyFormat The format to use when reading the key material, may be {@code null} to trigger auto detection.
+     */
+    public final void setKeyFormat(final FileFormat keyFormat) {
+        this.keyFormat = keyFormat;
+    }
+
+    /**
+     * Get the specified format of the key files.
+     * 
+     * @return The format or {@code null} if auto-detection should be tried.
+     */
+    public final FileFormat getKeyFormat() {
+        return keyFormat;
     }
 
     private static String fromChars(final char[] chars) {
@@ -272,17 +359,5 @@ public abstract class AbstractConfig {
         } else {
             return String.valueOf(chars);
         }
-    }
-
-    static boolean hasPemFileSuffix(final String path) {
-        return PATTERN_PEM.matcher(path).matches();
-    }
-
-    static boolean hasPkcsFileSuffix(final String path) {
-        return PATTERN_PKCS.matcher(path).matches();
-    }
-
-    static boolean hasJksFileSuffix(final String path) {
-        return PATTERN_JKS.matcher(path).matches();
     }
 }
