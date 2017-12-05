@@ -199,6 +199,7 @@ public final class MessageHelper {
     /**
      * Gets the value of a specific <em>application property</em>.
      * 
+     * @param <T> The expected type of the property to retrieve the value of.
      * @param props The application properties to retrieve the value from.
      * @param name The property name.
      * @param type The expected value type.
@@ -353,10 +354,11 @@ public final class MessageHelper {
     }
 
     /**
-     * Adds JMS vendor properties defined by <a href="">AMQP JMS Mapping 1.0</a> as AMQP 1.0
-     * application properties to a given message.
+     * Adds JMS vendor properties defined by
+     * <a href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
+     * AMQP JMS Mapping 1.0</a> as AMQP 1.0 application properties to a given message.
      * <p>
-     * The following vendor properties are added (if the messages has a corresponding
+     * The following vendor properties are added (if the message has a corresponding
      * non-null value set):
      * <ul>
      * <li>{@link #JMS_VENDOR_PROPERTY_CONTENT_TYPE}</li>
