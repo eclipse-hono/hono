@@ -3,10 +3,10 @@ title = "Auth Server"
 weight = 305
 +++
 
-The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< relref "api/Authentication-API.md" >}}) API. Other services use this component authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
+The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< relref "api/Authentication-API.md" >}}) API. Other services use this component for authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
 <!--more-->
 
-This component serves as a default implementation of the *Authentication* API only. On startup, it reads in all identities and their authorities from a JSON file from the filesystem. All data is then kept in memory and there are no remote service APIs for managing the identities and their authorities.
+This component serves as a default implementation of the *Authentication* API only. On startup, it reads in all identities and their authorities from a JSON file from the file system. All data is then kept in memory and there are no remote service APIs for managing the identities and their authorities.
 
 In a production environment, a more sophisticated implementation should be used instead.
 
@@ -115,6 +115,18 @@ There are several things noteworthy about the above command to start the service
 Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
 1. In cases where the server container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
+
+### Configuring the Java VM
+
+The Auth server Docker image by default does not pass any specific configuration options to the Java VM. The VM can be configured using the standard `-X` options by means of setting the `_JAVA_OPTIONS` environment variable which is evaluated by the Java VM during start up.
+
+Using the example from above, the following environment variable definition needs to be added to limit the VM's heap size to 64MB:
+
+~~~sh
+...
+> -e '_JAVA_OPTIONS=-Xmx64m' \
+> eclipse/hono-service-auth:latest
+~~~
 
 ## Run using the Docker Swarm Deployment Script
 
