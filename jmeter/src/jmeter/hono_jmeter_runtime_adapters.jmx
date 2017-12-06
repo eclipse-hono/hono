@@ -208,7 +208,33 @@
             <stringProp name="HTTPSampler.response_timeout"></stringProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          <net.xmeter.samplers.PubSampler guiclass="net.xmeter.gui.PubSamplerUI" testclass="net.xmeter.samplers.PubSampler" testname="MQTT Sender" enabled="true">
+          <net.xmeter.samplers.PubSampler guiclass="net.xmeter.gui.PubSamplerUI" testclass="net.xmeter.samplers.PubSampler" testname="Kura Sender" enabled="false">
+            <stringProp name="mqtt.keystore_file_path"></stringProp>
+            <stringProp name="mqtt.clientcert_file_path"></stringProp>
+            <stringProp name="mqtt.conn_keep_alive">300</stringProp>
+            <stringProp name="mqtt.conn_attampt_max">1</stringProp>
+            <stringProp name="mqtt.keep_time">1800</stringProp>
+            <stringProp name="mqtt.client_id_prefix">device_${__threadNum}</stringProp>
+            <boolProp name="mqtt.client_id_suffix">false</boolProp>
+            <stringProp name="mqtt.reconn_attampt_max">1</stringProp>
+            <stringProp name="mqtt.conn_timeout">10</stringProp>
+            <boolProp name="mqtt.dual_ssl_authentication">false</boolProp>
+            <stringProp name="mqtt.keystore_password"></stringProp>
+            <stringProp name="mqtt.clientcert_password"></stringProp>
+            <stringProp name="mqtt.port">1884</stringProp>
+            <stringProp name="mqtt.protocol">TCP</stringProp>
+            <stringProp name="mqtt.server">127.0.0.1</stringProp>
+            <stringProp name="mqtt.user_name">auth_${__threadNum}@DEFAULT_TENANT</stringProp>
+            <stringProp name="mqtt.password">hono-secret</stringProp>
+            <stringProp name="mqtt.topic_name">$EDC/DEFAULT_TENANT/device_${__threadNum}</stringProp>
+            <stringProp name="mqtt.qos_level">1</stringProp>
+            <boolProp name="mqtt.add_timestamp">false</boolProp>
+            <stringProp name="mqtt.message_type">Random string with fixed length</stringProp>
+            <stringProp name="mqtt.message_type_fixed_length">10</stringProp>
+            <stringProp name="mqtt.message_to_sent">mqtt</stringProp>
+          </net.xmeter.samplers.PubSampler>
+          <hashTree/>
+          <net.xmeter.samplers.PubSampler guiclass="net.xmeter.gui.PubSamplerUI" testclass="net.xmeter.samplers.PubSampler" testname="MQTT Sender" enabled="false">
             <stringProp name="mqtt.keystore_file_path"></stringProp>
             <stringProp name="mqtt.clientcert_file_path"></stringProp>
             <stringProp name="mqtt.conn_keep_alive">300</stringProp>
@@ -234,35 +260,9 @@
             <stringProp name="mqtt.message_to_sent">mqtt</stringProp>
           </net.xmeter.samplers.PubSampler>
           <hashTree/>
-          <net.xmeter.samplers.PubSampler guiclass="net.xmeter.gui.PubSamplerUI" testclass="net.xmeter.samplers.PubSampler" testname="Kura Sender" enabled="true">
-            <stringProp name="mqtt.keystore_file_path"></stringProp>
-            <stringProp name="mqtt.clientcert_file_path"></stringProp>
-            <stringProp name="mqtt.conn_keep_alive">300</stringProp>
-            <stringProp name="mqtt.conn_attampt_max">1</stringProp>
-            <stringProp name="mqtt.keep_time">1800</stringProp>
-            <stringProp name="mqtt.client_id_prefix">device_${__threadNum}</stringProp>
-            <boolProp name="mqtt.client_id_suffix">false</boolProp>
-            <stringProp name="mqtt.reconn_attampt_max">1</stringProp>
-            <stringProp name="mqtt.conn_timeout">10</stringProp>
-            <boolProp name="mqtt.dual_ssl_authentication">false</boolProp>
-            <stringProp name="mqtt.keystore_password"></stringProp>
-            <stringProp name="mqtt.clientcert_password"></stringProp>
-            <stringProp name="mqtt.port">1884</stringProp>
-            <stringProp name="mqtt.protocol">TCP</stringProp>
-            <stringProp name="mqtt.server">127.0.0.1</stringProp>
-            <stringProp name="mqtt.user_name">auth_${__threadNum}@DEFAULT_TENANT</stringProp>
-            <stringProp name="mqtt.password">hono-secret</stringProp>
-            <stringProp name="mqtt.topic_name">$EDC/${honoType}/DEFAULT_TENANT/device_${__threadNum}</stringProp>
-            <stringProp name="mqtt.qos_level">0</stringProp>
-            <boolProp name="mqtt.add_timestamp">false</boolProp>
-            <stringProp name="mqtt.message_type">Random string with fixed length</stringProp>
-            <stringProp name="mqtt.message_type_fixed_length">10</stringProp>
-            <stringProp name="mqtt.message_to_sent">mqtt</stringProp>
-          </net.xmeter.samplers.PubSampler>
-          <hashTree/>
-          <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Constant Timer" enabled="true">
-            <stringProp name="ConstantTimer.delay">10</stringProp>
-            <stringProp name="TestPlan.comments">Wait for incoming messages from Hono/AMQP-Network</stringProp>
+          <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="MQTT Wait" enabled="false">
+            <stringProp name="ConstantTimer.delay">1</stringProp>
+            <stringProp name="TestPlan.comments">Wait is needed for MQTT Adapter, so messages will not be discarded with too much load</stringProp>
           </ConstantTimer>
           <hashTree/>
         </hashTree>
