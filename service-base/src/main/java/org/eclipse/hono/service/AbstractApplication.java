@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.service;
@@ -17,8 +18,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.annotation.PreDestroy;
 
@@ -120,34 +124,35 @@ public class AbstractApplication implements ApplicationRunner {
 
         healthCheckServer = new HealthCheckServer(vertx, config);
 
-        final CountDownLatch startupLatch = new CountDownLatch(1);
-        final int startupTimeoutSeconds = config.getStartupTimeout();
+        final Future<Void> future = deployRequiredVerticles(config.getMaxInstances())
+             .compose(s -> deployServiceVerticles())
+             .compose(s -> postRegisterServiceVerticles())
+             .compose(s -> healthCheckServer.start());
 
-        Future<Void> started = Future.future();
-        started.setHandler(s -> {
-            if (s.failed()) {
-                log.error("cannot start up application", s.cause());
+        final CompletableFuture<Void> started = new CompletableFuture<>();
+        future.setHandler(result -> {
+            if (result.failed()) {
+                started.completeExceptionally(result.cause());
             } else {
-                startupLatch.countDown();
+                started.complete(null);
             }
         });
 
-        deployRequiredVerticles(config.getMaxInstances())
-            .compose(s -> deployServiceVerticles())
-            .compose(s -> postRegisterServiceVerticles())
-            .compose(s -> healthCheckServer.start())
-            .compose(s -> started.complete(), started);
+        final int startupTimeoutSeconds = config.getStartupTimeout();
 
         try {
-            if (startupLatch.await(startupTimeoutSeconds, TimeUnit.SECONDS)) {
-                log.info("application startup completed successfully");
-            } else {
-                log.error("startup timed out after {} seconds, shutting down ...", startupTimeoutSeconds);
-                shutdown();
-            }
+            log.debug("Waiting for {} seconds to start up", startupTimeoutSeconds);
+            started.get(startupTimeoutSeconds, TimeUnit.SECONDS);
+            log.info("application startup completed successfully");
+        } catch (TimeoutException e) {
+            log.error("startup timed out after {} seconds, shutting down ...", startupTimeoutSeconds);
+            shutdown();
         } catch (InterruptedException e) {
             log.error("startup process has been interrupted, shutting down ...");
             Thread.currentThread().interrupt();
+            shutdown();
+        } catch (ExecutionException e) {
+            log.error("failed during startup, shutting down ...");
             shutdown();
         }
     }
