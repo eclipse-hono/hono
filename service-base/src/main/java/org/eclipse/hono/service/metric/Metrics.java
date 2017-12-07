@@ -26,9 +26,9 @@ abstract public class Metrics {
      * special prefixes used by spring boot actuator together with dropwizard metrics
      * @see <a href="https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-metrics.html#production-ready-dropwizard-metrics">Spring Boot</a>
      */
-    protected static String METER_PREFIX     = "meter.";
-    protected static String TIMER_PREFIX     = "timer.";
-    protected static String HISTOGRAM_PREFIX = "histogram.";
+    protected static final String METER_PREFIX     = "meter.";
+    protected static final String TIMER_PREFIX     = "timer.";
+    protected static final String HISTOGRAM_PREFIX = "histogram.";
 
     /** metric parts for messages - useable for AMQP, MQTT, etc. */
     protected static final String MESSAGES      = ".messages.";
