@@ -106,11 +106,11 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
 
         try {
             Jwts.parser()
-                .setSigningKey(key)
-                .requireSubject(Objects.requireNonNull(deviceId))
-                .require("ten", Objects.requireNonNull(tenantId))
-                .setAllowedClockSkewSeconds(10)
-                .parse(token);
+                    .setSigningKey(key)
+                    .requireSubject(Objects.requireNonNull(deviceId))
+                    .require("ten", Objects.requireNonNull(tenantId))
+                    .setAllowedClockSkewSeconds(10)
+                    .parse(token);
             return true;
         } catch (JwtException e) {
             // token is invalid for some reason
