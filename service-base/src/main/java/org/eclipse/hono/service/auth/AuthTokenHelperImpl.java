@@ -27,7 +27,6 @@ import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.vertx.core.Vertx;
 
-
 /**
  * A helper for creating and validating JSON Web Tokens containing user claims.
  *
