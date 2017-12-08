@@ -19,10 +19,14 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import javax.crypto.spec.SecretKeySpec;
 
 import org.eclipse.hono.config.KeyLoader;
+import org.eclipse.hono.config.SignatureSupportingConfigProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.jsonwebtoken.*;
 import io.vertx.core.Vertx;
@@ -32,6 +36,8 @@ import io.vertx.core.Vertx;
  *
  */
 public abstract class JwtHelper {
+
+    private static final Logger LOG = LoggerFactory.getLogger(JwtHelper.class);
 
     private static final Key DUMMY_KEY = new SecretKeySpec(new byte[]{ 0x00,  0x01 }, SignatureAlgorithm.HS256.getJcaName());
     private final Vertx vertx;
@@ -198,6 +204,62 @@ public abstract class JwtHelper {
             throw new IllegalArgumentException("token contains no exp claim");
         } else {
             return result.get();
+        }
+    }
+
+    protected static <T extends JwtHelper> T forSharedSecret(final String sharedSecret, final long tokenExpiration,
+            final Supplier<T> instanceSupplier) {
+
+        Objects.requireNonNull(sharedSecret);
+        Objects.requireNonNull(instanceSupplier);
+
+        final T result = instanceSupplier.get();
+        result.setSharedSecret(getBytes(sharedSecret));
+        result.tokenLifetime = Duration.ofSeconds(tokenExpiration);
+        return result;
+    }
+
+    protected static <T extends JwtHelper> T forSigning(final SignatureSupportingConfigProperties config, final Supplier<T> instanceSupplier) {
+
+        Objects.requireNonNull(config);
+        Objects.requireNonNull(instanceSupplier);
+
+        if (!config.isAppropriateForCreating()) {
+            throw new IllegalArgumentException("configuration does not specify any signing tokens");
+        } else {
+            final T result = instanceSupplier.get();
+            result.tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
+            if (config.getSharedSecret() != null) {
+                byte[] secret = getBytes(config.getSharedSecret());
+                result.setSharedSecret(secret);
+                LOG.info("using shared secret [{} bytes] for signing tokens", secret.length);
+            } else if (config.getKeyPath() != null) {
+                result.setPrivateKey(config.getKeyPath());
+                LOG.info("using private key [{}] for signing tokens", config.getKeyPath());
+            }
+            return result;
+        }
+    }
+
+    protected static <T extends JwtHelper> T forValidating(final SignatureSupportingConfigProperties config, final Supplier<T> instanceSupplier) {
+
+        Objects.requireNonNull(config);
+        Objects.requireNonNull(instanceSupplier);
+
+        if (!config.isAppropriateForValidating()) {
+            throw new IllegalArgumentException(
+                    "configuration does not specify any key material for validating tokens");
+        } else {
+            T result = instanceSupplier.get();
+            if (config.getSharedSecret() != null) {
+                byte[] secret = getBytes(config.getSharedSecret());
+                result.setSharedSecret(secret);
+                LOG.info("using shared secret [{} bytes] for validating tokens", secret.length);
+            } else if (config.getCertPath() != null) {
+                result.setPublicKey(config.getCertPath());
+                LOG.info("using public key from certificate [{}] for validating tokens", config.getCertPath());
+            }
+            return result;
         }
     }
 }
