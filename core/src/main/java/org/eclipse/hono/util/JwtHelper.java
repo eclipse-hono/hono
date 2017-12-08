@@ -28,7 +28,12 @@ import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwsHeader;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.SigningKeyResolverAdapter;
 import io.vertx.core.Vertx;
 
 /**
@@ -39,7 +44,8 @@ public abstract class JwtHelper {
 
     private static final Logger LOG = LoggerFactory.getLogger(JwtHelper.class);
 
-    private static final Key DUMMY_KEY = new SecretKeySpec(new byte[]{ 0x00,  0x01 }, SignatureAlgorithm.HS256.getJcaName());
+    private static final Key DUMMY_KEY = new SecretKeySpec(new byte[] { 0x00, 0x01 },
+            SignatureAlgorithm.HS256.getJcaName());
     private final Vertx vertx;
 
     /**
@@ -75,8 +81,7 @@ public abstract class JwtHelper {
     }
 
     /**
-     * Sets the secret to use for signing tokens asserting the
-     * registration status of devices.
+     * Sets the secret to use for signing tokens asserting the registration status of devices.
      * 
      * @param secret The secret to use.
      * @throws NullPointerException if secret is {@code null}.
@@ -91,8 +96,8 @@ public abstract class JwtHelper {
     }
 
     /**
-     * Sets the path to a PKCS8 PEM file containing the RSA private key to use for signing tokens
-     * asserting the registration status of devices.
+     * Sets the path to a PKCS8 PEM file containing the RSA private key to use for signing tokens asserting the
+     * registration status of devices.
      * 
      * @param keyPath The absolute path to the file.
      * @throws NullPointerException if the path is {@code null}.
@@ -108,8 +113,8 @@ public abstract class JwtHelper {
     }
 
     /**
-     * Sets the path to a PEM file containing a certificate holding a public key to use for validating the
-     * signature of tokens asserting the registration status of devices.
+     * Sets the path to a PEM file containing a certificate holding a public key to use for validating the signature of
+     * tokens asserting the registration status of devices.
      * 
      * @param keyPath The absolute path to the file.
      * @throws NullPointerException if the path is {@code null}.
@@ -125,12 +130,10 @@ public abstract class JwtHelper {
     }
 
     /**
-     * Gets the duration being used for calculating the <em>exp</em> claim of tokens
-     * created by this class.
+     * Gets the duration being used for calculating the <em>exp</em> claim of tokens created by this class.
      * <p>
-     * Clients should always check if a token is expired before using any information
-     * contained in the token.
-     *  
+     * Clients should always check if a token is expired before using any information contained in the token.
+     * 
      * @return The duration.
      */
     public final Duration getTokenLifetime() {
@@ -185,7 +188,8 @@ public abstract class JwtHelper {
         final AtomicReference<Date> result = new AtomicReference<>();
 
         try {
-            Jwts.parser().setSigningKeyResolver(new SigningKeyResolverAdapter(){
+            Jwts.parser().setSigningKeyResolver(new SigningKeyResolverAdapter() {
+
                 @SuppressWarnings("rawtypes")
                 @Override
                 public Key resolveSigningKey(JwsHeader header, Claims claims) {
@@ -219,7 +223,8 @@ public abstract class JwtHelper {
         return result;
     }
 
-    protected static <T extends JwtHelper> T forSigning(final SignatureSupportingConfigProperties config, final Supplier<T> instanceSupplier) {
+    protected static <T extends JwtHelper> T forSigning(final SignatureSupportingConfigProperties config,
+            final Supplier<T> instanceSupplier) {
 
         Objects.requireNonNull(config);
         Objects.requireNonNull(instanceSupplier);
@@ -241,7 +246,8 @@ public abstract class JwtHelper {
         }
     }
 
-    protected static <T extends JwtHelper> T forValidating(final SignatureSupportingConfigProperties config, final Supplier<T> instanceSupplier) {
+    protected static <T extends JwtHelper> T forValidating(final SignatureSupportingConfigProperties config,
+            final Supplier<T> instanceSupplier) {
 
         Objects.requireNonNull(config);
         Objects.requireNonNull(instanceSupplier);
