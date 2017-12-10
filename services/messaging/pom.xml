@@ -74,14 +74,14 @@
                       <port>5672</port>
                       <port>${vertx.health.port}</port>
                     </ports>
-                    <cmd>
+                    <entryPoint>
                       <exec>
                         <arg>java</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-jar</arg>
                         <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
                       </exec>
-                    </cmd>
+                    </entryPoint>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
