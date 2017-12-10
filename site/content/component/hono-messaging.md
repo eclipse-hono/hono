@@ -151,7 +151,7 @@ Hono Messaging can be run as a Docker container from the command line. The follo
 > -e 'HONO_MESSAGING_CERT_PATH=/run/secrets/hono-messaging-cert.pem' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_MESSAGING_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
-> eclipse/hono-server:latest
+> eclipse/hono-service-messaging:latest
 ~~~
 
 {{% note %}}
@@ -162,6 +162,18 @@ There are several things noteworthy about the above command to start the service
 Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
 1. In cases where the Hono Messaging container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to put all environment variable definitions into a file and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
+
+### Configuring the Java VM
+
+The Hono Messaging Docker image by default does not pass any specific configuration options to the Java VM. The VM can be configured using the standard `-X` options by means of setting the `_JAVA_OPTIONS` environment variable which is evaluated by the Java VM during start up.
+
+Using the example from above, the following environment variable definition needs to be added to limit the VM's heap size to 256MB:
+
+~~~sh
+...
+> -e '_JAVA_OPTIONS=-Xmx256m' \
+> eclipse/hono-service-messaging:latest
+~~~
 
 ## Run using the Docker Swarm Deployment Script
 
