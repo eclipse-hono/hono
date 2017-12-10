@@ -13,7 +13,6 @@
 package org.eclipse.hono.tests.jms;
 
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.tests.jms.JmsIntegrationTestSupport.*;
 import static org.junit.Assert.*;
 
 import java.time.Duration;
@@ -28,6 +27,7 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
+import javax.naming.NamingException;
 
 import org.apache.qpid.jms.JmsQueue;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -35,7 +35,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +46,7 @@ public class SendReceiveIT {
 
     private static final int DEFAULT_TEST_TIMEOUT = 5000;
     private static final String SPECIAL_DEVICE = "fluxcapacitor";
-    private static final JmsQueue SPECIAL_DEVICE_SENDER_DEST = new JmsQueue(TELEMETRY_SENDER_ADDRESS + "/" + SPECIAL_DEVICE);
+    private static final JmsQueue SPECIAL_DEVICE_SENDER_DEST = new JmsQueue(JmsIntegrationTestSupport.TELEMETRY_SENDER_ADDRESS + "/" + SPECIAL_DEVICE);
 
     /* test constants */
     private static final int DELIVERY_MODE = DeliveryMode.NON_PERSISTENT;
@@ -58,26 +57,7 @@ public class SendReceiveIT {
     private JmsIntegrationTestSupport receiver;
     private JmsIntegrationTestSupport sender;
     private RegistrationTestSupport registration;
-    private JmsIntegrationTestSupport connector;
     private JmsIntegrationTestSupport registrationClient;
-
-    /**
-     * Connects to Hono services.
-     * 
-     * @throws Exception if one of the connections fails.
-     */
-    @Before
-    public void init() throws Exception {
-
-        sender = JmsIntegrationTestSupport.newClient(HONO, IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
-        connector = JmsIntegrationTestSupport.newClient(HONO, "connector-client", "connector-secret");
-        receiver = JmsIntegrationTestSupport.newClient(DISPATCH_ROUTER, IntegrationTestSupport.DOWNSTREAM_USER, IntegrationTestSupport.DOWNSTREAM_PWD);
-        registrationClient = JmsIntegrationTestSupport.newClient(JmsIntegrationTestSupport.HONO_DEVICEREGISTRY, IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
-        registration = registrationClient.getRegistrationTestSupport();
-
-        registration.register(DEVICE_ID, Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
-        registration.register(SPECIAL_DEVICE, Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
-    }
 
     /**
      * Closes the connections to Hono services.
@@ -87,17 +67,14 @@ public class SendReceiveIT {
     @After
     public void after() throws Exception {
         LOG.info("closing JMS connections...");
-        if (registration != null) {
-            registration.close();
+        if (registrationClient != null) {
+            registrationClient.close();
         }
         if (receiver != null) {
             receiver.close();
         }
         if (sender != null) {
             sender.close();
-        }
-        if (connector != null) {
-            connector.close();
         }
     }
 
@@ -109,6 +86,8 @@ public class SendReceiveIT {
     @Test
     public void testMalformedTelemetryMessageGetsRejected() throws Exception {
 
+        givenAReceiver();
+        givenASender();
         final CountDownLatch rejected = new CountDownLatch(1);
 
         // prepare consumer to get some credits for sending
@@ -143,6 +122,9 @@ public class SendReceiveIT {
     @Test
     public void testTelemetryUpload() throws Exception {
 
+        givenAReceiver();
+        givenASender();
+        getRegistrationClient().register(DEVICE_ID, Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
         final CountDownLatch latch = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final LongSummaryStatistics stats = new LongSummaryStatistics();
 
@@ -194,12 +176,15 @@ public class SendReceiveIT {
     @Test
     public void testSendReceiveForSpecificDeviceOnly() throws Exception {
 
+        givenAReceiver();
+        givenASender();
+        getRegistrationClient().register(SPECIAL_DEVICE, Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
         final CountDownLatch latch = new CountDownLatch(1);
 
         // get registration assertion
         final String registrationAssertion = getRegistrationAssertion(SPECIAL_DEVICE);
 
-        final MessageProducer telemetryProducer = connector.getTelemetryProducer(SPECIAL_DEVICE_SENDER_DEST);
+        final MessageProducer telemetryProducer = sender.getTelemetryProducer(SPECIAL_DEVICE_SENDER_DEST);
         final MessageConsumer messageConsumer = receiver.getTelemetryConsumer();
         messageConsumer.setMessageListener(message -> {
             final String deviceId = getDeviceId(message);
@@ -216,8 +201,32 @@ public class SendReceiveIT {
 
     private String getRegistrationAssertion(final String deviceId) throws Exception {
 
-        RegistrationResult result = registration.assertRegistration(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
+        RegistrationResult result = getRegistrationClient().assertRegistration(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         return result.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
+    }
+
+    private void givenAReceiver() throws JMSException, NamingException {
+        receiver = JmsIntegrationTestSupport.newClient(
+                JmsIntegrationTestSupport.DISPATCH_ROUTER,
+                IntegrationTestSupport.DOWNSTREAM_USER,
+                IntegrationTestSupport.DOWNSTREAM_PWD);
+    }
+
+    private void givenASender() throws JMSException, NamingException {
+        sender = JmsIntegrationTestSupport.newClient(JmsIntegrationTestSupport.HONO, IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
+    }
+
+    private RegistrationTestSupport getRegistrationClient() throws JMSException, NamingException {
+        if (registrationClient == null) {
+            registrationClient = JmsIntegrationTestSupport.newClient(
+                    JmsIntegrationTestSupport.HONO_DEVICEREGISTRY,
+                    IntegrationTestSupport.HONO_USER,
+                    IntegrationTestSupport.HONO_PWD);
+        }
+        if (registration == null) {
+            registration = registrationClient.getRegistrationTestSupport();
+        }
+        return registration;
     }
 
     private static String getDeviceId(final Message message) {

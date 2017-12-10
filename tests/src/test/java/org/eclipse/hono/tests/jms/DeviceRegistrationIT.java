@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.JMSSecurityException;
-import javax.naming.NamingException;
 
 import org.apache.qpid.jms.JmsQueue;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -34,8 +33,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Register some devices, send some messages.
@@ -43,34 +40,54 @@ import org.slf4j.LoggerFactory;
 public class DeviceRegistrationIT {
 
     private static final int DEFAULT_TEST_TIMEOUT = 5000; // ms
-    private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistrationIT.class);
     private static final String NON_EXISTING_DEVICE_ID = "NON_EXISTING";
+
     private static JmsIntegrationTestSupport client;
+
     private RegistrationTestSupport registration;
 
+    /**
+     * Opens a connection to the Device Registry.
+     * 
+     * @throws Exception if the connection cannot be established.
+     */
     @BeforeClass
-    public static void connectToDeviceRegistry() throws JMSException, NamingException {
+    public static void connectToDeviceRegistry() throws Exception {
         client = JmsIntegrationTestSupport.newClient(JmsIntegrationTestSupport.HONO_DEVICEREGISTRY, IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
     }
 
+    /**
+     * Creates a registration client for the default tenant.
+     * 
+     * @throws JMSException if the client cannot be created.
+     */
     @Before
-    public void init() throws Exception {
+    public void init() throws JMSException {
         registration = client.getRegistrationTestSupport();
         registration.createConsumer();
         registration.createProducer();
     }
 
+    /**
+     * Closes the registration client.
+     * 
+     * @throws JMSException if the client cannot be closed.
+     */
     @After
-    public void after() throws Exception {
+    public void after() throws JMSException {
         if (registration != null) {
             registration.close();
         }
     }
 
+    /**
+     * Closes the connection to the Device Registry.
+     * 
+     * @throws JMSException if the connection cannot be closed.
+     */
     @AfterClass
     public static void disconnect() throws JMSException {
         if (client != null) {
-            LOG.debug("closing JMS connection...");
             client.close();
         }
     }
@@ -154,15 +171,27 @@ public class DeviceRegistrationIT {
         assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
     }
 
+    /**
+     * Verifies that the Device Registry rejects an unauthorized request to open a receiver
+     * link for a tenant.
+     * 
+     * @throws JMSException if the test succeeds.
+     */
     @Test(expected = JMSSecurityException.class)
-    public void testOpenReceiverNotAllowedForOtherTenant() throws Exception {
+    public void testOpenReceiverNotAllowedForOtherTenant() throws JMSException {
 
         final RegistrationTestSupport registrationForOtherTenant = client.getRegistrationTestSupport("someOtherTenant", false);
         registrationForOtherTenant.createConsumer();
     }
 
+    /**
+     * Verifies that the Device Registry rejects an unauthorized request to open a sender
+     * link for a tenant.
+     * 
+     * @throws JMSException if the test succeeds.
+     */
     @Test(expected = JMSSecurityException.class)
-    public void testOpenSenderNotAllowedForOtherTenant() throws Exception {
+    public void testOpenSenderNotAllowedForOtherTenant() throws JMSException {
 
         final RegistrationTestSupport registrationForOtherTenant = client.getRegistrationTestSupport("someOtherTenant", false);
         registrationForOtherTenant.createProducer();

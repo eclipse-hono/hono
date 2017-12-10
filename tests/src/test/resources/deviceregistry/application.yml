@@ -12,6 +12,9 @@ hono:
     amqp:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
+    rest:
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
     svc:
       signing:
         sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf

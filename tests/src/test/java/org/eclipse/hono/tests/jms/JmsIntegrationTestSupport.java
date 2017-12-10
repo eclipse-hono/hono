@@ -52,8 +52,6 @@ public class JmsIntegrationTestSupport {
     static final Destination TELEMETRY_SENDER_DESTINATION = new JmsQueue(TELEMETRY_SENDER_ADDRESS);
     static final Destination TELEMETRY_RECV_DESTINATION = new JmsQueue(TELEMETRY_RECEIVER_ADDRESS);
 
-    private static final String AMQP_VHOST = "hono";
-    private static final String AMQP_DEVICEREGISTRY_VHOST = "deviceregistry";
     private static final String AMQP_URI_PATTERN = "amqp://%s:%d?jms.connectionIDPrefix=CON&amqp.vhost=%s%s";
     private static final String USERNAME_PASSWORD_PATTERN = "&jms.username=%s&jms.password=%s";
     private static final Logger LOG = LoggerFactory.getLogger(JmsIntegrationTestSupport.class);
@@ -148,22 +146,22 @@ public class JmsIntegrationTestSupport {
                         AMQP_URI_PATTERN,
                         IntegrationTestSupport.HONO_HOST,
                         IntegrationTestSupport.HONO_PORT,
-                        AMQP_VHOST,
+                        HONO,
                         ""));
         final StringBuilder honoDeviceRegistryURI = new StringBuilder(
                 String.format(
                         AMQP_URI_PATTERN,
                         IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                         IntegrationTestSupport.HONO_DEVICEREGISTRY_PORT,
-                        AMQP_DEVICEREGISTRY_VHOST,
+                        HONO_DEVICEREGISTRY,
                         ""));
         final StringBuilder qdrURI = new StringBuilder(
                 String.format(
                         AMQP_URI_PATTERN,
                         IntegrationTestSupport.DOWNSTREAM_HOST,
                         IntegrationTestSupport.DOWNSTREAM_PORT,
-                        AMQP_VHOST,
-                        "&jms.prefetchPolicy.queuePrefetch=20&jms.presettlePolicy.presettleConsumers=true"));
+                        DISPATCH_ROUTER,
+                        "&jms.prefetchPolicy.queuePrefetch=20"));
 
         if (username != null && password != null) {
             final String usernamePasswordProperty = String.format(USERNAME_PASSWORD_PATTERN, username, password);
