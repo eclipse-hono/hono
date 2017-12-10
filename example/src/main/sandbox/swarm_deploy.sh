@@ -91,6 +91,7 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env _JAVA_OPTIONS=-Xmx32m \
   ${docker.image.org-name}/hono-service-auth:${project.version}
 echo ... done
 
@@ -123,6 +124,7 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=prod \
+  --env _JAVA_OPTIONS=-Xmx64m \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
 echo ... done
@@ -141,6 +143,7 @@ docker service create $CREATE_OPTIONS --name hono-service-messaging \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=prod \
+  --env _JAVA_OPTIONS=-Xmx196m \
   ${docker.image.org-name}/hono-service-messaging:${project.version}
 echo ... done
 
@@ -157,6 +160,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:808
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env _JAVA_OPTIONS=-Xmx128m \
   ${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
 echo ... done
 
@@ -173,6 +177,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env _JAVA_OPTIONS=-Xmx128m \
   ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
 echo ... done
 
@@ -189,6 +194,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env _JAVA_OPTIONS=-Xmx128m \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
 
