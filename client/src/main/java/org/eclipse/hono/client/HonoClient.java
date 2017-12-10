@@ -27,7 +27,16 @@ import io.vertx.proton.ProtonDelivery;
 
 /**
  * A factory for creating clients for Hono's arbitrary APIs.
- *
+ * <p>
+ * A factory maintains a single AMQP 1.0 connection and a single
+ * session to the peer. This session is shared by all AMQP 1.0 links
+ * established for <em>senders</em>, <em>consumers</em> and <em>clients</em>
+ * created using the factory methods.
+ * <p>
+ * The <em>getOrCreate</em> factory methods return an existing client for the
+ * given address if available. Note that factory methods for creating consumers
+ * <em>always</em> return a new instance so that all messages received are processed
+ * by the given handler passed in to the factory method.
  */
 public interface HonoClient {
 
