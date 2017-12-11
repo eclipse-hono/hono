@@ -1,0 +1,5 @@
+participant AMQP 1.0 Messaging Network
+participant Business Application
+
+AMQP 1.0 Messaging Network->Business Application: 1.0 transfer("telemetry/TENANT", 4711, data)
+Business Application->AMQP 1.0 Messaging Network: 2.0 disposition("accepted")
