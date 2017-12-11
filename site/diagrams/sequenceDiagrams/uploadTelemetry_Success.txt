@@ -1,0 +1,14 @@
+participant MQTT Adapter
+participant Hono Messaging
+
+MQTT Adapter->Hono Messaging: 1.0 transfer("telemetry/TENANT", "4711", registration assertion, data)
+activate Hono Messaging
+note over Hono Messaging
+validate registration
+assertion
+end note
+Hono Messaging->AMQP 1.0 Messaging Network: 1.1 transfer("telemetry/TENANT", "4711", data)
+deactivate Hono Messaging
+AMQP 1.0 Messaging Network->Hono Messaging: 2.0 disposition("accepted")
+activate Hono Messaging
+Hono Messaging->MQTT Adapter: 2.1 disposition("accepted")

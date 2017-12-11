@@ -35,13 +35,18 @@ All other combinations are not supported by Hono and result in a termination of 
 
 **Message Flow**
 
-The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* uploading a telemetry data message to Hono's Telemetry endpoint. The *snd-settle-mode* being used is `settled`.
+The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* uploading a telemetry data message to Hono Messaging's Telemetry endpoint. The delivery mode being used is *AT LEAST ONCE*.
 
-![Upload telemetry data flow](../upload-telemetry-data.png)
+![Upload telemetry data flow](../uploadTelemetry_Success.png)
 
 1. *MQTT Adapter* sends telemetry data for device `4711`.
-   1. *Telemetry* endpoint successfully verifies that device `4711` of `TENANT` exists and is enabled by means of validating the *registration assertion* included in the message (see [Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})).
-   1. *Telemetry* endpoint forwards data to *Dispatch Router*.
+   1. *Hono Messaging* successfully verifies that device `4711` of `TENANT` exists and is enabled by means of validating the *registration assertion* included in the message (see [Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})) and forwards data to *AMQP 1.0 Messaging Network*.
+1. *AMQP 1.0 Messaging Network* acknowledges reception of the message.
+   1. *Hono Messaging* acknowledges reception of the message.
+
+{{% note %}}
+Telemetry messages are delivered unreliably by definition. Thus, the *MQTT Adapter* does not wait for the *disposition* frame sent by *Hono Messaging* to indicate successful delivery of the message but simply discards any disposition frame it receives.
+{{% /note %}}
 
 **Message Format**
 
@@ -84,14 +89,15 @@ In addition a client MAY include a boolean link property `ordering-required` wit
 
 **Message Flow**
 
-The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving a telemetry data message from Hono.
+The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving a telemetry data message from Hono. The delivery mode used is *AT LEAST ONCE*.
 
-![Receive Telemetry Data](../consume-telemetry-data.png)
+![Receive Telemetry Data](../consumeTelemetry_Success.png)
 
-1. *Dispatch Router* delivers telemetry message to *Business Application*.
+1. *AMQP 1.0 Messaging Network* delivers telemetry message to *Business Application*.
+1. *Business Application* acknowledges reception of message.
 
 {{% note %}}
-The *Business Application* can only consume telemetry messages that have been uploaded to Hono *after* the *Business Application* has established the link with the *Dispatch Router*. This is because telemetry messages are not *durable*, i.e. they are not persisted in Hono in order to be forwarded at a later time.
+The *Business Application* can only consume telemetry messages that have been uploaded to Hono *after* the *Business Application* has established the link with the *AMQP 1.0 Messaging Network*. This is because telemetry messages are not *durable*, i.e. they are not persisted in Hono in order to be forwarded at a later time.
 {{% /note %}}
 
 **Message Format**
