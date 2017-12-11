@@ -22,17 +22,6 @@ echo DEPLOYING ECLIPSE HONO SANDBOX TO DOCKER SWARM
 # creating Hono network
 docker network create --label project=$NS --driver overlay $NS
 
-# create volume for persisting Device Registry data
-docker volume create --label project=$NS device-registry
-
-# initialize Device Registry volume with default credentials
-docker secret create -l project=$NS sandbox-credentials.json $SCRIPTPATH/sandbox-credentials.json
-docker service create --detach=true --name init-device-registry-data \
-  --secret sandbox-credentials.json \
-  --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
-  --restart-condition=none \
-  busybox sh -c 'cp -u /run/secrets/sandbox-credentials.json /var/lib/hono/device-registry/credentials.json'
-
 docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 
 echo
@@ -41,7 +30,7 @@ docker secret create -l project=$NS influxdb.conf $CONFIG/influxdb.conf
 docker service create $CREATE_OPTIONS --name influxdb \
   --secret influxdb.conf \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
-docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 ${docker.image.org-name}/hono-grafana:${project.version}
+docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 grafana/grafana:${grafana.version}
 echo ... done
 
 echo
@@ -107,6 +96,21 @@ echo ... done
 
 echo
 echo Deploying Device Registry ...
+docker volume inspect -f '{{ .Name }}' device-registry 1> /dev/null 2> /dev/null
+if [ $? -eq 1 ]
+then
+  echo "Creating and initializing Docker Volume for Device Registry..."
+  # create volume for persisting Device Registry data
+  docker volume create --label project=$NS device-registry
+
+  # initialize Device Registry volume with default credentials
+  docker secret create -l project=$NS sandbox-credentials.json $SCRIPTPATH/sandbox-credentials.json
+  docker service create --detach=true --name init-device-registry-data \
+    --secret sandbox-credentials.json \
+    --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
+    --restart-condition=none \
+    busybox sh -c 'cp -u /run/secrets/sandbox-credentials.json /var/lib/hono/device-registry/credentials.json'
+fi
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
 docker secret create -l project=$NS hono-service-device-registry-config.yml $SCRIPTPATH/hono-service-device-registry-config.yml
@@ -197,3 +201,5 @@ docker service create --detach=false --name hono-nginx -p 80:80 \
 echo ... done
 
 echo ECLIPSE HONO SANDBOX DEPLOYED TO DOCKER SWARM
+echo
+echo "Please do not forget to configure the Grafana data source and dashboard using the $SCRIPTPATH/../deploy/configure_grafana.sh script"

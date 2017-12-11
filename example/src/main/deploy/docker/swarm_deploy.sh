@@ -96,11 +96,23 @@ echo ... done
 
 echo
 echo Deploying Device Registry ...
-docker volume create --label project=$NS device-registry
-docker run --rm \
-  --mount type=bind,source=$CONFIG/example-credentials.json,target=/tmp/hono/example-credentials.json \
-  --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
-  busybox sh -c 'cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json'
+docker volume inspect -f '{{ .Name }}' device-registry 1> /dev/null 2> /dev/null
+if [ $? -eq 1 ]
+then
+  echo "Creating and initializing Docker Volume for Device Registry..."
+  docker volume create --label project=$NS device-registry
+  docker secret create -l project=$NS example-credentials.json $CONFIG/example-credentials.json
+  docker service create --detach=true --name init-device-registry-data \
+    --secret example-credentials.json \
+    --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
+    --restart-condition=none \
+    busybox sh -c 'cp -u /run/secrets/example-credentials.json /var/lib/hono/device-registry/credentials.json'
+
+#   docker run --rm \
+#    --mount type=bind,source=$CONFIG/example-credentials.json,target=/tmp/hono/example-credentials.json \
+#    --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
+#    busybox sh -c 'cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json'
+fi
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
 docker secret create -l project=$NS hono-service-device-registry-config.yml $CONFIG/hono-service-device-registry-config.yml
@@ -115,11 +127,6 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --env SPRING_PROFILES_ACTIVE=dev \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
-
-#echo
-#echo Registering default credentials ...
-#curl -X POST -H 'Content-Type: application/json' --data-binary @$CONFIG/example-credentials.json http://$DOCKER_IP:28080/credentials/DEFAULT_TENANT
-#echo ... done
 
 echo
 echo Deploying Hono Messaging ...
