@@ -22,6 +22,10 @@ See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue
    * `/home/hono/registration/credentials.json` has been changed to `/var/lib/hono/device-registry/credentials.json`
 * The Device Registry used in the *Getting started* guide now by default persists data to a file system volume.
 
+### API Changes
+
+* The Telemetry API has been updated to recommend clients to use *AT LEAST ONCE* delivery semantics instead of *AT MOST ONCE*. This change has been made to better support end-to-end flow control between protocol adapters (devices) and downstream consumers.
+
 # 0.5-M10
 
 ### New Features
