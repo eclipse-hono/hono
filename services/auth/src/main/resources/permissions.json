@@ -48,9 +48,9 @@
     ]
   },
   "users": {
-    "rest-adapter@HONO": {
+    "http-adapter@HONO": {
       "mechanism": "PLAIN",
-      "password": "rest-secret",
+      "password": "http-secret",
       "authorities": [ "hono-component", "protocol-adapter" ]
     },
     "mqtt-adapter@HONO": {
