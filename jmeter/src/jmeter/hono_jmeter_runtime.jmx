@@ -103,8 +103,8 @@
           <org.eclipse.hono.jmeter.HonoSenderSampler guiclass="org.eclipse.hono.jmeter.ui.HonoSenderSamplerUI" testclass="org.eclipse.hono.jmeter.HonoSenderSampler" testname="Hono Sender" enabled="true">
             <stringProp name="host">127.0.0.1</stringProp>
             <stringProp name="port">5671</stringProp>
-            <stringProp name="user">rest-adapter@HONO</stringProp>
-            <stringProp name="pwd">rest-secret</stringProp>
+            <stringProp name="user">http-adapter@HONO</stringProp>
+            <stringProp name="pwd">http-secret</stringProp>
             <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
             <stringProp name="container">sender</stringProp>
             <stringProp name="trustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
@@ -119,8 +119,8 @@
             <stringProp name="endpoint">telemetry</stringProp>
             <stringProp name="registryHost">127.0.0.1</stringProp>
             <stringProp name="registryPort">25671</stringProp>
-            <stringProp name="registryUser">rest-adapter@HONO</stringProp>
-            <stringProp name="registryPwd">rest-secret</stringProp>
+            <stringProp name="registryUser">http-adapter@HONO</stringProp>
+            <stringProp name="registryPwd">http-secret</stringProp>
             <stringProp name="registryTrustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
           </org.eclipse.hono.jmeter.HonoSenderSampler>
           <hashTree/>
