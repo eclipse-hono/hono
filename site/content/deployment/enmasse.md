@@ -3,7 +3,7 @@ title = "EnMasse"
 weight = 475
 +++
 
-For more scalable messaging infrastructure, we should use messaging cloud platform like [EnMasse](http://enmasse.io/) instead of a single router/broker instance. The deployment in this case is very similar to the [standard Openshift deployment]({{< relref "openshift.md" >}}), so check that out for basic information and prerequisites. For the rest of this guide we will assume that you have Minishift properly installed and configured.
+For more scalable messaging infrastructure, we should use messaging cloud platform like [EnMasse](http://enmasse.io/) instead of a single router/broker instance. The deployment in this case is very similar to the [standard OpenShift deployment]({{< relref "openshift.md" >}}), so check that out for basic information and prerequisites. For the rest of this guide we will assume that you have Minishift properly installed and configured.
 <!--more-->
 
 {{% warning %}}
@@ -18,7 +18,7 @@ These are all subjects to current and future developments in this area. This doc
 
 ## Deploy EnMasse
 
-First thing we need is to run EnMasse messaging platform on Openshift in a project called `hono`. For that, download the EnMasse release from the [download page](https://github.com/EnMasseProject/enmasse/releases). These instructions were tested using version `0.13.2`. Unzipping the release and executing
+First thing we need is to run EnMasse messaging platform on OpenShift in a project called `hono`. For that, download the EnMasse release from the [download page](https://github.com/EnMasseProject/enmasse/releases). These instructions were tested using version `0.13.2`. Unzipping the release and executing
 
 ~~~sh
 ./deploy-openshift.sh -n hono -m https://$(minishift ip):8443
@@ -35,11 +35,11 @@ Now we are ready to deploy Hono. From the `example/target/deploy/openshift` dire
 ~hono/example/target/deploy/openshift$ ./enmasse_deploy.sh
 ~~~
 
-This should start all necessary Hono components, configured to connect to the EnMasse. See the [original Openshift guide]({{< relref "openshift.md" >}}) to see how to check the status Hono components.
+This should start all necessary Hono components, configured to connect to the EnMasse. See the [original OpenShift guide]({{< relref "openshift.md" >}}) to see how to check the status Hono components.
 
 ## Extract Certificate
 
-In order to connect the external consumer to EnMasse, we need to use a proper SSL certificate. We can extract one from the Openshift using the following command (from the `example` directory).
+In order to connect the external consumer to EnMasse, we need to use a proper SSL certificate. We can extract one from the OpenShift using the following command (from the `example` directory).
 
 ~~~sh
 ~hono/example$ oc extract secret/external-certs-messaging --to=target/config/hono-demo-certs-jar/ -n hono
@@ -59,7 +59,7 @@ Note that we used the EnMasse certificate obtained in the previous step. One mor
 
 ## Register Device
 
-Similarly as in other deployments, we can now register the device and send telemetry data. First let's register a device using an Openshift route for the `device registry` service.
+Similarly as in other deployments, we can now register the device and send telemetry data. First let's register a device using an OpenShift route for the `device registry` service.
 
 ~~~sh
 ~hono/example$ curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' http://hono-service-device-registry-http-hono.$(minishift ip).nip.io/registration/DEFAULT_TENANT
@@ -75,7 +75,7 @@ Now we can use HTTP protocol adapter, to post actual telemetry data
 
 ## Undeploy
 
-We can use the same `openshift_undeploy.sh` script to remove `hono` application from Openshift.
+We can use the same `openshift_undeploy.sh` script to remove `hono` application from OpenShift.
 
 ~~~sh
 ~hono/example/target/deploy/openshift$ ./openshift_undeploy.sh

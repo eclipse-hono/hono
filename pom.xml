@@ -223,7 +223,7 @@
             <execution>
               <id>create_resources</id>
               <!-- 
-                create Kubernetes/Openshift descriptors before the artifact is packaged so
+                create Kubernetes/OpenShift descriptors before the artifact is packaged so
                 that the desciptors are included in the artifact
                -->
               <phase>prepare-package</phase>
