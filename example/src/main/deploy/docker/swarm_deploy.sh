@@ -146,19 +146,19 @@ docker service create $CREATE_OPTIONS --name hono-service-messaging -p 5671:5671
 echo ... done
 
 echo
-echo Deploying HTTP REST adapter ...
-docker secret create -l project=$NS rest-adapter-key.pem $CERTS/rest-adapter-key.pem
-docker secret create -l project=$NS rest-adapter-cert.pem $CERTS/rest-adapter-cert.pem
-docker secret create -l project=$NS hono-adapter-rest-vertx-config.yml $CONFIG/hono-adapter-rest-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-rest-vertx -p 8080:8080 -p 8443:8443 \
-  --secret rest-adapter-key.pem \
-  --secret rest-adapter-cert.pem \
+echo Deploying HTTP adapter ...
+docker secret create -l project=$NS http-adapter-key.pem $CERTS/http-adapter-key.pem
+docker secret create -l project=$NS http-adapter-cert.pem $CERTS/http-adapter-cert.pem
+docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $CONFIG/hono-adapter-http-vertx-config.yml
+docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
+  --secret http-adapter-key.pem \
+  --secret http-adapter-cert.pem \
   --secret trusted-certs.pem \
-  --secret hono-adapter-rest-vertx-config.yml \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-rest-vertx-config.yml \
+  --secret hono-adapter-http-vertx-config.yml \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  ${docker.image.org-name}/hono-adapter-rest-vertx:${project.version}
+  ${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
 echo ... done
 
 echo

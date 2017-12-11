@@ -42,8 +42,8 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
     <hono.auth.validation.certPath>/run/secrets/auth-server-cert.pem</hono.auth.validation.certPath>
     <hono.adapter.mqtt.username>mqtt-adapter@HONO</hono.adapter.mqtt.username>
     <hono.adapter.mqtt.password>mqtt-secret</hono.adapter.mqtt.password>
-    <hono.adapter.rest.username>rest-adapter@HONO</hono.adapter.rest.username>
-    <hono.adapter.rest.password>rest-secret</hono.adapter.rest.password>
+    <hono.adapter.http.username>http-adapter@HONO</hono.adapter.http.username>
+    <hono.adapter.http.password>http-secret</hono.adapter.http.password>
     <hono.adapter.kura.username>kura-adapter@HONO</hono.adapter.kura.username>
     <hono.adapter.kura.password>kura-secret</hono.adapter.kura.password>
     <hono.trustStore.path>/run/secrets/trusted-certs.pem</hono.trustStore.path>
@@ -114,7 +114,7 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-adapter-rest-vertx</artifactId>
+      <artifactId>hono-adapter-http-vertx</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -176,7 +176,7 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                 hono-service-auth,
                 hono-service-messaging,
                 hono-service-device-registry,
-                hono-adapter-rest-vertx,
+                hono-adapter-http-vertx,
                 hono-adapter-mqtt-vertx,
                 hono-adapter-kura,
                 hono-metrics,

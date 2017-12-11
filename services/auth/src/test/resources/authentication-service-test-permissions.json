@@ -48,7 +48,7 @@
     ]
   },
   "users": {
-    "rest-adapter@HONO": {
+    "http-adapter@HONO": {
       "mechanism": "PLAIN",
       "password": "secret",
       "authorities": [ "hono-component", "protocol-adapter", "device-manager" ]
