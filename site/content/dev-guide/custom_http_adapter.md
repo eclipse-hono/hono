@@ -22,7 +22,7 @@ The Hono REST protocol adapter supports telemetry and event data processing. Add
 device registration. 
 
 For documentation of the Hono REST protocol adapter, refer to 
-[REST Adapter]({{< relref "component/rest-adapter.md" >}}) 
+[HTTP Adapter]({{< relref "component/http-adapter.md" >}}) 
 
 You can find the source of the Hono REST protocol adapter at 
 <https://github.com/eclipse/hono/tree/master/adapters/rest-vertx>.
@@ -84,7 +84,7 @@ You may adopt the Maven profile `build-docker-image` from the Maven POM file of 
 custom adapter's Maven POM file. 
 
 Follow the guidelines for running the Hono REST protocol adapter in 
-[REST Adapter]({{< relref "component/rest-adapter.md" >}}). Don't forget to configure the custom adapter's port if you 
+[HTTP Adapter]({{< relref "component/http-adapter.md" >}}). Don't forget to configure the custom adapter's port if you 
 have the Hono REST protocol adapter running. See the Configuration section of the Hono REST adapter for the details to 
 configure the port. 
 

@@ -55,8 +55,8 @@ The second command creates and starts up Docker Swarm *services* for all compone
 {{< figure src="../Hono_instance.svg" title="Hono instance containers">}}
 
 * Hono Instance
-  * A *REST Adapter* instance that exposes Hono's Telemetry and Event APIs as RESTful resources.
-  * An *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
+  * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as RESTful resources.
+  * A *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
   * A *Hono Messaging* instance that protocol adapters connect to in order to forward data from devices.
   * A *Device Registry* instance that manages device data and issues device registration assertions to protocol adapters.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
@@ -101,7 +101,7 @@ Now that the Hono instance is up and running you can use Hono's protocol adapter
 
 The following sections will use the REST adapter to publish the telemetry data because it is very easy to access using a standard HTTP client like `curl` or [`HTTPie`](https://httpie.org/) from the command line.
 
-Please refer to the [REST Adapter]({{< relref "rest-adapter.md" >}}) documentation for additional information on how to access Hono's functionality via REST.
+Please refer to the [HTTP Adapter]({{< relref "http-adapter.md" >}}) documentation for additional information on how to access Hono's functionality via REST.
 
 {{% warning %}}
 The following sections assume that the REST adapter Docker container has been started on the local machine. However, if you started the REST adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
@@ -195,7 +195,7 @@ If you have started the consumer as described above, you should now see the tele
 
 If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is *never* persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no consumer to deliver it to.
 
-Please refer to the [REST Adapter documentation]({{< relref "rest-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
+Please refer to the [HTTP Adapter documentation]({{< relref "http-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
 
 ### Uploading Event Data using the REST Adapter
 
