@@ -79,7 +79,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## REST Adapter
 
 The REST adapter supports the use of TLS for connections to the Device Registration service, the Credentials service and the Hono Messaging component.
-Please refer to the [REST adapter component documentation]({{< relref "component/rest-adapter.md" >}}) for details regarding the required configuration steps.
+Please refer to the [HTTP adapter component documentation]({{< relref "component/http-adapter.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the REST adapter for that purpose.
 

@@ -21,7 +21,7 @@ The following diagram provides an overview of the components involved in use cas
 
 ### Device Auth
 
-Both the REST adapter as well as the MQTT adapter require devices to authenticate during connection establishment by default. Both rely on the [Credentials API]({{< relref "api/Credentials-API.md" >}}) to help in verifying credentials provided by a device. See [Device Authentication]({{< relref "concepts/device-identity.md" >}}) for a general overview of Hono's approach to authenticating devices and [REST adapter]({{< relref "component/rest-adapter.md" >}}) and [MQTT adapter]({{< relref "component/mqtt-adapter.md" >}}) for specifics regarding how devices using HTTP and MQTT can authenticate to the corresponding protocol adapters.
+Both the HTTP adapter as well as the MQTT adapter require devices to authenticate during connection establishment by default. Both rely on the [Credentials API]({{< relref "api/Credentials-API.md" >}}) to help in verifying credentials provided by a device. See [Device Authentication]({{< relref "concepts/device-identity.md" >}}) for a general overview of Hono's approach to authenticating devices and [HTTP adapter]({{< relref "component/http-adapter.md" >}}) and [MQTT adapter]({{< relref "component/mqtt-adapter.md" >}}) for specifics regarding how devices using HTTP and MQTT can authenticate to the corresponding protocol adapters.
 
 ### System Component Auth
 

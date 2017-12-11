@@ -132,37 +132,37 @@ The following table provides an overview of the configuration variables and corr
 
 ## Run as a Docker Swarm Service
 
-The REST adapter can be run as a Docker container from the command line. The following commands create and start the REST adapter as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
+The HTTP adapter can be run as a Docker container from the command line. The following commands create and start the HTTP adapter as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
 
 ~~~sh
 ~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
-~/hono$ docker secret create rest-adapter-key.pem demo-certs/certs/http-adapter-key.pem
-~/hono$ docker secret create rest-adapter-cert.pem demo-certs/certs/http-adapter-cert.pem
+~/hono$ docker secret create http-adapter-key.pem demo-certs/certs/http-adapter-key.pem
+~/hono$ docker secret create http-adapter-cert.pem demo-certs/certs/http-adapter-cert.pem
 ~/hono$ docker service create --detach --name hono-adapter-http-vertx --network hono-net -p 8080:8080 -p 8443:8443  \
 > --secret trusted-certs.pem \
-> --secret rest-adapter-key.pem \
-> --secret rest-adapter-cert.pem \
+> --secret http-adapter-key.pem \
+> --secret http-adapter-cert.pem \
 > -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
 > -e 'HONO_MESSAGING_USERNAME=http-adapter@HONO' \
 > -e 'HONO_MESSAGING_PASSWORD=http-secret' \
 > -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_REGISTRATION_USERNAME=rest-adapter@HONO' \
-> -e 'HONO_REGISTRATION_PASSWORD=rest-secret' \
+> -e 'HONO_REGISTRATION_USERNAME=http-adapter@HONO' \
+> -e 'HONO_REGISTRATION_PASSWORD=http-secret' \
 > -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_HTTP_BIND_ADDRESS=0.0.0.0' \
 > -e 'HONO_HTTP_KEY_PATH=/run/secrets/http-adapter-key.pem' \
 > -e 'HONO_HTTP_CERT_PATH=/run/secrets/http-adapter-cert.pem' \
 > -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> eclipse/hono-adapter-rest-vertx:latest
+> eclipse/hono-adapter-http-vertx:latest
 ~~~
 
 {{% note %}}
 There are several things noteworthy about the above command to start the service:
 
 1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
-1. The *--network* command line switch is used to specify the *user defined* Docker network that the HTTP adapter container should attach to. It is important that the REST adapter container is attached to the same network that the Hono Messaging component is attached to so that the REST adapter can use the Hono Messaging component's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the HTTP adapter container should attach to. It is important that the HTTP adapter container is attached to the same network that the Hono Messaging component is attached to so that the HTTP adapter can use the Hono Messaging component's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
 1. In cases where the HTTP adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
@@ -189,7 +189,7 @@ In order to do so, the adapter can be started using the `spring-boot:run` maven 
 The corresponding command to start up the adapter with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/adapters/rest-vertx$ mvn spring-boot:run -Drun.arguments=\
+~/hono/adapters/http-vertx$ mvn spring-boot:run -Drun.arguments=\
 > --hono.messaging.host=hono-service-messaging.hono,\
 > --hono.messaging.username=http-adapter@HONO,\
 > --hono.messaging.password=http-secret,\
@@ -205,7 +205,7 @@ The corresponding command to start up the adapter with the configuration used in
 
 {{% note %}}
 In the example above the *--hono.messaging.host=hono-service-messaging.hono* command line option indicates that the Hono Messaging component is running on a host
-with name *hono-service-messaging.hono*. However, if the Hono Messaging component has been started as a Docker container then the *hono-service-messaging.hono* host name will most likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the REST adapter
+with name *hono-service-messaging.hono*. However, if the Hono Messaging component has been started as a Docker container then the *hono-service-messaging.hono* host name will most likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the HTTP adapter
 from the Spring Boot application and want it to connect to a Hono Messaging instance run as a Docker container then you need to set the
 value of the *--hono.messaging.host* option to the IP address (or name) of the Docker host running the Hono Messaging container.
 The same holds true analogously for the *hono-service-device-registry.hono* address.
@@ -238,7 +238,7 @@ There is a subtle difference between the *device identifier* (*device-id*) and t
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 * Response Headers:
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the HTTP adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
@@ -270,7 +270,7 @@ Response:
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 * Response Headers:
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the HTTP adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
 This URI MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
@@ -347,7 +347,7 @@ Response:
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 * Response Headers:
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the REST adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
+  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the HTTP adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
 This URI MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
