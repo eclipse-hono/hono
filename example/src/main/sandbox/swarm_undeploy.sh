@@ -25,11 +25,11 @@ docker secret rm \
   kura-adapter-cert.pem \
   hono-adapter-kura-config.yml
 
-docker service rm hono-adapter-rest-vertx
+docker service rm hono-adapter-http-vertx
 docker secret rm \
-  rest-adapter-key.pem \
-  rest-adapter-cert.pem \
-  hono-adapter-rest-vertx-config.yml
+  http-adapter-key.pem \
+  http-adapter-cert.pem \
+  hono-adapter-http-vertx-config.yml
 
 docker service rm hono-adapter-mqtt-vertx
 docker secret rm \

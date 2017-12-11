@@ -81,13 +81,13 @@ oc create secret generic hono-service-messaging-conf \
 oc create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
-echo Deploying HTTP REST adapter ...
-oc create secret generic hono-adapter-rest-vertx-conf \
-  --from-file=$CERTS/rest-adapter-key.pem \
-  --from-file=$CERTS/rest-adapter-cert.pem \
+echo Deploying HTTP adapter ...
+oc create secret generic hono-adapter-http-vertx-conf \
+  --from-file=$CERTS/http-adapter-key.pem \
+  --from-file=$CERTS/http-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$CONFIG/hono-adapter-rest-vertx-config.yml
-oc create -f $CONFIG/hono-adapter-rest-vertx-jar/META-INF/fabric8/openshift.yml
+  --from-file=application.yml=$CONFIG/hono-adapter-http-vertx-config.yml
+oc create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo Deploying MQTT adapter ...

@@ -48,9 +48,9 @@
     ]
   },
   "users": {
-    "${hono.adapter.rest.username}": {
+    "${hono.adapter.http.username}": {
       "mechanism": "PLAIN",
-      "password": "${hono.adapter.rest.password}",
+      "password": "${hono.adapter.http.password}",
       "authorities": [ "hono-component", "protocol-adapter" ]
     },
     "${hono.adapter.mqtt.username}": {
