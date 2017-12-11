@@ -28,7 +28,7 @@
 
   <modules>
     <module>http-vertx-base</module>
-    <module>rest-vertx</module>
+    <module>http-vertx</module>
     <module>mqtt-vertx</module>
     <module>mqtt-vertx-base</module>
     <module>kura</module>

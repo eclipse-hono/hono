@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.adapter.rest;
+package org.eclipse.hono.adapter.http;
 
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;
@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * The Hono REST adapter main application class.
  */
-@ComponentScan(basePackages = { "org.eclipse.hono.adapter.rest", "org.eclipse.hono.service.metric", "org.eclipse.hono.adapter.http" })
+@ComponentScan(basePackages = { "org.eclipse.hono.adapter.http", "org.eclipse.hono.service.metric", "org.eclipse.hono.adapter.http" })
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {

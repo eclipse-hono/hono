@@ -8,7 +8,7 @@
                 | |                                        
                 |_|                                        
 
-Eclipse Hono REST Protocol Adapter ${application.formatted-version}
+Eclipse Hono HTTP Protocol Adapter ${application.formatted-version}
 using Spring Boot ${spring-boot.formatted-version}
 
 Go to https://www.eclipse.org/hono for more information.

@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.rest;
+package org.eclipse.hono.adapter.http;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -20,7 +20,6 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.service.auth.device.Device;
@@ -42,11 +41,11 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
- * Verifies behavior of {@link VertxBasedRestProtocolAdapter}.
+ * Verifies behavior of {@link VertxBasedHttpProtocolAdapter}.
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class VertxBasedRestProtocolAdapterTest {
+public class VertxBasedHttpProtocolAdapterTest {
 
     private static final String HOST = "localhost";
     private static final String AUTHORIZATION_HEADER = "Authorization";
@@ -55,7 +54,7 @@ public class VertxBasedRestProtocolAdapterTest {
     private static HonoClient registrationClient;
     private static HonoClientBasedAuthProvider credentialsAuthProvider;
     private static HttpProtocolAdapterProperties config;
-    private static VertxBasedRestProtocolAdapter restAdapter;
+    private static VertxBasedHttpProtocolAdapter httpAdapter;
 
     private static Vertx vertx;
 
@@ -80,22 +79,22 @@ public class VertxBasedRestProtocolAdapterTest {
         config.setInsecurePortEnabled(true);
         config.setAuthenticationRequired(true);
 
-        restAdapter = new VertxBasedRestProtocolAdapter();
-        restAdapter.setConfig(config);
-        restAdapter.setHonoMessagingClient(messagingClient);
-        restAdapter.setRegistrationServiceClient(registrationClient);
-        restAdapter.setCredentialsAuthProvider(credentialsAuthProvider);
+        httpAdapter = new VertxBasedHttpProtocolAdapter();
+        httpAdapter.setConfig(config);
+        httpAdapter.setHonoMessagingClient(messagingClient);
+        httpAdapter.setRegistrationServiceClient(registrationClient);
+        httpAdapter.setCredentialsAuthProvider(credentialsAuthProvider);
 
-        Future<String> restServerDeploymentTracker = Future.future();
-        vertx.deployVerticle(restAdapter, restServerDeploymentTracker.completer());
-        restServerDeploymentTracker.compose(c -> setupTracker.complete(), setupTracker);
+        Future<String> httpServerDeploymentTracker = Future.future();
+        vertx.deployVerticle(httpAdapter, httpServerDeploymentTracker.completer());
+        httpServerDeploymentTracker.compose(c -> setupTracker.complete(), setupTracker);
     }
 
     @Test
     public final void testBasicAuthFailsEmptyHeader(final TestContext context) {
         final Async async = context.async();
 
-        vertx.createHttpClient().get(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
+        vertx.createHttpClient().get(httpAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
                 .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
             response.bodyHandler(totalBuffer -> {
@@ -117,7 +116,7 @@ public class VertxBasedRestProtocolAdapterTest {
             return null;
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
-        vertx.createHttpClient().put(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
+        vertx.createHttpClient().put(httpAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
                 .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
@@ -140,7 +139,7 @@ public class VertxBasedRestProtocolAdapterTest {
             return null;
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
-        vertx.createHttpClient().get(restAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
+        vertx.createHttpClient().get(httpAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
                 .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());

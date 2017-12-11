@@ -10,16 +10,13 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.rest;
+package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
 
-import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.adapter.http.HonoAuthHandlerImpl;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,9 +27,9 @@ import io.vertx.ext.web.RoutingContext;
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using REST.
  */
-public final class VertxBasedRestProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
+public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(VertxBasedRestProtocolAdapter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(VertxBasedHttpProtocolAdapter.class);
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
 
