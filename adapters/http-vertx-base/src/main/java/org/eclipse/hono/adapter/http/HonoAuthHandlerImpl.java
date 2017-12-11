@@ -131,7 +131,7 @@ public class HonoAuthHandlerImpl implements AuthHandler {
             };
             for (String authority : authorities) {
                 if (!sentFailure.get()) {
-                    user.isAuthorised(authority, authHandler);
+                    user.isAuthorized(authority, authHandler);
                 }
             }
         } else {
