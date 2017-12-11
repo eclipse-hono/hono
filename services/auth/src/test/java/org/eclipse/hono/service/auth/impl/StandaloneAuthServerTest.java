@@ -101,7 +101,7 @@ public class StandaloneAuthServerTest {
      */
     @Test
     public void testTokenRetrievalSucceedsForAuthenticatedUser(final TestContext ctx) {
-        client.verifyPlain(null, "rest-adapter@HONO", "secret", ctx.asyncAssertSuccess(user -> {
+        client.verifyPlain(null, "http-adapter@HONO", "secret", ctx.asyncAssertSuccess(user -> {
             ctx.assertNotNull(user.getToken());
         }));
     }

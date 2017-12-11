@@ -10,9 +10,8 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.rest;
+package org.eclipse.hono.adapter.http;
 
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -29,38 +28,38 @@ import org.springframework.context.annotation.Scope;
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
-    private static final String CONTAINER_ID_HONO_REST_ADAPTER = "Hono REST Adapter";
-    private static final String BEAN_NAME_VERTX_BASED_REST_PROTOCOL_ADAPTER = "vertxBasedRestProtocolAdapter";
+    private static final String CONTAINER_ID_HONO_HTTP_ADAPTER = "Hono HTTP Adapter";
+    private static final String BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER = "vertxBasedHttpProtocolAdapter";
 
     /**
-     * Creates a new REST protocol adapter instance.
+     * Creates a new HTTP protocol adapter instance.
      * 
      * @return The new instance.
      */
-    @Bean(name = BEAN_NAME_VERTX_BASED_REST_PROTOCOL_ADAPTER)
+    @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedRestProtocolAdapter vertxBasedRestProtocolAdapter(){
-        return new VertxBasedRestProtocolAdapter();
+    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter(){
+        return new VertxBasedHttpProtocolAdapter();
     }
 
     @Override
     protected void customizeMessagingClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_REST_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
         }
     }
 
     @Override
     protected void customizeRegistrationServiceClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_REST_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
         }
     }
 
     @Override
     protected void customizeCredentialsServiceClientConfigProperties(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_REST_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
         }
     }
 
@@ -108,7 +107,7 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public ObjectFactoryCreatingFactoryBean serviceFactory() {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_REST_PROTOCOL_ADAPTER);
+        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER);
         return factory;
     }
 }

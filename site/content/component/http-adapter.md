@@ -1,16 +1,16 @@
 +++
-title = "REST Adapter"
+title = "HTTP Adapter"
 weight = 350
 +++
 
-The REST protocol adapter exposes a RESTful API for Eclipse Hono&trade;'s Telemetry and Event endpoints.
+The HTTP protocol adapter exposes a HTTP based API for Eclipse Hono&trade;'s Telemetry and Event endpoints.
 <!--more-->
 
 The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image created from it.
 
 ## Service Configuration
 
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the REST adapter.
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the HTTP adapter.
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------: | :------ | :---------- |
@@ -36,13 +36,13 @@ The variables only need to be set if the default value does not match your envir
 
 ## Port Configuration
 
-The REST protocol adapter can be configured to listen for connections on
+The HTTP protocol adapter can be configured to listen for connections on
 
 * a secure port only (default) or
 * an insecure port only or
 * both a secure and an insecure port (dual port configuration)
 
-The REST protocol adapter will fail to start if none of the ports is configured properly.
+The HTTP protocol adapter will fail to start if none of the ports is configured properly.
 
 ### Secure Port Only
 
@@ -136,23 +136,23 @@ The REST adapter can be run as a Docker container from the command line. The fol
 
 ~~~sh
 ~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
-~/hono$ docker secret create rest-adapter-key.pem demo-certs/certs/rest-adapter-key.pem
-~/hono$ docker secret create rest-adapter-cert.pem demo-certs/certs/rest-adapter-cert.pem
-~/hono$ docker service create --detach --name hono-adapter-rest-vertx --network hono-net -p 8080:8080 -p 8443:8443  \
+~/hono$ docker secret create rest-adapter-key.pem demo-certs/certs/http-adapter-key.pem
+~/hono$ docker secret create rest-adapter-cert.pem demo-certs/certs/http-adapter-cert.pem
+~/hono$ docker service create --detach --name hono-adapter-http-vertx --network hono-net -p 8080:8080 -p 8443:8443  \
 > --secret trusted-certs.pem \
 > --secret rest-adapter-key.pem \
 > --secret rest-adapter-cert.pem \
 > -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
-> -e 'HONO_MESSAGING_USERNAME=rest-adapter@HONO' \
-> -e 'HONO_MESSAGING_PASSWORD=rest-secret' \
+> -e 'HONO_MESSAGING_USERNAME=http-adapter@HONO' \
+> -e 'HONO_MESSAGING_PASSWORD=http-secret' \
 > -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
 > -e 'HONO_REGISTRATION_USERNAME=rest-adapter@HONO' \
 > -e 'HONO_REGISTRATION_PASSWORD=rest-secret' \
 > -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_HTTP_BIND_ADDRESS=0.0.0.0' \
-> -e 'HONO_HTTP_KEY_PATH=/run/secrets/rest-adapter-key.pem' \
-> -e 'HONO_HTTP_CERT_PATH=/run/secrets/rest-adapter-cert.pem' \
+> -e 'HONO_HTTP_KEY_PATH=/run/secrets/http-adapter-key.pem' \
+> -e 'HONO_HTTP_CERT_PATH=/run/secrets/http-adapter-cert.pem' \
 > -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' \
 > -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
 > eclipse/hono-adapter-rest-vertx:latest
@@ -162,20 +162,20 @@ The REST adapter can be run as a Docker container from the command line. The fol
 There are several things noteworthy about the above command to start the service:
 
 1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
-1. The *--network* command line switch is used to specify the *user defined* Docker network that the REST adapter container should attach to. It is important that the REST adapter container is attached to the same network that the Hono Messaging component is attached to so that the REST adapter can use the Hono Messaging component's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
-1. In cases where the REST adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the HTTP adapter container should attach to. It is important that the REST adapter container is attached to the same network that the Hono Messaging component is attached to so that the REST adapter can use the Hono Messaging component's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. In cases where the HTTP adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
 ### Configuring the Java VM
 
-The REST adapter Docker image by default does not pass any specific configuration options to the Java VM. The VM can be configured using the standard `-X` options by means of setting the `_JAVA_OPTIONS` environment variable which is evaluated by the Java VM during start up.
+The HTTP adapter Docker image by default does not pass any specific configuration options to the Java VM. The VM can be configured using the standard `-X` options by means of setting the `_JAVA_OPTIONS` environment variable which is evaluated by the Java VM during start up.
 
 Using the example from above, the following environment variable definition needs to be added to limit the VM's heap size to 128MB:
 
 ~~~sh
 ...
 > -e '_JAVA_OPTIONS=-Xmx128m' \
-> eclipse/hono-adapter-rest-vertx:latest
+> eclipse/hono-adapter-http-vertx:latest
 ~~~
 
 ## Run using the Docker Swarm Deployment Script
@@ -185,18 +185,18 @@ In most cases it is much easier to start all of Hono's components in one shot us
 ## Run the Spring Boot Application
 
 Sometimes it is helpful to run the adapter from its jar file, e.g. in order to attach a debugger more easily or to take advantage of code replacement.
-In order to do so, the adapter can be started using the `spring-boot:run` maven goal from the `adapters/rest-vertx` folder.
+In order to do so, the adapter can be started using the `spring-boot:run` maven goal from the `adapters/http-vertx` folder.
 The corresponding command to start up the adapter with the configuration used in the Docker example above looks like this:
 
 ~~~sh
 ~/hono/adapters/rest-vertx$ mvn spring-boot:run -Drun.arguments=\
 > --hono.messaging.host=hono-service-messaging.hono,\
-> --hono.messaging.username=rest-adapter@HONO,\
-> --hono.messaging.password=rest-secret,\
+> --hono.messaging.username=http-adapter@HONO,\
+> --hono.messaging.password=http-secret,\
 > --hono.messaging.trustStorePath=target/certs/trusted-certs.pem \
 > --hono.registration.host=hono-service-device-registry.hono,\
-> --hono.registration.username=rest-adapter@HONO,\
-> --hono.registration.password=rest-secret,\
+> --hono.registration.username=http-adapter@HONO,\
+> --hono.registration.password=http-secret,\
 > --hono.registration.trustStorePath=target/certs/trusted-certs.pem \
 > --hono.http.bindAddress=0.0.0.0 \
 > --hono.http.insecurePortEnabled=true,\
@@ -213,7 +213,7 @@ The same holds true analogously for the *hono-service-device-registry.hono* addr
 
 ## Using the API
 
-The REST adapter by default requires devices to authenticate during connection establishment. The adapter supports the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). The *username* provided in the header must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the device against the credentials that the [configured Credentials service]({{< relref "#credentials-service-configuration" >}}) has on record for the device. The adapter uses the Credentials API's *get* operation to retrieve the credentials-on-record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
+The HTTP adapter by default requires devices to authenticate during connection establishment. The adapter supports the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). The *username* provided in the header must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the device against the credentials that the [configured Credentials service]({{< relref "#credentials-service-configuration" >}}) has on record for the device. The adapter uses the Credentials API's *get* operation to retrieve the credentials-on-record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
 
 When running the Hono example installation as described in the [Getting Started guide]({{< relref "getting-started.md" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for device `4711` of tenant `DEFAULT_TENANT` having an *auth-id* of `sensor1` and (hashed) *password* `hono-secret`. These credentials are used in the following examples illustrating the usage of the adapter. Please refer to the [Credentials API]({{< relref "api/Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
 

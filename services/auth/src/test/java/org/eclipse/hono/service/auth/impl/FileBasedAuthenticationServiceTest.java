@@ -89,7 +89,7 @@ public class FileBasedAuthenticationServiceTest {
     @Test
     public void testVerifyPlainGrantsAuthorizationId(final TestContext ctx) {
 
-        authService.verifyPlain("userB", "rest-adapter@HONO", "secret", ctx.asyncAssertSuccess(res -> {
+        authService.verifyPlain("userB", "http-adapter@HONO", "secret", ctx.asyncAssertSuccess(res -> {
             assertThat(res.getName(), is("userB"));
             assertThat(res.getToken(), is(TOKEN));
         }));
@@ -107,8 +107,8 @@ public class FileBasedAuthenticationServiceTest {
     @Test
     public void testVerifyPlainRefusesNonExistingAuthorizationId(final TestContext ctx) {
 
-        authService.verifyPlain("userC", "rest-adapter@HONO", "secret", ctx.asyncAssertSuccess(res -> {
-            assertThat(res.getName(), is("rest-adapter@HONO"));
+        authService.verifyPlain("userC", "http-adapter@HONO", "secret", ctx.asyncAssertSuccess(res -> {
+            assertThat(res.getName(), is("http-adapter@HONO"));
             assertThat(res.getToken(), is(TOKEN));
         }));
     }
