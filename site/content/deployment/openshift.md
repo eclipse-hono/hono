@@ -70,25 +70,25 @@ Be sure to switch to the `Eclipse Hono` project in the UI in order to see the co
 
 The screen shots below show Hono's components deployed to OpenShift.
 
-![Eclipse Hono on Openshift](../openshift_01.png)
+![Eclipse Hono on OpenShift](../openshift_01.png)
 
-![Eclipse Hono on Openshift](../openshift_02.png)
+![Eclipse Hono on OpenShift](../openshift_02.png)
 
-![Eclipse Hono on Openshift](../openshift_03.png)
+![Eclipse Hono on OpenShift](../openshift_03.png)
 
-![Eclipse Hono on Openshift](../openshift_04.png)
+![Eclipse Hono on OpenShift](../openshift_04.png)
 
-![Eclipse Hono on Openshift](../openshift_05.png)
+![Eclipse Hono on OpenShift](../openshift_05.png)
 
-![Eclipse Hono on Openshift](../openshift_06.png)
+![Eclipse Hono on OpenShift](../openshift_06.png)
 
-![Eclipse Hono on Openshift](../openshift_07.png)
+![Eclipse Hono on OpenShift](../openshift_07.png)
 
-![Eclipse Hono on Openshift](../openshift_08.png)
+![Eclipse Hono on OpenShift](../openshift_08.png)
 
-![Eclipse Hono on Openshift](../openshift_grafana.png)
+![Eclipse Hono on OpenShift](../openshift_grafana.png)
 
-![Eclipse Hono on Openshift](../openshift_influxdb.png)
+![Eclipse Hono on OpenShift](../openshift_influxdb.png)
 
 
 ### Undeploying Hono
