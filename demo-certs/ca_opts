@@ -84,12 +84,12 @@ keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
 subjectAltName       = DNS.1:hono-service-device-registry,DNS.2:hono-service-device-registry.hono,DNS.3:localhost
 
-[ req_ext_rest-adapter ]
+[ req_ext_http-adapter ]
 
 subjectKeyIdentifier = hash
 keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
-subjectAltName       = DNS.1:hono-adapter-rest-vertx,DNS.2:hono-adapter-rest-vertx.hono,DNS.3:localhost
+subjectAltName       = DNS.1:hono-adapter-http-vertx,DNS.2:hono-adapter-http-vertx.hono,DNS.3:localhost
 
 [ req_ext_mqtt-adapter ]
 
