@@ -572,7 +572,6 @@ public final class HonoClientImpl implements HonoClient {
                     }
                 });
         return this;
-
     }
 
     private void createCredentialsClient(
@@ -607,6 +606,50 @@ public final class HonoClientImpl implements HonoClient {
         }, clientTracker);
     }
 
+    @Override
+    public HonoClient getOrCreateTenantClient(final Handler<AsyncResult<TenantClient>> resultHandler) {
+        Objects.requireNonNull(resultHandler);
+        getOrCreateRequestResponseClient(
+                TenantClientImpl.getTargetAddress(),
+                (creationResult) -> createTenantClient(creationResult),
+                attempt -> {
+                    if (attempt.succeeded()) {
+                        resultHandler.handle(Future.succeededFuture((TenantClient) attempt.result()));
+                    } else {
+                        resultHandler.handle(Future.failedFuture(attempt.cause()));
+                    }
+                });
+        return this;
+    }
+
+    private void createTenantClient(final Handler<AsyncResult<RequestResponseClient>> creationHandler) {
+        Objects.requireNonNull(creationHandler);
+
+        Future<RequestResponseClient> clientTracker = Future.future();
+        clientTracker.setHandler(creationHandler);
+
+        checkConnection().compose(connected -> {
+
+            TenantClientImpl.create(
+                    context,
+                    connection,
+                    clientConfigProperties.getInitialCredits(),
+                    clientConfigProperties.getFlowLatency(),
+                    this::removeTenantClient,
+                    this::removeTenantClient,
+                    creationAttempt -> {
+                        if (creationAttempt.succeeded()) {
+                            TenantClient tenantClient = creationAttempt.result();
+                            tenantClient.setRequestTimeout(clientConfigProperties.getRequestTimeout());
+                            clientTracker.complete(tenantClient);
+                        } else {
+                            clientTracker.fail(creationAttempt.cause());
+                        }
+                    });
+        }, clientTracker);
+    }
+
+
     private void removeCredentialsClient(final String tenantId) {
         String key = CredentialsClientImpl.getTargetAddress(tenantId);
         RequestResponseClient client = activeRequestResponseClients.remove(key);
@@ -622,6 +665,15 @@ public final class HonoClientImpl implements HonoClient {
         if (client != null) {
             client.close(s -> {});
             LOG.debug("closed and removed registration client for [{}]", tenantId);
+        }
+    }
+
+    private void removeTenantClient(final String str) {
+        String key = TenantClientImpl.getTargetAddress();
+        RequestResponseClient client = activeRequestResponseClients.remove(key);
+        if (client != null) {
+            client.close(s -> {});
+            LOG.debug("closed and removed tenant client");
         }
     }
 

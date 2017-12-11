@@ -266,6 +266,16 @@ public interface HonoClient {
             Handler<AsyncResult<CredentialsClient>> resultHandler);
 
     /**
+     * Gets a client for interacting with Hono's <em>Tenant</em> API.
+     *
+     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    HonoClient getOrCreateTenantClient(
+            Handler<AsyncResult<TenantClient>> resultHandler);
+
+    /**
      * Closes this client's connection to the Hono server.
      * <p>
      * This method waits for at most 5 seconds for the connection to be closed properly. Any subsequent attempts to 

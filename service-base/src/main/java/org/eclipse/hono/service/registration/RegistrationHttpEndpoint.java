@@ -49,7 +49,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
 
     /**
      * Creates an endpoint for a Vertx instance.
-     * 
+     *
      * @param vertx The Vertx instance to use.
      * @throws NullPointerException if vertx is {@code null};
      */
