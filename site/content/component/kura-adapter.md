@@ -165,6 +165,18 @@ There are several things noteworthy about the above command to start the service
 1. In cases where the Kura adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
+### Configuring the Java VM
+
+The Kura adapter Docker image by default does not pass any specific configuration options to the Java VM. The VM can be configured using the standard `-X` options by means of setting the `_JAVA_OPTIONS` environment variable which is evaluated by the Java VM during start up.
+
+Using the example from above, the following environment variable definition needs to be added to limit the VM's heap size to 128MB:
+
+~~~sh
+...
+> -e '_JAVA_OPTIONS=-Xmx128m' \
+> eclipse/hono-adapter-kura:latest
+~~~
+
 ## Run using the Docker Swarm Deployment Script
 
 In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
