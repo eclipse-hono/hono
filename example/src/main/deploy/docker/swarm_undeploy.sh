@@ -80,4 +80,6 @@ docker secret rm trusted-certs.pem
 
 docker network rm $NS
 
+# we are not removing the device-registry volume so that we can leverage the existing data the next time Hono is deployed
+
 echo ECLIPSE HONO UNDEPLOYED FROM DOCKER SWARM
