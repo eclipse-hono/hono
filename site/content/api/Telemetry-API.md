@@ -28,8 +28,8 @@ The client indicates its preferred message delivery mode by means of the *snd-se
 
 | snd-settle-mode        | rcv-settle-mode        | Delivery semantics |
 | :--------------------- | :--------------------- | :----------------- |
-| `unsettled`, `mixed` | `first`               | Hono will acknowledge and settle received messages spontaneously. Hono will accept any re-delivered messages. |
-| `settled`             | `first`               | Hono will acknowledge and settle received messages spontaneously. This is the fastest mode of delivery. This corresponds to *AT MOST ONCE* delivery. |
+| `unsettled`, `mixed` | `first`               | Hono will acknowledge and settle received messages spontaneously. Hono will accept any re-delivered messages. Using `unsettled` for the *snd-settle-mode* results in *AT LEAST ONCE* delivery semantics and is the recommended mode for clients uploading telemetry data. |
+| `settled`             | `first`               | Hono will acknowledge and settle received messages spontaneously. This is the fastest mode of delivery but has the drawback of less reliable end-to-end flow control. This corresponds to *AT MOST ONCE* delivery. |
 
 All other combinations are not supported by Hono and result in a termination of the link. In particular, Hono does **not** support reliable transmission of telemetry data, i.e. messages containing telemetry data MAY be lost.
 
@@ -76,7 +76,7 @@ Hono supports multiple non-competing *Business Application* consumers of telemet
 1. Client has established an AMQP connection with Hono.
 2. Client has established an AMQP link in role *receiver* with Hono using source address `telemetry/${tenant_id}` where `${tenant_id}` represents the ID of the tenant the client wants to retrieve telemetry data for.
 
-Hono supports *AT MOST ONCE* delivery of messages only. A client therefore MUST use `settled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported by Hono and result in the termination of the link.
+Hono supports both *AT MOST ONCE* as well as *AT LEAST ONCE* delivery of telemetry messages. However, clients SHOULD use *AT LEAST ONCE* delivery in order to support end-to-end flow control and therefore SHOULD set the *snd-settle-mode* field to `unsettled` and the *rcv-settle-mode* field to `first` in their *attach* frame during link establishment.
 
 A client MAY indicate to Hono during link establishment that it wants to distribute the telemetry messages received for a given tenant among multiple consumers by including a link property `subscription-name` whose value is shared by all other consumers of the tenant. Hono ensures that messages from a given device are delivered to the same consumer. Note that this also means that telemetry messages MAY not be evenly distributed among consumers, e.g. when only a single device sends data. **NB** This feature is not supported yet.
 
