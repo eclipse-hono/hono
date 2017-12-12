@@ -41,7 +41,7 @@
     <junit.version>4.12</junit.version>
     <logback.version>1.2.3</logback.version>
     <mockito.version>1.10.19</mockito.version>
-    <netty.version>4.1.8.Final</netty.version>
+    <netty.version>4.1.15.Final</netty.version>
     <objenesis.version>2.4</objenesis.version>
     <proton.version>0.22.0</proton.version>
     <qpid-jms.version>0.21.0</qpid-jms.version>
