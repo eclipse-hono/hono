@@ -57,6 +57,7 @@ The second command creates and starts up Docker Swarm *services* for all compone
 * Hono Instance
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
   * A *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
+  * A *Kura Adapter* instance that exposes Hono's Telemetry and Event APIs as an Eclipse Kura&trade; compatible MQTT topic hierarchy.
   * A *Hono Messaging* instance that protocol adapters connect to in order to forward data from devices.
   * A *Device Registry* instance that manages device data and issues device registration assertions to protocol adapters.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
