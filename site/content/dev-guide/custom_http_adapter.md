@@ -3,110 +3,83 @@ title = "Implement a Custom Hono HTTP Protocol Adapter"
 weight = 396
 +++
 
-Hono comes with the Hono REST protocol adapter which you may use as a blueprint for your own HTTP protocol adapter 
-implementation. 
+Eclipse Hono&trade; comes with a default *HTTP Adapter* which can be used to interact with devices via HTTP.
+The default HTTP Adapter also serves as a blueprint for implementing a *custom* HTTP protocol adapter.
 <!--more-->
 
-
-
-This section will guide you through the steps to build your own custom Hono HTTP protocol adapter.
+This section will guide you through the steps to build your own custom HTTP protocol adapter.
 
 ## Prerequisites
 
 You should be familiar with the setup and start of Hono. Refer to the 
 [Getting Started]({{< relref "getting-started.md" >}}) guide.
 
-## The Hono REST Protocol Adapter
+## The standard HTTP Adapter
 
-The Hono REST protocol adapter supports telemetry and event data processing. Additionally, it provides an interface for 
-device registration. 
+Hono's HTTP Adapter supports telemetry and event data processing. Please refer to the [HTTP Adapter documentation]({{< relref "user-guide/http-adapter.md" >}}) for details regarding the usage and configuration of the HTTP  Adapter.
 
-For documentation of the Hono REST protocol adapter, refer to 
-[HTTP Adapter]({{< relref "user-guide/http-adapter.md" >}}) 
+You can find the source of the HTTP Adapter at <https://github.com/eclipse/hono/tree/master/adapters/http-vertx>.
 
-You can find the source of the Hono REST protocol adapter at 
-<https://github.com/eclipse/hono/tree/master/adapters/rest-vertx>.
-
-## Anatomy of the Hono REST Protocol Adapter
+## Anatomy of the standard HTTP Adapter
  
-Like many other Hono components, the Hono REST protocol adapter makes use of the [Vert.x](https://vertx.io) tool-kit. 
-All Hono protocol adapters are implemented as Vert.x verticles.
+Like many other Hono components, the HTTP Adapter is built on top of the [Vert.x](https://vertx.io) framework.
 
-The Hono REST protocol adapter class `VertxBasedRestProtocolAdapter` is derived from an abstract base class. This base 
-class implements the base functionality for component initialization, receiving HTTP requests from devices or external 
-clients, and forwarding of data to the Hono server. Additionally, the Hono REST protocol adapter implements an 
-interface for device registration.
+The HTTP Adapter's `VertxBasedRestProtocolAdapter` class is derived from an abstract base class. This base class implements the base functionality for component initialization, receiving HTTP requests from devices or external clients, and forwarding of data to *Hono Messaging*.
 
-## Derive Your Custom HTTP Adapter
+## Derive a custom HTTP Protocol Adapter
 
-Use the Hono REST protocol adapter as a blueprint. If not desired, you may remove the methods implementing the 
-functionality for device registration.
-
-## Extend Your Custom HTTP Adapter
+Use the standard HTTP Adapter as a blueprint.
 
 ### Adding Routes
-In Vert.x, a *route* is a mapping of a HTTP request to a handler. Inside a route, Vert.x provides a `RoutingContext` 
-instance which gives access to the HTTP request (and response) object containing the HTTP headers. 
 
-The Hono REST protocol adapter overrides the abstract method `addRoutes()`, provided by its base class, and adds the 
-routes for telemetry data, event data, and device registration. Thereby, it connects incoming requests to their 
-appropriate handler.
+In Vert.x, a *route* is a mapping of an HTTP request to a *handler*. Inside a route, Vert.x provides a `RoutingContext` 
+instance which gives access to the HTTP request (and response) object containing the HTTP headers.
+
+The standard HTTP Adapter overrides the abstract method `addRoutes()`, provided by the base class, and adds routes for processing telemetry data and events.
 
 ```java
 // route for uploading telemetry data
 router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
     .handler(ctx -> uploadTelemetryMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
 ```
- 
-The route for telemetry data parses the HTTP request, extracts the two parameters *tenant* and *deviceId* from the 
+
+The route for telemetry data parses the HTTP request, extracts the *tenant* and *deviceId* parameters from the
 request URL path, and forwards the message payload to the method `uploadTelemetryMessage()`, provided by the base class.
 
-{{% note %}}
-Note the Vert.x placeholder indicators `:` inside the URL path pattern `/telemetry/:%s/:%s`. Vert.x makes matching 
-placeholders available as request parameters. See [Capturing path parameters](
-http://vertx.io/docs/vertx-web/java/#_capturing_path_parameters) in the Vert.x documentation.
-{{% /note %}}
+**NB** Note the Vert.x place holder indicators `:` inside the URL path pattern `/telemetry/:%s/:%s`. Vert.x makes matching 
+place holders available as request parameters. See [Capturing path parameters](http://vertx.io/docs/vertx-web/java/#_capturing_path_parameters) in the Vert.x documentation.
 
-The route for event data looks very similar to the route for telemetry data. It forwards the event message payload to 
-the method `uploadEventMessage()`.
+The route for events looks very similar to the route for telemetry data. It forwards the event message payload to the `uploadEventMessage()` method.
 
-Refer to the [Telemetry API]({{< relref "api/Telemetry-API.md" >}}) and [Event API]({{< relref "api/Event-API.md" >}}) 
-sections of this documentation for further information about the different Hono data APIs.
+Please refer to the [Telemetry API]({{< relref "api/Telemetry-API.md" >}}) and [Event API]({{< relref "api/Event-API.md" >}}) 
+for details about the different Hono APIs.
 
-In your own custom HTTP protocol adapter adapt the routes according to your needs. 
+In the custom HTTP protocol adapter adapt the routes according to your needs.
 
-## Build and Run Your Custom HTTP Adapter
+## Build and run the custom HTTP Protocol Adapter
  
-If you have Hono running, you can launch your custom HTTP protocol adapter as a Docker Container or a Spring Boot 
-application.
+If you have Hono running, you can launch your custom HTTP protocol adapter as a Docker Container or a Spring Boot application.
 
-You may adopt the Maven profile `build-docker-image` from the Maven POM file of the Hono REST protocol adapter into your 
+You may adopt the Maven profile `build-docker-image` from the Maven POM file of the standard HTTP Adapter into your 
 custom adapter's Maven POM file. 
 
-Follow the guidelines for running the Hono REST protocol adapter in 
-[HTTP Adapter]({{< relref "user-guide/http-adapter.md" >}}). Don't forget to configure the custom adapter's port if you 
-have the Hono REST protocol adapter running. See the Configuration section of the Hono REST adapter for the details to 
-configure the port. 
+Follow the guidelines for running the HTTP Adapter in [HTTP Adapter]({{< relref "user-guide/http-adapter.md" >}}). Don't forget to configure the custom protocol adapter to bind to a different port than the standard HTTP Adapter if you intend to run them both at the same time. See the [Port Configuration section]({{< relref "user-guide/http-adapter.md#port-configuration" >}}) of the HTTP Adapter documentation for details.
 
-## Use Your Custom HTTP Adapter
+## Using the custom HTTP Protocol Adapter
 
 Now that you have your custom HTTP protocol adapter up and running, you can use any HTTP client, like `curl` or 
-`HTTPie`, to connect to your custom adapter. 
+`HTTPie`, to publish data to your custom adapter.
 
-Note that before starting sending data to your custom HTTP protocol adapter, you need a data consumer connected to Hono. 
-Otherwise you will not be able to successfully send data. You may use the Hono example consumer. See the 
-[Getting Started]({{< relref "getting-started.md" >}}) guide.
+Note that before publishing data to your custom HTTP protocol adapter, you need to start a *consumer* for the tenant you intend to publish data for.
+Otherwise you will not be able to successfully send data. For this purpose, you may use the example consumer as described in the [Getting Started]({{< relref "getting-started.md" >}}) guide.
 
-## Further Extend Your Custom HTTP Adapter
-The following section provides some additional options to further extend and adapt your custom HTTP protocol adapter. 
+## Further extend the custom HTTP Protocl Adapter
 
-### Extension Hooks
-The abstract base class includes additional hooks which you may use to further interfere in the lifecycle of the 
-adapter.
+The abstract base class includes additional hooks which you may use to *plug into* the adapter's life cycle:
 
-| Hook | Description |
-| ---- | ---- |
-| `preStartup()` | called before start of adapter's HTTP server |
+| Hook                    | Description                                   |
+| :---------------------- | :-------------------------------------------- |
+| `preStartup()`        | called before start of adapter's HTTP server |
 | `onStartupSuccess()` | called after successful start of adapter |  
-| `preShutdown()` | called before stop of adapter's HTTP server |
-| `postShutdown` | called after successful stop of adapter |
+| `preShutdown()`       | called before stop of adapter's HTTP server |
+| `postShutdown`        | called after successful stop of adapter |
