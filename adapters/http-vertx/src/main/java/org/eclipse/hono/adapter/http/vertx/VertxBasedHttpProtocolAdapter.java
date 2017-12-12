@@ -10,10 +10,13 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.adapter.http.vertx;
 
 import java.net.HttpURLConnection;
 
+import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
+import org.eclipse.hono.adapter.http.HonoAuthHandlerImpl;
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.http.HttpUtils;
