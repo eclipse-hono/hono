@@ -1004,7 +1004,7 @@
             "type": "text"
           },
           {
-            "content": "\u003ch1 style=\"color:black; background-color:#555555; padding:5px\"\u003e\u003ccenter\u003eREST Adapter\u003c/center\u003e\u003c/h1\u003e",
+            "content": "\u003ch1 style=\"color:black; background-color:#555555; padding:5px\"\u003e\u003ccenter\u003eHTTP Adapter\u003c/center\u003e\u003c/h1\u003e",
             "id": 27,
             "links": [],
             "mode": "html",
@@ -1432,7 +1432,7 @@
               }
             ],
             "thresholds": "",
-            "title": "REST Adapter Instances",
+            "title": "HTTP Adapter Instances",
             "type": "singlestat",
             "valueFontSize": "80%",
             "valueMaps": [
@@ -1845,7 +1845,7 @@
             "thresholds": [],
             "timeFrom": null,
             "timeShift": null,
-            "title": "Processed REST Telemetry Per Second (Ø/min)",
+            "title": "Processed HTTP Telemetry Per Second (Ø/min)",
             "tooltip": {
               "shared": true,
               "sort": 0,
@@ -2067,7 +2067,7 @@
             "thresholds": [],
             "timeFrom": null,
             "timeShift": null,
-            "title": "Processed REST Events Per Second (Ø/min)",
+            "title": "Processed HTTP Events Per Second (Ø/min)",
             "tooltip": {
               "shared": true,
               "sort": 0,
@@ -2414,7 +2414,7 @@
               }
             ],
             "thresholds": "",
-            "title": "REST Telemetry Processed",
+            "title": "HTTP Telemetry Processed",
             "type": "singlestat",
             "valueFontSize": "80%",
             "valueMaps": [
@@ -2519,7 +2519,7 @@
               }
             ],
             "thresholds": "",
-            "title": "REST Telemetry Undeliverable",
+            "title": "HTTP Telemetry Undeliverable",
             "type": "singlestat",
             "valueFontSize": "80%",
             "valueMaps": [
@@ -2846,7 +2846,7 @@
               }
             ],
             "thresholds": "",
-            "title": "REST Events Processed",
+            "title": "HTTP Events Processed",
             "type": "singlestat",
             "valueFontSize": "80%",
             "valueMaps": [
@@ -2951,7 +2951,7 @@
               }
             ],
             "thresholds": "",
-            "title": "REST Events Undeliverable",
+            "title": "HTTP Events Undeliverable",
             "type": "singlestat",
             "valueFontSize": "80%",
             "valueMaps": [
