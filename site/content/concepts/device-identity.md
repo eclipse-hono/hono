@@ -22,7 +22,7 @@ Hono components use the [Device Registration API]({{< relref "api/Device-Registr
 
 In many real world scenarios there will already be a component in place which keeps track of devices and which supports the particular *provisioning process* being used to bring devices into life. In such cases it makes sense to simply implement the mandatory operation of Hono's Device Registration API as a *facade* on top of the existing component.
 
-For demonstration purposes, Hono comes with a [simple default implementation]({{< relref "component/device-registry.md" >}}) of the Device Registration API which keeps all data in memory only. This component implements all mandatory and optional operations but is not supposed to be used in production scenarios.
+For demonstration purposes, Hono comes with a [simple default implementation]({{< relref "user-guide/device-registry.md" >}}) of the Device Registration API which keeps all data in memory only. This component implements all mandatory and optional operations but is not supposed to be used in production scenarios.
 
 ## Device Authentication
 
