@@ -1,5 +1,5 @@
 +++
-title = "HTTP Adapter"
+title = "Setup HTTP Adapter"
 weight = 350
 +++
 

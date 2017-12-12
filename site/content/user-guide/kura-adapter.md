@@ -1,5 +1,5 @@
 +++
-title = "Kura Adapter"
+title = "Setup Kura Adapter"
 weight = 380
 +++
 

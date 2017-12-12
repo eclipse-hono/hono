@@ -1,5 +1,5 @@
 +++
-title = "MQTT Adapter"
+title = "Setup MQTT Adapter"
 weight = 370
 +++
 

@@ -1,15 +1,16 @@
 +++
-title = "Dispatch Router"
-weight = 310
+title = "Setup AMQP 1.0 Messaging Network"
+weight = 390
 +++
+
+The *Dispatch Router*, together with the *Apache Artemis* message broker serves as the default *AMQP 1.0 Messaging Network* that is used in Hono's example deployment as described in the [Getting Started Guide]({{< relref "getting-started.md" >}}).
+<!--more-->
 
 The Dispatch Router component exposes service endpoints implementing the *north bound* part of Eclipse Hono&trade;'s [Telemetry]({{< relref "api/Telemetry-API.md" >}}) and [Event]({{< relref "api/Event-API.md" >}}) APIs.
 The north bound API is used by applications to consume telemetry data and events from connected devices.
-<!--more-->
 
-The Dispatch Router, together with the *Apache Artemis* message broker serves as the default *AMQP 1.0 Messaging Network* that is used in Hono's example deployment as described in the [Getting Started Guide]({{< relref "getting-started.md" >}}).
 
-## Configuration
+## Dispatch Router Configuration
 
 The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of the [enmasse project's Dispatch Router Docker image](https://hub.docker.com/r/enmasseproject/qdrouterd-base/) created from the Qpid project source code.
 
@@ -23,7 +24,7 @@ The provided configuration files are the following.
 | `dispatchrouter/sasl/qdrouter-sasl.conf`           | A configuration file for the [Cyrus SASL Library](http://www.cyrusimap.org/sasl/getting_started.html) used by Dispatch Router for authenticating clients. This configuration file can be adapted to e.g. configure LDAP or a database for verifying credentials.
 | `dispatchrouter/sasl/qdrouterd.sasldb`             | A Berkley DB file used by Cyrus SASL which contains the example users that are supported by the Dispatch Router.
 
-## Run as a Docker Swarm Service
+## Run Dispatch Router as a Docker Swarm Service
 
 The Dispatch Router can be run as a Docker container from the command line. The following commands create and start the Dispatch Router as a Docker Swarm service using the default keys and configuration files contained in the `dispatchrouter` and `demo-certs` modules:
 
@@ -52,6 +53,6 @@ There are several things noteworthy about the above command to start the Dispatc
 1. It is important to specify the configuration file on the Docker command line when starting the container. Otherwise, the Dispatch Router uses the default configuration located at */etc/qpid-dispatch/qdrouterd.conf* which provides unrestricted access.
 {{% /note %}}
 
-## Run using the Docker Swarm Deployment Script
+## Run Dispatch Router using the Docker Swarm Deployment Script
 
 In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.

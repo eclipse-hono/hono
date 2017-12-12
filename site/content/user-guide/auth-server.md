@@ -1,5 +1,5 @@
 +++
-title = "Auth Server"
+title = "Setup Auth Server"
 weight = 305
 +++
 

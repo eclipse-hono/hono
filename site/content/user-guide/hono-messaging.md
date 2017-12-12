@@ -1,5 +1,5 @@
 +++
-title = "Hono Messaging"
+title = "Setup Hono Messaging"
 weight = 320
 +++
 

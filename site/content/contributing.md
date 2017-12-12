@@ -43,6 +43,13 @@ You do this by adding the `-s` flag when you make the commit(s), e.g.
 
 You can find all the details in the [Contributing via Git](http://wiki.eclipse.org/Development_Resources/Contributing_via_Git) document on the Eclipse web site.
 
+## Conventions
+
+1. The *groupId* of modules is `org.eclipse.hono`, *artifactId* always starts with `hono-`.
+1. Modules producing a Docker image generally use `eclipse/${artifactId}` as the image's repository name. In some cases we do not use the <em>artifactId</em> but use a more descriptive name, e.g. the `application` module produces an image using `eclipse/hono-server` as the repository name, because the <em>application</em> module simply wraps the code from `server` into a Spring Boot application and creates a Docker image from it.
+1. All code complies with the formatting rules defined by the settings files in the `eclipse` folder.
+1. Modules implementing one of the Hono APIs are sub-modules of `services`.
+
 ## Making your Changes
 
 1. [Fork the repository on GitHub](https://github.com/eclipse/hono#fork-destination-box)

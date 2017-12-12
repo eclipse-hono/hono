@@ -65,13 +65,7 @@ pluralizeListTitles = "false"
 	name   = "Developer Guide"
 	identifier = "Developer Guide"
 	url    = "/dev-guide/"
-  weight = 250
-
-[[menu.main]]
-  name   = "Components"
-  identifier = "Components"
-  url    = "/component/"
-  weight = 300
+  weight = 395
 
 [[menu.main]]
   name   = "API"
