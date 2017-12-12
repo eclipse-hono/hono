@@ -23,7 +23,7 @@ Within a Hono installation the following communication channels can be secured w
 
 ## Auth Server
 
-The Auth Server supports the use of TLS for connections to clients. Please refer to the [Auth Server component documentation]({{< relref "component/auth-server.md" >}}) for details regarding the required configuration steps.
+The Auth Server supports the use of TLS for connections to clients. Please refer to the [Auth Server component documentation]({{< relref "user-guide/auth-server.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder includes the following demo keys and certificates to be used with the Auth Server for that purpose.
 
@@ -49,7 +49,7 @@ The `demo-certs/certs` folder includes the following demo keys and certificates 
 ## Hono Messaging
 
 Hono Messaging supports the use of TLS for connections to protocol adapters, the Dispatch Router and the Auth Server.
-Please refer to the [Hono Messaging component documentation]({{< relref "component/hono-messaging.md" >}}) for details regarding the required configuration steps.
+Please refer to the [Hono Messaging component documentation]({{< relref "user-guide/hono-messaging.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with Hono Messaging for that purpose.
 
@@ -64,7 +64,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## Device Registry
 
 The Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.
-Please refer to the [Device Registry component documentation]({{< relref "component/device-registry.md" >}}) for details regarding the required configuration steps.
+Please refer to the [Device Registry component documentation]({{< relref "user-guide/device-registry.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the Device Registry for that purpose.
 
@@ -79,7 +79,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## REST Adapter
 
 The REST adapter supports the use of TLS for connections to the Device Registration service, the Credentials service and the Hono Messaging component.
-Please refer to the [HTTP adapter component documentation]({{< relref "component/http-adapter.md" >}}) for details regarding the required configuration steps.
+Please refer to the [HTTP adapter component documentation]({{< relref "user-guide/http-adapter.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the REST adapter for that purpose.
 
@@ -93,7 +93,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## MQTT Adapter
 
 The MQTT adapter supports the use of TLS for connections to the Device Registration service, the Credentials service and the Hono Messaging component.
-Please refer to the [MQTT adapter component documentation]({{< relref "component/mqtt-adapter.md" >}}) for details regarding the required configuration steps.
+Please refer to the [MQTT adapter component documentation]({{< relref "user-guide/mqtt-adapter.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the MQTT adapter for that purpose.
 
