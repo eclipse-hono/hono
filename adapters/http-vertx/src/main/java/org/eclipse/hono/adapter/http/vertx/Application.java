@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.adapter.http.vertx;
 
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;
