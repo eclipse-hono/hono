@@ -36,9 +36,8 @@ You will need at least Docker version 17.03.1 (corresponding to 1.13.1 in Docker
 ### Docker Secrets
 
 The `example/target/deploy/docker/swarm_deploy.sh` script defines infrastructure and services that comprise a full Hono *stack*.
-In particular, the stack consists of an Auth Server, a Dispatch Router, a Hono server, a REST adapter and an MQTT adapter instance.
 
-The file contains the following service definition for the Auth Server:
+Among others, the file contains the following service definition for the Auth Server:
 
 ~~~sh
 ...

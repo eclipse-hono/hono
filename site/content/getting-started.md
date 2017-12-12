@@ -6,7 +6,7 @@ weight = 100
 
 Eclipse Hono&trade; consists of a set of micro services provided as Docker images. You can either build the Docker images yourself from the source code or you can run Hono by means of the pre-built Docker images available from our [Docker Hub repositories](https://hub.docker.com/u/eclipse/).
 
-This guide will walk you through building the images and example code from source, starting a Hono instance on your local computer and interacting with Hono via its REST adapter.
+This guide will walk you through building the images and example code from source, starting a Hono instance on your local computer and interacting with Hono via its HTTP adapter.
 
 ## Prerequisites
 
@@ -55,7 +55,7 @@ The second command creates and starts up Docker Swarm *services* for all compone
 {{< figure src="../Hono_instance.svg" title="Hono instance containers">}}
 
 * Hono Instance
-  * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as RESTful resources.
+  * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
   * A *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
   * A *Hono Messaging* instance that protocol adapters connect to in order to forward data from devices.
   * A *Device Registry* instance that manages device data and issues device registration assertions to protocol adapters.
@@ -99,12 +99,12 @@ Replace *localhost* with the name or IP address of the host that Docker is runni
 
 Now that the Hono instance is up and running you can use Hono's protocol adapters to upload some telemetry data and watch it being forwarded to the downstream consumer.
 
-The following sections will use the REST adapter to publish the telemetry data because it is very easy to access using a standard HTTP client like `curl` or [`HTTPie`](https://httpie.org/) from the command line.
+The following sections will use the HTTP adapter to publish the telemetry data because it is very easy to access using a standard HTTP client like `curl` or [`HTTPie`](https://httpie.org/) from the command line.
 
-Please refer to the [HTTP Adapter]({{< relref "http-adapter.md" >}}) documentation for additional information on how to access Hono's functionality via REST.
+Please refer to the [HTTP Adapter]({{< relref "http-adapter.md" >}}) documentation for additional information on how to access Hono's functionality via HTTP.
 
 {{% warning %}}
-The following sections assume that the REST adapter Docker container has been started on the local machine. However, if you started the REST adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
+The following sections assume that the HTTP adapter Docker container has been started on the local machine. However, if you started the HTTP adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
 {{% /warning %}}
 
 ### Registering a Device
@@ -158,7 +158,7 @@ Content-Length: 35
 }
 ~~~
 
-### Uploading Telemetry Data using the REST Adapter
+### Uploading Telemetry Data using the HTTP Adapter
 
 ~~~sh
 $ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
@@ -183,7 +183,7 @@ Content-Type: text/plain
 resource limit exceeded, please try again later
 ~~~
 
-This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono Messaging component to forward the data over. However, the REST adapter may not receive credits from Hono Messaging quickly enough for the request to be served successfully.
+This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono Messaging component to forward the data over. However, the HTTP adapter may not receive credits from Hono Messaging quickly enough for the request to be served successfully.
 You can simply ignore this response and re-submit the command. You should then get a response like this:
 
 ~~~
@@ -197,7 +197,7 @@ If you haven't started a consumer you will continue to get `503 Resource Unavail
 
 Please refer to the [HTTP Adapter documentation]({{< relref "http-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
 
-### Uploading Event Data using the REST Adapter
+### Uploading Event Data using the HTTP Adapter
 
 In a similar way you can upload event data, using curl
 

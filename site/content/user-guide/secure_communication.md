@@ -76,17 +76,17 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 | `trusted-certs.pem`         | Trusted CA certificates to use for verifying signatures. |
 
 
-## REST Adapter
+## HTTP Adapter
 
-The REST adapter supports the use of TLS for connections to the Device Registration service, the Credentials service and the Hono Messaging component.
+The HTTP adapter supports the use of TLS for connections to the Device Registration service, the Credentials service and the Hono Messaging component.
 Please refer to the [HTTP adapter component documentation]({{< relref "user-guide/http-adapter.md" >}}) for details regarding the required configuration steps.
 
-The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the REST adapter for that purpose.
+The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the HTTP adapter for that purpose.
 
 | File                      | Description                                                      |
 | :------------------------ | :--------------------------------------------------------------- |
-| `rest-adapter-key.pem`  | The example private key for creating signatures. |
-| `rest-adapter-cert.pem` | The example certificate asserting the adapter's identity. |
+| `http-adapter-key.pem`  | The example private key for creating signatures. |
+| `http-adapter-cert.pem` | The example certificate asserting the adapter's identity. |
 | `trusted-certs.pem`     | Trusted CA certificates to use for verifying signatures. |
 
 

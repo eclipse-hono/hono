@@ -111,13 +111,13 @@ In order to upload telemetry data to Hono, the device needs to be registered wit
 $ curl -X POST -i -H 'Content-Type: application/json' --data-binary '{"device-id": "4711"}' http://$(minikube ip):31080/registration/DEFAULT_TENANT
 ~~~
 
-After having the device registered, uploading telemetry is just a simple HTTP POST command to the *REST Adapter*:
+After having the device registered, uploading telemetry is just a simple HTTP POST command to the *HTTP Adapter*:
 
 ~~~sh
 $ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$(minikube ip):30080/telemetry
 ~~~
 
-Other than using the *REST Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
+Other than using the *HTTP Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
 
 ~~~sh
 mosquitto_pub -h $(minikube ip) -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'

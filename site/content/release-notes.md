@@ -21,6 +21,7 @@ See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue
    * `/home/hono/registration/device-identities.json` has been changed to `/var/lib/hono/device-registry/device-identities.json`
    * `/home/hono/registration/credentials.json` has been changed to `/var/lib/hono/device-registry/credentials.json`
 * The Device Registry used in the *Getting started* guide now by default persists data to a file system volume.
+* The *REST Adapter* has been renamed to *HTTP Adapter* because it does not really comply with the common requirements for RESTful services. As part of this effort, the names of the HTTP adapter's configuration variables have also been changed accordingly. See [HTTP Adapter Service Configuration]({{< relref "user-guide/http-adapter.md#service-configuration" >}}) for details.
 
 ### API Changes
 
