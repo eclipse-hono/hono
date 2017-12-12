@@ -28,7 +28,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using REST.
+ * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using HTTP.
  */
 public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 

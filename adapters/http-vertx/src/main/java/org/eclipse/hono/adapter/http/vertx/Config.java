@@ -24,7 +24,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 /**
- * Spring Boot configuration for the REST protocol adapter.
+ * Spring Boot configuration for the HTTP adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
@@ -33,7 +33,7 @@ public class Config extends AbstractAdapterConfig {
     private static final String BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER = "vertxBasedHttpProtocolAdapter";
 
     /**
-     * Creates a new HTTP protocol adapter instance.
+     * Creates a new HTTP adapter instance.
      * 
      * @return The new instance.
      */
@@ -76,7 +76,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     /**
-     * Exposes the REST adapter's configuration properties as a Spring bean.
+     * Exposes the HTTP adapter's configuration properties as a Spring bean.
      *
      * @return The configuration properties.
      */
@@ -101,7 +101,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for creating REST adapter instances.
+     * Exposes a factory for creating HTTP adapter instances.
      *
      * @return The factory bean.
      */

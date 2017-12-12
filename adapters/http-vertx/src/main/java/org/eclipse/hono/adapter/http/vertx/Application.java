@@ -18,7 +18,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * The Hono REST adapter main application class.
+ * The Hono HTTP adapter main application class.
  */
 @ComponentScan(basePackages = { "org.eclipse.hono.adapter.http", "org.eclipse.hono.service.metric", "org.eclipse.hono.adapter.http" })
 @Configuration
@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
 public class Application extends AbstractApplication {
 
     /**
-     * Starts the REST Adapter application.
+     * Starts the HTTP Adapter application.
      * 
      * @param args Command line args passed to the application.
      */
