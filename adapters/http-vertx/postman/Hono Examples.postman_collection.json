@@ -1,0 +1,222 @@
+{
+	"info": {
+		"name": "Hono Examples",
+		"_postman_id": "1bd754de-fe8b-ae53-8cae-0ac4764782ef",
+		"description": "Example HTTP requests for registering devices and publishing telemetry and events",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Registration",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"device-id\": \"4711\",\n\t\"manufacturer\": \"ACME Corp.\"\n}"
+				},
+				"url": {
+					"raw": "http://{{hono.host}}:{{hono.registry.port}}/registration/{{tenant}}",
+					"protocol": "http",
+					"host": [
+						"{{hono.host}}"
+					],
+					"port": "{{hono.registry.port}}",
+					"path": [
+						"registration",
+						"{{tenant}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Read Registration",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "http://{{hono.host}}:{{hono.registry.port}}/registration/{{tenant}}/4711",
+					"protocol": "http",
+					"host": [
+						"{{hono.host}}"
+					],
+					"port": "{{hono.registry.port}}",
+					"path": [
+						"registration",
+						"{{tenant}}",
+						"4711"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Registration",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"device-id\": \"4711\",\n\t\"manufacturer\": \"ACME Corp.\",\n\t\"model-no\": \"Best Ever\"\n}"
+				},
+				"url": {
+					"raw": "http://{{hono.host}}:{{hono.registry.port}}/registration/{{tenant}}/4711",
+					"protocol": "http",
+					"host": [
+						"{{hono.host}}"
+					],
+					"port": "{{hono.registry.port}}",
+					"path": [
+						"registration",
+						"{{tenant}}",
+						"4711"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Registration",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "DELETE",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "http://{{hono.host}}:{{hono.registry.port}}/registration/{{tenant}}/4711",
+					"protocol": "http",
+					"host": [
+						"{{hono.host}}"
+					],
+					"port": "{{hono.registry.port}}",
+					"path": [
+						"registration",
+						"{{tenant}}",
+						"4711"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Upload Telemetry Data",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"temp\": 21}"
+				},
+				"url": {
+					"raw": "http://{{hono.host}}:{{hono.port}}/telemetry/{{tenant}}/4711",
+					"protocol": "http",
+					"host": [
+						"{{hono.host}}"
+					],
+					"port": "{{hono.port}}",
+					"path": [
+						"telemetry",
+						"{{tenant}}",
+						"4711"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send Event Message",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"temp\": 5}"
+				},
+				"url": {
+					"raw": "http://{{hono.host}}:{{hono.port}}/event/{{tenant}}/4711",
+					"protocol": "http",
+					"host": [
+						"{{hono.host}}"
+					],
+					"port": "{{hono.port}}",
+					"path": [
+						"event",
+						"{{tenant}}",
+						"4711"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "basic",
+		"basic": [
+			{
+				"key": "password",
+				"value": "hono-secret",
+				"type": "string"
+			},
+			{
+				"key": "username",
+				"value": "sensor1@DEFAULT_TENANT",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "8e376b99-e394-4ea6-9da6-900a65fcfcb0",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "64c0a42a-0d41-4a27-9b3a-ea62ce8c46da",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
