@@ -1,5 +1,5 @@
 +++
-title = "Java - integrate Hono sender"
+title = "Integrate Hono Sender in Java"
 weight = 220
 +++
 
@@ -7,7 +7,7 @@ To illustrate how Hono can be integrated with Java code, a simple program is pro
 to the default tenant from a device. 
 It shall serve as a blueprint to integrate your existing java source code with Hono. 
 
-The code is found in the `example` module in the package `org.eclipse.hono.vertx.example`.
+The code is found in the [example](https://github.com/bsinno/hono/tree/master/example) module in the package [org.eclipse.hono.vertx.example](https://github.com/bsinno/hono/tree/master/example/src/main/java/org/eclipse/hono/vertx/example).
 
 The provided classes are kept as simple as possible (in the tradition of a classical "Hello World" implementation).
 This means that they make use of simple constant definitions, deal with exceptions as rarely as possible and use a few `System.out`'s.
@@ -15,13 +15,13 @@ This means that they make use of simple constant definitions, deal with exceptio
 Please refer to the javadoc of the classes for details.
 
 
-{{% warning %}}
+{{% note %}}
 Note that production ready code likely has to think more about error handling and logging than this simple blueprint.
-{{% /warning %}}
+{{% /note %}}
 
 ## Configure the example
 
-For simplicity, all configurations are defined as Java constants inside the class `HonoExampleConstants`.
+For simplicity, all configurations are defined as Java constants inside the class [HonoExampleConstants](https://github.com/bsinno/hono/blob/master/example/src/main/java/org/eclipse/hono/vertx/example/base/HonoExampleConstants.java).
 
 If you have Hono running in Docker under `localhost`, the example should work out of the box.
 Otherwise, please check and change the values to your needs (they are documented inside the class) and recompile them.
