@@ -31,11 +31,20 @@ oc new-project hono --description="Open source IoT connectivity" --display-name=
 # starting to deploy Eclipse Hono (developer user)
 echo
 echo "Deploying influxDB & Grafana ..."
+
+# add a service account allowing Grafana to run as root
+oc create serviceaccount useroot --as='system:admin'
+oc adm policy add-scc-to-user anyuid -z useroot --as='system:admin'
+
 oc create secret generic influxdb-conf --from-file=$CONFIG/influxdb.conf
-oc create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/openshift.yml
+oc create -f $SCRIPTPATH/../kubernetes/influxdb-deployment.yml
+oc create -f $SCRIPTPATH/../kubernetes/influxdb-svc.yml
+oc create -f $SCRIPTPATH/../kubernetes/grafana-deployment.yml
+oc create -f $SCRIPTPATH/../kubernetes/grafana-svc.yml
+oc create -f $SCRIPTPATH/grafana-route.yml
 echo ... done
 
-echo Deploying Apache ActiveMQ Artemis Broker ...
+echo "Deploying Apache ActiveMQ Artemis Broker ..."
 oc create secret generic hono-artemis-conf \
   --from-file=$CONFIG/hono-artemis-jar/etc/artemis-broker.xml \
   --from-file=$CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml \
@@ -49,7 +58,7 @@ oc create secret generic hono-artemis-conf \
 oc create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
-echo Deploying Qpid Dispatch Router ...
+echo "Deploying Qpid Dispatch Router ..."
 oc create secret generic hono-dispatch-router-conf \
   --from-file=$CERTS/qdrouter-key.pem \
   --from-file=$CERTS/qdrouter-cert.pem \
@@ -60,7 +69,7 @@ oc create secret generic hono-dispatch-router-conf \
 oc create -f $CONFIG/hono-dispatch-router-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
-echo Deploying Authentication Server ...
+echo "Deploying Authentication Server ..."
 oc create secret generic hono-service-auth-conf \
   --from-file=$CERTS/auth-server-key.pem \
   --from-file=$CERTS/auth-server-cert.pem \
@@ -69,7 +78,7 @@ oc create secret generic hono-service-auth-conf \
 oc create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
-echo Deploying Device Registry ...
+echo "Deploying Device Registry ..."
 oc create secret generic hono-service-device-registry-conf \
   --from-file=$CERTS/device-registry-key.pem \
   --from-file=$CERTS/device-registry-cert.pem \
@@ -80,7 +89,7 @@ oc create secret generic hono-service-device-registry-conf \
 oc create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
-echo Deploying Hono Messaging ...
+echo "Deploying Hono Messaging ..."
 oc create secret generic hono-service-messaging-conf \
   --from-file=$CERTS/hono-messaging-key.pem \
   --from-file=$CERTS/hono-messaging-cert.pem \
@@ -90,7 +99,7 @@ oc create secret generic hono-service-messaging-conf \
 oc create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
-echo Deploying HTTP adapter ...
+echo "Deploying HTTP adapter ..."
 oc create secret generic hono-adapter-http-vertx-conf \
   --from-file=$CERTS/http-adapter-key.pem \
   --from-file=$CERTS/http-adapter-cert.pem \
@@ -99,7 +108,7 @@ oc create secret generic hono-adapter-http-vertx-conf \
 oc create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
-echo Deploying MQTT adapter ...
+echo "Deploying MQTT adapter ..."
 oc create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/mqtt-adapter-key.pem \
   --from-file=$CERTS/mqtt-adapter-cert.pem \
@@ -108,7 +117,7 @@ oc create secret generic hono-adapter-mqtt-vertx-conf \
 oc create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
-echo Deploying Kura adapter ...
+echo "Deploying Kura adapter ..."
 oc create secret generic hono-adapter-kura-conf \
   --from-file=$CERTS/kura-adapter-key.pem \
   --from-file=$CERTS/kura-adapter-cert.pem \
@@ -118,18 +127,15 @@ oc create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
 echo
-echo Configuring Grafana ...
-# Grafana needs to run as root
-oc create serviceaccount useroot
-oc adm policy add-scc-to-user anyuid -z useroot -n hono --as system:admin
-oc patch dc/grafana --patch '{"spec":{"template":{"spec":{"serviceAccountName": "useroot"}}}}'
+echo "Configuring Grafana with data source & dashboard ..."
+
 chmod +x $SCRIPTPATH/../configure_grafana.sh
 HOST=$(oc get nodes --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}' --as system:admin)
 GRAFANA_PORT='NaN'
-until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do echo "Waiting for OpenShift cluster to come up...";
-GRAFANA_PORT=$(oc get service grafana --output='jsonpath={.spec.ports[0].nodePort}' --as system:admin); sleep 1;
-done;
-$SCRIPTPATH/../configure_grafana.sh ${HOST} ${GRAFANA_PORT}
+until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do
+  GRAFANA_PORT=$(oc get service grafana --output='jsonpath={.spec.ports[0].nodePort}' --as system:admin); sleep 1;
+done
+$SCRIPTPATH/../configure_grafana.sh $HOST $GRAFANA_PORT
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED ON OPENSHIFT

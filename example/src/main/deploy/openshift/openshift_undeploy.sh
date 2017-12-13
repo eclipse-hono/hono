@@ -19,6 +19,8 @@ oc delete project hono
 
 # deleting Hono Server persistent volume
 oc login -u system:admin
+oc adm policy remove-scc-from-user anyuid useroot
+oc delete serviceaccount useroot
 oc delete pv hono
 
 oc login -u developer

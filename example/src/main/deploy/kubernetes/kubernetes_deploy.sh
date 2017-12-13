@@ -25,14 +25,20 @@ kubectl create namespace $NS
 
 echo
 echo "Deploying influxDB & Grafana ..."
+
+kubectl create serviceaccount useroot --namespace $NS
+
 kubectl create secret generic influxdb-conf \
   --from-file=$CONFIG/influxdb.conf \
   --namespace $NS
-kubectl create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/influxdb-deployment.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/influxdb-svc.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/grafana-deployment.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/grafana-svc.yml --namespace $NS
 echo ... done
 
 echo
-echo Deploying Artemis broker ...
+echo "Deploying Artemis broker ..."
 kubectl create secret generic hono-artemis-conf \
   --from-file=$CONFIG/hono-artemis-jar/etc/artemis-broker.xml \
   --from-file=$CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml \
@@ -48,7 +54,7 @@ kubectl create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/kubernetes.yml --nam
 echo ... done
 
 echo
-echo Deploying Qpid Dispatch Router ...
+echo "Deploying Qpid Dispatch Router ..."
 kubectl create secret generic hono-dispatch-router-conf \
   --from-file=$CERTS/qdrouter-key.pem \
   --from-file=$CERTS/qdrouter-cert.pem \
@@ -61,7 +67,7 @@ kubectl create -f $CONFIG/hono-dispatch-router-jar/META-INF/fabric8/kubernetes.y
 echo ... done
 
 echo
-echo Deploying Authentication Server ...
+echo "Deploying Authentication Server ..."
 kubectl create secret generic hono-service-auth-conf \
   --from-file=$CERTS/auth-server-key.pem \
   --from-file=$CERTS/auth-server-cert.pem \
@@ -72,7 +78,7 @@ kubectl create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/kubernetes.yml 
 echo ... done
 
 echo
-echo Deploying Device Registry ...
+echo "Deploying Device Registry ..."
 kubectl create secret generic hono-service-device-registry-conf \
   --from-file=$CERTS/device-registry-key.pem \
   --from-file=$CERTS/device-registry-cert.pem \
@@ -85,7 +91,7 @@ kubectl create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/kube
 echo ... done
 
 echo
-echo Deploying Hono Messaging ...
+echo "Deploying Hono Messaging ..."
 kubectl create secret generic hono-service-messaging-conf \
   --from-file=$CERTS/hono-messaging-key.pem \
   --from-file=$CERTS/hono-messaging-cert.pem \
@@ -97,7 +103,7 @@ kubectl create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/kubernetes
 echo ... done
 
 echo
-echo Deploying HTTP adapter ...
+echo "Deploying HTTP adapter ..."
 kubectl create secret generic hono-adapter-http-vertx-conf \
   --from-file=$CERTS/http-adapter-key.pem \
   --from-file=$CERTS/http-adapter-cert.pem \
@@ -108,7 +114,7 @@ kubectl create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/kubernete
 echo ... done
 
 echo
-echo Deploying MQTT adapter ...
+echo "Deploying MQTT adapter ..."
 kubectl create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/mqtt-adapter-key.pem \
   --from-file=$CERTS/mqtt-adapter-cert.pem \
@@ -119,7 +125,7 @@ kubectl create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/kubernete
 echo ... done
 
 echo
-echo Deploying Kura adapter ...
+echo "Deploying Kura adapter ..."
 kubectl create secret generic hono-adapter-kura-conf \
   --from-file=$CERTS/kura-adapter-key.pem \
   --from-file=$CERTS/kura-adapter-cert.pem \
@@ -130,14 +136,15 @@ kubectl create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/kubernetes.yml 
 echo ... done
 
 echo
-echo Configuring Grafana ...
+echo "Configuring Grafana with data source & dashboard ..."
+
 chmod +x $SCRIPTPATH/../configure_grafana.sh
 HOST=$(kubectl get nodes --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}')
 GRAFANA_PORT='NaN'
-until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do echo "Waiting for Kubernetes cluster to come up...";
-GRAFANA_PORT=$(kubectl get service grafana -n hono --output='jsonpath={.spec.ports[0].nodePort}'); sleep 1;
-done;
-$SCRIPTPATH/../configure_grafana.sh ${HOST} ${GRAFANA_PORT}
+until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do
+  GRAFANA_PORT=$(kubectl get service grafana -n hono --output='jsonpath={.spec.ports[0].nodePort}'); sleep 1;
+done
+$SCRIPTPATH/../configure_grafana.sh $HOST $GRAFANA_PORT
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED TO KUBERNETES
