@@ -111,7 +111,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     sasl/*,
                     etc/*,
                     META-INF/fabric8/**/*
-                    </includes>
+                  </includes>
                   <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
                   <stripClassifier>true</stripClassifier>
                   <stripVersion>true</stripVersion>
