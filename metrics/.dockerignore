@@ -1,9 +1,0 @@
-*.sh
-.classpath
-.project
-docker-build.sh
-pom.xml
-qpid/*
-qpid-dispatch-build/*
-src/*
-target/*
