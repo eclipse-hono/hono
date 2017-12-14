@@ -382,7 +382,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param address The unknown target address.
      */
     protected final void handleUnknownEndpoint(final ProtonConnection con, final ProtonLink<?> link, final ResourceIdentifier address) {
-        LOG.info("client [{}] wants to establish link for unknown endpoint [address: {}]",
+        LOG.info("client [container: {}] wants to establish link for unknown endpoint [address: {}]",
                 con.getRemoteContainer(), address);
         link.setCondition(
                 ProtonHelper.condition(
@@ -417,11 +417,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
         if (receiver.getRemoteTarget().getAddress() == null) {
-            LOG.debug("client [{}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link",
+            LOG.debug("client [container: {}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link ...",
                     con.getRemoteContainer());
-            receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND.toString(), "anonymous relay not supported")).close();
+            receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "anonymous relay not supported"));
+            receiver.close();
         } else {
-            LOG.debug("client [{}] wants to open a link for sending messages [address: {}]",
+            LOG.debug("client [container: {}] wants to open a link [address: {}] for sending messages",
                     con.getRemoteContainer(), receiver.getRemoteTarget());
             try {
                 final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
@@ -437,12 +438,14 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                             endpoint.onLinkAttach(con, receiver, targetResource);
                         } else {
                             LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
-                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
+                            receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized"));
+                            receiver.close();
                         }
                     });
                 }
             } catch (final IllegalArgumentException e) {
                 LOG.debug("client has provided invalid resource identifier as target address", e);
+                receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such address"));
                 receiver.close();
             }
         }
@@ -456,7 +459,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
         final Source remoteSource = sender.getRemoteSource();
-        LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
+        LOG.debug("client [container: {}] wants to open a link [address: {}] for receiving messages",
                 con.getRemoteContainer(), remoteSource);
         try {
             final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
@@ -472,12 +475,14 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                         endpoint.onLinkAttach(con, sender, targetResource);
                     } else {
                         LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
-                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized")).close();
+                        sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized"));
+                        sender.close();
                     }
                 });
             }
         } catch (final IllegalArgumentException e) {
             LOG.debug("client has provided invalid resource identifier as target address", e);
+            sender.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such address"));
             sender.close();
         }
     }
@@ -505,7 +510,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param session The session that is initiated.
      */
     protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.debug("opening new session with client [{}]", con.getRemoteContainer());
+        LOG.debug("opening new session with client [container: {}]", con.getRemoteContainer());
         session.closeHandler(sessionResult -> {
             if (sessionResult.succeeded()) {
                 sessionResult.result().close();
@@ -533,9 +538,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
         if (res.succeeded()) {
-            LOG.debug("client [{}] closed connection", con.getRemoteContainer());
+            LOG.debug("client [container: {}] closed connection", con.getRemoteContainer());
         } else {
-            LOG.debug("client [{}] closed connection with error", con.getRemoteContainer(), res.cause());
+            LOG.debug("client [container: {}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
         con.close();
         con.disconnect();
@@ -548,7 +553,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param con The connection that was disconnected.
      */
     protected void handleRemoteDisconnect(final ProtonConnection con) {
-        LOG.debug("client [{}] disconnected", con.getRemoteContainer());
+        LOG.debug("client [container: {}] disconnected", con.getRemoteContainer());
         con.disconnect();
         publishConnectionClosedEvent(con);
     }

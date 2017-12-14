@@ -142,7 +142,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     @Override
     public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
-            logger.debug("client wants to use AT MOST ONCE delivery mode for {} endpoint, this is not supported.",getName());
+            logger.debug("client wants to use unsupported AT MOST ONCE delivery mode for endpoint [{}], closing link ...", getName());
             receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
             receiver.close();
         } else {
@@ -154,7 +154,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                     .setPrefetch(receiverLinkCredit)
                     .handler((delivery, message) -> {
                         handleMessage(con, receiver, targetAddress, delivery, message);
-                    }).closeHandler(clientDetached -> onLinkDetach(clientDetached.result()))
+                    }).closeHandler(clientDetached -> onLinkDetach(receiver))
                     .open();
         }
     }
@@ -249,26 +249,28 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     @Override
     public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier replyToAddress) {
         if (replyToAddress.getResourceId() == null) {
-            logger.debug("link target provided in client's link ATTACH must not be null, but must match pattern \"{}/<tenant>/<reply-address>\" instead", getName());
-            sender.setCondition(condition(AmqpError.INVALID_FIELD.toString(),
-                    String.format("link target must not be null but must have the following format %s/<tenant>/<reply-address>", getName())));
+            logger.debug("client [{}] provided invalid reply-to address", sender.getName());
+            sender.setCondition(ProtonHelper.condition(AmqpError.INVALID_FIELD,
+                    String.format("reply-to address must have the following format %s/<tenant>/<reply-address>", getName())));
             sender.close();
         } else {
             logger.debug("establishing sender link with client [{}]", sender.getName());
             final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(replyToAddress.toString(), message -> {
                 // TODO check for correct session here...?
-                logger.trace("forwarding reply to client: {}", message.body());
+                logger.trace("forwarding reply to client [{}]: {}", sender.getName(), message.body());
                 final Message amqpReply = getAmqpReply(message);
                 sender.send(amqpReply);
             });
 
+            sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
             sender.closeHandler(senderClosed -> {
+                logger.debug("client [{}] closed sender link, removing associated event bus consumer [{}]", sender.getName(), replyConsumer.address());
                 replyConsumer.unregister();
-                senderClosed.result().close();
-                logger.debug("receiver closed link [{}], removing associated event bus consumer [{}]", sender.getName(), replyConsumer.address());
+                if (senderClosed.succeeded()) {
+                    senderClosed.result().close();
+                }
             });
-
-            sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
+            sender.open();
         }
     }
 }
