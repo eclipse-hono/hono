@@ -15,6 +15,7 @@
 
   <springProfile name="dev">
     <logger name="org.eclipse.hono" level="DEBUG"/>
+    <logger name="org.eclipse.hono.connection" level="DEBUG"/>
     <logger name="org.eclipse.hono.event" level="DEBUG"/>
     <logger name="org.eclipse.hono.server" level="DEBUG"/>
     <logger name="org.eclipse.hono.service.auth" level="DEBUG"/>
