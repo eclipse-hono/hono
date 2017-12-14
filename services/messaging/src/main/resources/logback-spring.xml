@@ -16,10 +16,10 @@
   </root>
 
   <springProfile name="dev">
-    <logger name="org.eclipse.hono" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
     <logger name="org.eclipse.hono.event" level="DEBUG"/>
-    <logger name="org.eclipse.hono.server" level="DEBUG"/>
+    <logger name="org.eclipse.hono.messaging" level="DEBUG"/>
     <logger name="org.eclipse.hono.service.auth" level="DEBUG"/>
     <logger name="org.eclipse.hono.telemetry" level="DEBUG"/>
 
@@ -31,10 +31,6 @@
 
   <springProfile name="prod">
     <logger name="org.eclipse.hono" level="INFO"/>
-    <logger name="org.eclipse.hono.event" level="INFO"/>
-    <logger name="org.eclipse.hono.server" level="INFO"/>
-    <logger name="org.eclipse.hono.service.auth" level="INFO"/>
-    <logger name="org.eclipse.hono.telemetry" level="INFO"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>
 

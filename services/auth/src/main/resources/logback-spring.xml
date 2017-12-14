@@ -16,7 +16,6 @@
   </root>
 
   <springProfile name="dev">
-    <logger name="org.eclipse.hono" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
@@ -27,7 +26,6 @@
 
   <springProfile name="prod">
     <logger name="org.eclipse.hono" level="INFO"/>
-    <logger name="org.eclipse.hono.service" level="INFO"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>
 
