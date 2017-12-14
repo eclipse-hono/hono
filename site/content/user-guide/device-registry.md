@@ -230,7 +230,10 @@ The following sections describe the resources representing the operations of the
 
 The following command registers a device with ID `4711`
 
-    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{"device-id": "4711", "ep": "IMEI4711"}' http://localhost:28080/registration/DEFAULT_TENANT
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+        "device-id": "4711",
+        "ep": "IMEI4711"
+    }' http://localhost:28080/registration/DEFAULT_TENANT
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:
@@ -282,7 +285,10 @@ The response will look similar to this:
 
 **Example**
 
-    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"ep": "IMEI4711", "psk-id": "psk4711"}' http://localhost:28080/registration/DEFAULT_TENANT/4711
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+        "ep": "IMEI4711",
+        "psk-id": "psk4711"
+    }' http://localhost:28080/registration/DEFAULT_TENANT/4711
 
 The response will look similar to this:
 
@@ -335,11 +341,18 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
 
 **Example**
 
-The following command adds some `hashed-password` credentials for device `4720` using authentication identifier `sensor20`:
+The following commands add some `hashed-password` credentials for device `4720` using authentication identifier `sensor20`:
 
-    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary \
-    > '{"device-id": "4720", "type": "hashed-password", "auth-id": "sensor20", "secrets": [{"hash-function" : "sha-512", "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="}]}' \
-    > http://localhost:28080/credentials/DEFAULT_TENANT
+    $ PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+        "device-id": "4720",
+        "type": "hashed-password",
+        "auth-id": "sensor20",
+        "secrets": [{
+            "hash-function" : "sha-512",
+            "pwd-hash": "'$PWD_HASH'"
+        }]
+      }' http://localhost:28080/credentials/DEFAULT_TENANT
 
 The response will look like this:
 
@@ -347,8 +360,27 @@ The response will look like this:
     Location: /credentials/DEFAULT_TENANT/sensor20/hashed-password
     Content-Length: 0
 
+Multiple credentials of different type can be registered for the same authentication identifier.
+The following commands add `psk` credentials for the same device `4720` using authentication identifier `sensor20`:
 
-### Get Credentials by Type and Authentication Identifier 
+    $ SHARED_KEY=$(echo -n "TheSharedKey" | base64 -w 0)
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+       "device-id": "4720",
+       "type": "psk",
+       "auth-id": "sensor20",
+       "secrets": [{
+         "key" : "'$SHARED_KEY'"
+         }]
+      }' http://localhost:28080/credentials/DEFAULT_TENANT
+
+The response will look like this:
+
+    HTTP/1.1 201 Created
+    Location: /credentials/DEFAULT_TENANT/sensor20/psk
+    Content-Length: 0
+
+
+### Get Credentials by Authentication Identifier and Type
 
 * URI: `/credentials/${tenantId}/${authId}/${type}`
 * Method: `GET`
@@ -358,42 +390,30 @@ The response will look like this:
 
 **Example**
 
-The following command retrieves credentials data of type `hashed-password` for the authId `sensor1`:
+The following command retrieves credentials data of type `hashed-password` for the authentication identifier `sensor20`:
 
-    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor1/hashed-password
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
 
 The response will look similar to this:
 
     HTTP/1.1 200 OK
+    Content-Length: 268
     Content-Type: application/json; charset=utf-8
-    Content-Length: 927
     
     {
-      "device-id" : "4711",
-      "type" : "hashed-password",
-      "auth-id" : "sensor1",
-      "enabled" : true,
-      "secrets" : [ {
-        "not-before" : "2017-05-01T14:00:00+01:00",
-        "not-after" : "2037-06-01T14:00:00+01:00",
-        "hash-function" : "sha-512",
-        "salt" : "aG9ubw==",
-        "pwd-hash" : "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="
-      }, {
-        "not-before" : "2017-05-15T14:00:00+01:00",
-        "not-after" : "2037-05-01T14:00:00+01:00",
-        "hash-function" : "sha-unknown",
-        "salt" : "aG9ubzI=",
-        "pwd-hash" : "QDhkSQcm0HNBybnuc5irvPIgNUJn0iVoQnFSoltLOsDlfxhcQWa99l8Dhh67jSKBr7fXeSvFZ1mEojReAXz18A=="
-      }, {
-        "not-before" : "2017-05-15T14:00:00+01:00",
-        "not-after" : "2037-05-01T14:00:00+01:00",
-        "hash-function" : "sha-256",
-        "salt" : "aG9ubzI=",
-        "pwd-hash" : "QDhkSQcm0HNBybnuc5irvPIgNUJn0iVoQnFSoltLOsDlfxhcQWa99l8Dhh67jSKBr7fXeSvFZ1mEojReAXz18A=="
-      } ]
+        "auth-id": "sensor20",
+        "device-id": "4720",
+        "enabled": true,
+        "secrets": [
+            {
+                "hash-function": "sha-512",
+                "pwd-hash": "tnxz0zDFs+pJGdCVSuoPE4TnamXsfIjBEOb0rg3e9WFD9KfbCkoRuwVZKgRWInfqp87kCLsoV/HEwdJwgw793Q=="
+            }
+        ],
+        "type": "hashed-password"
     }
- 
+
+
 ### Get all Credentials for a Device
 
 * URI: `/credentials/${tenantId}/${deviceId}`
@@ -405,57 +425,43 @@ The response will look similar to this:
 
 **Example**
 
-The following command retrieves credentials for device `4711`:
+The following command retrieves credentials for device `4720`:
 
-    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4711
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4720
 
 The response will look similar to this:
 
     HTTP/1.1 200 OK
+    Content-Length: 491
     Content-Type: application/json; charset=utf-8
-    Content-Length: 1406
     
     {
-      "total" : 2,
-      "credentials" : [ {
-        "device-id" : "4711",
-        "type" : "hashed-password",
-        "auth-id" : "sensor1",
-        "enabled" : true,
-        "secrets" : [ {
-          "not-before" : "2017-05-01T14:00:00+01:00",
-          "not-after" : "2037-06-01T14:00:00+01:00",
-          "hash-function" : "sha-512",
-          "salt" : "aG9ubw==",
-          "pwd-hash" : "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA=="
-        }, {
-          "not-before" : "2017-05-15T14:00:00+01:00",
-          "not-after" : "2037-05-01T14:00:00+01:00",
-          "hash-function" : "sha-unknown",
-          "salt" : "aG9ubzI=",
-          "pwd-hash" : "QDhkSQcm0HNBybnuc5irvPIgNUJn0iVoQnFSoltLOsDlfxhcQWa99l8Dhh67jSKBr7fXeSvFZ1mEojReAXz18A=="
-        }, {
-          "not-before" : "2017-05-15T14:00:00+01:00",
-          "not-after" : "2037-05-01T14:00:00+01:00",
-          "hash-function" : "sha-256",
-          "salt" : "aG9ubzI=",
-          "pwd-hash" : "QDhkSQcm0HNBybnuc5irvPIgNUJn0iVoQnFSoltLOsDlfxhcQWa99l8Dhh67jSKBr7fXeSvFZ1mEojReAXz18A=="
-        } ]
-        }, {
-        "device-id" : "4711",
-        "type" : "psk",
-        "auth-id" : "sensor1",
-        "enabled" : true,
-        "secrets" : [ {
-          "not-before" : "2017-05-01T14:00:00+01:00",
-          "not-after" : "2037-06-01T14:00:00+01:00",
-          "key" : "c2VjcmV0S2V5"
-        }, {
-          "not-before" : "2017-06-15T14:00:00+01:00",
-          "not-after" : "2037-05-01T14:00:00+01:00",
-          "key" : "c2VjcmV0S2V5Mg=="
-        } ]
-      } ]
+        "credentials": [
+            {
+                "auth-id": "sensor20",
+                "device-id": "4720",
+                "enabled": true,
+                "secrets": [
+                    {
+                        "hash-function": "sha-512",
+                        "pwd-hash": "tnxz0zDFs+pJGdCVSuoPE4TnamXsfIjBEOb0rg3e9WFD9KfbCkoRuwVZKgRWInfqp87kCLsoV/HEwdJwgw793Q=="
+                    }
+                ],
+                "type": "hashed-password"
+            },
+            {
+                "auth-id": "sensor20",
+                "device-id": "4720",
+                "enabled": true,
+                "secrets": [
+                    {
+                        "key": "VGhlU2hhcmVkS2V5"
+                    }
+                ],
+                "type": "psk"
+            }
+        ],
+        "total": 2
     }
 
 
@@ -481,9 +487,17 @@ This resource can be used to change values of a particular set of credentials. H
 
 The following command adds an expiration date to the `hashed-password` credentials for authentication identifier `sensor20`:
 
-    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary \
-    > '{"device-id": "4711", "type": "hashed-password", "auth-id": "sensor1", "secrets": [{"hash-function" : "sha-512", "salt": "aG9ubw==", "pwd-hash": "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA==", "not-after": "2018-01-01T00:00:00+01:00"}]}' \
-    > http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
+    $ PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+        "device-id": "4720",
+        "type": "hashed-password",
+        "auth-id": "sensor20",
+        "secrets": [{
+            "hash-function" : "sha-512",
+            "pwd-hash": "'$PWD_HASH'",
+            "not-after": "2018-01-01T00:00:00+01:00"
+        }]
+    }' http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
 
 The response will look like this:
 
@@ -501,7 +515,7 @@ The response will look like this:
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/sensor1/hashed-password
+    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
 
 The response will look similar to this:
 
@@ -521,7 +535,7 @@ Removes all credentials registered for a particular device.
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4711
+    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4720
 
 The response will look similar to this:
 
