@@ -12,9 +12,9 @@
 
 package org.eclipse.hono.service.registration;
 
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.mockito.Mockito.mock;
+
+import java.net.HttpURLConnection;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
@@ -36,7 +36,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 
 /**
- * BaseRegistrationServiceTest
+ * Tests verifying behavior of {@link BaseRegistrationService}.
  *
  */
 @RunWith(VertxUnitRunner.class)
@@ -66,7 +66,7 @@ public class BaseRegistrationServiceTest {
     public void testStartupFailsIfNoRegistrationAssertionFactoryIsSet(final TestContext ctx) {
 
         // GIVEN a registry without an assertion factory being set
-        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HttpURLConnection.HTTP_OK,
                 BaseRegistrationService.getResultPayload("4711", new JsonObject()));
 
         // WHEN starting the service
@@ -84,23 +84,34 @@ public class BaseRegistrationServiceTest {
      * 
      * @param ctx The vertx unit test context.
      */
-    @Test(timeout = 2000)
+    @Test
     public void testAssertDeviceRegistrationReturnsToken(final TestContext ctx) {
 
-        // GIVEN a registry that contains an enabled device
-        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
-                BaseRegistrationService.getResultPayload("4711", new JsonObject()));
+        // GIVEN a registry that contains an enabled device with a default content type set
+        final JsonObject registrationInfo = new JsonObject()
+                .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
+                        .put(RegistrationConstants.FIELD_CONTENT_TYPE, "application/default"));
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(
+                HttpURLConnection.HTTP_OK, BaseRegistrationService.getResultPayload("4711", registrationInfo));
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
+        final Async assertionSucceded = ctx.async();
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
-            // THEN the response contains a JWT token asserting the device's registration status
-            ctx.assertEquals(result.getStatus(), HTTP_OK);
+            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_OK);
             JsonObject payload = result.getPayload();
             ctx.assertNotNull(payload);
+            // THEN the response contains a JWT token asserting the device's registration status
             String compactJws = payload.getString(RegistrationConstants.FIELD_ASSERTION);
             ctx.assertNotNull(compactJws);
+            // and contains the registered default content type
+            JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
+            ctx.assertNotNull(defaults);
+            ctx.assertEquals("application/default", defaults.getString(RegistrationConstants.FIELD_CONTENT_TYPE));
+            assertionSucceded.complete();
         }));
+
+        assertionSucceded.await(1000);
     }
 
     /**
@@ -108,20 +119,24 @@ public class BaseRegistrationServiceTest {
      * 
      * @param ctx The vertx unit test context.
      */
-    @Test(timeout = 2000)
+    @Test
     public void testAssertDeviceRegistrationFailsForDisabledDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
-        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_OK,
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HttpURLConnection.HTTP_OK,
                 BaseRegistrationService.getResultPayload("4711", new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false)));
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
+        final Async assertionFailure = ctx.async();
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
             // THEN the response does not contain a JWT token
-            ctx.assertEquals(result.getStatus(), HTTP_NOT_FOUND);
+            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
             ctx.assertNull(result.getPayload());
+            assertionFailure.complete();
         }));
+
+        assertionFailure.await(1000);
     }
 
     /**
@@ -129,19 +144,23 @@ public class BaseRegistrationServiceTest {
      * 
      * @param ctx The vertx unit test context.
      */
-    @Test(timeout = 2000)
+    @Test
     public void testAssertDeviceRegistrationFailsForNonExistingDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
-        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HTTP_NOT_FOUND, null);
+        BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(HttpURLConnection.HTTP_NOT_FOUND, null);
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
+        final Async assertionFailure = ctx.async();
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
             // THEN the response does not contain a JWT token
-            ctx.assertEquals(result.getStatus(), HTTP_NOT_FOUND);
+            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
             ctx.assertNull(result.getPayload());
+            assertionFailure.complete();
         }));
+
+        assertionFailure.await(1000);
     }
 
     private BaseRegistrationService<ServiceConfigProperties> getRegistrationService(final int status, final JsonObject data) {
