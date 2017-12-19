@@ -11,8 +11,6 @@
  */
 package org.eclipse.hono.util;
 
-import static org.eclipse.hono.util.MessageHelper.*;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -27,24 +25,51 @@ import io.vertx.core.json.JsonObject;
  */
 public final class RegistrationConstants extends RequestResponseApiConstants {
 
-    /* registration actions */
+    /**
+     * The AMQP 1.0 <em>subject</em> to use for the <em>assert device registration</em> operation.
+     */
     public static final String ACTION_ASSERT     = "assert";
+    /**
+     * The AMQP 1.0 <em>subject</em> to use for the <em>register device</em> operation.
+     */
     public static final String ACTION_REGISTER   = "register";
+    /**
+     * The AMQP 1.0 <em>subject</em> to use for the <em>get registration information</em> operation.
+     */
     public static final String ACTION_GET        = "get";
+    /**
+     * The AMQP 1.0 <em>subject</em> to use for the <em>deregister device</em> operation.
+     */
     public static final String ACTION_DEREGISTER = "deregister";
+    /**
+     * The AMQP 1.0 <em>subject</em> to use for the <em>update device registration</em> operation.
+     */
     public static final String ACTION_UPDATE     = "update";
 
 
-    /* JSON field names */
-    public static final String FIELD_ASSERTION                   = "assertion";
-    public static final String FIELD_DATA                        = "data";
+    /**
+     * The name of the field in a response to the <em>assert device registration</em> operation
+     * that contains the registration status assertion.
+     */
+    public static final String FIELD_ASSERTION    = "assertion";
+    /**
+     * The name of the field in a response to the <em>get registration information</em> operation
+     * that contains a device's registration information.
+     */
+    public static final String FIELD_DATA         = "data";
+    /**
+     * The name of the field in a device's registration information that contains
+     * <em>defaults</em> to be used by protocol adapters when processing messages published
+     * by the device.
+     */
+    public static final String FIELD_DEFAULTS     = "defaults";
 
+    /**
+     * The name of the Device Registration API endpoint.
+     */
+    public static final String REGISTRATION_ENDPOINT = "registration";
 
-    public static final String REGISTRATION_ENDPOINT             = "registration";
-    public static final String PATH_SEPARATOR                    = "/";
-    public static final String NODE_ADDRESS_REGISTRATION_PREFIX  = REGISTRATION_ENDPOINT + PATH_SEPARATOR;
-
-    private static final List<String> ACTIONS     = Arrays.asList(ACTION_ASSERT, ACTION_REGISTER,
+    private static final List<String> ACTIONS = Arrays.asList(ACTION_ASSERT, ACTION_REGISTER,
             ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE);
 
     /**
@@ -90,12 +115,12 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     }
 
     /**
-     * Build a Json object as a reply to a registration request via the vert.x event bus.
+     * Build a JSON object as a reply to a registration request via the vert.x event bus.
      *
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to.
      * @param result The {@link RegistrationResult} object with the payload for the reply object.
-     * @return JsonObject The json reply object that is to be sent back via the vert.x event bus.
+     * @return JsonObject The JSON reply object that is to be sent back via the vert.x event bus.
      */
     public static JsonObject getServiceReplyAsJson(final String tenantId, final String deviceId, final RegistrationResult result) {
         return getServiceReplyAsJson(result.getStatus(), tenantId, deviceId, result.getPayload());
@@ -117,6 +142,6 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
 
     private static String getKey(final Message msg) {
         Objects.requireNonNull(msg);
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_KEY, String.class);
+        return MessageHelper.getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_KEY, String.class);
     }
 }
