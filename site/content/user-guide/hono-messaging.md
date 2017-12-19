@@ -36,9 +36,9 @@ The following table provides an overview of the environment variables and corres
 | `HONO_METRIC_REPORTER_GRAPHITE_PREFIX`<br>`--hono.metric.reporter.graphite.prefix` | no  | - | Prefix all metric names with the given string. |
 | `HONO_METRIC_REPORTER_CONSOLE_ACTIVE`<br>`--hono.metric.reporter.console.active` | no  | `false` | Activates the metrics reporter to the console/log. |
 | `HONO_METRIC_REPORTER_CONSOLE_PERIOD`<br>`--hono.metric.reporter.console.period` | no  | `5000` | Sets the time interval for reporting. |
-| `HONO_METRIC_JVM_MEMORY`<br>`--hono.metric.jvm.memory` | no  | `true` | Activates JVM memory metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.messaging.jvm.memory`. |
-| `HONO_METRIC_JVM_THREAD`<br>`--hono.metric.jvm.thread` | no  | `true` | Activates JVM thread metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.messaging.jvm.thread`.|
-| `HONO_METRIC_VERTX`<br>`--hono.metric.vertx` | no  | `true` | Activates the Vert.x metrics (from the Vert.x metrics project). The metric name is `hono.messaging.vertx`. |
+| `HONO_METRIC_JVM_MEMORY`<br>`--hono.metric.jvm.memory` | no  | `false` | Activates JVM memory metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.messaging.jvm.memory`. |
+| `HONO_METRIC_JVM_THREAD`<br>`--hono.metric.jvm.thread` | no  | `false` | Activates JVM thread metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.messaging.jvm.thread`.|
+| `HONO_METRIC_VERTX`<br>`--hono.metric.vertx` | no  | `false` | Activates the Vert.x metrics (from the Vert.x metrics project). The metric name is `hono.messaging.vertx`. |
 
 The variables only need to be set if the default value does not match your environment.
 
