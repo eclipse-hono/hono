@@ -137,16 +137,20 @@ A response to an *assertion* request contains the [Standard Response Properties]
 
 The body of the response message consists of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following properties:
 
-| Name             | Mandatory | Type       | Description |
-| :--------------- | :-------: | :--------- | :---------- |
-| *device-id*      | *yes*     | *string*   | The ID of the device that is subject of the assertion. |
-| *assertion*      | *yes*     | *string*   | A [JSON Web Token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
+| Name             | Mandatory | Type          | Description |
+| :--------------- | :-------: | :------------ | :---------- |
+| *device-id*      | *yes*     | *string*      | The ID of the device that is subject of the assertion. |
+| *assertion*      | *yes*     | *string*      | A [JSON Web Token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
+| *defaults*       | *no*      | *JSON object* | Default values to be used by protocol adapters for augmenting messages from devices with missing information like a *content type*. It is up to the discretion of a protocol adapter if and how to use the given default values when processing messages published by the device. |
 
-Below is an example for a payload of a response to an *assertion* request for device `4711`:
+Below is an example for a payload of a response to an *assert* request for device `4711` which also includes a default *content-type*:
 ~~~json
 {
   "device-id" : "4711",
-  "assertion" : "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE1MDMwMTY0MzJ9.Gz8VYpLso-IuasLrSm6YVg1irofz7RKEYS4kM2CUQ5o"
+  "assertion" : "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE1MDMwMTY0MzJ9.Gz8VYpLso-IuasLrSm6YVg1irofz7RKEYS4kM2CUQ5o",
+  "defaults": {
+    "content-type": "application/vnd.acme+json"
+  }
 }
 ~~~
 
@@ -278,13 +282,16 @@ The registration data is carried in the payload as a UTF-8 encoded string repres
 
 ## Request Payload
 
-The JSON object conveyed in the payload MAY contain an arbitrary number of members with arbitrary names which MUST be of a scalar type only.
+The JSON object conveyed in the payload MAY contain an arbitrary number of members with arbitrary names. Clients may register *default* values for a device which can be used by protocol adapters to augment messages with missing information that have been published by the device. Protocol adapters extract default values from the `defaults` JSON object registered for a device.
 
-Below is an example for a payload of a request for registering a device:
+Below is an example for a payload of a request for registering a device with a default content type:
 ~~~json
 {
   "manufacturer": "ACME Corp.",
-  "firmware": "v1.5"
+  "firmware": "v1.5",
+  "defaults": {
+    "content-type": "application/vnd.acme+json"
+  }
 }
 ~~~
 
@@ -305,7 +312,10 @@ Below is an example for a payload of a response to a *get* request for device `4
   "data" : {
     "enabled": true,
     "manufacturer": "ACME Corp.",
-    "firmware": "v1.5"
+    "firmware": "v1.5",
+    "defaults": {
+      "content-type": "application/vnd.acme+json"
+    }
   }
 }
 ~~~
