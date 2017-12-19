@@ -245,7 +245,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.messaging.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.messaging.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -350,7 +350,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.messaging.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'event' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.messaging.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'event' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -677,7 +677,7 @@
                 "groupBy": [],
                 "measurement": "meter.hono.server.messages.telemetry/DEFAULT_TENANT.processed.count",
                 "policy": "default",
-                "query": "select sum(*) from (select last(value) from \"meter.hono.messaging.messages.processed.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from (select last(value) from \"meter.hono.messaging.messages.processed.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -770,7 +770,7 @@
                 "groupBy": [],
                 "measurement": "meter.hono.server.messages.telemetry/DEFAULT_TENANT.discarded.count",
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"counter.hono.messaging.messages.discarded.count\" where tenant = 'DEFAULT_TENANT' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"counter.hono.messaging.messages.discarded.count\" where tenant = 'DEFAULT_TENANT' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -859,7 +859,7 @@
                 "groupBy": [],
                 "measurement": "meter.hono.server.messages.telemetry/DEFAULT_TENANT.processed.count",
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.messaging.messages.processed.count\" where tenant = '$TENANT' and type = 'event' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.messaging.messages.processed.count\" where tenant = '$TENANT' and type = 'event' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -952,7 +952,7 @@
                 "groupBy": [],
                 "measurement": "meter.hono.server.messages.telemetry/DEFAULT_TENANT.discarded.count",
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"counter.hono.messaging.messages.undeliverable.count\" where tenant = 'DEFAULT_TENANT' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"counter.hono.messaging.messages.undeliverable.count\" where tenant = 'DEFAULT_TENANT' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -1200,7 +1200,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.mqtt.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.mqtt.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -1305,7 +1305,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.mqtt.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'event' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.mqtt.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'event' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -1515,7 +1515,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.http.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.http.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -1620,7 +1620,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.http.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'event' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.http.messages.processed.m1_rate\" where tenant = '$TENANT' and type = 'event' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -2182,7 +2182,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.mqtt.messages.processed.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.mqtt.messages.processed.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -2287,7 +2287,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"counter.hono.mqtt.messages.undeliverable.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"counter.hono.mqtt.messages.undeliverable.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -2392,7 +2392,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.http.messages.processed.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.http.messages.processed.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -2497,7 +2497,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"counter.hono.http.messages.undeliverable.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"counter.hono.http.messages.undeliverable.count\" where tenant = '$TENANT' and type = 'telemetry' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -2614,7 +2614,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.mqtt.messages.processed.count\" where tenant = '$TENANT' and type = 'event' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.mqtt.messages.processed.count\" where tenant = '$TENANT' and type = 'event' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -2719,7 +2719,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"counter.hono.mqtt.messages.undeliverable.count\" where tenant = '$TENANT' and type = 'event' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"counter.hono.mqtt.messages.undeliverable.count\" where tenant = '$TENANT' and type = 'event' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -2824,7 +2824,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"meter.hono.http.messages.processed.count\" where tenant = '$TENANT' and type = 'event' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"meter.hono.http.messages.processed.count\" where tenant = '$TENANT' and type = 'event' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
@@ -2929,7 +2929,7 @@
                   }
                 ],
                 "policy": "default",
-                "query": "select sum(*) from ( select last(value) from \"counter.hono.http.messages.undeliverable.count\" where tenant = '$TENANT' and type = 'event' group by host ) where time \u003e now() - 1d",
+                "query": "select sum(*) from ( select last(value) from \"counter.hono.http.messages.undeliverable.count\" where tenant = '$TENANT' and type = 'event' group by host ) where $timeFilter",
                 "rawQuery": true,
                 "refId": "A",
                 "resultFormat": "time_series",
