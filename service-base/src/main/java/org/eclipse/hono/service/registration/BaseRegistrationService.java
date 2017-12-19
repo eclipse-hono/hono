@@ -11,9 +11,7 @@
  */
 package org.eclipse.hono.service.registration;
 
-import static java.net.HttpURLConnection.*;
-import static org.eclipse.hono.util.RegistrationConstants.*;
-
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
@@ -99,10 +97,10 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     }
 
     private void registerConsumer() {
-        registrationConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_REGISTRATION_IN);
+        registrationConsumer = vertx.eventBus().consumer(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN);
         registrationConsumer.handler(this::processRegistrationMessage);
         log.info("listening on event bus [address: {}] for incoming registration messages",
-                EVENT_BUS_ADDRESS_REGISTRATION_IN);
+                RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN);
     }
 
     /**
@@ -145,37 +143,37 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
 
 
             switch (operation) {
-            case ACTION_ASSERT:
+            case RegistrationConstants.ACTION_ASSERT:
                 log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
                 assertRegistration(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
-            case ACTION_GET:
+            case RegistrationConstants.ACTION_GET:
                 log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
                 getDevice(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
-            case ACTION_REGISTER:
+            case RegistrationConstants.ACTION_REGISTER:
                 JsonObject payload = getRequestPayload(body);
                 log.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId,
                         payload != null ? payload.encode() : null);
                 addDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
                 break;
-            case ACTION_UPDATE:
+            case RegistrationConstants.ACTION_UPDATE:
                 payload = getRequestPayload(body);
                 log.debug("updating registration for device [{}] of tenant [{}] with data {}", deviceId, tenantId,
                         payload != null ? payload.encode() : null);
                 updateDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
                 break;
-            case ACTION_DEREGISTER:
+            case RegistrationConstants.ACTION_DEREGISTER:
                 log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
                 removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
             default:
                 log.info("operation [{}] not supported", operation);
-                reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
+                reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
             }
         } catch (ClassCastException e) {
             log.debug("malformed request message");
-            reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
+            reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         }
     }
 
@@ -197,35 +195,49 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
                 resultHandler.handle(getAttempt);
             } else {
                 final RegistrationResult result = getAttempt.result();
-                if (result.getStatus() == HTTP_NOT_FOUND) {
+                if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
                     // device is not registered with tenant
                     resultHandler.handle(getAttempt);
-                } else if (isDeviceEnabled(result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA))){
-                    // device is registered with tenant and is enabled
-                    resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HTTP_OK, getAssertionPayload(tenantId, deviceId))));
                 } else {
-                    resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HTTP_NOT_FOUND)));
+                    final JsonObject registrationInfo = result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
+                    if (isDeviceEnabled(registrationInfo)) {
+                        // device is registered with tenant and is enabled
+                        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(
+                                HttpURLConnection.HTTP_OK,
+                                getAssertionPayload(tenantId, deviceId, registrationInfo))));
+                    } else {
+                        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                    }
                 }
             }
         });
     }
 
     private boolean isDeviceEnabled(final JsonObject registrationData) {
-        return registrationData.getBoolean(FIELD_ENABLED, Boolean.TRUE);
+        return registrationData.getBoolean(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
     }
 
     /**
      * Creates a registration assertion token for a device and wraps it in a JSON object.
+     * <p>
+     * The returned JSON object may also contain <em>default</em> values registered for the
+     * device under key {@link RegistrationConstants#FIELD_DEFAULTS}.
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to create the assertion token for.
+     * @param registrationInfo The device's registration information.
      * @return The payload.
      */
-    protected final JsonObject getAssertionPayload(final String tenantId, final String deviceId) {
+    protected final JsonObject getAssertionPayload(final String tenantId, final String deviceId, final JsonObject registrationInfo) {
 
-        return new JsonObject()
-                .put(FIELD_DEVICE_ID, deviceId)
-                .put(FIELD_ASSERTION, assertionFactory.getAssertion(tenantId, deviceId));
+        final JsonObject result = new JsonObject()
+                .put(RegistrationConstants.FIELD_DEVICE_ID, deviceId)
+                .put(RegistrationConstants.FIELD_ASSERTION, assertionFactory.getAssertion(tenantId, deviceId));
+        final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
+        if (defaults != null) {
+            result.put(RegistrationConstants.FIELD_DEFAULTS, defaults);
+        }
+        return result;
     }
 
     private void reply(final Message<JsonObject> request, final AsyncResult<RegistrationResult> result) {
@@ -233,7 +245,7 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
         if (result.succeeded()) {
             reply(request, result.result());
         } else {
-            request.fail(HTTP_INTERNAL_ERROR, "cannot process registration request");
+            request.fail(HttpURLConnection.HTTP_INTERNAL_ERROR, "cannot process registration request");
         }
     }
 
@@ -255,10 +267,10 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     private JsonObject getRequestPayload(final JsonObject request) {
 
         final JsonObject payload = request.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
-        Boolean enabled = payload.getBoolean(FIELD_ENABLED);
+        Boolean enabled = payload.getBoolean(RegistrationConstants.FIELD_ENABLED);
         if (enabled == null) {
             log.debug("adding 'enabled' key to payload");
-            payload.put(FIELD_ENABLED, Boolean.TRUE);
+            payload.put(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
         }
         return payload;
     }
@@ -273,7 +285,9 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
      */
     protected final static JsonObject getResultPayload(final String deviceId, final JsonObject data) {
 
-        return new JsonObject().put(FIELD_DEVICE_ID, deviceId).put(FIELD_DATA, data);
+        return new JsonObject()
+                .put(RegistrationConstants.FIELD_DEVICE_ID, deviceId)
+                .put(RegistrationConstants.FIELD_DATA, data);
     }
 
 }
