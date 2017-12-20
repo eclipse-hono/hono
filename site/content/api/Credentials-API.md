@@ -264,9 +264,11 @@ The table below provides an overview of the standard members defined for the JSO
 | *type*           | *yes*     | *string*   |               | The credential type name. The value may be arbitrarily chosen by clients but SHOULD reflect the particular type of authentication mechanism the credentials are to be used with. Possible values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   |               | The identity that the device should be authenticated as. |
 | *enabled*        | *no*      | *boolean*  | *true*        | If set to *false* the credentials are not supposed to be used to authenticate devices any longer. This may e.g. be used to disable a particular mechanism for authenticating the device. **NB** It is up to the discretion of the protocol adapter to make use of this information. |
-| *secrets*        | *yes*     | *array*    |               | A list of secrets scoped to a particular time period. See [Secrets Format]({{< relref "#secrets-format" >}}) for details. **NB** This array must contain at least one element - an empty array is handled as an error.|
+| *secrets*        | *yes*     | *array*    |               | A list of secrets scoped to a particular time period. See [Secrets Format]({{< relref "#secrets-format" >}}) for details. **NB** This array must contain at least one element - an empty array is considered an error. |
 
 For each set of credentials the combination of *auth-id* and *type* MUST be unique within a tenant.
+
+**NB** Care needs to be taken that the value for the *authentication identifer* is compliant with the authentication mechanism(s) it is supposed to be used with. For example, when using standard HTTP Basic authentication, the *username* part of the Basic Authorization header value (which corresponds to the *auth-id*) MUST not contain any *colon* (`:`) characters, because the colon character is used as the separator between username and password. Similar constraints may exist for other authentication mechanisms, so the *authentication identifier* needs to be chosen with the anticipated mechanism(s) being used in mind. Otherwise, devices may fail to authenticate with protocol adapters, even if the credentials provided by the device match the credentials registered for the device. In general, using only characters from the `[a-zA-Z0-9_-]` range for the authentication identifier should be compatible with most mechanisms.
 
 ### Secrets Format
 
