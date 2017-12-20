@@ -20,6 +20,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
 
     private boolean authenticationRequired = true;
     private boolean jmsVendorPropsEnabled = false;
+    private boolean defaultsEnabled = true;
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
@@ -92,5 +93,41 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      */
     public final void setJmsVendorPropsEnabled(final boolean flag) {
         this.jmsVendorPropsEnabled = flag;
+    }
+
+    /**
+     * Checks if the adapter should use <em>default</em> values registered for a device
+     * to augment messages published by the device.
+     * <p>
+     * Default values that can be registered for devices include:
+     * <ul>
+     * <li><em>content-type</em> - the default content type to set on a downstream message
+     * if the device did not specify a content type when it published the message. This
+     * is particularly useful for defining a content type for devices connected via MQTT
+     * which does not provide a standard way of setting a content type.</li>
+     * </ul>
+     * 
+     * @return {@code true} if the adapter should use default values.
+     */
+    public boolean isDefaultsEnabled() {
+        return defaultsEnabled;
+    }
+
+    /**
+     * Sets if the adapter should use <em>default</em> values registered for a device
+     * to augment messages published by the device.
+     * <p>
+     * Default values that can be registered for devices include:
+     * <ul>
+     * <li><em>content-type</em> - the default content type to set on a downstream message
+     * if the device did not specify a content type when it published the message. This
+     * is particularly useful for defining a content type for devices connected via MQTT
+     * which does not provide a standard way of setting a content type.</li>
+     * </ul>
+     * 
+     * @param flag {@code true} if the adapter should use default values.
+     */
+    public void setDefaultsEnabled(final boolean flag) {
+        this.defaultsEnabled = flag;
     }
 }

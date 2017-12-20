@@ -21,7 +21,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
@@ -31,11 +31,13 @@ import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.util.StringUtils;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonClientOptions;
@@ -49,7 +51,7 @@ import io.vertx.proton.ProtonHelper;
  * 
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
+public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterProperties> extends AbstractServiceBase<T> {
 
     /**
      * The name of the AMQP 1.0 application property that is used to convey the
@@ -387,15 +389,22 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
-     * Gets a registration status assertion for a device.
+     * Gets an assertion for a device's registration status.
+     * <p>
+     * The returned JSON object contains the assertion for the device
+     * under property {@link RegistrationConstants#FIELD_ASSERTION}.
+     * <p>
+     * In addition to the assertion the returned object may include <em>default</em>
+     * values for properties to set on messages published by the device under
+     * property {@link RegistrationConstants#FIELD_DEFAULTS}.
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
      * @return The assertion.
      */
-    protected final Future<String> getRegistrationAssertion(final String tenantId, final String deviceId) {
+    protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId) {
 
-        Future<String> result = Future.future();
+        Future<JsonObject> result = Future.future();
         getRegistrationClient(tenantId).compose(client -> {
             Future<RegistrationResult> regResult = Future.future();
             client.assertRegistration(deviceId, regResult.completer());
@@ -403,8 +412,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
         }).compose(response -> {
             switch(response.getStatus()) {
             case HttpURLConnection.HTTP_OK:
-                final String assertion = response.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
-                result.complete(assertion);
+                result.complete(response.getPayload());
                 break;
             case HttpURLConnection.HTTP_NOT_FOUND:
                 result.fail(new ClientErrorException(response.getStatus(), "device unknown or disabled"));
@@ -414,6 +422,73 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
             }
         }, result);
         return result;
+    }
+
+    /**
+     * Adds message properties based on a device's registration information.
+     * <p>
+     * Sets the following properties on the message:
+     * <ul>
+     * <li>Adds the registration assertion found in the
+     * {@link RegistrationConstants#FIELD_ASSERTION} property of the given registration information.</li>
+     * <li>Augments the message with missing (application) properties corresponding to the
+     * {@link RegistrationConstants#FIELD_DEFAULTS} contained in the registration information.</li>
+     * <li>Adds JMS vendor properties if configuration property <em>jmsVendorPropertiesEnabled</em> is set
+     * to {@code true}.</li>
+     * </ul>
+     * 
+     * @param message The message to set the properties on.
+     * @param registrationInfo The values to set.
+     */
+    protected final void addProperties(final Message message, final JsonObject registrationInfo) {
+
+        MessageHelper.addRegistrationAssertion(message, registrationInfo.getString(RegistrationConstants.FIELD_ASSERTION));
+        if (getConfig().isDefaultsEnabled()) {
+            final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
+            if (defaults != null) {
+                addDefaults(message, defaults);
+            }
+        }
+        if (getConfig().isJmsVendorPropsEnabled()) {
+            MessageHelper.addJmsVendorProperties(message);
+        }
+    }
+
+    private void addDefaults(final Message message, final JsonObject defaults) {
+
+        defaults.forEach(prop -> {
+
+            switch(prop.getKey()) {
+            case MessageHelper.SYS_PROPERTY_CONTENT_TYPE:
+                if (StringUtils.isEmpty(message.getContentType()) && String.class.isInstance(prop.getValue())) {
+                    // set to default type registered for device or fall back to default content type
+                    message.setContentType((String) prop.getValue());
+                }
+                break;
+            case MessageHelper.SYS_PROPERTY_CONTENT_ENCODING:
+                if (StringUtils.isEmpty(message.getContentEncoding()) && String.class.isInstance(prop.getValue())) {
+                    message.setContentEncoding((String) prop.getValue());
+                }
+                break;
+            case MessageHelper.SYS_PROPERTY_ABSOLUTE_EXPIRY_TIME:
+            case MessageHelper.SYS_PROPERTY_CORRELATION_ID:
+            case MessageHelper.SYS_PROPERTY_CREATION_TIME:
+            case MessageHelper.SYS_PROPERTY_GROUP_ID:
+            case MessageHelper.SYS_PROPERTY_GROUP_SEQUENCE:
+            case MessageHelper.SYS_PROPERTY_MESSAGE_ID:
+            case MessageHelper.SYS_PROPERTY_REPLY_TO:
+            case MessageHelper.SYS_PROPERTY_REPLY_TO_GROUP_ID:
+            case MessageHelper.SYS_PROPERTY_SUBJECT:
+            case MessageHelper.SYS_PROPERTY_TO:
+            case MessageHelper.SYS_PROPERTY_USER_ID:
+                // these standard properties cannot be set using defaults
+                LOG.debug("ignoring default property [{}] registered for device", prop.getKey());
+                break;
+            default:
+                // add all other defaults as application properties
+                MessageHelper.addProperty(message, prop.getKey(), prop.getValue());
+            }
+        });
     }
 
     /**
@@ -497,24 +572,38 @@ public abstract class AbstractProtocolAdapterBase<T extends ServiceConfigPropert
     }
 
     /**
+     * Creates a new AMQP 1.0 message for an address and device ID.
+     * 
+     * @param address The receiver of the message.
+     * @param deviceId The identifier of the device that the message originates from.
+     * @return The message.
+     * @throws NullPointerException if address or device ID are {@code null}.
+     */
+    protected static Message newMessage(final String address, final String deviceId) {
+
+        return newMessage(address, deviceId, null);
+    }
+
+    /**
      * Creates a new AMQP 1.0 message for an address, device ID and content type.
      * 
      * @param address The receiver of the message.
      * @param deviceId The identifier of the device that the message originates from.
-     * @param contentType The content type describing the message's payload.
+     * @param contentType The content type describing the message's payload (may be {@code null}).
      * @return The message.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if address or device ID are {@code null}.
      */
     protected static Message newMessage(final String address, final String deviceId, final String contentType) {
 
         Objects.requireNonNull(address);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(contentType);
 
         final Message msg = ProtonHelper.message();
         msg.setAddress(address.toString());
         MessageHelper.addDeviceId(msg, deviceId);
-        msg.setContentType(contentType);
+        if (contentType != null) {
+            msg.setContentType(contentType);
+        }
         return msg;
     }
 }

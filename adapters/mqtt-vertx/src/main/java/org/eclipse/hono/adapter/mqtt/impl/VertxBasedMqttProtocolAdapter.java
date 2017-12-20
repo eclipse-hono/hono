@@ -18,7 +18,6 @@ import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
@@ -36,7 +35,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
             if (address.getTenantId() == null || address.getResourceId() == null) {
                 throw new IllegalArgumentException("topic of unauthenticated message must contain tenant and device IDs");
             } else {
-                return newMessage(address.getBasePath(), address.getResourceId(), CONTENT_TYPE_OCTET_STREAM);
+                return newMessage(address.getBasePath(), address.getResourceId());
             }
         });
     }
@@ -51,9 +50,9 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 // use authenticated device's tenant to fill in missing information
                 final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address.getEndpoint(),
                         deviceIdentity.getTenantId(), deviceIdentity.getDeviceId());
-                return newMessage(downstreamAddress.getBasePath(), downstreamAddress.getResourceId(), CONTENT_TYPE_OCTET_STREAM);
+                return newMessage(downstreamAddress.getBasePath(), downstreamAddress.getResourceId());
             } else {
-                return newMessage(address.getBasePath(), address.getResourceId(), CONTENT_TYPE_OCTET_STREAM);
+                return newMessage(address.getBasePath(), address.getResourceId());
             }
         });
     }
