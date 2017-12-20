@@ -136,14 +136,19 @@ public final class HealthCheckServer {
     }
 
     /**
-     * Closes the HTTP server if it exists.
-     *
+     * Closes the HTTP server exposing the health checks.
+     * <p>
+     * This method usually does not need to be invoked explicitly because
+     * the HTTP server will be closed implicitly when the vert.x instance
+     * is closed.
+     * 
      * @return A Future indicating the outcome of the operation.
      */
     public Future<Void> stop() {
 
         Future<Void> result = Future.future();
         if (server != null) {
+            LOG.info("closing health check HTTP server [{}:{}]", config.getHealthCheckBindAddress(), server.actualPort());
             server.close(result.completer());
         } else {
             result.complete();
