@@ -29,14 +29,11 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
 import io.vertx.proton.ProtonClientOptions;
 
 /**
@@ -173,70 +170,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // THEN the onStartupSuccess method has been invoked
         startupFailed.await(300);
-    }
-
-    /**
-     * Verifies that the adapter does not include a device registration assertion in an HTTP response by default.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testGetRegistrationAssertionHeaderDoesNotIncludeAssertionInResponse(final TestContext ctx) {
-
-        // GIVEN an adapter connected to the Device Registration service
-        HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
-
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> startup.complete()));
-        adapter.start(startupTracker);
-        startup.await(300);
-
-        // WHEN a request to publish telemetry data is processed
-        HttpServerRequest req = mock(HttpServerRequest.class);
-        HttpServerResponse response = mock(HttpServerResponse.class);
-        RoutingContext context = mock(RoutingContext.class);
-        when(context.request()).thenReturn(req);
-        when(context.response()).thenReturn(response);
-        adapter.getRegistrationAssertion(context, "tenant", "device");
-
-        // THEN the response does NOT contain a registration assertion header
-        verify(response, never()).putHeader(eq(AbstractVertxBasedHttpProtocolAdapter.HEADER_REGISTRATION_ASSERTION), anyString());
-    }
-
-    /**
-     * Verifies that the adapter adds a device registration assertion in an HTTP response if configured.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testGetRegistrationAssertionHeaderAddsAssertionToResponse(final TestContext ctx) {
-
-        // GIVEN an adapter connected to the Device Registration service that is configured to include
-        // device registration assertions in responses
-        config.setRegAssertionEnabled(true);
-        HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
-
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> startup.complete()));
-        adapter.start(startupTracker);
-        startup.await(300);
-
-        // WHEN a request to publish telemetry data is processed
-        HttpServerRequest req = mock(HttpServerRequest.class);
-        HttpServerResponse response = mock(HttpServerResponse.class);
-        RoutingContext context = mock(RoutingContext.class);
-        when(context.request()).thenReturn(req);
-        when(context.response()).thenReturn(response);
-        adapter.getRegistrationAssertion(context, "tenant", "device");
-
-        // THEN the response contains a registration assertion header
-        verify(response).putHeader(AbstractVertxBasedHttpProtocolAdapter.HEADER_REGISTRATION_ASSERTION, "token");
     }
 
     @SuppressWarnings("unchecked")

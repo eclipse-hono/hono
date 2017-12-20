@@ -71,13 +71,57 @@ public final class MessageHelper {
     public static final String APP_PROPERTY_STATUS                 = "status";
 
     /**
-     * The AMQP 1.0 <em>subject</em> message property.
+     * The AMQP 1.0 <em>absolute-expiry-time</em> message property.
      */
-    public static final String SYS_PROPERTY_SUBJECT                = "subject";
+    public static final String SYS_PROPERTY_ABSOLUTE_EXPIRY_TIME   = "absolute-expiry-time";
+    /**
+     * The AMQP 1.0 <em>content-encoding</em> message property.
+     */
+    public static final String SYS_PROPERTY_CONTENT_ENCODING       = "content-encoding";
+    /**
+     * The AMQP 1.0 <em>content-type</em> message property.
+     */
+    public static final String SYS_PROPERTY_CONTENT_TYPE           = "content-type";
     /**
      * The AMQP 1.0 <em>correlation-id</em> message property.
      */
     public static final String SYS_PROPERTY_CORRELATION_ID         = "correlation-id";
+    /**
+     * The AMQP 1.0 <em>creation-time</em> message property.
+     */
+    public static final String SYS_PROPERTY_CREATION_TIME          = "creation-time";
+    /**
+     * The AMQP 1.0 <em>group-id</em> message property.
+     */
+    public static final String SYS_PROPERTY_GROUP_ID               = "group-id";
+    /**
+     * The AMQP 1.0 <em>group-sequence</em> message property.
+     */
+    public static final String SYS_PROPERTY_GROUP_SEQUENCE         = "group-sequence";
+    /**
+     * The AMQP 1.0 <em>message-id</em> message property.
+     */
+    public static final String SYS_PROPERTY_MESSAGE_ID             = "message-id";
+    /**
+     * The AMQP 1.0 <em>reply-to</em> message property.
+     */
+    public static final String SYS_PROPERTY_REPLY_TO               = "reply-to";
+    /**
+     * The AMQP 1.0 <em>reply-to-group-id</em> message property.
+     */
+    public static final String SYS_PROPERTY_REPLY_TO_GROUP_ID      = "reply-to-group-id";
+    /**
+     * The AMQP 1.0 <em>subject</em> message property.
+     */
+    public static final String SYS_PROPERTY_SUBJECT                = "subject";
+    /**
+     * The AMQP 1.0 <em>user-id</em> message property.
+     */
+    public static final String SYS_PROPERTY_USER_ID                = "user-id";
+    /**
+     * The AMQP 1.0 <em>to</em> message property.
+     */
+    public static final String SYS_PROPERTY_TO                     = "to";
 
     /**
      * The {@code JMS_AMQP_CONTENT_ENCODING} vendor property name.
