@@ -169,10 +169,6 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
                 log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
                 removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
-            case ACTION_ENABLED:
-                log.debug("checking if device [{}] of tenant [{}] is enabled", deviceId, tenantId);
-                isEnabled(tenantId, deviceId, result -> reply(regMsg, result));
-                break;
             default:
                 log.info("operation [{}] not supported", operation);
                 reply(regMsg, RegistrationResult.from(HTTP_BAD_REQUEST));
@@ -230,31 +226,6 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
         return new JsonObject()
                 .put(FIELD_DEVICE_ID, deviceId)
                 .put(FIELD_ASSERTION, assertionFactory.getAssertion(tenantId, deviceId));
-    }
-
-    /**
-     * This default implementation simply invokes {@link RegistrationService#getDevice(String, String, Handler)}
-     * with the parameters passed in to this method.
-     * <p>
-     * Subclasses should override this method in order to use a more efficient way of determining the device's status.
-
-     * @param tenantId The tenantId to which the device belongs.
-     * @param deviceId The deviceIf of the device to be checked.
-     * @param resultHandler The callback handler to which the result is reported.
-     */
-    public void isEnabled(final String tenantId, final String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        getDevice(tenantId, deviceId, getAttempt -> {
-            if (getAttempt.succeeded()) {
-                RegistrationResult result = getAttempt.result();
-                if (result.getStatus() == HTTP_OK) {
-                    resultHandler.handle(Future.succeededFuture(RegistrationResult.from(result.getStatus(), result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA))));
-                } else {
-                    resultHandler.handle(getAttempt);
-                }
-            } else {
-                resultHandler.handle(getAttempt);
-            }
-        });
     }
 
     private void reply(final Message<JsonObject> request, final AsyncResult<RegistrationResult> result) {
