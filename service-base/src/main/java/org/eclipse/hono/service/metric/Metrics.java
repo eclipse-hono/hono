@@ -58,21 +58,25 @@ abstract public class Metrics {
     protected abstract String getPrefix();
 
     /**
-     * Sets the spring boot gauge service, will be based on Dropwizard Metrics, if in classpath.
+     * Sets the service to use for managing gauges.
+     * <p>
+     * Spring Boot will inject a concrete implementation that is available on the class path.
      *
      * @param gaugeService The gauge service.
      */
-    @Autowired
+    @Autowired(required = false)
     public final void setGaugeService(final GaugeService gaugeService) {
         this.gaugeService = gaugeService;
     }
 
     /**
-     * Sets the spring boot counter service, will be based on Dropwizard Metrics, if in classpath.
+     * Sets the service to use for managing counters.
+     * <p>
+     * Spring Boot will inject a concrete implementation that is available on the class path.
      *
      * @param counterService The counter service.
      */
-    @Autowired
+    @Autowired(required = false)
     public final void setCounterService(final CounterService counterService) {
         this.counterService = counterService;
     }
