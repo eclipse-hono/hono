@@ -432,21 +432,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </goals>
               </execution>
               <execution>
-                <id>stop-docker</id>
+                <id>stop-and-remove-docker</id>
                 <phase>post-integration-test</phase>
                 <goals>
                   <goal>stop</goal>
                   <goal>remove</goal>
                 </goals>
-              </execution>
-              <execution>
-                <id>remove-test-images</id>
-                <phase>post-integration-test</phase>
-                <goals>
-                  <goal>remove</goal>
-                </goals>
                 <configuration>
-                  <filter>auth,device-registry,messaging,qdrouter,artemis</filter>
                   <removeAll>true</removeAll>
                 </configuration>
               </execution>
