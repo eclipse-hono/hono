@@ -94,7 +94,7 @@ public final class AuthenticationServerClient {
         options.addEnabledSaslMechanism(AuthenticationConstants.MECHANISM_PLAIN);
         factory.connect(options, authcid, password, null, null, conAttempt -> {
             if (conAttempt.failed()) {
-                authenticationResultHandler.handle(Future.failedFuture("cannot connect to authentication server"));
+                authenticationResultHandler.handle(Future.failedFuture("cannot connect to Authentication service"));
             } else {
                 final ProtonConnection openCon = conAttempt.result();
 
@@ -107,14 +107,14 @@ public final class AuthenticationServerClient {
                     }
                     ProtonConnection con = conAttempt.result();
                     if (con != null) {
-                        LOG.debug("closing connection to authentication server");
+                        LOG.debug("closing connection to Authentication service");
                         con.close();
                     }
                 });
 
                 vertx.setTimer(5000, tid -> {
                     if (!userTracker.isComplete()) {
-                        userTracker.fail("time out reached while waiting for token from authentication server");
+                        userTracker.fail("time out reached while waiting for token from Authentication service");
                     }
                 });
 
@@ -158,20 +158,20 @@ public final class AuthenticationServerClient {
                             return false;
                         }
                     };
-                    LOG.debug("successfully retrieved token from authentication server");
+                    LOG.debug("successfully retrieved token from Authentication service");
                     authResult.complete(user);
 
                 } else {
-                    authResult.fail("message from authentication server contains no body");
+                    authResult.fail("message from Authentication service contains no body");
                 }
 
             } else {
-                authResult.fail("authentication server issued unsupported token [type: " + type + "]");
+                authResult.fail("Authentication service issued unsupported token [type: " + type + "]");
             }
         };
 
         openReceiver(openCon, messageHandler).compose(openReceiver -> {
-            LOG.debug("opened receiver link to authentication server, waiting for token ...");
+            LOG.debug("opened receiver link to Authentication service, waiting for token ...");
         }, authResult);
     }
 
