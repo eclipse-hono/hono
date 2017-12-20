@@ -128,7 +128,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     @Override
     protected void doStart(final Future<Void> startFuture) {
         if (factory == null) {
-            startFuture.fail("no connection factory for authentication server set");
+            startFuture.fail("no connection factory for Authentication service set");
         } else {
             client = new AuthenticationServerClient(vertx, factory);
             startFuture.complete();
