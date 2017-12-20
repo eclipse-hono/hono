@@ -19,6 +19,7 @@ import java.net.HttpURLConnection;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.Before;
@@ -90,7 +91,7 @@ public class BaseRegistrationServiceTest {
         // GIVEN a registry that contains an enabled device with a default content type set
         final JsonObject registrationInfo = new JsonObject()
                 .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
-                        .put(RegistrationConstants.FIELD_CONTENT_TYPE, "application/default"));
+                        .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"));
         BaseRegistrationService<ServiceConfigProperties> registrationService = getRegistrationService(
                 HttpURLConnection.HTTP_OK, BaseRegistrationService.getResultPayload("4711", registrationInfo));
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
@@ -107,7 +108,7 @@ public class BaseRegistrationServiceTest {
             // and contains the registered default content type
             JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
             ctx.assertNotNull(defaults);
-            ctx.assertEquals("application/default", defaults.getString(RegistrationConstants.FIELD_CONTENT_TYPE));
+            ctx.assertEquals("application/default", defaults.getString(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
             assertionSucceded.complete();
         }));
 

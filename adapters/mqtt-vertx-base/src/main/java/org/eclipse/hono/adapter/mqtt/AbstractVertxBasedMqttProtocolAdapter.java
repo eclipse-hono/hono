@@ -33,15 +33,16 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttAuth;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
@@ -65,11 +66,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    protected MqttAdapterMetrics metrics;
+    private MqttAdapterMetrics metrics;
 
     private MqttServer server;
     private MqttServer insecureServer;
-    private Map<MqttEndpoint, String> registrationAssertions = new HashMap<>();
+    private Map<MqttEndpoint, JsonObject> registrationAssertions = new HashMap<>();
 
     @Override
     public int getPortDefaultValue() {
@@ -431,7 +432,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private Future<Void> publishMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice, final Message message, final ResourceIdentifier authorizedResource) {
 
-        final Future<String> assertionTracker = getRegistrationAssertion(endpoint, authorizedResource.getTenantId(), authorizedResource.getResourceId());
+        final Future<JsonObject> assertionTracker = getRegistrationAssertion(endpoint, authorizedResource.getTenantId(), authorizedResource.getResourceId());
         final Future<MessageSender> senderTracker = getSenderForEndpoint(authorizedResource.getEndpoint(), authorizedResource.getTenantId());
 
         return CompositeFuture.all(assertionTracker, senderTracker).recover(t -> {
@@ -451,7 +452,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 return Future.failedFuture(new ServerErrorException(503, "no credit available for sender [" +
                         message.getAddress() + "]"));
             } else {
-                addProperties(messageFromDevice, message, assertionTracker.result());
+                message.setBody(new Data(new Binary(messageFromDevice.payload().getBytes())));
+                MessageHelper.addProperty(message, PROPERTY_HONO_ORIG_ADDRESS, messageFromDevice.topicName());
+                addProperties(message, assertionTracker.result());
                 return doUploadMessage(message, endpoint, messageFromDevice, sender);
             }
         });
@@ -520,37 +523,27 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
     }
 
-    private void addProperties(final MqttPublishMessage messageFromDevice, final Message message, final String registrationAssertion) {
+    private Future<JsonObject> getRegistrationAssertion(final MqttEndpoint endpoint, final String tenantId, final String deviceId) {
 
-        if (StringUtils.isEmpty(message.getContentType())) {
-            message.setContentType(CONTENT_TYPE_OCTET_STREAM);
+        final JsonObject registrationAssertion = registrationAssertions.get(endpoint);
+        if (registrationAssertion != null) {
+            String token = registrationAssertion.getString(RegistrationConstants.FIELD_ASSERTION);
+            if (token != null && !RegistrationAssertionHelperImpl.isExpired(token, 10)) {
+                return Future.succeededFuture(registrationAssertion);
+            }
         }
-        message.setBody(new Data(new Binary(messageFromDevice.payload().getBytes())));
-        MessageHelper.addRegistrationAssertion(message, registrationAssertion);
-        MessageHelper.addProperty(message, PROPERTY_HONO_ORIG_ADDRESS, messageFromDevice.topicName());
-        if (getConfig().isJmsVendorPropsEnabled()) {
-            MessageHelper.addJmsVendorProperties(message);
-        }
-    }
 
-    private Future<String> getRegistrationAssertion(final MqttEndpoint endpoint, final String tenantId, final String deviceId) {
-
-        String token = registrationAssertions.get(endpoint);
-        if (token != null && !RegistrationAssertionHelperImpl.isExpired(token, 10)) {
-            return Future.succeededFuture(token);
-        } else {
-            registrationAssertions.remove(endpoint);
-            return getRegistrationAssertion(tenantId, deviceId).map(t -> {
-                // if the client closes the connection right after publishing the messages and before that
-                // the registration assertion has been returned, avoid to put it into the map
-                if (endpoint.isConnected()) {
-                    LOG.trace("caching registration assertion for [tenantId: {}, deviceId: {}]",
-                            tenantId, deviceId);
-                    registrationAssertions.put(endpoint, t);
-                }
-                return t;
-            });
-        }
+        registrationAssertions.remove(endpoint);
+        return getRegistrationAssertion(tenantId, deviceId).map(t -> {
+            // if the client closes the connection right after publishing the messages and before that
+            // the registration assertion has been returned, avoid to put it into the map
+            if (endpoint.isConnected()) {
+                LOG.trace("caching registration assertion for [tenantId: {}, deviceId: {}]",
+                        tenantId, deviceId);
+                registrationAssertions.put(endpoint, t);
+            }
+            return t;
+        });
     }
 
     private Future<Void> doUploadMessage(final Message message, final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice,

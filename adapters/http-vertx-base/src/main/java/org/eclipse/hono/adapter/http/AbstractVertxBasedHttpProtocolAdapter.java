@@ -24,8 +24,6 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.JwtHelper;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -523,7 +521,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             HttpUtils.badRequest(ctx, "missing body");
         } else {
 
-            final Future<String> tokenTracker = getRegistrationAssertion(tenant, deviceId);
+            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId);
 
             CompositeFuture.all(tokenTracker, senderTracker).setHandler(s -> {
                 if (s.succeeded()) {
@@ -545,10 +543,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     private void sendToHono(final RoutingContext ctx, final String deviceId, final Buffer payload,
-            final String contentType, final String token, final MessageSender sender, final String tenant,
+            final String contentType, final JsonObject registrationInfo, final MessageSender sender, final String tenant,
             final String endpointName) {
 
-        final Message msg = newMessage(String.format("%s/%s", endpointName, tenant), deviceId, contentType, payload, token);
+        final Message msg = newMessage(String.format("%s/%s", endpointName, tenant), deviceId, contentType, payload, registrationInfo);
         if (sender.send(msg)) {
             LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                     tenant, deviceId, endpointName);
@@ -560,50 +558,16 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
     }
 
-    /**
-     * Gets a registration assertion for a device.
-     * <p>
-     * This method first tries to retrieve the assertion from request header {@link #HEADER_REGISTRATION_ASSERTION}.
-     * If the header exists and contains a value representing a non-expired assertion the returned future will
-     * be completed with the value from the header.
-     * Otherwise a new assertion is retrieved from the Device Registration service and used to complete the future.
-     * If the <em>regAssertionEnabled</em> configuration property is set, the newly created token is included in
-     * the HTTP response using the same header name.
-     * 
-     * @param ctx The routing context to retrieve the assertion request header from.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to get the assertion for.
-     * @return A future containing the assertion.
-     */
-    protected final Future<String> getRegistrationAssertion(final RoutingContext ctx, final String tenantId,
-            final String deviceId) {
-
-        final String assertion = ctx.request().getHeader(HEADER_REGISTRATION_ASSERTION);
-        if (assertion != null && !JwtHelper.isExpired(assertion, 5)) {
-            return Future.succeededFuture(assertion);
-        } else {
-            return getRegistrationAssertion(tenantId, deviceId).map(token -> {
-                if (getConfig().isRegAssertionEnabled()) {
-                    ctx.response().putHeader(HEADER_REGISTRATION_ASSERTION, token);
-                }
-                return token;
-            });
-        }
-    }
-
     private Message newMessage(
             final String address,
             final String deviceId,
             final String contentType,
             final Buffer payload,
-            final String registrationAssertion) {
+            final JsonObject registrationInfo) {
 
         final Message message = newMessage(address, deviceId, contentType);
         message.setBody(new Data(new Binary(payload.getBytes())));
-        MessageHelper.addRegistrationAssertion(message, registrationAssertion);
-        if (getConfig().isJmsVendorPropsEnabled()) {
-            MessageHelper.addJmsVendorProperties(message);
-        }
+        addProperties(message, registrationInfo);
         return message;
     }
 }
