@@ -31,7 +31,6 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String ACTION_ASSERT     = "assert";
     public static final String ACTION_REGISTER   = "register";
     public static final String ACTION_GET        = "get";
-    public static final String ACTION_ENABLED    = "enabled";
     public static final String ACTION_DEREGISTER = "deregister";
     public static final String ACTION_UPDATE     = "update";
 
@@ -46,7 +45,7 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String NODE_ADDRESS_REGISTRATION_PREFIX  = REGISTRATION_ENDPOINT + PATH_SEPARATOR;
 
     private static final List<String> ACTIONS     = Arrays.asList(ACTION_ASSERT, ACTION_REGISTER,
-            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE, ACTION_ENABLED);
+            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE);
 
     /**
      * The vert.x event bus address to which inbound registration messages are published.
