@@ -21,8 +21,10 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
 import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -30,7 +32,6 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
-
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -53,8 +54,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests validating {@link FileBasedCredentialsService} using a stand alone server.
@@ -80,7 +79,7 @@ public class StandaloneCredentialsApiTest {
     private static CredentialsClient           credentialsClient;
 
     @BeforeClass
-    public static void prepareDeviceRegistry(final TestContext ctx) throws Exception {
+    public static void prepareDeviceRegistry(final TestContext ctx) {
 
         ServiceConfigProperties props = new ServiceConfigProperties();
         props.setInsecurePortEnabled(true);
@@ -132,15 +131,18 @@ public class StandaloneCredentialsApiTest {
      */
     private static HonoUser createUser() {
 
-        AuthoritiesImpl authorities = new AuthoritiesImpl()
+        final AuthoritiesImpl authorities = new AuthoritiesImpl()
                 .addResource(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE })
                 .addOperation(CredentialsConstants.CREDENTIALS_ENDPOINT, "*", "*");
-        HonoUser user = mock(HonoUser.class);
-        when(user.getAuthorities()).thenReturn(authorities);
-        return user;
+        return new HonoUserAdapter() {
+            @Override
+            public Authorities getAuthorities() {
+                return authorities;
+            }
+        };
     }
 
-    public static AuthenticationService createAuthenticationService(final HonoUser returnedUser) {
+    private static AuthenticationService createAuthenticationService(final HonoUser returnedUser) {
         return new AuthenticationService() {
 
             @Override

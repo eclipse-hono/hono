@@ -19,6 +19,7 @@ import org.apache.qpid.proton.engine.Record;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.auth.HonoUserAdapter;
 
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonLink;
@@ -108,7 +109,7 @@ public final class Constants {
     /**
      * The principal to use for anonymous clients.
      */
-    public static final HonoUser PRINCIPAL_ANONYMOUS = new HonoUser() {
+    public static final HonoUser PRINCIPAL_ANONYMOUS = new HonoUserAdapter() {
 
         private final Authorities authorities = new Authorities() {
 
@@ -137,16 +138,6 @@ public final class Constants {
         public Authorities getAuthorities() {
             return authorities;
         }
-
-        @Override
-        public String getToken() {
-            return null;
-        }
-
-        @Override
-        public boolean isExpired() {
-            return false;
-        }
     };
 
     private Constants() {
@@ -163,9 +154,9 @@ public final class Constants {
 
         if (record != null) {
             HonoUser client = record.get(KEY_CLIENT_PRINCIPAL, HonoUser.class);
-            return client == null ? Constants.PRINCIPAL_ANONYMOUS : client;
+            return client != null ? client : PRINCIPAL_ANONYMOUS;
         } else {
-            return Constants.PRINCIPAL_ANONYMOUS;
+            return PRINCIPAL_ANONYMOUS;
         }
     }
 
@@ -175,7 +166,7 @@ public final class Constants {
      * @param con The connection to get the principal for.
      * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
      *         if the client has not been authenticated.
-     * @throws NullPointerException if con is {@code null}.
+     * @throws NullPointerException if the connection is {@code null}.
      */
     public static HonoUser getClientPrincipal(final ProtonConnection con) {
         Record attachments = Objects.requireNonNull(con).attachments();

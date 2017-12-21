@@ -16,8 +16,8 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Section;
-import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.auth.AuthenticationConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -123,7 +123,7 @@ public final class AuthenticationServerClient {
         });
     }
 
-    private void getToken(ProtonConnection openCon, final Future<HonoUser> authResult) {
+    private void getToken(final ProtonConnection openCon, final Future<HonoUser> authResult) {
 
         final ProtonMessageHandler messageHandler = (delivery, message) -> {
 
@@ -136,26 +136,10 @@ public final class AuthenticationServerClient {
                 Section body = message.getBody();
                 if (body instanceof AmqpValue) {
                     final String token = ((AmqpValue) body).getValue().toString();
-                    HonoUser user = new HonoUser() {
-
-                        @Override
-                        public String getName() {
-                            return null;
-                        }
-
+                    HonoUser user = new HonoUserAdapter() {
                         @Override
                         public String getToken() {
                             return token;
-                        }
-
-                        @Override
-                        public Authorities getAuthorities() {
-                            return null;
-                        }
-
-                        @Override
-                        public boolean isExpired() {
-                            return false;
                         }
                     };
                     LOG.debug("successfully retrieved token from Authentication service");
