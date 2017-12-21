@@ -72,6 +72,11 @@ public class HonoMessagingApplicationConfig {
         return Vertx.vertx(options);
     }
 
+    /**
+     * Creates a new Hono Messaging instance and exposes it as a Spring Bean.
+     * 
+     * @return The new instance.
+     */
     @Bean(name = BEAN_NAME_HONO_MESSAGING)
     @Scope("prototype")
     public HonoMessaging honoMessaging() {
@@ -79,7 +84,7 @@ public class HonoMessagingApplicationConfig {
     }
 
     /**
-     * Exposes a factory for {@code HonoServer} instances as a Spring bean.
+     * Exposes a factory for Hono Messaging instances as a Spring bean.
      * 
      * @return The factory.
      */

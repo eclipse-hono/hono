@@ -53,6 +53,11 @@ public class ApplicationConfig {
         return Vertx.vertx(options);
     }
 
+    /**
+     * Creates a new Authentication Server instance and exposes it as a Spring Bean.
+     * 
+     * @return The new instance.
+     */
     @Bean(name = BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER)
     @Scope("prototype")
     public SimpleAuthenticationServer simpleAuthenticationServer(){
@@ -60,7 +65,7 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes a factory for creating service instances as a Spring bean.
+     * Exposes a factory for Authentication Server instances as a Spring bean.
      * 
      * @return The factory.
      */
