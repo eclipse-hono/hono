@@ -11,12 +11,10 @@
  */
 package org.eclipse.hono.messaging;
 
-import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.proton.*;
 
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
-import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +29,7 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
 
     @Override
     protected String getServiceName() {
-        return "Hono";
+        return "Hono-Messaging";
     }
 
     @Autowired
@@ -74,21 +72,6 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
             vertx.eventBus().publish(
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
                     conId);
-        }
-    }
-
-    /**
-     * Registers this service's endpoints' readiness checks.
-     * <p>
-     * This invokes {@link AmqpEndpoint#registerReadinessChecks(HealthCheckHandler)} for all registered endpoints
-     * and it checks if the <em>Authentication Service</em> is connected.
-     *
-     * @param handler The health check handler to register the checks with.
-     */
-    @Override
-    public void registerReadinessChecks(final HealthCheckHandler handler) {
-        for (AmqpEndpoint ep : endpoints()) {
-            ep.registerReadinessChecks(handler);
         }
     }
 
