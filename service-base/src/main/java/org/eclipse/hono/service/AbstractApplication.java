@@ -143,7 +143,6 @@ public class AbstractApplication implements ApplicationRunner {
         try {
             log.debug("Waiting for {} seconds to start up", startupTimeoutSeconds);
             started.get(startupTimeoutSeconds, TimeUnit.SECONDS);
-            log.info("application startup completed successfully");
         } catch (TimeoutException e) {
             log.error("startup timed out after {} seconds, shutting down ...", startupTimeoutSeconds);
             shutdown();
@@ -221,20 +220,23 @@ public class AbstractApplication implements ApplicationRunner {
     public final void shutdown(final long maxWaitTime, final Handler<Boolean> shutdownHandler) {
 
         try {
+            log.info("shutting down application...");
+
             preShutdown();
             final CountDownLatch latch = new CountDownLatch(1);
 
             stopHealthCheckServer().setHandler(result -> {
+
                 if (vertx != null) {
-                    log.debug("shutting down application...");
+                    log.info("closing vert.x instance ...");
                     vertx.close(r -> {
                         if (r.failed()) {
-                            log.error("could not shut down application cleanly", r.cause());
+                            log.error("could not close vert.x instance", r.cause());
                         }
                         latch.countDown();
                     });
                 } else {
-                    latch.countDown(); // Don't wait for the timeout.
+                    latch.countDown(); // nothing to wait for
                 }
             });
 
@@ -246,7 +248,7 @@ public class AbstractApplication implements ApplicationRunner {
                 shutdownHandler.handle(Boolean.FALSE);
             }
         } catch (InterruptedException e) {
-            log.error("shut down has been interrupted, aborting...");
+            log.error("application shut down has been interrupted, aborting...");
             Thread.currentThread().interrupt();
             shutdownHandler.handle(Boolean.FALSE);
         }
@@ -279,7 +281,7 @@ public class AbstractApplication implements ApplicationRunner {
      * Invoked before application shutdown is initiated.
      * <p>
      * May be overridden to provide additional shutdown handling, e.g.
-     * releasing resources.
+     * releasing resources before the vert.x instance is closed.
      */
     protected void preShutdown() {
         // empty
