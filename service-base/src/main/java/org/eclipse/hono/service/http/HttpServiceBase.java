@@ -136,8 +136,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
                 .compose(s -> startEndpoints())
                 .compose(router -> {
                      return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
-                })
-                .compose(s -> onStartupSuccess());
+                }).compose(s -> onStartupSuccess());
     }
 
     /**
@@ -314,18 +313,43 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         return startFuture;
     }
 
+    private Future<Void> stopEndpoints() {
+
+        final Future<Void> stopFuture = Future.future();
+        @SuppressWarnings("rawtypes")
+        List<Future> endpointFutures = new ArrayList<>(endpoints.size());
+        for (HttpEndpoint ep : endpoints) {
+            LOG.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+            Future<Void> endpointFuture = Future.future();
+            endpointFutures.add(endpointFuture);
+            ep.stop(endpointFuture);
+        }
+        CompositeFuture.all(endpointFutures).setHandler(shutdown -> {
+            if (shutdown.succeeded()) {
+                stopFuture.complete();
+            } else {
+                stopFuture.fail(shutdown.cause());
+            }
+        });
+        return stopFuture;
+
+    }
+
     @Override
     protected final Future<Void> stopInternal() {
 
         return preShutdown()
-                .compose(s -> stopServer())
-                .compose(s -> stopInsecureServer())
+                .compose(s -> {
+                    return CompositeFuture.all(stopServer(), stopInsecureServer());
+                })
+                .compose(s -> stopEndpoints())
                 .compose(v -> postShutdown());
     }
 
     private Future<Void> stopServer() {
         Future<Void> serverStopTracker = Future.future();
         if (server != null) {
+            LOG.info("stopping secure HTTP server [{}:{}]", getBindAddress(), getActualPort());
             server.close(serverStopTracker.completer());
         } else {
             serverStopTracker.complete();
@@ -336,6 +360,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     private Future<Void> stopInsecureServer() {
         Future<Void> insecureServerStopTracker = Future.future();
         if (insecureServer != null) {
+            LOG.info("stopping insecure HTTP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
             insecureServer.close(insecureServerStopTracker.completer());
         } else {
             insecureServerStopTracker.complete();
