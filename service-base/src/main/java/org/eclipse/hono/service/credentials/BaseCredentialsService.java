@@ -90,8 +90,8 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
      */
     @Override
     public final void stop(final Future<Void> stopFuture) {
+        log.info("unregistering event bus listener [address: {}]", CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN);
         credentialsConsumer.unregister();
-        log.info("unregistered credentials data consumer from event bus");
         doStop(stopFuture);
     }
 

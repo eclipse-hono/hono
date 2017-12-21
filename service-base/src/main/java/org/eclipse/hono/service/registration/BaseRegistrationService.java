@@ -112,8 +112,8 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
      */
     @Override
     public final void stop(final Future<Void> stopFuture) {
+        log.info("unregistering event bus listener [address: {}]", EVENT_BUS_ADDRESS_REGISTRATION_IN);
         registrationConsumer.unregister();
-        log.info("unregistered registration data consumer from event bus");
         doStop(stopFuture);
     }
 
