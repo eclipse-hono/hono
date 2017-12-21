@@ -151,7 +151,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     @Override
-    public final Future<Void> startInternal() {
+    protected final Future<Void> startInternal() {
         Future<Void> result = Future.future();
         if (messaging == null) {
             result.fail("Hono Messaging client must be set");
@@ -178,10 +178,40 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     @Override
-    public final Future<Void> stopInternal() {
+    protected final Future<Void> stopInternal() {
+
+        LOG.info("stopping protocol adapter");
         Future<Void> result = Future.future();
-        doStop(result);
+        Future<Void> doStopResult = Future.future();
+        doStop(doStopResult);
+        doStopResult
+            .compose(s -> closeClients())
+            .recover(t -> {
+                LOG.info("error while stopping protocol adapter", t);
+                return Future.failedFuture(t);
+            }).compose(s -> {
+                result.complete();
+                LOG.info("successfully stopped protocol adapter");
+            }, result);
         return result;
+    }
+
+    private CompositeFuture closeClients() {
+
+        Future<Void> messagingTracker = Future.future();
+        if (messaging == null) {
+            messagingTracker.complete();
+        } else {
+            messaging.shutdown(messagingTracker.completer());
+        }
+
+        Future<Void> registrationTracker = Future.future();
+        if (registration == null) {
+            registrationTracker.complete();
+        } else {
+            registration.shutdown(registrationTracker.completer());
+        }
+        return CompositeFuture.all(messagingTracker, registrationTracker);
     }
 
     /**
@@ -317,39 +347,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final boolean isConnected() {
         return messaging != null && messaging.isConnected() &&
                 registration != null && registration.isConnected();
-    }
-
-    /**
-     * Closes the connections to the Hono Messaging component and the Device Registration service.
-     * 
-     * @param closeHandler The handler to notify about the result.
-     */
-    protected final void closeClients(final Handler<AsyncResult<Void>> closeHandler) {
-
-        Future<Void> messagingTracker = Future.future();
-        Future<Void> registrationTracker = Future.future();
-
-        if (messaging == null) {
-            messagingTracker.complete();
-        } else {
-            messaging.shutdown(messagingTracker.completer());
-        }
-
-        if (registration == null) {
-            registrationTracker.complete();
-        } else {
-            registration.shutdown(registrationTracker.completer());
-        }
-
-        CompositeFuture.all(messagingTracker, registrationTracker).setHandler(s -> {
-            if (closeHandler != null) {
-                if (s.succeeded()) {
-                    closeHandler.handle(Future.succeededFuture());
-                } else {
-                    closeHandler.handle(Future.failedFuture(s.cause()));
-                }
-            }
-        });
     }
 
     /**
