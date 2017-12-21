@@ -336,17 +336,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             LOG.error("error in preShutdown", e);
         }
 
-        Future<Void> shutdownTracker = Future.future();
-        shutdownTracker.setHandler(done -> {
-            if (done.succeeded()) {
-                LOG.info("HTTP adapter has been shut down successfully");
-                stopFuture.complete();
-            } else {
-                LOG.info("error while shutting down adapter", done.cause());
-                stopFuture.fail(done.cause());
-            }
-        });
-
         Future<Void> serverStopTracker = Future.future();
         if (server != null) {
             server.close(serverStopTracker.completer());
@@ -362,12 +351,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
 
         CompositeFuture.all(serverStopTracker, insecureServerStopTracker)
-            .compose(v -> {
-                Future<Void> honoClientStopTracker = Future.future();
-                closeClients(honoClientStopTracker.completer());
-                return honoClientStopTracker;
-            }).compose(v -> postShutdown())
-            .compose(s -> shutdownTracker.complete(), shutdownTracker);
+            .compose(v -> postShutdown())
+            .compose(s -> stopFuture.complete(), stopFuture);
     }
 
     /**

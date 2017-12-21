@@ -215,17 +215,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     @Override
     public void doStop(final Future<Void> stopFuture) {
 
-        Future<Void> shutdownTracker = Future.future();
-        shutdownTracker.setHandler(done -> {
-            if (done.succeeded()) {
-                LOG.info("adapter has been shut down successfully");
-                stopFuture.complete();
-            } else {
-                LOG.info("error while shutting down adapter", done.cause());
-                stopFuture.fail(done.cause());
-            }
-        });
-
         Future<Void> serverTracker = Future.future();
         if (this.server != null) {
             this.server.close(serverTracker.completer());
@@ -241,9 +230,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
 
         CompositeFuture.all(serverTracker, insecureServerTracker)
-            .compose(d -> {
-                closeClients(shutdownTracker.completer());
-            }, shutdownTracker);
+            .compose(d -> stopFuture.complete(), stopFuture);
     }
 
     final void handleEndpointConnection(final MqttEndpoint endpoint) {
