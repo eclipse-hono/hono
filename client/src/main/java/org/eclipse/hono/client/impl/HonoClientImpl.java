@@ -663,7 +663,7 @@ public final class HonoClientImpl implements HonoClient {
                 if (closedCon.succeeded()) {
                     LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
                 } else {
-                    LOG.info("could not close connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
+                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
                 }
                 connection.disconnect();
                 if (completionHandler != null) {
