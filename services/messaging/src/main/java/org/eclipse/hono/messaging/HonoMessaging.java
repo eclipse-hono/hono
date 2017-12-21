@@ -11,15 +11,15 @@
  */
 package org.eclipse.hono.messaging;
 
-import io.vertx.proton.*;
-
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonSession;
 
 /**
  * Hono Messaging is an AMQP 1.0 container that provides nodes for uploading <em>Telemetry</em> and
