@@ -44,10 +44,8 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
 
     @Override
     public final void start(final Future<Void> startFuture) {
-        String listenAddress = EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
-        authRequestConsumer = vertx.eventBus().consumer(listenAddress);
-        authRequestConsumer.handler(this::processMessage);
-        LOG.info("listening on event bus [address: {}] for authentication requests", listenAddress);
+        authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHENTICATION_IN, this::processMessage);
+        LOG.info("listening on event bus [address: {}] for authentication requests", EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
         doStart(startFuture);
     }
 
@@ -67,6 +65,7 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
 
     @Override
     public final void stop(final Future<Void> stopFuture) {
+        LOG.info("unregistering event bus listener [address: {}]", EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
         authRequestConsumer.unregister();
         doStop(stopFuture);
     }
