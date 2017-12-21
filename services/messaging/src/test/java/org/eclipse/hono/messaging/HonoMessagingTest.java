@@ -22,10 +22,8 @@ import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.proton.ProtonConnection;
@@ -62,8 +60,11 @@ public class HonoMessagingTest {
         return server;
     }
 
+    /**
+     * Verifies that Hono Messaging notifies downstream components
+     * about an upstream connection being closed.
+     */
     @Test
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public void testServerPublishesConnectionIdOnClientDisconnect() {
 
         // GIVEN a Hono server
