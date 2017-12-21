@@ -52,7 +52,7 @@ public class Application extends AbstractApplication {
      * @param credentialsService The service implementation.
      * @throws NullPointerException if service is {@code null}.
      */
-    @Autowired(required = false)
+    @Autowired
     public final void setCredentialsService(final CredentialsService credentialsService) {
         this.credentialsService = Objects.requireNonNull(credentialsService);
     }
@@ -98,12 +98,8 @@ public class Application extends AbstractApplication {
 
     private Future<String> deployCredentialsService() {
         Future<String> result = Future.future();
-        if (credentialsService != null) {
-            log.info("Starting credentials service {}", credentialsService);
-            getVertx().deployVerticle(credentialsService, result.completer());
-        } else {
-            result.complete();
-        }
+        log.info("Starting credentials service {}", credentialsService);
+        getVertx().deployVerticle(credentialsService, result.completer());
         return result;
     }
 
@@ -119,8 +115,8 @@ public class Application extends AbstractApplication {
     }
 
     private Future<String> deployRegistrationService() {
-        log.info("Starting registration service {}", registrationService);
         Future<String> result = Future.future();
+        log.info("Starting registration service {}", registrationService);
         getVertx().deployVerticle(registrationService, result.completer());
         return result;
     }
