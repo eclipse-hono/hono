@@ -218,6 +218,27 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         return startFuture;
     }
 
+    private Future<Void> stopEndpoints() {
+
+        @SuppressWarnings("rawtypes")
+        List<Future> endpointFutures = new ArrayList<>(endpoints.size());
+        for (AmqpEndpoint ep : endpoints.values()) {
+            LOG.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+            Future<Void> endpointFuture = Future.future();
+            endpointFutures.add(endpointFuture);
+            ep.stop(endpointFuture);
+        }
+        final Future<Void> stopFuture = Future.future();
+        CompositeFuture.all(endpointFutures).setHandler(shutdown -> {
+            if (shutdown.succeeded()) {
+                stopFuture.complete();
+            } else {
+                stopFuture.fail(shutdown.cause());
+            }
+        });
+        return stopFuture;
+    }
+
     private Future<Void> startInsecureServer() {
 
         if (isInsecurePortEnabled()) {
@@ -317,22 +338,34 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     @Override
     public final Future<Void> stopInternal() {
 
-        Future<Void> shutdownHandler = Future.future();
-        Future<Void> tracker = Future.future();
+        return CompositeFuture.all(stopServer(), stopInsecureServer())
+                .compose(s -> stopEndpoints());
+    }
+
+    private Future<Void> stopServer() {
+
+        Future<Void> secureTracker = Future.future();
+
         if (server != null) {
-            server.close(tracker.completer());
+            LOG.info("stopping secure AMQP server [{}:{}]", getBindAddress(), getActualPort());
+            server.close(secureTracker.completer());
         } else {
-            LOG.info("service has been already shut down");
-            tracker.complete();
+            secureTracker.complete();
         }
-        tracker.compose(t -> {
-            if (insecureServer != null) {
-                insecureServer.close(shutdownHandler.completer());
-            } else {
-                shutdownHandler.complete();
-            }
-        }, shutdownHandler);
-        return shutdownHandler;
+        return secureTracker;
+    }
+
+    private Future<Void> stopInsecureServer() {
+
+        Future<Void> insecureTracker = Future.future();
+
+        if (insecureServer != null) {
+            LOG.info("stopping insecure AMQP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
+            insecureServer.close(insecureTracker.completer());
+        } else {
+            insecureTracker.complete();
+        }
+        return insecureTracker;
     }
 
     @Override
