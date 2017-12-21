@@ -14,8 +14,8 @@ package org.eclipse.hono.service.auth;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.Activity;
-import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -120,26 +120,10 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
         final String authSubject = body.getString(AuthorizationConstants.AUTH_SUBJECT_FIELD);
-        final HonoUser user = new HonoUser() {
-
+        final HonoUser user = new HonoUserAdapter() {
             @Override
             public String getName() {
                 return authSubject;
-            }
-
-            @Override
-            public Authorities getAuthorities() {
-                return null;
-            }
-
-            @Override
-            public String getToken() {
-                return null;
-            }
-
-            @Override
-            public boolean isExpired() {
-                return false;
             }
         };
         final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.PERMISSION_FIELD));

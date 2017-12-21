@@ -12,7 +12,6 @@
 package org.eclipse.hono.messaging;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.stream.IntStream;
 
@@ -21,8 +20,10 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.auth.Activity;
+import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -122,12 +123,19 @@ public class StandaloneEventApiTest {
      */
     private static HonoUser createUser() {
 
-        AuthoritiesImpl authorities = new AuthoritiesImpl()
+        final AuthoritiesImpl authorities = new AuthoritiesImpl()
                 .addResource(EventConstants.EVENT_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE });
-        HonoUser user = mock(HonoUser.class);
-        when(user.getName()).thenReturn("test-client");
-        when(user.getAuthorities()).thenReturn(authorities);
-        return user;
+        return new HonoUserAdapter() {
+            @Override
+            public String getName() {
+                return "test-client";
+            }
+
+            @Override
+            public Authorities getAuthorities() {
+                return authorities;
+            }
+        };
     }
 
     @Before
