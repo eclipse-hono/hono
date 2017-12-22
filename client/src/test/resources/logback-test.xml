@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration>
+
 <configuration>
 
   <!-- 
@@ -21,8 +23,8 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.eclipse.hono" level="INFO"/>
-  <logger name="org.eclipse.hono.client" level="DEBUG"/>
-  <logger name="org.eclipse.hono.client.impl" level="DEBUG"/>
+  <logger name="org.eclipse.hono" level="WARN"/>
+  <logger name="org.eclipse.hono.client" level="WARN"/>
+  <logger name="org.eclipse.hono.client.impl" level="WARN"/>
 
 </configuration>
