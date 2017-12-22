@@ -75,7 +75,7 @@ public class StandaloneTelemetryApiTest {
         assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
         telemetryAdapter = new MessageDiscardingDownstreamAdapter(vertx);
         server = new HonoMessaging();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(vertx, TestSupport.createAuthenticationService(createUser())));
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
         HonoMessagingConfigProperties configProperties = new HonoMessagingConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(0);

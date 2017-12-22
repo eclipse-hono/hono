@@ -14,31 +14,25 @@ package org.eclipse.hono.service.auth;
 import static org.eclipse.hono.service.auth.AuthenticationConstants.MECHANISM_EXTERNAL;
 import static org.eclipse.hono.service.auth.AuthenticationConstants.MECHANISM_PLAIN;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.cert.X509Certificate;
 
-import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.JwtHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetSocket;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.sasl.ProtonSaslAuthenticator;
 
 /**
@@ -58,8 +52,9 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticator;
 public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
 
     private static final Logger   LOG = LoggerFactory.getLogger(HonoSaslAuthenticator.class);
-    private final Vertx           vertx;
+
     private final AuthenticationService authenticationService;
+
     private Sasl                  sasl;
     private boolean               succeeded;
     private ProtonConnection      protonConnection;
@@ -68,12 +63,10 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
     /**
      * Creates a new authenticator.
      * 
-     * @param vertx the Vertx environment to run on.
      * @param authService The service to use for authenticating client.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public HonoSaslAuthenticator(final Vertx vertx, final AuthenticationService authService) {
-        this.vertx = Objects.requireNonNull(vertx);
+    public HonoSaslAuthenticator(final AuthenticationService authService) {
         this.authenticationService = Objects.requireNonNull(authService);
     }
 
@@ -119,7 +112,6 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
                     LOG.debug("authentication of client [authorization ID: {}] succeeded", user.getName());
                     Constants.setClientPrincipal(protonConnection, user);
                     succeeded = true;
-                    registerTimerForHandlingExpiredToken(user, protonConnection);
                     sasl.done(SaslOutcome.PN_SASL_OK);
 
                 } else {
@@ -135,29 +127,6 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             sasl.recv(saslResponse, 0, saslResponse.length);
 
             verify(chosenMechanism, saslResponse, authTracker.completer());
-        }
-    }
-
-    // We currently have no way of refreshing the token before expiration using
-    // vertx-proton's existing API. We therefore force the client to re-connect when
-    // the token expires.
-    // Once we are able to refresh tokens using vertx-proton API we will get rid
-    // of this ugly hack.
-    // TODO refresh tokens properly
-    private void registerTimerForHandlingExpiredToken(final HonoUser user, final ProtonConnection con) {
-
-        if (user.getToken() != null) {
-            Duration expiration = Duration.between(Instant.now(), JwtHelper.getExpiration(user.getToken()).toInstant());
-            vertx.setTimer(expiration.toMillis(), tid -> {
-                LOG.debug("client's [{}] access token has expired, closing connection", user.getName());
-                con.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, "access token expired")).close();
-                String conId = con.attachments().get(Constants.KEY_CONNECTION_ID, String.class);
-                if (conId != null) {
-                    vertx.eventBus().publish(
-                            Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
-                            conId);
-                }
-            });
         }
     }
 

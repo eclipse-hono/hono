@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.auth;
 
+import java.time.Duration;
+import java.time.Instant;
+
 
 /**
  * An empty default implementation to be selectively overridden by subclasses.
@@ -49,6 +52,15 @@ public abstract class HonoUserAdapter implements HonoUser {
      */
     @Override
     public boolean isExpired() {
-        return false;
+        return !Instant.now().isBefore(getExpirationTime());
     }
+
+    /**
+     * @return now + 10 minutes.
+     */
+    @Override
+    public Instant getExpirationTime() {
+        return Instant.now().plus(Duration.ofMinutes(10L));
+    }
+
 }

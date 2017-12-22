@@ -296,6 +296,11 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
             public boolean isExpired() {
                 return !Instant.now().isBefore(tokenExpirationTime);
             }
+
+            @Override
+            public Instant getExpirationTime() {
+                return tokenExpirationTime;
+            }
         };
         authenticationResultHandler.handle(Future.succeededFuture(honoUser));
     }

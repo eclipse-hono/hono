@@ -12,10 +12,16 @@
 
 package org.eclipse.hono.service.amqp;
 
-import java.util.*;
+import java.lang.ref.WeakReference;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.proton.*;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.Activity;
@@ -29,9 +35,18 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonLink;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
+import io.vertx.proton.ProtonServer;
+import io.vertx.proton.ProtonServerOptions;
+import io.vertx.proton.ProtonSession;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
 /**
@@ -45,8 +60,8 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  */
 public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
 
-    // <name, node implementation>
     private final Map<String, AmqpEndpoint> endpoints = new HashMap<>();
+
     private ProtonServer server;
     private ProtonServer insecureServer;
     private ProtonSaslAuthenticatorFactory saslAuthenticatorFactory;
@@ -183,6 +198,30 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             .compose(s -> startEndpoints())
             .compose(s -> startSecureServer())
             .compose(s -> startInsecureServer());
+    }
+
+    /**
+     * Closes an expired client connection.
+     * <p>
+     * A connection is considered expired if the {@link HonoUser#isExpired()} method
+     * of the user principal attached to the connection returns {@code true}.
+     * 
+     * @param con The client connection.
+     */
+    protected final void closeExpiredConnection(final ProtonConnection con) {
+
+        if (!con.isDisconnected()) {
+            final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
+            if (clientPrincipal != null) {
+                LOG.debug("client's [{}] access token has expired, closing connection", clientPrincipal.getName());
+                con.disconnectHandler(null);
+                con.closeHandler(null);
+                con.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, "access token expired"));
+                con.close();
+                con.disconnect();
+                publishConnectionClosedEvent(con);
+            }
+        }
     }
 
     /**
@@ -527,10 +566,18 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         connection.disconnectHandler(this::handleRemoteDisconnect);
         connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
         connection.openHandler(remoteOpen -> {
-            LOG.debug("client [container: {}, user: {}] connected", connection.getRemoteContainer(), Constants.getClientPrincipal(connection).getName());
-            connection.open();
+            final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
+            LOG.debug("client [container: {}, user: {}] connected", connection.getRemoteContainer(), clientPrincipal.getName());
             // attach an ID so that we can later inform downstream components when connection is closed
             connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
+            final Duration delay = Duration.between(Instant.now(), clientPrincipal.getExpirationTime());
+            final WeakReference<ProtonConnection> conRef = new WeakReference<>(connection);
+            vertx.setTimer(delay.toMillis(), timerId -> {
+                if (conRef.get() != null) {
+                    closeExpiredConnection(conRef.get());
+                }
+            });
+            connection.open();
         });
     }
 
@@ -564,7 +611,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Invoked when a client closes the connection with this server.
      * <p>
-     * The implementation closes and disconnects the connection.
+     * This implementation closes and disconnects the connection.
      *
      * @param con The connection to close.
      * @param res The client's close frame.
