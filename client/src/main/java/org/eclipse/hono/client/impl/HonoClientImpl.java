@@ -202,31 +202,41 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
-    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose, final Handler<ProtonConnection> disconnectHandler) {
+    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose, final Handler<ProtonConnection> connectionLossHandler) {
+
         if (remoteClose.failed()) {
             LOG.info("remote server [{}:{}] closed connection with error condition: {}",
                     connectionFactory.getHost(), connectionFactory.getPort(), remoteClose.cause().getMessage());
+        } else {
+            LOG.info("remote server [{}:{}] closed connection", connectionFactory.getHost(), connectionFactory.getPort());
         }
+        connection.disconnectHandler(null);
         connection.close();
-        onRemoteDisconnect(connection, disconnectHandler);
+        handleConnectionLoss(connectionLossHandler);
     }
 
-    private void onRemoteDisconnect(final ProtonConnection con, final Handler<ProtonConnection> nextHandler) {
+    private void onRemoteDisconnect(final ProtonConnection con, final Handler<ProtonConnection> connectionLossHandler) {
 
         if (con != connection) {
             LOG.warn("cannot handle failure of unknown connection");
         } else {
             LOG.debug("lost connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-            connection.disconnect();
-            activeSenders.clear();
-            activeRequestResponseClients.clear();
-            failAllCreationRequests();
+            handleConnectionLoss(connectionLossHandler);
+        }
+    }
 
-            if (nextHandler != null) {
-                nextHandler.handle(con);
-            } else {
-                reconnect(attempt -> {}, failedCon -> onRemoteDisconnect(failedCon, null));
-            }
+    private void handleConnectionLoss(final Handler<ProtonConnection> connectionLossHandler) {
+        if (connection != null && !connection.isDisconnected()) {
+            connection.disconnect();
+        }
+        activeSenders.clear();
+        activeRequestResponseClients.clear();
+        failAllCreationRequests();
+
+        if (connectionLossHandler != null) {
+            connectionLossHandler.handle(connection);
+        } else {
+            reconnect(attempt -> {}, failedCon -> onRemoteDisconnect(failedCon, null));
         }
     }
 
