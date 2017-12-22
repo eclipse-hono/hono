@@ -13,6 +13,7 @@
 package org.eclipse.hono.service.auth.device;
 
 import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.Lifecycle;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -24,7 +25,7 @@ import io.vertx.ext.auth.AuthProvider;
  * means of health checks.
  *
  */
-public interface HonoClientBasedAuthProvider extends AuthProvider, HealthCheckProvider {
+public interface HonoClientBasedAuthProvider extends AuthProvider, HealthCheckProvider, Lifecycle {
 
     /**
      * Validates credentials provided by a device against the credentials on record

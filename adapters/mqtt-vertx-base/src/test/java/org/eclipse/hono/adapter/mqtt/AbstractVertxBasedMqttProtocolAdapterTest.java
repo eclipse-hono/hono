@@ -71,6 +71,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
+        when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
         config = new ProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
     }

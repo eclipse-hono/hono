@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.http.vertx;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
@@ -60,25 +61,25 @@ public class VertxBasedHttpProtocolAdapterTest {
 
     private static Vertx vertx;
 
-    @AfterClass
-    public final static void shutDown() {
-        vertx.close();
-    }
-
+    /**
+     * Sets up the protocol adapter.
+     * 
+     * @param context
+     */
     @BeforeClass
-    public final static void setup(TestContext context) {
-        vertx = Vertx.vertx();
+    public final static void setup(final TestContext context) {
 
-        Future<String> setupTracker = Future.future();
-        setupTracker.setHandler(context.asyncAssertSuccess());
+        vertx = Vertx.vertx();
+        final Async startup = context.async();
 
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
+        when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
+        when(credentialsAuthProvider.stop()).thenReturn(Future.succeededFuture());
 
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePort(0);
-        config.setInsecurePortEnabled(true);
         config.setAuthenticationRequired(true);
 
         httpAdapter = new VertxBasedHttpProtocolAdapter();
@@ -87,9 +88,18 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setRegistrationServiceClient(registrationClient);
         httpAdapter.setCredentialsAuthProvider(credentialsAuthProvider);
 
-        Future<String> httpServerDeploymentTracker = Future.future();
-        vertx.deployVerticle(httpAdapter, httpServerDeploymentTracker.completer());
-        httpServerDeploymentTracker.compose(c -> setupTracker.complete(), setupTracker);
+        vertx.deployVerticle(httpAdapter, context.asyncAssertSuccess(s -> {
+            startup.complete();
+        }));
+        startup.await(1000);
+    }
+
+    /**
+     * Shuts down the server.
+     */
+    @AfterClass
+    public final static void shutDown() {
+        vertx.close();
     }
 
     @Test

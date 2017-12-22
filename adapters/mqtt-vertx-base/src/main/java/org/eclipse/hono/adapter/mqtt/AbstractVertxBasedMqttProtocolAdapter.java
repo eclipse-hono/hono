@@ -206,8 +206,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         .compose(v -> bindSecureMqttServer())
         .compose(s -> bindInsecureMqttServer())
         .compose(t -> {
-            connectToMessaging(null);
-            connectToDeviceRegistration(null);
             startFuture.complete();
         }, startFuture);
     }
