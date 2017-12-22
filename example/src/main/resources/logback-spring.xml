@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+
 <configuration>
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
@@ -13,14 +15,15 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.eclipse.hono" level="INFO"/>
-  <logger name="org.eclipse.hono.client" level="INFO"/>
-  <logger name="org.eclipse.hono.messaging" level="INFO"/>
-  <logger name="org.eclipse.hono.service.auth" level="INFO"/>
-  <logger name="org.eclipse.hono.service.registration" level="INFO"/>
-  <logger name="org.eclipse.hono.telemetry" level="INFO"/>
-  <logger name="org.eclipse.hono.telemetry.impl" level="INFO"/>
-  <logger name="org.eclipse.hono.util" level="INFO"/>
+  <springProfile name="dev">
+    <logger name="org.eclipse.hono.client" level="DEBUG"/>
+    <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.example" level="DEBUG"/>
+  </springProfile>
+
+  <springProfile name="prod">
+    <logger name="org.eclipse.hono" level="INFO"/>
+  </springProfile>
 
   <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
 
