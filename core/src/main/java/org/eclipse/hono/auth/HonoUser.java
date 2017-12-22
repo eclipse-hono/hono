@@ -13,6 +13,7 @@
 package org.eclipse.hono.auth;
 
 import java.security.Principal;
+import java.time.Instant;
 
 
 /**
@@ -43,4 +44,11 @@ public interface HonoUser extends Principal {
      *         should be considered invalid.
      */
     boolean isExpired();
+
+    /**
+     * Gets the point in time after which this user's authorities should be considered invalid.
+     * 
+     * @return The expiration time.
+     */
+    Instant getExpirationTime();
 }

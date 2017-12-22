@@ -43,7 +43,6 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
 
     private final AuthenticationService authenticationService;
-    private final Vertx vertx;
 
     /**
      * Creates a new factory for a Vertx environment.
@@ -58,24 +57,22 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      */
     @Autowired
     public HonoSaslAuthenticatorFactory(final Vertx vertx, @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final AuthTokenHelper validator) {
-        this(vertx, new EventBusAuthenticationService(vertx, validator));
+        this(new EventBusAuthenticationService(vertx, validator));
     }
 
     /**
      * Creates a new factory using a specific authentication service instance.
      * 
-     * @param vertx the Vertx environment to run the factory in.
      * @param authService The object to return on invocations of {@link #create()}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public HonoSaslAuthenticatorFactory(final Vertx vertx, final AuthenticationService authService) {
-        this.vertx = Objects.requireNonNull(vertx);
+    public HonoSaslAuthenticatorFactory(final AuthenticationService authService) {
         this.authenticationService = Objects.requireNonNull(authService);
     }
 
     @Override
     public ProtonSaslAuthenticator create() {
-        return new HonoSaslAuthenticator(vertx, authenticationService);
+        return new HonoSaslAuthenticator(authenticationService);
     }
 
     /**
@@ -170,7 +167,12 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
         public boolean isExpired() {
             // we add some leeway to the token's expiration time to account for system clocks not being
             // perfectly in sync
-            return !Instant.now().isBefore(expandedToken.getBody().getExpiration().toInstant().plus(expirationLeeway));
+            return !Instant.now().isBefore(getExpirationTime().plus(expirationLeeway));
+        }
+
+        @Override
+        public Instant getExpirationTime() {
+            return expandedToken.getBody().getExpiration().toInstant();
         }
     }
 }
