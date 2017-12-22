@@ -39,7 +39,7 @@ import io.vertx.ext.web.Router;
  * <li>Before shutdown: invoke {@link #stop()} for a graceful shutdown.</li>
  * </ol>
  */
-public final class HealthCheckServer {
+public final class HealthCheckServer implements Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(HealthCheckServer.class);
 
@@ -104,6 +104,7 @@ public final class HealthCheckServer {
      *
      * @return a future indicating the output of the operation.
      */
+    @Override
     public Future<Void> start() {
 
         Future<Void> result = Future.future();
@@ -144,6 +145,7 @@ public final class HealthCheckServer {
      * 
      * @return A Future indicating the outcome of the operation.
      */
+    @Override
     public Future<Void> stop() {
 
         Future<Void> result = Future.future();
