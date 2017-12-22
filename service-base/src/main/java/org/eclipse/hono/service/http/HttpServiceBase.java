@@ -298,9 +298,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             List<Future> endpointFutures = new ArrayList<>(endpoints.size());
             for (HttpEndpoint ep : endpoints) {
                 LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
-                Future<Void> endpointFuture = Future.future();
-                endpointFutures.add(endpointFuture);
-                ep.start(endpointFuture);
+                endpointFutures.add(ep.start());
             }
             CompositeFuture.all(endpointFutures).setHandler(startup -> {
                 if (startup.succeeded()) {
@@ -320,9 +318,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
         for (HttpEndpoint ep : endpoints) {
             LOG.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
-            Future<Void> endpointFuture = Future.future();
-            endpointFutures.add(endpointFuture);
-            ep.stop(endpointFuture);
+            endpointFutures.add(ep.stop());
         }
         CompositeFuture.all(endpointFutures).setHandler(shutdown -> {
             if (shutdown.succeeded()) {

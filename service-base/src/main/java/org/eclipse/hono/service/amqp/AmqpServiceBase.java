@@ -242,9 +242,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
         for (AmqpEndpoint ep : endpoints.values()) {
             LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
-            Future<Void> endpointFuture = Future.future();
-            endpointFutures.add(endpointFuture);
-            ep.start(endpointFuture);
+            endpointFutures.add(ep.start());
         }
         final Future<Void> startFuture = Future.future();
         CompositeFuture.all(endpointFutures).setHandler(startup -> {
@@ -263,9 +261,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
         for (AmqpEndpoint ep : endpoints.values()) {
             LOG.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
-            Future<Void> endpointFuture = Future.future();
-            endpointFutures.add(endpointFuture);
-            ep.stop(endpointFuture);
+            endpointFutures.add(ep.stop());
         }
         final Future<Void> stopFuture = Future.future();
         CompositeFuture.all(endpointFutures).setHandler(shutdown -> {
