@@ -154,13 +154,17 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<Void> startInternal() {
         Future<Void> result = Future.future();
         if (messaging == null) {
-            result.fail("Hono Messaging client must be set");
+            result.fail(new IllegalStateException("Hono Messaging client must be set"));
         } else if (registration == null) {
-            result.fail("Device Registration client must be set");
+            result.fail(new IllegalStateException("Device Registration client must be set"));
         } else if (credentialsAuthProvider == null) {
             result.fail(new IllegalStateException("Credentials Authentication Provider must be set"));
         } else {
-            doStart(result);
+            connectToMessaging(null);
+            connectToDeviceRegistration(null);
+            credentialsAuthProvider.start().compose(s -> {
+                doStart(result);
+            }, result);
         }
         return result;
     }
@@ -185,7 +189,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Future<Void> doStopResult = Future.future();
         doStop(doStopResult);
         doStopResult
-            .compose(s -> closeClients())
+            .compose(s -> closeServiceClients())
             .recover(t -> {
                 LOG.info("error while stopping protocol adapter", t);
                 return Future.failedFuture(t);
@@ -196,7 +200,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return result;
     }
 
-    private CompositeFuture closeClients() {
+    private CompositeFuture closeServiceClients() {
 
         Future<Void> messagingTracker = Future.future();
         if (messaging == null) {
@@ -211,7 +215,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else {
             registration.shutdown(registrationTracker.completer());
         }
-        return CompositeFuture.all(messagingTracker, registrationTracker);
+
+        Future<Void> credentialsTracker = Future.future();
+        if (credentialsAuthProvider == null) {
+            credentialsTracker.complete();
+        } else {
+            credentialsTracker = credentialsAuthProvider.stop();
+        }
+        return CompositeFuture.all(messagingTracker, registrationTracker, credentialsTracker);
     }
 
     /**

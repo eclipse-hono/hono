@@ -163,8 +163,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 }
             })
             .compose(s -> {
-                connectToMessaging(null);
-                connectToDeviceRegistration(null);
                 try {
                     onStartupSuccess();
                     startFuture.complete();

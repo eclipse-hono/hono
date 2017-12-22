@@ -15,8 +15,7 @@ package org.eclipse.hono.service.auth.device;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
-
-import javax.annotation.PostConstruct;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
@@ -56,6 +55,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     protected final Logger log = LoggerFactory.getLogger(getClass());
     private final Vertx vertx;
     private HonoClient credentialsClient;
+    private AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
 
     /**
      * Creates a new authentication provider for a vert.x instance.
@@ -105,13 +105,15 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     /**
      * Connects to the Credentials service using the configured client.
      */
-    @PostConstruct
-    protected final void connectToCredentialsService() {
+    @Override
+    public final Future<Void> start() {
 
+        final Future<Void> result = Future.future();
         if (credentialsClient == null) {
-            log.error("Credentials service client is not set");
+            result.fail(new IllegalStateException("Credentials service client is not set"));
         } else if (credentialsClient.isConnected()) {
             log.info("already connected to Credentials service");
+            result.complete();
         } else {
             credentialsClient.connect(
                     createClientOptions(),
@@ -123,7 +125,9 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
                         }
                     },
                     this::onDisconnectCredentialsService);
+            result.complete();
         }
+        return result;
     }
 
     /**
@@ -133,16 +137,36 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
      */
     private void onDisconnectCredentialsService(final ProtonConnection con) {
 
-        vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-            log.info("attempting to reconnect to Credentials service");
-            credentialsClient.connect(createClientOptions(), connectAttempt -> {
-                if (connectAttempt.succeeded()) {
-                    log.info("reconnected to Credentials service");
-                } else {
-                    log.debug("cannot reconnect to Credentials service");
-                }
-            }, this::onDisconnectCredentialsService);
-        });
+        if (shutdownInProgress.get()) {
+            log.debug("shut down in progress, not trying to re-connect to Credentials service");
+        } else {
+            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+                log.info("attempting to reconnect to Credentials service");
+                credentialsClient.connect(createClientOptions(), connectAttempt -> {
+                    if (connectAttempt.succeeded()) {
+                        log.info("reconnected to Credentials service");
+                    } else {
+                        log.debug("cannot reconnect to Credentials service");
+                    }
+                }, this::onDisconnectCredentialsService);
+            });
+        }
+    }
+
+    /**
+     * Closes the connection to the Credentials service.
+     */
+    @Override
+    public final Future<Void> stop() {
+
+        shutdownInProgress.set(true);
+        Future<Void> result = Future.future();
+        if (credentialsClient == null) {
+            result.complete();
+        } else {
+            credentialsClient.shutdown(result.completer());
+        }
+        return result;
     }
 
     private ProtonClientOptions createClientOptions() {

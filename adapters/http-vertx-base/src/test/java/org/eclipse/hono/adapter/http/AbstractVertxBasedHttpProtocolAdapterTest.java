@@ -57,6 +57,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
+        when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
     }
