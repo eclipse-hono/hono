@@ -101,14 +101,6 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         return ctx.request().getParam(PARAM_DEVICE_ID);
     }
 
-    /**
-     * Returns {@code null} to disable status resource.
-     */
-    @Override
-    protected final String getStatusResourcePath() {
-        return null;
-    }
-
     private void handle401(final RoutingContext ctx) {
         HttpUtils.unauthorized(ctx, "Basic realm=\"" + getConfig().getRealm() + "\"");
     }
