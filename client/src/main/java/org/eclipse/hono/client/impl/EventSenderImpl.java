@@ -17,6 +17,7 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -33,9 +34,9 @@ public final class EventSenderImpl extends AbstractSender {
 
     private static final String EVENT_ENDPOINT_NAME = "event";
 
-    private EventSenderImpl(final ProtonSender sender, final String tenantId, final String targetAddress,
+    private EventSenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId, final String targetAddress,
             final Context context, final Handler<String> closeHook) {
-        super(sender, tenantId, targetAddress, context, closeHook);
+        super(config, sender, tenantId, targetAddress, context, closeHook);
     }
 
     /**
@@ -69,12 +70,12 @@ public final class EventSenderImpl extends AbstractSender {
      * Creates a new sender for publishing events to a Hono server.
      * 
      * @param context The vertx context to run all interactions with the server on.
+     * @param clientConfig The configuration properties to use.
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the events will be published for.
      * @param deviceId The device that the events will be published for or {@code null}
      *                 if the events are going to be be produced by arbitrary devices of the
      *                 tenant.
-     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
      *                  target address is provided as an argument to the handler.
      * @param creationHandler The handler to invoke with the result of the creation attempt.
@@ -83,10 +84,10 @@ public final class EventSenderImpl extends AbstractSender {
      */
     public static void create(
             final Context context,
+            final ClientConfigProperties clientConfig,
             final ProtonConnection con,
             final String tenantId,
             final String deviceId,
-            final long waitForInitialCredits,
             final Handler<String> closeHook,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
@@ -96,10 +97,10 @@ public final class EventSenderImpl extends AbstractSender {
         Objects.requireNonNull(creationHandler);
 
         final String targetAddress = getTargetAddress(tenantId, deviceId);
-        createSender(context, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, waitForInitialCredits, closeHook).setHandler(created -> {
+        createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new EventSenderImpl(created.result(), tenantId, targetAddress, context, closeHook)));
+                        new EventSenderImpl(clientConfig, created.result(), tenantId, targetAddress, context, closeHook)));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }

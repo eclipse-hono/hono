@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
@@ -45,8 +46,8 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
     private static Logger LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private CredentialsClientImpl(final Context context, final String tenantId) {
-        super(context, tenantId);
+    private CredentialsClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
+        super(context, config, tenantId);
     }
 
     @Override
@@ -89,30 +90,26 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
      * Creates a new credentials client for a tenant.
      *
      * @param context The vert.x context to run all interactions with the server on.
+     * @param clientConfig The configuration properties to use.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant for which credentials are handled.
-     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
-     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
-     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
      */
     public static void create(
             final Context context,
+            final ClientConfigProperties clientConfig,
             final ProtonConnection con,
             final String tenantId,
-            final int receiverPrefetchCredits,
-            final long waitForInitialCredits,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<CredentialsClient>> creationHandler) {
 
         LOG.debug("creating new credentials client for [{}]", tenantId);
-        final CredentialsClientImpl client = new CredentialsClientImpl(context, tenantId);
-        client.createLinks(con, receiverPrefetchCredits, waitForInitialCredits, senderCloseHook, receiverCloseHook).setHandler(s -> {
+        final CredentialsClientImpl client = new CredentialsClientImpl(context, clientConfig, tenantId);
+        client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
                 LOG.debug("successfully created credentials client for [{}]", tenantId);
                 creationHandler.handle(Future.succeededFuture(client));

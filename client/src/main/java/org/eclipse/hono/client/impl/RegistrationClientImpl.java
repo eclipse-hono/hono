@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -41,9 +42,9 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
 
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
 
-    private RegistrationClientImpl(final Context context, final String tenantId) {
+    private RegistrationClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
 
-        super(context, tenantId);
+        super(context, config, tenantId);
     }
 
     /**
@@ -79,30 +80,26 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * Creates a new registration client for a tenant.
      * 
      * @param context The vert.x context to run all interactions with the server on.
+     * @param clientConfig The configuration properties to use.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant to consumer events for.
-     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
-     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.*
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
-     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
      */
     public static void create(
             final Context context,
+            final ClientConfigProperties clientConfig,
             final ProtonConnection con,
             final String tenantId,
-            final int receiverPrefetchCredits,
-            final long waitForInitialCredits,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
 
         LOG.debug("creating new registration client for [{}]", tenantId);
-        final RegistrationClientImpl client = new RegistrationClientImpl(context, tenantId);
-        client.createLinks(con, receiverPrefetchCredits, waitForInitialCredits, senderCloseHook, receiverCloseHook).setHandler(s -> {
+        final RegistrationClientImpl client = new RegistrationClientImpl(context, clientConfig, tenantId);
+        client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
                 LOG.debug("successfully created registration client for [{}]", tenantId);
                 creationHandler.handle(Future.succeededFuture(client));

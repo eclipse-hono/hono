@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 import java.util.Objects;
 
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -31,9 +32,9 @@ public final class TelemetrySenderImpl extends AbstractSender {
 
     private static final String TELEMETRY_ENDPOINT_NAME  = "telemetry";
 
-    private TelemetrySenderImpl(final ProtonSender sender, final String tenantId, final String targetAddress,
-            final Context context, final Handler<String> closeHook) {
-        super(sender, tenantId, targetAddress, context, closeHook);
+    private TelemetrySenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
+            final String targetAddress, final Context context, final Handler<String> closeHook) {
+        super(config, sender, tenantId, targetAddress, context, closeHook);
     }
 
     /**
@@ -67,12 +68,12 @@ public final class TelemetrySenderImpl extends AbstractSender {
      * Creates a new sender for publishing telemetry data to a Hono server.
      * 
      * @param context The vertx context to run all interactions with the server on.
+     * @param clientConfig The configuration properties to use.
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the telemetry data will be uploaded for.
      * @param deviceId The device that the telemetry data will be uploaded for or {@code null}
      *                 if the data to be uploaded will be produced by arbitrary devices of the
      *                 tenant.
-     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
      * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
      *                  target address is provided as an argument to the handler.
      * @param creationHandler The handler to invoke with the result of the creation attempt.
@@ -81,10 +82,10 @@ public final class TelemetrySenderImpl extends AbstractSender {
      */
     public static void create(
             final Context context,
+            final ClientConfigProperties clientConfig,
             final ProtonConnection con,
             final String tenantId,
             final String deviceId,
-            final long waitForInitialCredits,
             final Handler<String> closeHook,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
@@ -94,10 +95,10 @@ public final class TelemetrySenderImpl extends AbstractSender {
         Objects.requireNonNull(creationHandler);
 
         final String targetAddress = getTargetAddress(tenantId, deviceId);
-        createSender(context, con, targetAddress, ProtonQoS.AT_MOST_ONCE, waitForInitialCredits, closeHook).setHandler(created -> {
+        createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_MOST_ONCE, closeHook).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
-                        new TelemetrySenderImpl(created.result(), tenantId, targetAddress, context, closeHook)));
+                        new TelemetrySenderImpl(clientConfig, created.result(), tenantId, targetAddress, context, closeHook)));
             } else {
                 creationHandler.handle(Future.failedFuture(created.cause()));
             }
