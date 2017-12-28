@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -22,6 +22,7 @@ import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,8 +35,8 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractConsumer.class);
 
-    AbstractConsumer(final Context context, final ProtonReceiver receiver) {
-        super(context);
+    AbstractConsumer(final Context context, final ClientConfigProperties config, final ProtonReceiver receiver) {
+        super(context, config);
         this.receiver = receiver;
     }
 
@@ -51,12 +52,12 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
 
     static Future<ProtonReceiver> createConsumer(
             final Context context,
+            final ClientConfigProperties clientConfig,
             final ProtonConnection con,
             final String tenantId,
             final String pathSeparator,
             final String address,
             final ProtonQoS qos,
-            final int prefetch,
             final BiConsumer<ProtonDelivery, Message> consumer) {
 
         Future<ProtonReceiver> result = Future.future();
@@ -65,7 +66,7 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
         context.runOnContext(open -> {
             final ProtonReceiver receiver = con.createReceiver(targetAddress);
             receiver.setAutoAccept(true);
-            receiver.setPrefetch(prefetch);
+            receiver.setPrefetch(clientConfig.getInitialCredits());
             receiver.setQoS(qos);
             receiver.handler((delivery, message) -> {
                 if (consumer != null) {

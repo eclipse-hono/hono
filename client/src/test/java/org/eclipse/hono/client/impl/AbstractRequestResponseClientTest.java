@@ -24,6 +24,7 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Test;
@@ -254,7 +255,7 @@ public class AbstractRequestResponseClientTest {
 
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {
 
-        return new AbstractRequestResponseClient<SimpleRequestResponseResult>(context, tenant, sender, receiver) {
+        return new AbstractRequestResponseClient<SimpleRequestResponseResult>(context, new ClientConfigProperties(), tenant, sender, receiver) {
 
             @Override
             protected String getName() {

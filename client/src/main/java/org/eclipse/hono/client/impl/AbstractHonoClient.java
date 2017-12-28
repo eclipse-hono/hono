@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +43,15 @@ public abstract class AbstractHonoClient {
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**
+     * The vertx context to run all interactions with the server on.
+     */
+    protected final Context                context;
+    /**
+     * The configuration properties for this client.
+     */
+    protected final ClientConfigProperties config;
+
+    /**
      * The vertx-proton object used for sending messages to the server.
      */
     protected ProtonSender   sender;
@@ -49,18 +59,17 @@ public abstract class AbstractHonoClient {
      * The vertx-proton object used for receiving messages from the server.
      */
     protected ProtonReceiver receiver;
-    /**
-     * The vertx context to run all interactions with the server on.
-     */
-    protected Context        context;
 
     /**
      * Creates a client for a vert.x context.
      * 
      * @param context The context to run all interactions with the server on.
+     * @param config The configuration properties to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected AbstractHonoClient(final Context context) {
+    protected AbstractHonoClient(final Context context, final ClientConfigProperties config) {
         this.context = Objects.requireNonNull(context);
+        this.config = Objects.requireNonNull(config);
     }
 
     /**
@@ -69,7 +78,7 @@ public abstract class AbstractHonoClient {
      * @param closeHandler the handler to be notified about the outcome.
      * @throws NullPointerException if the given handler is {@code null}.
      */
-    protected void closeLinks(final Handler<AsyncResult<Void>> closeHandler) {
+    protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler) {
 
         Objects.requireNonNull(closeHandler);
 
@@ -139,22 +148,28 @@ public abstract class AbstractHonoClient {
      * Creates a sender link.
      * 
      * @param ctx The vert.x context to use for establishing the link.
+     * @param clientConfig The configuration properties to use.
      * @param con The connection to create the link for.
      * @param targetAddress The target address of the link.
      * @param qos The quality of service to use for the link.
-     * @param waitForInitialCredits Milliseconds to wait after link creation if there are no credits.
-     * @param closeHook The handler to invoke when the link is closed by the peer.
+     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
      *         The future will fail if the link cannot be opened.
-     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
+     * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
      */
     protected static final Future<ProtonSender> createSender(
             final Context ctx,
+            final ClientConfigProperties clientConfig,
             final ProtonConnection con,
             final String targetAddress,
             final ProtonQoS qos,
-            final long waitForInitialCredits,
             final Handler<String> closeHook) {
+
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(clientConfig);
+        Objects.requireNonNull(con);
+        Objects.requireNonNull(targetAddress);
+        Objects.requireNonNull(qos);
 
         final Future<ProtonSender> result = Future.future();
 
@@ -166,9 +181,9 @@ public abstract class AbstractHonoClient {
                     LOG.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
                     // wait on credits a little time, if not already given
                     if (sender.sendQueueFull()) {
-                        ctx.owner().setTimer(waitForInitialCredits, timerID -> {
+                        ctx.owner().setTimer(clientConfig.getFlowLatency(), timerID -> {
                             LOG.debug("sender [target: {}] has {} credits after grace period of {}ms", targetAddress,
-                                    sender.getCredit(), waitForInitialCredits);
+                                    sender.getCredit(), clientConfig.getFlowLatency());
                             result.complete(sender);
                         });
                     } else {
@@ -202,31 +217,38 @@ public abstract class AbstractHonoClient {
      * The receiver will be created with its <em>autoAccept</em> property set to {@code true}.
      *
      * @param ctx The vert.x context to use for establishing the link.
+     * @param clientConfig The configuration properties to use.
      * @param con The connection to create the link for.
      * @param sourceAddress The address to receive messages from.
      * @param qos The quality of service to use for the link.
-     * @param prefetchCredits Number of credits, given initially from receiver to sender.
      * @param messageHandler The handler to invoke with every message received.
-     * @param closeHook The handler to invoke when the link is closed by the peer.
+     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
      *         The future will fail if the link cannot be opened.
-     * @throws IllegalArgumentException if prefetchCredits is {@code < 0}.
+     * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
      */
     protected static final Future<ProtonReceiver> createReceiver(
             final Context ctx,
+            final ClientConfigProperties clientConfig,
             final ProtonConnection con,
             final String sourceAddress,
             final ProtonQoS qos,
-            final int prefetchCredits,
             final ProtonMessageHandler messageHandler,
             final Handler<String> closeHook) {
 
-        Future<ProtonReceiver> result = Future.future();
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(clientConfig);
+        Objects.requireNonNull(con);
+        Objects.requireNonNull(sourceAddress);
+        Objects.requireNonNull(qos);
+        Objects.requireNonNull(messageHandler);
+
+        final Future<ProtonReceiver> result = Future.future();
         ctx.runOnContext(go -> {
             final ProtonReceiver receiver = con.createReceiver(sourceAddress);
             receiver.setAutoAccept(true);
             receiver.setQoS(qos);
-            receiver.setPrefetch(prefetchCredits);
+            receiver.setPrefetch(clientConfig.getInitialCredits());
             receiver.handler(messageHandler);
             receiver.openHandler(result.completer());
             receiver.closeHandler(remoteClosed -> {

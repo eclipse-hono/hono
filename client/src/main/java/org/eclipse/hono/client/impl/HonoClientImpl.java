@@ -12,8 +12,11 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -22,14 +25,24 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.*;
+import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RequestResponseClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.*;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -229,7 +242,7 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(tenantId);
         getOrCreateSender(
                 TelemetrySenderImpl.getTargetAddress(tenantId, deviceId),
-                (creationResult) -> createTelemetrySender(tenantId, deviceId, clientConfigProperties.getFlowLatency(), creationResult),
+                (creationResult) -> createTelemetrySender(tenantId, deviceId, creationResult),
                 resultHandler);
         return this;
     }
@@ -249,7 +262,7 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(resultHandler);
         getOrCreateSender(
                 EventSenderImpl.getTargetAddress(tenantId, deviceId),
-                (creationResult) -> createEventSender(tenantId, deviceId, clientConfigProperties.getFlowLatency(), creationResult),
+                (creationResult) -> createEventSender(tenantId, deviceId, creationResult),
                 resultHandler);
         return this;
     }
@@ -298,13 +311,12 @@ public final class HonoClientImpl implements HonoClient {
     private HonoClient createTelemetrySender(
             final String tenantId,
             final String deviceId,
-            final long waitForInitialCredits,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
         Future<MessageSender> senderTracker = Future.future();
         senderTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> TelemetrySenderImpl.create(context, connection, tenantId, deviceId, waitForInitialCredits,
+                connected -> TelemetrySenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
                         onSenderClosed -> {
                             activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, deviceId));
                         },
@@ -318,16 +330,6 @@ public final class HonoClientImpl implements HonoClient {
             final String tenantId,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
-        return createTelemetryConsumer(tenantId, clientConfigProperties.getInitialCredits(), telemetryConsumer,
-                creationHandler);
-    }
-
-    @Override
-    public HonoClient createTelemetryConsumer(
-            final String tenantId,
-            final int prefetch,
-            final Consumer<Message> telemetryConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
         // register a handler to be notified if the underlying connection to the server fails
         // so that we can fail the result handler passed in
@@ -343,8 +345,8 @@ public final class HonoClientImpl implements HonoClient {
             creationHandler.handle(attempt);
         });
         checkConnection().compose(
-                connected -> TelemetryConsumerImpl.create(context, connection, tenantId,
-                        connectionFactory.getPathSeparator(), prefetch, telemetryConsumer, consumerTracker.completer()),
+                connected -> TelemetryConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
+                        connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer()),
                 consumerTracker);
         return this;
     }
@@ -355,35 +357,13 @@ public final class HonoClientImpl implements HonoClient {
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
-        createEventConsumer(tenantId, clientConfigProperties.getInitialCredits(), (delivery, message) -> eventConsumer.accept(message), creationHandler);
+        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler);
         return this;
     }
 
     @Override
     public HonoClient createEventConsumer(
             final String tenantId,
-            final int prefetch,
-            final Consumer<Message> eventConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
-
-        createEventConsumer(tenantId, prefetch, (delivery, message) -> eventConsumer.accept(message), creationHandler);
-        return this;
-    }
-
-    @Override
-    public HonoClient createEventConsumer(
-            final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> eventConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
-
-        createEventConsumer(tenantId, clientConfigProperties.getInitialCredits(), eventConsumer, creationHandler);
-        return this;
-    }
-
-    @Override
-    public HonoClient createEventConsumer(
-            final String tenantId,
-            final int prefetch,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
@@ -401,8 +381,8 @@ public final class HonoClientImpl implements HonoClient {
             creationHandler.handle(attempt);
         });
         checkConnection().compose(
-                connected -> EventConsumerImpl.create(context, connection, tenantId,
-                        connectionFactory.getPathSeparator(), prefetch, eventConsumer, consumerTracker.completer()),
+                connected -> EventConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
+                        connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer()),
                 consumerTracker);
         return this;
     }
@@ -410,13 +390,12 @@ public final class HonoClientImpl implements HonoClient {
     private HonoClient createEventSender(
             final String tenantId,
             final String deviceId,
-            final long waitForInitialCredits,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
         Future<MessageSender> senderTracker = Future.future();
         senderTracker.setHandler(creationHandler);
         checkConnection().compose(
-                connected -> EventSenderImpl.create(context, connection, tenantId, deviceId, waitForInitialCredits,
+                connected -> EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
                         onSenderClosed -> {
                             activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
                         },
@@ -517,10 +496,9 @@ public final class HonoClientImpl implements HonoClient {
 
             RegistrationClientImpl.create(
                     context,
+                    clientConfigProperties,
                     connection,
                     tenantId,
-                    clientConfigProperties.getInitialCredits(),
-                    clientConfigProperties.getFlowLatency(),
                     this::removeRegistrationClient,
                     this::removeRegistrationClient,
                     creationAttempt -> {
@@ -570,10 +548,9 @@ public final class HonoClientImpl implements HonoClient {
 
             CredentialsClientImpl.create(
                     context,
+                    clientConfigProperties,
                     connection,
                     tenantId,
-                    clientConfigProperties.getInitialCredits(),
-                    clientConfigProperties.getFlowLatency(),
                     this::removeCredentialsClient,
                     this::removeCredentialsClient,
                     creationAttempt -> {

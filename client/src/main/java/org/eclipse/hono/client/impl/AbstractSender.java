@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -26,6 +26,7 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,21 +44,20 @@ import io.vertx.proton.ProtonSender;
  */
 abstract class AbstractSender extends AbstractHonoClient implements MessageSender {
 
-    private static final Logger                LOG = LoggerFactory.getLogger(AbstractSender.class);
-    private static final AtomicLong            MESSAGE_COUNTER = new AtomicLong();
-    private static final Pattern               CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
-    private static final BiConsumer<Object, ProtonDelivery> DEFAULT_DISPOSITION_HANDLER = (messageId, delivery) -> LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
+    private static final Logger     LOG = LoggerFactory.getLogger(AbstractSender.class);
+    private static final AtomicLong MESSAGE_COUNTER = new AtomicLong();
+    private static final Pattern    CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
 
-    protected final String                     tenantId;
-    protected final String                     targetAddress;
+    protected final String tenantId;
+    protected final String targetAddress;
 
     private final Handler<String>              closeHook;
     private Handler<Void>                      drainHandler;
-    private BiConsumer<Object, ProtonDelivery> defaultDispositionHandler = DEFAULT_DISPOSITION_HANDLER;
+    private BiConsumer<Object, ProtonDelivery> defaultDispositionHandler = this::logUpdatedDisposition;
 
-    AbstractSender(final ProtonSender sender, final String tenantId, final String targetAddress,
+    AbstractSender(final ClientConfigProperties config, final ProtonSender sender, final String tenantId, final String targetAddress,
             final Context context, final Handler<String> closeHook) {
-        super(context);
+        super(context, config);
         this.sender = Objects.requireNonNull(sender);
         this.tenantId = Objects.requireNonNull(tenantId);
         this.targetAddress = targetAddress;
@@ -338,4 +338,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         }
     }
 
+    private void logUpdatedDisposition(final Object messageId, final ProtonDelivery delivery) {
+        LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
+    }
 }
