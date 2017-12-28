@@ -212,25 +212,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         router.route().handler(BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY).setBodyLimit(getConfig().getMaxPayloadSize()));
 
-        String statusResourcePath = getStatusResourcePath();
-        if (statusResourcePath != null) {
-            router.route(HttpMethod.GET, statusResourcePath).handler(this::doGetStatus);
-        }
-
         return router;
-    }
-
-    /**
-     * Returns the path for the status resource.
-     * <p>
-     * By default, this method returns {@code /status}.
-     * Subclasses may override this method to return a different path or {@code null},
-     * in which case the status resource will be disabled.
-     * 
-     * @return The resource path or {@code null}.
-     */
-    protected String getStatusResourcePath() {
-        return "/status";
     }
 
     /**
@@ -369,26 +351,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected Future<Void> postShutdown() {
         return Future.succeededFuture();
-    }
-
-    private void doGetStatus(final RoutingContext ctx) {
-        JsonObject result = new JsonObject(getHonoMessagingClient().getConnectionStatus());
-        result.put("active profiles", activeProfiles);
-        result.put("senders", getHonoMessagingClient().getSenderStatus());
-        adaptStatusResource(result);
-        ctx.response()
-            .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
-            .end(result.encodePrettily());
-    }
-
-    /**
-     * Adapts the JsonObject returned on a status request.
-     * Subclasses can add their own properties here.
-     * 
-     * @param status status object to be adapted
-     */
-    protected void adaptStatusResource(final JsonObject status) {
-        // empty
     }
 
     /**

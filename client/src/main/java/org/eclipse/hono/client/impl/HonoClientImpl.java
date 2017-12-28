@@ -30,8 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.*;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -107,33 +105,6 @@ public final class HonoClientImpl implements HonoClient {
     @Override
     public boolean isConnected() {
         return connection != null && !connection.isDisconnected();
-    }
-
-    @Override
-    public Map<String, Object> getConnectionStatus() {
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("name", connectionFactory.getName());
-        result.put("connected", isConnected());
-        result.put("server", String.format("%s:%d", connectionFactory.getHost(), connectionFactory.getPort()));
-        result.put("#clients", activeRequestResponseClients.size());
-        result.put("senders", getSenderStatus());
-        return result;
-    }
-
-    @Override
-    public JsonArray getSenderStatus() {
-
-        JsonArray result = new JsonArray();
-        for (Entry<String, MessageSender> senderEntry : activeSenders.entrySet()) {
-            final MessageSender sender = senderEntry.getValue();
-            JsonObject senderStatus = new JsonObject()
-                .put("address", senderEntry.getKey())
-                .put("open", sender.isOpen())
-                .put("credit", sender.getCredit());
-            result.add(senderStatus);
-        }
-        return result;
     }
 
     @Override

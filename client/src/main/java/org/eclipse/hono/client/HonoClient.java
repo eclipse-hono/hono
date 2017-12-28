@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,7 +12,6 @@
 
 package org.eclipse.hono.client;
 
-import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -20,7 +19,6 @@ import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonArray;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -46,37 +44,6 @@ public interface HonoClient {
      * @return {@code true} if this client is connected.
      */
     boolean isConnected();
-
-    /**
-     * Gets properties describing the status of the connection to the Hono server.
-     * <p>
-     * The returned map contains the following properties:
-     * <ul>
-     * <li><em>name</em> - The name being indicated as the <em>container-id</em> in the
-     * client's AMQP <em>Open</em> frame.</li>
-     * <li><em>connected</em> - A boolean indicating whether this client is currently connected
-     * to the Hono server.</li>
-     * <li><em>Hono server</em> - The host (either name or literal IP address) and port of the
-     * server this client is configured to connect to.</li>
-     * </ul>
-     * 
-     * @return The connection status properties.
-     */
-    Map<String, Object> getConnectionStatus();
-
-    /**
-     * Gets a list of all senders and their current status.
-     * <p>
-     * For each sender the following properties are contained:
-     * <ol>
-     * <li>address - the link target address</li>
-     * <li>open - indicates whether the link is (still) open</li>
-     * <li>credit - the link-credit available</li>
-     * </ol>
-     * 
-     * @return The status information.
-     */
-    JsonArray getSenderStatus();
 
     /**
      * Connects to the Hono server using given options.
