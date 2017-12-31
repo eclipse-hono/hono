@@ -537,25 +537,61 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<Void> doUploadMessage(final Message message, final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice,
             final MessageSender sender) {
 
+        if (TelemetryConstants.TELEMETRY_ENDPOINT.equals(sender.getEndpoint())) {
+            return doUploadTelemetryData(message, sender);
+        } else if (EventConstants.EVENT_ENDPOINT.equals(sender.getEndpoint())) {
+            return doUploadEvent(message, sender).map(s -> {
+                // check that the remote MQTT client is still connected before sending PUBACK
+                if (endpoint.isConnected() && messageFromDevice.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                    endpoint.publishAcknowledge(messageFromDevice.messageId());
+                }
+                return (Void) null;
+            });
+        } else {
+            return Future.failedFuture(new IllegalArgumentException("unsupported endpoint"));
+        }
+    }
+
+    private Future<Void> doUploadTelemetryData(final Message message, final MessageSender sender) {
+
+        boolean accepted = sender.send(message, (messageId, delivery) -> {
+            LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
+            if (Accepted.class.isInstance(delivery.getRemoteState())) {
+                LOG.trace("telemetry message [message ID: {}] accepted by downstream", messageId);
+            } else if (Rejected.class.isInstance(delivery.getRemoteState())) {
+                Rejected remoteState = (Rejected) delivery.getRemoteState();
+                LOG.debug("telemetry message [messag ID: {}] rejected by downstream: {}, {}", messageId,
+                        remoteState.getError().getCondition(), remoteState.getError().getDescription());
+            } else {
+                LOG.debug("telemetry message [messag ID: {}] not accepted by downstream: {}", messageId,
+                        delivery.getRemoteState().getClass().getSimpleName());
+            }
+        });
+
+        if (accepted) {
+            // for telemetry data we do not care whether the downstream container
+            // accepts the message or not
+            // instead, we consider the sending successful if we were
+            // able to send the message at all
+            return Future.succeededFuture();
+        } else {
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending message"));
+        }
+    }
+
+    private Future<Void> doUploadEvent(final Message message, final MessageSender sender) {
+
         Future<Void> result = Future.future();
         boolean accepted = sender.send(message, (messageId, delivery) -> {
             LOG.trace("delivery state updated [message ID: {}, new remote state: {}]", messageId, delivery.getRemoteState());
-            if (messageFromDevice.qosLevel() == MqttQoS.AT_MOST_ONCE) {
+            if (Accepted.class.isInstance(delivery.getRemoteState())) {
+                LOG.trace("event message [message ID: {}] accepted by downstream", messageId);
                 result.complete();
-            } else if (messageFromDevice.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                if (Accepted.class.isInstance(delivery.getRemoteState())) {
-                    // check that the remote MQTT client is still connected before sending PUBACK
-                    if (endpoint.isConnected()) {
-                        endpoint.publishAcknowledge(messageFromDevice.messageId());
-                    }
-                    result.complete();
-                } else if (Rejected.class.isInstance(delivery.getRemoteState())) {
-                    Rejected remoteState = (Rejected) delivery.getRemoteState();
-                    LOG.debug("message from device has been rejected: {}, {}", remoteState.getError().getCondition(), remoteState.getError().getDescription());
-                    result.fail("message rejected: " + remoteState.getError().getCondition());
-                } else {
-                    result.fail("message not accepted by remote: " + delivery.getRemoteState().getClass().getSimpleName());
-                }
+            } else if (Rejected.class.isInstance(delivery.getRemoteState())) {
+                Rejected remoteState = (Rejected) delivery.getRemoteState();
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, remoteState.getError().getDescription()));
+            } else {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, delivery.getRemoteState().getClass().getSimpleName()));
             }
         });
         if (!accepted) {
