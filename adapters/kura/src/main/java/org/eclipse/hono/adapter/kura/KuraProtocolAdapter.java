@@ -18,7 +18,9 @@ import java.util.Arrays;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TelemetryConstants;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
@@ -81,9 +83,9 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
 
         switch(level) {
         case AT_MOST_ONCE:
-            return AbstractVertxBasedMqttProtocolAdapter.TELEMETRY_ENDPOINT;
+            return TelemetryConstants.TELEMETRY_ENDPOINT;
         default:
-            return AbstractVertxBasedMqttProtocolAdapter.EVENT_ENDPOINT;
+            return EventConstants.EVENT_ENDPOINT;
         }
     }
 }

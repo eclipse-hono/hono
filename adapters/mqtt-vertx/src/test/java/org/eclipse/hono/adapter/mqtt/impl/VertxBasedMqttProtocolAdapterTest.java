@@ -18,12 +18,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.adapter.mqtt.impl.VertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -89,7 +90,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         // GIVEN an adapter
 
         // WHEN a device publishes a message with QoS 1 to a "telemetry" topic
-        final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, AbstractVertxBasedMqttProtocolAdapter.TELEMETRY_ENDPOINT);
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final Async determineAddressFailure = ctx.async();
         adapter.getDownstreamMessage(message).recover(t -> {
             determineAddressFailure.complete();
@@ -110,7 +111,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         // GIVEN an adapter
 
         // WHEN a device publishes a message with QoS 0 to an "event" topic
-        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, AbstractVertxBasedMqttProtocolAdapter.EVENT_ENDPOINT);
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, EventConstants.EVENT_ENDPOINT);
         final Async messageFailure = ctx.async();
         adapter.getDownstreamMessage(message).recover(t -> {
             messageFailure.complete();
@@ -131,7 +132,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         // GIVEN an adapter
 
         // WHEN an anonymous device publishes a message to a topic that does not contain a tenant ID
-        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, VertxBasedMqttProtocolAdapter.TELEMETRY_ENDPOINT);
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final Async determineAddressFailure = ctx.async();
         adapter.getDownstreamMessage(message).recover(t -> {
             determineAddressFailure.complete();
@@ -153,7 +154,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         // GIVEN an adapter
 
         // WHEN an anonymous device publishes a message to a topic that does not contain a device ID
-        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, VertxBasedMqttProtocolAdapter.TELEMETRY_ENDPOINT + "/my-tenant");
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT + "/my-tenant");
         final Async determineAddressFailure = ctx.async();
         adapter.getDownstreamMessage(message).recover(t -> {
             determineAddressFailure.complete();
@@ -175,7 +176,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         // GIVEN an adapter
 
         // WHEN an authenticated device publishes a message to a topic that does not contain a tenant ID
-        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, VertxBasedMqttProtocolAdapter.TELEMETRY_ENDPOINT);
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final Async determineAddressSuccess = ctx.async();
         Future<Message> downstreamMessage = adapter.getDownstreamMessage(message, new Device("my-tenant", "4711")).map(msg -> {
             determineAddressSuccess.complete();
@@ -185,7 +186,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         // THEN the mapped address contains the authenticated device's tenant and device ID
         determineAddressSuccess.await(2000);
         final ResourceIdentifier downstreamAddress = ResourceIdentifier.fromString(downstreamMessage.result().getAddress());
-        assertThat(downstreamAddress.getEndpoint(), is(VertxBasedMqttProtocolAdapter.TELEMETRY_ENDPOINT));
+        assertThat(downstreamAddress.getEndpoint(), is(TelemetryConstants.TELEMETRY_ENDPOINT));
         assertThat(downstreamAddress.getTenantId(), is("my-tenant"));
         assertThat(MessageHelper.getDeviceId(downstreamMessage.result()), is("4711"));
     }

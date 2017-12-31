@@ -17,7 +17,9 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TelemetryConstants;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
@@ -61,14 +63,14 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
 
         try {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(message.topicName());
-            if (TELEMETRY_ENDPOINT.equals(topic.getEndpoint())) {
+            if (TelemetryConstants.TELEMETRY_ENDPOINT.equals(topic.getEndpoint())) {
                 if (!MqttQoS.AT_MOST_ONCE.equals(message.qosLevel())) {
                     // client tries to send telemetry message using QoS 1 or 2
                     return Future.failedFuture("Only QoS 0 supported for telemetry messages");
                 } else {
                     return Future.succeededFuture(topic);
                 }
-            } else if (EVENT_ENDPOINT.equals(topic.getEndpoint())) {
+            } else if (EventConstants.EVENT_ENDPOINT.equals(topic.getEndpoint())) {
                 if (!MqttQoS.AT_LEAST_ONCE.equals(message.qosLevel())) {
                     // client tries to send event message using QoS 0 or 2
                     return Future.failedFuture("Only QoS 1 supported for event messages");

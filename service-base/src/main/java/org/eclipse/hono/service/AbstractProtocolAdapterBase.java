@@ -59,14 +59,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     public static final String PROPERTY_HONO_ORIG_ADDRESS = "hono-orig-address";
     /**
-     * The <em>telemetry</em> endpoint name.
-     */
-    public static final String TELEMETRY_ENDPOINT = "telemetry";
-    /**
-     * The <em>event</em> endpoint name.
-     */
-    public static final String EVENT_ENDPOINT = "event";
-    /**
      * The <em>application/octet-stream</em> content type.
      */
     protected static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";

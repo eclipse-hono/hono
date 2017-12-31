@@ -32,9 +32,11 @@ import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -497,9 +499,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      */
     private Future<MessageSender> getSenderForEndpoint(final String endpoint, final String tenantId) {
 
-        if (endpoint.equals(TELEMETRY_ENDPOINT)) {
+        if (TelemetryConstants.TELEMETRY_ENDPOINT.equals(endpoint)) {
             return getTelemetrySender(tenantId);
-        } else if (endpoint.equals(EVENT_ENDPOINT)) {
+        } else if (EventConstants.EVENT_ENDPOINT.equals(endpoint)) {
             return getEventSender(tenantId);
         } else {
             // MQTT client is trying to publish on a not supported endpoint
