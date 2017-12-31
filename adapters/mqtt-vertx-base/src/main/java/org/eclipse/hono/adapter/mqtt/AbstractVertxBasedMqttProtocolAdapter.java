@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -436,8 +437,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             final MessageSender sender = senderTracker.result();
             if (sender.sendQueueFull()) {
                 // cannot send message downstream
-                return Future.failedFuture(new ServerErrorException(503, "no credit available for sender [" +
-                        message.getAddress() + "]"));
+                return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                        "no credit available for sender [" + message.getAddress() + "]"));
             } else {
                 message.setBody(new Data(new Binary(messageFromDevice.payload().getBytes())));
                 MessageHelper.addProperty(message, PROPERTY_HONO_ORIG_ADDRESS, messageFromDevice.topicName());
@@ -478,7 +479,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 } else {
                     LOG.debug("discarding message published by authenticated device [tenant-id: {}, device-id: {}] to unauthorized topic [{}]",
                             authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), address);
-                    return Future.failedFuture(new ClientErrorException(403, "device is not authorized to publish to topic"));
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "device is not authorized to publish to topic"));
                 }
             } catch (IllegalArgumentException e) {
                 LOG.debug("discarding message mapped to malformed address [to: {}]", message.getAddress());
@@ -558,7 +559,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             }
         });
         if (!accepted) {
-            result.fail(new ServerErrorException(503, "no credit available for sending message"));
+            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending message"));
         }
         return result;
     }
