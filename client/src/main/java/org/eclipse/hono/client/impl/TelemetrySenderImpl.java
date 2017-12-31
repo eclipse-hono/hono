@@ -95,7 +95,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
         Objects.requireNonNull(creationHandler);
 
         final String targetAddress = getTargetAddress(tenantId, deviceId);
-        createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_MOST_ONCE, closeHook).compose(sender -> {
+        createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).compose(sender -> {
             return Future.<MessageSender> succeededFuture(
                     new TelemetrySenderImpl(clientConfig, sender, tenantId, targetAddress, context, closeHook));
         }).setHandler(creationHandler);
