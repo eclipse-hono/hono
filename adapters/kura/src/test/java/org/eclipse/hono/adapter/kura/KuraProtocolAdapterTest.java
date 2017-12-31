@@ -18,8 +18,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -74,7 +76,7 @@ public class KuraProtocolAdapterTest {
         // THEN the message is forwarded to the event API
         determineAddressSuccess.await(2000);
         assertMessageProperties(msgTracker.result(), config.getCtrlMsgContentType(),
-                KuraProtocolAdapter.EVENT_ENDPOINT, "my-scope", "4711");
+                EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
     }
 
     /**
@@ -102,7 +104,7 @@ public class KuraProtocolAdapterTest {
         // and has the custom control message content type
         determineAddressSuccess.await(2000);
         assertMessageProperties(msgTracker.result(), config.getCtrlMsgContentType(),
-                KuraProtocolAdapter.TELEMETRY_ENDPOINT, "my-scope", "4711");
+                TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
     }
 
     /**
@@ -127,7 +129,7 @@ public class KuraProtocolAdapterTest {
         // THEN the message is recognized as a control message and forwarded to the event API
         determineAddressSuccess.await(2000);
         assertMessageProperties(msgTracker.result(), config.getCtrlMsgContentType(),
-                KuraProtocolAdapter.TELEMETRY_ENDPOINT, "my-scope", "4711");
+                TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
     }
 
     /**
@@ -154,7 +156,7 @@ public class KuraProtocolAdapterTest {
         // and has the configured data message content type
         determineAddressSuccess.await(2000);
         assertMessageProperties(msgTracker.result(), config.getDataMsgContentType(),
-                KuraProtocolAdapter.TELEMETRY_ENDPOINT, "my-scope", "4711");
+                TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
     }
 
     /**
@@ -179,7 +181,7 @@ public class KuraProtocolAdapterTest {
         // THEN the message is forwarded to the event API
         determineAddressSuccess.await(2000);
         assertMessageProperties(msgTracker.result(), config.getDataMsgContentType(),
-                KuraProtocolAdapter.EVENT_ENDPOINT, "my-scope", "4711");
+                EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
     }
 
     private void assertMessageProperties(final Message msg, final String contentType, final String endpoint, String tenantId, final String deviceId) {
