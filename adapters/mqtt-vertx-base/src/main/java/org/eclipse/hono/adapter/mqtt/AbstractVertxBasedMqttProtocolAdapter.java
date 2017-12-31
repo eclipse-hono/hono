@@ -233,6 +233,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             .compose(d -> stopFuture.complete(), stopFuture);
     }
 
+    /**
+     * Invoked when a client sends its <em>CONNECT</em> packet.
+     * <p>
+     * Authenticates the client (if required) and registers handlers for processing
+     * messages published by the client.
+     * 
+     * @param endpoint The MQTT endpoint representing the client.
+     */
     final void handleEndpointConnection(final MqttEndpoint endpoint) {
 
         LOG.debug("connection request from client [clientId: {}]", endpoint.clientIdentifier());
@@ -256,8 +264,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * been disabled by setting the {@linkplain ProtocolAdapterProperties#isAuthenticationRequired()
      * authentication required} configuration property to {@code false}.
      * <p>
-     * Registers a close handler on the endpoint which first removes any registration assertion
-     * cached for the client then delegates to {@link #onClose(MqttEndpoint)}.
+     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint)}.
      * Registers a publish handler on the endpoint which invokes
      * {@link #onUnauthenticatedMessage(MqttEndpoint, MqttPublishMessage)} for each message
      * being published by the client.
@@ -268,11 +275,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private void handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
 
         endpoint.closeHandler(v -> {
+            close(endpoint);
             LOG.debug("connection to unauthenticated device [clientId: {}] closed", endpoint.clientIdentifier());
-            if (registrationAssertions.remove(endpoint) != null) {
-                LOG.trace("removed registration assertion for device [clientId: {}]", endpoint.clientIdentifier());
-            }
-            onClose(endpoint);
         });
         endpoint.publishHandler(message -> onUnauthenticatedMessage(endpoint, message));
 
@@ -283,24 +287,24 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private void handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint) {
 
         if (endpoint.auth() == null) {
-            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
-            LOG.debug("connection request from device [clientId: {}] rejected,  [cause: {}]",
+            LOG.debug("connection request from device [clientId: {}] rejected: {}",
                     endpoint.clientIdentifier(), "device did not provide credentials in CONNECT packet");
+            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
 
         } else {
 
             final DeviceCredentials credentials = getCredentials(endpoint.auth());
 
             if (credentials == null) {
-                LOG.debug("cannot authenticate device [clientId: {}] rejected [cause: {}]",
-                        endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                LOG.debug("connection request from device [clientId: {}] rejected: {}",
+                        endpoint.clientIdentifier(), "device provided malformed credentials in CONNECT packet");
                 endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
-                close(endpoint);
+
             } else {
                 getCredentialsAuthProvider().authenticate(credentials, attempt -> {
                     if (attempt.failed()) {
 
-                        LOG.debug("cannot authenticate device [tenant-id: {}, auth-id: {}], cause: {}",
+                        LOG.debug("cannot authenticate device [tenant-id: {}, auth-id: {}]: {}",
                                 credentials.getTenantId(), credentials.getAuthId(), attempt.cause().getMessage());
                         if (ServerErrorException.class.isInstance(attempt.cause())) {
                             // credentials service might not be available (yet)
@@ -309,7 +313,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                             // validation of credentials has failed
                             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
                         }
-                        close(endpoint);
 
                     } else {
 
@@ -317,7 +320,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
                                 authenticatedDevice.getTenantId(), credentials.getAuthId(), authenticatedDevice.getDeviceId());
                         onAuthenticationSuccess(endpoint, authenticatedDevice);
-                        metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
                     }
                 });
                 
@@ -328,17 +330,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private void onAuthenticationSuccess(final MqttEndpoint endpoint, final Device authenticatedDevice) {
 
         endpoint.closeHandler(v -> {
+            close(endpoint);
             LOG.debug("connection to device [tenant-id: {}, device-id: {}] closed",
                     authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-            if (registrationAssertions.remove(endpoint) != null) {
-                LOG.trace("removed registration assertion for device [tenant-id: {}, device-id: {}]",
-                        authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-            }
-            onClose(endpoint);
+            metrics.decrementMqttConnections(authenticatedDevice.getTenantId());
         });
 
         endpoint.publishHandler(message -> onAuthenticatedMessage(endpoint, message, authenticatedDevice));
         endpoint.accept(false);
+        metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
     }
 
     /**
@@ -569,7 +569,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param endpoint The connection to close.
      */
     protected final void close(final MqttEndpoint endpoint) {
-        registrationAssertions.remove(endpoint);
+        if (registrationAssertions.remove(endpoint) != null) {
+            LOG.trace("removed registration assertion for device [clientId: {}]", endpoint.clientIdentifier());
+        }
+        onClose(endpoint);
         if (endpoint.isConnected()) {
             LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
             endpoint.close();
@@ -579,14 +582,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
-     * Invoked before the connection with a client is closed.
+     * Invoked before the connection with a device is closed.
+     * <p>
+     * Subclasses should override this method in order to release any device
+     * specific resources.
      * <p>
      * This default implementation does nothing.
      * 
      * @param endpoint The connection to be closed.
      */
     protected void onClose(final MqttEndpoint endpoint) {
-        metrics.decrementMqttConnections(getCredentials(endpoint.auth()).getTenantId());
     }
 
     /**
