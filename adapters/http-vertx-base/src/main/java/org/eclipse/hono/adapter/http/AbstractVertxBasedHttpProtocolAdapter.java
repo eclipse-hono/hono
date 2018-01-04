@@ -34,7 +34,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
@@ -200,8 +199,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * This method creates a router instance with the following routes:
      * <ol>
      * <li>A default route limiting the body size of requests to the maximum payload size set in the <em>config</em> properties.</li>
-     * <li>A route for retrieving this adapter's current status from the resource path returned by
-     * {@link #getStatusResourcePath()} (if not {@code null}).</li>
      * </ol>
      * 
      * @return The newly created router (never {@code null}).
