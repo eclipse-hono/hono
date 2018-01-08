@@ -9,7 +9,9 @@ import org.eclipse.hono.vertx.example.base.HonoSenderBase;
  * microservices are reachable.
  */
 public class HonoEventSender extends HonoSenderBase {
-    public static void main(final String[] args) throws Exception {
+
+    public static void main(final String[] args) {
+
         System.out.println("Starting downstream event sender...");
         HonoEventSender honoDownstreamSender = new HonoEventSender();
         honoDownstreamSender.setEventMode(true);
