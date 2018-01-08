@@ -20,7 +20,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -252,7 +251,6 @@ public abstract class ClientTestBase {
     public void testSendingMessages(final TestContext ctx) throws InterruptedException {
 
         final CountDownLatch received = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
-        final CountDownLatch accepted = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final Async setup = ctx.async();
 
         final Future<MessageConsumer> setupTracker = Future.future();
@@ -261,13 +259,6 @@ public abstract class ClientTestBase {
             setup.complete();
         }));
 
-        sender.setDefaultDispositionHandler((id, disposition) -> {
-            accepted.countDown();
-            //TODO temp fix to the test, until we have a logic to resend released qos1 messages
-            if (Released.class.isInstance(disposition.getRemoteState())) {
-                received.countDown();
-            }
-        });
         Future<RegistrationResult> tokenTracker = Future.future();
 
         Future<RegistrationResult> regTracker = Future.future();
@@ -306,27 +297,18 @@ public abstract class ClientTestBase {
 
         while (messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
 
-            final Async batchComplete = ctx.async();
+            final Async sending = ctx.async();
+            sender.send(
+                    DEVICE_ID,
+                    "payload_" + messagesSent.getAndIncrement(),
+                    CONTENT_TYPE_TEXT_PLAIN,
+                    registrationAssertion,
+                    creditAvailable -> sending.complete());
 
-            vertx.getOrCreateContext().runOnContext(batchSend -> {
-                Handler<Void> runBatch = run -> {
-                    while (!sender.sendQueueFull() && messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
-                        sender.send(DEVICE_ID, "payload_" + messagesSent.getAndIncrement(), CONTENT_TYPE_TEXT_PLAIN, registrationAssertion, (Handler<Void>) null);
-                        if (messagesSent.get() % 200 == 0) {
-                            LOGGER.info("messages sent: " + messagesSent.get());
-                        }
-                    }
-                    batchComplete.complete();
-                };
-                if (sender.sendQueueFull()) {
-                    // wait for credit to arrive
-                    sender.sendQueueDrainHandler(runBatch);
-                } else {
-                    runBatch.handle(null);
-                }
-            });
-
-            batchComplete.await();
+            if (messagesSent.get() % 200 == 0) {
+                LOGGER.info("messages sent: " + messagesSent.get());
+            }
+            sending.await();
         }
 
         long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
@@ -334,10 +316,6 @@ public abstract class ClientTestBase {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
                     messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.getCount(), System.currentTimeMillis() - start);
             ctx.fail("did not receive all messages sent");
-        } else if (!accepted.await(timeToWait, TimeUnit.MILLISECONDS)) {
-            LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                    messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.getCount(), System.currentTimeMillis() - start);
-            ctx.fail("not all sent messages have been accepted");
         } else {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
                     messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.getCount(), System.currentTimeMillis() - start);

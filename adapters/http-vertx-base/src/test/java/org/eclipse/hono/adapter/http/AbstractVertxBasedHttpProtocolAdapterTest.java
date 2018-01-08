@@ -16,25 +16,37 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
+import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedHttpProtocolAdapter}.
@@ -42,6 +54,12 @@ import io.vertx.proton.ProtonClientOptions;
  */
 @RunWith(VertxUnitRunner.class)
 public class AbstractVertxBasedHttpProtocolAdapterTest {
+
+    /**
+     * Global timeout for all test cases.
+     */
+    @Rule
+    public Timeout globalTimeout = new Timeout(600, TimeUnit.MILLISECONDS);
 
     HonoClient messagingClient;
     HonoClient registrationClient;
@@ -86,7 +104,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.start(startupTracker);
 
         // THEN the client provided http server has been configured and started
-        startup.await(300);
+        startup.await();
         verify(server).requestHandler(any(Handler.class));
         verify(server).listen(any(Handler.class));
         verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
@@ -119,8 +137,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has been invoked
-        startup.await(300);
-        onStartupSuccess.await(300);
+        startup.await();
+        onStartupSuccess.await();
     }
 
 
@@ -145,7 +163,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has been invoked
-        startup.await(300);
+        startup.await();
     }
 
     /**
@@ -161,16 +179,99 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, s -> ctx.fail("should not invoke onStartupSuccess"));
 
         // WHEN starting the adapter
-        Async startupFailed = ctx.async();
         Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(startupAttempt -> {
-            ctx.assertTrue(startupAttempt.failed());
-            startupFailed.complete();
-        });
+        startupTracker.setHandler(ctx.asyncAssertFailure());
         adapter.start(startupTracker);
 
-        // THEN the onStartupSuccess method has been invoked
-        startupFailed.await(300);
+        // THEN the onStartupSuccess method has not been invoked
+    }
+
+    /**
+     * Verifies that the adapter waits for an event being settled and accepted
+     * by a downstream peer before responding with a 202 status to the device.
+     */
+    @Test
+    public void testUploadEventWaitsForAcceptedOutcome() {
+
+        // GIVEN an adapter with a downstream event consumer attached
+        final Future<ProtonDelivery> outcome = Future.future();
+        givenAnEventSenderForOutcome(outcome);
+
+        HttpServer server = getHttpServer(false);
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device publishes an event
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final RoutingContext ctx = mock(RoutingContext.class);
+        when(ctx.getBody()).thenReturn(payload);
+        when(ctx.response()).thenReturn(response);
+        when(response.setStatusCode(anyInt())).thenReturn(response);
+
+        adapter.uploadEventMessage(ctx, "tenant", "device", payload, "application/text");
+
+        // THEN the device does not get a response
+        verify(response, never()).end();
+
+        // until the event has been accepted
+        outcome.complete(mock(ProtonDelivery.class));
+        verify(response).setStatusCode(202);
+        verify(response).end();
+    }
+
+    /**
+     * Verifies that the adapter waits for an event being settled and accepted
+     * by a downstream peer before responding with a 202 status to the device.
+     */
+    @Test
+    public void testUploadEventFailsForRejectedOutcome() {
+
+        // GIVEN an adapter with a downstream event consumer attached
+        final Future<ProtonDelivery> outcome = Future.future();
+        givenAnEventSenderForOutcome(outcome);
+
+        HttpServer server = getHttpServer(false);
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device publishes an event that is not accepted by the peer
+        final Buffer payload = Buffer.buffer("some payload");
+        final RoutingContext ctx = mock(RoutingContext.class);
+        when(ctx.getBody()).thenReturn(payload);
+
+        adapter.uploadEventMessage(ctx, "tenant", "device", payload, "application/text");
+        outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed payload"));
+
+        // THEN the device gets a 400
+        verify(ctx).fail(HttpURLConnection.HTTP_BAD_REQUEST);
+    }
+
+    /**
+     * Verifies that the adapter does not wait for a telemetry message being settled and accepted
+     * by a downstream peer before responding with a 202 status to the device.
+     */
+    @Test
+    public void testUploadTelemetryDoesNotWaitForAcceptedOutcome() {
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
+        givenATelemetrySenderForOutcome(outcome);
+
+        HttpServer server = getHttpServer(false);
+        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device publishes a telemetry message
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final RoutingContext ctx = mock(RoutingContext.class);
+        when(ctx.getBody()).thenReturn(payload);
+        when(ctx.response()).thenReturn(response);
+        when(response.setStatusCode(anyInt())).thenReturn(response);
+
+        adapter.uploadTelemetryMessage(ctx, "tenant", "device", payload, "application/text");
+
+        // THEN the device receives a 202 response immediately
+        verify(response).setStatusCode(202);
+        verify(response).end();
     }
 
     @SuppressWarnings("unchecked")
@@ -237,4 +338,31 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         return adapter;
     }
+
+    @SuppressWarnings("unchecked")
+    private void givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
+
+        final MessageSender sender = mock(MessageSender.class);
+        when(sender.send(any(Message.class))).thenReturn(outcome);
+
+        doAnswer(invocation -> {
+            Handler<AsyncResult<MessageSender>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            resultHandler.handle(Future.succeededFuture(sender));
+            return messagingClient;
+        }).when(messagingClient).getOrCreateEventSender(anyString(), any(Handler.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
+
+        final MessageSender sender = mock(MessageSender.class);
+        when(sender.send(any(Message.class))).thenReturn(outcome);
+
+        doAnswer(invocation -> {
+            Handler<AsyncResult<MessageSender>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            resultHandler.handle(Future.succeededFuture(sender));
+            return messagingClient;
+        }).when(messagingClient).getOrCreateTelemetrySender(anyString(), any(Handler.class));
+    }
+
 }

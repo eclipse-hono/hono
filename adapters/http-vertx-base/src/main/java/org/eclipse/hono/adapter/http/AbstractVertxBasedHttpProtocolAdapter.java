@@ -465,38 +465,34 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId);
 
-            CompositeFuture.all(tokenTracker, senderTracker).setHandler(s -> {
-                if (s.succeeded()) {
-                    sendToHono(ctx, deviceId, payload, contentType, tokenTracker.result(),
-                            senderTracker.result(), tenant, endpointName);
-                } else if (ClientErrorException.class.isInstance(s.cause())) {
-                    ClientErrorException e = (ClientErrorException) s.cause();
-                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}, cause: {} - {}]",
+            CompositeFuture.all(tokenTracker, senderTracker).compose(ok -> {
+
+                return senderTracker.result().send(newMessage(
+                        String.format("%s/%s", endpointName, tenant),
+                        deviceId,
+                        contentType,
+                        payload,
+                        tokenTracker.result()));
+            }).map(delivery -> {
+                LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                        tenant, deviceId, endpointName);
+                metrics.incrementProcessedHttpMessages(endpointName, tenant);
+                ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
+                return (Void) null;
+            }).otherwise(t -> {
+                if (ClientErrorException.class.isInstance(t)) {
+                    ClientErrorException e = (ClientErrorException) t;
+                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
                             tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
-                    ctx.fail(HttpURLConnection.HTTP_FORBIDDEN);
+                    ctx.fail(e.getErrorCode());
                 } else {
-                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}, cause: {}]",
-                            tenant, deviceId, endpointName, s.cause().getMessage());
+                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {}",
+                            tenant, deviceId, endpointName, t.getMessage());
                     metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
                     HttpUtils.serviceUnavailable(ctx, 2);
                 }
+                return (Void) null;
             });
-        }
-    }
-
-    private void sendToHono(final RoutingContext ctx, final String deviceId, final Buffer payload,
-            final String contentType, final JsonObject registrationInfo, final MessageSender sender, final String tenant,
-            final String endpointName) {
-
-        final Message msg = newMessage(String.format("%s/%s", endpointName, tenant), deviceId, contentType, payload, registrationInfo);
-        if (sender.send(msg)) {
-            LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                    tenant, deviceId, endpointName);
-            metrics.incrementProcessedHttpMessages(endpointName, tenant);
-            ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
-        } else {
-            metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
-            HttpUtils.serviceUnavailable(ctx, 2, "resource limit exceeded");
         }
     }
 
