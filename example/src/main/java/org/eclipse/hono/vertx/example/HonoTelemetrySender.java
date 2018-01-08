@@ -9,7 +9,9 @@ import org.eclipse.hono.vertx.example.base.HonoSenderBase;
  * microservices are reachable.
  */
 public class HonoTelemetrySender extends HonoSenderBase {
-    public static void main(final String[] args) throws Exception {
+
+    public static void main(final String[] args) {
+
         System.out.println("Starting downstream telemetry sender...");
         HonoTelemetrySender honoDownstreamSender = new HonoTelemetrySender();
         honoDownstreamSender.sendData();
