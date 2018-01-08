@@ -13,15 +13,21 @@
 package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.TelemetryConstants;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
@@ -30,11 +36,11 @@ import io.vertx.proton.ProtonSender;
  */
 public final class TelemetrySenderImpl extends AbstractSender {
 
-    private static final String TELEMETRY_ENDPOINT_NAME  = "telemetry";
+    private static final AtomicLong MESSAGE_COUNTER = new AtomicLong();
 
-    private TelemetrySenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
-            final String targetAddress, final Context context, final Handler<String> closeHook) {
-        super(config, sender, tenantId, targetAddress, context, closeHook);
+    TelemetrySenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
+            final String targetAddress, final Context context) {
+        super(config, sender, tenantId, targetAddress, context);
     }
 
     /**
@@ -47,7 +53,8 @@ public final class TelemetrySenderImpl extends AbstractSender {
      * @throws NullPointerException if tenant is {@code null}.
      */
     public static String getTargetAddress(final String tenantId, final String deviceId) {
-        StringBuilder targetAddress = new StringBuilder(TELEMETRY_ENDPOINT_NAME).append("/").append(Objects.requireNonNull(tenantId));
+        StringBuilder targetAddress = new StringBuilder(TelemetryConstants.TELEMETRY_ENDPOINT)
+                .append("/").append(Objects.requireNonNull(tenantId));
         if (deviceId != null && deviceId.length() > 0) {
             targetAddress.append("/").append(deviceId);
         }
@@ -56,7 +63,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
 
     @Override
     public String getEndpoint() {
-        return TELEMETRY_ENDPOINT_NAME;
+        return TelemetryConstants.TELEMETRY_ENDPOINT;
     }
 
     @Override
@@ -97,7 +104,39 @@ public final class TelemetrySenderImpl extends AbstractSender {
         final String targetAddress = getTargetAddress(tenantId, deviceId);
         createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).compose(sender -> {
             return Future.<MessageSender> succeededFuture(
-                    new TelemetrySenderImpl(clientConfig, sender, tenantId, targetAddress, context, closeHook));
+                    new TelemetrySenderImpl(clientConfig, sender, tenantId, targetAddress, context));
         }).setHandler(creationHandler);
+    }
+
+    @Override
+    protected Future<ProtonDelivery> sendMessage(final Message message) {
+
+        Objects.requireNonNull(message);
+
+        final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
+        message.setMessageId(messageId);
+        final ProtonDelivery result = sender.send(message, deliveryUpdated -> {
+
+            if (deliveryUpdated.remotelySettled()) {
+                if (Accepted.class.isInstance(deliveryUpdated.getRemoteState())) {
+                    LOG.trace("message [message ID: {}] accepted by peer", messageId);
+                } else if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
+                    Rejected remoteState = (Rejected) deliveryUpdated.getRemoteState();
+                    if (remoteState.getError() == null) {
+                        LOG.debug("message [message ID: {}] rejected by peer", messageId);
+                    } else {
+                        LOG.debug("message [message ID: {}] rejected by peer: {}, {}", messageId,
+                                remoteState.getError().getCondition(), remoteState.getError().getDescription());
+                    }
+                } else {
+                    LOG.debug("message [message ID: {}] not accepted by peer: {}", messageId, deliveryUpdated.getRemoteState());
+                }
+            } else {
+                LOG.warn("peer did not settle telemetry message [message ID: {}, remote state: {}]", messageId, deliveryUpdated.getRemoteState());
+            }
+        });
+        LOG.trace("sent telemetry message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+
+        return Future.succeededFuture(result);
     }
 }

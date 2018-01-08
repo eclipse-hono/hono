@@ -400,7 +400,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
-     * @return The assertion.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will fail if the assertion cannot be retrieved. The cause will be
+     *         a {@link ServiceInvocationException} containing a corresponding error code.
+     *         <p>
+     *         Otherwise the future will contain the assertion.
      */
     protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId) {
 
@@ -415,7 +420,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 result.complete(response.getPayload());
                 break;
             case HttpURLConnection.HTTP_NOT_FOUND:
-                result.fail(new ClientErrorException(response.getStatus(), "device unknown or disabled"));
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "device unknown or disabled"));
                 break;
             default:
                 result.fail(new ServiceInvocationException(response.getStatus(), "failed to assert registration"));
