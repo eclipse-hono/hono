@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  * <p>
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,8 +11,10 @@
  */
 package org.eclipse.hono.client.impl;
 
+import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -208,7 +210,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         final Handler<AsyncResult<R>> handler = replyMap.remove(message.getCorrelationId());
         if (handler != null) {
             R response = getRequestResponseResult(message);
-            LOG.debug("received response [reply-to: {}, action: {}, correlation ID: {}, status: {}]",
+            LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
                     replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
             handler.handle(Future.succeededFuture(response));
             ProtonHelper.accepted(delivery, true);
@@ -321,7 +323,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             }
             sendRequest(request, resultHandler);
         } else {
-            resultHandler.handle(Future.failedFuture(new ServerErrorException(503, "sender and/or receiver link is not open")));
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
         }
     }
 
@@ -340,19 +343,28 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         context.runOnContext(req -> {
             if (sender.sendQueueFull()) {
                 LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
-                resultHandler.handle(Future.failedFuture(new ServerErrorException(503, "no credit available for sending request")));
+                resultHandler.handle(Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
             } else {
                 final String messageId = (String) request.getMessageId();
                 replyMap.put(messageId, resultHandler);
                 sender.send(request);
                 if (requestTimeoutMillis > 0) {
                     context.owner().setTimer(requestTimeoutMillis, tid -> {
-                        cancelRequest(messageId, Future.failedFuture(new ServerErrorException(503, "request timed out after " + requestTimeoutMillis + "ms")));
+                        cancelRequest(messageId, Future.failedFuture(new ServerErrorException(
+                                HttpURLConnection.HTTP_UNAVAILABLE, "request timed out after " + requestTimeoutMillis + "ms")));
                     });
                 }
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("sent request [target address: {}, action: {}, device ID: {}, message-id: {}] to service",
-                            targetAddress, request.getSubject(), MessageHelper.getDeviceId(request), messageId);
+                    final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(messageId);
+                    final String deviceId = MessageHelper.getDeviceId(request);
+                    if (deviceId == null) {
+                        LOG.debug("sent request [target address: {}, subject: {}, correlation ID: {}] to service",
+                                targetAddress, request.getSubject(), correlationId);
+                    } else {
+                        LOG.debug("sent request [target address: {}, subject: {}, correlation ID: {}, device ID: {}] to service",
+                                targetAddress, request.getSubject(), correlationId, deviceId);
+                    }
                 }
             }
         });
