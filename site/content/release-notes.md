@@ -25,7 +25,13 @@ See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue
 
 ### API Changes
 
-* The Telemetry API has been updated to recommend clients to use *AT LEAST ONCE* delivery semantics instead of *AT MOST ONCE*. This change has been made to better support end-to-end flow control between protocol adapters (devices) and downstream consumers.
+* The [Telemetry API]({{< relref "api/Telemetry-API.md" >}}) has been updated to recommend clients to use *AT LEAST ONCE* delivery semantics instead of *AT MOST ONCE*. This change has been made to better support end-to-end flow control between protocol adapters (devices) and downstream consumers.
+* The `org.eclipse.hono.client.MessageSender` interface has been changed:
+   * All methods now return a `Future<ProtonDelivery>` to indicate the outcome of the operation according to the sender specific delivery semantics.
+     For a Telemetry client this means that the future will be succeeded immediately after the message has been sent, i.e. the client does not wait
+     for a downstream container to accept the message.
+     For an Event client this means that the future will be succeeded once the downstream container has settled and accepted the message.
+   * All operations accepting a disposition handler have been removed in order to relieve clients from the burden of (correctly) implementing the delivery semantics.
 
 ## 0.5-M10
 

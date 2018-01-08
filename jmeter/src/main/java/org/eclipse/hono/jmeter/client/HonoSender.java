@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * A wrapper around a {@code HonoClient} mapping the client's asynchronous API to the blocking
@@ -230,23 +232,28 @@ public class HonoSender extends AbstractClient {
                         properties.put(TIME_STAMP_VARIABLE, System.currentTimeMillis());
                     }
 
-                    // mark send as error when we have no credits
-                    boolean messageAccepted = messageSender.send(deviceId, properties, sampler.getData(),
-                            sampler.getContentType(), token);
+                    final CompletableFuture<ProtonDelivery> delivery = new CompletableFuture<>();
 
-                    if (messageAccepted) {
-                        bytesSent.addAndGet(messageLength);
-                        messagesSent.incrementAndGet();
-                    } else {
-                        String error = MessageFormat.format(
-                                "ERROR: Client has not enough capacity - credit: {0}  device: {1}  address: {2}  thread: {3}",
-                                messageSender.getCredit(), deviceId, sampler.getTenant(),
-                                sampler.getThreadName());
-                        sampleResult.setResponseMessage(error);
-                        sampleResult.setSuccessful(false);
-                        sampleResult.setResponseCode("500");
-                        LOGGER.error(error);
-                    }
+                    // mark send as error when we have no credits
+                    messageSender.send(deviceId, properties, sampler.getData(), sampler.getContentType(), token)
+                        .setHandler(sendAttempt -> {
+                            if (sendAttempt.succeeded()) {
+                                bytesSent.addAndGet(messageLength);
+                                messagesSent.incrementAndGet();
+                                delivery.complete(sendAttempt.result());
+                            } else {
+                                String error = MessageFormat.format(
+                                        "ERROR: Client has not enough capacity - credit: {0}  device: {1}  address: {2}  thread: {3}",
+                                        messageSender.getCredit(), deviceId, sampler.getTenant(),
+                                        sampler.getThreadName());
+                                sampleResult.setResponseMessage(error);
+                                sampleResult.setSuccessful(false);
+                                sampleResult.setResponseCode("500");
+                                LOGGER.error(error);
+                                delivery.completeExceptionally(sendAttempt.cause());
+                            }
+                        });
+                    delivery.get();
                 }
 
                 sampleResult.setSentBytes(bytesSent.get());

@@ -13,7 +13,6 @@ package org.eclipse.hono.messaging;
 
 import static org.mockito.Mockito.mock;
 
-import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.auth.Activity;
@@ -21,6 +20,7 @@ import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -35,7 +35,6 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
@@ -140,17 +139,14 @@ public class StandaloneEventApiTest extends AbstractStandaloneApiTest {
     public void testMessageWithNonMatchingRegistrationAssertionGetRejected(final TestContext ctx) {
 
         final String assertion = getAssertion(Constants.DEFAULT_TENANT, "not-" + DEVICE_1);
-        final Async dispositionUpdate = ctx.async();
+        final Future<MessageSender> senderTracker = getSender(Constants.DEFAULT_TENANT);
 
-        getSender(Constants.DEFAULT_TENANT).setHandler(ctx.asyncAssertSuccess(sender -> {
-            sender.send(DEVICE_1, "payload", "text/plain", assertion, (id, delivery) -> {
-                ctx.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
-                ctx.assertTrue(sender.isOpen());
-                dispositionUpdate.complete();
-            });
+        senderTracker.compose(sender -> {
+            return sender.send(DEVICE_1, "payload", "text/plain", assertion);
+        }).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ClientErrorException.class.isInstance(t));
+            ctx.assertTrue(senderTracker.result().isOpen());
         }));
-
-        dispositionUpdate.await();
     }
 
     /**
@@ -163,17 +159,15 @@ public class StandaloneEventApiTest extends AbstractStandaloneApiTest {
 
         final Message msg = ProtonHelper.message("malformed");
         msg.setMessageId("malformed-message");
-        final Async dispositionUpdate = ctx.async();
+        final Future<MessageSender> senderTracker = getSender(Constants.DEFAULT_TENANT);
 
-        getSender(Constants.DEFAULT_TENANT).setHandler(ctx.asyncAssertSuccess(sender -> {
-            sender.send(msg, (id, delivery) -> {
-                ctx.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
-                ctx.assertTrue(sender.isOpen());
-                dispositionUpdate.complete();
-            });
+        senderTracker.compose(sender -> {
+            return sender.send(msg);
+        }).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ClientErrorException.class.isInstance(t));
+            ctx.assertTrue(senderTracker.result().isOpen());
         }));
 
-        dispositionUpdate.await();
     }
 
     /**
@@ -185,17 +179,14 @@ public class StandaloneEventApiTest extends AbstractStandaloneApiTest {
     @Test
     public void testMessageOriginatingFromOtherDeviceGetsRejected(final TestContext ctx) {
 
-        String registrationAssertion = getAssertion(Constants.DEFAULT_TENANT, DEVICE_1);
-        final Async dispositionUpdate = ctx.async();
+        final String registrationAssertion = getAssertion(Constants.DEFAULT_TENANT, DEVICE_1);
+        final Future<MessageSender> senderTracker = getSender(Constants.DEFAULT_TENANT, "not-" + DEVICE_1);
 
-        getSender(Constants.DEFAULT_TENANT, "not-" + DEVICE_1).setHandler(ctx.asyncAssertSuccess(sender -> {
-            sender.send(DEVICE_1, "from other device", "text/plain", registrationAssertion, (id, delivery) -> {
-                ctx.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
-                ctx.assertTrue(sender.isOpen());
-                dispositionUpdate.complete();
-            });
+        senderTracker.compose(sender -> {
+            return sender.send(DEVICE_1, "from other device", "text/plain", registrationAssertion);
+        }).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(ClientErrorException.class.isInstance(t));
+            ctx.assertTrue(senderTracker.result().isOpen());
         }));
-
-        dispositionUpdate.await();
     }
 }

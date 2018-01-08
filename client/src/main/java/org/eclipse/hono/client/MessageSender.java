@@ -14,22 +14,26 @@
 package org.eclipse.hono.client;
 
 import java.util.Map;
-import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonDelivery;
 
 /**
- * A client for publishing messages to a Hono server.
+ * A client for publishing messages to Hono.
  *
  */
 public interface MessageSender {
 
     /**
      * Gets the name of the endpoint this sender sends messages to.
+     * <p>
+     * The name returned is implementation specific, e.g. an implementation
+     * that can be used to upload telemetry data to Hono will return
+     * the value <em>telemetry</em>.
      * 
      * @return The endpoint name.
      */
@@ -37,6 +41,8 @@ public interface MessageSender {
 
     /**
      * Gets the number of messages this sender can send based on its current number of credits.
+     * <p>
+     * Note that the value returned is valid during execution of the current vert.x handler only.
      * 
      * @return The number of messages.
      */
@@ -44,8 +50,10 @@ public interface MessageSender {
 
     /**
      * Checks if this sender can send or buffer (and send later) a message.
+     * <p>
+     * Note that the value returned is valid during execution of the current vert.x handler only.
      * 
-     * @return {@code false} if a message can be sent or buffered.
+     * @return {@code true} if a message can not be sent or buffered at the moment.
      */
     boolean sendQueueFull();
 
@@ -77,32 +85,6 @@ public interface MessageSender {
     void sendQueueDrainHandler(Handler<Void> handler);
 
     /**
-     * Sets a callback for handling the closing of this sender due to an error condition indicated by
-     * the server.
-     * <p>
-     * When this handler is called back, this client's link to the Hono server's endpoint has been
-     * closed due to an error condition. Possible reasons include:
-     * <ul>
-     * <li>A sent message does not comply with the Hono API.</li>
-     * <li>This client is not authorized to publish messages for the tenant it has been configured for.</li>
-     * </ul>
-     * The former problem usually indicates an implementation error in the client whereas the
-     * latter problem indicates that the client's authorizations might have changed on the server
-     * side after it has connected to the server.
-     * 
-     * @param errorHandler The callback for handling the error condition. The error handler's <em>cause</em>
-     *                     property will contain the cause for the closing of the link.
-     */
-    void setErrorHandler(Handler<AsyncResult<Void>> errorHandler);
-
-    /**
-     * Sets the default callback for disposition updates for messages sent with this {@link MessageSender}.
-     *
-     * @param dispositionHandler consumer that accepts a message id and updated disposition
-     */
-    void setDefaultDispositionHandler(BiConsumer<Object, ProtonDelivery> dispositionHandler);
-
-    /**
      * Closes the AMQP link with the Hono server this sender is using.
      * <p>
      * The underlying AMQP connection to the server is not affected by this operation.
@@ -114,6 +96,8 @@ public interface MessageSender {
 
     /**
      * Checks if this sender is (locally) open.
+     * <p>
+     * Note that the value returned is valid during execution of the current vert.x handler only.
      * 
      * @return {@code true} if this sender can be used to send messages to the peer.
      */
@@ -123,204 +107,185 @@ public interface MessageSender {
      * Sends an AMQP 1.0 message to the endpoint configured for this client.
      * 
      * @param message The message to send.
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit.
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if the message is {@code null}.
      */
-    boolean send(Message message);
-
-    /**
-     * Sends an AMQP 1.0 message to the endpoint configured for this client.
-     *
-     * @param message The message to send.
-     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
-     * @throws NullPointerException if the message is {@code null}.
-     */
-    boolean send(Message message, BiConsumer<Object, ProtonDelivery> dispositionHandler);
+    Future<ProtonDelivery> send(Message message);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
      * 
      * @param deviceId The id of the device.
+     *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param payload The data to send.
+     *                <p>
      *                The payload's byte representation will be contained in the message as an AMQP 1.0
      *                <em>Data</em> section.
      * @param contentType The content type of the payload.
+     *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
+     *                              <p>
      *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
      *                              client} can be used to obtain such an assertion.
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit.
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    boolean send(String deviceId, String payload, String contentType, String registrationAssertion);
+    Future<ProtonDelivery> send(String deviceId, String payload, String contentType, String registrationAssertion);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
      * 
      * @param deviceId The id of the device.
+     *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param payload The data to send.
+     *                <p>
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
+     *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
+     *                              <p>
      *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
      *                              client} can be used to obtain such an assertion.
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit.
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    boolean send(String deviceId, byte[] payload, String contentType, String registrationAssertion);
+    Future<ProtonDelivery> send(String deviceId, byte[] payload, String contentType, String registrationAssertion);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
      *
      * @param deviceId The id of the device.
+     *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
+     * @param properties The application properties.
+     *                   <p>
+     *                   AMQP application properties that can be used for carrying data in the message other than the payload
      * @param payload The data to send.
+     *                <p>
      *                The payload's byte representation will be contained in the message as an AMQP 1.0
      *                <em>Data</em> section.
      * @param contentType The content type of the payload.
+     *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
+     *                              <p>
      *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
      *                              client} can be used to obtain such an assertion.
-     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit.
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
+     * @throws NullPointerException if any of device id, payload, content type or registration assertion
+     *                              is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    boolean send(String deviceId, String payload, String contentType, String registrationAssertion, BiConsumer<Object, ProtonDelivery> dispositionHandler);
+    Future<ProtonDelivery> send(
+            String deviceId,
+            Map<String, ?> properties,
+            String payload,
+            String contentType,
+            String registrationAssertion);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
      *
      * @param deviceId The id of the device.
-     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
-     * @param payload The data to send.
-     *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
-     * @param contentType The content type of the payload.
-     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
-     *                              client} can be used to obtain such an assertion.
-     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    boolean send(String deviceId, byte[] payload, String contentType, String registrationAssertion, BiConsumer<Object, ProtonDelivery> dispositionHandler);
-
-    /**
-     * Sends a message for a given device to the endpoint configured for this client.
-     *
-     * @param deviceId The id of the device.
+     *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param properties The application properties.
+     *                   <p>
      *                   AMQP application properties that can be used for carrying data in the message other than the payload
      * @param payload The data to send.
-     *                The payload's byte representation will be contained in the message as an AMQP 1.0
-     *                <em>Data</em> section.
-     * @param contentType The content type of the payload.
-     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
-     *                    If the content type specifies a particular character set, this character set will be used to
-     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
-     *                              client} can be used to obtain such an assertion.
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
-     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
-     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
-     */
-    boolean send(String deviceId, Map<String, ?> properties, String payload, String contentType, String registrationAssertion);
-
-    /**
-     * Sends a message for a given device to the endpoint configured for this client.
-     *
-     * @param deviceId The id of the device.
-     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
-     * @param properties The application properties.
-     *                   AMQP application properties that can be used for carrying data in the message other than the payload
-     * @param payload The data to send.
+     *                <p>
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
+     *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
+     *                              <p>
      *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
      *                              client} can be used to obtain such an assertion.
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit.
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
-     */
-    boolean send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, String registrationAssertion);
-
-    /**
-     * Sends a message for a given device to the endpoint configured for this client.
-     *
-     * @param deviceId The id of the device.
-     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
-     * @param properties The application properties.
-     *                   AMQP application properties that can be used for carrying data in the message other than the payload
-     * @param payload The data to send.
-     *                The payload's byte representation will be contained in the message as an AMQP 1.0
-     *                <em>Data</em> section.
-     * @param contentType The content type of the payload.
-     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
-     *                    If the content type specifies a particular character set, this character set will be used to
-     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
-     *                              client} can be used to obtain such an assertion.
-     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
-     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    boolean send(String deviceId, Map<String, ?> properties, String payload, String contentType, String registrationAssertion,
-            BiConsumer<Object, ProtonDelivery> dispositionHandler);
-
-    /**
-     * Sends a message for a given device to the endpoint configured for this client.
-     *
-     * @param deviceId The id of the device.
-     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
-     * @param properties The application properties.
-     *                   AMQP application properties that can be used for carrying data in the message other than the payload
-     * @param payload The data to send.
-     *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
-     * @param contentType The content type of the payload.
-     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
-     *                              client} can be used to obtain such an assertion.
-     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
-     * @return {@code true} if this client has enough capacity to accept and send the message. If not,
-     *         the message is discarded and {@code false} is returned.
-     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
-     */
-    boolean send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, String registrationAssertion,
-            BiConsumer<Object, ProtonDelivery> dispositionHandler);
+    Future<ProtonDelivery> send(
+            String deviceId,
+            Map<String, ?> properties,
+            byte[] payload,
+            String contentType,
+            String registrationAssertion);
 
     /**
      * Sends an AMQP 1.0 message to the endpoint configured for this client.
@@ -333,25 +298,20 @@ public interface MessageSender {
      * @param message The message to send.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if the message is {@code null}.
      */
-    void send(Message message, Handler<Void> capacityAvailableHandler);
-
-    /**
-     * Sends an AMQP 1.0 message to the endpoint configured for this client.
-     * <p>
-     * The message will be sent immediately if this client has enough credit available on its
-     * link to the Hono server or it will be sent later after this client has been replenished
-     * with more credit. In both cases the handler will be notified <em>once only</em> when this
-     * sender has capacity available for accepting and sending the next message.
-     *
-     * @param message The message to send.
-     * @param capacityAvailableHandler The handler to notify when this sender can accept and send
-     *                                 another message.
-     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
-     * @throws NullPointerException if the message is {@code null}.
-     */
-    void send(Message message, Handler<Void> capacityAvailableHandler, BiConsumer<Object, ProtonDelivery> dispositionHandler);
+    Future<ProtonDelivery> send(Message message, Handler<Void> capacityAvailableHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -362,24 +322,44 @@ public interface MessageSender {
      * sender has capacity available for accepting and sending the next message.
      * 
      * @param deviceId The id of the device.
+     *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param payload The data to send.
+     *                <p>
      *                The payload's byte representation will be contained in the message as an AMQP 1.0
      *                <em>Data</em> section.
      * @param contentType The content type of the payload.
+     *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
+     *                              <p>
      *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
      *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
-     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
+     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    void send(String deviceId, String payload, String contentType, String registrationAssertion, Handler<Void> capacityAvailableHandler);
+    Future<ProtonDelivery> send(
+            String deviceId,
+            String payload,
+            String contentType,
+            String registrationAssertion,
+            Handler<Void> capacityAvailableHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -390,20 +370,41 @@ public interface MessageSender {
      * sender has capacity available for accepting and sending the next message.
      * 
      * @param deviceId The id of the device.
+     *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param payload The data to send.
+     *                <p>
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
+     *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
+     *                              <p>
      *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
      *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    void send(String deviceId, byte[] payload, String contentType, String registrationAssertion, Handler<Void> capacityAvailableHandler);
+    Future<ProtonDelivery> send(
+            String deviceId,
+            byte[] payload,
+            String contentType,
+            String registrationAssertion,
+            Handler<Void> capacityAvailableHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -414,26 +415,48 @@ public interface MessageSender {
      * sender has capacity available for accepting and sending the next message.
      *
      * @param deviceId The id of the device.
+     *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param properties The application properties.
-     *                   AMQP application properties that can be used for carrying data in the message other than the payload
+     *                   <p>
+     *                   AMQP application properties that can be used for carrying data in the message other than the payload.
      * @param payload The data to send.
+     *                <p>
      *                The payload's byte representation will be contained in the message as an AMQP 1.0
      *                <em>Data</em> section.
      * @param contentType The content type of the payload.
+     *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
+     *                              <p>
      *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
      *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
-     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
+     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    void send(String deviceId, Map<String, ?> properties, String payload, String contentType, String registrationAssertion, Handler<Void> capacityAvailableHandler);
+    Future<ProtonDelivery> send(
+            String deviceId,
+            Map<String, ?> properties,
+            String payload,
+            String contentType,
+            String registrationAssertion,
+            Handler<Void> capacityAvailableHandler);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -444,81 +467,43 @@ public interface MessageSender {
      * sender has capacity available for accepting and sending the next message.
      *
      * @param deviceId The id of the device.
+     *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
      * @param properties The application properties.
-     *                   AMQP application properties that can be used for carrying data in the message other than the payload
+     *                   <p>
+     *                   AMQP application properties that can be used for carrying data in the message other than the payload.
      * @param payload The data to send.
+     *                <p>
      *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload.
+     *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
+     *                              <p>
      *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
      *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
-     */
-    void send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, String registrationAssertion, Handler<Void> capacityAvailableHandler);
-
-    /**
-     * Sends a message for a given device to the endpoint configured for this client.
-     * <p>
-     * The message will be sent immediately if this client has enough credit available on its
-     * link to the Hono server or it will be sent later after this client has been replenished
-     * with more credit. In both cases the handler will be notified <em>once only</em> when this
-     * sender has capacity available for accepting and sending the next message.
-     *
-     * @param deviceId The id of the device.
-     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
-     * @param properties The application properties.
-     *                   AMQP application properties that can be used for carrying data in the message other than the payload
-     * @param payload The data to send.
-     *                The payload's byte representation will be contained in the message as an AMQP 1.0
-     *                <em>Data</em> section.
-     * @param contentType The content type of the payload.
-     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
-     *                    If the content type specifies a particular character set, this character set will be used to
-     *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
-     *                              client} can be used to obtain such an assertion.
-     * @param capacityAvailableHandler The handler to notify when this sender can accept and send
-     *                                 another message.
-     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
-     * @throws NullPointerException if any of device id, payload or content type is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    void send(String deviceId, Map<String, ?> properties, String payload, String contentType, String registrationAssertion,
-            Handler<Void> capacityAvailableHandler, BiConsumer<Object, ProtonDelivery> dispositionHandler);
-
-    /**
-     * Sends a message for a given device to the endpoint configured for this client.
-     * <p>
-     * The message will be sent immediately if this client has enough credit available on its
-     * link to the Hono server or it will be sent later after this client has been replenished
-     * with more credit. In both cases the handler will be notified <em>once only</em> when this
-     * sender has capacity available for accepting and sending the next message.
-     *
-     * @param deviceId The id of the device.
-     *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
-     * @param properties The application properties.
-     *                   AMQP application properties that can be used for carrying data in the message other than the payload
-     * @param payload The data to send.
-     *                The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
-     * @param contentType The content type of the payload.
-     *                    This parameter will be used as the value for the message's <em>content-type</em> property.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
-     *                              client} can be used to obtain such an assertion.
-     * @param capacityAvailableHandler The handler to notify when this sender can accept and send
-     *                                 another message.
-     * @param dispositionHandler The handler for disposition updates that accepts a message id and updated disposition
-     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
-     */
-    void send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType, String registrationAssertion,
-            Handler<Void> capacityAvailableHandler, BiConsumer<Object, ProtonDelivery> dispositionHandler);
-
+    Future<ProtonDelivery> send(
+            String deviceId,
+            Map<String, ?> properties,
+            byte[] payload,
+            String contentType,
+            String registrationAssertion,
+            Handler<Void> capacityAvailableHandler);
 }

@@ -34,6 +34,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * Example of a telemetry/event sender that connects to the Hono Server, registers a device, waits for input from command line
@@ -178,9 +179,7 @@ public class ExampleSender extends AbstractExampleClient {
         return result;
     }
 
-    private Future<Void> send(final String msg, final Map<String, Object> props, final String registrationAssertion) {
-
-        Future<Void> result = Future.future();
+    private Future<ProtonDelivery> send(final String msg, final Map<String, Object> props, final String registrationAssertion) {
 
         Future<MessageSender> senderTracker = Future.future();
         if (activeProfiles.contains("event")) {
@@ -189,13 +188,6 @@ public class ExampleSender extends AbstractExampleClient {
             client.getOrCreateTelemetrySender(tenantId, senderTracker.completer());
         }
 
-        senderTracker.compose(sender -> {
-            if (!sender.send(deviceId, props, msg, "text/plain", registrationAssertion)) {
-                LOG.info("sender has no credit (yet), maybe no consumers attached? Try again ...");
-            }
-            result.complete();
-        }, result);
-
-        return result;
+        return senderTracker.compose(sender -> sender.send(deviceId, props, msg, "text/plain", registrationAssertion));
     }
 }
