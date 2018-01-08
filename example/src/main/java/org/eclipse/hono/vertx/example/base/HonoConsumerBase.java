@@ -84,8 +84,7 @@ public class HonoConsumerBase {
                 honoClient.createTelemetryConsumer(TENANT_ID,
                         msg -> handleMessage(msg), consumerFuture.completer());
             }
-        },
-                consumerFuture);
+        }, consumerFuture);
 
         latch.await();
 

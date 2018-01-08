@@ -9,7 +9,9 @@ import org.eclipse.hono.vertx.example.base.HonoConsumerBase;
  * microservices are reachable.
  */
 public class HonoTelemetryConsumer extends HonoConsumerBase {
+
     public static void main(final String[] args) throws Exception {
+
         System.out.println("Starting telemetry consumer...");
         HonoTelemetryConsumer honoDownstreamEventConsumer = new HonoTelemetryConsumer();
         honoDownstreamEventConsumer.consumeData();

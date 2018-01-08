@@ -1,18 +1,15 @@
 package org.eclipse.hono.vertx.example.base;
 
 import java.net.HttpURLConnection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -108,34 +105,46 @@ public class HonoSenderBase {
     /**
      * Send data to HonoMessaging {@link HonoSenderBase#COUNT} times in a sequence.
      * First all Hono clients need to be connected before data can be sent.
-     *
-     * @throws InterruptedException If the used latch was interrupted during waiting.
      */
-    protected void sendData() throws InterruptedException {
-        // use a latch to wait for the Hono clients to be connected.
-        final CountDownLatch latch = new CountDownLatch(1);
+    protected void sendData() {
 
-        final AtomicBoolean clientsCreated = getHonoClients(latch);
+        final CompletableFuture<Void> done = new CompletableFuture<>();
 
-        latch.await();
-
-        // check if the clients were created properly
-        if (clientsCreated.get()) {
+        getHonoClients().compose(ok -> getRegistrationAssertion()).map(token -> {
             // then send single messages sequentially in a loop
             IntStream.range(0, COUNT).forEach(value -> {
-                handleSingleMessage(value);
+                try {
+                    sendMessageToHono(value, token).get();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                }
             });
+            done.complete(null);
+            return null;
+        }).compose(s -> closeClients()).otherwise(t -> {
+            System.err.println("cannot send messages: " + t.getMessage());
+            done.complete(null);
+            return null;
+        });
 
-            /*
-             * Since events are asynchronously acknowledged to validate their delivery, the vertx instance must not be
-             * closed before all acknowledgements were processed. Wait for the count down latch here.
-             */
-            messageDeliveryCountDown.await();
-            // print a summary of the message deliveries.
-            System.out.println("All " + COUNT + " messages tried to deliver.");
-            System.out.println("Successful deliveries: " + nrMessageDeliverySucceeded + (eventMode ? " (incl. acknowledge)." : "."));
-            System.out.println("Failed deliveries    : " + nrMessageDeliveryFailed.get());
+        /*
+         * Since events are asynchronously acknowledged to validate their delivery, the vertx instance must not be
+         * closed before all acknowledgements were processed. Wait for the count down latch here.
+         */
+        try {
+            done.get();
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (final ExecutionException e) {
+            e.printStackTrace();
         }
+
+        // print a summary of the message deliveries.
+        System.out.println("Total number of messages: " + COUNT);
+        System.out.println("Successful deliveries   : " + nrMessageDeliverySucceeded + (eventMode ? " (incl. acknowledge)." : "."));
+        System.out.println("Failed deliveries       : " + nrMessageDeliveryFailed.get());
 
         vertx.close();
     }
@@ -148,21 +157,20 @@ public class HonoSenderBase {
      *              authorization to send data.
      * @return A Future that is completed after the message was sent.
      */
-    private Future<Void> sendMessageToHono(final int value, final String token) {
+    private CompletableFuture<Void> sendMessageToHono(final int value, final String token) {
 
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put("my_prop_string", "I'm a string");
-        properties.put("my_prop_int", value);
-
-        Future<Void> result = messageSender.send(HonoExampleConstants.DEVICE_ID, properties, "myMessage" + value, "text/plain", token)
-                .recover(t -> {
-                    System.err.println("Could not send message: " + t.getMessage());
-                    nrMessageDeliveryFailed.incrementAndGet();
-                    return Future.failedFuture(t);
-                }).compose(delivery -> {
-                    nrMessageDeliverySucceeded.incrementAndGet();
-                    return Future.<Void> succeededFuture();
-                });
+        final CompletableFuture<Void> result = new CompletableFuture<>();
+        messageSender.send(HonoExampleConstants.DEVICE_ID, null, "myMessage" + value, "text/plain", token)
+            .map(delivery -> {
+                nrMessageDeliverySucceeded.incrementAndGet();
+                result.complete(null);
+                return (Void) null;
+            }).otherwise(t -> {
+                System.err.println("Could not send message: " + t.getMessage());
+                nrMessageDeliveryFailed.incrementAndGet();
+                result.completeExceptionally(t);
+                return (Void) null;
+            });
         messageDeliveryCountDown.countDown();
         return result;
     }
@@ -170,106 +178,88 @@ public class HonoSenderBase {
     /**
      * Get both Hono clients and connect them to Hono's microservices.
      *
-     * @param countDownLatch The latch to count down as soon as the clients are created.
-     *
      * @return The result of the creation and connection of the Hono clients.
      */
-    private AtomicBoolean getHonoClients(final CountDownLatch countDownLatch) {
+    private Future<Void> getHonoClients() {
         // we need two clients to get it working, define futures for them
         final Future<RegistrationClient> registrationClientTracker = getRegistrationClient();
         final Future<MessageSender> messageSenderTracker = getMessageSender();
 
-        final AtomicBoolean clientsCreated = new AtomicBoolean(false);
+        final Future<Void> result = Future.future();
 
-        CompositeFuture.all(registrationClientTracker, messageSenderTracker).setHandler(result -> {
-            if (!result.succeeded()) {
+        CompositeFuture.all(registrationClientTracker, messageSenderTracker).setHandler(s -> {
+            if (result.failed()) {
                 System.err.println(
-                        "hono clients could not be created : " + result.cause().getMessage());
+                        "hono clients could not be created : " + s.cause().getMessage());
+                result.fail(s.cause());
             } else {
-                clientsCreated.set(true);
                 registrationClient = registrationClientTracker.result();
                 messageSender = messageSenderTracker.result();
+                result.complete();
             }
-            countDownLatch.countDown();
         });
 
-        return clientsCreated;
+        return result;
     }
 
     private Future<RegistrationClient> getRegistrationClient() {
-        final Future<RegistrationClient> registrationClientTracker = Future.future();
+
+        final Future<RegistrationClient> result = Future.future();
 
         final Future<HonoClient> registryConnectionTracker = Future.future();
         honoRegistryClient.connect(new ProtonClientOptions(), registryConnectionTracker.completer());
         registryConnectionTracker.compose(registryClient -> {
-            honoRegistryClient.getOrCreateRegistrationClient(HonoExampleConstants.TENANT_ID, registrationClientTracker.completer());
-        }, registrationClientTracker);
+            honoRegistryClient.getOrCreateRegistrationClient(HonoExampleConstants.TENANT_ID, result.completer());
+        }, result);
 
-        return registrationClientTracker;
+        return result;
     }
 
     private Future<MessageSender> getMessageSender() {
-        final Future<MessageSender> messageSenderTracker = Future.future();
+
+        final Future<MessageSender> result = Future.future();
 
         final Future<HonoClient> messagingConnectionTracker = Future.future();
         honoMessagingClient.connect(new ProtonClientOptions(), messagingConnectionTracker.completer());
         messagingConnectionTracker.compose(messagingClient -> {
-            if (eventMode) {
-                messagingClient.getOrCreateEventSender(HonoExampleConstants.TENANT_ID, messageSenderTracker.completer());
+            if (isEventMode()) {
+                messagingClient.getOrCreateEventSender(HonoExampleConstants.TENANT_ID, result.completer());
             } else {
-                messagingClient.getOrCreateTelemetrySender(HonoExampleConstants.TENANT_ID, messageSenderTracker.completer());
+                messagingClient.getOrCreateTelemetrySender(HonoExampleConstants.TENANT_ID, result.completer());
             }
-        }, messageSenderTracker);
+        }, result);
 
-        return messageSenderTracker;
-    }
-
-    private void handleSingleMessage(final int value) {
-        final CountDownLatch messageSenderLatch = new CountDownLatch(1);
-
-        final Future<Void> senderTracker = Future.future();
-        senderTracker.setHandler(v -> {
-            messageSenderLatch.countDown();
-            if (senderTracker.failed()) {
-                System.err.println("Failed: Sending message... #" + value + " - " + senderTracker.toString());
-            } else {
-                System.out.println("Sending message... #" + value);
-            }
-        });
-        getRegistrationAssertion().compose(token ->
-                sendMessageToHono(value, token)
-        ).compose(v -> {
-                    nrMessageDeliverySucceeded.incrementAndGet();
-                    senderTracker.complete();
-                },
-                senderTracker);
-
-        try {
-            messageSenderLatch.await();
-        } catch (InterruptedException e) {
-        }
+        return result;
     }
 
     /**
      * Get the registration assertion for the device that needs to be sent along with the data downstream to HonoMessaging.
+     * 
      * @return The assertion inside the Future if it was successful, the error reason inside the Future if it failed.
      */
     private Future<String> getRegistrationAssertion() {
 
-        final Future<String> result = Future.future();
         final Future<RegistrationResult> tokenTracker = Future.future();
         registrationClient.assertRegistration(HonoExampleConstants.DEVICE_ID, tokenTracker.completer());
 
-        tokenTracker.compose(regResult -> {
+        return tokenTracker.map(regResult -> {
             if (regResult.getStatus() == HttpURLConnection.HTTP_OK) {
-                result.complete(regResult.getPayload().getString(RegistrationConstants.FIELD_ASSERTION));
-            } else if (regResult.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                result.fail(new ClientErrorException(regResult.getStatus(), "cannot assert registration status (device needs to be registered)"));
+                 return regResult.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
             } else {
-                result.fail(new ServiceInvocationException(regResult.getStatus(), "cannot assert registration status"));
+                throw new IllegalStateException("cannot assert registration status");
             }
-        }, result);
-        return result;
+        }).otherwise(t -> {
+            throw new IllegalStateException("cannot assert registration status", t);
+        });
+    }
+
+    private Future<Void> closeClients() {
+
+        final Future<Void> messagingClient = Future.future();
+        final Future<Void> regClient = Future.future();
+        honoMessagingClient.shutdown(messagingClient.completer());
+        honoRegistryClient.shutdown(regClient.completer());
+        return CompositeFuture.all(messagingClient, regClient).compose(ok -> Future.succeededFuture());
     }
 
     /**
