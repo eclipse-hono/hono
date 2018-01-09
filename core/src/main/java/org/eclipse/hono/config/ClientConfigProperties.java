@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -43,6 +43,8 @@ public class ClientConfigProperties extends AbstractConfig {
     private long flowLatency = DEFAULT_FLOW_LATENCY;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
     private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
+    private boolean hostnameVerificationRequired = true;
+    private boolean tlsEnabled = false;
 
     /**
      * Gets the name or literal IP address of the host that the client is configured to connect to.
@@ -271,5 +273,66 @@ public class ClientConfigProperties extends AbstractConfig {
         } else {
             this.requestTimeoutMillis = requestTimeoutMillis;
         }
+    }
+
+    /**
+     * Checks if the <em>host</em> property must match the distinguished or
+     * any of the alternative names asserted by the server's certificate when
+     * connecting using TLS.
+     * 
+     * @return {@code true} if the host name will be matched against the
+     *         asserted names.
+     */
+    public final boolean isHostnameVerificationRequired() {
+        return hostnameVerificationRequired;
+    }
+
+    /**
+     * Sets whether the <em>host</em> property must match the distinguished or
+     * any of the alternative names asserted by the server's certificate when
+     * connecting using TLS.
+     * <p>
+     * Verification is enabled by default, i.e. the connection will be established
+     * only if the server presents a certificate that has been signed by one of the
+     * client's trusted CAs and one of the asserted names matches the host name that
+     * the client used to connect to the server.
+     * 
+     * @param hostnameVerificationRequired {@code true} if the host name should be matched.
+     */
+    public final void setHostnameVerificationRequired(boolean hostnameVerificationRequired) {
+        this.hostnameVerificationRequired = hostnameVerificationRequired;
+    }
+
+    /**
+     * Checks if the client should use TLS to verify the server's identity
+     * and encrypt the connection.
+     * <p>
+     * Verification is disabled by default. Setting the <em>trustStorePath</em>
+     * property enables verification of the server identity implicitly and the
+     * value of this property is ignored.
+     * 
+     * @return {@code true} if the server identity should be verified.
+     */
+    public final boolean isTlsEnabled() {
+        return tlsEnabled;
+    }
+
+    /**
+     * Sets whether the client should use TLS to verify the server's identity
+     * and encrypt the connection.
+     * <p>
+     * Verification is disabled by default. Setting the <em>trustStorePath</em>
+     * property enables verification of the server identity implicitly and the
+     * value of this property is ignored.
+     * <p>
+     * This property should be set to {@code true} if the server uses a certificate
+     * that has been signed by a CA that is contained in the standard trust store
+     * that the JVM is configured to use. In this case the <em>trustStorePath</em>
+     * does not need to be set.
+     * 
+     * @param enabled {@code true} if the server identity should be verified.
+     */
+    public final void setTlsEnabled(boolean enabled) {
+        this.tlsEnabled = enabled;
     }
 }

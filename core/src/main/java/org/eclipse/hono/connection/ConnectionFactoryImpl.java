@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -183,15 +183,22 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
 
     private void addTlsTrustOptions(final ProtonClientOptions clientOptions) {
 
+        if (config.isTlsEnabled()) {
+            clientOptions.setSsl(true);
+        }
+
         if (clientOptions.getTrustOptions() == null) {
             TrustOptions trustOptions = config.getTrustOptions();
             if (trustOptions != null) {
                 clientOptions.setSsl(true).setTrustOptions(trustOptions);
-                if (config.isHostnameVerificationRequired()) {
-                    clientOptions.setHostnameVerificationAlgorithm("HTTPS");
-                } else {
-                    clientOptions.setHostnameVerificationAlgorithm("");
-                }
+            }
+        }
+
+        if (clientOptions.isSsl()) {
+            if (config.isHostnameVerificationRequired()) {
+                clientOptions.setHostnameVerificationAlgorithm("HTTPS");
+            } else {
+                clientOptions.setHostnameVerificationAlgorithm("");
             }
         }
     }
@@ -339,6 +346,21 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
          */
         public ConnectionFactoryBuilder disableHostnameVerification() {
             this.properties.setHostnameVerificationRequired(false);
+            return this;
+        }
+
+        /**
+         * Explicitly enables encryption and verification of peer identity using TLS.
+         * <p>
+         * TLS is disabled by default but is implicitly enabled by setting a trust store.
+         * <p>
+         * When no trust store is set, peer identity is verified using the JVM's configured
+         * standard trust store.
+         * 
+         * @return This builder for command chaining.
+         */
+        public ConnectionFactoryBuilder enableTls() {
+            this.properties.setTlsEnabled(true);
             return this;
         }
 
