@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -41,7 +41,6 @@ public abstract class AbstractConfig {
 
     private String trustStorePath;
     private char[] trustStorePassword;
-    private boolean hostnameVerificationRequired = true;
     private String pathSeparator = Constants.DEFAULT_PATH_SEPARATOR;
     private String keyStorePath;
     private char[] keyStorePassword;
@@ -149,26 +148,6 @@ public abstract class AbstractConfig {
             LOG.debug("unsupported trust store format");
             return null;
         }
-    }
-
-    /**
-     * Checks if the <em>host</em> property must match the distinguished name
-     * asserted by the server's certificate when connecting using TLS.
-     * 
-     * @return {@code true} if the host name will be matched against the DN.
-     */
-    public final boolean isHostnameVerificationRequired() {
-        return hostnameVerificationRequired;
-    }
-
-    /**
-     * Sets whether the <em>host</em> property must match the distinguished name
-     * asserted by the server's certificate when connecting using TLS.
-     * 
-     * @param hostnameVerificationRequired {@code true} if the host name should be matched.
-     */
-    public final void setHostnameVerificationRequired(boolean hostnameVerificationRequired) {
-        this.hostnameVerificationRequired = hostnameVerificationRequired;
     }
 
     /**

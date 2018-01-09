@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -122,5 +122,55 @@ public class ConnectionFactoryImplTest {
         ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
         verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq("user"), eq("pw"), any(Handler.class));
         assertTrue(optionsCaptor.getValue().getEnabledSaslMechanisms().contains("PLAIN"));
+    }
+
+    /**
+     * Verifies that the factory uses TLS when connecting to the peer if no trust store
+     * is configured but TLS has been enabled explicitly.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectEnablesSslIfExplicitlyConfigured() {
+
+        // GIVEN a factory configured to connect to a server using TLS
+        final ClientConfigProperties config = new ClientConfigProperties();
+        config.setHost("remote.host");
+        config.setTlsEnabled(true);
+        final ProtonClient client = mock(ProtonClient.class);
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, config);
+        factory.setProtonClient(client);
+
+        // WHEN connecting to the server
+        factory.connect(null, null, null, c -> {});
+
+        // THEN the factory uses TLS when establishing the connection
+        ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), anyString(), anyString(), any(Handler.class));
+        assertTrue(optionsCaptor.getValue().isSsl());
+    }
+
+    /**
+     * Verifies that the factory uses TLS when connecting to the peer if a trust store
+     * is configured but TLS has not been enabled explicitly.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectEnablesSslIfTrustStoreIsConfigured() {
+
+        // GIVEN a factory configured to use a specific trust store
+        final ClientConfigProperties config = new ClientConfigProperties();
+        config.setHost("remote.host");
+        config.setTrustStorePath("/tmp/trusted-ca.p12");
+        final ProtonClient client = mock(ProtonClient.class);
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, config);
+        factory.setProtonClient(client);
+
+        // WHEN connecting to the server
+        factory.connect(null, null, null, c -> {});
+
+        // THEN the factory uses TLS when establishing the connection
+        ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), anyString(), anyString(), any(Handler.class));
+        assertTrue(optionsCaptor.getValue().isSsl());
     }
 }
