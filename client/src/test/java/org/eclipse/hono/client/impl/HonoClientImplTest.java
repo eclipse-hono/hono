@@ -378,7 +378,7 @@ public class HonoClientImplTest {
         // THEN the client invokes the disconnect handler provided in the original connect method call
         disconnectHandlerInvocation.await(500);
     }
-    
+
     /**
      * Verifies that it fails to connect after client was shutdown.
      * 
@@ -392,7 +392,7 @@ public class HonoClientImplTest {
         ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
         HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.shutdown();
-        
+
         // WHEN client connects
         Async connectionHandlerInvocation = ctx.async();
         Handler<AsyncResult<HonoClient>> connectionHandler = result -> {
@@ -401,11 +401,11 @@ public class HonoClientImplTest {
             }
         };
         client.connect(new ProtonClientOptions(), connectionHandler );
-        
+
         //THEN connect fails
         connectionHandlerInvocation.await(500);
     }
-    
+
     /**
      * Verifies that the client does not try to re-connect to a server instance if the client was shutdown.
      * 

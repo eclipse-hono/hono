@@ -160,7 +160,6 @@ public class AbstractRequestResponseClientTest {
             ctx.assertEquals(200, s.getStatus());
             ctx.assertEquals("payload", s.getPayload());
             responseReceived.complete();
-            
         }));
 
         // WHEN a response is received for the request
