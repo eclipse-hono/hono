@@ -51,7 +51,6 @@ public class KuraAdapterProperties extends ProtocolAdapterProperties {
         return controlPrefix;
     }
 
-    
     /**
      * Sets the <em>topic.control-prefix</em> to use for determining if a message published
      * by a Kura gateway is a <em>control</em> message.

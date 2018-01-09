@@ -64,7 +64,6 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
         this.config = Objects.requireNonNull(props);
     }
 
-    
     /**
      * Gets the service configuration properties.
      * 

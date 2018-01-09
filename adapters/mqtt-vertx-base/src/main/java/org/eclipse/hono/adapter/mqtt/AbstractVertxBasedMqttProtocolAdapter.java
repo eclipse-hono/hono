@@ -323,7 +323,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         onAuthenticationSuccess(endpoint, authenticatedDevice);
                     }
                 });
-                
+
             }
         }
     }

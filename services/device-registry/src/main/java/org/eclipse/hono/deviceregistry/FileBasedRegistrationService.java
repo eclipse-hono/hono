@@ -222,7 +222,6 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
                     return (Void) null;
                 });
             });
-            
         } else {
             log.trace("registry does not need to be persisted");
             return Future.succeededFuture();
