@@ -12,7 +12,7 @@
 
 package org.eclipse.hono.jmeter.ui;
 
-import javax.swing.*;
+import javax.swing.JCheckBox;
 
 import org.apache.jmeter.testelement.TestElement;
 import org.apache.jorphan.gui.JLabeledTextArea;

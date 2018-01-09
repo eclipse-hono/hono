@@ -11,7 +11,7 @@
  */
 package org.eclipse.hono.jmeter.ui;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
 
 import org.apache.jmeter.gui.util.VerticalPanel;
 import org.apache.jorphan.gui.JLabeledTextField;

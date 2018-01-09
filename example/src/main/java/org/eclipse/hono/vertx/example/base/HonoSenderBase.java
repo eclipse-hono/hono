@@ -1,16 +1,13 @@
 package org.eclipse.hono.vertx.example.base;
 
-import io.vertx.core.*;
-import io.vertx.proton.ProtonClientOptions;
-import io.vertx.proton.ProtonDelivery;
-import org.apache.qpid.proton.amqp.messaging.Accepted;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistrationResult;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.DEVICE_ID;
+import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.HONO_MESSAGING_HOST;
+import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.HONO_MESSAGING_PORT;
+import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.HONO_REGISTRY_HOST;
+import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.HONO_REGISTRY_PORT;
+import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.TENANT_ID;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,9 +17,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.*;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
+
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * Example base class for sending data to Hono.

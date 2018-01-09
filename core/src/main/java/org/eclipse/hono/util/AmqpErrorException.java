@@ -51,7 +51,6 @@ public final class AmqpErrorException extends RuntimeException {
         this.error = Symbol.getSymbol(Objects.requireNonNull(error));
     }
 
-    
     /**
      * Gets the AMQP error conveyed in this exception.
      * 

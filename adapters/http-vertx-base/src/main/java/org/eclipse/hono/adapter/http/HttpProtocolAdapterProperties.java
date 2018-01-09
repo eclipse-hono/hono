@@ -42,7 +42,6 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
         return regAssertionEnabled;
     }
 
-    
     /**
      * Sets whether the adapter should return a token to devices asserting the device's
      * registration status.
@@ -55,7 +54,6 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
         this.regAssertionEnabled = regAssertionEnabled;
     }
 
-    
     /**
      * Gets the name of the realm that unauthenticated devices are prompted to provide credentials for.
      * <p>
@@ -70,8 +68,6 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
         return realm;
     }
 
-
-    
     /**
      * Sets the name of the realm that unauthenticated devices are prompted to provide credentials for.
      * <p>

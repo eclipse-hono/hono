@@ -368,7 +368,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         Objects.requireNonNull(payload);
         Objects.requireNonNull(field);
         Objects.requireNonNull(type);
-        
+
         final Object value = payload.getValue(field);
         if (type.isInstance(value)) {
             return (T) value;

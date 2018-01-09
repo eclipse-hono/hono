@@ -66,7 +66,6 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
         return jmsVendorPropsEnabled;
     }
 
-    
     /**
      * Sets if the adapter should include <em>Vendor Properties</em> as defined by <a
      * href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
