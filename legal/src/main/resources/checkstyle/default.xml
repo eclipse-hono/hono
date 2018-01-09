@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE module PUBLIC "-//Puppy Crawl//DTD Check Configuration 1.3//EN" "http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
+
+<!--
+    Copyright (c) 2018 Red Hat Inc and others.
+
+    All rights reserved. This program and the accompanying materials 
+    are made available under the terms of the Eclipse Public License v1.0
+    which accompanies this distribution, and is available at
+    http://www.eclipse.org/legal/epl-v10.html
+
+    Contributors:
+        Red Hat Inc - initial API and implementation and initial documentation
+-->
+
+<module name="Checker">
+
+  <!-- suppression file -->
+
+  <module name="SuppressionFilter">
+    <property name="file" value="${checkstyle.suppressions.file}" />
+    <property name="optional" value="false" />
+  </module>
+
+  <module name="TreeWalker">
+
+    <!-- imports -->
+
+    <module name="AvoidStarImport">
+      <property name="allowStaticMemberImports" value="true"/>
+    </module>
+
+    <module name="UnusedImports" />
+
+    <!-- possible issues -->
+
+    <module name="OneStatementPerLine" />
+    <module name="StringLiteralEquality" />
+
+    <!-- whitespaces, linebreaks -->
+
+    <module name="RegexpSinglelineJava">
+      <property name="format" value="^\s+$" />
+      <property name="message" value="Empty lines must not contain whitespaces" />
+    </module>
+
+  </module>
+
+  <!-- only spaces, no tabs -->
+
+  <module name="FileTabCharacter" />
+
+</module>

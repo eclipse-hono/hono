@@ -146,6 +146,10 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
     </resources>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+      </plugin>
+      <plugin>
         <!-- 
           Copy legal documents from "legal" module to "target/classes" folder
           so that we make sure to include legal docs in all modules.

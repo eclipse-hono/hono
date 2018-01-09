@@ -342,7 +342,7 @@
               <configuration>
                 <includeArtifactIds>hono-legal</includeArtifactIds>
                 <outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
-                <excludes>META-INF/**</excludes>
+                <excludes>META-INF/**,checkstyle/**</excludes>
               </configuration>
             </execution>
           </executions>
@@ -363,6 +363,39 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <!--
+            we need to stick to 2.17 as long as m2eclipse checkstyle is
+            not updated to support 3.0.0
+            -->
+          <version>2.17</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.eclipse.hono</groupId>
+              <artifactId>hono-legal</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>com.puppycrawl.tools</groupId>
+              <artifactId>checkstyle</artifactId>
+              <version>7.6.1</version>
+            </dependency>
+          </dependencies>
+          <executions>
+            <execution>
+              <id>checkstyle-check</id>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <configLocation>checkstyle/default.xml</configLocation>
+            <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -449,6 +482,7 @@
           <autoReleaseAfterClose>false</autoReleaseAfterClose>
         </configuration>
       </plugin>
+
     </plugins>
   </build>
 
