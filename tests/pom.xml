@@ -8,7 +8,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-bom</artifactId>
-    <version>${revision}</version>
+    <version>0.5-M11-SNAPSHOT</version>
     <relativePath>../bom</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -80,19 +80,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <scope>test</scope>
     </dependency>
   </dependencies>
+
   <build>
     <plugins>
       <plugin>
-        <groupId>org.sonatype.plugins</groupId>
-        <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>${nexus-staging-maven-plugin.version}</version>
-        <extensions>true</extensions>
-        <configuration>
-          <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
-        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
+
   <profiles>
     <profile>
       <id>run-tests</id>
