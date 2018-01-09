@@ -37,14 +37,14 @@ public class FileFormatTest {
         assertName(FileFormat.PKCS12, "/foo/bar/Baz.pFx");
         assertName(FileFormat.PKCS12, "foo.pfx");
     }
-    
+
     @Test
     public void testP12() {
         assertName(FileFormat.PKCS12, "/foo/bar/baz.p12");
         assertName(FileFormat.PKCS12, "/foo/bar/baz.P12");
         assertName(FileFormat.PKCS12, "foo.p12");
     }
-    
+
     @Test
     public void testJks() {
         assertName(FileFormat.JKS, "/foo/bar/baz.jks");
