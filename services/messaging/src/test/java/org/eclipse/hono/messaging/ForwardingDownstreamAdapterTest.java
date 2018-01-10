@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -51,19 +51,19 @@ import io.vertx.proton.ProtonSession;
 @RunWith(VertxUnitRunner.class)
 public class ForwardingDownstreamAdapterTest {
 
-    private ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.NODE_ADDRESS_TELEMETRY_PREFIX, "myTenant", null);
+    private static final Vertx vertx = Vertx.vertx();
+
+    private ResourceIdentifier          targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "myTenant", null);
     private ForwardingDownstreamAdapter adapter;
-    private ConnectionFactory connectionFactory;
-    private Vertx vertx;
-    private Record attachments;
-    private ProtonConnection con;
+    private ConnectionFactory           connectionFactory;
+    private Record                      attachments;
+    private ProtonConnection            con;
 
     /**
      * Initializes mocks etc.
      */
     @Before
     public void setup() {
-        vertx = Vertx.vertx();
         attachments = mock(Record.class);
         ProtonSession session = mock(ProtonSession.class);
         con = mock(ProtonConnection.class);
