@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -16,8 +16,10 @@ package org.eclipse.hono.util;
  */
 public final class TelemetryConstants {
 
-    public static final String TELEMETRY_ENDPOINT             = "telemetry";
-    public static final String NODE_ADDRESS_TELEMETRY_PREFIX  = TELEMETRY_ENDPOINT + Constants.DEFAULT_PATH_SEPARATOR;
+    /**
+     * The name of the Telemetry API endpoint.
+     */
+    public static final String TELEMETRY_ENDPOINT = "telemetry";
 
     private TelemetryConstants() {
     }
