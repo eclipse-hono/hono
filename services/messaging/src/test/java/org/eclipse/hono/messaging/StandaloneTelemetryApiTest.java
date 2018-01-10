@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,8 +13,6 @@ package org.eclipse.hono.messaging;
 
 import static org.mockito.Mockito.mock;
 
-import java.util.stream.IntStream;
-
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
@@ -26,23 +24,13 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
-import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
-import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
-import org.eclipse.hono.util.Constants;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
@@ -52,46 +40,36 @@ import io.vertx.proton.ProtonClientOptions;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class StandaloneTelemetryApiTest {
+public class StandaloneTelemetryApiTest extends AbstractStandaloneApiTest {
 
-    private static final Logger                LOG = LoggerFactory.getLogger(StandaloneTelemetryApiTest.class);
-    private static final String                DEVICE_PREFIX = "device";
-    private static final String                DEVICE_1 = DEVICE_PREFIX + "1";
-    private static final String                USER = "hono-client";
-    private static final String                PWD = "secret";
-    private static final String                SECRET = "dajAIOFDHUIFHFSDAJKGFKSDF,SBDFAZUSDJBFFNCLDNC";
-    private static final int                   TIMEOUT = 2000; // milliseconds
+    private static HonoMessaging server;
 
-    private static Vertx                       vertx = Vertx.vertx();
-    private static HonoMessaging                  server;
-    private static MessageDiscardingDownstreamAdapter telemetryAdapter;
-    private static HonoClient                  client;
-    private static MessageSender               telemetrySender;
-    private static RegistrationAssertionHelper assertionHelper;
-
+    /**
+     * Sets up the fixture common to all test cases.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @BeforeClass
-    public static void prepareHonoServer(final TestContext ctx) throws Exception {
+    public static void prepareHonoServer(final TestContext ctx) {
 
-        assertionHelper = RegistrationAssertionHelperImpl.forSharedSecret(SECRET, 10);
-        telemetryAdapter = new MessageDiscardingDownstreamAdapter(vertx);
-        server = new HonoMessaging();
-        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
-        HonoMessagingConfigProperties configProperties = new HonoMessagingConfigProperties();
-        configProperties.setInsecurePortEnabled(true);
+        vertx = Vertx.vertx();
+        downstreamAdapter = new MessageDiscardingDownstreamAdapter(vertx);
+
+        final HonoMessagingConfigProperties configProperties = new HonoMessagingConfigProperties();
         configProperties.setInsecurePort(0);
-        server.setConfig(configProperties);
-        TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
+
+        final TelemetryEndpoint telemetryEndpoint = new TelemetryEndpoint(vertx);
         telemetryEndpoint.setMetrics(mock(MessagingMetrics.class));
-        telemetryEndpoint.setTelemetryAdapter(telemetryAdapter);
+        telemetryEndpoint.setTelemetryAdapter(downstreamAdapter);
         telemetryEndpoint.setRegistrationAssertionValidator(assertionHelper);
         telemetryEndpoint.setConfiguration(configProperties);
+
+        server = new HonoMessaging();
+        server.setSaslAuthenticatorFactory(new HonoSaslAuthenticatorFactory(TestSupport.createAuthenticationService(createUser())));
+        server.setConfig(configProperties);
         server.addEndpoint(telemetryEndpoint);
 
-        final Future<HonoClient> setupTracker = Future.future();
-        setupTracker.setHandler(ctx.asyncAssertSuccess());
-
-        Future<String> serverTracker = Future.future();
-
+        final Future<String> serverTracker = Future.future();
         vertx.deployVerticle(server, serverTracker.completer());
 
         serverTracker.compose(s -> {
@@ -103,9 +81,10 @@ public class StandaloneTelemetryApiTest {
                     .user(USER)
                     .password(PWD)
                     .build());
-            client.connect(new ProtonClientOptions(), setupTracker.completer());
-        }, setupTracker);
-
+            final Future<HonoClient> connectTracker = Future.future();
+            client.connect(new ProtonClientOptions(), connectTracker.completer());
+            return connectTracker;
+        }).setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
@@ -115,8 +94,9 @@ public class StandaloneTelemetryApiTest {
      */
     private static HonoUser createUser() {
 
-        final AuthoritiesImpl authorities = new AuthoritiesImpl()
+        final Authorities authorities = new AuthoritiesImpl()
                 .addResource(TelemetryConstants.TELEMETRY_ENDPOINT, "*", new Activity[]{ Activity.READ, Activity.WRITE });
+
         return new HonoUserAdapter() {
             @Override
             public String getName() {
@@ -130,62 +110,17 @@ public class StandaloneTelemetryApiTest {
         };
     }
 
-    @Before
-    public void createSender(final TestContext ctx) {
-
-        telemetryAdapter.setMessageConsumer(msg -> {});
+    @Override
+    protected Future<MessageSender> getSender(final String tenantId) {
+        Future<MessageSender> result = Future.future();
+        client.getOrCreateTelemetrySender(tenantId, result.completer());
+        return result;
     }
 
-    @After
-    public void clearRegistry(final TestContext ctx) throws InterruptedException {
-
-        if (telemetrySender != null && telemetrySender.isOpen()) {
-            Async done = ctx.async();
-            telemetrySender.close(closeAttempt -> {
-                ctx.assertTrue(closeAttempt.succeeded());
-                done.complete();
-            });
-            done.await(1000L);
-        }
-    }
-
-    @AfterClass
-    public static void shutdown(final TestContext ctx) {
-
-        if (client != null) {
-            client.shutdown(ctx.asyncAssertSuccess());
-        }
-    }
-
-    @Test(timeout = TIMEOUT)
-    public void testTelemetryUploadSucceedsForRegisteredDevice(final TestContext ctx) throws Exception {
-
-        LOG.debug("starting telemetry upload test");
-        int count = 30;
-        final Async messagesReceived = ctx.async(count);
-        telemetryAdapter.setMessageConsumer(msg -> {
-            messagesReceived.countDown();
-            LOG.debug("received message [id: {}]", msg.getMessageId());
-        });
-
-        Async sender = ctx.async();
-        client.getOrCreateTelemetrySender(Constants.DEFAULT_TENANT, creationAttempt -> {
-            ctx.assertTrue(creationAttempt.succeeded());
-            telemetrySender = creationAttempt.result();
-            sender.complete();
-        });
-        sender.await(1000L);
-
-        String registrationAssertion = assertionHelper.getAssertion(Constants.DEFAULT_TENANT, DEVICE_1);
-        LOG.debug("got registration assertion for device [{}]: {}", DEVICE_1, registrationAssertion);
-
-        IntStream.range(0, count).forEach(i -> {
-            Async waitForCredit = ctx.async();
-            LOG.trace("sending message {}", i);
-            telemetrySender.send(DEVICE_1, "payload" + i, "text/plain; charset=utf-8", registrationAssertion, done -> waitForCredit.complete());
-            LOG.trace("sender's send queue full: {}", telemetrySender.sendQueueFull());
-            waitForCredit.await();
-        });
-
+    @Override
+    protected Future<MessageSender> getSender(String tenantId, String deviceId) {
+        Future<MessageSender> result = Future.future();
+        client.getOrCreateTelemetrySender(tenantId, deviceId, result.completer());
+        return result;
     }
 }
