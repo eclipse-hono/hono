@@ -32,7 +32,6 @@ import org.eclipse.hono.messaging.UpstreamReceiver;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
