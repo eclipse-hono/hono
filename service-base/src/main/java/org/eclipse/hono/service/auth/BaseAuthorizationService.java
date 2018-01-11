@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -118,15 +118,15 @@ public abstract class BaseAuthorizationService extends AbstractVerticle implemen
 
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
-        final String authSubject = body.getString(AuthorizationConstants.AUTH_SUBJECT_FIELD);
+        final String authSubject = body.getString(AuthorizationConstants.FIELD_AUTH_SUBJECT);
         final HonoUser user = new HonoUserAdapter() {
             @Override
             public String getName() {
                 return authSubject;
             }
         };
-        final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.PERMISSION_FIELD));
-        final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(AuthorizationConstants.RESOURCE_FIELD));
+        final Activity permission = Activity.valueOf(body.getString(AuthorizationConstants.FIELD_PERMISSION));
+        final ResourceIdentifier resource = ResourceIdentifier.fromString(body.getString(AuthorizationConstants.FIELD_RESOURCE));
 
         isAuthorized(user, resource, permission).setHandler(authAttempt -> {
             boolean hasPermission = false;
