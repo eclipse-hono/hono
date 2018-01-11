@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2017, 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.kura;
 
+import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -44,21 +45,21 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeMessagingClientConfigProperties(final ClientConfigProperties props) {
+    protected void customizeMessagingClientConfig(final ClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_KURA_ADAPTER);
         }
     }
 
     @Override
-    protected void customizeRegistrationServiceClientConfigProperties(final ClientConfigProperties props) {
+    protected void customizeRegistrationServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_KURA_ADAPTER);
         }
     }
 
     @Override
-    protected void customizeCredentialsServiceClientConfigProperties(final ClientConfigProperties props) {
+    protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_KURA_ADAPTER);
         }

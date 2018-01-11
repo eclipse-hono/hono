@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2016 Bosch Software Innovations GmbH.
+    Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
 
     All rights reserved. This program and the accompanying materials
     are made available under the terms of the Eclipse Public License v1.0
@@ -34,6 +34,7 @@
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:0.8.0-1</dispatch-router.image.name>
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
     <grafana.version>4.2.0</grafana.version>
+    <guava.version>19.0</guava.version>
     <influxdb.version>1.2.4-alpine</influxdb.version>
     <jackson.version>2.9.0</jackson.version>
     <java-base-image.name>openjdk:8-jre-alpine</java-base-image.name>
@@ -296,6 +297,11 @@
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-dispatch-router</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
