@@ -37,6 +37,7 @@ import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.CacheManager;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -53,6 +54,7 @@ import io.vertx.proton.ProtonDelivery;
 public final class HonoClientImpl implements HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClientImpl.class);
+
     private final Map<String, MessageSender> activeSenders = new ConcurrentHashMap<>();
     private final Map<String, RequestResponseClient> activeRequestResponseClients = new ConcurrentHashMap<>();
     private final Map<String, Boolean> creationLocks = new ConcurrentHashMap<>();
@@ -61,10 +63,13 @@ public final class HonoClientImpl implements HonoClient {
     private final ConnectionFactory connectionFactory;
     private final ClientConfigProperties clientConfigProperties;
     private final Vertx vertx;
+
     private volatile boolean shutdown = false;
+
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
     private Context context;
+    private CacheManager cacheManager;
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -91,6 +96,16 @@ public final class HonoClientImpl implements HonoClient {
      */
     public HonoClientImpl(final Vertx vertx, final ConnectionFactory connectionFactory) {
         this(vertx, connectionFactory, new ClientConfigProperties());
+    }
+
+    /**
+     * Sets a manager for creating cache instances to be used in Hono clients.
+     * 
+     * @param manager The cache manager.
+     * @throws NullPointerException if manager is {@code null}.
+     */
+    public void setCacheManager(final CacheManager manager) {
+        this.cacheManager = Objects.requireNonNull(manager);
     }
 
     /**
@@ -497,13 +512,14 @@ public final class HonoClientImpl implements HonoClient {
             RegistrationClientImpl.create(
                     context,
                     clientConfigProperties,
+                    cacheManager,
                     connection,
                     tenantId,
                     this::removeRegistrationClient,
                     this::removeRegistrationClient,
                     creationAttempt -> {
                         if (creationAttempt.succeeded()) {
-                            RegistrationClient registrationClient = creationAttempt.result();
+                            final RegistrationClient registrationClient = creationAttempt.result();
                             registrationClient.setRequestTimeout(clientConfigProperties.getRequestTimeout());
                             clientTracker.complete(registrationClient);
                         } else {
