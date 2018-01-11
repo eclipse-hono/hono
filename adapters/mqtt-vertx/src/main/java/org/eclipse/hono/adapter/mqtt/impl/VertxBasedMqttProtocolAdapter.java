@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Red Hat and others
+ * Copyright (c) 2016, 2018 Red Hat and others
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -37,7 +37,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
             if (address.getTenantId() == null || address.getResourceId() == null) {
                 throw new IllegalArgumentException("topic of unauthenticated message must contain tenant and device IDs");
             } else {
-                return newMessage(address.getBasePath(), address.getResourceId());
+                return newMessage(address.getBasePath(), address.getResourceId(), messageFromDevice.topicName());
             }
         });
     }
@@ -52,9 +52,9 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 // use authenticated device's tenant to fill in missing information
                 final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address.getEndpoint(),
                         deviceIdentity.getTenantId(), deviceIdentity.getDeviceId());
-                return newMessage(downstreamAddress.getBasePath(), downstreamAddress.getResourceId());
+                return newMessage(downstreamAddress.getBasePath(), downstreamAddress.getResourceId(), messageFromDevice.topicName());
             } else {
-                return newMessage(address.getBasePath(), address.getResourceId());
+                return newMessage(address.getBasePath(), address.getResourceId(), messageFromDevice.topicName());
             }
         });
     }

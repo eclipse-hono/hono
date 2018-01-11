@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -53,10 +53,10 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_DEVICE_ID              = "device_id";
     /**
-     * The name of the AMQP 1.0 message application property containing the id of the tenant the device that has
-     * reported the data belongs to.
+     * The name of the AMQP 1.0 application property that is used to convey the
+     * address that a message has been originally published to by a device.
      */
-    public static final String APP_PROPERTY_TENANT_ID              = "tenant_id";
+    public static final String APP_PROPERTY_ORIG_ADDRESS           = "orig_address";
     /**
      * The name of the AMQP 1.0 message application property containing a JWT token asserting a device's registration status.
      */
@@ -69,6 +69,11 @@ public final class MessageHelper {
      * The name of the AMQP 1.0 message application property containing the status code indicating the outcome of processing a request.
      */
     public static final String APP_PROPERTY_STATUS                 = "status";
+    /**
+     * The name of the AMQP 1.0 message application property containing the id of the tenant the device that has
+     * reported the data belongs to.
+     */
+    public static final String APP_PROPERTY_TENANT_ID              = "tenant_id";
 
     /**
      * The AMQP 1.0 <em>absolute-expiry-time</em> message property.

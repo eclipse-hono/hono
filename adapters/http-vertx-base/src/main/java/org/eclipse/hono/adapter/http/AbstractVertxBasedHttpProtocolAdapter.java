@@ -258,6 +258,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         return options;
     }
 
+    /**
+     * Invoked before the message is sent to the downstream peer.
+     * <p>
+     * Subclasses may override this method in order to customize the message
+     * before it is sent, e.g. adding custom properties.
+     * 
+     * @param downstreamMessage The message that will be sent downstream.
+     * @param ctx The routing context.
+     */
+    protected void customizeDownstreamMessage(final Message downstreamMessage, final RoutingContext ctx) {
+        // this default implementation does nothing
+    }
+
     private Future<HttpServer> bindSecureHttpServer(final Router router) {
 
         if (isSecurePortEnabled()) {
@@ -467,12 +480,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
             CompositeFuture.all(tokenTracker, senderTracker).compose(ok -> {
 
-                return senderTracker.result().send(newMessage(
+                final Message downstreamMessage = newMessage(
                         String.format("%s/%s", endpointName, tenant),
                         deviceId,
+                        ctx.request().uri(),
                         contentType,
                         payload,
-                        tokenTracker.result()));
+                        tokenTracker.result());
+                customizeDownstreamMessage(downstreamMessage, ctx);
+                return senderTracker.result().send(downstreamMessage);
             }).map(delivery -> {
                 LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         tenant, deviceId, endpointName);
@@ -497,13 +513,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     private Message newMessage(
-            final String address,
+            final String downstreamAddress,
             final String deviceId,
+            final String uri,
             final String contentType,
             final Buffer payload,
             final JsonObject registrationInfo) {
 
-        final Message message = newMessage(address, deviceId, contentType);
+        final Message message = newMessage(downstreamAddress, deviceId, uri, contentType);
         message.setBody(new Data(new Binary(payload.getBytes())));
         addProperties(message, registrationInfo);
         return message;
