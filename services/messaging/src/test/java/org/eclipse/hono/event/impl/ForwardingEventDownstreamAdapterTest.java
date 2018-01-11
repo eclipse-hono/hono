@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -64,6 +64,7 @@ public class ForwardingEventDownstreamAdapterTest {
      * 
      * @param ctx The test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testProcessMessageForwardsMessageToDownstreamSender(final TestContext ctx) {
 
@@ -103,6 +104,7 @@ public class ForwardingEventDownstreamAdapterTest {
      * 
      * @param ctx The test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testProcessMessageReleasesMessageIfNoCreditIsAvailable(final TestContext ctx) {
 
