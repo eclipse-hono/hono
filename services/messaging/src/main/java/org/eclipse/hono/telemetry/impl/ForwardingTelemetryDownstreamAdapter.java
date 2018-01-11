@@ -60,6 +60,6 @@ public final class ForwardingTelemetryDownstreamAdapter extends ForwardingDownst
     protected ProtonQoS getDownstreamQos() {
         // Use of AT_LEAST_ONCE vs. AT_MOST_ONCE also for pre-settled telemetry messages to be sure, that the
         // Dispatch Router handles flow control as expected (see issue #356)
-        return ProtonQoS.AT_MOST_ONCE;
+        return ProtonQoS.AT_LEAST_ONCE;
     }
 }
