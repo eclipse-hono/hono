@@ -12,6 +12,7 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.ExpiringValueCache;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.RequestResponseResult;
@@ -60,6 +62,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     private final String replyToAddress;
     private final String targetAddress;
 
+    /**
+     * A cache to use for responses received from the service.
+     */
+    private ExpiringValueCache responseCache;
+
     private long requestTimeoutMillis = DEFAULT_TIMEOUT_MILLIS;
 
     /**
@@ -93,6 +100,16 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         this(context, config, tenantId);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
+    }
+
+    /**
+     * Sets a cache for responses received from the service.
+     * 
+     * @param cache The cache or {@code null} if no responses should be cached.
+     */
+    public final void setResponseCache(final ExpiringValueCache cache) {
+        this.responseCache = cache;
+        LOG.info("enabling caching of responses from {}", targetAddress);
     }
 
     /**
@@ -150,6 +167,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param con The AMQP 1.0 connection to the peer.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
+     * @throws NullPointerException if con is {@code null}.
      */
     protected final Future<Void> createLinks(final ProtonConnection con) {
         return createLinks(con, null, null);
@@ -164,6 +182,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
+     * @throws NullPointerException if con is {@code null}.
      */
     protected final Future<Void> createLinks(final ProtonConnection con, final Handler<String> senderCloseHook, final Handler<String> receiverCloseHook) {
         Future<Void> result = Future.future();
@@ -389,4 +408,46 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         closeLinks(closeHandler);
     }
 
+    /**
+     * Checks if this client supports caching of results.
+     * 
+     * @return {@code true} if caching is supported.
+     */
+    protected final boolean isCachingEnabled() {
+        return responseCache != null;
+    }
+
+    /**
+     * Gets a response from the cache.
+     * 
+     * @param key The key to get the response for.
+     * @return The value or {@code null} if no response exists for the key
+     *         or the response is expired.
+     */
+    protected final R getResponseFromCache(final String key) {
+
+        if (responseCache == null) {
+            return null;
+        } else {
+            return responseCache.get(key);
+        }
+    }
+
+    /**
+     * Adds a response to the cache.
+     * 
+     * @param key The key to store the value under.
+     * @param response The response to cache. Any existing response for the key will be replaced.
+     * @param expirationTime The time after which the response should be considered invalid.
+     * @throws IllegalArgumentException if the current time is not before the expiration time.
+     * @throws IllegalStateException if no cache has been configured.
+     */
+    protected final void putResponseToCache(final String key, final R response, final Instant expirationTime) {
+
+        if (responseCache == null) {
+            throw new IllegalStateException("no cache configured");
+        } else {
+            responseCache.put(key, response, expirationTime);
+        }
+    }
 }

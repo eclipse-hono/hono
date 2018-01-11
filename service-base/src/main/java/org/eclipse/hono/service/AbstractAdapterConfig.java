@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Red Hat and others.
+ * Copyright (c) 2016, 2018 Red Hat and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -14,6 +14,7 @@
 package org.eclipse.hono.service;
 
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -25,8 +26,12 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.guava.GuavaCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
+
+import com.google.common.cache.CacheBuilder;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -71,9 +76,10 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes client configuration properties as a Spring bean.
+     * Exposes configuration properties for accessing a Hono Messaging service as a Spring bean.
      * <p>
-     * Sets the <em>amqpHostname</em> to {@code hono-messaging} if not set explicitly.
+     * The properties can be customized in subclasses by means of overriding the
+     * {@link #customizeMessagingClientConfig(ClientConfigProperties)} method.
      *
      * @return The properties.
      */
@@ -82,7 +88,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public ClientConfigProperties messagingClientConfig() {
         ClientConfigProperties config = new ClientConfigProperties();
-        customizeMessagingClientConfigProperties(config);
+        customizeMessagingClientConfig(config);
         return config;
     }
 
@@ -95,7 +101,7 @@ public abstract class AbstractAdapterConfig {
      *
      * @param config The client configuration to customize.
      */
-    protected void customizeMessagingClientConfigProperties(final ClientConfigProperties config) {
+    protected void customizeMessagingClientConfig(final ClientConfigProperties config) {
         // empty by default
     }
 
@@ -135,9 +141,9 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.registration")
     @Bean
-    public ClientConfigProperties registrationServiceClientConfig() {
-        ClientConfigProperties config = new ClientConfigProperties();
-        customizeRegistrationServiceClientConfigProperties(config);
+    public RequestResponseClientConfigProperties registrationServiceClientConfig() {
+        RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        customizeRegistrationServiceClientConfig(config);
         return config;
     }
 
@@ -150,7 +156,7 @@ public abstract class AbstractAdapterConfig {
      *
      * @param config The configuration to customize.
      */
-    protected void customizeRegistrationServiceClientConfigProperties(final ClientConfigProperties config) {
+    protected void customizeRegistrationServiceClientConfig(final RequestResponseClientConfigProperties config) {
         // empty by default
     }
 
@@ -175,7 +181,27 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public HonoClient registrationServiceClient() {
-        return new HonoClientImpl(vertx(), registrationServiceConnectionFactory(), registrationServiceClientConfig());
+        final HonoClientImpl result = 
+                new HonoClientImpl(vertx(), registrationServiceConnectionFactory(), registrationServiceClientConfig());
+        final int minCacheSize = registrationServiceClientConfig().getResponseCacheMinSize();
+        final long maxCacheSize = registrationServiceClientConfig().getResponseCacheMaxSize();
+        if (maxCacheSize > 0) {
+            result.setCacheManager(newCacheManager(minCacheSize, Math.max(minCacheSize, maxCacheSize)));
+        }
+        return result;
+    }
+
+    private CacheManager newCacheManager(final int initialCapacity, final long maxCapacity) {
+
+        final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
+                .concurrencyLevel(1)
+                .initialCapacity(initialCapacity)
+                .maximumSize(maxCapacity);
+
+        final GuavaCacheManager manager = new GuavaCacheManager();
+        manager.setAllowNullValues(false);
+        manager.setCacheBuilder(builder);
+        return manager;
     }
 
     /**
@@ -190,8 +216,8 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.credentials")
     @Bean
     public ClientConfigProperties credentialsServiceClientConfig() {
-        ClientConfigProperties config = new ClientConfigProperties();
-        customizeCredentialsServiceClientConfigProperties(config);
+        RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        customizeCredentialsServiceClientConfig(config);
         return config;
     }
 
@@ -204,7 +230,7 @@ public abstract class AbstractAdapterConfig {
      *
      * @param config The configuration to customize.
      */
-    protected void customizeCredentialsServiceClientConfigProperties(final ClientConfigProperties config) {
+    protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties config) {
         // empty by default
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Red Hat and others.
+ * Copyright (c) 2016, 2018 Red Hat and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
+import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -45,21 +46,21 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeMessagingClientConfigProperties(final ClientConfigProperties props) {
+    protected void customizeMessagingClientConfig(final ClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
         }
     }
 
     @Override
-    protected void customizeRegistrationServiceClientConfigProperties(final ClientConfigProperties props) {
+    protected void customizeRegistrationServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
         }
     }
 
     @Override
-    protected void customizeCredentialsServiceClientConfigProperties(final ClientConfigProperties props) {
+    protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
         }
