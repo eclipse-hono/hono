@@ -61,10 +61,10 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @Rule
     public Timeout globalTimeout = new Timeout(600, TimeUnit.MILLISECONDS);
 
-    HonoClient messagingClient;
-    HonoClient registrationClient;
-    HonoClientBasedAuthProvider credentialsAuthProvider;
-    HttpProtocolAdapterProperties config;
+    private HonoClient                    messagingClient;
+    private HonoClient                    registrationClient;
+    private HonoClientBasedAuthProvider   credentialsAuthProvider;
+    private HttpProtocolAdapterProperties config;
 
     /**
      * Sets up common fixture.
@@ -220,8 +220,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter waits for an event being settled and accepted
-     * by a downstream peer before responding with a 202 status to the device.
+     * Verifies that the adapter fails the upload of an event with a 400
+     * result if it is rejected by the downstream peer.
      */
     @Test
     public void testUploadEventFailsForRejectedOutcome() {
@@ -239,7 +239,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(ctx.getBody()).thenReturn(payload);
 
         adapter.uploadEventMessage(ctx, "tenant", "device", payload, "application/text");
-        outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed payload"));
+        outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
 
         // THEN the device gets a 400
         verify(ctx).fail(HttpURLConnection.HTTP_BAD_REQUEST);
