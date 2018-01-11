@@ -54,11 +54,6 @@ import io.vertx.proton.ProtonHelper;
 public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterProperties> extends AbstractServiceBase<T> {
 
     /**
-     * The name of the AMQP 1.0 application property that is used to convey the
-     * address that a message has been originally published to by a device.
-     */
-    public static final String PROPERTY_HONO_ORIG_ADDRESS = "hono-orig-address";
-    /**
      * The <em>application/octet-stream</em> content type.
      */
     protected static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
@@ -578,27 +573,56 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Creates a new AMQP 1.0 message for an address and device ID.
+     * <p>
+     * Subclasses are encouraged to use this method for creating {@code Message} instances to
+     * be sent downstream in order to have the following properties set on the message automatically:
+     * <ul>
+     * <li><em>to</em> will be set to address</li>
+     * <li>application property <em>device_id</em> will be set to device ID</li>
+     * <li>application property <em>orig_address</em> will be set to publish address</li>
+     * </ul>
      * 
      * @param address The receiver of the message.
      * @param deviceId The identifier of the device that the message originates from.
+     * @param publishAddress The address that the message has been published to originally by the device
+     *                       (may be {@code null}).
+     *                       <p>
+     *                       This address will be transport protocol specific, e.g. an HTTP based adapter
+     *                       will probably use URIs here whereas an MQTT based adapter might use the
+     *                       MQTT message's topic.
      * @return The message.
      * @throws NullPointerException if address or device ID are {@code null}.
      */
-    protected static Message newMessage(final String address, final String deviceId) {
+    protected static Message newMessage(final String address, final String deviceId, final String publishAddress) {
 
-        return newMessage(address, deviceId, null);
+        return newMessage(address, deviceId, publishAddress, null);
     }
 
     /**
-     * Creates a new AMQP 1.0 message for an address, device ID and content type.
+     * Creates a new AMQP 1.0 message for an address, device ID, original publish address and content type.
+     * <p>
+     * Subclasses are encouraged to use this method for creating {@code Message} instances to
+     * be sent downstream in order to have the following properties set on the message automatically:
+     * <ul>
+     * <li><em>to</em> will be set to address</li>
+     * <li>application property <em>device_id</em> will be set to device ID</li>
+     * <li>application property <em>orig_address</em> will be set to publish address</li>
+     * <li><em>content-type</em> will be set to content type</li>
+     * </ul>
      * 
      * @param address The receiver of the message.
      * @param deviceId The identifier of the device that the message originates from.
+     * @param publishAddress The address that the message has been published to originally by the device.
+     *                       (may be {@code null}).
+     *                       <p>
+     *                       This address will be transport protocol specific, e.g. an HTTP based adapter
+     *                       will probably use URIs here whereas an MQTT based adapter might use the
+     *                       MQTT message's topic.
      * @param contentType The content type describing the message's payload (may be {@code null}).
      * @return The message.
      * @throws NullPointerException if address or device ID are {@code null}.
      */
-    protected static Message newMessage(final String address, final String deviceId, final String contentType) {
+    protected static Message newMessage(final String address, final String deviceId, final String publishAddress, final String contentType) {
 
         Objects.requireNonNull(address);
         Objects.requireNonNull(deviceId);
@@ -606,6 +630,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         final Message msg = ProtonHelper.message();
         msg.setAddress(address.toString());
         MessageHelper.addDeviceId(msg, deviceId);
+        if (publishAddress != null) {
+            MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
+        }
         if (contentType != null) {
             msg.setContentType(contentType);
         }

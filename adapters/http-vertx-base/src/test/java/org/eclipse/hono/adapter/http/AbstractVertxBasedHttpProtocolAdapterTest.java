@@ -12,12 +12,10 @@
 
 package org.eclipse.hono.adapter.http;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -38,6 +36,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -59,7 +58,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      * Global timeout for all test cases.
      */
     @Rule
-    public Timeout globalTimeout = new Timeout(600, TimeUnit.MILLISECONDS);
+    public Timeout globalTimeout = Timeout.seconds(5);
 
     private HonoClient                    messagingClient;
     private HonoClient                    registrationClient;
@@ -203,10 +202,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final RoutingContext ctx = mock(RoutingContext.class);
-        when(ctx.getBody()).thenReturn(payload);
-        when(ctx.response()).thenReturn(response);
-        when(response.setStatusCode(anyInt())).thenReturn(response);
+        final RoutingContext ctx = newRoutingContext(payload, response);
 
         adapter.uploadEventMessage(ctx, "tenant", "device", payload, "application/text");
 
@@ -235,8 +231,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // WHEN a device publishes an event that is not accepted by the peer
         final Buffer payload = Buffer.buffer("some payload");
-        final RoutingContext ctx = mock(RoutingContext.class);
-        when(ctx.getBody()).thenReturn(payload);
+        final RoutingContext ctx = newRoutingContext(payload);
 
         adapter.uploadEventMessage(ctx, "tenant", "device", payload, "application/text");
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
@@ -262,16 +257,28 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // WHEN a device publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final RoutingContext ctx = mock(RoutingContext.class);
-        when(ctx.getBody()).thenReturn(payload);
-        when(ctx.response()).thenReturn(response);
-        when(response.setStatusCode(anyInt())).thenReturn(response);
+        final RoutingContext ctx = newRoutingContext(payload, response);
 
         adapter.uploadTelemetryMessage(ctx, "tenant", "device", payload, "application/text");
 
         // THEN the device receives a 202 response immediately
         verify(response).setStatusCode(202);
         verify(response).end();
+    }
+
+    private static RoutingContext newRoutingContext(final Buffer payload) {
+        return newRoutingContext(payload, mock(HttpServerResponse.class));
+    }
+
+    private static RoutingContext newRoutingContext(final Buffer payload, final HttpServerResponse response) {
+
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        final RoutingContext ctx = mock(RoutingContext.class);
+        when(ctx.getBody()).thenReturn(payload);
+        when(ctx.response()).thenReturn(response);
+        when(ctx.request()).thenReturn(request);
+        when(response.setStatusCode(anyInt())).thenReturn(response);
+        return ctx;
     }
 
     @SuppressWarnings("unchecked")

@@ -71,7 +71,7 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
             } else {
                 LOG.debug("mapped Kura message [topic: {}, QoS: {}] to Hono message [to: {}, device_id: {}, content-type: {}]",
                         topic, messageFromDevice.qosLevel(), mappedTopic.getBasePath(), mappedTopic.getResourceId(), contentType);
-                result.complete(newMessage(mappedTopic.getBasePath(), mappedTopic.getResourceId(), contentType));
+                result.complete(newMessage(mappedTopic.getBasePath(), mappedTopic.getResourceId(), messageFromDevice.topicName(), contentType));
             }
         } catch (IllegalArgumentException e) {
             result.fail(e);

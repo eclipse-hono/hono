@@ -441,7 +441,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 if (message.getBody() == null) {
                     message.setBody(new Data(new Binary(messageFromDevice.payload().getBytes())));
                 }
-                MessageHelper.addProperty(message, PROPERTY_HONO_ORIG_ADDRESS, messageFromDevice.topicName());
                 addProperties(message, assertionTracker.result());
                 return doUploadMessage(message, endpoint, messageFromDevice, sender);
             }
