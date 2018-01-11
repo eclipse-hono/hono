@@ -5,7 +5,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.IntStream;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
@@ -19,6 +18,8 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
+
+import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.DEVICE_ID;
 
 /**
  * Example base class for sending data to Hono.
@@ -35,7 +36,7 @@ public class HonoSenderBase {
     /**
      * The number of messages to send.
      */
-    public static final int COUNT = 50;
+    public static final int COUNT = 2500;
     /**
      * The user name for connecting to Hono.
      */
@@ -107,46 +108,45 @@ public class HonoSenderBase {
      * First all Hono clients need to be connected before data can be sent.
      */
     protected void sendData() {
+        final CompletableFuture<String> tokenDone = new CompletableFuture<>();
 
-        final CompletableFuture<Void> done = new CompletableFuture<>();
-
-        getHonoClients().compose(ok -> getRegistrationAssertion()).map(token -> {
-            // then send single messages sequentially in a loop
-            IntStream.range(0, COUNT).forEach(value -> {
-                try {
-                    sendMessageToHono(value, token).get();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } catch (ExecutionException e) {
-                    e.printStackTrace();
-                }
-            });
-            done.complete(null);
+        getHonoClients().compose(ok -> getRegistrationAssertion()).map(receivedToken -> {
+            tokenDone.complete(receivedToken);
             return null;
-        }).compose(s -> closeClients()).otherwise(t -> {
+        }).
+        otherwise(t -> {
             System.err.println("cannot send messages: " + t.getMessage());
-            done.complete(null);
+            tokenDone.completeExceptionally(t);
             return null;
         });
 
-        /*
-         * Since events are asynchronously acknowledged to validate their delivery, the vertx instance must not be
-         * closed before all acknowledgements were processed. Wait for the count down latch here.
-         */
         try {
-            done.get();
-        } catch (final InterruptedException e) {
+            // wait for token from registration service
+            final String token = tokenDone.get();
+            // then send single messages sequentially in a loop
+            for (int messagesSent = 0; messagesSent < COUNT; messagesSent++) {
+                // send message and wait until it was delivered
+                sendMessageToHono(messagesSent, token).get();
+                if (messagesSent % 250 == 0) {
+                    System.out.println("Sent " + messagesSent + " messages.");
+                }
+            }
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        } catch (final ExecutionException e) {
+        } catch (ExecutionException e) {
             e.printStackTrace();
         }
 
+        closeClients();
         // print a summary of the message deliveries.
         System.out.println("Total number of messages: " + COUNT);
         System.out.println("Successful deliveries   : " + nrMessageDeliverySucceeded + (eventMode ? " (incl. acknowledge)." : "."));
         System.out.println("Failed deliveries       : " + nrMessageDeliveryFailed.get());
 
-        vertx.close();
+        // give some time for flushing asynchronous message buffers before shutdown
+        vertx.setTimer(2000, timerId -> {
+            vertx.close();
+        });
     }
 
     /**
@@ -159,11 +159,18 @@ public class HonoSenderBase {
      */
     private CompletableFuture<Void> sendMessageToHono(final int value, final String token) {
 
-        final CompletableFuture<Void> result = new CompletableFuture<>();
-        messageSender.send(HonoExampleConstants.DEVICE_ID, null, "myMessage" + value, "text/plain", token)
-            .map(delivery -> {
+        final CompletableFuture<Void> capacityAvailableFuture = new CompletableFuture<>();
+        final CompletableFuture<Void> messageDeliveredFuture = new CompletableFuture<>();
+        final CompletableFuture<Void> result = messageDeliveredFuture.thenCombine(capacityAvailableFuture,
+                (v1, v2) -> (Void) null
+        );
+
+        messageSender.send(HonoExampleConstants.DEVICE_ID, null, "myMessage" + value, "text/plain",
+            token, capacityAvail -> {
+                capacityAvailableFuture.complete(null);
+            }).map(delivery -> {
                 nrMessageDeliverySucceeded.incrementAndGet();
-                result.complete(null);
+                messageDeliveredFuture.complete(null);
                 return (Void) null;
             }).otherwise(t -> {
                 System.err.println("Could not send message: " + t.getMessage());
@@ -240,7 +247,7 @@ public class HonoSenderBase {
     private Future<String> getRegistrationAssertion() {
 
         final Future<RegistrationResult> tokenTracker = Future.future();
-        registrationClient.assertRegistration(HonoExampleConstants.DEVICE_ID, tokenTracker.completer());
+        registrationClient.assertRegistration(DEVICE_ID, tokenTracker.completer());
 
         return tokenTracker.map(regResult -> {
             if (regResult.getStatus() == HttpURLConnection.HTTP_OK) {
@@ -254,7 +261,6 @@ public class HonoSenderBase {
     }
 
     private Future<Void> closeClients() {
-
         final Future<Void> messagingClient = Future.future();
         final Future<Void> regClient = Future.future();
         honoMessagingClient.shutdown(messagingClient.completer());
