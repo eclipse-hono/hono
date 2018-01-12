@@ -36,7 +36,7 @@ public class HonoSenderBase {
     /**
      * The number of messages to send.
      */
-    public static final int COUNT = 2500;
+    public static final int COUNT = 1000;
     /**
      * The user name for connecting to Hono.
      */
@@ -155,12 +155,13 @@ public class HonoSenderBase {
      * @param value The int value that is combined with a string and send downstream.
      * @param token The registration assertion that was retrieved for the device to let HonoMessaging verify the
      *              authorization to send data.
-     * @return A Future that is completed after the message was sent.
+     * @return A Future that is completed after the message was sent and there is capacity available for more messages.
      */
     private CompletableFuture<Void> sendMessageToHono(final int value, final String token) {
 
         final CompletableFuture<Void> capacityAvailableFuture = new CompletableFuture<>();
         final CompletableFuture<Void> messageDeliveredFuture = new CompletableFuture<>();
+        // let the returned result future be only completed after the message was delivered and there is more capacity available.
         final CompletableFuture<Void> result = messageDeliveredFuture.thenCombine(capacityAvailableFuture,
                 (v1, v2) -> (Void) null
         );
