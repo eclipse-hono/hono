@@ -26,8 +26,7 @@ import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
- * A telemetry adapter that forwards uploaded messages to another AMQP 1.0
- * container.
+ * A telemetry adapter that forwards uploaded messages to another AMQP 1.0 container.
  *
  */
 @Component
@@ -38,13 +37,9 @@ public final class ForwardingTelemetryDownstreamAdapter extends ForwardingDownst
     /**
      * Creates a new adapter instance for a sender factory.
      *
-     * @param vertx
-     *            The Vert.x instance to run on.
-     * @param senderFactory
-     *            The factory to use for creating new senders for downstream
-     *            telemetry data.
-     * @throws NullPointerException
-     *             if any of the parameters is {@code null}.
+     * @param vertx The Vert.x instance to run on.
+     * @param senderFactory The factory to use for creating new senders for downstream telemetry data.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Autowired
     public ForwardingTelemetryDownstreamAdapter(final Vertx vertx, final SenderFactory senderFactory) {
