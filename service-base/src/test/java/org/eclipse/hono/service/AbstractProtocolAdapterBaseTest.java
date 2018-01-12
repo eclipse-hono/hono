@@ -100,6 +100,19 @@ public class AbstractProtocolAdapterBaseTest {
         assertThat(message.getContentType(), is("application/existing"));
     }
 
+    /**
+     * Verifies that the fall back content type is set on a downstream message
+     * if no default has been configured for the device.
+     */
+    @Test
+    public void testAddPropertiesAddsFallbackContentType() {
+
+        final Message message = ProtonHelper.message();
+        adapter.addProperties(message, newRegistrationAssertionResult("token"));
+        assertThat(MessageHelper.getRegistrationAssertion(message), is("token"));
+        assertThat(message.getContentType(), is(AbstractProtocolAdapterBase.CONTENT_TYPE_OCTET_STREAM));
+    }
+
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {
 
 

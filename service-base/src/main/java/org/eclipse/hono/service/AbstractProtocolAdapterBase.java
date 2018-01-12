@@ -449,6 +449,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 addDefaults(message, defaults);
             }
         }
+        if (StringUtils.isEmpty(message.getContentType())) {
+            // set default content type if none has been specified when creating the
+            // message nor a default content type is available
+            message.setContentType(CONTENT_TYPE_OCTET_STREAM);
+        }
         if (getConfig().isJmsVendorPropsEnabled()) {
             MessageHelper.addJmsVendorProperties(message);
         }
