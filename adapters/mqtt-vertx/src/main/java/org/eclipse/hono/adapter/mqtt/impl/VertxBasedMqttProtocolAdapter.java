@@ -31,6 +31,11 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> {
 
     @Override
+    protected String getTypeName() {
+        return "hono-mqtt";
+    }
+
+    @Override
     protected Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice) {
 
         return mapTopic(messageFromDevice).map(address -> {

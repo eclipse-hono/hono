@@ -58,6 +58,11 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_ORIG_ADDRESS           = "orig_address";
     /**
+     * The name of the AMQP 1.0 message application property containing the name of the
+     * protocol adapter over which an uploaded message has originally been received.
+     */
+    public static final String APP_PROPERTY_ORIG_ADAPTER           = "orig_adapter";
+    /**
      * The name of the AMQP 1.0 message application property containing a JWT token asserting a device's registration status.
      */
     public static final String APP_PROPERTY_REGISTRATION_ASSERTION = "reg_assertion";

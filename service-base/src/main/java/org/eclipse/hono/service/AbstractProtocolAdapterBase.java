@@ -129,6 +129,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Gets this adapter's type name.
+     * <p>
+     * The name should be unique among all protocol adapters that are part of a Hono installation.
+     * There is no specific scheme to follow but it is recommended to include the adapter's origin
+     * and the protocol that the adapter supports in the name and to use lower case letters only.
+     * <p>
+     * Based on this recommendation, Hono's standard HTTP adapter for instance might report
+     * <em>hono-http</em> as its type name.
+     * <p>
+     * The name returned by this method is added to a downstream message by the
+     * {@link #addProperties(Message, JsonObject)} method.
+     * 
+     * @return The adapter's name.
+     */
+    protected abstract String getTypeName();
+
+    /**
      * Gets the authentication provider used for verifying device credentials.
      *
      * @return The provider.
@@ -140,7 +157,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     protected final Future<Void> startInternal() {
         Future<Void> result = Future.future();
-        if (messaging == null) {
+        if (StringUtils.isEmpty(getTypeName())) {
+            result.fail(new IllegalStateException("adapter does not define a typeName"));
+        } else if (messaging == null) {
             result.fail(new IllegalStateException("Hono Messaging client must be set"));
         } else if (registration == null) {
             result.fail(new IllegalStateException("Device Registration client must be set"));
@@ -157,9 +176,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
+     * Invoked after the adapter has started up.
      * <p>
-     * This method is invoked by {@link #start()} as part of the startup process.
+     * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
      *
      * @param startFuture The future to complete once start up is complete.
      */
@@ -213,11 +232,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Subclasses should override this method to perform any work required before shutting down this protocol adapter.
+     * Invoked directly before the adapter is shut down.
      * <p>
-     * This method is invoked by {@link #stop()} as part of the shutdown process.
+     * Subclasses should override this method to perform any work required before
+     * shutting down this protocol adapter.
      *
-     * @param stopFuture The future to complete once shutdown is complete.
+     * @param stopFuture The future to complete once all work is done and shut down
+     *                   should commence.
      */
     protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
@@ -431,6 +452,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <ul>
      * <li>Adds the registration assertion found in the
      * {@link RegistrationConstants#FIELD_ASSERTION} property of the given registration information.</li>
+     * <li>Adds {@linkplain #getTypeName() the adapter's name} to the message in application property
+     * {@link MessageHelper#APP_PROPERTY_ORIG_ADAPTER}</li>
      * <li>Augments the message with missing (application) properties corresponding to the
      * {@link RegistrationConstants#FIELD_DEFAULTS} contained in the registration information.</li>
      * <li>Adds JMS vendor properties if configuration property <em>jmsVendorPropertiesEnabled</em> is set
@@ -443,6 +466,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final void addProperties(final Message message, final JsonObject registrationInfo) {
 
         MessageHelper.addRegistrationAssertion(message, registrationInfo.getString(RegistrationConstants.FIELD_ASSERTION));
+        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
         if (getConfig().isDefaultsEnabled()) {
             final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
             if (defaults != null) {

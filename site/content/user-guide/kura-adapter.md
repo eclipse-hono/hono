@@ -235,3 +235,16 @@ Once the gateway has established a connection to the Kura adapter, all *control*
 1. *control* messages with QoS 0 are forwarded to Hono's telemetry endpoint whereas messages with QoS 1 are forwarded to the event endpoint. The corresponding AMQP 1.0 messages that are sent downstream have a content type of `application/vnd.eclipse.kura-control`.
 1. *data* messages with QoS 0 are forwarded to the telemetry endpoint whereas messages with QoS 1 are forwarded to the event endpoint. The corresponding AMQP 1.0 messages that are sent downstream have a content type of `application/vnd.eclipse.kura-data`.
 1. All AMQP messages sent downstream include a `hono-orig-address` application property containing the name of the topic that the message has been originally published to by the gateway.
+
+## Downstream Meta Data
+
+The adapter includes the following meta data in messages being sent downstream:
+
+| Name               | Location        | Type      | Description                                                     |
+| :----------------- | :-------------- | :-------- | :-------------------------------------------------------------- |
+| `orig_adapter`   | *application*   | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The Kura adapter's type name is `hono-kura-mqtt`. |
+| `orig_address`   | *application*   | *string*  | Contains the name of the MQTT topic that the Kura gateway has originally published the data to. |
+
+The adapter also considers [*defaults* registered for the device]({{< relref "api/Device-Registration-API.md#payload-format" >}}). For each default value the adapter checks if a corresponding property is already set on the message and if not, sets the message's property to the registered default value or adds a corresponding application property.
+
+Note that of the standard AMQP 1.0 message properties only the `content-type` can be set this way to a registered default value.

@@ -33,6 +33,11 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<KuraAdapterProperties> {
 
     @Override
+    protected String getTypeName() {
+        return "hono-kura-mqtt";
+    }
+
+    @Override
     protected Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice) {
 
         return getDownstreamMessage(messageFromDevice, null);

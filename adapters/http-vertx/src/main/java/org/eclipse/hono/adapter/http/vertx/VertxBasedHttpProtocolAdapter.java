@@ -37,6 +37,11 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     private static final String PARAM_DEVICE_ID = "device_id";
 
     @Override
+    protected String getTypeName() {
+        return "hono-http";
+    }
+
+    @Override
     protected final void addRoutes(final Router router) {
         if (!getConfig().isAuthenticationRequired()) {
             LOG.warn("device authentication has been disabled");

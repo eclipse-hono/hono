@@ -466,6 +466,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = new AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties>() {
 
             @Override
+            protected String getTypeName() {
+                return "mqtt";
+            }
+
+            @Override
             protected Future<Message> getDownstreamMessage(final MqttPublishMessage message) {
                 final ResourceIdentifier topic = ResourceIdentifier.fromString(message.topicName());
                 final Message result = ProtonHelper.message();
