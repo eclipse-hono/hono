@@ -13,9 +13,11 @@
 package org.eclipse.hono.client;
 
 
+import org.eclipse.hono.util.TenantResult;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import org.eclipse.hono.util.TenantResult;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A client for accessing Hono's Tenant API.
@@ -26,5 +28,9 @@ import org.eclipse.hono.util.TenantResult;
  */
 public interface TenantClient extends RequestResponseClient {
 
+    void add(final JsonObject data, Handler<AsyncResult<TenantResult>> resultHandler);
+
     void get(String tenantId, Handler<AsyncResult<TenantResult>> resultHandler);
+
+    void update(String tenantId, final JsonObject data, Handler<AsyncResult<TenantResult>> resultHandler);
 }
