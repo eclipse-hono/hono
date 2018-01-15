@@ -312,6 +312,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties>() {
 
             @Override
+            protected String getTypeName() {
+                return "http";
+            }
+
+            @Override
             protected void addRoutes(final Router router) {
             }
 

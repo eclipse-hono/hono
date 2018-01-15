@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2017, 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,10 +25,13 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonHelper;
 
 
@@ -36,7 +39,10 @@ import io.vertx.proton.ProtonHelper;
  * Tests verifying behavior of {@link AbstractProtocolAdapterBase}.
  *
  */
+@RunWith(VertxUnitRunner.class)
 public class AbstractProtocolAdapterBaseTest {
+
+    private static final String ADAPTER_NAME = "abstract-adapter";
 
     private ProtocolAdapterProperties properties;
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
@@ -64,6 +70,24 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     /**
+     * Verifies that an adapter that does not define a type name
+     * cannot be started.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testStartUpFailsIfNoTypeNameIsDefined(final TestContext ctx) {
+
+        // GIVEN an adapter that does not define a type name
+        adapter = newProtocolAdapter(properties, null);
+        adapter.setRegistrationServiceClient(mock(HonoClient.class));
+
+        // WHEN starting the adapter
+        // THEN startup fails
+        adapter.startInternal().setHandler(ctx.asyncAssertFailure());
+    }
+
+    /**
      * Verifies that the registration assertion is set on a downstream message.
      */
     @Test
@@ -72,6 +96,22 @@ public class AbstractProtocolAdapterBaseTest {
         final Message message = ProtonHelper.message();
         adapter.addProperties(message, newRegistrationAssertionResult("token"));
         assertThat(MessageHelper.getRegistrationAssertion(message), is("token"));
+    }
+
+    /**
+     * Verifies that the adapter's name is set on a downstream message.
+     */
+    @Test
+    public void testAddPropertiesAddsAdapterName() {
+
+        final Message message = ProtonHelper.message();
+        adapter.addProperties(message, newRegistrationAssertionResult("token"));
+        assertThat(
+                MessageHelper.getApplicationProperty(
+                        message.getApplicationProperties(),
+                        MessageHelper.APP_PROPERTY_ORIG_ADAPTER,
+                        String.class),
+                is(ADAPTER_NAME));
     }
 
     /**
@@ -115,8 +155,17 @@ public class AbstractProtocolAdapterBaseTest {
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {
 
+        return newProtocolAdapter(props, ADAPTER_NAME);
+    }
+
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props, final String typeName) {
 
         AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<ProtocolAdapterProperties>() {
+
+            @Override
+            public String getTypeName() {
+                return typeName;
+            }
 
             @Override
             public int getPortDefaultValue() {
