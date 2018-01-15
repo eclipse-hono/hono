@@ -12,21 +12,21 @@
 
 package org.eclipse.hono.client.impl;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.eclipse.hono.util.TenantConstants.ACTION_ADD;
 import static org.eclipse.hono.util.TenantConstants.ACTION_GET;
+import static org.eclipse.hono.util.TenantConstants.ACTION_UPDATE;
 
-import java.io.IOException;
+
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -100,9 +100,22 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
     }
 
     @Override
+    public void add(final JsonObject data, final Handler<AsyncResult<TenantResult>> resultHandler) {
+        Objects.requireNonNull(resultHandler);
+        createAndSendRequest(ACTION_ADD, null, data, resultHandler);
+    }
+
+    @Override
     public final void get(final String tenantId, final Handler<AsyncResult<TenantResult>> resultHandler) {
         final JsonObject specification = new JsonObject().put(TenantConstants.FIELD_TENANT_ID, tenantId);
         createAndSendRequest(ACTION_GET, createProperties(tenantId), specification, resultHandler);
+    }
+
+    @Override
+    public void update(final String tenantId, final JsonObject data, final Handler<AsyncResult<TenantResult>> resultHandler) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(resultHandler);
+        createAndSendRequest(ACTION_UPDATE, createProperties(tenantId), data, resultHandler);
     }
 
     private Map<String, Object> createProperties(final String tenantId) {
