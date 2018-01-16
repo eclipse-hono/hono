@@ -36,8 +36,17 @@ curl -X PUT -T addresses.json -H "content-type: application/json" http://$(oc ge
 # starting to deploy Eclipse Hono (developer user)
 echo
 echo "Deploying influxDB & Grafana ..."
+
+# add a service account allowing Grafana to run as root
+oc create serviceaccount useroot --as='system:admin'
+oc adm policy add-scc-to-user anyuid -z useroot --as='system:admin'
+
 oc create secret generic influxdb-conf --from-file=$CONFIG/influxdb.conf
-oc create -f $CONFIG/hono-metrics-jar/META-INF/fabric8/openshift.yml
+oc create -f $SCRIPTPATH/../kubernetes/influxdb-deployment.yml
+oc create -f $SCRIPTPATH/../kubernetes/influxdb-svc.yml
+oc create -f $SCRIPTPATH/../kubernetes/grafana-deployment.yml
+oc create -f $SCRIPTPATH/../kubernetes/grafana-svc.yml
+oc create -f $SCRIPTPATH/grafana-route.yml
 echo ... done
 
 echo Deploying Authentication Server ...
@@ -86,6 +95,18 @@ oc create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=application.yml=$CONFIG/hono-adapter-mqtt-vertx-config.yml
 oc create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/openshift.yml
+echo ... done
+
+echo
+echo "Configuring Grafana with data source & dashboard ..."
+
+chmod +x $SCRIPTPATH/../configure_grafana.sh
+HOST=$(oc get nodes --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}' --as system:admin)
+GRAFANA_PORT='NaN'
+until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do
+  GRAFANA_PORT=$(oc get service grafana --output='jsonpath={.spec.ports[0].nodePort}' --as system:admin); sleep 1;
+done
+$SCRIPTPATH/../configure_grafana.sh $HOST $GRAFANA_PORT
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED ON OPENSHIFT
