@@ -67,7 +67,8 @@ public class HonoConsumerBase {
 
         consumerFuture.setHandler(result -> {
             if (!result.succeeded()) {
-                System.err.println("honoClient could not create telemetry consumer : " + result.cause());
+                System.err.println("honoClient could not create telemetry consumer for " + HONO_AMQP_CONSUMER_HOST + ":"
+                        + HONO_AMQP_CONSUMER_PORT + " : " + result.cause());
             }
             latch.countDown();
         });
