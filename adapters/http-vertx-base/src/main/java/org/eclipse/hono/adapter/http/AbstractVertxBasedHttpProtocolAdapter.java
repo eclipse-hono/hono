@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -28,7 +28,6 @@ import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -52,21 +51,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Default file uploads directory used by Vert.x Web
      */
-    protected static final String DEFAULT_UPLOADS_DIRECTORY      = "/tmp";
-
-    /**
-     * The name of the HTTP header field used to convey a device's registration status assertion.
-     */
-    protected static final String HEADER_REGISTRATION_ASSERTION = "Hono-Reg-Assertion";
+    protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
-    @Value("${spring.profiles.active:}")
-    private String activeProfiles;
-
-    private HttpServer server;
-    private HttpServer insecureServer;
-
+    private HttpServer         server;
+    private HttpServer         insecureServer;
     private HttpAdapterMetrics metrics;
 
     /**
