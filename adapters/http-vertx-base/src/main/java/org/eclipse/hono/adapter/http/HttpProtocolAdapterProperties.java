@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Bosch Software Innovations GmbH - remove regAssertion property
  */
 
 package org.eclipse.hono.adapter.http;
@@ -27,32 +28,7 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
      * The default name of the realm that devices need to authenticate to.
      */
     public static final String DEFAULT_REALM = "Hono";
-    private boolean regAssertionEnabled = false;
     private String realm = DEFAULT_REALM;
-
-    /**
-     * Checks if the adapter should return a token to devices asserting the device's
-     * registration status.
-     * <p>
-     * The default value of this property is {@code false}.
-     * 
-     * @return {@code true} if the adapter should return tokens.
-     */
-    public final boolean isRegAssertionEnabled() {
-        return regAssertionEnabled;
-    }
-
-    /**
-     * Sets whether the adapter should return a token to devices asserting the device's
-     * registration status.
-     * <p>
-     * The default value of this property is {@code false}.
-     * 
-     * @param regAssertionEnabled {@code true} if the adapter should return tokens.
-     */
-    public final void setRegAssertionEnabled(final boolean regAssertionEnabled) {
-        this.regAssertionEnabled = regAssertionEnabled;
-    }
 
     /**
      * Gets the name of the realm that unauthenticated devices are prompted to provide credentials for.
