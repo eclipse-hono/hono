@@ -40,10 +40,10 @@ public interface ExpiringValue<T> {
     /**
      * Checks if the value has already expired.
      * 
-     * @param now The reference point in time to check expiration against.
+     * @param refInstant The reference point in time to check expiration against.
      * @return {@code true} if the value has expired based on the given instant,
      *         {@code false} otherwise.
      * @throws NullPointerException if the instant is {@code null}.
      */
-    boolean isExpired(Instant now);
+    boolean isExpired(Instant refInstant);
 }
