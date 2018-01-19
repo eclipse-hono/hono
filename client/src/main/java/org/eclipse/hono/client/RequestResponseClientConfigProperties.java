@@ -66,7 +66,7 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * <p>
      * Once the maximum number of entries is reached, the cache applies
      * an implementation specific policy for handling new entries that
-     * are be put to the cache.
+     * are put to the cache.
      * <p>
      * The default value is {@link #DEFAULT_RESPONSE_CACHE_MAX_SIZE}.
      * 
@@ -81,7 +81,7 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * <p>
      * Once the maximum number of entries is reached, the cache applies
      * an implementation specific policy for handling new entries that
-     * are be put to the cache.
+     * are put to the cache.
      * <p>
      * The default value is {@link #DEFAULT_RESPONSE_CACHE_MAX_SIZE}.
      * 
