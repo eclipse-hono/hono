@@ -10,7 +10,7 @@ node('iothub') {
     def buildDate = sdf.format(startTime)
     def buildVersion = "${buildDate}_${BUILD_NUMBER}_BOSCH"
     if (BRANCH != "develop") {
-        buildVersion = "${buildDate}_${BUILD_NUMBER}_BOSCH_" + BRANCH
+        buildVersion = "${buildDate}_${BUILD_NUMBER}_BOSCH_${BRANCH}"
     }
 
     def dockerImageOrgName = "eclipse"
