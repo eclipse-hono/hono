@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2017, 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,6 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.Binary;
@@ -29,15 +27,14 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
-import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -49,7 +46,6 @@ import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * A base class for implementing Vert.x based Hono protocol adapters
@@ -71,7 +67,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private MqttServer server;
     private MqttServer insecureServer;
-    private Map<MqttEndpoint, JsonObject> registrationAssertions = new HashMap<>();
 
     @Override
     public int getPortDefaultValue() {
@@ -418,7 +413,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private Future<Void> publishMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice, final Message message, final ResourceIdentifier authorizedResource) {
 
-        final Future<JsonObject> assertionTracker = getRegistrationAssertion(endpoint, authorizedResource.getTenantId(), authorizedResource.getResourceId());
+        final Future<JsonObject> assertionTracker = getRegistrationAssertion(authorizedResource.getTenantId(), authorizedResource.getResourceId());
         final Future<MessageSender> senderTracker = getSenderForEndpoint(authorizedResource.getEndpoint(), authorizedResource.getTenantId());
 
         return CompositeFuture.all(assertionTracker, senderTracker).recover(t -> {
@@ -510,29 +505,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
     }
 
-    private Future<JsonObject> getRegistrationAssertion(final MqttEndpoint endpoint, final String tenantId, final String deviceId) {
-
-        final JsonObject registrationAssertion = registrationAssertions.get(endpoint);
-        if (registrationAssertion != null) {
-            String token = registrationAssertion.getString(RegistrationConstants.FIELD_ASSERTION);
-            if (token != null && !RegistrationAssertionHelperImpl.isExpired(token, 10)) {
-                return Future.succeededFuture(registrationAssertion);
-            }
-        }
-
-        registrationAssertions.remove(endpoint);
-        return getRegistrationAssertion(tenantId, deviceId).map(t -> {
-            // if the client closes the connection right after publishing the messages and before that
-            // the registration assertion has been returned, avoid to put it into the map
-            if (endpoint.isConnected()) {
-                LOG.trace("caching registration assertion for [tenantId: {}, deviceId: {}]",
-                        tenantId, deviceId);
-                registrationAssertions.put(endpoint, t);
-            }
-            return t;
-        });
-    }
-
     private Future<Void> doUploadMessage(final Message message, final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice,
             final MessageSender sender) {
 
@@ -553,9 +525,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param endpoint The connection to close.
      */
     protected final void close(final MqttEndpoint endpoint) {
-        if (registrationAssertions.remove(endpoint) != null) {
-            LOG.trace("removed registration assertion for device [clientId: {}]", endpoint.clientIdentifier());
-        }
         onClose(endpoint);
         if (endpoint.isConnected()) {
             LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
