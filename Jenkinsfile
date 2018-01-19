@@ -8,11 +8,11 @@ node('iothub') {
     def startTime = new Date()
     def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd")
     def buildDate = sdf.format(startTime)
-    if (BRANCH == "develop") {
-        def buildVersion = "${buildDate}_${BUILD_NUMBER}_BOSCH"
-    } else {
-        def buildVersion = "${buildDate}_${BUILD_NUMBER}_BOSCH_" + BRANCH
+    def buildVersion = "${buildDate}_${BUILD_NUMBER}_BOSCH"
+    if (BRANCH != "develop") {
+        buildVersion = "${buildDate}_${BUILD_NUMBER}_BOSCH_" + BRANCH
     }
+
     def dockerImageOrgName = "eclipse"
 
     stage('Checkout') {
