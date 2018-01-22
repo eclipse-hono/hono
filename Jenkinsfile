@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 node('iothub') {
 
-    final String BRANCH= "${params.BRANCH}".replace("origin/", "").replaceAll("/", "")
+    final String BRANCH= "${BRANCH_NAME}".replace("origin/", "").replaceAll("/", "")
     def mvnHome = tool 'mvn3.3.9'
     env.JAVA_HOME = tool 'jdk8u74'
 
