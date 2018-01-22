@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
@@ -41,6 +42,12 @@ import io.vertx.core.json.JsonObject;
  * @param <T> The type of configuration properties this service requires.
  */
 public abstract class BaseRegistrationService<T> extends ConfigurationSupportingVerticle<T> implements RegistrationService {
+
+    /**
+     * The name of the field in a device's registration information that contains
+     * the identifier of the gateway that it is connected to.
+     */
+    public static final String PROPERTY_VIA = "via";
 
     /**
      * A logger to be shared by subclasses.
@@ -137,15 +144,22 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
 
         try {
             final JsonObject body = regMsg.body();
-            final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
-            final String deviceId = body.getString(RequestResponseApiConstants.FIELD_DEVICE_ID);
+            final String tenantId = body.getString(RegistrationConstants.FIELD_TENANT_ID);
+            final String deviceId = body.getString(RegistrationConstants.FIELD_DEVICE_ID);
+            final String gatewayId = body.getString(RegistrationConstants.APP_PROPERTY_GATEWAY_ID);
             final String operation = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
 
 
             switch (operation) {
             case RegistrationConstants.ACTION_ASSERT:
-                log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
-                assertRegistration(tenantId, deviceId, result -> reply(regMsg, result));
+                if (gatewayId == null) {
+                    log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
+                    assertRegistration(tenantId, deviceId, result -> reply(regMsg, result));
+                } else {
+                    log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
+                            deviceId, tenantId, gatewayId);
+                    assertRegistration(tenantId, deviceId, gatewayId, result -> reply(regMsg, result));
+                }
                 break;
             case RegistrationConstants.ACTION_GET:
                 log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
@@ -184,33 +198,104 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
      * using cached information etc.
      */
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void assertRegistration(
+            final String tenantId,
+            final String deviceId,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resultHandler);
 
-        getDevice(tenantId, deviceId, getAttempt -> {
-            if (getAttempt.failed()) {
-                resultHandler.handle(getAttempt);
+        final Future<RegistrationResult> getResultTracker = Future.future();
+        getDevice(tenantId, deviceId, getResultTracker.completer());
+
+        getResultTracker.map(result -> {
+            if (isDeviceEnabled(result)) {
+                return RegistrationResult.from(
+                        HttpURLConnection.HTTP_OK,
+                        getAssertionPayload(tenantId, deviceId, result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA)));
             } else {
-                final RegistrationResult result = getAttempt.result();
-                if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                    // device is not registered with tenant
-                    resultHandler.handle(getAttempt);
+                return RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+            }
+        }).setHandler(resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Subclasses may override this method in order to implement a more sophisticated approach for asserting registration status, e.g.
+     * using cached information etc.
+     */
+    @Override
+    public void assertRegistration(
+            final String tenantId,
+            final String deviceId,
+            final String gatewayId,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(gatewayId);
+        Objects.requireNonNull(resultHandler);
+
+        Future<RegistrationResult> deviceInfoTracker = Future.future();
+        Future<RegistrationResult> gatewayInfoTracker = Future.future();
+
+        getDevice(tenantId, deviceId, deviceInfoTracker.completer());
+        getDevice(tenantId, gatewayId, gatewayInfoTracker.completer());
+
+        CompositeFuture.all(deviceInfoTracker, gatewayInfoTracker).compose(ok -> {
+
+            final RegistrationResult deviceResult = deviceInfoTracker.result();
+            final RegistrationResult gatewayResult = gatewayInfoTracker.result();
+
+            if (!isDeviceEnabled(deviceResult)) {
+                return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+            } else if (!isDeviceEnabled(gatewayResult)) {
+                return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
+            } else {
+
+                final JsonObject deviceData = deviceResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
+                final JsonObject gatewayData = gatewayResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
+
+                if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
+                    return Future.succeededFuture(RegistrationResult.from(
+                        HttpURLConnection.HTTP_OK,
+                        getAssertionPayload(tenantId, deviceId, deviceData)));
                 } else {
-                    final JsonObject registrationInfo = result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
-                    if (isDeviceEnabled(registrationInfo)) {
-                        // device is registered with tenant and is enabled
-                        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(
-                                HttpURLConnection.HTTP_OK,
-                                getAssertionPayload(tenantId, deviceId, registrationInfo))));
-                    } else {
-                        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-                    }
+                    return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
                 }
             }
-        });
+        }).setHandler(resultHandler);
+    }
+
+    /**
+     * Checks if a gateway is authorized to act <em>on behalf of</em> a device.
+     * <p>
+     * This default implementation checks if the value of the
+     * {@link #PROPERTY_VIA} property in the device's registration information
+     * matches the gateway's identifier.
+     * <p>
+     * Subclasses should override this method in order to implement a more
+     * sophisticated check.
+     * 
+     * @param gatewayId The identifier of the gateway.
+     * @param gatewayData The data registered for the gateway.
+     * @param deviceId The identifier of the device.
+     * @param deviceData The data registered for the device.
+     * @return {@code true} if the gateway is authorized.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected boolean isGatewayAuthorized(final String gatewayId, final JsonObject gatewayData,
+            final String deviceId, final JsonObject deviceData) {
+
+        return gatewayId.equals(deviceData.getString(PROPERTY_VIA));
+    }
+
+    private boolean isDeviceEnabled(final RegistrationResult registrationResult) {
+        return registrationResult.isOk() &&
+                isDeviceEnabled(registrationResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA));
     }
 
     private boolean isDeviceEnabled(final JsonObject registrationData) {
@@ -289,5 +374,4 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
                 .put(RegistrationConstants.FIELD_DEVICE_ID, deviceId)
                 .put(RegistrationConstants.FIELD_DATA, data);
     }
-
 }

@@ -47,14 +47,14 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_REGISTRY_REST_KEY_STORE_PASSWORD`<br>`--hono.registry.rest.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_REGISTRY_REST_KEY_STORE_PATH`<br>`--hono.registry.rest.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_REGISTRY_REST_KEY_PATH` and `HONO_REGISTRY_REST_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_REGISTRY_REST_PORT`<br>`--hono.registry.rest.port` | no | `5671` | The secure port that the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_REGISTRY_SVC_FILENAME`<br>`--hono.registry.svc.filename` | no | `/var/lib/hono/device-registry/`<br>`device-identities.json` | The path to the file where the server stores identities of registered devices. Hono tries to read device identities from this file during start-up and writes out all identities to this file periodically if property `HONO_REGISTRY_SVC_SAVE_TO_FILE` is set to `true`. |
+| `HONO_REGISTRY_SVC_FILENAME`<br>`--hono.registry.svc.filename` | no | `/var/lib/hono/device-registry/`<br>`device-identities.json` | The path to the file where the server stores identities of registered devices. Hono tries to read device identities from this file during start-up and writes out all identities to this file periodically if property `HONO_REGISTRY_SVC_SAVE_TO_FILE` is set to `true`.<br>Please refer to [Device Identities File Format]({{< relref "#device-identities-file-format" >}}) for details regarding the file's format. |
 | `HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT`<br>`--hono.registry.svc.maxDevicesPerTenant` | no | `100` | The number of devices that can be registered for each tenant. It is an error to set this property to a value <= 0. |
 | `HONO_REGISTRY_SVC_MODIFICATION_ENABLED`<br>`--hono.registry.svc.modificationEnabled` | no | `true` | When set to `false` the device information contained in the registry cannot be updated nor removed from the registry. |
 | `HONO_REGISTRY_SVC_SAVE_TO_FILE`<br>`--hono.registry.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered device information to the file specified by the `HONO_REGISTRY_FILENAME` property. |
 | `HONO_REGISTRY_SVC_SIGNING_KEY_PATH`<br>`--hono.registry.svc.signing.keyPath` | no  | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for signing tokens asserting a device's registration status. When using this variable, other services that need to validate the tokens issued by this service need to be configured with the corresponding certificate/public key. Alternatively, a symmetric key can be used for signing (and validating) by setting the `HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_REGISTRY_AMP_KEY_PATH` variable. If that variable is also not set, startup of the server fails. |
 | `HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET`<br>`--hono.registry.svc.signing.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for signing tokens asserting a device's registration status. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the signing key using this variable, other services that need to validate the tokens issued by this service need to be configured with the same key. Alternatively, an asymmetric key pair can be used for signing (and validating) by setting the `HONO_REGISTRY_SVC_SIGNING_KEY_PATH` variable. If none of these variables is set, startup of the server fails. |
 | `HONO_REGISTRY_SVC_SIGNING_TOKEN_EXPIRATION`<br>`--hono.registry.svc.signing.tokenExpiration` | no | `10` | The expiration period to use for the tokens asserting the registration status of devices. |
-| `HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME`<br>`--hono.credentials.svc.credentialsFilename` | no | `/var/lib/hono/device-registry/`<br>`credentials.json` | The path to the file where the server stores credentials of devices. Hono tries to read credentials from this file during start-up and writes out all identities to this file periodically if property `HONO_CREDENTIALS_SVC_SAVE_TO_FILE` is set to `true`. |
+| `HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME`<br>`--hono.credentials.svc.credentialsFilename` | no | `/var/lib/hono/device-registry/`<br>`credentials.json` | The path to the file where the server stores credentials of devices. Hono tries to read credentials from this file during start-up and writes out all identities to this file periodically if property `HONO_CREDENTIALS_SVC_SAVE_TO_FILE` is set to `true`.<br>Please refer to [Credentials File Format]({{< relref "#credentials-file-format" >}}) for details regarding the file's format. |
 | `HONO_CREDENTIALS_SVC_MODIFICATION_ENABLED`<br>`--hono.credentials.svc.modificationEnabled` | no | `true` | When set to `false` the credentials contained in the registry cannot be updated nor removed. |
 | `HONO_CREDENTIALS_SVC_SAVE_TO_FILE`<br>`--hono.credentials.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered credentials to the file specified by the `HONO_CREDENTIALS_SVC_CREDENTIALS_FILENAME` property. |
 
@@ -127,6 +127,30 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_AUTH_VALIDATION_CERT_PATH`<br>`--hono.auth.validation.certPath` | no  | - | The absolute path to the PEM file containing the public key that the service should use for validating tokens issued by the Authentication service. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHARED_SECRET` variable. If none of these variables is set, the service falls back to the key indicated by the `HONO_AUTH_CERT_PATH` variable. If that variable is also not set, startup of the service fails. |
 | `HONO_AUTH_VALIDATION_SHARED_SECRET`<br>`--hono.auth.validation.sharedSecret` | no  | - | A string to derive a symmetric key from which is used for validating tokens issued by the Authentication service. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the Authentication service **must** be configured with the same key. Alternatively, an asymmetric key pair can be used for validating (and signing) by setting the `HONO_AUTH_SIGNING_CERT_PATH` variable. If none of these variables is set, startup of the service fails. |
 
+## Device Identities File Format
+
+The Device Registry supports persisting the device identities and their registration information to a JSON file in the local file system.
+The *Getting started Guide* includes an example configuration which illustrates the file format used. The configuration file's location is `/example/src/main/config/example-device-identities.json`.
+
+## Credentials File Format
+
+The Device Registry supports persisting the devices' credentials to a JSON file in the local file system.
+The *Getting started Guide* includes an example configuration which illustrates the file format used. The configuration file's location is `/example/src/main/config/example-credentials.json`.
+
+## Configuring Gateway Devices
+
+The Device Registry supports devices to *act on behalf of* other devices. This is particularly useful for cases where a device does not connect directly to a Hono protocol adapter but is connected to a *gateway* component that is usually specific to the device's communication protocol. It is the gateway component which then connects to a Hono protocol adapter and publishes data on behalf of the device(s). Examples of such a set up include devices using [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/) for communication.
+
+In these cases the protocol adapter will usually authenticate the gateway component instead of the device for which it wants to publish data. In order to verify that the gateway is *authorized* to publish data on behalf of the particular device, the protocol adapter should include the gateway's device identifier (as determined during the authentication process) in its invocation of the Device Registry's *assert Device Registration* operation.
+
+The Device Registry will then do the following:
+1. Verify that the device exists and is enabled.
+1. Verify that the gateway exists and is enabled.
+2. Verify that the device's registration information contains a property called `via` and that its value is the gateway's device identifier.
+
+Only if all conditions are met, the Device Registry returns an assertion of the device's registration status. The protocol adapter can then forward the published data to Hono Messaging in the same way as for any device that connects directly to the adapter.
+
+The example configuration file (located at `/example/src/main/config/example-device-identities.json`) includes a device and a corresponding gateway configured in this way.
 
 ## Run as a Docker Swarm Service
 

@@ -42,9 +42,6 @@ public class RequestResponseApiConstants {
     public static final String FIELD_PAYLOAD   = "payload";
     public static final String FIELD_TENANT_ID = "tenant-id";
 
-    /* message property names */
-    public static final String APP_PROPERTY_KEY = "key";
-
     /**
      * Build a Proton message as a reply for an endpoint from the json payload that e.g. is received from the vert.x eventbus
      * from the implementing service.
@@ -54,6 +51,7 @@ public class RequestResponseApiConstants {
      * @return Message The built Proton message.
      */
     public static final Message getAmqpReply(final String endpoint, final JsonObject payload) {
+
         final String tenantId = payload.getString(FIELD_TENANT_ID);
         final String deviceId = payload.getString(FIELD_DEVICE_ID);
         final Integer status = payload.getInteger(MessageHelper.APP_PROPERTY_STATUS);
@@ -100,7 +98,7 @@ public class RequestResponseApiConstants {
         }
 
         if (payload != null) {
-            message.setContentType("application/json; charset=utf-8");
+            message.setContentType(CONTENT_TYPE_APPLICATION_JSON);
             message.setBody(new AmqpValue(payload.encode()));
         }
         return message;
@@ -168,31 +166,11 @@ public class RequestResponseApiConstants {
      */
     public static final JsonObject getServiceRequestAsJson(final String operation, final String tenantId, final String deviceId,
                                                            final JsonObject payload) {
-        return getServiceRequestAsJson(operation, tenantId, deviceId, null, payload);
-    }
-
-    /**
-     * Build a Json object as a request for internal communication via the vert.x event bus.
-     * Clients use this object to build their request that is sent to the processing service.
-     *
-     * @param operation The operation that shall be processed by the service.
-     * @param tenantId The tenant for which the message was processed.
-     * @param deviceId The device that the message relates to. Maybe null - then no deviceId will be contained.
-     * @param valueForKeyProperty The value for the application property {@link #APP_PROPERTY_KEY}.
-     *                            If null, the key will not be set.
-     * @param payload The payload from the request that is passed to the processing service.
-     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
-     */
-    public static final JsonObject getServiceRequestAsJson(final String operation, final String tenantId, final String deviceId,
-                                                           final String valueForKeyProperty, final JsonObject payload) {
         final JsonObject msg = new JsonObject();
         msg.put(MessageHelper.SYS_PROPERTY_SUBJECT, operation);
+        msg.put(FIELD_TENANT_ID, tenantId);
         if (deviceId != null) {
             msg.put(FIELD_DEVICE_ID, deviceId);
-        }
-        msg.put(FIELD_TENANT_ID, tenantId);
-        if (valueForKeyProperty != null) {
-            msg.put(RegistrationConstants.APP_PROPERTY_KEY, valueForKeyProperty);
         }
         if (payload != null) {
             msg.put(RegistrationConstants.FIELD_PAYLOAD, payload);
