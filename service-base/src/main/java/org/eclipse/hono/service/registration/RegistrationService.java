@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -45,14 +45,47 @@ public interface RegistrationService extends Verticle {
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
-     * @param resultHandler The handler to invoke with the result of the operation. If a device with the
-     *         given ID is registered for the tenant and its <em>enabled</em> property is {@code true},
-     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK}
-     *         and the <em>payload</em> will contain a JWT token asserting the registration status.
-     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *                      <p>
+     *                      If a device with the given ID is registered for the tenant and its
+     *                      <em>enabled</em> property is {@code true}, the <em>status</em> will
+     *                      be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will
+     *                      contain a JWT token asserting the registration status.
+     *                      <p>
+     *                      Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void assertRegistration(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
+
+    /**
+     * Asserts that a device is authorized to act as a <em>gateway</em> for another device.
+     * <p>
+     * In particular, this means that the gateway and the device are registered with the tenant, are enabled
+     * and that the gateway device is allowed to <em>act on behalf of</em> the other device.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to get the assertion for.
+     * @param gatewayId The gateway that wants to act on behalf of the device.
+     *                  <p>
+     *                  Implementing classes should verify, that the gateway is authorized to
+     *                  get an assertion for the device. Such a check might be
+     *                  based on a specific role that the client needs to have or on an
+     *                  explicitly defined relation between the gateway and the device(s).
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *                      <p>
+     *                      If a device with the given ID is registered for the tenant and its
+     *                      <em>enabled</em> property is {@code true}, the <em>status</em> will
+     *                      be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will
+     *                      contain a JWT token asserting the registration status.
+     *                      <p>
+     *                      If a gateway ID is provided and the gateway is not authorized to
+     *                      get an assertion for the device, the status will be
+     *                      {@link HttpURLConnection#HTTP_FORBIDDEN}.
+     *                      <p>
+     *                      Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    void assertRegistration(String tenantId, String deviceId, String gatewayId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     /**
      * Registers a device.

@@ -124,13 +124,16 @@ public class UsernamePasswordCredentialsTest {
     public void testMatchesCredentialsSucceedsForMatchingPassword() throws NoSuchAlgorithmException {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
-        String hashedPassword = getHashedPassword("sha-512", null, TEST_PASSWORD);
-        Map<String, String> candidateSecret = new HashMap<>();
+        final byte[] salt = "TheSalt".getBytes(StandardCharsets.UTF_8);
+        final String encodedSalt = Base64.getEncoder().encodeToString(salt);
+        final String hashedPassword = getHashedPassword("sha-512", salt, TEST_PASSWORD);
+        final Map<String, String> candidateSecret = new HashMap<>();
+        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_SALT, encodedSalt);
         candidateSecret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, hashedPassword);
         candidateSecret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, "sha-512");
 
         // WHEN a device provides matching credentials
-        UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
+        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
 
         // THEN verification of the credentials succeeds
         assertTrue(credentials.matchesCredentials(candidateSecret));
@@ -162,7 +165,7 @@ public class UsernamePasswordCredentialsTest {
         if (salt != null) {
             digest.update(salt);
         }
-        digest.update(TEST_PASSWORD.getBytes(StandardCharsets.UTF_8));
+        digest.update(password.getBytes(StandardCharsets.UTF_8));
         return Base64.getEncoder().encodeToString(digest.digest());
     }
 }
