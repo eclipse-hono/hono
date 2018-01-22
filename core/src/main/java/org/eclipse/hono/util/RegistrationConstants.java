@@ -46,6 +46,11 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      */
     public static final String ACTION_UPDATE     = "update";
 
+    /**
+     * The name of the AMQP 1.0 message application property containing the id of the gateway
+     * that wants to report data on behalf of another device.
+     */
+    public static final String APP_PROPERTY_GATEWAY_ID = "gateway_id";
 
     /**
      * The name of the field in a response to the <em>assert device registration</em> operation
@@ -105,13 +110,21 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      * @throws DecodeException if the message contains a body that cannot be parsed into a JSON object.
      */
     public static JsonObject getRegistrationMsg(final Message message) {
+
         Objects.requireNonNull(message);
+
         final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
         final String tenantId = MessageHelper.getTenantIdAnnotation(message);
-        final String key = getKey(message);
+        final String gatewayId = MessageHelper.getApplicationProperty(message.getApplicationProperties(),
+                APP_PROPERTY_GATEWAY_ID, String.class);
         final String operation = message.getSubject();
         final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getServiceRequestAsJson(operation, tenantId, deviceId, key, payload);
+
+        final JsonObject result = getServiceRequestAsJson(operation, tenantId, deviceId, payload);
+        if (gatewayId != null) {
+            result.put(APP_PROPERTY_GATEWAY_ID, gatewayId);
+        }
+        return result;
     }
 
     /**
@@ -137,11 +150,5 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static boolean hasStatus(final JsonObject msg, final int expectedStatus) {
 
         return Objects.requireNonNull(msg).getInteger(MessageHelper.APP_PROPERTY_STATUS).equals(expectedStatus);
-    }
-
-
-    private static String getKey(final Message msg) {
-        Objects.requireNonNull(msg);
-        return MessageHelper.getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_KEY, String.class);
     }
 }

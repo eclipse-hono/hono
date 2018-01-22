@@ -125,9 +125,10 @@ The following sequence diagram illustrates the flow of messages involved in a *C
 
 The following table provides an overview of the properties a client needs to set on a message to get registration information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name        | Mandatory | Location                 | Type     | Description |
-| :---------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*   | yes       | *properties*             | *string* | MUST be set to `assert`. |
+| Name         | Mandatory | Location                 | Type     | Description |
+| :----------- | :-------: | :----------------------- | :------- | :---------- |
+| *subject*    | yes       | *properties*             | *string* | MUST be set to `assert`. |
+| *gateway_id* | no        | *application-properties* | *string* | The identifier of the gateway that wants to get an assertion *on behalf* of another device (given in the *device_id* property).<br>An implementation SHOULD verify that the gateway exists, is enabled and is authorized to get an assertion for, and thus send data on behalf of, the device. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
@@ -159,6 +160,7 @@ The response message's *status* property may contain the following codes:
 | Code  | Description |
 | :---- | :---------- |
 | *200* | OK, the device is registered for the given tenant and is enabled. The payload contains the signed assertion. |
+| *403* | Forbidden, the gateway with the given *gateway id* either does not exist, is not enabled or is not authorized to get an assertion for the device with the given *device id*. |
 | *404* | Not Found, there is no device registered with the given *device id* within the given *tenant id* or the device is not enabled. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.

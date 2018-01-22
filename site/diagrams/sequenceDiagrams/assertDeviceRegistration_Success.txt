@@ -1,12 +1,18 @@
 title Assert Device Registration (success)
 
-Client->+Device Registration Service: transfer("registration/tenant", "assert", device-id)
+Client->Device Registration Service: transfer("registration/tenant", "assert", device-id, gateway-id)
+activate Device Registration Service
 note over Device Registration Service:
-lookup device and check enabled flag
-generate assertion
+verify that
+- device and gateway exist
+- device and gateway are enabled
+- gateway is authorized for device
 end note
-Device Registration Service->Client: transfer("registration/tenant/${reply-to}", "200", device-id, assertion)
+Device Registration Service->Client: transfer("registration/tenant/${reply-to}", "200", JSON payload)
+deactivate Device Registration Service
 note right of Client:
-device-id and assertion
-contained in JSON body
+JSON payload contains
+- device-id
+- assertion
+- defaults (optional)
 end note
