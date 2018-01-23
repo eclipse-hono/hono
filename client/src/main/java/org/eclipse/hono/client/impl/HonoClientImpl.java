@@ -289,6 +289,9 @@ public final class HonoClientImpl implements HonoClient {
         if (sender != null && sender.isOpen()) {
             LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
             resultHandler.handle(Future.succeededFuture(sender));
+        } else if (!isConnected()) {
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
         } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
 
             // register a handler to be notified if the underlying connection to the server fails
@@ -297,7 +300,7 @@ public final class HonoClientImpl implements HonoClient {
                 // remove lock so that next attempt to open a sender doesn't fail
                 creationLocks.remove(key);
                 resultHandler.handle(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost")));
+                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
             };
             creationRequests.add(connectionFailureHandler);
             creationLocks.put(key, Boolean.TRUE);
@@ -319,7 +322,8 @@ public final class HonoClientImpl implements HonoClient {
 
         } else {
             LOG.debug("already trying to create a message sender for {}", key);
-            resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
         }
     }
 
@@ -420,10 +424,11 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     private Future<ProtonConnection> checkConnection() {
-        if (connection == null || connection.isDisconnected()) {
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "client is not connected to server (yet)"));
-        } else {
+
+        if (isConnected()) {
             return Future.succeededFuture(connection);
+        } else {
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "client is not connected to server (yet)"));
         }
     }
 
@@ -443,6 +448,9 @@ public final class HonoClientImpl implements HonoClient {
         if (client != null && client.isOpen()) {
             LOG.debug("reusing existing client [target: {}]", key);
             resultHandler.handle(Future.succeededFuture(client));
+        } else if (!isConnected()) {
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
         } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
 
             // register a handler to be notified if the underlying connection to the server fails
@@ -473,7 +481,8 @@ public final class HonoClientImpl implements HonoClient {
 
         } else {
             LOG.debug("already trying to create a client for {}", key);
-            resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
         }
     }
 
