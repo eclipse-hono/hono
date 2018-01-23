@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH and others.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -15,6 +15,7 @@ package org.eclipse.hono.service.auth.device;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -86,11 +87,16 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         readinessHandler.register("connected-to-credentials-service", status -> {
-            if (credentialsClient != null && credentialsClient.isConnected()) {
-                status.tryComplete(Status.OK());
-            } else {
-                status.tryComplete(Status.KO());
-            }
+            Future<Boolean> checkResult = Optional.ofNullable(credentialsClient)
+                    .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
+            checkResult.map(connected -> {
+                if (connected) {
+                    status.tryComplete(Status.OK());
+                } else {
+                    status.tryComplete(Status.KO());
+                }
+                return null;
+            });
         });
     }
 
@@ -111,9 +117,6 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
         final Future<Void> result = Future.future();
         if (credentialsClient == null) {
             result.fail(new IllegalStateException("Credentials service client is not set"));
-        } else if (credentialsClient.isConnected()) {
-            log.info("already connected to Credentials service");
-            result.complete();
         } else {
             credentialsClient.connect(
                     createClientOptions(),

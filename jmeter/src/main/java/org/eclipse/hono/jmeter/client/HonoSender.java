@@ -144,11 +144,11 @@ public class HonoSender extends AbstractClient {
 
     private void createSender() throws InterruptedException {
 
-        final CountDownLatch senderLatch = new CountDownLatch(1);
-        if (honoClient == null || !honoClient.isConnected()) {
-            connect();
+        if (honoClient == null) {
+            throw new IllegalStateException("not connected to Hono");
         }
 
+        final CountDownLatch senderLatch = new CountDownLatch(1);
         if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
             honoClient.getOrCreateTelemetrySender(sampler.getTenant(), resultHandler -> {
                 if (resultHandler.failed()) {
