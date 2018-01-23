@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH and others.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -14,6 +14,7 @@ package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -258,11 +259,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             if (connectHandler != null) {
                 connectHandler.handle(Future.failedFuture("Hono Messaging client not set"));
             }
-        } else if (messaging.isConnected()) {
-            LOG.info("already connected to Hono Messaging");
-            if (connectHandler != null) {
-                connectHandler.handle(Future.succeededFuture(messaging));
-            }
         } else {
             messaging.connect(createClientOptions(), connectAttempt -> {
                 if (connectHandler != null) {
@@ -311,11 +307,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             if (connectHandler != null) {
                 connectHandler.handle(Future.failedFuture("Device Registration client not set"));
             }
-        } else if (registration.isConnected()) {
-            LOG.info("already connected to Device Registration service");
-            if (connectHandler != null) {
-                connectHandler.handle(Future.succeededFuture(registration));
-            }
         } else {
             registration.connect(createClientOptions(), connectAttempt -> {
                 if (connectHandler != null) {
@@ -358,14 +349,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Checks if this adapter is connected to <em>Hono Messaging</em>, <em>Device Registration</em>
-     * and the <em>Credentials</em> service.
+     * Checks if this adapter is connected to <em>Hono Messaging</em>
+     * and the <em>Device Registration</em> service.
      * 
-     * @return {@code true} if this adapter is connected.
+     * @return A succeeded future containing {@code true} if and only if
+     *         this adapter is connected to both services.
      */
-    protected final boolean isConnected() {
-        return messaging != null && messaging.isConnected() &&
-                registration != null && registration.isConnected();
+    protected final Future<Boolean> isConnected() {
+        final Future<Boolean> messagingCheck = Optional.ofNullable(messaging)
+                .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
+        final Future<Boolean> registrationCheck = Optional.ofNullable(registration)
+                .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
+        return CompositeFuture.all(messagingCheck, registrationCheck).compose(ok -> {
+            return Future.succeededFuture(messagingCheck.result() && registrationCheck.result());
+        });
     }
 
     /**
@@ -527,11 +524,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
         handler.register("connection-to-services", status -> {
-            if (isConnected()) {
-                status.tryComplete(Status.OK());
-            } else {
-                status.tryComplete(Status.KO());
-            }
+            isConnected().map(connected -> {
+                if (connected) {
+                    status.tryComplete(Status.OK());
+                } else {
+                    status.tryComplete(Status.KO());
+                }
+                return null;
+            });
         });
         if (credentialsAuthProvider != null) {
             credentialsAuthProvider.registerReadinessChecks(handler);

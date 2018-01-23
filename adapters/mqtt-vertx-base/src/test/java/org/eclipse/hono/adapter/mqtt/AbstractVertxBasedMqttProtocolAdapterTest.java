@@ -431,8 +431,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     private void forceClientMocksToConnected() {
-        when(messagingClient.isConnected()).thenReturn(true);
-        when(registrationClient.isConnected()).thenReturn(true);
+        when(messagingClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(registrationClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
     }
 
     private MqttEndpoint getMqttEndpointAuthenticated() {
