@@ -23,13 +23,16 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
@@ -52,6 +55,12 @@ import io.vertx.proton.ProtonSender;
  */
 @RunWith(VertxUnitRunner.class)
 public class AbstractRequestResponseClientTest {
+
+    /**
+     * Global timeout for all test cases.
+     */
+    @Rule
+    public Timeout timeout = Timeout.seconds(5);
 
     private static final String MESSAGE_ID = "messageid";
     private ProtonReceiver recv;
@@ -110,7 +119,7 @@ public class AbstractRequestResponseClientTest {
         }));
 
         // THEN the message is not sent and the request result handler is failed
-        sendFailure.await(2000);
+        sendFailure.await();
         verify(sender, never()).send(any(Message.class));
     }
 
@@ -134,7 +143,7 @@ public class AbstractRequestResponseClientTest {
 
         // THEN the message is sent and the message being sent contains the headers as application properties
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture());
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
         assertThat(messageCaptor.getValue(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), instanceOf(AmqpValue.class));
@@ -144,6 +153,38 @@ public class AbstractRequestResponseClientTest {
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key"), is("test-value"));
         // and a timer has been set to time out the request after 200 ms
         verify(vertx).setTimer(eq(200L), any(Handler.class));
+    }
+
+    /**
+     * Verifies that the client fails the result handler if the peer rejects
+     * the request message.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testCreateAndSendRequestFailsOnRejectedMessage(final TestContext ctx) {
+
+        // GIVEN a request-response client that times out requests after 200 ms
+        client.setRequestTimeout(200);
+
+        // WHEN sending a request message with some headers and payload
+        final Async sendFailure = ctx.async();
+        final JsonObject payload = new JsonObject().put("key", "value");
+        client.createAndSendRequest("get", null, payload, ctx.asyncAssertFailure(t -> {
+            sendFailure.complete();
+        }));
+        // and the peer rejects the message
+        final Rejected rejected = new Rejected();
+        rejected.setError(ProtonHelper.condition("bad-request", "request message is malformed"));
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.getRemoteState()).thenReturn(rejected);
+        final ArgumentCaptor<Handler> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
+        dispositionHandlerCaptor.getValue().handle(delivery);
+
+        // THEN the result handler is failed
+        sendFailure.await();
     }
 
     /**
@@ -172,7 +213,7 @@ public class AbstractRequestResponseClientTest {
         client.handleResponse(delivery, response);
 
         // THEN the response is passed to the handler registered with the request
-        responseReceived.await(1000);
+        responseReceived.await();
         verify(vertx, never()).setTimer(anyLong(), any(Handler.class));
     }
 
@@ -205,7 +246,7 @@ public class AbstractRequestResponseClientTest {
         }));
 
         // THEN the request handler is failed
-        requestFailure.await(1000);
+        requestFailure.await();
     }
 
     /**
@@ -228,7 +269,7 @@ public class AbstractRequestResponseClientTest {
         }));
 
         // THEN the request fails immediately
-        requestFailure.await(1000);
+        requestFailure.await();
     }
 
     /**
@@ -251,7 +292,7 @@ public class AbstractRequestResponseClientTest {
         }));
 
         // THEN the request fails immediately
-        requestFailure.await(1000);
+        requestFailure.await();
     }
 
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {
