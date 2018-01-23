@@ -96,6 +96,7 @@ public class RegistrationClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testAssertRegistrationAddsInfoOnCacheMiss(final TestContext ctx) {
 
@@ -115,7 +116,7 @@ public class RegistrationClientImplTest {
             ctx.assertEquals(registrationAssertion, result.getPayload());
         }));
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture());
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
@@ -127,6 +128,7 @@ public class RegistrationClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testAssertRegistrationInvokesServiceOnIfNoCacheConfigured(final TestContext ctx) {
 
@@ -145,7 +147,7 @@ public class RegistrationClientImplTest {
             ctx.assertEquals(registrationAssertion, result.getPayload());
         }));
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture());
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);

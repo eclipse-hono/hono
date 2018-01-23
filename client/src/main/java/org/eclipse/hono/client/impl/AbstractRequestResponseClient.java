@@ -19,8 +19,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -58,7 +61,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     private static final Logger LOG = LoggerFactory.getLogger(AbstractRequestResponseClient.class);
     private static final long DEFAULT_TIMEOUT_MILLIS = 200L;
 
-    private final Map<String, Handler<AsyncResult<R>>> replyMap = new ConcurrentHashMap<>();
+    private final Map<Object, Handler<AsyncResult<R>>> replyMap = new ConcurrentHashMap<>();
     private final String replyToAddress;
     private final String targetAddress;
 
@@ -248,7 +251,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @throws IllegalArgumentException if the result has not failed.
      */
-    protected final void cancelRequest(final String correlationId, final AsyncResult<R> result) {
+    protected final void cancelRequest(final Object correlationId, final AsyncResult<R> result) {
 
         Objects.requireNonNull(correlationId);
         Objects.requireNonNull(result);
@@ -365,17 +368,41 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
             } else {
-                final String messageId = (String) request.getMessageId();
-                replyMap.put(messageId, resultHandler);
-                sender.send(request);
+                final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(request.getMessageId());
+                replyMap.put(correlationId, resultHandler);
+                sender.send(request, deliveryUpdated -> {
+
+                    // settle locally
+                    deliveryUpdated.settle();
+
+                    if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
+                        final Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
+                        if (rejected.getError() != null) {
+                            LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
+                                    targetAddress, request.getSubject(), correlationId, rejected.getError());
+                            cancelRequest(correlationId, Future.failedFuture(new ClientErrorException(
+                                    HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getCondition().toString())));
+                        } else {
+                            LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]",
+                                    targetAddress, request.getSubject(), correlationId);
+                            cancelRequest(correlationId, Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)));
+                        }
+                    } else if (Accepted.class.isInstance(deliveryUpdated.getRemoteState())) {
+                        LOG.trace("service has accepted request [target address: {}, subject: {}, correlation ID: {}]",
+                                targetAddress, request.getSubject(), correlationId);
+                    } else {
+                        LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
+                                targetAddress, request.getSubject(), correlationId, deliveryUpdated.getRemoteState());
+                        cancelRequest(correlationId, Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+                    }
+                });
                 if (requestTimeoutMillis > 0) {
                     context.owner().setTimer(requestTimeoutMillis, tid -> {
-                        cancelRequest(messageId, Future.failedFuture(new ServerErrorException(
+                        cancelRequest(correlationId, Future.failedFuture(new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE, "request timed out after " + requestTimeoutMillis + "ms")));
                     });
                 }
                 if (LOG.isDebugEnabled()) {
-                    final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(messageId);
                     final String deviceId = MessageHelper.getDeviceId(request);
                     if (deviceId == null) {
                         LOG.debug("sent request [target address: {}, subject: {}, correlation ID: {}] to service",
