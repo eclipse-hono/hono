@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
@@ -115,7 +116,7 @@ public class HonoClientImplTest {
                     ctx.fail("should not create concurrent client");
                     return Future.succeededFuture(mock(RegistrationClient.class));
                 },
-                ctx.asyncAssertFailure(t -> {
+                ctx.<RequestResponseClient> asyncAssertFailure(t -> {
                     // THEN the concurrent attempt fails without any attempt being made to create another client
                     ctx.assertTrue(ServerErrorException.class.isInstance(t));
                 }));
@@ -278,14 +279,14 @@ public class HonoClientImplTest {
         // second on reconnect
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 2);
 
-        // GIVEN a client connected to a server
+        // GIVEN a client trying to create a sender to the peer
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(new ProtonClientOptions().setReconnectAttempts(1), ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
-        final Async senderCreationFailure = ctx.async();
         // WHEN the downstream connection fails just when the client wants to open a sender link
+        final Async senderCreationFailure = ctx.async();
         client.getOrCreateSender("telemetry/tenant", () -> {
             connectionFactory.getDisconnectHandler().handle(con);
             return Future.future();

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
@@ -39,11 +40,12 @@ import io.vertx.proton.ProtonDelivery;
 public interface HonoClient {
 
     /**
-     * Checks whether this client is connected to the Hono server.
+     * Checks whether this client is connected to the service.
      * 
-     * @return {@code true} if this client is connected.
+     * @return A succeeded future containing {@code true} if this client is connected,
+     *         {@code false} otherwise.
      */
-    boolean isConnected();
+    Future<Boolean> isConnected();
 
     /**
      * Connects to the Hono server using given options.
@@ -127,9 +129,8 @@ public interface HonoClient {
     /**
      * Creates a new consumer of events for a tenant.
      * <p>
-     * The events passed in to the registered eventConsumer will be settled
-     * automatically if the consumer does not throw an exception and does not
-     * manually handle the message disposition using the passed in delivery.
+     * The events passed in to the event consumer will be settled
+     * automatically if the consumer does not throw an exception.
      *
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
@@ -144,7 +145,7 @@ public interface HonoClient {
     /**
      * Creates a new consumer of events for a tenant.
      * <p>
-     * The events passed in to the registered eventConsumer will be settled
+     * The events passed in to the event consumer will be settled
      * automatically if the consumer does not throw an exception and does not
      * manually handle the message disposition using the passed in delivery.
      *

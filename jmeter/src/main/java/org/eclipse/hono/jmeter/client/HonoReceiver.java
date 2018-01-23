@@ -101,10 +101,10 @@ public class HonoReceiver extends AbstractClient {
     }
 
     private void createConsumer(final ClientConfigProperties config) throws InterruptedException {
-        final CountDownLatch receiverLatch = new CountDownLatch(1);
-        if (amqpNetworkClient == null || !amqpNetworkClient.isConnected()) {
-            connect(config);
+        if (amqpNetworkClient == null) {
+            throw new IllegalStateException("not connected to AMQP Network");
         }
+        final CountDownLatch receiverLatch = new CountDownLatch(1);
         if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
             amqpNetworkClient.createTelemetryConsumer(sampler.getTenant(), this::messageReceived, creationHandler -> {
                 if (creationHandler.failed()) {
