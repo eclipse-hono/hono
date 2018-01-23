@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -26,6 +26,7 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /**
@@ -41,7 +42,7 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
     }
 
     @Override
-    public void flow(final int credits) throws IllegalStateException {
+    public void flow(final int credits) {
         receiver.flow(credits);
     }
 
@@ -60,7 +61,15 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
             final ProtonQoS qos,
             final BiConsumer<ProtonDelivery, Message> consumer) {
 
-        Future<ProtonReceiver> result = Future.future();
+        Objects.requireNonNull(context);
+        Objects.requireNonNull(clientConfig);
+        Objects.requireNonNull(con);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(pathSeparator);
+        Objects.requireNonNull(address);
+        Objects.requireNonNull(qos);
+
+        final Future<ProtonReceiver> result = Future.future();
         final String targetAddress = String.format(address, pathSeparator, tenantId);
 
         context.runOnContext(open -> {
@@ -74,14 +83,16 @@ abstract class AbstractConsumer extends AbstractHonoClient implements MessageCon
                 }
                 if (LOG.isTraceEnabled()) {
                     int remainingCredits = receiver.getCredit() - receiver.getQueued();
-                    LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]", delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                    LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
+                            delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
                 }
             });
             receiver.openHandler(receiverOpen -> {
                 if (receiverOpen.succeeded()) {
                     LOG.debug("receiver [source: {}, qos: {}] open", receiver.getRemoteSource(), receiver.getRemoteQoS());
                     if (qos.equals(ProtonQoS.AT_LEAST_ONCE) && !qos.equals(receiver.getRemoteQoS())) {
-                        LOG.info("remote container uses other QoS than requested [requested: {}, in use: {}]", qos, receiver.getRemoteQoS());
+                        LOG.info("remote container uses other QoS than requested [requested: {}, in use: {}]",
+                                qos, receiver.getRemoteQoS());
                     }
                     result.complete(receiver);
                 } else {
