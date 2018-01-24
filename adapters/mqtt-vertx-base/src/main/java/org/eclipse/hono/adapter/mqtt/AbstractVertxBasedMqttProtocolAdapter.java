@@ -415,7 +415,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private Future<Void> publishMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice, final Message message, final ResourceIdentifier authorizedResource) {
 
-        final Future<JsonObject> assertionTracker = getRegistrationAssertion(authorizedResource.getTenantId(), authorizedResource.getResourceId());
+        final Future<JsonObject> assertionTracker = getRegistrationAssertion(authorizedResource.getTenantId(), authorizedResource.getResourceId(), null);
         final Future<MessageSender> senderTracker = getSenderForEndpoint(authorizedResource.getEndpoint(), authorizedResource.getTenantId());
 
         return CompositeFuture.all(assertionTracker, senderTracker).recover(t -> {

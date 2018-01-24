@@ -16,6 +16,7 @@ package org.eclipse.hono.service;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -172,10 +173,10 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter connected to a registration service
         final JsonObject assertionResult = newRegistrationAssertionResult("token");
-        when(registrationClient.assertRegistration("device")).thenReturn(Future.succeededFuture(assertionResult));
+        when(registrationClient.assertRegistration(eq("device"), anyString())).thenReturn(Future.succeededFuture(assertionResult));
 
         // WHEN an assertion for the device is retrieved
-        adapter.getRegistrationAssertion("tenant", "device").setHandler(ctx.asyncAssertSuccess(result -> {
+        adapter.getRegistrationAssertion("tenant", "device", null).setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the result contains the registration assertion
             ctx.assertEquals(assertionResult, result);
         }));
@@ -183,21 +184,21 @@ public class AbstractProtocolAdapterBaseTest {
 
     /**
      * Verifies that the adapter fails a request to get a registration assertion for
-     * a non-existing device with a 403 Forbidden error.
+     * a non-existing device.
      * 
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetRegistrationAssertionFailsWith403ForNonExistingDevice(final TestContext ctx) {
+    public void testGetRegistrationAssertionFailsWith404ForNonExistingDevice(final TestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
-        when(registrationClient.assertRegistration("non-existent")).thenReturn(
+        when(registrationClient.assertRegistration(eq("non-existent"), anyString())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         // WHEN an assertion for a non-existing device is retrieved
-        adapter.getRegistrationAssertion("tenant", "non-existent").setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the request fails with a 403
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
+        adapter.getRegistrationAssertion("tenant", "non-existent", null).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the request fails with a 404
+            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
