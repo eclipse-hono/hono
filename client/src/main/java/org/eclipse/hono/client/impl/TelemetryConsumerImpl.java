@@ -90,8 +90,8 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
         Objects.requireNonNull(telemetryConsumer);
         Objects.requireNonNull(creationHandler);
 
-        createConsumer(context, con, tenantId, pathSeparator, TELEMETRY_ADDRESS_TEMPLATE, ProtonQoS.AT_MOST_ONCE, prefetch,
-                (protonDelivery, message) -> telemetryConsumer.accept(message)).setHandler(created -> {
+        //createConsumer(context, con, tenantId, pathSeparator, TELEMETRY_ADDRESS_TEMPLATE, ProtonQoS.AT_MOST_ONCE, prefetch, (protonDelivery, message) -> telemetryConsumer.accept(message)).setHandler(created -> {
+        createReceiver(context, con, String.format(TELEMETRY_ADDRESS_TEMPLATE, pathSeparator, tenantId), ProtonQoS.AT_LEAST_ONCE, prefetch, (delivery, message) -> telemetryConsumer.accept(message), null).setHandler(created -> {
                     if (created.succeeded()) {
                         creationHandler.handle(Future.succeededFuture(
                                 new TelemetryConsumerImpl(context, created.result())));

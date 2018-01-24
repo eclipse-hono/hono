@@ -69,7 +69,7 @@ public abstract class AbstractHonoClient {
      * @param closeHandler the handler to be notified about the outcome.
      * @throws NullPointerException if the given handler is {@code null}.
      */
-    protected void closeLinks(final Handler<AsyncResult<Void>> closeHandler) {
+    protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler) {
 
         Objects.requireNonNull(closeHandler);
 
@@ -227,8 +227,29 @@ public abstract class AbstractHonoClient {
             receiver.setAutoAccept(true);
             receiver.setQoS(qos);
             receiver.setPrefetch(prefetchCredits);
-            receiver.handler(messageHandler);
-            receiver.openHandler(result.completer());
+            receiver.handler((delivery, message) -> {
+                messageHandler.handle(delivery, message);
+                if (LOG.isTraceEnabled()) {
+                    int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                    LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]", delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                }
+            });
+            receiver.openHandler(openAttach -> {
+                if(openAttach.failed()) {
+                    LOG.debug("receiver open attach failed [{}] by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), openAttach.cause().getMessage());
+                    result.fail(openAttach.cause());
+                }
+                else {
+                    result.complete(openAttach.result());
+                }
+            });
+            receiver.detachHandler(remoteDetached -> {
+                if (remoteDetached.succeeded()) {
+                    LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
+                } else {
+                    LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
+                }
+            });
             receiver.closeHandler(remoteClosed -> {
                 if (remoteClosed.succeeded()) {
                     LOG.debug("receiver [{}] closed by peer [{}]", sourceAddress, con.getRemoteContainer());

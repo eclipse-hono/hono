@@ -91,7 +91,8 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
         Objects.requireNonNull(pathSeparator);
         Objects.requireNonNull(eventConsumer);
         Objects.requireNonNull(creationHandler);
-        createConsumer(context, con, tenantId, pathSeparator, EVENT_ADDRESS_TEMPLATE, ProtonQoS.AT_LEAST_ONCE, prefetch, eventConsumer).setHandler(created -> {
+        //createConsumer(context, con, tenantId, pathSeparator, EVENT_ADDRESS_TEMPLATE, ProtonQoS.AT_LEAST_ONCE, prefetch, eventConsumer).setHandler(created -> {
+        createReceiver(context, con, String.format(EVENT_ADDRESS_TEMPLATE, pathSeparator, tenantId), ProtonQoS.AT_LEAST_ONCE, prefetch, eventConsumer::accept, null).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
                         new EventConsumerImpl(context, created.result())));
