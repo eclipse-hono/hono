@@ -258,8 +258,8 @@ public abstract class AbstractHonoClient {
             });
             receiver.openHandler(openAttach -> {
                 if(openAttach.failed()) {
-                    result.fail(openAttach.cause());
                     LOG.debug("receiver open attach failed [{}] by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), openAttach.cause().getMessage());
+                    result.fail(openAttach.cause());
                 }
                 else {
                     result.complete(openAttach.result());
