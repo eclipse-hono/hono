@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,6 +11,7 @@
  */
 package org.eclipse.hono.util;
 
+import java.net.HttpURLConnection;
 
 /**
  * A container for the result returned by a Hono API that implements the request response pattern.
@@ -49,5 +50,14 @@ public class RequestResponseResult<T> {
      */
     public final T getPayload() {
         return payload;
+    }
+
+    /**
+     * Checks if this result's status is <em>OK</em>.
+     * 
+     * @return {@code true} if status == 200.
+     */
+    public final boolean isOk() {
+        return HttpURLConnection.HTTP_OK == status;
     }
 }
