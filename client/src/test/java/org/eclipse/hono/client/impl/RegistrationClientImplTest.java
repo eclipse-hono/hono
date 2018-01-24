@@ -26,6 +26,7 @@ import org.eclipse.hono.util.ExpiringValueCache;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.TriTuple;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,7 +62,7 @@ public class RegistrationClientImplTest {
     public Timeout globalTimeout = Timeout.seconds(5);
 
     private RegistrationClientImpl client;
-    private ExpiringValueCache cache;
+    private ExpiringValueCache<Object, RegistrationResult> cache;
     private ProtonSender sender;
     private ProtonReceiver receiver;
 
@@ -84,7 +85,9 @@ public class RegistrationClientImplTest {
         }).when(context).runOnContext(any(Handler.class));
 
         sender = mock(ProtonSender.class);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
         receiver = mock(ProtonReceiver.class);
+        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
 
         cache = mock(ExpiringValueCache.class);
         client = new RegistrationClientImpl(context, config, "tenant", sender, receiver);
@@ -105,14 +108,11 @@ public class RegistrationClientImplTest {
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
         final Message response = ProtonHelper.message(registrationAssertion.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(sender.send(any(Message.class))).thenReturn(mock(ProtonDelivery.class));
-        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
 
         // WHEN getting registration information
         client.assertRegistration("device", ctx.asyncAssertSuccess(result -> {
             // THEN the registration information has been added to the cache
-            verify(cache).put(eq("assert-device"), any(RegistrationResult.class), any(Instant.class));
+            verify(cache).put(eq(TriTuple.of("assert", "device", null)), any(RegistrationResult.class), any(Instant.class));
             ctx.assertEquals(registrationAssertion, result.getPayload());
         }));
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
@@ -130,20 +130,17 @@ public class RegistrationClientImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testAssertRegistrationInvokesServiceOnIfNoCacheConfigured(final TestContext ctx) {
+    public void testAssertRegistrationInvokesServiceIfNoCacheConfigured(final TestContext ctx) {
 
         // GIVEN an adapter with no cache configured
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
         final Message response = ProtonHelper.message(registrationAssertion.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(sender.send(any(Message.class))).thenReturn(mock(ProtonDelivery.class));
-        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
 
         // WHEN getting registration information
         client.assertRegistration("device", ctx.asyncAssertSuccess(result -> {
             // THEN the registration information has been retrieved from the service
-            verify(cache, never()).put(anyString(), any(RegistrationResult.class), any(Instant.class));
+            verify(cache, never()).put(anyObject(), any(RegistrationResult.class), any(Instant.class));
             ctx.assertEquals(registrationAssertion, result.getPayload());
         }));
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
@@ -166,7 +163,7 @@ public class RegistrationClientImplTest {
         client.setResponseCache(cache);
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
         final RegistrationResult regResult = RegistrationResult.from(HttpURLConnection.HTTP_OK, registrationAssertion);
-        when(cache.get("assert-device")).thenReturn(regResult);
+        when(cache.get(eq(TriTuple.of("assert", "device", null)))).thenReturn(regResult);
 
         // WHEN getting registration information
         client.assertRegistration("device", ctx.asyncAssertSuccess(result -> {

@@ -28,6 +28,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.SpringBasedExpiringValueCache;
+import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
@@ -118,7 +119,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
         final RegistrationClientImpl client = new RegistrationClientImpl(context, clientConfig, tenantId);
         if (cacheManager != null) {
             final Cache cache = cacheManager.getCache(RegistrationClientImpl.getTargetAddress(tenantId));
-            client.setResponseCache(new SpringBasedExpiringValueCache(cache));
+            client.setResponseCache(new SpringBasedExpiringValueCache<>(cache));
         }
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
@@ -196,7 +197,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resultHandler);
 
-        final String key = "assert-" + deviceId;
+        final TriTuple<String, String, String> key = TriTuple.of("assert", deviceId, null);
         getCachedRegistrationAssertion(key).recover(t -> {
             final Future<RegistrationResult> regResult = Future.future();
             createAndSendRequest(ACTION_ASSERT, createDeviceIdProperties(deviceId), null, regResult.completer());
@@ -215,7 +216,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
 
     }
 
-    private Future<RegistrationResult> getCachedRegistrationAssertion(final String key) {
+    private Future<RegistrationResult> getCachedRegistrationAssertion(final TriTuple<String, String, String> key) {
 
         final RegistrationResult result = getResponseFromCache(key);
         if (result == null) {
