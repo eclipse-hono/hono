@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
@@ -163,15 +165,43 @@ public class RegistrationClientImplTest {
         client.setResponseCache(cache);
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
         final RegistrationResult regResult = RegistrationResult.from(HttpURLConnection.HTTP_OK, registrationAssertion);
-        when(cache.get(eq(TriTuple.of("assert", "device", null)))).thenReturn(regResult);
+        when(cache.get(eq(TriTuple.of("assert", "device", "gateway")))).thenReturn(regResult);
 
         // WHEN getting registration information
-        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> {
+        client.assertRegistration("device", "gateway").setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the registration information is read from the cache
             ctx.assertEquals(registrationAssertion, result);
             verify(sender, never()).send(any(Message.class));
         }));
 
+    }
+
+    /**
+     * Verifies that the client includes the required information in the request
+     * message sent to the Device Registration service.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testGetRegistrationInfoIncludesRequiredParamsInRequest(final TestContext ctx) {
+
+        // GIVEN an adapter without a cache
+
+        // WHEN getting registration information
+        client.assertRegistration("device", "gateway");
+
+        // THEN the message being sent contains the device ID and the gateway ID
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        final Message sentMessage = messageCaptor.getValue();
+        assertThat(MessageHelper.getDeviceId(sentMessage), is("device"));
+        assertThat(
+                MessageHelper.getApplicationProperty(
+                        sentMessage.getApplicationProperties(),
+                        RegistrationConstants.APP_PROPERTY_GATEWAY_ID,
+                        String.class),
+                is("gateway"));
     }
 
     private static JsonObject newRegistrationAssertionResult() {

@@ -12,12 +12,10 @@
  */
 package org.eclipse.hono.service;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -389,6 +387,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
+     * @param gatewayId The gateway that wants to act on behalf of the device. May be {@code null},
+     *                  if the device connects to the protocol adapter directly.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will fail if the assertion cannot be retrieved. The cause will be
@@ -396,18 +396,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         <p>
      *         Otherwise the future will contain the assertion.
      */
-    protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId) {
+    protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId, final String gatewayId) {
 
-        return getRegistrationClient(tenantId).compose(client -> client.assertRegistration(deviceId))
-                .recover(t -> {
-                    final ServiceInvocationException e = (ServiceInvocationException) t;
-                    switch(e.getErrorCode()) {
-                    case HttpURLConnection.HTTP_NOT_FOUND:
-                         throw new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "device unknown or disabled");
-                    default:
-                        throw e;
-                    }
-                });
+        return getRegistrationClient(tenantId).compose(client -> client.assertRegistration(deviceId, gatewayId));
     }
 
     /**
