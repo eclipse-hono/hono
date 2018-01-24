@@ -129,9 +129,6 @@ public final class EventSenderImpl extends AbstractSender {
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
         message.setMessageId(messageId);
         sender.send(message, deliveryUpdated -> {
-
-            deliveryUpdated.settle();
-
             if (deliveryUpdated.remotelySettled()) {
                 if (Accepted.class.isInstance(deliveryUpdated.getRemoteState())) {
                     LOG.trace("event [message ID: {}] accepted by peer", messageId);
