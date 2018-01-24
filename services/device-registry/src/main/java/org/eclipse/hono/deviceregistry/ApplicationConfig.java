@@ -227,6 +227,18 @@ public class ApplicationConfig {
     }
 
     /**
+     * Gets properties for configuring {@code FileBasedTenantsService} which implements
+     * the <em>Tenants</em> API.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.tenants.svc")
+    public FileBasedTenantsConfigProperties tenantsProperties() {
+        return new FileBasedTenantsConfigProperties();
+    }
+
+    /**
      * Exposes a factory for JWTs asserting a device's registration status as a Spring bean.
      *
      * @return The bean.
