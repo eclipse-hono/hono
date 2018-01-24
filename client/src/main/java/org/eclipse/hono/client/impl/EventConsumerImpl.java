@@ -13,14 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import java.util.Objects;
-import java.util.function.BiConsumer;
-
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.Constants;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -29,13 +21,21 @@ import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
+
+import java.util.Objects;
+import java.util.function.BiConsumer;
 
 /**
  * A Vertx-Proton based client for consuming event messages from a Hono server.
  */
 public class EventConsumerImpl extends AbstractConsumer implements MessageConsumer {
 
-    private static final String EVENT_ADDRESS_TEMPLATE = "event%s%s";
+    private static final String EVENT_ADDRESS_TEMPLATE = EventConstants.EVENT_ENDPOINT + "%s%s";
 
     private EventConsumerImpl(final Context context, final ClientConfigProperties config, final ProtonReceiver receiver) {
         super(context, config, receiver);
@@ -91,7 +91,9 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
         Objects.requireNonNull(pathSeparator);
         Objects.requireNonNull(eventConsumer);
         Objects.requireNonNull(creationHandler);
-        createConsumer(context, clientConfig, con, tenantId, pathSeparator, EVENT_ADDRESS_TEMPLATE, ProtonQoS.AT_LEAST_ONCE, eventConsumer).setHandler(created -> {
+
+        createReceiver(context, clientConfig, con, String.format(EVENT_ADDRESS_TEMPLATE, pathSeparator, tenantId),
+                ProtonQoS.AT_LEAST_ONCE, eventConsumer::accept, null).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
                         new EventConsumerImpl(context, clientConfig, created.result())));

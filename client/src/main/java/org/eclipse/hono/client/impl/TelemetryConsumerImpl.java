@@ -12,14 +12,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import java.util.Objects;
-import java.util.function.Consumer;
-
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.Constants;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -27,13 +19,21 @@ import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TelemetryConstants;
+
+import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * A Vertx-Proton based client for consuming telemetry data from a Hono server.
  */
 public class TelemetryConsumerImpl extends AbstractConsumer implements MessageConsumer {
 
-    private static final String TELEMETRY_ADDRESS_TEMPLATE  = "telemetry%s%s";
+    private static final String TELEMETRY_ADDRESS_TEMPLATE  = TelemetryConstants.TELEMETRY_ENDPOINT + "%s%s";
 
     private TelemetryConsumerImpl(final Context context, final ClientConfigProperties config, final ProtonReceiver receiver) {
         super(context, config, receiver);
@@ -90,8 +90,8 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
         Objects.requireNonNull(telemetryConsumer);
         Objects.requireNonNull(creationHandler);
 
-        createConsumer(context, clientConfig, con, tenantId, pathSeparator, TELEMETRY_ADDRESS_TEMPLATE, ProtonQoS.AT_LEAST_ONCE,
-                (protonDelivery, message) -> telemetryConsumer.accept(message)).setHandler(created -> {
+        createReceiver(context, clientConfig, con, String.format(TELEMETRY_ADDRESS_TEMPLATE, pathSeparator, tenantId), ProtonQoS.AT_LEAST_ONCE,
+                (delivery, message) -> telemetryConsumer.accept(message), null).setHandler(created -> {
                     if (created.succeeded()) {
                         creationHandler.handle(Future.succeededFuture(
                                 new TelemetryConsumerImpl(context, clientConfig, created.result())));
