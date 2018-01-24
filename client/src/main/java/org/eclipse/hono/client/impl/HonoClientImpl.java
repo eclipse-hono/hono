@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CredentialsClient;
@@ -257,7 +258,7 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(tenantId);
         getOrCreateSender(
                 TelemetrySenderImpl.getTargetAddress(tenantId, deviceId),
-                (creationResult) -> createTelemetrySender(tenantId, deviceId, creationResult),
+                () -> createTelemetrySender(tenantId, deviceId),
                 resultHandler);
         return this;
     }
@@ -277,12 +278,14 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(resultHandler);
         getOrCreateSender(
                 EventSenderImpl.getTargetAddress(tenantId, deviceId),
-                (creationResult) -> createEventSender(tenantId, deviceId, creationResult),
+                () -> createEventSender(tenantId, deviceId),
                 resultHandler);
         return this;
     }
 
-    void getOrCreateSender(final String key, final Consumer<Handler<AsyncResult<MessageSender>>> newSenderSupplier,
+    void getOrCreateSender(
+            final String key,
+            final Supplier<Future<MessageSender>> newSenderSupplier,
             final Handler<AsyncResult<MessageSender>> resultHandler) {
 
         final MessageSender sender = activeSenders.get(key);
@@ -306,7 +309,7 @@ public final class HonoClientImpl implements HonoClient {
             creationLocks.put(key, Boolean.TRUE);
             LOG.debug("creating new message sender for {}", key);
 
-            newSenderSupplier.accept(creationAttempt -> {
+            newSenderSupplier.get().setHandler(creationAttempt -> {
                 if (creationAttempt.succeeded()) {
                     MessageSender newSender = creationAttempt.result();
                     LOG.debug("successfully created new message sender for {}", key);
@@ -327,21 +330,19 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
-    private HonoClient createTelemetrySender(
+    private Future<MessageSender> createTelemetrySender(
             final String tenantId,
-            final String deviceId,
-            final Handler<AsyncResult<MessageSender>> creationHandler) {
+            final String deviceId) {
 
-        Future<MessageSender> senderTracker = Future.future();
-        senderTracker.setHandler(creationHandler);
-        checkConnection().compose(
-                connected -> TelemetrySenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
+        return checkConnection().compose(connected -> {
+            final Future<MessageSender> result = Future.future();
+            TelemetrySenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
                         onSenderClosed -> {
                             activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, deviceId));
                         },
-                        senderTracker.completer()),
-                senderTracker);
-        return this;
+                        result.completer());
+            return result;
+        });
     }
 
     @Override
@@ -406,21 +407,19 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    private HonoClient createEventSender(
+    private Future<MessageSender> createEventSender(
             final String tenantId,
-            final String deviceId,
-            final Handler<AsyncResult<MessageSender>> creationHandler) {
+            final String deviceId) {
 
-        Future<MessageSender> senderTracker = Future.future();
-        senderTracker.setHandler(creationHandler);
-        checkConnection().compose(
-                connected -> EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
+        return checkConnection().compose(connected -> {
+            Future<MessageSender> result = Future.future();
+            EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
                         onSenderClosed -> {
                             activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
                         },
-                        senderTracker.completer()),
-                senderTracker);
-        return this;
+                        result.completer());
+            return result;
+        });
     }
 
     private Future<ProtonConnection> checkConnection() {
@@ -441,7 +440,7 @@ public final class HonoClientImpl implements HonoClient {
      */
     void getOrCreateRequestResponseClient(
             final String key, 
-            final Consumer<Handler<AsyncResult<RequestResponseClient>>> clientSupplier,
+            final Supplier<Future<RequestResponseClient>> clientSupplier,
             final Handler<AsyncResult<RequestResponseClient>> resultHandler) {
 
         final RequestResponseClient client = activeRequestResponseClients.get(key);
@@ -465,7 +464,7 @@ public final class HonoClientImpl implements HonoClient {
             creationLocks.put(key, Boolean.TRUE);
             LOG.debug("creating new client for {}", key);
 
-            clientSupplier.accept(creationAttempt -> {
+            clientSupplier.get().setHandler(creationAttempt -> {
                 if (creationAttempt.succeeded()) {
                     RequestResponseClient newClient = creationAttempt.result();
                     LOG.debug("successfully created new client for {}", key);
@@ -495,7 +494,7 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(resultHandler);
         getOrCreateRequestResponseClient(
                 RegistrationClientImpl.getTargetAddress(tenantId),
-                (creationResult) -> createRegistrationClient(tenantId, creationResult),
+                () -> createRegistrationClient(tenantId),
                 attempt -> {
                     if (attempt.succeeded()) {
                         resultHandler.handle(Future.succeededFuture((RegistrationClient) attempt.result()));
@@ -506,18 +505,13 @@ public final class HonoClientImpl implements HonoClient {
         return this;
     }
 
-    private void createRegistrationClient(
-            final String tenantId,
-            final Handler<AsyncResult<RequestResponseClient>> creationHandler) {
+    private Future<RequestResponseClient> createRegistrationClient(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(creationHandler);
 
-        Future<RequestResponseClient> clientTracker = Future.future();
-        clientTracker.setHandler(creationHandler);
+        return checkConnection().compose(connected -> {
 
-        checkConnection().compose(connected -> {
-
+            final Future<RequestResponseClient> result = Future.future();
             RegistrationClientImpl.create(
                     context,
                     clientConfigProperties,
@@ -530,12 +524,13 @@ public final class HonoClientImpl implements HonoClient {
                         if (creationAttempt.succeeded()) {
                             final RegistrationClient registrationClient = creationAttempt.result();
                             registrationClient.setRequestTimeout(clientConfigProperties.getRequestTimeout());
-                            clientTracker.complete(registrationClient);
+                            result.complete(registrationClient);
                         } else {
-                            clientTracker.fail(creationAttempt.cause());
+                            result.fail(creationAttempt.cause());
                         }
                     });
-        }, clientTracker);
+            return result;
+        });
     }
 
     @Override
@@ -547,7 +542,7 @@ public final class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(resultHandler);
         getOrCreateRequestResponseClient(
                 CredentialsClientImpl.getTargetAddress(tenantId),
-                (creationResult) -> createCredentialsClient(tenantId, creationResult),
+                () -> createCredentialsClient(tenantId),
                 attempt -> {
                     if (attempt.succeeded()) {
                         resultHandler.handle(Future.succeededFuture((CredentialsClient) attempt.result()));
@@ -559,18 +554,13 @@ public final class HonoClientImpl implements HonoClient {
 
     }
 
-    private void createCredentialsClient(
-            final String tenantId,
-            final Handler<AsyncResult<RequestResponseClient>> creationHandler) {
+    private Future<RequestResponseClient> createCredentialsClient(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(creationHandler);
 
-        Future<RequestResponseClient> clientTracker = Future.future();
-        clientTracker.setHandler(creationHandler);
+        return checkConnection().compose(connected -> {
 
-        checkConnection().compose(connected -> {
-
+            final Future<RequestResponseClient> result = Future.future();
             CredentialsClientImpl.create(
                     context,
                     clientConfigProperties,
@@ -582,12 +572,13 @@ public final class HonoClientImpl implements HonoClient {
                         if (creationAttempt.succeeded()) {
                             CredentialsClient credentialsClient = creationAttempt.result();
                             credentialsClient.setRequestTimeout(clientConfigProperties.getRequestTimeout());
-                            clientTracker.complete(credentialsClient);
+                            result.complete(credentialsClient);
                         } else {
-                            clientTracker.fail(creationAttempt.cause());
+                            result.fail(creationAttempt.cause());
                         }
                     });
-        }, clientTracker);
+            return result;
+        });
     }
 
     private void removeCredentialsClient(final String tenantId) {
