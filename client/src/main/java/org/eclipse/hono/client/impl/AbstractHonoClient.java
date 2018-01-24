@@ -249,8 +249,29 @@ public abstract class AbstractHonoClient {
             receiver.setAutoAccept(true);
             receiver.setQoS(qos);
             receiver.setPrefetch(clientConfig.getInitialCredits());
-            receiver.handler(messageHandler);
-            receiver.openHandler(result.completer());
+            receiver.handler((delivery, message) -> {
+                messageHandler.handle(delivery, message);
+                if (LOG.isTraceEnabled()) {
+                    int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                    LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]", delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                }
+            });
+            receiver.openHandler(openAttach -> {
+                if(openAttach.failed()) {
+                    result.fail(openAttach.cause());
+                    LOG.debug("receiver open attach failed [{}] by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), openAttach.cause().getMessage());
+                }
+                else {
+                    result.complete(openAttach.result());
+                }
+            });
+            receiver.detachHandler(remoteDetached -> {
+                if (remoteDetached.succeeded()) {
+                    LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
+                } else {
+                    LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
+                }
+            });
             receiver.closeHandler(remoteClosed -> {
                 if (remoteClosed.succeeded()) {
                     LOG.debug("receiver [{}] closed by peer [{}]", sourceAddress, con.getRemoteContainer());
