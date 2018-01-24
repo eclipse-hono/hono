@@ -1,13 +1,14 @@
 /**
- * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
- * <p>
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * <p>
+ *
  * Contributors:
- * Bosch Software Innovations GmbH - initial creation
+ *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.client.impl;
 
@@ -371,10 +372,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(request.getMessageId());
                 replyMap.put(correlationId, resultHandler);
                 sender.send(request, deliveryUpdated -> {
-
-                    // settle locally
-                    deliveryUpdated.settle();
-
                     if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
                         final Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
                         if (rejected.getError() != null) {
