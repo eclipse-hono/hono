@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.messaging;
@@ -100,6 +101,7 @@ public class SenderFactoryImpl implements SenderFactory {
         Future<ProtonSender> result = Future.future();
         ProtonSender sender = session.createSender(getTenantOnlyTargetAddress(address));
         sender.setQoS(qos);
+        sender.setAutoSettle(true);
         sender.sendQueueDrainHandler(sendQueueDrainHandler);
         sender.openHandler(openAttempt -> {
             if (openAttempt.succeeded()) {

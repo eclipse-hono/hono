@@ -48,16 +48,7 @@ public final class ForwardingEventDownstreamAdapter extends ForwardingDownstream
     }
 
     protected void forwardMessage(final ProtonSender sender, final Message msg, final ProtonDelivery delivery) {
-        sender.send(msg, updatedDelivery -> {
-
-            // settle downstream message locally
-
-            updatedDelivery.settle();
-
-            // forward downstream state to upstream message
-
-            delivery.disposition(updatedDelivery.getRemoteState(), updatedDelivery.remotelySettled());
-        });
+        sender.send(msg, updatedDelivery -> delivery.disposition(updatedDelivery.getRemoteState(), updatedDelivery.remotelySettled()));
     }
 
     @Override

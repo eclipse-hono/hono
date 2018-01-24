@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.client.impl;
@@ -176,6 +177,7 @@ public abstract class AbstractHonoClient {
         ctx.runOnContext(create -> {
             final ProtonSender sender = con.createSender(targetAddress);
             sender.setQoS(qos);
+            sender.setAutoSettle(true);
             sender.openHandler(senderOpen -> {
                 if (senderOpen.succeeded()) {
                     LOG.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());

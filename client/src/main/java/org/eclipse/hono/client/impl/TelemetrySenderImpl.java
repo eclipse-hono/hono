@@ -117,9 +117,6 @@ public final class TelemetrySenderImpl extends AbstractSender {
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
         message.setMessageId(messageId);
         final ProtonDelivery result = sender.send(message, deliveryUpdated -> {
-
-            deliveryUpdated.settle();
-
             if (deliveryUpdated.remotelySettled()) {
                 if (Accepted.class.isInstance(deliveryUpdated.getRemoteState())) {
                     LOG.trace("message [message ID: {}] accepted by peer", messageId);
