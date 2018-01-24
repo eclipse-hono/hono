@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,10 +8,14 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.telemetry.impl;
 
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.messaging.DownstreamAdapter;
@@ -37,7 +41,8 @@ import io.vertx.proton.ProtonQoS;
 @Qualifier("telemetry")
 public final class TelemetryEndpoint extends MessageForwardingEndpoint<HonoMessagingConfigProperties> {
 
-    private static final ProtonQoS[] SUPPORTED_DELIVERY_MODES = new ProtonQoS[]{ ProtonQoS.AT_LEAST_ONCE, ProtonQoS.AT_MOST_ONCE };
+    private static final Set<ProtonQoS> SUPPORTED_DELIVERY_MODES = Collections
+            .unmodifiableSet(EnumSet.of(ProtonQoS.AT_LEAST_ONCE, ProtonQoS.AT_MOST_ONCE));
 
     /**
      * Creates a new endpoint.
@@ -78,7 +83,7 @@ public final class TelemetryEndpoint extends MessageForwardingEndpoint<HonoMessa
      * @return <em>AT_MOST_ONCE</em> and <em>AT_LEAST_ONCE</em>.
      */
     @Override
-    protected ProtonQoS[] getEndpointQos() {
+    protected Set<ProtonQoS> getEndpointQos() {
         return SUPPORTED_DELIVERY_MODES;
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,14 +8,15 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.messaging;
 
 import static io.vertx.proton.ProtonHelper.condition;
 import static org.eclipse.hono.util.MessageHelper.getAnnotation;
 
-import java.util.Arrays;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
@@ -130,7 +131,7 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
     @Override
     public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
 
-        if (!Arrays.stream(getEndpointQos()).anyMatch(qos -> qos.equals(receiver.getRemoteQoS()))) {
+        if (!getEndpointQos().contains(receiver.getRemoteQoS())) {
             logger.debug("client [{}] wants to use unsupported delivery mode {} for endpoint [name: {}, QoS: {}], closing link", 
                     con.getRemoteContainer(), receiver.getRemoteQoS(), getName(), getEndpointQos());
             receiver.setCondition(ErrorConditions.ERROR_UNSUPPORTED_DELIVERY_MODE);
@@ -222,10 +223,13 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
      * <p>
      * The {@link #onLinkAttach(ProtonConnection, ProtonReceiver, ResourceIdentifier)} method will reject a client's
      * attempt to establish a link that does not match at least one of the delivery modes returned by this method.
+     * <p>
+     * Changes to the returned collection must not have any impact on the original data set. Returning an
+     * unmodifiable collection is recommended.
      * 
      * @return The delivery modes this endpoint supports.
      */
-    protected abstract ProtonQoS[] getEndpointQos();
+    protected abstract Set<ProtonQoS> getEndpointQos();
 
     /**
      * Registers a check that succeeds if this endpoint has a usable connection to its

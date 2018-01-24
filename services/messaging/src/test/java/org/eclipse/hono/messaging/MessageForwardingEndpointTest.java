@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.messaging;
 
@@ -16,6 +17,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
+
+import java.util.EnumSet;
+import java.util.Set;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
@@ -228,8 +232,8 @@ public class MessageForwardingEndpointTest {
             }
 
             @Override
-            protected ProtonQoS[] getEndpointQos() {
-                return new ProtonQoS[]{ ProtonQoS.AT_MOST_ONCE };
+            protected Set<ProtonQoS> getEndpointQos() {
+                return EnumSet.of(ProtonQoS.AT_MOST_ONCE);
             }
         };
         endpoint.setMetrics(mock(MessagingMetrics.class));
