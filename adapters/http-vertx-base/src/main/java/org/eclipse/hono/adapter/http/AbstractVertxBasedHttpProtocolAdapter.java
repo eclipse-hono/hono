@@ -466,7 +466,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             HttpUtils.badRequest(ctx, "missing body");
         } else {
 
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId);
+            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, null);
 
             CompositeFuture.all(tokenTracker, senderTracker).compose(ok -> {
 

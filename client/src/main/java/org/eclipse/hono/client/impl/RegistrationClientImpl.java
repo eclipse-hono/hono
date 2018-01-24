@@ -263,14 +263,14 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
 
         Objects.requireNonNull(deviceId);
 
-        final TriTuple<String, String, String> key = TriTuple.of("assert", deviceId, null);
+        final TriTuple<String, String, String> key = TriTuple.of("assert", deviceId, gatewayId);
         return getCachedRegistrationAssertion(key).recover(t -> {
             final Future<RegistrationResult> regResult = Future.future();
-            createAndSendRequest(
-                    RegistrationConstants.ACTION_ASSERT,
-                    createDeviceIdProperties(deviceId),
-                    null,
-                    regResult.completer());
+            final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+            if (gatewayId != null) {
+                properties.put(RegistrationConstants.APP_PROPERTY_GATEWAY_ID, gatewayId);
+            }
+            createAndSendRequest(RegistrationConstants.ACTION_ASSERT, properties, null, regResult.completer());
             return regResult.map(response -> {
                 switch(response.getStatus()) {
                 case HttpURLConnection.HTTP_OK:
