@@ -69,7 +69,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * A cache to use for responses received from the service.
      */
-    private ExpiringValueCache responseCache;
+    private ExpiringValueCache<Object, R> responseCache;
 
     private long requestTimeoutMillis = DEFAULT_TIMEOUT_MILLIS;
 
@@ -112,7 +112,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * 
      * @param cache The cache or {@code null} if no responses should be cached.
      */
-    public final void setResponseCache(final ExpiringValueCache cache) {
+    public final void setResponseCache(final ExpiringValueCache<Object, R> cache) {
         this.responseCache = cache;
         LOG.info("enabling caching of responses from {}", targetAddress);
     }
@@ -449,7 +449,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @return The value or {@code null} if no response exists for the key
      *         or the response is expired.
      */
-    protected final R getResponseFromCache(final String key) {
+    protected final R getResponseFromCache(final Object key) {
 
         if (responseCache == null) {
             return null;
@@ -467,7 +467,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @throws IllegalArgumentException if the current time is not before the expiration time.
      * @throws IllegalStateException if no cache has been configured.
      */
-    protected final void putResponseToCache(final String key, final R response, final Instant expirationTime) {
+    protected final void putResponseToCache(final Object key, final R response, final Instant expirationTime) {
 
         if (responseCache == null) {
             throw new IllegalStateException("no cache configured");

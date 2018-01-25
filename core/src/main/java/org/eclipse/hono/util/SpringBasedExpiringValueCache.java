@@ -23,9 +23,11 @@ import org.springframework.cache.Cache;
 
 /**
  * A cache for expiring values based on Spring's Cache abstraction.
- *
+ * 
+ * @param <K> The type of keys that the cache supports.
+ * @param <V> The type of values that the cache supports.
  */
-public class SpringBasedExpiringValueCache implements ExpiringValueCache {
+public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K, V> {
 
     private static final Logger LOG = LoggerFactory.getLogger(SpringBasedExpiringValueCache.class);
 
@@ -41,14 +43,14 @@ public class SpringBasedExpiringValueCache implements ExpiringValueCache {
     }
 
     @Override
-    public <T> void put(final String key, final T value, final Instant expirationTime) {
+    public void put(final K key, final V value, final Instant expirationTime) {
 
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
         Objects.requireNonNull(expirationTime);
 
         if (Instant.now().isBefore(expirationTime)) {
-            final ExpiringValue<T> expiringValue = new BasicExpiringValue<>(value, expirationTime);
+            final ExpiringValue<V> expiringValue = new BasicExpiringValue<>(value, expirationTime);
             cache.put(key, expiringValue);
         } else {
             throw new IllegalArgumentException("value is already expired");
@@ -56,13 +58,13 @@ public class SpringBasedExpiringValueCache implements ExpiringValueCache {
     }
 
     @Override
-    public <T> T get(final String key) {
+    public V get(final K key) {
 
         if (key == null) {
             return null;
         } else {
             @SuppressWarnings("unchecked")
-            ExpiringValue<T> value = cache.get(key, ExpiringValue.class);
+            ExpiringValue<V> value = cache.get(key, ExpiringValue.class);
             if (value == null) {
                 LOG.trace("cache miss [key: {}]", key);
                 return null;

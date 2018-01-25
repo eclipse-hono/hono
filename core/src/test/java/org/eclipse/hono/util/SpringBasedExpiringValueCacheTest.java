@@ -30,7 +30,7 @@ import org.springframework.cache.Cache;
 public class SpringBasedExpiringValueCacheTest {
 
     private Cache springCache;
-    private SpringBasedExpiringValueCache cache;
+    private SpringBasedExpiringValueCache<String, String> cache;
 
     /**
      * Sets up the fixture.
@@ -38,7 +38,7 @@ public class SpringBasedExpiringValueCacheTest {
     @Before
     public void setUp() {
         springCache = mock(Cache.class);
-        cache = new SpringBasedExpiringValueCache(springCache);
+        cache = new SpringBasedExpiringValueCache<>(springCache);
     }
 
     /**
