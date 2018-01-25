@@ -87,8 +87,7 @@ public interface RegistrationService extends Verticle {
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to remove.
      * @param resultHandler The handler to invoke with the result of the operation. If the device has been removed,
-     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain the keys
-     *         that had been registered for the removed device.
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_NO_CONTENT}.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
