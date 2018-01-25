@@ -33,7 +33,9 @@ See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue
      for a downstream container to accept the message.
      For an Event client this means that the future will be succeeded once the downstream container has settled and accepted the message.
    * All operations accepting a disposition handler have been removed in order to relieve clients from the burden of (correctly) implementing the delivery semantics.
-
+* The `org.eclipse.hono.client.HonoClient` interface has been changed:
+   * All methods that had previously returned `HonoClient` have been changed to return `void` instead. Returning the client instance had originally been intended to be useful for chaining commands. However, there was nothing much to chain because the effect of invoking the (asynchronous) operations is usually not immediately visible in the client, e.g. when invoking the *connect* method, the returned client will most likely not (yet) be connected.
+ 
 ## 0.5-M10
 
 ### New Features
