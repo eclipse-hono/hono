@@ -51,10 +51,9 @@ public interface HonoClient {
      * @param options The options to use (may be {@code null}).
      * @param connectionHandler The handler to notify about the outcome of the connection attempt. Always fails if one
      *            of the shutdown methods was called before.
-     * @return This client for command chaining.
      * @throws NullPointerException if the connection handler is {@code null}.
      */
-    HonoClient connect(ProtonClientOptions options, Handler<AsyncResult<HonoClient>> connectionHandler);
+    void connect(ProtonClientOptions options, Handler<AsyncResult<HonoClient>> connectionHandler);
 
     /**
      * Connects to the Hono server using given options.
@@ -63,10 +62,9 @@ public interface HonoClient {
      * @param connectionHandler The handler to notify about the outcome of the connection attempt. Always fails if one
      *            of the shutdown methods was called before.
      * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
-     * @return This client for command chaining.
      * @throws NullPointerException if the connection handler is {@code null}.
      */
-    HonoClient connect(
+    void connect(
             ProtonClientOptions options,
             Handler<AsyncResult<HonoClient>> connectionHandler,
             Handler<ProtonConnection> disconnectHandler);
@@ -76,10 +74,9 @@ public interface HonoClient {
      * 
      * @param tenantId The ID of the tenant to send messages for.
      * @param resultHandler The handler to notify about the client.
-     * @return This for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    HonoClient getOrCreateTelemetrySender(String tenantId, Handler<AsyncResult<MessageSender>> resultHandler);
+    void getOrCreateTelemetrySender(String tenantId, Handler<AsyncResult<MessageSender>> resultHandler);
 
     /**
      * Gets a client for sending telemetry messages to a Hono server.
@@ -87,10 +84,9 @@ public interface HonoClient {
      * @param tenantId The ID of the tenant to send messages for.
      * @param deviceId The ID of the device to send events for (may be {@code null}).
      * @param resultHandler The handler to notify about the client.
-     * @return This for command chaining.
      * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
      */
-    HonoClient getOrCreateTelemetrySender(String tenantId, String deviceId,
+    void getOrCreateTelemetrySender(String tenantId, String deviceId,
             Handler<AsyncResult<MessageSender>> resultHandler);
 
     /**
@@ -98,10 +94,9 @@ public interface HonoClient {
      * 
      * @param tenantId The ID of the tenant to send events for.
      * @param resultHandler The handler to notify about the client.
-     * @return This for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    HonoClient getOrCreateEventSender(String tenantId, Handler<AsyncResult<MessageSender>> resultHandler);
+    void getOrCreateEventSender(String tenantId, Handler<AsyncResult<MessageSender>> resultHandler);
 
     /**
      * Gets a client for sending events to a Hono server.
@@ -109,10 +104,9 @@ public interface HonoClient {
      * @param tenantId The ID of the tenant to send events for.
      * @param deviceId The ID of the device to send events for (may be {@code null}).
      * @param resultHandler The handler to notify about the client.
-     * @return This for command chaining.
      * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
      */
-    HonoClient getOrCreateEventSender(
+    void getOrCreateEventSender(
             String tenantId,
             String deviceId,
             Handler<AsyncResult<MessageSender>> resultHandler);
@@ -123,10 +117,9 @@ public interface HonoClient {
      * @param tenantId The tenant to consume data for.
      * @param telemetryConsumer The handler to invoke with every message received.
      * @param creationHandler The handler to invoke with the outcome of the operation.
-     * @return This client for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    HonoClient createTelemetryConsumer(
+    void createTelemetryConsumer(
             String tenantId,
             Consumer<Message> telemetryConsumer,
             Handler<AsyncResult<MessageConsumer>> creationHandler);
@@ -141,10 +134,9 @@ public interface HonoClient {
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
      * @param creationHandler The handler to invoke with the outcome of the operation.
-     * @return This client for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    HonoClient createEventConsumer(
+    void createEventConsumer(
             String tenantId,
             Consumer<Message> eventConsumer,
             Handler<AsyncResult<MessageConsumer>> creationHandler);
@@ -159,10 +151,9 @@ public interface HonoClient {
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
      * @param creationHandler The handler to invoke with the outcome of the operation.
-     * @return This client for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    HonoClient createEventConsumer(
+    void createEventConsumer(
             String tenantId,
             BiConsumer<ProtonDelivery, Message> eventConsumer,
             Handler<AsyncResult<MessageConsumer>> creationHandler);
@@ -172,9 +163,9 @@ public interface HonoClient {
      * 
      * @param tenantId The tenant to manage device registration data for.
      * @param resultHandler The handler to invoke with the result of the operation.
-     * @return This client for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    HonoClient getOrCreateRegistrationClient(
+    void getOrCreateRegistrationClient(
             String tenantId,
             Handler<AsyncResult<RegistrationClient>> resultHandler);
 
@@ -183,10 +174,9 @@ public interface HonoClient {
      *
      * @param tenantId The tenant to manage device credentials data for.
      * @param resultHandler The handler to invoke with the result of the operation.
-     * @return This client for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    HonoClient getOrCreateCredentialsClient(
+    void getOrCreateCredentialsClient(
             String tenantId,
             Handler<AsyncResult<CredentialsClient>> resultHandler);
 
@@ -205,6 +195,7 @@ public interface HonoClient {
      * connect this client again will fail.
      * 
      * @param completionHandler The handler to invoke with the result of the operation.
+     * @throws NullPointerException if the handler is {@code null}.
      */
     void shutdown(Handler<AsyncResult<Void>> completionHandler);
 

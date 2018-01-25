@@ -138,12 +138,12 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public HonoClient connect(final ProtonClientOptions options, final Handler<AsyncResult<HonoClient>> connectionHandler) {
-        return connect(options, connectionHandler, null);
+    public void connect(final ProtonClientOptions options, final Handler<AsyncResult<HonoClient>> connectionHandler) {
+        connect(options, connectionHandler, null);
     }
 
     @Override
-    public HonoClient connect(
+    public void connect(
             final ProtonClientOptions options,
             final Handler<AsyncResult<HonoClient>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
@@ -186,7 +186,6 @@ public final class HonoClientImpl implements HonoClient {
         } else {
             LOG.debug("already trying to connect to server ...");
         }
-        return this;
     }
 
     private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler, final Handler<ProtonConnection> disconnectHandler) {
@@ -254,27 +253,26 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public HonoClient getOrCreateTelemetrySender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
-        return getOrCreateTelemetrySender(tenantId, null, resultHandler);
+    public void getOrCreateTelemetrySender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+        getOrCreateTelemetrySender(tenantId, null, resultHandler);
     }
 
     @Override
-    public HonoClient getOrCreateTelemetrySender(final String tenantId, final String deviceId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+    public void getOrCreateTelemetrySender(final String tenantId, final String deviceId, final Handler<AsyncResult<MessageSender>> resultHandler) {
         Objects.requireNonNull(tenantId);
         getOrCreateSender(
                 TelemetrySenderImpl.getTargetAddress(tenantId, deviceId),
                 () -> createTelemetrySender(tenantId, deviceId),
                 resultHandler);
-        return this;
     }
 
     @Override
-    public HonoClient getOrCreateEventSender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
-        return getOrCreateEventSender(tenantId, null, resultHandler);
+    public void getOrCreateEventSender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+        getOrCreateEventSender(tenantId, null, resultHandler);
     }
 
     @Override
-    public HonoClient getOrCreateEventSender(
+    public void getOrCreateEventSender(
             final String tenantId,
             final String deviceId,
             final Handler<AsyncResult<MessageSender>> resultHandler) {
@@ -285,7 +283,6 @@ public final class HonoClientImpl implements HonoClient {
                 EventSenderImpl.getTargetAddress(tenantId, deviceId),
                 () -> createEventSender(tenantId, deviceId),
                 resultHandler);
-        return this;
     }
 
     void getOrCreateSender(
@@ -351,7 +348,7 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public HonoClient createTelemetryConsumer(
+    public void createTelemetryConsumer(
             final String tenantId,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
@@ -373,21 +370,19 @@ public final class HonoClientImpl implements HonoClient {
                 connected -> TelemetryConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
                         connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer()),
                 consumerTracker);
-        return this;
     }
 
     @Override
-    public HonoClient createEventConsumer(
+    public void createEventConsumer(
             final String tenantId,
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
         createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler);
-        return this;
     }
 
     @Override
-    public HonoClient createEventConsumer(
+    public void createEventConsumer(
             final String tenantId,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
@@ -409,7 +404,6 @@ public final class HonoClientImpl implements HonoClient {
                 connected -> EventConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
                         connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer()),
                 consumerTracker);
-        return this;
     }
 
     private Future<MessageSender> createEventSender(
@@ -491,7 +485,7 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public HonoClient getOrCreateRegistrationClient(
+    public void getOrCreateRegistrationClient(
             final String tenantId,
             final Handler<AsyncResult<RegistrationClient>> resultHandler) {
 
@@ -507,7 +501,6 @@ public final class HonoClientImpl implements HonoClient {
                         resultHandler.handle(Future.failedFuture(attempt.cause()));
                     }
                 });
-        return this;
     }
 
     private Future<RequestResponseClient> createRegistrationClient(final String tenantId) {
@@ -531,7 +524,7 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public HonoClient getOrCreateCredentialsClient(
+    public void getOrCreateCredentialsClient(
             final String tenantId,
             final Handler<AsyncResult<CredentialsClient>> resultHandler) {
 
@@ -547,8 +540,6 @@ public final class HonoClientImpl implements HonoClient {
                         resultHandler.handle(Future.failedFuture(attempt.cause()));
                     }
                 });
-        return this;
-
     }
 
     private Future<RequestResponseClient> createCredentialsClient(final String tenantId) {
@@ -609,6 +600,8 @@ public final class HonoClientImpl implements HonoClient {
 
     @Override
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
+
+        Objects.requireNonNull(completionHandler);
         shutdown = true;
         if (connection == null || connection.isDisconnected()) {
             LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
