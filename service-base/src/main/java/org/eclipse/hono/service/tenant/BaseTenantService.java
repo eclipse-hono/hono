@@ -21,7 +21,7 @@ import java.net.HttpURLConnection;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantConstants.Action;
+import org.eclipse.hono.util.RequestResponseApiConstants.Action;
 import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,7 +135,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
             }
 
             final String subject = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
-            JsonObject payload;
+            final JsonObject payload;
 
             switch (Action.from(subject)) {
             case ACTION_GET:
@@ -299,7 +299,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
-    public void get(String tenantId, Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void get(final String tenantId, final Handler<AsyncResult<TenantResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -309,7 +309,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
-    public void add(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -319,7 +319,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
-    public void update(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void update(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -329,7 +329,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
-    public void remove(String tenantId, Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void remove(final String tenantId, final Handler<AsyncResult<TenantResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 

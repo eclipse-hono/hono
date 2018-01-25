@@ -24,6 +24,7 @@ import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantAmqpEndpoint;
+import org.eclipse.hono.service.tenant.TenantHttpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
@@ -175,6 +176,17 @@ public class ApplicationConfig {
     @Scope("prototype")
     public CredentialsHttpEndpoint credentialsHttpEndpoint() {
         return new CredentialsHttpEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of an HTTP protocol handler for Hono's <em>Tenant</em> API.
+     *
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public TenantHttpEndpoint tenantHttpEndpoint() {
+        return new TenantHttpEndpoint(vertx());
     }
 
     /**
