@@ -227,22 +227,21 @@ The same holds true analogously for the *hono-service-device-registry.hono* addr
 
 ## Using the API
 
-The HTTP adapter by default requires devices to authenticate during connection establishment. The adapter supports the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). The *username* provided in the header must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the device against the credentials that the [configured Credentials service]({{< relref "#credentials-service-configuration" >}}) has on record for the device. The adapter uses the Credentials API's *get* operation to retrieve the credentials-on-record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
+The HTTP adapter by default requires clients (devices or gateway components) to authenticate during connection establishment. The adapter supports the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617) for that purpose. The *username* provided in the header must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the client against the credentials that the [configured Credentials service]({{< relref "#credentials-service-configuration" >}}) has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
 
-When running the Hono example installation as described in the [Getting Started guide]({{< relref "getting-started.md" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for device `4711` of tenant `DEFAULT_TENANT` having an *auth-id* of `sensor1` and (hashed) *password* `hono-secret`. These credentials are used in the following examples illustrating the usage of the adapter. Please refer to the [Credentials API]({{< relref "api/Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
+When running the Hono example installation as described in the [Getting Started guide]({{< relref "getting-started.md" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` having *auth-ids* `sensor1` and `gw1` and (hashed) *passwords* `hono-secret` and `gw-secret` respectively. These credentials are used in the following examples illustrating the usage of the adapter. Please refer to the [Credentials API]({{< relref "api/Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
 
 {{% note %}}
 There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for a discussion of the concepts.
 {{% /note %}}
 
-### Publish Telemetry Data
+### Publish Telemetry Data (authenticated Device)
 
 * URI: `/telemetry`
 * Method: `POST`
 * Request Headers:
   * (required) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})).
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -251,8 +250,6 @@ There is a subtle difference between the *device identifier* (*device-id*) and t
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
-* Response Headers:
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the HTTP adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
@@ -268,14 +265,12 @@ Response:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
-### Publish Telemetry Data (unauthenticated devices)
+### Publish Telemetry Data (unauthenticated Device)
 
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})) and its identity.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -283,12 +278,8 @@ Response:
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
-* Response Headers:
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the HTTP adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
-This URI MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
-
-For reasons of completeness, this URI MAY also be used by devices that do have authenticated to the protocol adapter. In this case the protocol adapter verifies that the values provided in the path parameters match the credentials that the device has provided during authentication. If they do not match, the adapter responds with a 403 status code.
+This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
 **Examples**
 
@@ -302,34 +293,54 @@ Response:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
-An authenticated device may also use this URI. In this case the device needs to know both the *auth-id* as well as the corresponding *device identifier*:
+### Publish Telemetry Data (authenticated Gateway)
 
-    $ curl -i -X PUT -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+* URI: `/telemetry/${tenantId}/${deviceId}`
+* Method: `PUT`
+* Request Headers:
+  * (required) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
+  * (required) `Content-Type`: The type of payload contained in the body.
+* Request Body:
+  * (required) Arbitrary payload encoded according to the given content type.
+* Status Codes:
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
+  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
-In real world scenarios this would usually only make sense if the *device identifier* is also used as the *auth-id*, i.e.
+This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like SigFox or LoRa. In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
 
-    $ curl -i -X PUT -u 4711@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "#device-registration-service-connection-configuration" >}}).
 
-### Publish an Event
+**Examples**
+
+Publish some JSON data for device `4712` via gateway `gw-1`:
+
+    $ curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
+
+Response:
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+**NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
+
+### Publish an Event (authenticated Device)
 
 * URI: `/event`
 * Method: `POST`
 * Request Headers:
   * (required) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})) and its identity. Including this header only makes sense if the adapter's `HONO_HTTP_REG_ASSERTION_ENABLED` property has been set to `true`.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
-  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
+  * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
-* Response Headers:
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client MAY include this token on subsequent telemetry or event requests for the same device in order to prevent the adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
@@ -345,27 +356,21 @@ Response:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
-### Publish an Event (unauthenticated devices)
+### Publish an Event (unauthenticated Device)
 
 * URI: `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}))
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
-  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
+  * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
-* Response Headers:
-  * (optional) `Hono-Reg-Assertion`: A JSON Web Token asserting the device's registration status (see [assert Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})). A client SHOULD include this token on subsequent telemetry or event requests for the same device in order to prevent the HTTP adapter from requesting a fresh assertion from the *Device Registration* service on each invocation. This header will be included in a response every time a new token has been issued. Note that this header will only be generated if the `HONO_HTTP_REG_ASSERTION_ENABLED` property is explicitly set to `true`.
 
-This URI MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
-
-For reasons of completeness, this URI MAY also be used by devices that do have authenticated to the protocol adapter. In this case the protocol adapter verifies that the values provided in the path parameters match the credentials that the device has provided during authentication. If they do not match, the adapter responds with a 403 status code.
+This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
 **Examples**
 
@@ -379,15 +384,38 @@ Response:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
-An authenticated device may also use this URI. In this case the device needs to know both the *auth-id* as well as the corresponding *device identifier*:
+### Publish an Event (authenticated Gateway)
 
-    $ curl -i -X PUT -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-    $ --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+* URI: `/event/${tenantId}/${deviceId}`
+* Method: `PUT`
+* Request Headers:
+  * (required) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
+  * (required) `Content-Type`: The type of payload contained in the body.
+* Request Body:
+  * (required) Arbitrary payload encoded according to the given content type.
+* Status Codes:
+  * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
+  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted, i.e. the given device either does not belong to the given tenant or is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
-In real world scenarios this would usually only make sense if the *device identifier* is also used as the *auth-id*, i.e.
+This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like SigFox or LoRa. In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
 
-    $ curl -i -X PUT -u 4711@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-    $ --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "#device-registration-service-connection-configuration" >}}).
+
+**Examples**
+
+Publish some JSON data for device `4712` via gateway `gw-1`:
+
+    $ curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4712
+
+Response:
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+**NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
 ## Downstream Meta Data
 

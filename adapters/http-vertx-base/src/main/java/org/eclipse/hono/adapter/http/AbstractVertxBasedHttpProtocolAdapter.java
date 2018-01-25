@@ -14,6 +14,7 @@ package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
@@ -21,6 +22,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -466,7 +468,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             HttpUtils.badRequest(ctx, "missing body");
         } else {
 
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, null);
+            final Device authenticatedDevice = Optional.ofNullable(ctx.user()).map(user -> {
+                if (Device.class.isInstance(user)) {
+                    return (Device) user;
+                } else {
+                    return null;
+                }
+            }).orElse(null);
+            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
 
             CompositeFuture.all(tokenTracker, senderTracker).compose(ok -> {
 
