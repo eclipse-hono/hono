@@ -36,6 +36,21 @@ public final class Constants {
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
 
     /**
+     * The type of the mqtt protocol adapter.
+     */
+    public static final String TYPE_MQTT = "hono-mqtt";
+
+    /**
+     * The type of the http protocol adapter.
+     */
+    public static final String TYPE_HTTP = "hono-http";
+
+    /**
+     * The type of the kura protocol adapter.
+     */
+    public static final String TYPE_KURA = "hono-kura";
+
+    /**
      * The default number of milliseconds to wait before trying to reconnect to a service.
      */
     public static final long DEFAULT_RECONNECT_INTERVAL_MILLIS = 500;
