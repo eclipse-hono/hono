@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.client.impl;
 
@@ -229,12 +230,16 @@ public final class HonoClientImpl implements HonoClient {
         if (connection != null && !connection.isDisconnected()) {
             connection.disconnect();
         }
+
+        final ProtonConnection failedConnection = this.connection;
+        this.connection = null;
+
         activeSenders.clear();
         activeRequestResponseClients.clear();
         failAllCreationRequests();
 
         if (connectionLossHandler != null) {
-            connectionLossHandler.handle(connection);
+            connectionLossHandler.handle(failedConnection);
         } else {
             reconnect(attempt -> {}, failedCon -> onRemoteDisconnect(failedCon, null));
         }
