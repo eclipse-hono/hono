@@ -516,7 +516,7 @@ public final class HonoClientImpl implements HonoClient {
 
         return checkConnection().compose(connected -> {
 
-            final Future<RequestResponseClient> result = Future.future();
+            final Future<RegistrationClient> result = Future.future();
             RegistrationClientImpl.create(
                     context,
                     clientConfigProperties,
@@ -525,16 +525,8 @@ public final class HonoClientImpl implements HonoClient {
                     tenantId,
                     this::removeRegistrationClient,
                     this::removeRegistrationClient,
-                    creationAttempt -> {
-                        if (creationAttempt.succeeded()) {
-                            final RegistrationClient registrationClient = creationAttempt.result();
-                            registrationClient.setRequestTimeout(clientConfigProperties.getRequestTimeout());
-                            result.complete(registrationClient);
-                        } else {
-                            result.fail(creationAttempt.cause());
-                        }
-                    });
-            return result;
+                    result.completer());
+            return result.map(client -> (RequestResponseClient) client);
         });
     }
 
@@ -564,7 +556,7 @@ public final class HonoClientImpl implements HonoClient {
 
         return checkConnection().compose(connected -> {
 
-            final Future<RequestResponseClient> result = Future.future();
+            final Future<CredentialsClient> result = Future.future();
             CredentialsClientImpl.create(
                     context,
                     clientConfigProperties,
@@ -572,16 +564,8 @@ public final class HonoClientImpl implements HonoClient {
                     tenantId,
                     this::removeCredentialsClient,
                     this::removeCredentialsClient,
-                    creationAttempt -> {
-                        if (creationAttempt.succeeded()) {
-                            CredentialsClient credentialsClient = creationAttempt.result();
-                            credentialsClient.setRequestTimeout(clientConfigProperties.getRequestTimeout());
-                            result.complete(credentialsClient);
-                        } else {
-                            result.fail(creationAttempt.cause());
-                        }
-                    });
-            return result;
+                    result.completer());
+            return result.map(client -> (RequestResponseClient) client);
         });
     }
 

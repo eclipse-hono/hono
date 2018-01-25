@@ -86,6 +86,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
         super(context, config);
         Objects.requireNonNull(tenantId);
+        this.requestTimeoutMillis = config.getRequestTimeout();
         this.targetAddress = String.format("%s/%s", getName(), tenantId);
         this.replyToAddress = String.format("%s/%s/%s", getName(), tenantId, UUID.randomUUID());
     }
