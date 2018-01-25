@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -134,7 +134,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (Device.class.isInstance(ctx.user())) {
             Device device = (Device) ctx.user();
-            if (device.getTenantId().equals(getTenantParam(ctx)) && device.getDeviceId().equals(getDeviceIdParam(ctx))) {
+            if (device.getTenantId().equals(getTenantParam(ctx))) {
                 ctx.next();
             } else {
                 ctx.fail(HttpURLConnection.HTTP_FORBIDDEN);

@@ -12,10 +12,12 @@
  */
 package org.eclipse.hono.service;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -387,18 +389,48 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
-     * @param gatewayId The gateway that wants to act on behalf of the device. May be {@code null},
-     *                  if the device connects to the protocol adapter directly.
+     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
+     *                  <p>
+     *                  If not {@code null} then the authenticated device is compared to the
+     *                  given tenant and device ID. If they differ in the device identifier,
+     *                  then the authenticated device is considered to be a gateway acting on
+     *                  behalf of the device.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will fail if the assertion cannot be retrieved. The cause will be
      *         a {@link ServiceInvocationException} containing a corresponding error code.
      *         <p>
      *         Otherwise the future will contain the assertion.
+     * @throws NullPointerException if tenant ID or device ID are {@code null}.
      */
-    protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId, final String gatewayId) {
+    protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId, final Device authenticatedDevice) {
 
-        return getRegistrationClient(tenantId).compose(client -> client.assertRegistration(deviceId, gatewayId));
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+
+        final Future<String> gatewayId = getGatewayId(tenantId, deviceId, authenticatedDevice);
+
+        return gatewayId
+                .compose(gwId -> getRegistrationClient(tenantId))
+                .compose(client -> client.assertRegistration(deviceId, gatewayId.result()));
+    }
+
+    private Future<String> getGatewayId(final String tenantId, final String deviceId, final Device authenticatedDevice) {
+
+        final Future<String> result = Future.future();
+        if (authenticatedDevice == null) {
+            result.complete();
+        } else if (tenantId.equals(authenticatedDevice.getTenantId())) {
+            if (deviceId.equals(authenticatedDevice.getDeviceId())) {
+                result.complete();
+            } else {
+                result.complete(authenticatedDevice.getDeviceId());
+            }
+        } else {
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                    "cannot publish data for device of other tenant"));
+        }
+        return result;
     }
 
     /**
