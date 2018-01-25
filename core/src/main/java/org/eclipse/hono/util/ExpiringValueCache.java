@@ -18,8 +18,10 @@ import java.time.Instant;
 /**
  * A cache for values that have a limited validity period.
  * 
+ * @param <K> The type of keys that the cache supports.
+ * @param <V> The type of values that the cache supports.
  */
-public interface ExpiringValueCache {
+public interface ExpiringValueCache<K, V> {
 
     /**
      * Puts a value to the cache.
@@ -33,7 +35,7 @@ public interface ExpiringValueCache {
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @throws IllegalArgumentException if the expiration time is not in the future.
      */
-    <T> void put(String key, T value, Instant expirationTime);
+    void put(K key, V value, Instant expirationTime);
 
     /**
      * Gets a value from the cache.
@@ -42,5 +44,5 @@ public interface ExpiringValueCache {
      * @return The value or {@code null} if no value exists for the key or
      *         if the value is expired.
      */
-    <T> T get(String key);
+    V get(K key);
 }
