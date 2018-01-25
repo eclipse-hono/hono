@@ -75,8 +75,7 @@ public interface RegistrationService extends Verticle {
      * @param otherKeys A map containing additional properties to be registered with the device (may be {@code null}).
      *                  The properties provided in this map will completely replace any existing properties registered for the device.
      * @param resultHandler The handler to invoke with the result of the operation. If a device with the given ID exists for
-     *         the tenant, the <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain
-     *         the keys that had originally been registered for the device.
+     *         the tenant and was updated, the <em>status</em> will be {@link HttpURLConnection#HTTP_NO_CONTENT}.
      *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
      */
