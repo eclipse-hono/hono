@@ -159,6 +159,7 @@ public class RequestResponseApiConstants {
      *
      * @param operation The operation that shall be processed by the service.
      * @param tenantId The tenant for which the message was processed.
+     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
      * @throws NullPointerException if operation or tenant ID are {@code null}.
      * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
      */
