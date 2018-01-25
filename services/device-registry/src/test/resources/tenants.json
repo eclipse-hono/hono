@@ -1,0 +1,29 @@
+[
+  {
+    "tenant": "DEFAULT_TENANT",
+    "data": {
+      "enabled": "true"
+    }
+  },
+  {
+    "tenant": "HTTP_TENANT",
+    "data": {
+      "enabled": "true"
+    },
+    "adapters": {
+      "hono-http": {
+        "enabled": true,
+        "device-authentication-required": true
+      },
+      "hono-mqtt": {
+        "enabled": false,
+        "device-authentication-required": true
+      },
+      "hono-kura": {
+        "enabled": false,
+        "device-authentication-required": true
+      }
+
+    }
+  }
+]

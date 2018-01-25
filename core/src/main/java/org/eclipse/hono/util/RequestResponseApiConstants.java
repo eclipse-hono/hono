@@ -149,7 +149,32 @@ public class RequestResponseApiConstants {
      *
      * @param operation The operation that shall be processed by the service.
      * @param tenantId The tenant for which the message was processed.
-     * @param deviceId The device that the message relates to.
+     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
+     */
+    public static final JsonObject getServiceRequestAsJson(final String operation, final String tenantId) {
+        return getServiceRequestAsJson(operation, tenantId, null, null);
+    }
+
+    /**
+     * Build a Json object as a request for internal communication via the vert.x event bus.
+     * Clients use this object to build their request that is sent to the processing service.
+     *
+     * @param operation The operation that shall be processed by the service.
+     * @param tenantId The tenant for which the message was processed.
+     * @param payload The payload from the request that is passed to the processing service.
+     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
+     */
+    public static final JsonObject getServiceRequestAsJson(final String operation, final String tenantId, final JsonObject payload) {
+        return getServiceRequestAsJson(operation, tenantId, null, payload);
+    }
+
+    /**
+     * Build a Json object as a request for internal communication via the vert.x event bus.
+     * Clients use this object to build their request that is sent to the processing service.
+     *
+     * @param operation The operation that shall be processed by the service.
+     * @param tenantId The tenant for which the message was processed.
+     * @param deviceId The device that the message relates to. Maybe null - then no deviceId will be contained.
      * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
      */
     public static final JsonObject getServiceRequestAsJson(final String operation, final String tenantId, final String deviceId) {
