@@ -23,7 +23,7 @@ import io.vertx.core.json.JsonObject;
  * Constants &amp; utility methods used throughout the Credentials API.
  */
 public final class CredentialsConstants extends RequestResponseApiConstants {
-    /* registration actions */
+    /* credentials actions */
     public static final String OPERATION_GET                     = "get";
     public static final String OPERATION_ADD                     = "add";
     public static final String OPERATION_UPDATE                  = "update";
