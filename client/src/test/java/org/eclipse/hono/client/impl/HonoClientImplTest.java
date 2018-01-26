@@ -22,6 +22,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
 import org.junit.AfterClass;
@@ -59,6 +60,8 @@ public class HonoClientImplTest {
 
     private ProtonConnection con;
     private DisconnectHandlerProvidingConnectionFactory connectionFactory;
+    private ClientConfigProperties props;
+    private HonoClientImpl client;
 
     /**
      * Sets up vertx.
@@ -76,6 +79,8 @@ public class HonoClientImplTest {
         con = mock(ProtonConnection.class);
         when(con.getRemoteContainer()).thenReturn("server");
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
+        props = new ClientConfigProperties();
+        client = new HonoClientImpl(vertx, connectionFactory, props);
     }
 
     /**
@@ -100,7 +105,6 @@ public class HonoClientImplTest {
 
         // GIVEN a client that already tries to create a registration client for "tenant"
         final Async connected = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
@@ -133,7 +137,6 @@ public class HonoClientImplTest {
 
         // GIVEN a client that tries to create a registration client for "tenant"
         final Async connected = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
@@ -167,7 +170,6 @@ public class HonoClientImplTest {
 
         // GIVEN a client that already tries to create a telemetry sender for "tenant"
         final Async connected = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
@@ -196,7 +198,6 @@ public class HonoClientImplTest {
 
         // GIVEN a client that tries to create a telemetry sender for "tenant"
         final Async connected = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
@@ -232,7 +233,6 @@ public class HonoClientImplTest {
 
         // GIVEN a client that already tries to create a telemetry sender for "tenant"
         final Async connected = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
@@ -259,7 +259,6 @@ public class HonoClientImplTest {
 
         // GIVEN a client that already tries to create a telemetry sender for "tenant"
         final Async connected = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
@@ -290,7 +289,7 @@ public class HonoClientImplTest {
 
         // GIVEN a client trying to create a sender to the peer
         final Async connected = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+        client = new HonoClientImpl(vertx, connectionFactory, props);
         client.connect(new ProtonClientOptions().setReconnectAttempts(1)).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
@@ -326,7 +325,7 @@ public class HonoClientImplTest {
 
         // GIVEN an client connected to a server
         final Async connected = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+        client = new HonoClientImpl(vertx, connectionFactory, props);
         client.connect(new ProtonClientOptions().setReconnectAttempts(1)).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
@@ -348,7 +347,7 @@ public class HonoClientImplTest {
         // GIVEN a client that cannot connect to the server
         // expect the connection factory to fail twice and succeed on third connect attempt
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 1, 2);
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
+        client = new HonoClientImpl(vertx, connectionFactory, props);
 
         // WHEN trying to connect
         Async disconnectHandlerInvocation = ctx.async();
@@ -378,7 +377,6 @@ public class HonoClientImplTest {
         // GIVEN a client that is connected to a server
         final Async connected = ctx.async();
         final Async disconnectHandlerInvocation = ctx.async();
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(
                 new ProtonClientOptions().setReconnectAttempts(1),
                 failedCon -> disconnectHandlerInvocation.complete())
@@ -405,7 +403,6 @@ public class HonoClientImplTest {
     public void testConnectFailsAfterShutdown(final TestContext ctx) {
 
         // GIVEN a shutdown client
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.shutdown();
 
         // WHEN client connects
@@ -422,12 +419,12 @@ public class HonoClientImplTest {
      *
      */
     @Test
-    public void testDoesNotTriggerReconnectionAfterShutdown(final TestContext ctx) {
+    public void testClientDoesNotTriggerReconnectionAfterShutdown(final TestContext ctx) {
 
         // GIVEN a client that tries to connect to a server but does not succeed
-        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 0, Integer.MAX_VALUE);
-        final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         final Async connectionHandlerInvocation = ctx.async();
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 0, Integer.MAX_VALUE);
+        client = new HonoClientImpl(vertx, connectionFactory, props);
         client.connect(new ProtonClientOptions().setReconnectAttempts(1)).setHandler(
                 ctx.asyncAssertFailure(cause -> connectionHandlerInvocation.complete()));
 

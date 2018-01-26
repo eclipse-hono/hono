@@ -14,20 +14,19 @@
 package org.eclipse.hono.vertx.example.base;
 
 import java.util.concurrent.CountDownLatch;
+
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
-
-import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.*;
 
 /**
  * Example base class for consuming data from Hono.
@@ -57,16 +56,16 @@ public class HonoConsumerBase {
      * your project as well and adopt the file path.
      */
     public HonoConsumerBase() {
-        honoClient = new HonoClientImpl(vertx,
-                ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
-                        .vertx(vertx)
-                        .host(HONO_AMQP_CONSUMER_HOST)
-                        .port(HONO_AMQP_CONSUMER_PORT)
-                        .user(HONO_CLIENT_USER)
-                        .password(HONO_CLIENT_PASSWORD)
-                        .trustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem")
-                        .disableHostnameVerification()
-                        .build());
+
+        final ClientConfigProperties props = new ClientConfigProperties();
+        props.setHost(HonoExampleConstants.HONO_AMQP_CONSUMER_HOST);
+        props.setPort(HonoExampleConstants.HONO_AMQP_CONSUMER_PORT);
+        props.setUsername(HONO_CLIENT_USER);
+        props.setPassword(HONO_CLIENT_PASSWORD);
+        props.setTrustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem");
+        props.setHostnameVerificationRequired(false);
+
+        honoClient = new HonoClientImpl(vertx, props);
     }
 
     /**
@@ -81,18 +80,18 @@ public class HonoConsumerBase {
 
         consumerFuture.setHandler(result -> {
             if (!result.succeeded()) {
-                System.err.println("honoClient could not create telemetry consumer for " + HONO_AMQP_CONSUMER_HOST + ":"
-                        + HONO_AMQP_CONSUMER_PORT + " : " + result.cause());
+                System.err.println("honoClient could not create telemetry consumer for " + HonoExampleConstants.HONO_AMQP_CONSUMER_HOST
+                        + ":" + HonoExampleConstants.HONO_AMQP_CONSUMER_PORT + " : " + result.cause());
             }
             latch.countDown();
         });
 
         honoClient.connect(new ProtonClientOptions()).compose(connectedClient -> {
             if (eventMode) {
-                return connectedClient.createEventConsumer(TENANT_ID,
+                return connectedClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
                         msg -> handleMessage(msg));
             } else {
-                return connectedClient.createTelemetryConsumer(TENANT_ID,
+                return connectedClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
                         msg -> handleMessage(msg));
             }
         }).setHandler(consumerFuture.completer());

@@ -36,6 +36,7 @@ import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,12 +76,36 @@ public final class HonoClientImpl implements HonoClient {
 
     /**
      * Creates a new client for a set of configuration properties.
-     *
+     * <p>
+     * This constructor creates a connection factory using {@link ConnectionFactoryBuilder}.
+     * 
+     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
+     * @param clientConfigProperties The configuration properties to use.
+     */
+    public HonoClientImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+
+        if (vertx != null) {
+            this.vertx = vertx;
+        } else {
+            this.vertx = Vertx.vertx();
+        }
+        this.context = vertx.getOrCreateContext();
+        this.clientConfigProperties = clientConfigProperties;
+        this.connectionFactory = ConnectionFactoryBuilder.newBuilder(clientConfigProperties).vertx(vertx).build();
+    }
+
+    /**
+     * Creates a new client for a set of configuration properties.
+     * <p>
+     * <em>NB</em> Make sure to always use the same set of configuration properties for both
+     * the connection factory as well as the Hono client in order to prevent unexpected behavior.
+     * 
      * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
      * @param connectionFactory The factory to use for creating an AMQP connection to the Hono server.
-     * @param clientConfigProperties The config properties to use (beside the connection properties)
+     * @param clientConfigProperties The configuration properties to use.
      */
     public HonoClientImpl(final Vertx vertx, final ConnectionFactory connectionFactory, final ClientConfigProperties clientConfigProperties) {
+
         if (vertx != null) {
             this.vertx = vertx;
         } else {
@@ -89,20 +114,6 @@ public final class HonoClientImpl implements HonoClient {
         this.context = vertx.getOrCreateContext();
         this.connectionFactory = connectionFactory;
         this.clientConfigProperties = clientConfigProperties;
-    }
-
-    /**
-     * Creates a new client for a set of configuration properties.
-     *
-     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
-     * @param connectionFactory The factory to use for creating an AMQP connection to the Hono server.
-     */
-    public HonoClientImpl(final Vertx vertx, final ConnectionFactory connectionFactory) {
-        // TODO remove this constructor
-        // The passed in factory will very likely use custom config properties
-        // which do not match the defaults used for this client.
-        // This might lead to unexpected behavior during runtime.
-        this(vertx, connectionFactory, new ClientConfigProperties());
     }
 
     /**
