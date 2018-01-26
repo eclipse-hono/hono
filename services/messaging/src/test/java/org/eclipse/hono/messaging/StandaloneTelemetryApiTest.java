@@ -21,7 +21,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.telemetry.impl.TelemetryEndpoint;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -72,14 +72,13 @@ public class StandaloneTelemetryApiTest extends AbstractStandaloneApiTest {
         vertx.deployVerticle(server, serverTracker.completer());
 
         serverTracker.compose(s -> {
-            client = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
-                    .vertx(vertx)
-                    .name("test")
-                    .host(server.getInsecurePortBindAddress())
-                    .port(server.getInsecurePort())
-                    .user(USER)
-                    .password(PWD)
-                    .build());
+            final ClientConfigProperties clientProps = new ClientConfigProperties();
+            clientProps.setName("test");
+            clientProps.setHost(server.getInsecurePortBindAddress());
+            clientProps.setPort(server.getInsecurePort());
+            clientProps.setUsername(USER);
+            clientProps.setPassword(PWD);
+            client = new HonoClientImpl(vertx, clientProps);
             return client.connect(new ProtonClientOptions());
         }).setHandler(ctx.asyncAssertSuccess());
     }

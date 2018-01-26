@@ -82,6 +82,6 @@ public class AppConfiguration {
      */
     @Bean
     public HonoClient honoClient() {
-        return new HonoClientImpl(vertx(), honoConnectionFactory());
+        return new HonoClientImpl(vertx(), honoConnectionFactory(), honoClientConfig());
     }
 }

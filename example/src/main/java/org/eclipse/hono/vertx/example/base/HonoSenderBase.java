@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.vertx.example.base;
 
-import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.DEVICE_ID;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -24,7 +22,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.RegistrationConstants;
 
 import io.vertx.core.CompositeFuture;
@@ -92,26 +90,26 @@ public class HonoSenderBase {
      * your project as well and adopt the file path.
      */
     public HonoSenderBase() {
-        honoMessagingClient = new HonoClientImpl(vertx,
-                ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
-                        .vertx(vertx)
-                        .host(HonoExampleConstants.HONO_MESSAGING_HOST)
-                        .port(HonoExampleConstants.HONO_MESSAGING_PORT)
-                        .user(HONO_CLIENT_USER)
-                        .password(HONO_CLIENT_PASSWORD)
-                        .trustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem")
-                        .disableHostnameVerification()
-                        .build());
-        honoRegistryClient = new HonoClientImpl(vertx,
-                ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder()
-                        .vertx(vertx)
-                        .host(HonoExampleConstants.HONO_REGISTRY_HOST)
-                        .port(HonoExampleConstants.HONO_REGISTRY_PORT)
-                        .user(HONO_CLIENT_USER)
-                        .password(HONO_CLIENT_PASSWORD)
-                        .trustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem")
-                        .disableHostnameVerification()
-                        .build());
+
+        final ClientConfigProperties messagingProps = new ClientConfigProperties();
+        messagingProps.setHost(HonoExampleConstants.HONO_MESSAGING_HOST);
+        messagingProps.setPort(HonoExampleConstants.HONO_MESSAGING_PORT);
+        messagingProps.setUsername(HONO_CLIENT_USER);
+        messagingProps.setPassword(HONO_CLIENT_PASSWORD);
+        messagingProps.setTrustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem");
+        messagingProps.setHostnameVerificationRequired(false);
+
+        honoMessagingClient = new HonoClientImpl(vertx, messagingProps);
+
+        final ClientConfigProperties registryProps = new ClientConfigProperties();
+        registryProps.setHost(HonoExampleConstants.HONO_REGISTRY_HOST);
+        registryProps.setPort(HonoExampleConstants.HONO_REGISTRY_PORT);
+        registryProps.setUsername(HONO_CLIENT_USER);
+        registryProps.setPassword(HONO_CLIENT_PASSWORD);
+        registryProps.setTrustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem");
+        registryProps.setHostnameVerificationRequired(false);
+
+        honoRegistryClient = new HonoClientImpl(vertx, registryProps);
     }
 
     /**
@@ -248,7 +246,7 @@ public class HonoSenderBase {
      */
     private Future<String> getRegistrationAssertion() {
 
-        return registrationClient.assertRegistration(DEVICE_ID).map(regInfo -> {
+        return registrationClient.assertRegistration(HonoExampleConstants.DEVICE_ID).map(regInfo -> {
             return regInfo.getString(RegistrationConstants.FIELD_ASSERTION);
         });
     }

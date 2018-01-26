@@ -34,8 +34,8 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
@@ -114,14 +114,13 @@ public class StandaloneCredentialsApiTest {
             vertx.deployVerticle(server, serviceTracker.completer());
             return serviceTracker;
         }).compose(s -> {
-            client = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
-                    .vertx(vertx)
-                    .name("test")
-                    .host(server.getInsecurePortBindAddress())
-                    .port(server.getInsecurePort())
-                    .user(USER)
-                    .password(PWD)
-                    .build());
+            final ClientConfigProperties clientProps = new ClientConfigProperties();
+            clientProps.setName("test");
+            clientProps.setHost(server.getInsecurePortBindAddress());
+            clientProps.setPort(server.getInsecurePort());
+            clientProps.setUsername(USER);
+            clientProps.setPassword(PWD);
+            client = new HonoClientImpl(vertx, clientProps);
 
             return client.connect(new ProtonClientOptions());
         }).compose(c -> c.getOrCreateCredentialsClient(Constants.DEFAULT_TENANT)).setHandler(ctx.asyncAssertSuccess(r -> {
