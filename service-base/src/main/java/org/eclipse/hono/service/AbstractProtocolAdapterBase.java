@@ -16,6 +16,8 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
@@ -28,13 +30,13 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.StringUtils;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
@@ -419,10 +421,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         final Future<String> result = Future.future();
         if (authenticatedDevice == null) {
-            result.complete();
+            result.complete(null);
         } else if (tenantId.equals(authenticatedDevice.getTenantId())) {
             if (deviceId.equals(authenticatedDevice.getDeviceId())) {
-                result.complete();
+                result.complete(null);
             } else {
                 result.complete(authenticatedDevice.getDeviceId());
             }
@@ -450,6 +452,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param message The message to set the properties on.
      * @param registrationInfo The values to set.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected final void addProperties(final Message message, final JsonObject registrationInfo) {
 
@@ -540,86 +543,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Checks if the tenant and device from a given resource identifier match an authenticated device's identity.
-     *
-     * @param resource The resource to match.
-     * @param authenticatedDevice The authenticated device identity.
-     * 
-     * @return {@code true} if tenantId and deviceId are {@code null} or (if not null) match the authenticated
-     *         device identity.
-     */
-    protected final boolean validateCredentialsWithTopicStructure(final ResourceIdentifier resource, final Device authenticatedDevice) {
-        return validateCredentialsWithTopicStructure(resource.getTenantId(), resource.getResourceId(),
-                authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-    }
-
-    /**
-     * Checks if the tenant and device from a given resource identifier match an authenticated device's identity.
-     *
-     * @param resource The resource to match.
-     * @param authenticatedTenantId The identifier of the tenant that the authenticated device belongs to.
-     * @param authenticatedDeviceId The authenticated device's identifier.
-     * 
-     * @return {@code true} if tenantId and deviceId are {@code null} or (if not null) match the authenticated
-     *         device's tenant and device identifier.
-     */
-    protected final boolean validateCredentialsWithTopicStructure(final ResourceIdentifier resource,
-            final String authenticatedTenantId, final String authenticatedDeviceId) {
-        return validateCredentialsWithTopicStructure(resource.getTenantId(), resource.getResourceId(),
-                authenticatedTenantId, authenticatedDeviceId);
-    }
-
-    /**
-     * Checks if a given tenant and device identifier match an authenticated device's identity.
-     *
-     * @param tenantId The tenant identifier to match.
-     * @param deviceId The device identifier to match.
-     * @param authenticatedTenantId The identifier of the tenant that the authenticated device belongs to.
-     * @param authenticatedDeviceId The authenticated device's identifier.
-     * 
-     * @return {@code true} if tenantId and deviceId are {@code null} or (if not null) match the authenticated
-     *         device's tenant and device identifier.
-     */
-    protected final boolean validateCredentialsWithTopicStructure(final String tenantId, final String deviceId,
-            final String authenticatedTenantId, final String authenticatedDeviceId) {
-        if (tenantId != null && !tenantId.equals(authenticatedTenantId)) {
-            return false;
-        }
-        if (deviceId != null && !deviceId.equals(authenticatedDeviceId)) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Creates a new AMQP 1.0 message for an address and device ID.
-     * <p>
-     * Subclasses are encouraged to use this method for creating {@code Message} instances to
-     * be sent downstream in order to have the following properties set on the message automatically:
-     * <ul>
-     * <li><em>to</em> will be set to address</li>
-     * <li>application property <em>device_id</em> will be set to device ID</li>
-     * <li>application property <em>orig_address</em> will be set to publish address</li>
-     * </ul>
-     * 
-     * @param address The receiver of the message.
-     * @param deviceId The identifier of the device that the message originates from.
-     * @param publishAddress The address that the message has been published to originally by the device
-     *                       (may be {@code null}).
-     *                       <p>
-     *                       This address will be transport protocol specific, e.g. an HTTP based adapter
-     *                       will probably use URIs here whereas an MQTT based adapter might use the
-     *                       MQTT message's topic.
-     * @return The message.
-     * @throws NullPointerException if address or device ID are {@code null}.
-     */
-    protected static Message newMessage(final String address, final String deviceId, final String publishAddress) {
-
-        return newMessage(address, deviceId, publishAddress, null);
-    }
-
-    /**
-     * Creates a new AMQP 1.0 message for an address, device ID, original publish address and content type.
+     * Creates a new AMQP 1.0 message.
      * <p>
      * Subclasses are encouraged to use this method for creating {@code Message} instances to
      * be sent downstream in order to have the following properties set on the message automatically:
@@ -628,7 +552,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <li>application property <em>device_id</em> will be set to device ID</li>
      * <li>application property <em>orig_address</em> will be set to publish address</li>
      * <li><em>content-type</em> will be set to content type</li>
+     * <li>additional properties set by {@link #addProperties(Message, JsonObject)}</li>
      * </ul>
+     * This method also sets the message's payload.
      * 
      * @param address The receiver of the message.
      * @param deviceId The identifier of the device that the message originates from.
@@ -639,16 +565,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *                       will probably use URIs here whereas an MQTT based adapter might use the
      *                       MQTT message's topic.
      * @param contentType The content type describing the message's payload (may be {@code null}).
+     * @param payload The message payload.
+     * @param registrationInfo The device's registration information as retrieved by the <em>Device
+     * Registration</em> service's <em>assert Device Registration</em> operation.
      * @return The message.
-     * @throws NullPointerException if address or device ID are {@code null}.
+     * @throws NullPointerException if address, device ID or registration info are {@code null}.
      */
-    protected static Message newMessage(final String address, final String deviceId, final String publishAddress, final String contentType) {
+    protected final Message newMessage(
+            final String address,
+            final String deviceId,
+            final String publishAddress,
+            final String contentType,
+            final Buffer payload,
+            final JsonObject registrationInfo) {
 
         Objects.requireNonNull(address);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(registrationInfo);
 
         final Message msg = ProtonHelper.message();
-        msg.setAddress(address.toString());
+        msg.setAddress(address);
         MessageHelper.addDeviceId(msg, deviceId);
         if (publishAddress != null) {
             MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
@@ -656,6 +592,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (contentType != null) {
             msg.setContentType(contentType);
         }
+        if (payload != null) {
+            msg.setBody(new Data(new Binary(payload.getBytes())));
+        }
+        addProperties(msg, registrationInfo);
         return msg;
     }
 }

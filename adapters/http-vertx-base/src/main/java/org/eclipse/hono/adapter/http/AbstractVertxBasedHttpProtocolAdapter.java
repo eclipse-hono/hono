@@ -16,8 +16,6 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
@@ -509,19 +507,5 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 return (Void) null;
             });
         }
-    }
-
-    private Message newMessage(
-            final String downstreamAddress,
-            final String deviceId,
-            final String uri,
-            final String contentType,
-            final Buffer payload,
-            final JsonObject registrationInfo) {
-
-        final Message message = newMessage(downstreamAddress, deviceId, uri, contentType);
-        message.setBody(new Data(new Binary(payload.getBytes())));
-        addProperties(message, registrationInfo);
-        return message;
     }
 }
