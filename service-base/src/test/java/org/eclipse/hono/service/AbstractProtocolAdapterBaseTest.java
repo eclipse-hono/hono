@@ -28,6 +28,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Before;
@@ -200,6 +201,28 @@ public class AbstractProtocolAdapterBaseTest {
             // THEN the request fails with a 404
             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));
+    }
+
+    /**
+     * Verifies that the adapter fails a request to retrieve a token for a gateway that does not
+     * belong to the same tenant as the device it wants to act on behalf of.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetRegistrationAssertionFailsWith403ForNonMatchingTenant(final TestContext ctx) {
+
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN a gateway tries to get an assertion for a device from another tenant
+        adapter.getRegistrationAssertion(
+                "tenant A",
+                "device",
+                new Device("tenant B", "gateway")).setHandler(ctx.asyncAssertFailure(t -> {
+                    // THEN the request fails with a 403 Forbidden error
+                    ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ClientErrorException) t).getErrorCode());
+                }));
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {

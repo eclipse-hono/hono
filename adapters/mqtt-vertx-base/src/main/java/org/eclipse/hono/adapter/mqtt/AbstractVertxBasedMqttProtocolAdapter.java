@@ -16,12 +16,11 @@ package org.eclipse.hono.adapter.mqtt;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
@@ -29,7 +28,6 @@ import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
@@ -40,12 +38,12 @@ import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttAuth;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
-import io.vertx.mqtt.messages.MqttPublishMessage;
 
 /**
  * A base class for implementing Vert.x based Hono protocol adapters
@@ -261,9 +259,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * authentication required} configuration property to {@code false}.
      * <p>
      * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint)}.
-     * Registers a publish handler on the endpoint which invokes
-     * {@link #onUnauthenticatedMessage(MqttEndpoint, MqttPublishMessage)} for each message
-     * being published by the client.
+     * Registers a publish handler on the endpoint which invokes {@link #onPublishedMessage(MqttContext)}
+     * for each message being published by the client.
      * Accepts the connection request.
      * 
      * @param endpoint The MQTT endpoint representing the client.
@@ -274,7 +271,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             close(endpoint);
             LOG.debug("connection to unauthenticated device [clientId: {}] closed", endpoint.clientIdentifier());
         });
-        endpoint.publishHandler(message -> onUnauthenticatedMessage(endpoint, message));
+        endpoint.publishHandler(message -> onPublishedMessage(new MqttContext(message, endpoint)));
 
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
         endpoint.accept(false);
@@ -332,193 +329,159 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             metrics.decrementMqttConnections(authenticatedDevice.getTenantId());
         });
 
-        endpoint.publishHandler(message -> onAuthenticatedMessage(endpoint, message, authenticatedDevice));
+        endpoint.publishHandler(message -> onPublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
         endpoint.accept(false);
         metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
     }
 
     /**
-     * Processes a message that has been published via an unauthenticated connection.
-     * <ol>
-     * <li>{@linkplain #getDownstreamMessage(MqttPublishMessage) Maps the message from the device to a message to be sent downstream}.</li>
-     * <li>Forwards the message to the API endpoint corresponding to the downstream address.</li>
-     * </ol>
+     * Uploads a message to Hono Messaging.
      * 
-     * @param endpoint The connection over which the message has been received.
-     * @param messageFromDevice The message received over the connection.
-     * @return A future indicating the outcome of processing the message. The future will be succeeded
-     *         if and only if the message has been sent downstream.
+     * @param ctx The context in which the MQTT message has been published.
+     * @param resource The resource that the message should be uploaded to.
+     * @param payload The message payload to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been uploaded successfully.
+     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of context, resource or payload is {@code null}.
+     * @throws IllegalArgumentException if the payload is empty.
      */
-    protected final Future<Void> onUnauthenticatedMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice) {
+    public final Future<Void> uploadMessage(
+            final MqttContext ctx,
+            final ResourceIdentifier resource,
+            final Buffer payload) {
 
-        LOG.trace("received message [topic: {}, QoS: {}] from unauthenticated device", messageFromDevice.topicName(), messageFromDevice.qosLevel());
-        final Future<Message> messageTracker = getDownstreamMessage(messageFromDevice);
-        return messageTracker.compose(message -> authorize(message, null)).compose(authorizedAddress -> {
-            return publishMessage(endpoint, messageFromDevice, messageTracker.result(), authorizedAddress).map(s -> {
-                LOG.trace("successfully processed message [topic: {}, QoS: {}] from unauthenticated device", messageFromDevice.topicName(), messageFromDevice.qosLevel());
-                onMessageSent(authorizedAddress);
-                return (Void) null;
-            }).recover(f -> {
-                LOG.debug("error processing message [topic: {}, QoS: {}] from unauthenticated device: {}",
-                        messageFromDevice.topicName(), messageFromDevice.qosLevel(), f.getMessage());
-                if (!ClientErrorException.class.isInstance(f)) {
-                    onMessageUndeliverable(authorizedAddress);
-                }
-                return Future.failedFuture(f);
-            });
-        });
-    }
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(resource);
+        Objects.requireNonNull(payload);
 
-    /**
-     * Processes a message that has been published via an authenticated connection.
-     * <ol>
-     * <li>{@linkplain #getDownstreamMessage(MqttPublishMessage, Device) Maps the message} from the device to a message
-     * to be sent downstream.</li>
-     * <li>Authorizes the message to be forwarded downstream.</li>
-     * <li>Forwards the message to the API endpoint corresponding to the downstream address.</li>
-     * </ol>
-     * 
-     * @param endpoint The connection over which the message has been received.
-     * @param messageFromDevice The message received over the connection.
-     * @param authenticatedDevice The authenticated device that has published the message.
-     * @return A future indicating the outcome of processing the message. The future will be succeeded
-     *         if and only if the message has been sent downstream.
-     */
-    protected final Future<Void> onAuthenticatedMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice,
-            final Device authenticatedDevice) {
-
-        LOG.trace("received message [topic: {}, QoS: {}] from authenticated device [tenant-id: {}, device-id: {}]",
-                messageFromDevice.topicName(), messageFromDevice.qosLevel(), authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-
-        final Future<Message> mappedMessage = getDownstreamMessage(messageFromDevice, authenticatedDevice);
-
-        return mappedMessage.compose(message -> authorize(message, authenticatedDevice)).compose(authorizedResource -> {
-
-            return publishMessage(endpoint, messageFromDevice, mappedMessage.result(), authorizedResource).map(s -> {
-
-                LOG.trace("successfully processed message [topic: {}, QoS: {}] from authenticated device [tenantId: {}, deviceId: {}]",
-                        messageFromDevice.topicName(), messageFromDevice.qosLevel(), authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-                onMessageSent(authorizedResource);
-                return (Void) null;
-
-            }).recover(f -> {
-
-                LOG.debug("error processing message [topic: {}, QoS: {}] from authenticated device [tenantId: {}, deviceId: {}]: {}",
-                        messageFromDevice.topicName(), messageFromDevice.qosLevel(), authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), f.getMessage());
-                if (!ClientErrorException.class.isInstance(f)) {
-                    onMessageUndeliverable(authorizedResource);
-                }
-                return Future.failedFuture(f);
-            });
-        });
-    }
-
-    private Future<Void> publishMessage(final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice, final Message message, final ResourceIdentifier authorizedResource) {
-
-        final Future<JsonObject> assertionTracker = getRegistrationAssertion(authorizedResource.getTenantId(), authorizedResource.getResourceId(), null);
-        final Future<MessageSender> senderTracker = getSenderForEndpoint(authorizedResource.getEndpoint(), authorizedResource.getTenantId());
-
-        return CompositeFuture.all(assertionTracker, senderTracker).recover(t -> {
-            if (assertionTracker.failed()) {
-                LOG.debug("error getting registration assertion for device [tenant ID: {}, device ID: {}]: {}",
-                        authorizedResource.getTenantId(), authorizedResource.getResourceId(), t.getMessage());
-            } else {
-                LOG.debug("error getting {} sender for device [tenant ID: {}, device ID: {}]: {}",
-                        authorizedResource.getEndpoint(), authorizedResource.getTenantId(), authorizedResource.getResourceId(),
-                        t.getMessage());
-            }
-            return Future.failedFuture(t);
-        }).compose(ok -> {
-            final MessageSender sender = senderTracker.result();
-            if (sender.sendQueueFull()) {
-                // cannot send message downstream
-                return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                        "no credit available for sender [" + message.getAddress() + "]"));
-            } else {
-                if (message.getBody() == null) {
-                    message.setBody(new Data(new Binary(messageFromDevice.payload().getBytes())));
-                }
-                addProperties(message, assertionTracker.result());
-                return doUploadMessage(message, endpoint, messageFromDevice, sender);
-            }
-        });
-    }
-
-    /**
-     * Checks if a device is authorized to publish a message.
-     * 
-     * @param message The message to authorize.
-     * @param authenticatedDevice The authenticated device or {@code null} if the device has not been authenticated.
-     * @return A succeeded future containing a resource identifier for the authorized message. The future will
-     *         be failed if the message does not contain a <em>device_id</em> application property or has a
-     *         malformed address.
-     */
-    private Future<ResourceIdentifier> authorize(final Message message, final Device authenticatedDevice) {
-
-        final String deviceId = MessageHelper.getDeviceId(message);
-        final String to = message.getAddress();
-        if (deviceId == null) {
-            return Future.failedFuture(new IllegalArgumentException("message contains no device_id property"));
-        } else if (to == null) {
-                return Future.failedFuture(new IllegalArgumentException("message has no address"));
+        if (resource.getEndpoint().equals(TelemetryConstants.TELEMETRY_ENDPOINT)) {
+            return uploadTelemetryMessage(
+                    ctx,
+                    resource.getTenantId(),
+                    resource.getResourceId(),
+                    payload);
+        } else if (resource.getEndpoint().equals(EventConstants.EVENT_ENDPOINT)){
+            return uploadEventMessage(
+                    ctx,
+                    resource.getTenantId(),
+                    resource.getResourceId(),
+                    payload);
         } else {
-            try {
-                final ResourceIdentifier address = ResourceIdentifier.fromString(to + "/" + deviceId);
-                if (authenticatedDevice == null) {
-                    if (address.getResourcePath().length != 3) {
-                        return Future.failedFuture(new IllegalArgumentException("message has malformed address"));
-                    } else {
-                        return Future.succeededFuture(address);
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
+        }
+
+    }
+
+    /**
+     * Uploads a telemetry message to Hono Messaging.
+     * 
+     * @param ctx The context in which the MQTT message has been published.
+     * @param tenant The tenant of the device that has produced the data.
+     * @param deviceId The id of the device that has produced the data.
+     * @param payload The message payload to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been uploaded successfully.
+     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
+     * @throws IllegalArgumentException if the payload is empty.
+     */
+    public final Future<Void> uploadTelemetryMessage(
+            final MqttContext ctx,
+            final String tenant,
+            final String deviceId,
+            final Buffer payload) {
+
+        return uploadMessage(
+                Objects.requireNonNull(ctx),
+                Objects.requireNonNull(tenant),
+                Objects.requireNonNull(deviceId),
+                Objects.requireNonNull(payload),
+                getTelemetrySender(tenant),
+                TelemetryConstants.TELEMETRY_ENDPOINT);
+    }
+
+    /**
+     * Uploads an event message to Hono Messaging.
+     * 
+     * @param ctx The context in which the MQTT message has been published.
+     * @param tenant The tenant of the device that has produced the data.
+     * @param deviceId The id of the device that has produced the data.
+     * @param payload The message payload to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been uploaded successfully.
+     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
+     * @throws IllegalArgumentException if the payload is empty.
+     */
+    public final Future<Void> uploadEventMessage(
+            final MqttContext ctx,
+            final String tenant,
+            final String deviceId,
+            final Buffer payload) {
+
+        return uploadMessage(
+                Objects.requireNonNull(ctx),
+                Objects.requireNonNull(tenant),
+                Objects.requireNonNull(deviceId),
+                Objects.requireNonNull(payload),
+                getEventSender(tenant),
+                EventConstants.EVENT_ENDPOINT);
+    }
+
+    private Future<Void> uploadMessage(final MqttContext ctx, final String tenant, final String deviceId,
+            final Buffer payload, final Future<MessageSender> senderTracker, final String endpointName) {
+
+        if (payload.length() == 0) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "payload must not be empty"));
+        } else {
+
+            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, ctx.authenticatedDevice());
+
+            return CompositeFuture.all(tokenTracker, senderTracker).compose(ok -> {
+
+                final Message downstreamMessage = newMessage(
+                        String.format("%s/%s", endpointName, tenant),
+                        deviceId,
+                        ctx.message().topicName(),
+                        ctx.contentType(),
+                        payload,
+                        tokenTracker.result());
+                customizeDownstreamMessage(downstreamMessage, ctx);
+                return senderTracker.result().send(downstreamMessage);
+
+            }).compose(delivery -> {
+
+                LOG.trace("successfully processed message [topic: {}, QoS: {}] for device [tenantId: {}, deviceId: {}]",
+                        ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
+                metrics.incrementProcessedMqttMessages(endpointName, tenant);
+                onMessageSent(ctx);
+                if (EventConstants.EVENT_ENDPOINT.equals(endpointName)) {
+                    // check that the remote MQTT client is still connected before sending PUBACK
+                    if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                        ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
                     }
-                } else if (validateCredentialsWithTopicStructure(address, authenticatedDevice)) {
-                    return Future.succeededFuture(address);
+                }
+                return Future.<Void> succeededFuture();
+
+            }).recover(t -> {
+
+                if (ClientErrorException.class.isInstance(t)) {
+                    ClientErrorException e = (ClientErrorException) t;
+                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
+                            tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
                 } else {
-                    LOG.debug("discarding message published by authenticated device [tenant-id: {}, device-id: {}] to unauthorized topic [{}]",
-                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), address);
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "device is not authorized to publish to topic"));
+                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                            tenant, deviceId, endpointName, t);
+                    metrics.incrementUndeliverableMqttMessages(endpointName, tenant);
+                    onMessageUndeliverable(ctx);
                 }
-            } catch (IllegalArgumentException e) {
-                LOG.debug("discarding message mapped to malformed address [to: {}]", message.getAddress());
-                return Future.failedFuture(e);
-            }
+                return Future.failedFuture(t);
+            });
         }
-    }
-
-    /**
-     * Gets a sender for forwarding a message to a downstream API endpoint.
-     * <p>
-     * This method is invoked just before the message is forwarded downstream.
-     * 
-     * @param endpoint The API endpoint that the message should be forwarded to.
-     * @param tenantId The tenant to which the device that has published the message belongs to.
-     * @return A succeeded future containing an appropriate sender.
-     *         A failed future if the QoS and endpoint do not pass verification.
-     */
-    private Future<MessageSender> getSenderForEndpoint(final String endpoint, final String tenantId) {
-
-        if (TelemetryConstants.TELEMETRY_ENDPOINT.equals(endpoint)) {
-            return getTelemetrySender(tenantId);
-        } else if (EventConstants.EVENT_ENDPOINT.equals(endpoint)) {
-            return getEventSender(tenantId);
-        } else {
-            // MQTT client is trying to publish on a not supported endpoint
-            LOG.debug("no such endpoint [{}]", endpoint);
-            return Future.failedFuture(new IllegalArgumentException("no such endpoint"));
-        }
-    }
-
-    private Future<Void> doUploadMessage(final Message message, final MqttEndpoint endpoint, final MqttPublishMessage messageFromDevice,
-            final MessageSender sender) {
-
-        return sender.send(message).map(delivery -> {
-            if (EventConstants.EVENT_ENDPOINT.equals(sender.getEndpoint())) {
-                // check that the remote MQTT client is still connected before sending PUBACK
-                if (endpoint.isConnected() && messageFromDevice.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                    endpoint.publishAcknowledge(messageFromDevice.messageId());
-                }
-            }
-            return (Void) null;
-        });
     }
 
     /**
@@ -568,16 +531,49 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
+     * Processes an MQTT message that has been published by a device.
+     * <p>
+     * Subclasses should determine
+     * <ul>
+     * <li>the tenant and identifier of the device that has published the message</li>
+     * <li>the payload to send downstream</li>
+     * <li>the content type of the payload</li>
+     * </ul>
+     * and then invoke one of the <em>upload*</em> methods to send the message
+     * downstream.
+     * 
+     * @param ctx The context in which the MQTT message has been published.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been successfully uploaded.
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException}.
+     */
+    protected abstract Future<Void> onPublishedMessage(final MqttContext ctx);
+
+    /**
+     * Invoked before the message is sent to the downstream peer.
+     * <p>
+     * This default implementation does nothing.
+     * <p>
+     * Subclasses may override this method in order to customize the message
+     * before it is sent, e.g. adding custom properties.
+     * 
+     * @param downstreamMessage The message that will be sent downstream.
+     * @param ctx The context in which the MQTT message has been published.
+     */
+    protected void customizeDownstreamMessage(final Message downstreamMessage, final MqttContext ctx) {
+    }
+
+    /**
      * Invoked when a message has been forwarded downstream successfully.
      * <p>
      * This default implementation does nothing.
      * <p>
      * Subclasses should override this method in order to e.g. update metrics counters.
      * 
-     * @param downstreamAddress The address that the message has been forwarded to.
+     * @param ctx The context in which the MQTT message has been published.
      */
-    protected void onMessageSent(final ResourceIdentifier downstreamAddress) {
-        metrics.incrementProcessedMqttMessages(downstreamAddress.getEndpoint(), downstreamAddress.getTenantId());
+    protected void onMessageSent(final MqttContext ctx) {
     }
 
     /**
@@ -593,73 +589,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * <p>
      * Subclasses should override this method in order to e.g. update metrics counters.
      * 
-     * @param downstreamAddress The address that the message has been forwarded to.
+     * @param ctx The context in which the MQTT message has been published.
      */
-    protected void onMessageUndeliverable(final ResourceIdentifier downstreamAddress) {
-        metrics.incrementUndeliverableMqttMessages(downstreamAddress.getEndpoint(), downstreamAddress.getTenantId());
+    protected void onMessageUndeliverable(final MqttContext ctx) {
     }
-
-    /**
-     * Maps an MQTT message received from an anonymous device to a corresponding AMQP 1.0 message
-     * to be forwarded downstream.
-     * <p>
-     * This method is invoked for each message received. The returned AMQP message is required to
-     * have its <em>to</em> property set to an address corresponding to the Hono API endpoint
-     * the MQTT message should be forwarded to. The address must consist of three segments:
-     * <ol>
-     * <li>the endpoint name (either <em>telemetry</em> or <em>event</em>)</li>
-     * <li>the tenant to which the device belongs</li>
-     * <li>the device that the data contained in the MQTT message originates from</li>
-     * </ol>
-     * <p>
-     * Implementors
-     * <ul>
-     * <li>should also set the <em>content-type</em> of the AMQP message to a value
-     * that describes the payload of the message appropriately for consumers to identify
-     * messages they might be interested in. Otherwise the content type will be set to
-     * <em>application/octet-stream</em>.</li>
-     * <li>may set arbitrary <em>application properties</em> on the AMQP message.</li>
-     * <li>should not copy the MQTT message's payload to the returned AMQP message and
-     * should also not set a <em>message-id</em>. Both is done by the <em>publishMessage</em>
-     * method when the AMQP message is forwarded downstream.</li>
-     * </ul>
-     * 
-     * @param messageFromDevice The MQTT QoS of the published message.
-     * @return A succeeded future containing the corresponding AMQP 1.0 message or a failed future
-     *         if the MQTT message could not be processed.
-     */
-    protected abstract Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice);
-
-    /**
-     * Maps an MQTT message received from an authenticated device to a corresponding AMQP 1.0 message
-     * to be forwarded downstream.
-     * <p>
-     * This method is invoked for each message received. The returned AMQP message is required to
-     * have its <em>to</em> property set to an address corresponding to the Hono API endpoint
-     * the MQTT message should be forwarded to. The address must consist of three segments:
-     * <ol>
-     * <li>the endpoint name (either <em>telemetry</em> or <em>event</em>)</li>
-     * <li>the tenant to which the device belongs</li>
-     * <li>the device that the data contained in the MQTT message originates from</li>
-     * </ol>
-     * <p>
-     * Implementors
-     * <ul>
-     * <li>should also set the <em>content-type</em> of the AMQP message to a value
-     * that describes the payload of the message appropriately for consumers to identify
-     * messages they might be interested in. Otherwise the content type will be set to
-     * <em>application/octet-stream</em>.</li>
-     * <li>may set arbitrary <em>application properties</em> on the AMQP message.</li>
-     * <li>should not copy the MQTT message's payload to the returned AMQP message and
-     * should also not set a <em>message-id</em>. Both is done by the <em>publishMessage</em>
-     * method when the AMQP message is forwarded downstream.</li>
-     * </ul>
-     * 
-     * @param messageFromDevice The MQTT QoS of the published message.
-     * @param deviceIdentity The identity of the device. This information can be used by implementors to
-     *        e.g. create the downstream message's address.
-     * @return A succeeded future containing the corresponding AMQP 1.0 message or a failed future
-     *         if the MQTT message could not be processed.
-     */
-    protected abstract Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice, final Device deviceIdentity);
 }

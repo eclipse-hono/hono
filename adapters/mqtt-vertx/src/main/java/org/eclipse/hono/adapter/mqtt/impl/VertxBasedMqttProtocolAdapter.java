@@ -13,10 +13,12 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
-import org.apache.qpid.proton.message.Message;
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
+import org.eclipse.hono.adapter.mqtt.MqttContext;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -30,65 +32,83 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  */
 public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> {
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @return <em>hono-mqtt</em>
+     */
     @Override
     protected String getTypeName() {
         return "hono-mqtt";
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    protected Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice) {
+    protected Future<Void> onPublishedMessage(final MqttContext ctx) {
 
-        return mapTopic(messageFromDevice).map(address -> {
-            if (address.getTenantId() == null || address.getResourceId() == null) {
-                throw new IllegalArgumentException("topic of unauthenticated message must contain tenant and device IDs");
-            } else {
-                return newMessage(address.getBasePath(), address.getResourceId(), messageFromDevice.topicName());
-            }
-        });
+        return mapTopic(ctx.message())
+        .compose(address -> checkAddress(ctx, address))
+        .recover(t -> {
+            LOG.debug("discarding message [topic: {}] from device: {}", ctx.message().topicName(), t.getMessage());
+            return Future.failedFuture(t);
+        })
+        .compose(address -> uploadMessage(ctx, address, ctx.message().payload()));
     }
 
-    @Override
-    protected Future<Message> getDownstreamMessage(final MqttPublishMessage messageFromDevice, final Device deviceIdentity) {
-
-        return mapTopic(messageFromDevice).map(address -> {
-            if (address.getTenantId() != null && address.getResourceId() == null) {
-                throw new IllegalArgumentException("topic of authenticated message must not contain tenant ID only");
-            } else if (address.getTenantId() == null && address.getResourceId() == null) {
-                // use authenticated device's tenant to fill in missing information
-                final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address.getEndpoint(),
-                        deviceIdentity.getTenantId(), deviceIdentity.getDeviceId());
-                return newMessage(downstreamAddress.getBasePath(), downstreamAddress.getResourceId(), messageFromDevice.topicName());
-            } else {
-                return newMessage(address.getBasePath(), address.getResourceId(), messageFromDevice.topicName());
-            }
-        });
-    }
-
-    private Future<ResourceIdentifier> mapTopic(final MqttPublishMessage message) {
+    Future<ResourceIdentifier> mapTopic(final MqttPublishMessage message) {
 
         try {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(message.topicName());
             if (TelemetryConstants.TELEMETRY_ENDPOINT.equals(topic.getEndpoint())) {
                 if (!MqttQoS.AT_MOST_ONCE.equals(message.qosLevel())) {
                     // client tries to send telemetry message using QoS 1 or 2
-                    return Future.failedFuture("Only QoS 0 supported for telemetry messages");
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Only QoS 0 supported for telemetry messages"));
                 } else {
                     return Future.succeededFuture(topic);
                 }
             } else if (EventConstants.EVENT_ENDPOINT.equals(topic.getEndpoint())) {
                 if (!MqttQoS.AT_LEAST_ONCE.equals(message.qosLevel())) {
                     // client tries to send event message using QoS 0 or 2
-                    return Future.failedFuture("Only QoS 1 supported for event messages");
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Only QoS 1 supported for event messages"));
                 } else {
                     return Future.succeededFuture(topic);
                 }
             } else {
                 // MQTT client is trying to publish on a not supported endpoint
                 LOG.debug("no such endpoint [{}]", topic.getEndpoint());
-                return Future.failedFuture("no such endpoint");
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "no such endpoint"));
             }
-        } catch (IllegalArgumentException e) {
-            return Future.failedFuture(e);
+        } catch (final IllegalArgumentException e) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
         }
+    }
+
+    Future<ResourceIdentifier> checkAddress(final MqttContext ctx, final ResourceIdentifier address) {
+
+        final Future<ResourceIdentifier> result = Future.future();
+
+        if (ctx.authenticatedDevice() == null) {
+            if (address.getTenantId() == null || address.getResourceId() == null) {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        "topic of unauthenticated message must contain tenant and device ID"));
+            } else {
+                result.complete(address);
+            }
+        } else {
+            if (address.getTenantId() != null && address.getResourceId() == null) {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        "topic of authenticated message must not contain tenant ID only"));
+            } else if (address.getTenantId() == null && address.getResourceId() == null) {
+                // use authenticated device's tenant to fill in missing information
+                final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address.getEndpoint(),
+                        ctx.authenticatedDevice().getTenantId(), ctx.authenticatedDevice().getDeviceId());
+                result.complete(downstreamAddress);
+            } else {
+                result.complete(address);
+            }
+        }
+        return result;
     }
 }
