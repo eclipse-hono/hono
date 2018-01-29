@@ -1,6 +1,6 @@
 +++
 title = "Setup MQTT Adapter"
-weight = 370
+weight = 320
 +++
 
 The MQTT protocol adapter exposes an MQTT topic hierarchy for publishing messages and events to Eclipse Hono&trade;'s Telemetry and Event endpoints.

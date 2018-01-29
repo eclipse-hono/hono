@@ -1,6 +1,6 @@
 +++
 title = "Setup HTTP Adapter"
-weight = 350
+weight = 310
 +++
 
 The HTTP protocol adapter exposes a HTTP based API for Eclipse Hono&trade;'s Telemetry and Event endpoints.

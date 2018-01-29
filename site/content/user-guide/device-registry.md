@@ -1,6 +1,6 @@
 +++
 title = "Setup Device Registry"
-weight = 340
+weight = 290
 +++
 
 The Device Registry component exposes an AMQP 1.0 based service endpoint implementing Eclipse Hono&trade;'s [Device Registration]({{< relref "api/Device-Registration-API.md" >}}) API. 
