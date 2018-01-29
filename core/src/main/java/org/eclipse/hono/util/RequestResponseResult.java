@@ -60,4 +60,15 @@ public class RequestResponseResult<T> {
     public final boolean isOk() {
         return HttpURLConnection.HTTP_OK == status;
     }
+
+    /**
+     * Checks if this result's status code represents
+     * an error.
+     * 
+     * @return {@code true} if the result contains an error code.
+     */
+    public final boolean isError() {
+        return status >= HttpURLConnection.HTTP_BAD_REQUEST &&
+                status < 600;
+    }
 }
