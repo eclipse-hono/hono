@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2017, 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  */
 
 package org.eclipse.hono.client;
-
 
 /**
  * Indicates an unexpected outcome of a (remote) service invocation.
@@ -64,7 +63,7 @@ public class ServiceInvocationException extends RuntimeException {
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
      */
     public ServiceInvocationException(final int errorCode, final String msg, final Throwable cause) {
-        super(msg, cause);
+        super(providedOrDefaultMessage(errorCode, msg), cause);
         if (errorCode < 400 || errorCode >= 600) {
             throw new IllegalArgumentException("status code must be >= 400 and < 600");
         } else {
@@ -81,4 +80,20 @@ public class ServiceInvocationException extends RuntimeException {
         return errorCode;
     }
 
+    /**
+     * Provide a default message if none is provided.
+     * 
+     * @param errorCode The error code
+     * @param msg The detail message. May be {@code null}.
+     * @return The provided message or the default message derived from the error code if {@code null} was provided as a
+     *         message.
+     */
+    private static String providedOrDefaultMessage(final int errorCode, final String msg) {
+
+        if (msg != null) {
+            return msg;
+        } else {
+            return "Error Code: " + errorCode;
+        }
+    }
 }
