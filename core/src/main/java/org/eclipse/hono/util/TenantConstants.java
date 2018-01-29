@@ -39,7 +39,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
             if (subject != null) {
                 try {
                     return Action.valueOf(subject);
-                } catch (IllegalArgumentException e) {
+                } catch (final IllegalArgumentException e) {
                 }
             }
             return ACTION_UNKNOWN;
@@ -84,7 +84,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static JsonObject getTenantMsg(final Message message) {
         Objects.requireNonNull(message);
         final String subject = message.getSubject();
-        final String tenantId = MessageHelper.getTenantIdAnnotation(message);
+        final String tenantId = MessageHelper.getTenantId(message);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
         return getServiceRequestAsJson(subject, tenantId, payload);
     }
@@ -98,7 +98,8 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * @return JsonObject The JSON reply object.
      * @throws NullPointerException If tenantResult is null.
      */
-    public static final JsonObject getServiceReplyAsJson(final String tenantId, final TenantResult tenantResult) {
+    public static JsonObject getServiceReplyAsJson(final String tenantId, final TenantResult tenantResult) {
+        Objects.requireNonNull(tenantResult);
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(RequestResponseApiConstants.FIELD_TENANT_ID, tenantId);
 

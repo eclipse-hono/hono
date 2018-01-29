@@ -1,29 +1,29 @@
 /**
- * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
  *
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
  *
- * Contributors:
- *    Bosch Software Innovations GmbH - initial creation
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 1.0 which is available at
+ * https://www.eclipse.org/legal/epl-v10.html
  *
+ * SPDX-License-Identifier: EPL-1.0
  */
 
-package org.eclipse.hono.service.credentials;
+package org.eclipse.hono.service.tenant;
 
+import static org.eclipse.hono.util.TenantConstants.Action;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TenantConstants;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,17 +37,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
 
 /**
- * Tests verifying behavior of {@link CredentialsAmqpEndpoint}.
+ * Tests verifying behavior of {@link TenantAmqpEndpoint}.
  */
 @RunWith(MockitoJUnitRunner.class)
-public class CredentialsAmqpEndpointTest {
+public class TenantAmqpEndpointTest {
 
-    private static final ResourceIdentifier resource = ResourceIdentifier.from(CredentialsConstants.CREDENTIALS_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+    private static final ResourceIdentifier resource = ResourceIdentifier.from(TenantConstants.TENANT_ENDPOINT, Constants.DEFAULT_TENANT, null);
 
     @Mock private EventBus eventBus;
     @Mock private Vertx    vertx;
 
-    private CredentialsAmqpEndpoint endpoint;
+    private TenantAmqpEndpoint endpoint;
 
     /**
      * Sets up the fixture.
@@ -57,7 +57,7 @@ public class CredentialsAmqpEndpointTest {
 
         when(vertx.eventBus()).thenReturn(eventBus);
 
-        endpoint = new CredentialsAmqpEndpoint(vertx);
+        endpoint = new TenantAmqpEndpoint(vertx);
     }
 
     /**
@@ -68,15 +68,12 @@ public class CredentialsAmqpEndpointTest {
     public void testProcessMessageSendsRequestViaEventBus() {
 
         final Message msg = ProtonHelper.message();
-        msg.setSubject(CredentialsConstants.OPERATION_GET);
-        MessageHelper.addDeviceId(msg, "4711");
+        msg.setSubject(Action.ACTION_GET.toString());
         MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
         MessageHelper.annotate(msg, resource);
 
-        msg.setBody(new AmqpValue(new JsonObject().put("temp", 15).encode()));
-
         endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
-        verify(eventBus).send(eq(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN), any(JsonObject.class), any(Handler.class));
+        verify(eventBus).send(eq(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN), any(JsonObject.class), any(Handler.class));
     }
 }
