@@ -85,6 +85,7 @@ kubectl create secret generic hono-service-device-registry-conf \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=$CONFIG/example-credentials.json \
+  --from-file=$CONFIG/example-tenants.json \
   --from-file=application.yml=$CONFIG/hono-service-device-registry-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
