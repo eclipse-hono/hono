@@ -1,6 +1,6 @@
 +++
 title = "Integrate Hono Consumer in Java"
-weight = 230
+weight = 210
 +++
 
 To illustrate how Hono can be integrated with Java code, a simple program is provided that consumes telemetry or event data 

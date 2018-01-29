@@ -1,6 +1,6 @@
 +++
 title = "Setup AMQP 1.0 Messaging Network"
-weight = 390
+weight = 360
 +++
 
 The *Dispatch Router*, together with the *Apache Artemis* message broker serves as the default *AMQP 1.0 Messaging Network* that is used in Hono's example deployment as described in the [Getting Started Guide]({{< relref "getting-started.md" >}}).

@@ -1,6 +1,6 @@
 +++
 title = "Integrate Hono Sender in Java"
-weight = 220
+weight = 215
 +++
 
 To illustrate how Hono can be integrated with Java code, a simple program is provided that sends telemetry or event data 

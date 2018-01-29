@@ -1,6 +1,6 @@
 +++
 title = "Load Tests with JMeter"
-weight = 240
+weight = 230
 +++
 
 The Hono project includes a JMeter plugin, which could be used to send and receive telemetry/event data. It uses the 
