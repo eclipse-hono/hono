@@ -1,6 +1,6 @@
 +++
 title = "Setup Auth Server"
-weight = 305
+weight = 270
 +++
 
 The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< relref "api/Authentication-API.md" >}}) API. Other services use this component for authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.

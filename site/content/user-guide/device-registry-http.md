@@ -1,6 +1,6 @@
 +++
 title = "Device Registry - RESTful resources"
-weight = 450
+weight = 370
 +++
 
 In addition to the AMQP 1.0 based API endpoints, the Device Registry 
