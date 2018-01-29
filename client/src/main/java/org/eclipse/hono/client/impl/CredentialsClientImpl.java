@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  * <p>
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,15 +12,13 @@
 
 package org.eclipse.hono.client.impl;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.util.CredentialsConstants.OPERATION_GET;
-
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -65,13 +63,13 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
     @Override
     protected CredentialsResult<CredentialsObject> getResult(final int status, final String payload) {
         try {
-            if (status == HTTP_OK) {
+            if (status == HttpURLConnection.HTTP_OK) {
                 return CredentialsResult.from(status, objectMapper.readValue(payload, CredentialsObject.class));
             } else {
                 return CredentialsResult.from(status);
             }
         } catch (IOException e) {
-            return CredentialsResult.from(HTTP_INTERNAL_ERROR);
+            return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
         }
     }
 
@@ -126,11 +124,23 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public void get(final String type, final String authId, final Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler) {
+    public Future<CredentialsObject> get(final String type, final String authId) {
+
         Objects.requireNonNull(type);
         Objects.requireNonNull(authId);
-        Objects.requireNonNull(resultHandler);
-        JsonObject specification = new JsonObject().put(CredentialsConstants.FIELD_TYPE, type).put(CredentialsConstants.FIELD_AUTH_ID, authId);
-        createAndSendRequest(OPERATION_GET, specification, resultHandler);
+
+        final Future<CredentialsResult<CredentialsObject>> responseTracker = Future.future();
+        final JsonObject specification = new JsonObject()
+                .put(CredentialsConstants.FIELD_TYPE, type)
+                .put(CredentialsConstants.FIELD_AUTH_ID, authId);
+        createAndSendRequest(CredentialsConstants.OPERATION_GET, specification, responseTracker.completer());
+        return responseTracker.map(response -> {
+            switch(response.getStatus()) {
+            case HttpURLConnection.HTTP_OK:
+                return response.getPayload();
+            default:
+                throw StatusCodeMapper.from(response);
+            }
+        });
     }
 }

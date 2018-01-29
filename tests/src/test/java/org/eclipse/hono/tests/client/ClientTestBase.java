@@ -13,11 +13,10 @@
 
 package org.eclipse.hono.tests.client;
 
-import static java.net.HttpURLConnection.*;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -25,14 +24,13 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistrationResult;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,30 +92,36 @@ public abstract class ClientTestBase {
     @Before
     public void connect(final TestContext ctx) {
 
-        downstreamClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
-                .vertx(vertx)
-                .host(IntegrationTestSupport.DOWNSTREAM_HOST)
-                .port(IntegrationTestSupport.DOWNSTREAM_PORT)
-                .pathSeparator(IntegrationTestSupport.PATH_SEPARATOR)
-                .user(IntegrationTestSupport.DOWNSTREAM_USER)
-                .password(IntegrationTestSupport.DOWNSTREAM_PWD)
-                .build());
+        final ClientConfigProperties downstreamProps = new ClientConfigProperties();
+        downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
+        downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
+        downstreamProps.setPathSeparator(IntegrationTestSupport.PATH_SEPARATOR);
+        downstreamProps.setUsername(IntegrationTestSupport.DOWNSTREAM_USER);
+        downstreamProps.setPassword(IntegrationTestSupport.DOWNSTREAM_PWD);
+        downstreamClient = new HonoClientImpl(
+                vertx,
+                ConnectionFactoryBuilder.newBuilder(downstreamProps).vertx(vertx).build(),
+                downstreamProps);
 
-        honoClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
-                .vertx(vertx)
-                .host(IntegrationTestSupport.HONO_HOST)
-                .port(IntegrationTestSupport.HONO_PORT)
-                .user(IntegrationTestSupport.HONO_USER)
-                .password(IntegrationTestSupport.HONO_PWD)
-                .build());
+        final ClientConfigProperties honoProps = new ClientConfigProperties();
+        honoProps.setHost(IntegrationTestSupport.HONO_HOST);
+        honoProps.setPort(IntegrationTestSupport.HONO_PORT);
+        honoProps.setUsername(IntegrationTestSupport.HONO_USER);
+        honoProps.setPassword(IntegrationTestSupport.HONO_PWD);
+        honoClient = new HonoClientImpl(
+                vertx,
+                ConnectionFactoryBuilder.newBuilder(honoProps).vertx(vertx).build(),
+                honoProps);
 
-        honoDeviceRegistryClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
-                .vertx(vertx)
-                .host(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST)
-                .port(IntegrationTestSupport.HONO_DEVICEREGISTRY_PORT)
-                .user(IntegrationTestSupport.HONO_USER)
-                .password(IntegrationTestSupport.HONO_PWD)
-                .build());
+        final ClientConfigProperties registryProps = new ClientConfigProperties();
+        registryProps.setHost(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST);
+        registryProps.setPort(IntegrationTestSupport.HONO_DEVICEREGISTRY_PORT);
+        registryProps.setUsername(IntegrationTestSupport.HONO_USER);
+        registryProps.setPassword(IntegrationTestSupport.HONO_PWD);
+        honoDeviceRegistryClient = new HonoClientImpl(
+                vertx,
+                ConnectionFactoryBuilder.newBuilder(registryProps).vertx(vertx).build(),
+                registryProps);
 
         // connect to AMQP messaging network
         final Future<HonoClient> downstreamTracker = downstreamClient.connect(new ProtonClientOptions());
@@ -153,16 +157,12 @@ public abstract class ClientTestBase {
      */
     @After
     public void deregister(final TestContext ctx) {
+
         if (registrationClient != null) {
 
             final Async done = ctx.async();
-            LOGGER.debug("deregistering device [{}]", DEVICE_ID);
-            registrationClient.deregister(DEVICE_ID, r -> {
-                if (r.failed()) {
-                    LOGGER.info("deregistration of device [{}] failed", DEVICE_ID, r.cause());
-                }
-                done.complete();
-            });
+            LOGGER.debug("deregistering devices");
+            registrationClient.deregister(DEVICE_ID).setHandler(r -> done.complete());
             done.await(2000);
         }
 
@@ -242,22 +242,12 @@ public abstract class ClientTestBase {
         final CountDownLatch received = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final Async setup = ctx.async();
 
-        Future<RegistrationResult> tokenTracker = Future.future();
+        final AtomicReference<String> registrationAssertion = new AtomicReference<>();
 
-        Future<RegistrationResult> regTracker = Future.future();
-        registrationClient.register(DEVICE_ID, null, regTracker.completer());
-        regTracker.compose(r -> {
-            if (r.getStatus() == HTTP_CREATED || r.getStatus() == HTTP_CONFLICT) {
-                // test can also commence if device already exists
-                LOGGER.debug("registration succeeded");
-                registrationClient.assertRegistration(DEVICE_ID, tokenTracker.completer());
-            } else {
-                LOGGER.debug("device registration failed with status [{}]", r);
-                tokenTracker.fail("failed to register device");
-            }
-            return tokenTracker;
-        }).compose(r -> {
-            if (r.getStatus() == HTTP_OK) {
+        registrationClient.register(DEVICE_ID, null)
+            .compose(ok -> registrationClient.assertRegistration(DEVICE_ID))
+            .compose(result -> {
+                registrationAssertion.set(result.getString(RegistrationConstants.FIELD_ASSERTION));
                 return createConsumer(TEST_TENANT_ID, msg -> {
                     LOGGER.trace("received {}", msg);
                     assertMessageProperties(ctx, msg);
@@ -267,19 +257,14 @@ public abstract class ClientTestBase {
                         LOGGER.info("messages received: {}", IntegrationTestSupport.MSG_COUNT - received.getCount());
                     }
                 });
-            } else {
-                return Future.failedFuture(new ServiceInvocationException(r.getStatus()));
-            }
-        }).map(c -> {
-            consumer = c;
-            return c;
-        }).setHandler(ctx.asyncAssertSuccess(ok -> {
-            setup.complete();
-        }));
+            }).map(c -> {
+                consumer = c;
+                setup.complete();
+                return null;
+            });
 
         setup.await(1000);
 
-        final String registrationAssertion = tokenTracker.result().getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
         long start = System.currentTimeMillis();
         final AtomicInteger messagesSent = new AtomicInteger();
 
@@ -290,7 +275,7 @@ public abstract class ClientTestBase {
                     DEVICE_ID,
                     "payload_" + messagesSent.getAndIncrement(),
                     CONTENT_TYPE_TEXT_PLAIN,
-                    registrationAssertion,
+                    registrationAssertion.get(),
                     creditAvailable -> sending.complete());
 
             if (messagesSent.get() % 200 == 0) {

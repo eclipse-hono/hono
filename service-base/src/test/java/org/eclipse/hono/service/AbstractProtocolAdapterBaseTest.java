@@ -19,14 +19,20 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
+
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
@@ -42,6 +48,12 @@ import io.vertx.proton.ProtonHelper;
  */
 @RunWith(VertxUnitRunner.class)
 public class AbstractProtocolAdapterBaseTest {
+
+    /**
+     * Time out all test after 5 seconds.
+     */
+    @Rule
+    public Timeout timeout = Timeout.seconds(5);
 
     private static final String ADAPTER_NAME = "abstract-adapter";
 
@@ -147,6 +159,46 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.addProperties(message, newRegistrationAssertionResult("token"));
         assertThat(MessageHelper.getRegistrationAssertion(message), is("token"));
         assertThat(message.getContentType(), is(AbstractProtocolAdapterBase.CONTENT_TYPE_OCTET_STREAM));
+    }
+
+    /**
+     * Verifies that the adapter successfully retrieves a registration assertion
+     * for an existing device.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetRegistrationAssertionSucceedsForExistingDevice(final TestContext ctx) {
+
+        // GIVEN an adapter connected to a registration service
+        final JsonObject assertionResult = newRegistrationAssertionResult("token");
+        when(registrationClient.assertRegistration("device")).thenReturn(Future.succeededFuture(assertionResult));
+
+        // WHEN an assertion for the device is retrieved
+        adapter.getRegistrationAssertion("tenant", "device").setHandler(ctx.asyncAssertSuccess(result -> {
+            // THEN the result contains the registration assertion
+            ctx.assertEquals(assertionResult, result);
+        }));
+    }
+
+    /**
+     * Verifies that the adapter fails a request to get a registration assertion for
+     * a non-existing device with a 403 Forbidden error.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetRegistrationAssertionFailsWith403ForNonExistingDevice(final TestContext ctx) {
+
+        // GIVEN an adapter connected to a registration service
+        when(registrationClient.assertRegistration("non-existent")).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+
+        // WHEN an assertion for a non-existing device is retrieved
+        adapter.getRegistrationAssertion("tenant", "non-existent").setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the request fails with a 403
+            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
+        }));
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {

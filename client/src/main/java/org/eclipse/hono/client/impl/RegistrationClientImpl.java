@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.util.RegistrationConstants.*;
-
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +20,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.JwtHelper;
 import org.eclipse.hono.util.MessageHelper;
@@ -144,10 +143,24 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public void register(final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public Future<Void> register(final String deviceId, final JsonObject data) {
+
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
-        createAndSendRequest(ACTION_REGISTER, createDeviceIdProperties(deviceId), data, resultHandler);
+
+        final Future<RegistrationResult> regResultTracker = Future.future();
+        createAndSendRequest(
+                RegistrationConstants.ACTION_REGISTER,
+                createDeviceIdProperties(deviceId),
+                data,
+                regResultTracker.completer());
+        return regResultTracker.map(response -> {
+            switch(response.getStatus()) {
+            case HttpURLConnection.HTTP_CREATED:
+                return null;
+            default:
+                throw StatusCodeMapper.from(response);
+            }
+        });
     }
 
     /**
@@ -156,10 +169,24 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public void update(final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public Future<Void> update(final String deviceId, final JsonObject data) {
+
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
-        createAndSendRequest(ACTION_UPDATE, createDeviceIdProperties(deviceId), data, resultHandler);
+
+        final Future<RegistrationResult> regResultTracker = Future.future();
+        createAndSendRequest(
+                RegistrationConstants.ACTION_UPDATE,
+                createDeviceIdProperties(deviceId),
+                data,
+                regResultTracker.completer());
+        return regResultTracker.map(response -> {
+            switch(response.getStatus()) {
+            case HttpURLConnection.HTTP_NO_CONTENT:
+                return null;
+            default:
+                throw StatusCodeMapper.from(response);
+            }
+        });
     }
 
     /**
@@ -168,10 +195,24 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public void deregister(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public Future<Void> deregister(final String deviceId) {
+
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
-        createAndSendRequest(ACTION_DEREGISTER, createDeviceIdProperties(deviceId), null, resultHandler);
+
+        final Future<RegistrationResult> regResultTracker = Future.future();
+        createAndSendRequest(
+                RegistrationConstants.ACTION_DEREGISTER,
+                createDeviceIdProperties(deviceId),
+                null,
+                regResultTracker.completer());
+        return regResultTracker.map(response -> {
+            switch(response.getStatus()) {
+            case HttpURLConnection.HTTP_NO_CONTENT:
+                return null;
+            default:
+                throw StatusCodeMapper.from(response);
+            }
+        });
     }
 
     /**
@@ -180,10 +221,36 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public void get(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public Future<JsonObject> get(final String deviceId) {
+
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
-        createAndSendRequest(ACTION_GET, createDeviceIdProperties(deviceId), null, resultHandler);
+        final Future<RegistrationResult> resultTracker = Future.future();
+        createAndSendRequest(
+                RegistrationConstants.ACTION_GET,
+                createDeviceIdProperties(deviceId),
+                null,
+                resultTracker.completer());
+        return resultTracker.map(regResult -> {
+            switch (regResult.getStatus()) {
+            case HttpURLConnection.HTTP_OK:
+                return regResult.getPayload();
+            default:
+                throw StatusCodeMapper.from(regResult);
+            }
+        });
+    }
+
+    /**
+     * Invokes the <em>Assert Device Registration</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     * <p>
+     * This method delegates to {@link #assertRegistration(String, String)} with {@code null}
+     * as the <em>gatewayId</em>.
+     */
+    @Override
+    public Future<JsonObject> assertRegistration(final String deviceId) {
+        return assertRegistration(deviceId, null);
     }
 
     /**
@@ -192,15 +259,18 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public void assertRegistration(final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public Future<JsonObject> assertRegistration(final String deviceId, final String gatewayId) {
 
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
 
         final TriTuple<String, String, String> key = TriTuple.of("assert", deviceId, null);
-        getCachedRegistrationAssertion(key).recover(t -> {
+        return getCachedRegistrationAssertion(key).recover(t -> {
             final Future<RegistrationResult> regResult = Future.future();
-            createAndSendRequest(ACTION_ASSERT, createDeviceIdProperties(deviceId), null, regResult.completer());
+            createAndSendRequest(
+                    RegistrationConstants.ACTION_ASSERT,
+                    createDeviceIdProperties(deviceId),
+                    null,
+                    regResult.completer());
             return regResult.map(response -> {
                 switch(response.getStatus()) {
                 case HttpURLConnection.HTTP_OK:
@@ -212,8 +282,14 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
                     return response;
                 }
             });
-        }).setHandler(resultHandler);
-
+        }).map(result -> {
+            switch(result.getStatus()) {
+            case HttpURLConnection.HTTP_OK:
+                return result.getPayload();
+            default:
+                throw StatusCodeMapper.from(result);
+            }
+        });
     }
 
     private Future<RegistrationResult> getCachedRegistrationAssertion(final TriTuple<String, String, String> key) {

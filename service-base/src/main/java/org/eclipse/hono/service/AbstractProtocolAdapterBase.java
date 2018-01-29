@@ -28,7 +28,6 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -399,24 +398,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId) {
 
-        Future<JsonObject> result = Future.future();
-        getRegistrationClient(tenantId).compose(client -> {
-            Future<RegistrationResult> regResult = Future.future();
-            client.assertRegistration(deviceId, regResult.completer());
-            return regResult;
-        }).compose(response -> {
-            switch(response.getStatus()) {
-            case HttpURLConnection.HTTP_OK:
-                result.complete(response.getPayload());
-                break;
-            case HttpURLConnection.HTTP_NOT_FOUND:
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "device unknown or disabled"));
-                break;
-            default:
-                result.fail(new ServiceInvocationException(response.getStatus(), "failed to assert registration"));
-            }
-        }, result);
-        return result;
+        return getRegistrationClient(tenantId).compose(client -> client.assertRegistration(deviceId))
+                .recover(t -> {
+                    final ServiceInvocationException e = (ServiceInvocationException) t;
+                    switch(e.getErrorCode()) {
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                         throw new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "device unknown or disabled");
+                    default:
+                        throw e;
+                    }
+                });
     }
 
     /**
