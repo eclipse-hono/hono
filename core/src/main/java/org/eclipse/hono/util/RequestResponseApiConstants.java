@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -36,13 +36,14 @@ public class RequestResponseApiConstants {
     public static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
 
     /* message payload fields */
-    public static final String FIELD_PAYLOAD                     = "payload";
-    public static final String FIELD_ENABLED                     = "enabled";
-    public static final String FIELD_DEVICE_ID                   = "device-id";
-    public static final String FIELD_TENANT_ID                   = "tenant-id";
+    public static final String FIELD_DEVICE_ID = "device-id";
+    public static final String FIELD_ENABLED   = "enabled";
+    public static final String FIELD_ERROR     = "error";
+    public static final String FIELD_PAYLOAD   = "payload";
+    public static final String FIELD_TENANT_ID = "tenant-id";
 
     /* message property names */
-    public static final String APP_PROPERTY_KEY                  = "key";
+    public static final String APP_PROPERTY_KEY = "key";
 
     /**
      * Build a Proton message as a reply for an endpoint from the json payload that e.g. is received from the vert.x eventbus
