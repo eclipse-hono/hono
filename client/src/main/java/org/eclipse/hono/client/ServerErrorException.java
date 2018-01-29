@@ -62,26 +62,9 @@ public class ServerErrorException extends ServiceInvocationException {
      * @throws IllegalArgumentException if the code is not &ge; 500 and &lt; 600.
      */
     public ServerErrorException(final int errorCode, final String msg, final Throwable cause) {
-        super(errorCode, providedOrDefaultMessage(errorCode, msg), cause);
+        super(errorCode, msg, cause);
         if (errorCode < 500 || errorCode >= 600) {
             throw new IllegalArgumentException("client error code must be >= 500 and < 600");
         }
     }
-
-    /**
-     * Provide a default message if none is provided.
-     * 
-     * @param errorCode The error code
-     * @param msg The detail message. May be {@code null}.
-     * @return The provided message or the default message derived from the error code if {@code null} was provided as a
-     *         message.
-     */
-    private static String providedOrDefaultMessage(final int errorCode, final String msg) {
-        if (msg != null) {
-            return msg;
-        }
-
-        return "Error Code: " + errorCode;
-    }
-
 }
