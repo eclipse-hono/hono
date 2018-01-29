@@ -13,7 +13,8 @@
 
 package org.eclipse.hono.vertx.example.base;
 
-import java.net.HttpURLConnection;
+import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.DEVICE_ID;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -25,14 +26,11 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistrationResult;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
-
-import static org.eclipse.hono.vertx.example.base.HonoExampleConstants.DEVICE_ID;
 
 /**
  * Example base class for sending data to Hono.
@@ -250,17 +248,8 @@ public class HonoSenderBase {
      */
     private Future<String> getRegistrationAssertion() {
 
-        final Future<RegistrationResult> tokenTracker = Future.future();
-        registrationClient.assertRegistration(DEVICE_ID, tokenTracker.completer());
-
-        return tokenTracker.map(regResult -> {
-            if (regResult.getStatus() == HttpURLConnection.HTTP_OK) {
-                 return regResult.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
-            } else {
-                throw new IllegalStateException("cannot assert registration status");
-            }
-        }).otherwise(t -> {
-            throw new IllegalStateException("cannot assert registration status", t);
+        return registrationClient.assertRegistration(DEVICE_ID).map(regInfo -> {
+            return regInfo.getString(RegistrationConstants.FIELD_ASSERTION);
         });
     }
 

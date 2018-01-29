@@ -32,6 +32,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
@@ -189,8 +190,8 @@ public class StandaloneCredentialsApiTest {
     @Test
     public void testGetCredentialsNotExistingAuthId(final TestContext ctx) {
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, "notExisting", ctx.asyncAssertSuccess(result -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, "notExisting").setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -203,9 +204,8 @@ public class StandaloneCredentialsApiTest {
     @Test
     public void testGetCredentialsReturnsCredentialsTypeAndAuthId(final TestContext ctx) {
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, ctx.asyncAssertSuccess(result -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            checkPayloadGetCredentialsContainsAuthIdAndType(result.getPayload());
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1).setHandler(ctx.asyncAssertSuccess(result -> {
+            checkPayloadGetCredentialsContainsAuthIdAndType(result);
         }));
     }
 
@@ -218,9 +218,8 @@ public class StandaloneCredentialsApiTest {
     @Test
     public void testGetCredentialsReturnsCredentialsDefaultDeviceIdAndIsEnabled(final TestContext ctx) {
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, ctx.asyncAssertSuccess(result -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertTrue(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(result.getPayload()));
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1).setHandler(ctx.asyncAssertSuccess(result -> {
+            assertTrue(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(result));
         }));
     }
 
@@ -233,9 +232,8 @@ public class StandaloneCredentialsApiTest {
     @Test
     public void testGetCredentialsReturnsMultipleSecrets(final TestContext ctx) {
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, ctx.asyncAssertSuccess(result -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            checkPayloadGetCredentialsReturnsMultipleSecrets(result.getPayload());
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1).setHandler(ctx.asyncAssertSuccess(result -> {
+            checkPayloadGetCredentialsReturnsMultipleSecrets(result);
         }));
     }
 
@@ -248,9 +246,8 @@ public class StandaloneCredentialsApiTest {
     @Test
     public void testGetCredentialsFirstSecretCorrectPassword(final TestContext ctx) {
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, ctx.asyncAssertSuccess(result -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            checkPayloadGetCredentialsReturnsFirstSecretWithCorrectPassword(result.getPayload());
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1).setHandler(ctx.asyncAssertSuccess(result -> {
+            checkPayloadGetCredentialsReturnsFirstSecretWithCorrectPassword(result);
         }));
     }
 
@@ -263,9 +260,8 @@ public class StandaloneCredentialsApiTest {
     @Test
     public void testGetCredentialsFirstSecretCurrentlyActiveTimeInterval(final TestContext ctx) {
 
-        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, ctx.asyncAssertSuccess(result -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(result.getPayload());
+        credentialsClient.get(CREDENTIALS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1).setHandler(ctx.asyncAssertSuccess(result -> {
+            checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(result);
         }));
     }
 
@@ -278,9 +274,8 @@ public class StandaloneCredentialsApiTest {
     @Test
     public void testGetCredentialsPresharedKeyIsNotEnabled(final TestContext ctx) {
 
-        credentialsClient.get(CREDENTIALS_TYPE_PRESHARED_KEY, CREDENTIALS_AUTHID2, ctx.asyncAssertSuccess(result -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(result.getPayload()));
+        credentialsClient.get(CREDENTIALS_TYPE_PRESHARED_KEY, CREDENTIALS_AUTHID2).setHandler(ctx.asyncAssertSuccess(result -> {
+            assertFalse(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(result));
         }));
     }
 

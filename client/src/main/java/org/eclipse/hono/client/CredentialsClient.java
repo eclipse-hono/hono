@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,14 +8,14 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Bosch Software Innovations GmbH - remove handler based methods
  */
 
 package org.eclipse.hono.client;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
 import org.eclipse.hono.util.CredentialsObject;
-import org.eclipse.hono.util.CredentialsResult;
+
+import io.vertx.core.Future;
 
 /**
  * A client for accessing Hono's Credentials API.
@@ -34,19 +34,17 @@ public interface CredentialsClient extends RequestResponseClient {
      * 
      * @param type The type of credentials to retrieve.
      * @param authId The authentication identifier used in the credentials to retrieve.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the result of the operation.
      *         <p>
-     *         The handler will be invoked with a succeeded future if a response has
-     *         been received from the credentials service. The <em>status</em> and
-     *         <em>payload</em> properties will contain values as defined in
+     *         The future will succeed if a response with status 200 has been received from the
+     *         credentials service. The JSON object will then contain values as defined in
      *         <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
      *         Get Credentials</a>.
      *         <p>
-     *         If the request could not be sent to the service or the service did not reply
-     *         within the timeout period, the handler will be invoked with
-     *         a failed future containing a {@link ServerErrorException}.
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code returned by the service.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    void get(String type, String authId, Handler<AsyncResult<CredentialsResult<CredentialsObject>>> resultHandler);
+    Future<CredentialsObject> get(String type, String authId);
 }

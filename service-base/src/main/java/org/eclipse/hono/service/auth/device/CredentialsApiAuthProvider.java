@@ -21,11 +21,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.eclipse.hono.util.CredentialsResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -200,30 +199,12 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     protected final Future<CredentialsObject> getCredentialsForDevice(final DeviceCredentials deviceCredentials) {
 
         Objects.requireNonNull(deviceCredentials);
-        Future<CredentialsObject> result = Future.future();
         if (credentialsClient == null) {
-            result.fail(new IllegalStateException("Credentials API client is not set"));
+            return Future.failedFuture(new IllegalStateException("Credentials API client is not set"));
         } else {
-            getCredentialsServiceClient(deviceCredentials.getTenantId()).compose(client -> {
-                Future<CredentialsResult<CredentialsObject>> credResultFuture = Future.future();
-                client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(), credResultFuture.completer());
-                return credResultFuture;
-            }).compose(credResult -> {
-                int status = credResult.getStatus();
-                if (status == HttpURLConnection.HTTP_OK) {
-                    CredentialsObject payload = credResult.getPayload();
-                    result.complete(payload);
-                } else if (status == HttpURLConnection.HTTP_NOT_FOUND) {
-                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
-                } else if (status >= 400 && status < 500){
-                    result.fail(new ClientErrorException(status, "cannot retrieve credentials"));
-                } else {
-                    result.fail(new ServerErrorException(status, "cannot retrieve credentials"));
-                }
-            }, result);
+            return getCredentialsServiceClient(deviceCredentials.getTenantId()).compose(client ->
+                client.get(deviceCredentials.getType(), deviceCredentials.getAuthId()));
         }
-
-        return result;
     }
 
     @Override
@@ -236,19 +217,26 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
         Future<Device> validationResult = Future.future();
         validationResult.setHandler(resultHandler);
 
-        getCredentialsForDevice(deviceCredentials).compose(credentialsOnRecord -> {
-            if (deviceCredentials.validate(credentialsOnRecord)) {
-                validationResult.complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
+        getCredentialsForDevice(deviceCredentials).recover(t -> {
+            final ServiceInvocationException e = (ServiceInvocationException) t;
+            if (e.getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
             } else {
-                validationResult.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "invalid credentials"));
+                return Future.failedFuture(t);
             }
-        }, validationResult);
+        }).map(credentialsOnRecord -> {
+            if (deviceCredentials.validate(credentialsOnRecord)) {
+                return new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId());
+            } else {
+                 throw new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "invalid credentials");
+            }
+        }).setHandler(resultHandler);
     }
 
     @Override
     public final void authenticate(final JsonObject authInfo, final Handler<AsyncResult<User>> resultHandler) {
 
-        DeviceCredentials credentials = getCredentials(Objects.requireNonNull(authInfo));
+        final DeviceCredentials credentials = getCredentials(Objects.requireNonNull(authInfo));
         if (credentials == null) {
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials")));
         } else {

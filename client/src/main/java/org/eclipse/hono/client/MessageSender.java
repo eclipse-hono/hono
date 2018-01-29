@@ -142,7 +142,7 @@ public interface MessageSender {
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
      *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
      *                              client} can be used to obtain such an assertion.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -177,7 +177,7 @@ public interface MessageSender {
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
      *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
      *                              client} can be used to obtain such an assertion.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -218,7 +218,7 @@ public interface MessageSender {
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
      *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
      *                              client} can be used to obtain such an assertion.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -262,7 +262,7 @@ public interface MessageSender {
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
      *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
      *                              client} can be used to obtain such an assertion.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -336,7 +336,7 @@ public interface MessageSender {
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
      *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
      *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
@@ -381,7 +381,7 @@ public interface MessageSender {
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
      *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
      *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
@@ -432,7 +432,7 @@ public interface MessageSender {
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
      *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
      *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.
@@ -481,7 +481,7 @@ public interface MessageSender {
      * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
      *                              this sender has been created for.
      *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String, Handler) registration
+     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
      *                              client} can be used to obtain such an assertion.
      * @param capacityAvailableHandler The handler to notify when this sender can accept and send
      *                                 another message.

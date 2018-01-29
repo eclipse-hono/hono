@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -32,7 +33,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -81,21 +81,14 @@ public class CredentialsApiAuthProviderTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testAuthenticateFailsWithExceptionReportedByCredentialsClient(final TestContext ctx) {
 
         final ServerErrorException reportedException = new ServerErrorException(503);
         when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
-        doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(2, Handler.class);
-            handler.handle(Future.failedFuture(reportedException));
-            return null;
-        }).when(credentialsClient).get(anyString(), anyString(), any(Handler.class));
-        Async authenticate = ctx.async();
+        when(credentialsClient.get(anyString(), anyString())).thenReturn(Future.failedFuture(reportedException));
         provider.authenticate(UsernamePasswordCredentials.create("user@TENANT", "pwd", false), ctx.asyncAssertFailure(t -> {
             ctx.assertEquals(t, reportedException);
-            authenticate.complete();
         }));
     }
 
@@ -111,12 +104,30 @@ public class CredentialsApiAuthProviderTest {
         // WHEN trying to authenticate using malformed credentials
         // that do not contain a tenant
         final JsonObject authInfo = new JsonObject().put("username", "no-tenant").put("password", "secret");
-        Async authenticate = ctx.async();
         provider.authenticate(authInfo, ctx.asyncAssertFailure(t -> {
+            // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
-            authenticate.complete();
         }));
 
-        // THEN authentication fails with a client error
     }
+
+    /**
+     * Verifies that the auth provider fails an authentication request with a 401
+     * {@code ClientErrorException} if the auth-id is unknown.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAuthenticateFailsWith401ForNonExistingAuthId(final TestContext ctx) {
+
+        // WHEN trying to authenticate using an auth-id that is not known
+        final JsonObject authInfo = new JsonObject().put("username", "unknown@TENANT").put("password", "secret");
+        when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
+        when(credentialsClient.get(anyString(), eq("unknown"))).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        provider.authenticate(authInfo, ctx.asyncAssertFailure(t -> {
+            // THEN authentication fails with a 401 client error
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+        }));
+    }
+
 }

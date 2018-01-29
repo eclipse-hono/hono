@@ -14,8 +14,7 @@ package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -34,7 +33,6 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.AfterClass;
@@ -492,13 +490,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(registrationClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(registrationClient));
         adapter.setCredentialsAuthProvider(credentialsAuthProvider);
 
-        RegistrationClient regClient = mock(RegistrationClient.class);
-        doAnswer(invocation -> {
-            Handler<AsyncResult<RegistrationResult>> resultHandler = invocation.getArgumentAt(1, Handler.class);
-            JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
-            resultHandler.handle(Future.succeededFuture(RegistrationResult.from(200, result)));
-            return null;
-        }).when(regClient).assertRegistration(anyString(), any(Handler.class));
+        final RegistrationClient regClient = mock(RegistrationClient.class);
+        final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
+        when(regClient.assertRegistration(anyString())).thenReturn(Future.succeededFuture(result));
 
         when(registrationClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 

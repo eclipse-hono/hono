@@ -275,16 +275,17 @@ public class HonoSender extends AbstractClient {
 
     private void createDevice() throws InterruptedException {
         if (registrationClient != null) {
-            CountDownLatch latch = new CountDownLatch(1);
-            JsonObject data = new JsonObject("{ \"type\": \"jmeter test device\" }");
-            registrationClient.register(sampler.getDeviceId(), data, assertHandler -> {
-                if (assertHandler.failed()) {
-                    LOGGER.error("RegistrationClient.register() failed", assertHandler.cause());
+            final CountDownLatch latch = new CountDownLatch(1);
+            final JsonObject data = new JsonObject().put("type", "jmeter test device");
+            registrationClient.register(sampler.getDeviceId(), data).setHandler(attempt -> {
+                if (attempt.failed()) {
+                    LOGGER.error("device registration failed", attempt.cause());
+                } else {
+                    LOGGER.debug("registered device: {}", sampler.getDeviceId());
                 }
                 latch.countDown();
             });
             latch.await();
-            LOGGER.debug("created device: {}",sampler.getDeviceId());
         } else {
             LOGGER.debug("device could not be created - registrationClient is NULL: {}",sampler.getDeviceId());
         }
@@ -293,27 +294,28 @@ public class HonoSender extends AbstractClient {
     private void removeDevice() throws InterruptedException {
         if (registrationClient != null) {
             CountDownLatch latch = new CountDownLatch(1);
-            registrationClient.deregister(sampler.getDeviceId(), assertHandler -> {
+            registrationClient.deregister(sampler.getDeviceId()).setHandler(assertHandler -> {
                 if (assertHandler.failed()) {
-                    LOGGER.error("RegistrationClient.deregister() failed", assertHandler.cause());
+                    LOGGER.error("deregistration of device failed", assertHandler.cause());
+                } else {
+                    LOGGER.debug("removed device: {}", sampler.getDeviceId());
                 }
                 latch.countDown();
             });
             latch.await();
-            LOGGER.debug("removed device: {}",sampler.getDeviceId());
         } else {
-            LOGGER.debug("device could not be removed - registrationClient is NULL: {}",sampler.getDeviceId());
+            LOGGER.debug("device could not be removed - registrationClient is NULL: {}", sampler.getDeviceId());
         }
     }
 
     private void updateAssertion() throws InterruptedException {
         if (registrationClient != null) {
-            CountDownLatch latch = new CountDownLatch(1);
-            registrationClient.assertRegistration(sampler.getDeviceId(), assertHandler -> {
-                if (assertHandler.failed()) {
-                    LOGGER.error("RegistrationClient.assertRegistration() failed", assertHandler.cause());
+            final CountDownLatch latch = new CountDownLatch(1);
+            registrationClient.assertRegistration(sampler.getDeviceId()).setHandler(attempt -> {
+                if (attempt.succeeded()) {
+                    token = attempt.result().getString(RegistrationConstants.FIELD_ASSERTION);
                 } else {
-                    token = assertHandler.result().getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
+                    LOGGER.error("RegistrationClient.assertRegistration() failed", attempt.cause());
                 }
                 latch.countDown();
             });

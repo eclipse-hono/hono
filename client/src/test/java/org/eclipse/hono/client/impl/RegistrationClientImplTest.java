@@ -110,10 +110,10 @@ public class RegistrationClientImplTest {
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
 
         // WHEN getting registration information
-        client.assertRegistration("device", ctx.asyncAssertSuccess(result -> {
+        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the registration information has been added to the cache
             verify(cache).put(eq(TriTuple.of("assert", "device", null)), any(RegistrationResult.class), any(Instant.class));
-            ctx.assertEquals(registrationAssertion, result.getPayload());
+            ctx.assertEquals(registrationAssertion, result);
         }));
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
@@ -138,10 +138,10 @@ public class RegistrationClientImplTest {
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
 
         // WHEN getting registration information
-        client.assertRegistration("device", ctx.asyncAssertSuccess(result -> {
+        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the registration information has been retrieved from the service
             verify(cache, never()).put(anyObject(), any(RegistrationResult.class), any(Instant.class));
-            ctx.assertEquals(registrationAssertion, result.getPayload());
+            ctx.assertEquals(registrationAssertion, result);
         }));
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
@@ -166,9 +166,9 @@ public class RegistrationClientImplTest {
         when(cache.get(eq(TriTuple.of("assert", "device", null)))).thenReturn(regResult);
 
         // WHEN getting registration information
-        client.assertRegistration("device", ctx.asyncAssertSuccess(result -> {
+        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the registration information is read from the cache
-            ctx.assertEquals(regResult, result);
+            ctx.assertEquals(registrationAssertion, result);
             verify(sender, never()).send(any(Message.class));
         }));
 
