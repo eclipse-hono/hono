@@ -318,51 +318,54 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
      */
     public TenantResult addOrUpdateTenant(final String tenantId, final JsonObject data, final boolean update) {
 
-        Objects.requireNonNull(tenantId);
-        if (update) {
-            if (!tenants.containsKey(tenantId)) {
-                return TenantResult.from(HTTP_NOT_FOUND);
-            }
+        if (!getConfig().isModificationEnabled()) {
+            return TenantResult.from(HTTP_FORBIDDEN);
         } else {
-            if (tenants.containsKey(tenantId)) {
-                return TenantResult.from(HTTP_CONFLICT);
-            }
-        }
-
-        JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
-
-        try {
-            final JsonArray adaptersConfigurationArray = obj.getJsonArray(FIELD_ADAPTERS);
-            if (adaptersConfigurationArray != null) {
-                final Map<String, JsonObject> adapterConfigurationsMap = new HashMap<>();
-                for (int i = 0; i < adaptersConfigurationArray.size(); i++) {
-                    final JsonObject adapterConfiguration = adaptersConfigurationArray.getJsonObject(i);
-                    final String adapterType = (String) adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
-                    if (adapterType != null) {
-                        adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
-                        adapterConfigurationsMap.put(adapterType, adapterConfiguration);
-                    } else {
-                        return TenantResult.from(HTTP_BAD_REQUEST);
-                    }
+            Objects.requireNonNull(tenantId);
+            if (update) {
+                if (!tenants.containsKey(tenantId)) {
+                    return TenantResult.from(HTTP_NOT_FOUND);
                 }
-                // all is checked and prepared, now store it internally
-                tenantsAdapterConfigurations.put(tenantId, adapterConfigurationsMap);
+            } else {
+                if (tenants.containsKey(tenantId)) {
+                    return TenantResult.from(HTTP_CONFLICT);
+                }
             }
-        }
-        catch (ClassCastException cce) {
-            log.warn("addTenant invoked with wrong type for {}: not a JsonArray!", FIELD_ADAPTERS);
-            return TenantResult.from(HTTP_BAD_REQUEST);
-        }
 
-        dirty = true;
-        obj.remove(FIELD_TENANT);
-        obj.remove(FIELD_ADAPTERS);
-        tenants.put(tenantId, obj);
+            JsonObject obj=data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
 
-        if (update) {
-            return TenantResult.from(HTTP_NO_CONTENT);
-        } else {
-            return TenantResult.from(HTTP_CREATED);
+            try {
+                final JsonArray adaptersConfigurationArray = obj.getJsonArray(FIELD_ADAPTERS);
+                if (adaptersConfigurationArray != null) {
+                    final Map<String, JsonObject> adapterConfigurationsMap=new HashMap<>();
+                    for (int i=0; i < adaptersConfigurationArray.size(); i++) {
+                        final JsonObject adapterConfiguration = adaptersConfigurationArray.getJsonObject(i);
+                        final String adapterType = (String) adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
+                        if (adapterType != null) {
+                            adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
+                            adapterConfigurationsMap.put(adapterType, adapterConfiguration);
+                        } else {
+                            return TenantResult.from(HTTP_BAD_REQUEST);
+                        }
+                    }
+                    // all is checked and prepared, now store it internally
+                    tenantsAdapterConfigurations.put(tenantId, adapterConfigurationsMap);
+                }
+            } catch (ClassCastException cce) {
+                log.debug("addTenant invoked with wrong type for {}: not a JsonArray!", FIELD_ADAPTERS);
+                return TenantResult.from(HTTP_BAD_REQUEST);
+            }
+
+            dirty = true;
+            obj.remove(FIELD_TENANT);
+            obj.remove(FIELD_ADAPTERS);
+            tenants.put(tenantId, obj);
+
+            if (update) {
+                return TenantResult.from(HTTP_NO_CONTENT);
+            } else {
+                return TenantResult.from(HTTP_CREATED);
+            }
         }
     }
 
