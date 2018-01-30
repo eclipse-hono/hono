@@ -22,14 +22,6 @@ hono:
 ---
 
 spring:
-  profiles: sender
-hono:
-  client:
-    port: 5671
-
----
-
-spring:
   profiles: ssl
 hono:
   client:

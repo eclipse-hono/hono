@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -31,7 +31,8 @@ import io.vertx.core.dns.AddressResolverOptions;
  */
 @Configuration
 public class AppConfiguration {
-    protected final int DEFAULT_ADDRESS_RESOLUTION_TIMEOUT = 2000;
+
+    private final int DEFAULT_ADDRESS_RESOLUTION_TIMEOUT = 2000;
 
     /**
      * Exposes a Vert.x instance as a Spring bean.

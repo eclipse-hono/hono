@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -35,6 +35,11 @@ public class Application {
         LOG.info("Starting example client in role {}", profiles);
     }
 
+    /**
+     * Starts the client.
+     * 
+     * @param args Command line arguments passed on to the Spring Boot application.
+     */
     public static void main(final String[] args) {
         SpringApplication.run(Application.class, args);
     }
