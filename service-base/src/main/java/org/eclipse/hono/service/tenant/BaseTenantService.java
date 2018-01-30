@@ -15,20 +15,19 @@ package org.eclipse.hono.service.tenant;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static org.eclipse.hono.util.TenantConstants.*;
 
 import java.net.HttpURLConnection;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantConstants.Action;
 import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -48,7 +47,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
     /**
      * A logger to be shared by subclasses.
      */
-    protected final Logger log = LoggerFactory.getLogger(this.getClass());
+    protected final Logger log = LoggerFactory.getLogger(getClass());
     private MessageConsumer<JsonObject> tenantConsumer;
 
 
@@ -63,12 +62,15 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * @param startFuture The future to complete on successful startup.
      */
     public final void start(final Future<Void> startFuture) {
-        this.tenantConsumer();
-        this.doStart(startFuture);
+        tenantConsumer();
+        doStart(startFuture);
     }
 
     /**
      * Subclasses should override this method to perform any work required on start-up of this verticle.
+     * <p>
+     * This default implementation performs nothing except for completing the Future.
+     * </p>
      * <p>
      * This method is invoked by {@link #start()} as part of the verticle deployment process.
      * </p>
@@ -81,9 +83,9 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
     }
 
     private void tenantConsumer() {
-        this.tenantConsumer = this.vertx.eventBus().consumer(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN);
-        this.tenantConsumer.handler(this::processTenantMessage);
-        this.log.info("listening on event bus [address: {}] for incoming tenant CRUD messages",
+        tenantConsumer = vertx.eventBus().consumer(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN);
+        tenantConsumer.handler(this::processTenantMessage);
+        log.info("listening on event bus [address: {}] for incoming tenant CRUD messages",
                 TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN);
     }
 
@@ -93,13 +95,16 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * @param stopFuture the future to invoke once shutdown is complete.
      */
     public final void stop(final Future<Void> stopFuture) {
-        this.tenantConsumer.unregister();
-        this.log.info("unregistered tenant data consumer from event bus");
-        this.doStop(stopFuture);
+        tenantConsumer.unregister();
+        log.info("unregistered tenant data consumer from event bus");
+        doStop(stopFuture);
     }
 
     /**
      * Subclasses should override this method to perform any work required before shutting down this verticle.
+     * <p>
+     * This default implementation performs nothing except for completing the Future.
+     * </p>
      * <p>
      * This method is invoked by {@link #stop()} as part of the verticle deployment process.
      * </p>
@@ -114,24 +119,25 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
     /**
      * Processes a tenant request message received via the Vertx event bus.
      *
-     * @param tenantMsg The message.
+     * @param tenantMsg The message. Must not be null.
+     * @throws NullPointerException If the tenantMsg is null.
      */
     public final void processTenantMessage(final Message<JsonObject> tenantMsg) {
         try {
             final JsonObject body = tenantMsg.body();
-            final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
-            final String operation = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
+            final String tenantId = body.getString(TenantConstants.FIELD_TENANT_ID);
 
             if (tenantId == null) {
                 log.debug("tenant request does not contain mandatory property [{}]",
-                        RequestResponseApiConstants.FIELD_TENANT_ID);
+                        TenantConstants.FIELD_TENANT_ID);
                 reply(tenantMsg, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
                 return;
             }
 
+            final String subject = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
             JsonObject payload;
 
-            switch (operation) {
+            switch (Action.from(subject)) {
             case ACTION_GET:
                 log.debug("retrieving tenant [{}]", tenantId);
                 get(tenantId, result -> reply(tenantMsg, result));
@@ -143,12 +149,12 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
                     break;
                 }
                 payload = getRequestPayload(body);
-                log.debug("creating tenant [{}] with data {}", tenantId, payload != null ? payload.encode() : null);
+                log.debug("creating tenant [{}]", tenantId);
                 add(tenantId, payload, result -> reply(tenantMsg, result));
                 break;
             case ACTION_UPDATE:
                 payload = getRequestPayload(body);
-                log.debug("updating tenant [{}] with data {}", tenantId, payload != null ? payload.encode() : null);
+                log.debug("updating tenant [{}]", tenantId);
                 update(tenantId, payload, result -> reply(tenantMsg, result));
                 break;
             case ACTION_REMOVE:
@@ -156,7 +162,8 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
                 remove(tenantId, result -> reply(tenantMsg, result));
                 break;
             default:
-                break;
+                log.debug("invalid action in request message [{}]", subject);
+                reply(tenantMsg, TenantResult.from(HTTP_BAD_REQUEST));
             }
         } catch (final ClassCastException e) {
             log.debug("malformed request message [{}]", e.getMessage());
@@ -164,9 +171,14 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
         }
     }
 
-    private void reply(final Message<JsonObject> request, final AsyncResult<TenantResult> result) {
-        if (result.succeeded()) {
-            this.reply(request, result.result());
+    private void reply(final Message<JsonObject> request, final AsyncResult<TenantResult> asyncActionResult) {
+        if (asyncActionResult.succeeded()) {
+            if (asyncActionResult.result() != null) {
+                reply(request, asyncActionResult.result());
+            } else {
+                log.debug("result is null in reply to tenant request");
+                reply(request, TenantResult.from(HTTP_INTERNAL_ERROR));
+            }
         } else {
             request.fail(HTTP_INTERNAL_ERROR, "cannot process tenant management request");
         }
@@ -176,70 +188,93 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * Sends a response to a tenant request over the Vertx event bus.
      *
      * @param request The message to respond to.
-     * @param result The tenant result that should be conveyed in the response.
+     * @param tenantResult The tenant result that should be conveyed in the response.
+     * @throws NullPointerException If request or tenantResult is null.
      */
-    protected final void reply(final Message<JsonObject> request, final TenantResult result) {
+    protected final void reply(final Message<JsonObject> request, final TenantResult tenantResult) {
         final JsonObject body = request.body();
-        final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
-        request.reply(TenantConstants.getServiceReplyAsJson(tenantId, result));
+        request.reply(TenantConstants.getServiceReplyAsJson(body.getString(TenantConstants.FIELD_TENANT_ID), tenantResult));
     }
 
-    private JsonObject getRequestPayload(final JsonObject request) {
-        final JsonObject payload = request.getJsonObject(TenantConstants.FIELD_PAYLOAD, new JsonObject());
-        addNotPresentFieldsWithDefaultValuesForTenant(payload);
-        return payload;
-    }
-
+    /**
+     * Check the request payload for validity.
+     *
+     * @param request The request that was sent via the vert.x event bus containing the payload to be checked.
+     * @return boolean The result of the check : {@link Boolean#TRUE} if the payload is valid, {@link Boolean#FALSE} otherwise.
+     * @throws NullPointerException If the request is null.
+     */
     private boolean isValidRequestPayload(final JsonObject request) {
         final JsonObject payload = request.getJsonObject(TenantConstants.FIELD_PAYLOAD, new JsonObject());
-        final JsonArray adapters = payload.getJsonArray(TenantConstants.FIELD_ADAPTERS);
-        if (adapters != null) {
-            if (adapters.size() == 0) {
-                return false;
-            }
-            for (int i = 0; i < adapters.size(); i++) {
-                final JsonObject adapterDetails = adapters.getJsonObject(i);
-                if (adapterDetails == null) {
+        try {
+            final JsonArray adapters = payload.getJsonArray(TenantConstants.FIELD_ADAPTERS);
+            if (adapters != null) {
+                if (adapters.size() == 0) {
                     return false;
                 }
-                // check for mandatory field adapter type
-                if (adapterDetails.getString(FIELD_ADAPTERS_TYPE) == null) {
+                if (adapters.stream().filter(adapterDetails -> ((JsonObject) adapterDetails).getString(TenantConstants.FIELD_ADAPTERS_TYPE) == null)
+                        .findFirst().isPresent()) {
                     return false;
                 }
             }
+        } catch (final ClassCastException e) {
+            // if we did not find a JsonArray or the elements were not of type JsonObject
+            return false;
         }
         return true;
     }
 
-    private void addNotPresentFieldsWithDefaultValuesForTenant(final JsonObject payload) {
-        if(!payload.containsKey(TenantConstants.FIELD_ENABLED)) {
-            log.debug("adding 'enabled' key to payload");
-            payload.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+    /**
+     * Get the payload from the request and add default values for not provided optional elements.
+     * <p>
+     * Payload should be checked for validity first, there is no error handling inside this method anymore.
+     * </p>
+     *
+     * @param requestWithCheckedPayload The request containing the payload that was checked for validity already.
+     * @throws ClassCastException If the {@link TenantConstants#FIELD_ADAPTERS_TYPE} element of the payload is
+     *       not a {@link JsonArray} or the JsonArray contains elements that are not of type {@link JsonObject}.
+     */
+    private JsonObject getRequestPayload(final JsonObject requestWithCheckedPayload) {
+        final JsonObject payload = requestWithCheckedPayload.getJsonObject(TenantConstants.FIELD_PAYLOAD, new JsonObject());
+        addNotPresentFieldsWithDefaultValuesForTenant(payload);
+        return payload;
+    }
+
+    /**
+     * Add default values for optional fields that are not filled in the payload.
+     * <p>
+     * Payload should be checked for validity first, there is no error handling inside this method anymore.
+     * </p>
+     *
+     * @param checkedPayload The checked payload to add optional fields to.
+     * @throws ClassCastException If the {@link TenantConstants#FIELD_ADAPTERS_TYPE} element is not a {@link JsonArray}
+     *       or the JsonArray contains elements that are not of type {@link JsonObject}.
+     */
+    private void addNotPresentFieldsWithDefaultValuesForTenant(final JsonObject checkedPayload) {
+        if (!checkedPayload.containsKey(TenantConstants.FIELD_ENABLED)) {
+            log.trace("adding 'enabled' key to payload");
+            checkedPayload.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         }
 
-        final JsonArray adapters = payload.getJsonArray(TenantConstants.FIELD_ADAPTERS);
+        final JsonArray adapters = checkedPayload.getJsonArray(TenantConstants.FIELD_ADAPTERS);
         if (adapters != null) {
-            for (int i = 0; i < adapters.size(); i++) {
-                final JsonObject adapterDetails = adapters.getJsonObject(i);
-                addNotPresentFieldsWithDefaultValuesForAdapter(adapterDetails);
-            }
+            adapters.forEach(elem -> addNotPresentFieldsWithDefaultValuesForAdapter((JsonObject) elem));
         }
     }
     
     private void addNotPresentFieldsWithDefaultValuesForAdapter(final JsonObject adapter) {
-        if(!adapter.containsKey(TenantConstants.FIELD_ENABLED)) {
-            log.debug("adding 'enabled' key to payload");
+        if (!adapter.containsKey(TenantConstants.FIELD_ENABLED)) {
+            log.trace("adding 'enabled' key to payload");
             adapter.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         }
         
-        if(!adapter.containsKey(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)) {
-            log.debug("adding 'device-authentication-required' key to adapter payload");
+        if (!adapter.containsKey(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)) {
+            log.trace("adding 'device-authentication-required' key to adapter payload");
             adapter.put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE);
         }
     }
 
     /**
-     * Wraps a given tenant ID, it's properties data and it's adapter configuration data into a JSON structure suitable
+     * Wraps a given tenant ID, its properties data and its adapter configuration data into a JSON structure suitable
      * to be returned to clients as the result of a tenant API operation.
      *
      * @param tenantId The tenant ID.

@@ -11,15 +11,15 @@
       "enabled": "true"
     },
     "adapters": {
-      "http": {
+      "hono-http": {
         "enabled": true,
         "device-authentication-required": true
       },
-      "mqtt": {
+      "hono-mqtt": {
         "enabled": false,
         "device-authentication-required": true
       },
-      "kura": {
+      "hono-kura": {
         "enabled": false,
         "device-authentication-required": true
       }

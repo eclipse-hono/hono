@@ -95,7 +95,7 @@ public class Application extends AbstractApplication {
     @Override
     protected final Future<Void> deployRequiredVerticles(int maxInstances) {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         CompositeFuture.all(
                 deployAuthenticationService(), // we only need 1 authentication service
                 deployTenantService(),
@@ -111,14 +111,14 @@ public class Application extends AbstractApplication {
     }
 
     private Future<String> deployCredentialsService() {
-        Future<String> result = Future.future();
+        final Future<String> result = Future.future();
         log.info("Starting credentials service {}", credentialsService);
         getVertx().deployVerticle(credentialsService, result.completer());
         return result;
     }
 
     private Future<String> deployAuthenticationService() {
-        Future<String> result = Future.future();
+        final Future<String> result = Future.future();
         if (!Verticle.class.isInstance(authenticationService)) {
             result.fail("authentication service is not a verticle");
         } else {
@@ -129,14 +129,14 @@ public class Application extends AbstractApplication {
     }
 
     private Future<String> deployRegistrationService() {
-        Future<String> result = Future.future();
+        final Future<String> result = Future.future();
         log.info("Starting registration service {}", registrationService);
         getVertx().deployVerticle(registrationService, result.completer());
         return result;
     }
 
     private Future<String> deployTenantService() {
-        Future<String> result = Future.future();
+        final Future<String> result = Future.future();
         log.info("Starting tenant service {}", tenantService);
         getVertx().deployVerticle(tenantService, result.completer());
         return result;

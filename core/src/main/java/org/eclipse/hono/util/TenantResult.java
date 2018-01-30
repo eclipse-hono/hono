@@ -14,6 +14,7 @@
 package org.eclipse.hono.util;
 
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.DecodeException;
 
 /**
  * A container for the result returned by Hono's Tenant API.
@@ -24,6 +25,12 @@ public final class TenantResult extends RequestResponseResult<JsonObject> {
         super(status, payload);
     }
 
+    /**
+     * Creates a new result for a status code.
+     *
+     * @param status The status code indicating the outcome of the request.
+     * @return The result.
+     */
     public static TenantResult from(final int status) {
         return new TenantResult(status, null);
     }
@@ -45,6 +52,7 @@ public final class TenantResult extends RequestResponseResult<JsonObject> {
      * @param status The status code indicating the outcome of the request.
      * @param payloadString The payload to convey to the sender of the request, represented as String.
      * @return The result.
+     * @throws DecodeException if the given payload is not valid JSON.
      */
     public static TenantResult from(final int status, final String payloadString) {
         if (payloadString != null) {
