@@ -93,7 +93,7 @@ public class EventConsumerImplTest {
         Async consumerCreation = ctx.async();
         EventConsumerImpl.create(vertx.getOrCreateContext(), new ClientConfigProperties(), con, "tenant", eventConsumer, ctx.asyncAssertSuccess(s -> {
             consumerCreation.complete();
-        }));
+        }), detachHandler -> {});
         consumerCreation.await(500);
 
         // WHEN an event is received

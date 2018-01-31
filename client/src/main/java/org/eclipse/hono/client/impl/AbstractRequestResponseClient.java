@@ -76,7 +76,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection, int, long)} only.
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} only.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
@@ -213,7 +213,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     private Future<ProtonReceiver> createReceiver(final ProtonConnection con, final String sourceAddress, final Handler<String> closeHook) {
 
-        return AbstractHonoClient.createReceiver(context, config, con, sourceAddress, ProtonQoS.AT_LEAST_ONCE, this::handleResponse, closeHook);
+        return AbstractHonoClient.createReceiver(context, config, con, sourceAddress, ProtonQoS.AT_LEAST_ONCE, this::handleResponse, closeHook, detach -> {});
     }
 
     /**

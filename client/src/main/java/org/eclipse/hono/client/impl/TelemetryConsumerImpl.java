@@ -48,6 +48,7 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
      * @param tenantId The tenant to consumer events for.
      * @param telemetryConsumer The consumer to invoke with each telemetry message received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @param detachHandler The handler invoked on detached (not closed) link.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static void create(
@@ -56,9 +57,10 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
             final ProtonConnection con,
             final String tenantId,
             final Consumer<Message> telemetryConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<Void>> detachHandler) {
 
-        create(context, clientConfig, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, telemetryConsumer, creationHandler);
+        create(context, clientConfig, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, telemetryConsumer, creationHandler, detachHandler);
     }
 
     /**
@@ -71,6 +73,7 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
      * @param pathSeparator The address path separator character used by the server.
      * @param telemetryConsumer The consumer to invoke with each telemetry message received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @param detachHandler The handler invoked on detached (not closed) link.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static void create(
@@ -80,7 +83,8 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
             final String tenantId,
             final String pathSeparator,
             final Consumer<Message> telemetryConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<Void>> detachHandler) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(clientConfig);
@@ -89,9 +93,10 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
         Objects.requireNonNull(pathSeparator);
         Objects.requireNonNull(telemetryConsumer);
         Objects.requireNonNull(creationHandler);
+        Objects.requireNonNull(detachHandler);
 
         createReceiver(context, clientConfig, con, String.format(TELEMETRY_ADDRESS_TEMPLATE, pathSeparator, tenantId), ProtonQoS.AT_LEAST_ONCE,
-                (delivery, message) -> telemetryConsumer.accept(message), null).setHandler(created -> {
+                (delivery, message) -> telemetryConsumer.accept(message), null, detachHandler).setHandler(created -> {
                     if (created.succeeded()) {
                         creationHandler.handle(Future.succeededFuture(
                                 new TelemetryConsumerImpl(context, clientConfig, created.result())));

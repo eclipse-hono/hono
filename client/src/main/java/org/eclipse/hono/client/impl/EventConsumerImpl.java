@@ -50,6 +50,7 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
      * @param tenantId The tenant to consumer events for.
      * @param eventConsumer The consumer to invoke with each event received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @param detachHandler The handler invoked on detached (not closed) link.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static void create(
@@ -58,9 +59,10 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
             final ProtonConnection con,
             final String tenantId,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<Void>> detachHandler) {
 
-        create(context, clientConfig, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, eventConsumer, creationHandler);
+        create(context, clientConfig, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, eventConsumer, creationHandler, detachHandler);
     }
 
     /**
@@ -73,6 +75,7 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
      * @param pathSeparator The address path separator character used by the server.
      * @param eventConsumer The consumer to invoke with each event received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @param detachHandler The handler invoked on detached (not closed) link.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static void create(
@@ -82,7 +85,8 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
             final String tenantId,
             final String pathSeparator,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<Void>> detachHandler) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(clientConfig);
@@ -91,9 +95,10 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
         Objects.requireNonNull(pathSeparator);
         Objects.requireNonNull(eventConsumer);
         Objects.requireNonNull(creationHandler);
+        Objects.requireNonNull(detachHandler);
 
         createReceiver(context, clientConfig, con, String.format(EVENT_ADDRESS_TEMPLATE, pathSeparator, tenantId),
-                ProtonQoS.AT_LEAST_ONCE, eventConsumer::accept, null).setHandler(created -> {
+                ProtonQoS.AT_LEAST_ONCE, eventConsumer::accept, null, detachHandler).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
                         new EventConsumerImpl(context, clientConfig, created.result())));

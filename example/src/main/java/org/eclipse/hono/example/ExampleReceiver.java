@@ -66,7 +66,23 @@ public class ExampleReceiver extends AbstractExampleClient {
         if (activeProfiles.contains(PROFILE_EVENT)) {
             client.createEventConsumer(tenantId,
                     (msg) -> handleMessage(PROFILE_EVENT, msg),
-                    handler);
+                    creationHandler -> {
+                        if (creationHandler.failed()) {
+                            vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+                                LOG.info("attempting to re-open the EventConsumer ...");
+                                onConnectionEstablished(handler);
+                            });
+                        } else {
+                            handler.handle(creationHandler);
+                        }
+                    }, detachHandler -> {
+                        // link is detached, but not closed (e.g. a the target of the link like a broker is no longer available)
+                        LOG.info("detach handler of event consumer is called {}", detachHandler.failed() ? detachHandler.cause() : "");
+                        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+                            LOG.info("attempting to re-open the EventConsumer link ...");
+                            onConnectionEstablished(done -> {});
+                        });
+                    });
         } else {
             // default is telemetry consumer
             client.createTelemetryConsumer(tenantId,

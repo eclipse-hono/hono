@@ -12,20 +12,14 @@
  */
 package org.eclipse.hono.client.impl;
 
-import java.net.HttpURLConnection;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
@@ -41,14 +35,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonClientOptions;
-import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonDelivery;
+import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
@@ -102,7 +101,7 @@ public final class HonoClientImpl implements HonoClient {
 
     /**
      * Sets a manager for creating cache instances to be used in Hono clients.
-     * 
+     *
      * @param manager The cache manager.
      * @throws NullPointerException if manager is {@code null}.
      */
@@ -348,10 +347,20 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
+    @Deprecated
     public void createTelemetryConsumer(
             final String tenantId,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+        createTelemetryConsumer(tenantId, telemetryConsumer, creationHandler, detachHandler -> {});
+    }
+
+    @Override
+    public void createTelemetryConsumer(
+            final String tenantId,
+            final Consumer<Message> telemetryConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<Void>> detachHandler) {
 
         // register a handler to be notified if the underlying connection to the server fails
         // so that we can fail the result handler passed in
@@ -368,24 +377,43 @@ public final class HonoClientImpl implements HonoClient {
         });
         checkConnection().compose(
                 connected -> TelemetryConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                        connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer()),
+                        connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer(), detachHandler),
                 consumerTracker);
     }
 
     @Override
+    @Deprecated
     public void createEventConsumer(
             final String tenantId,
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
-        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler);
+        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler, detachHandler->{});
+    }
+    @Override
+    public void createEventConsumer(
+            final String tenantId,
+            final Consumer<Message> eventConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<Void>> detachHandler) {
+
+        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler, detachHandler);
     }
 
     @Override
+    @Deprecated
     public void createEventConsumer(
             final String tenantId,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+        createEventConsumer(tenantId, eventConsumer, creationHandler, detachHandler -> { });
+    }
+    @Override
+    public void createEventConsumer(
+            final String tenantId,
+            final BiConsumer<ProtonDelivery, Message> eventConsumer,
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<Void>> detachHandler) {
 
         // register a handler to be notified if the underlying connection to the server fails
         // so that we can fail the result handler passed in
@@ -402,7 +430,7 @@ public final class HonoClientImpl implements HonoClient {
         });
         checkConnection().compose(
                 connected -> EventConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                        connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer()),
+                        connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer(), detachHandler),
                 consumerTracker);
     }
 
@@ -432,13 +460,13 @@ public final class HonoClientImpl implements HonoClient {
 
     /**
      * Gets an existing or creates a new request-response client for a particular service.
-     * 
+     *
      * @param key The key to look-up the client by.
      * @param clientSupplier A consumer for an attempt to create a new client.
      * @param resultHandler The handler to inform about the outcome of the operation.
      */
     void getOrCreateRequestResponseClient(
-            final String key, 
+            final String key,
             final Supplier<Future<RequestResponseClient>> clientSupplier,
             final Handler<AsyncResult<RequestResponseClient>> resultHandler) {
 
