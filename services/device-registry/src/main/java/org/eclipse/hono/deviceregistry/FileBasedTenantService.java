@@ -341,6 +341,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                     for (int i=0; i < adaptersConfigurationArray.size(); i++) {
                         final JsonObject adapterConfiguration = adaptersConfigurationArray.getJsonObject(i);
                         final String adapterType = (String) adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
+
                         if (adapterType != null) {
                             adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
                             adapterConfigurationsMap.put(adapterType, adapterConfiguration);
@@ -357,6 +358,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             }
 
             dirty = true;
+
             obj.remove(FIELD_TENANT);
             obj.remove(FIELD_ADAPTERS);
             tenants.put(tenantId, obj);

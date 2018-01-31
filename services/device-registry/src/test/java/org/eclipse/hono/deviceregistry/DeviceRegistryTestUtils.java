@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.TenantConstants;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -80,6 +81,30 @@ public final class DeviceRegistryTestUtils {
                 put(CredentialsConstants.FIELD_AUTH_ID, authId).
                 put(CredentialsConstants.FIELD_SECRETS, new JsonArray().add(secret));
         return credPayload;
+    }
+
+    /**
+     * Creates a tenant object for a tenantId.
+     * <p>
+     * The tenant created is configured for the http and the mqtt adapter.
+     *
+     * @param tenantId The tenant identifier.
+     * @return The tenant object.
+     */
+    public static JsonObject buildTenantPayload(final String tenantId) {
+        final JsonObject adapterDetailsHttp=new JsonObject().
+                put(TenantConstants.FIELD_ADAPTERS_TYPE, "hono-http").
+                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, "true").
+                put(TenantConstants.FIELD_ENABLED, "true");
+        final JsonObject adapterDetailsMqtt=new JsonObject().
+                put(TenantConstants.FIELD_ADAPTERS_TYPE, "hono-mqtt").
+                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, "true").
+                put(TenantConstants.FIELD_ENABLED, "true");
+        final JsonObject tenantPayload=new JsonObject().
+                put(TenantConstants.FIELD_TENANT_ID, tenantId).
+                put(TenantConstants.FIELD_ENABLED, "true").
+                put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
+        return tenantPayload;
     }
 
     /**
