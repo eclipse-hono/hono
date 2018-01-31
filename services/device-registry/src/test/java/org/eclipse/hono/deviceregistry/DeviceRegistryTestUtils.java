@@ -16,11 +16,12 @@ package org.eclipse.hono.deviceregistry;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.TenantConstants;
+
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.TenantConstants;
 
 /**
  * Utility methods for testing functionality around credentials management.
