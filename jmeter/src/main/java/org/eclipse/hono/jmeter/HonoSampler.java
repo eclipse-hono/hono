@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 public abstract class HonoSampler extends AbstractSampler {
 
     private static final long serialVersionUID = 1L;
+    private static final Object semaphoreLock = new Object();
 
     public enum Endpoint {
         telemetry, event
@@ -115,21 +116,28 @@ public abstract class HonoSampler extends AbstractSampler {
     }
 
     void addSemaphore() {
-        final String receivers = (getSemaphores() + 1) + "";
-        JMeterUtils.setProperty(HONO_PREFIX + getAddress(), receivers);
-        LOGGER.info("addSemaphore - receivers: {}",receivers);
+
+        synchronized (semaphoreLock) {
+            final String receivers = (getSemaphores() + 1) + "";
+            JMeterUtils.setProperty(HONO_PREFIX + getAddress(), receivers);
+            LOGGER.info("addSemaphore - receivers: {}",receivers);
+        }
     }
 
     int getSemaphores() {
-        final String semaphores = JMeterUtils.getProperty(HONO_PREFIX + getAddress());
-        if (semaphores == null) {
-            return 0;
-        } else {
-            return Integer.parseInt(semaphores);
+        synchronized (semaphoreLock) {
+            final String semaphores = JMeterUtils.getProperty(HONO_PREFIX + getAddress());
+            if (semaphores == null) {
+                return 0;
+            } else {
+                return Integer.parseInt(semaphores);
+            }
         }
     }
 
     void removeSemaphores() {
-        JMeterUtils.setProperty(HONO_PREFIX + getAddress(), "0");
+        synchronized (semaphoreLock) {
+            JMeterUtils.setProperty(HONO_PREFIX + getAddress(), "0");
+        }
     }
 }

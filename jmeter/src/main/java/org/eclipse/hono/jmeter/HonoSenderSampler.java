@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,6 +11,8 @@
  */
 
 package org.eclipse.hono.jmeter;
+
+import java.util.concurrent.CompletionException;
 
 import org.apache.jmeter.samplers.Entry;
 import org.apache.jmeter.samplers.SampleResult;
@@ -152,29 +154,30 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         res.setResponseOK();
         res.setResponseCodeOK();
         res.setSampleLabel(getName());
-        try {
-            honoSender.send(res, getDeviceId(), isWaitForCredits());
-        } catch (InterruptedException e) {
-            LOGGER.error("send", e);
-        }
+        honoSender.send(res, getDeviceId(), isWaitForCredits());
         return res;
     }
 
     @Override
     public void threadStarted() {
+
         int activeReceivers = getSemaphores();
         int waitOn = 0;
         try {
             waitOn = Integer.parseInt(getWaitForReceivers());
-        } catch (Throwable t) {
-            LOGGER.error("wait on receivers value is not an integer - use 0");
+        } catch (NumberFormatException t) {
+            LOGGER.error("wait on receivers value is not an integer - using default (0)");
         }
+
         int waitOnTimeout = 0;
         try {
             waitOnTimeout = Integer.parseInt(getWaitForReceiversTimeout());
-        } catch (Throwable t) {
-            LOGGER.error("wait on receivers timeout value is not an integer - use 0");
+        } catch (NumberFormatException t) {
+            LOGGER.error("wait on receivers timeout value is not an integer - using default (0)");
         }
+
+        honoSender = new HonoSender(this);
+
         if (activeReceivers < waitOn) {
             int endCounter = waitOnTimeout / 100;
             for (int i = 0; i < endCounter && activeReceivers < waitOn; i++) {
@@ -188,10 +191,13 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
                         Thread.currentThread().getName());
             }
         }
+
         try {
-            honoSender = new HonoSender(this);
-        } catch (InterruptedException e) {
-            LOGGER.error("thread start", e);
+            LOGGER.info("deviceId on threadStart: {}", getDeviceId());
+            honoSender.start(getDeviceId()).join();
+        } catch (CompletionException e) {
+            LOGGER.error("error initializing sender: {}/{} ({})", getEndpoint(), getTenant(),
+                    Thread.currentThread().getName(), e);
         }
     }
 
@@ -199,9 +205,9 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     public void threadFinished() {
         if (honoSender != null) {
             try {
-                honoSender.close();
-            } catch (InterruptedException e) {
-                LOGGER.error("error closing hono sender", e);
+                honoSender.close(getDeviceId()).join();
+            } catch (CompletionException e) {
+                LOGGER.error("error during shut down of sender", e);
             }
         }
     }
