@@ -249,6 +249,7 @@ public abstract class AbstractHonoClient {
                 } else {
                     LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
                 }
+                con.close();
             });
             receiver.closeHandler(remoteClosed -> {
                 if (remoteClosed.succeeded()) {
