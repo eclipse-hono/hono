@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016,2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,6 +11,8 @@
  */
 
 package org.eclipse.hono.jmeter;
+
+import java.util.concurrent.CompletionException;
 
 import org.apache.jmeter.samplers.Entry;
 import org.apache.jmeter.samplers.SampleResult;
@@ -94,18 +96,25 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
 
     @Override
     public void threadStarted() {
+
         try {
             honoReceiver = new HonoReceiver(this);
-        } catch (InterruptedException e) {
-            LOGGER.error("thread start", e);
+            honoReceiver.start().join();
+            addSemaphore();
+        } catch (CompletionException e) {
+            LOGGER.error("error starting receiver: {}/{} ({)}", getEndpoint(), getTenant(),
+                    Thread.currentThread().getName(), e.getCause());
         }
-        addSemaphore();
     }
 
     @Override
     public void threadFinished() {
         if (honoReceiver != null) {
-            honoReceiver.close();
+            try {
+                honoReceiver.close().join();
+            } catch (CompletionException e) {
+                LOGGER.error("error during shut down of receiver", e);
+            }
         }
         removeSemaphores();
     }

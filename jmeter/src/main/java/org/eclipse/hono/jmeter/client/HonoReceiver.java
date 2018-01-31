@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -18,7 +18,9 @@ import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
+
+import javax.jms.IllegalStateException;
 
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -26,6 +28,7 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -36,7 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.vertx.core.Vertx;
+import io.vertx.core.Future;
 
 /**
  * Receiver, which connects to the AMQP network; asynchronous API needs to be used synchronous for JMeters threading
@@ -46,24 +49,29 @@ public class HonoReceiver extends AbstractClient {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HonoReceiver.class);
 
-    private ConnectionFactory amqpNetworkConnectionFactory;
-    private HonoClient amqpNetworkClient;
+    private final ConnectionFactory   amqpNetworkConnectionFactory;
+    private final HonoClient          amqpNetworkClient;
+    private final HonoReceiverSampler sampler;
+
+    private final transient Object lock = new Object();
 
     private long sampleStart;
     private int messageCount;
     private long totalSampleDeliveryTime;
     private long messageSize;
-    private HonoReceiverSampler sampler;
-    private Vertx vertx = vertx();
 
-    private final transient Object lock = new Object();
+    /**
+     * Creates a new receiver.
+     * 
+     * @param sampler The sampler configuration.
+     */
+    public HonoReceiver(final HonoReceiverSampler sampler) {
 
-    public HonoReceiver(final HonoReceiverSampler sampler) throws InterruptedException {
-        this.sampler = sampler;
-
+        super();
         if (sampler.isUseSenderTime() && sampler.getSenderTimeVariableName() == null) {
             throw new IllegalArgumentException("SenderTime VariableName must be set when using SenderTime flag");
         }
+        this.sampler = sampler;
 
         final ClientConfigProperties clientConfig = new ClientConfigProperties();
         clientConfig.setHostnameVerificationRequired(false);
@@ -79,48 +87,59 @@ public class HonoReceiver extends AbstractClient {
         amqpNetworkConnectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder(clientConfig)
                 .vertx(vertx)
                 .build();
-
-        connect(clientConfig);
-        createConsumer(clientConfig);
-
-        LOGGER.debug("receiver active: {}/{} ({})", sampler.getEndpoint(), sampler.getTenant(),
-                Thread.currentThread().getName());
+        amqpNetworkClient = new HonoClientImpl(vertx, amqpNetworkConnectionFactory, clientConfig);
     }
 
-    private void connect(final ClientConfigProperties config) throws InterruptedException {
-        final CountDownLatch receiverConnectLatch = new CountDownLatch(1);
-        amqpNetworkClient = new HonoClientImpl(vertx, amqpNetworkConnectionFactory, config);
-        amqpNetworkClient.connect(getClientOptions(Integer.parseInt(sampler.getReconnectAttempts()))).setHandler(
-                connectionHandler -> {
-                    if (connectionHandler.failed()) {
-                        LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
-                    }
-                    receiverConnectLatch.countDown();
+    /**
+     * Starts this receiver.
+     * 
+     * @return A future indicating the outcome of the startup process.
+     */
+    public CompletableFuture<Void> start() {
+
+        final CompletableFuture<Void> result = new CompletableFuture<>();
+
+        connect().compose(client -> createConsumer()).setHandler(attempt -> {
+            if (attempt.succeeded()) {
+                LOGGER.debug("receiver active: {}/{} ({})", sampler.getEndpoint(), sampler.getTenant(),
+                        Thread.currentThread().getName());
+                result.complete(null);
+            } else {
+                result.completeExceptionally(attempt.cause());
+            }
+        });
+        return result;
+    }
+
+    private Future<HonoClient> connect() {
+
+        return amqpNetworkClient
+                .connect(getClientOptions(Integer.parseInt(sampler.getReconnectAttempts())))
+                .map(client -> {
+                    LOGGER.info("connected to AMQP Messaging Network [{}:{}]", sampler.getHost(), sampler.getPort());
+                    return client;
                 });
-        receiverConnectLatch.await();
     }
 
-    private void createConsumer(final ClientConfigProperties config) throws InterruptedException {
+    private Future<MessageConsumer> createConsumer() {
+
         if (amqpNetworkClient == null) {
-            throw new IllegalStateException("not connected to AMQP Network");
-        }
-        final CountDownLatch receiverLatch = new CountDownLatch(1);
-        if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
-            amqpNetworkClient.createTelemetryConsumer(sampler.getTenant(), this::messageReceived).setHandler(creationHandler -> {
-                if (creationHandler.failed()) {
-                    LOGGER.error("HonoClient.createTelemetryConsumer() failed", creationHandler.cause());
-                }
-                receiverLatch.countDown();
-            });
+            return Future.failedFuture(new IllegalStateException("not connected to Hono"));
+        } else if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
+            return amqpNetworkClient
+                    .createTelemetryConsumer(sampler.getTenant(), this::messageReceived)
+                    .map(consumer -> {
+                        LOGGER.info("created {} consumer", sampler.getEndpoint());
+                        return consumer;
+                    });
         } else {
-            amqpNetworkClient.createEventConsumer(sampler.getTenant(), this::messageReceived).setHandler(creationHandler -> {
-                if (creationHandler.failed()) {
-                    LOGGER.error("HonoClient.createEventConsumer() failed", creationHandler.cause());
-                }
-                receiverLatch.countDown();
-            });
+            return amqpNetworkClient
+                    .createEventConsumer(sampler.getTenant(), this::messageReceived)
+                    .map(consumer -> {
+                        LOGGER.info("created {} consumer", sampler.getEndpoint());
+                        return consumer;
+                    });
         }
-        receiverLatch.await();
     }
 
     public void sample(final SampleResult result) {
@@ -225,12 +244,17 @@ public class HonoReceiver extends AbstractClient {
         }
     }
 
-    public void close() {
-        try {
-            amqpNetworkClient.shutdown();
-            vertx.close();
-        } catch (final Throwable t) {
-            LOGGER.error("unknown exception in closing of receiver", t);
-        }
+    /**
+     * Closes the connection to the AMQP Messaging Network.
+     * 
+     * @return A future that successfully completes once the connection is closed.
+     */
+    public CompletableFuture<Void> close() {
+
+        final CompletableFuture<Void> result = new CompletableFuture<>();
+        final Future<Void> clientTracker = Future.future();
+        amqpNetworkClient.shutdown(clientTracker.completer());
+        clientTracker.otherwiseEmpty().compose(ok -> closeVertx()).setHandler(attempt -> result.complete(null));
+        return result;
     }
 }
