@@ -49,7 +49,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
  * Tests the Credentials REST Interface of the {@link DeviceRegistryRestServer}.
- * Currently limited to the POST method only.
  */
 @RunWith(VertxUnitRunner.class)
 public class CredentialsRestServerTest {
