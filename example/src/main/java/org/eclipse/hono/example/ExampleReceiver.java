@@ -65,19 +65,8 @@ public class ExampleReceiver extends AbstractExampleClient {
 
         if (activeProfiles.contains(PROFILE_EVENT)) {
             client.createEventConsumer(tenantId,
-                    (msg) -> handleMessage(PROFILE_EVENT, msg),
-                    creationHandler -> {
-                        if (creationHandler.failed()) {
-                            vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
-                                LOG.info("attempting to re-open the EventConsumer ...");
-                                onConnectionEstablished(handler);
-                            });
-                        } else {
-                            handler.handle(creationHandler);
-                        }
-                    }, detachHandler -> {
-                        // link is detached, but not closed (e.g. a the target of the link like a broker is no longer available)
-                        LOG.info("detach handler of event consumer is called {}", detachHandler.failed() ? detachHandler.cause() : "");
+                    (msg) -> handleMessage(PROFILE_EVENT, msg), handler, closeHandler -> {
+                        LOG.info("close handler of event consumer is called");
                         vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
                             LOG.info("attempting to re-open the EventConsumer link ...");
                             onConnectionEstablished(done -> {});
@@ -86,8 +75,13 @@ public class ExampleReceiver extends AbstractExampleClient {
         } else {
             // default is telemetry consumer
             client.createTelemetryConsumer(tenantId,
-                    msg -> handleMessage(PROFILE_TELEMETRY, msg),
-                    handler);
+                    msg -> handleMessage(PROFILE_TELEMETRY, msg), handler, closeHandler -> {
+                        LOG.info("close handler of telemetry consumer is called");
+                        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+                            LOG.info("attempting to re-open the TelemetryConsumer link ...");
+                            onConnectionEstablished(done -> {});
+                        });
+                    });
         }
     }
 

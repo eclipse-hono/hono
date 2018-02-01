@@ -122,14 +122,6 @@ public class SenderFactoryImpl implements SenderFactory {
                 LOG.debug("sender [{}] for container [{}] closed", address, connection.getRemoteContainer());
             }
         });
-        sender.detachHandler(remoteDetached -> {
-            if (remoteDetached.succeeded()) {
-                LOG.debug("sender [{}] detached (with closed=false) by peer [{}]", sender.getRemoteSource(), connection.getRemoteContainer());
-            } else {
-                LOG.debug("sender [{}] detached (with closed=false) by peer [{}]: {}", sender.getRemoteSource(), connection.getRemoteContainer(), remoteDetached.cause().getMessage());
-            }
-            sender.close();
-        });
         sender.open();
         return result;
     }

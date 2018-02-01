@@ -12,6 +12,15 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.util.Objects;
+import java.util.function.Consumer;
+
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TelemetryConstants;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -19,14 +28,6 @@ import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.TelemetryConstants;
-
-import java.util.Objects;
-import java.util.function.Consumer;
 
 /**
  * A Vertx-Proton based client for consuming telemetry data from a Hono server.
@@ -48,7 +49,7 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
      * @param tenantId The tenant to consumer events for.
      * @param telemetryConsumer The consumer to invoke with each telemetry message received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @param detachHandler The handler invoked on detached (not closed) link.
+     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static void create(
@@ -58,9 +59,9 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
             final String tenantId,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler,
-            final Handler<AsyncResult<Void>> detachHandler) {
+            final Handler<String> closeHook) {
 
-        create(context, clientConfig, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, telemetryConsumer, creationHandler, detachHandler);
+        create(context, clientConfig, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, telemetryConsumer, creationHandler, closeHook);
     }
 
     /**
@@ -73,7 +74,7 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
      * @param pathSeparator The address path separator character used by the server.
      * @param telemetryConsumer The consumer to invoke with each telemetry message received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @param detachHandler The handler invoked on detached (not closed) link.
+     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static void create(
@@ -84,7 +85,7 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
             final String pathSeparator,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler,
-            final Handler<AsyncResult<Void>> detachHandler) {
+            final Handler<String> closeHook) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(clientConfig);
@@ -93,10 +94,9 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
         Objects.requireNonNull(pathSeparator);
         Objects.requireNonNull(telemetryConsumer);
         Objects.requireNonNull(creationHandler);
-        Objects.requireNonNull(detachHandler);
 
         createReceiver(context, clientConfig, con, String.format(TELEMETRY_ADDRESS_TEMPLATE, pathSeparator, tenantId), ProtonQoS.AT_LEAST_ONCE,
-                (delivery, message) -> telemetryConsumer.accept(message), null, detachHandler).setHandler(created -> {
+                (delivery, message) -> telemetryConsumer.accept(message), closeHook).setHandler(created -> {
                     if (created.succeeded()) {
                         creationHandler.handle(Future.succeededFuture(
                                 new TelemetryConsumerImpl(context, clientConfig, created.result())));

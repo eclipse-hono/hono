@@ -13,6 +13,16 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -22,15 +32,6 @@ import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.config.ClientConfigProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * A base class for implementing Hono API clients.
@@ -212,6 +213,7 @@ public abstract class AbstractHonoClient {
                 } else {
                     LOG.debug("sender [{}] detached (with closed=false) by peer [{}]: {}", sender.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
                 }
+                sender.close();
             });
             sender.open();
         });
@@ -231,7 +233,6 @@ public abstract class AbstractHonoClient {
      * @param qos The quality of service to use for the link.
      * @param messageHandler The handler to invoke with every message received.
      * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
-     * @param detachHandler The handler invoked on detached (not closed) link.
      * @return A future for the created link. The future will be completed once the link is open.
      *         The future will fail if the link cannot be opened.
      * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
@@ -243,8 +244,7 @@ public abstract class AbstractHonoClient {
             final String sourceAddress,
             final ProtonQoS qos,
             final ProtonMessageHandler messageHandler,
-            final Handler<String> closeHook,
-            final Handler<AsyncResult<Void>> detachHandler) {
+            final Handler<String> closeHook) {
 
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(clientConfig);
@@ -272,19 +272,20 @@ public abstract class AbstractHonoClient {
                     result.fail(openAttach.cause());
                 } else {
                     if(LOG.isTraceEnabled()) {
-                        LOG.debug("receiver open attach succeeded [{}] by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
+                        LOG.trace("receiver open attach succeeded [{}] by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
                     }
                     result.complete(openAttach.result());
                 }
             });
             receiver.detachHandler(remoteDetached -> {
-                receiver.detach();
                 if (remoteDetached.succeeded()) {
                     LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
-                    detachHandler.handle(Future.succeededFuture());
                 } else {
                     LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
-                    detachHandler.handle(Future.failedFuture(remoteDetached.cause()));
+                }
+                receiver.close();
+                if (closeHook != null) {
+                    closeHook.handle(sourceAddress);
                 }
             });
             receiver.closeHandler(remoteClosed -> {

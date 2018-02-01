@@ -117,14 +117,14 @@ public interface HonoClient {
      * @param tenantId The tenant to consume data for.
      * @param telemetryConsumer The handler to invoke with every message received.
      * @param creationHandler The handler to invoke with the outcome of the operation.
-     * @param detachHandler The handler invoked on detached (not closed) link.
+     * @param closeHandler The handler invoked on detached link (detach with close=true and close=false).
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void createTelemetryConsumer(
             String tenantId,
             Consumer<Message> telemetryConsumer,
             Handler<AsyncResult<MessageConsumer>> creationHandler,
-            Handler<AsyncResult<Void>> detachHandler);
+            Handler<AsyncResult<Void>> closeHandler);
 
     /**
      * Creates a new consumer of telemetry data for a tenant.
@@ -150,14 +150,14 @@ public interface HonoClient {
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
      * @param creationHandler The handler to invoke with the outcome of the operation.
-     * @param detachHandler The handler invoked on detached (not closed) link.
+     * @param closeHandler The handler invoked on detached link (detach with close=true and close=false).
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void createEventConsumer(
             String tenantId,
             Consumer<Message> eventConsumer,
             Handler<AsyncResult<MessageConsumer>> creationHandler,
-            Handler<AsyncResult<Void>> detachHandler);
+            Handler<AsyncResult<Void>> closeHandler);
 
     /**
      * Creates a new consumer of events for a tenant.
@@ -187,14 +187,14 @@ public interface HonoClient {
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
      * @param creationHandler The handler to invoke with the outcome of the operation.
-     * @param detachHandler The handler invoked on detached (not closed) link.
+     * @param closeHandler The handler invoked on detached link (detach with close=true and close=false).
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void createEventConsumer(
             String tenantId,
             BiConsumer<ProtonDelivery, Message> eventConsumer,
             Handler<AsyncResult<MessageConsumer>> creationHandler,
-            Handler<AsyncResult<Void>> detachHandler);
+            Handler<AsyncResult<Void>> closeHandler);
 
     /**
      * Creates a new consumer of events for a tenant.

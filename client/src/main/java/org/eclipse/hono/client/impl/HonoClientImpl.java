@@ -352,7 +352,7 @@ public final class HonoClientImpl implements HonoClient {
             final String tenantId,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
-        createTelemetryConsumer(tenantId, telemetryConsumer, creationHandler, detachHandler -> {});
+        createTelemetryConsumer(tenantId, telemetryConsumer, creationHandler, closeHandler -> {});
     }
 
     @Override
@@ -360,7 +360,7 @@ public final class HonoClientImpl implements HonoClient {
             final String tenantId,
             final Consumer<Message> telemetryConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler,
-            final Handler<AsyncResult<Void>> detachHandler) {
+            final Handler<AsyncResult<Void>> closeHandler) {
 
         // register a handler to be notified if the underlying connection to the server fails
         // so that we can fail the result handler passed in
@@ -377,7 +377,7 @@ public final class HonoClientImpl implements HonoClient {
         });
         checkConnection().compose(
                 connected -> TelemetryConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                        connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer(), detachHandler),
+                        connectionFactory.getPathSeparator(), telemetryConsumer, consumerTracker.completer(), closeHook -> closeHandler.handle(Future.succeededFuture())),
                 consumerTracker);
     }
 
@@ -388,16 +388,16 @@ public final class HonoClientImpl implements HonoClient {
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
-        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler, detachHandler->{});
+        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler, closeHandler->{});
     }
     @Override
     public void createEventConsumer(
             final String tenantId,
             final Consumer<Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler,
-            final Handler<AsyncResult<Void>> detachHandler) {
+            final Handler<AsyncResult<Void>> closeHandler) {
 
-        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler, detachHandler);
+        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler, closeHandler);
     }
 
     @Override
@@ -406,14 +406,14 @@ public final class HonoClientImpl implements HonoClient {
             final String tenantId,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
-        createEventConsumer(tenantId, eventConsumer, creationHandler, detachHandler -> { });
+        createEventConsumer(tenantId, eventConsumer, creationHandler, closeHandler -> { });
     }
     @Override
     public void createEventConsumer(
             final String tenantId,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
             final Handler<AsyncResult<MessageConsumer>> creationHandler,
-            final Handler<AsyncResult<Void>> detachHandler) {
+            final Handler<AsyncResult<Void>> closeHandler) {
 
         // register a handler to be notified if the underlying connection to the server fails
         // so that we can fail the result handler passed in
@@ -430,7 +430,7 @@ public final class HonoClientImpl implements HonoClient {
         });
         checkConnection().compose(
                 connected -> EventConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                        connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer(), detachHandler),
+                        connectionFactory.getPathSeparator(), eventConsumer, consumerTracker.completer(), closeHook -> closeHandler.handle(Future.succeededFuture())),
                 consumerTracker);
     }
 
