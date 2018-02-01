@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static org.eclipse.hono.util.TenantConstants.Action;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
@@ -68,7 +67,7 @@ public class TenantAmqpEndpointTest {
     public void testProcessMessageSendsRequestViaEventBus() {
 
         final Message msg = ProtonHelper.message();
-        msg.setSubject(Action.ACTION_GET.toString());
+        msg.setSubject(TenantConstants.StandardAction.ACTION_GET.toString());
         MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
         MessageHelper.annotate(msg, resource);
 

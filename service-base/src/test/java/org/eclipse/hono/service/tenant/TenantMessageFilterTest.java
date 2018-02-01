@@ -14,11 +14,11 @@
 package org.eclipse.hono.service.tenant;
 
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_TENANT_ID;
-import static org.eclipse.hono.util.TenantConstants.Action;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
@@ -40,7 +40,7 @@ public class TenantMessageFilterTest {
     @Test
     public void testVerifyDetectsMissingTenantProperty() {
         // GIVEN a valid tenant GET message without an AMQP value
-        final Message msg = givenAMessageHavingProperties(Action.ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(CredentialsConstants.StandardAction.ACTION_GET);
         // WHEN receiving the message via a link with any tenant
         final ResourceIdentifier linkTarget = getResourceIdentifier(DEFAULT_TENANT);
 
@@ -54,7 +54,7 @@ public class TenantMessageFilterTest {
     @Test
     public void testVerifySucceedsForValidGetAction() {
         // GIVEN a tenant GET message for tenant DEFAULT_TENANT
-        final Message msg = givenAMessageHavingProperties(Action.ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(CredentialsConstants.StandardAction.ACTION_GET);
         MessageHelper.addProperty(msg, APP_PROPERTY_TENANT_ID, DEFAULT_TENANT);
         // WHEN receiving the message via a link with matching target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(DEFAULT_TENANT);
@@ -67,7 +67,7 @@ public class TenantMessageFilterTest {
         return ResourceIdentifier.from(TenantConstants.TENANT_ENDPOINT, tenant, null);
     }
 
-    private Message givenAMessageHavingProperties(final Action action) {
+    private Message givenAMessageHavingProperties(final CredentialsConstants.StandardAction action) {
         final Message msg = ProtonHelper.message();
         msg.setMessageId("msg");
         msg.setReplyTo("reply");
