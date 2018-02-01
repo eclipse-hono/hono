@@ -67,11 +67,14 @@
             <stringProp name="pwd">pw</stringProp>
             <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
             <stringProp name="container">receiver</stringProp>
-            <stringProp name="trustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
+            <stringProp name="trustStorePath">/pathToHono/hono/demo-certs/certs/trusted-certs.pem</stringProp>
             <stringProp name="tenant">DEFAULT_TENANT</stringProp>
             <boolProp name="useSenderTime">true</boolProp>
             <stringProp name="endpoint">telemetry</stringProp>
             <stringProp name="prefetch">50</stringProp>
+            <stringProp name="reconnectAttempts">1</stringProp>
+            <boolProp name="senderTimeInPayload">false</boolProp>
+            <stringProp name="senderTimeVariableName">timeStamp</stringProp>
           </org.eclipse.hono.jmeter.HonoReceiverSampler>
           <hashTree/>
           <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Constant Timer" enabled="true">
@@ -107,7 +110,7 @@
             <stringProp name="pwd">http-secret</stringProp>
             <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
             <stringProp name="container">sender</stringProp>
-            <stringProp name="trustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
+            <stringProp name="trustStorePath">/pathToHono/hono/demo-certs/certs/trusted-certs.pem</stringProp>
             <stringProp name="deviceId">device_${__threadNum}</stringProp>
             <stringProp name="tenant">DEFAULT_TENANT</stringProp>
             <boolProp name="setSenderTime">true</boolProp>
@@ -119,9 +122,9 @@
             <stringProp name="endpoint">telemetry</stringProp>
             <stringProp name="registryHost">127.0.0.1</stringProp>
             <stringProp name="registryPort">25671</stringProp>
-            <stringProp name="registryUser">http-adapter@HONO</stringProp>
-            <stringProp name="registryPwd">http-secret</stringProp>
-            <stringProp name="registryTrustStorePath">/home/mp/Development/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
+            <stringProp name="registryUser">hono-client@HONO</stringProp>
+            <stringProp name="registryPwd">secret</stringProp>
+            <stringProp name="registryTrustStorePath">/pathToHono/hono/demo-certs/certs/trusted-certs.pem</stringProp>
           </org.eclipse.hono.jmeter.HonoSenderSampler>
           <hashTree/>
           <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Constant Timer" enabled="false">

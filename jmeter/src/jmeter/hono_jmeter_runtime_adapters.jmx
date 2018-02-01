@@ -82,7 +82,7 @@
             <stringProp name="pwd">verysecret</stringProp>
             <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
             <stringProp name="container">receiver_jmeter</stringProp>
-            <stringProp name="trustStorePath">/home/marc/Open/hono/demo-certs/certs/trusted-certs.pem</stringProp>
+            <stringProp name="trustStorePath">/pathToHono/hono/demo-certs/certs/trusted-certs.pem</stringProp>
             <stringProp name="tenant">DEFAULT_TENANT</stringProp>
             <boolProp name="useSenderTime">false</boolProp>
             <stringProp name="endpoint">telemetry</stringProp>
