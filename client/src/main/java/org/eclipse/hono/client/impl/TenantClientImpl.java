@@ -102,7 +102,8 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
     @Override
     public void add(final JsonObject data, final Handler<AsyncResult<TenantResult>> resultHandler) {
         Objects.requireNonNull(resultHandler);
-        createAndSendRequest(ACTION_ADD, null, data, resultHandler);
+        String tenantId = data.getString(TenantConstants.FIELD_TENANT_ID);
+        createAndSendRequest(ACTION_ADD, createProperties(tenantId), data, resultHandler);
     }
 
     @Override
