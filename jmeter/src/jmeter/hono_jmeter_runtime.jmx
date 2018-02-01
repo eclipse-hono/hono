@@ -63,8 +63,8 @@
           <org.eclipse.hono.jmeter.HonoReceiverSampler guiclass="org.eclipse.hono.jmeter.ui.HonoReceiverSamplerUI" testclass="org.eclipse.hono.jmeter.HonoReceiverSampler" testname="Hono Receiver" enabled="true">
             <stringProp name="host">127.0.0.1</stringProp>
             <stringProp name="port">15671</stringProp>
-            <stringProp name="user">user1@HONO</stringProp>
-            <stringProp name="pwd">pw</stringProp>
+            <stringProp name="user">consumer@HONO</stringProp>
+            <stringProp name="pwd">verysecret</stringProp>
             <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
             <stringProp name="container">receiver</stringProp>
             <stringProp name="trustStorePath">/pathToHono/hono/demo-certs/certs/trusted-certs.pem</stringProp>
