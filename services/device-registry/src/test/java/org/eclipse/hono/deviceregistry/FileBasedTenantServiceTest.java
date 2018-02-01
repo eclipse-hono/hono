@@ -341,7 +341,7 @@ public class FileBasedTenantServiceTest {
         svc.get("tenant", ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
                     assertThat(s.getPayload().getString(TenantConstants.FIELD_TENANT_ID), is("tenant"));
-                    assertThat(s.getPayload().getString(TenantConstants.FIELD_ENABLED), is("true"));
+                    assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
                     get.complete();
                 }));
         get.await(2000);
@@ -411,7 +411,7 @@ public class FileBasedTenantServiceTest {
         final Async get = ctx.async();
         svc.get("tenant", ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
-            assertThat(s.getPayload().getString(TenantConstants.FIELD_ENABLED), is("true"));
+            assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
             get.complete();
         }));
         get.await(2000);

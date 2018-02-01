@@ -15,7 +15,6 @@ package org.eclipse.hono.service.tenant;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CREATED;
-import static org.eclipse.hono.util.TenantConstants.Action;
 import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -59,7 +58,7 @@ public class BaseTenantServiceTest {
 
         final JsonObject testPayload = createValidTenantPayload();
 
-        final Message<JsonObject> msg = createMessageMockForPayload(Action.ACTION_ADD, testPayload);
+        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.StandardAction.ACTION_ADD, testPayload);
         tenantService.processTenantMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_CREATED, TEST_TENANT));
@@ -87,7 +86,7 @@ public class BaseTenantServiceTest {
         final JsonObject testPayload = createValidTenantPayload();
         testPayload.put(TenantConstants.FIELD_ADAPTERS, new JsonArray());
 
-        final Message<JsonObject> msg = createMessageMockForPayload(Action.ACTION_ADD, testPayload);
+        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.StandardAction.ACTION_ADD, testPayload);
         tenantService.processTenantMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST, TEST_TENANT));
@@ -106,18 +105,18 @@ public class BaseTenantServiceTest {
         adapterArray.add(new JsonObject());
         testPayload.put(TenantConstants.FIELD_ADAPTERS, adapterArray);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(Action.ACTION_ADD, testPayload);
+        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.StandardAction.ACTION_ADD, testPayload);
         tenantService.processTenantMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST, TEST_TENANT));
     }
 
     @SuppressWarnings("unchecked")
-    private static Message<JsonObject> createMessageMockForPayload(final Action operation, final JsonObject payload) {
+    private static Message<JsonObject> createMessageMockForPayload(final TenantConstants.StandardAction action, final JsonObject payload) {
 
         final JsonObject requestBody = new JsonObject();
         requestBody.put(TenantConstants.FIELD_TENANT_ID, TEST_TENANT);
-        requestBody.put(MessageHelper.SYS_PROPERTY_SUBJECT, operation);
+        requestBody.put(MessageHelper.SYS_PROPERTY_SUBJECT, action);
         if (payload != null) {
             requestBody.put(TenantConstants.FIELD_PAYLOAD, payload);
         }
