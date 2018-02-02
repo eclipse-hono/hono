@@ -92,13 +92,13 @@ public final class TenantConstants extends RequestResponseApiConstants {
     /**
      * Gets a JSON object representing the reply to a Tenant API request via the vert.x event bus.
      *
-     * @param tenantId The tenant for which the message was processed. Must not be null.
+     * @param tenantId The tenant for which the message was processed. If null, the value for the key
+     *                 {@link RequestResponseApiConstants#FIELD_TENANT_ID} in the reply will be null, too.
      * @param tenantResult The result to return to the sender of the request.
      * @return JsonObject The JSON reply object.
-     * @throws NullPointerException If tenantId or tenantResult is null.
+     * @throws NullPointerException If tenantResult is null.
      */
     public static final JsonObject getServiceReplyAsJson(final String tenantId, final TenantResult tenantResult) {
-        Objects.requireNonNull(tenantId);
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(RequestResponseApiConstants.FIELD_TENANT_ID, tenantId);
 
