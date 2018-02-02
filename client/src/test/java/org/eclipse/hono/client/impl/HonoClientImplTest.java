@@ -138,15 +138,19 @@ public class HonoClientImplTest {
         connected.await();
 
         final Async creationFailure = ctx.async();
+        final Async supplierInvocation = ctx.async();
+
         client.getOrCreateRequestResponseClient(
                 "registration/tenant",
                 () -> {
                     ctx.assertFalse(creationFailure.isCompleted());
+                    supplierInvocation.complete();
                     return Future.future();
                 },
                 ctx.asyncAssertFailure(cause -> creationFailure.complete()));
 
         // WHEN the underlying connection fails
+        supplierInvocation.await();
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN all creation requests are failed
@@ -198,14 +202,21 @@ public class HonoClientImplTest {
         connected.await();
 
         final Async disconnected = ctx.async();
+        final Async supplierInvocation = ctx.async();
+
         client.getOrCreateSender(
                 "telemetry/tenant",
-                () -> Future.future(),
+                () -> {
+                    ctx.assertFalse(disconnected.isCompleted());
+                    supplierInvocation.complete();
+                    return Future.future();
+                },
                 ctx.asyncAssertFailure(cause -> {
                     disconnected.complete();
                 }));
 
         // WHEN the underlying connection fails
+        supplierInvocation.await();
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN all creation requests are failed
