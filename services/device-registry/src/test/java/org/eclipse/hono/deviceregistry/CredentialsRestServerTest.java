@@ -375,7 +375,7 @@ public class CredentialsRestServerTest {
         addCredentials(requestBody).compose(ar -> {
             // now try to get credentials again
             return getCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD, b -> {
-                context.assertTrue(testJsonObjectToBeContained(b.toJsonObject(), requestBody));
+                context.assertTrue(DeviceRegistryTestUtils.testJsonObjectToBeContained(b.toJsonObject(), requestBody));
             });
         }).setHandler(context.asyncAssertSuccess());
     }
@@ -399,11 +399,11 @@ public class CredentialsRestServerTest {
 
         addMultipleCredentials(credentialsListToAdd).compose(ar -> {
             return getCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD, b -> {
-                context.assertTrue(testJsonObjectToBeContained(b.toJsonObject(), hashedPasswordCredentials));
+                context.assertTrue(DeviceRegistryTestUtils.testJsonObjectToBeContained(b.toJsonObject(), hashedPasswordCredentials));
             });
         }).compose(gr -> {
             return getCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, b -> {
-                context.assertTrue(testJsonObjectToBeContained(b.toJsonObject(), presharedKeyCredentials));
+                context.assertTrue(DeviceRegistryTestUtils.testJsonObjectToBeContained(b.toJsonObject(), presharedKeyCredentials));
             });
         }).setHandler(context.asyncAssertSuccess());
     }
@@ -525,52 +525,6 @@ public class CredentialsRestServerTest {
 
     private static String getRandomAuthId(final String authIdPrefix) {
         return authIdPrefix + "." + UUID.randomUUID();
-    }
-
-    /**
-     * A simple implementation of subtree containment: all entries of the JsonObject that is tested to be contained
-     * must be contained in the other JsonObject as well. Nested JsonObjects are treated the same by recursively calling
-     * this method to test the containment.
-     * Note that currently JsonArrays need to be equal and are not tested for containment (not necessary for our purposes
-     * here).
-     * @param jsonObject The JsonObject that must fully contain the other JsonObject (but may contain more entries as well).
-     * @param jsonObjectToBeContained The JsonObject that needs to be fully contained inside the other JsonObject.
-     * @return The result of the containment test.
-     */
-    private static boolean testJsonObjectToBeContained(final JsonObject jsonObject, final JsonObject jsonObjectToBeContained) {
-        if (jsonObjectToBeContained == null) {
-            return true;
-        }
-        if (jsonObject == null) {
-            return false;
-        }
-        AtomicBoolean containResult = new AtomicBoolean(true);
-
-        jsonObjectToBeContained.forEach(entry -> {
-            if (!jsonObject.containsKey(entry.getKey())) {
-                containResult.set(false);
-            } else {
-                if (entry.getValue() == null) {
-                    if (jsonObject.getValue(entry.getKey()) != null) {
-                        containResult.set(false);
-                    }
-                } else if (entry.getValue() instanceof JsonObject) {
-                    if (!(jsonObject.getValue(entry.getKey()) instanceof JsonObject)) {
-                        containResult.set(false);
-                    } else {
-                        if (!testJsonObjectToBeContained((JsonObject)entry.getValue(),
-                                (JsonObject)jsonObject.getValue(entry.getKey()))) {
-                            containResult.set(false);
-                        }
-                    }
-                } else {
-                    if (!(entry.getValue().equals(jsonObject.getValue(entry.getKey())))) {
-                        containResult.set(false);
-                    }
-                }
-            }
-        });
-        return containResult.get();
     }
 
     private static void testAddCredentialsWithMissingPayloadParts(final TestContext context, final String fieldMissing) {

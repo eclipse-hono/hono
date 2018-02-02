@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.util.CredentialsConstants;
 
@@ -100,5 +101,51 @@ public final class DeviceRegistryTestUtils {
             }
         }
         return result;
+    }
+
+    /**
+     * A simple implementation of subtree containment: all entries of the JsonObject that is tested to be contained
+     * must be contained in the other JsonObject as well. Nested JsonObjects are treated the same by recursively calling
+     * this method to test the containment.
+     * Note that currently JsonArrays need to be equal and are not tested for containment (not necessary for our purposes
+     * here).
+     * @param jsonObject The JsonObject that must fully contain the other JsonObject (but may contain more entries as well).
+     * @param jsonObjectToBeContained The JsonObject that needs to be fully contained inside the other JsonObject.
+     * @return The result of the containment test.
+     */
+    public static boolean testJsonObjectToBeContained(final JsonObject jsonObject, final JsonObject jsonObjectToBeContained) {
+        if (jsonObjectToBeContained == null) {
+            return true;
+        }
+        if (jsonObject == null) {
+            return false;
+        }
+        AtomicBoolean containResult = new AtomicBoolean(true);
+
+        jsonObjectToBeContained.forEach(entry -> {
+            if (!jsonObject.containsKey(entry.getKey())) {
+                containResult.set(false);
+            } else {
+                if (entry.getValue() == null) {
+                    if (jsonObject.getValue(entry.getKey()) != null) {
+                        containResult.set(false);
+                    }
+                } else if (entry.getValue() instanceof JsonObject) {
+                    if (!(jsonObject.getValue(entry.getKey()) instanceof JsonObject)) {
+                        containResult.set(false);
+                    } else {
+                        if (!testJsonObjectToBeContained((JsonObject)entry.getValue(),
+                                (JsonObject)jsonObject.getValue(entry.getKey()))) {
+                            containResult.set(false);
+                        }
+                    }
+                } else {
+                    if (!(entry.getValue().equals(jsonObject.getValue(entry.getKey())))) {
+                        containResult.set(false);
+                    }
+                }
+            }
+        });
+        return containResult.get();
     }
 }
