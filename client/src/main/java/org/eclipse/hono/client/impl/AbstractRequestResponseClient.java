@@ -76,7 +76,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection, int, long)} only.
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} only.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.

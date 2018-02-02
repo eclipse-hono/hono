@@ -55,7 +55,7 @@ public abstract class AbstractHonoClient {
     /**
      * The vertx-proton object used for sending messages to the server.
      */
-    protected ProtonSender   sender;
+    protected ProtonSender sender;
     /**
      * The vertx-proton object used for receiving messages from the server.
      */
@@ -207,6 +207,14 @@ public abstract class AbstractHonoClient {
                     closeHook.handle(targetAddress);
                 }
             });
+            sender.detachHandler(remoteDetached -> {
+                if (remoteDetached.succeeded()) {
+                    LOG.debug("sender [{}] detached (with closed=false) by peer [{}]", sender.getRemoteSource(), con.getRemoteContainer());
+                } else {
+                    LOG.debug("sender [{}] detached (with closed=false) by peer [{}]: {}", sender.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
+                }
+                sender.close();
+            });
             sender.open();
         });
 
@@ -259,11 +267,13 @@ public abstract class AbstractHonoClient {
                 }
             });
             receiver.openHandler(openAttach -> {
-                if(openAttach.failed()) {
+                if (openAttach.failed()) {
                     LOG.debug("receiver open attach failed [{}] by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), openAttach.cause().getMessage());
                     result.fail(openAttach.cause());
-                }
-                else {
+                } else {
+                    if(LOG.isTraceEnabled()) {
+                        LOG.trace("receiver open attach succeeded [{}] by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
+                    }
                     result.complete(openAttach.result());
                 }
             });
@@ -272,6 +282,10 @@ public abstract class AbstractHonoClient {
                     LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
                 } else {
                     LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
+                }
+                receiver.close();
+                if (closeHook != null) {
+                    closeHook.handle(sourceAddress);
                 }
             });
             receiver.closeHandler(remoteClosed -> {

@@ -327,6 +327,15 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             createSender(targetAddress, replenishedSender -> handleFlow(replenishedSender, client)).compose(createdSender -> {
                 addSender(client, createdSender);
                 tracker.complete();
+                createdSender.detachHandler(detachHandler -> {
+                    if (detachHandler.succeeded()) {
+                        logger.info("downstream sender was closed detached [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
+                    } else {
+                        logger.warn("downstream sender was closed detached [con: {}, link: {}]: {}", client.getConnectionId(), client.getLinkId(), detachHandler.cause().getMessage());
+                    }
+                    createdSender.close();
+                    resultHandler.handle(Future.failedFuture(detachHandler.cause()));
+                });
             }, tracker);
         }
     }
