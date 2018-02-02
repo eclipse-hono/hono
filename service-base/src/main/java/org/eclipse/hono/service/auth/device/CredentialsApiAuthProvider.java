@@ -114,23 +114,19 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     @Override
     public final Future<Void> start() {
 
-        final Future<Void> result = Future.future();
         if (credentialsClient == null) {
-            result.fail(new IllegalStateException("Credentials service client is not set"));
+            return Future.failedFuture(new IllegalStateException("Credentials service client is not set"));
         } else {
-            credentialsClient.connect(
-                    createClientOptions(),
-                    connectAttempt -> {
-                        if (connectAttempt.failed()) {
-                            log.warn("connection to Credentials service failed", connectAttempt.cause());
-                        } else {
-                            log.info("connected to Credentials service");
-                        }
-                    },
-                    this::onDisconnectCredentialsService);
-            result.complete();
+            return credentialsClient
+                    .connect(createClientOptions(), this::onDisconnectCredentialsService)
+                    .map(connectedClient -> {
+                        log.info("connected to Credentials service");
+                        return (Void) null;
+                    }).recover(t -> {
+                        log.warn("connection to Credentials service failed", t);
+                        return Future.failedFuture(t);
+                    });
         }
-        return result;
     }
 
     /**
@@ -145,13 +141,13 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
         } else {
             vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
                 log.info("attempting to reconnect to Credentials service");
-                credentialsClient.connect(createClientOptions(), connectAttempt -> {
+                credentialsClient.connect(createClientOptions(), this::onDisconnectCredentialsService).setHandler(connectAttempt -> {
                     if (connectAttempt.succeeded()) {
                         log.info("reconnected to Credentials service");
                     } else {
                         log.debug("cannot reconnect to Credentials service");
                     }
-                }, this::onDisconnectCredentialsService);
+                });
             });
         }
     }
@@ -186,9 +182,11 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
      * @return A future containing the client.
      */
     protected final Future<CredentialsClient> getCredentialsServiceClient(final String tenantId) {
-        Future<CredentialsClient> result = Future.future();
-        credentialsClient.getOrCreateCredentialsClient(tenantId, result.completer());
-        return result;
+        if (credentialsClient == null) {
+            return Future.failedFuture(new IllegalStateException("no credentials client set"));
+        } else {
+            return credentialsClient.getOrCreateCredentialsClient(tenantId);
+        }
     }
 
     /**

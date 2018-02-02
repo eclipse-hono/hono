@@ -15,10 +15,9 @@ package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
@@ -31,7 +30,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -54,18 +52,13 @@ public class AbstractProtocolAdapterBaseTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Before
     public void setup() {
 
         registrationClient = mock(RegistrationClient.class);
 
         HonoClient honoClient = mock(HonoClient.class);
-        doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
-            handler.handle(Future.succeededFuture(registrationClient));
-            return null;
-        }).when(honoClient).getOrCreateRegistrationClient(anyString(), any(Handler.class));
+        when(honoClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(registrationClient));
 
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);

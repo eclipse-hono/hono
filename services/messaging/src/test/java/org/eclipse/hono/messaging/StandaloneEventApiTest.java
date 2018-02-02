@@ -21,7 +21,6 @@ import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
@@ -86,9 +85,7 @@ public class StandaloneEventApiTest extends AbstractStandaloneApiTest {
                     .user(USER)
                     .password(PWD)
                     .build());
-            final Future<HonoClient> setupTracker = Future.future();
-            client.connect(new ProtonClientOptions(), setupTracker.completer());
-            return setupTracker;
+            return client.connect(new ProtonClientOptions());
         }).setHandler(ctx.asyncAssertSuccess());
     }
 
@@ -117,16 +114,12 @@ public class StandaloneEventApiTest extends AbstractStandaloneApiTest {
 
     @Override
     protected Future<MessageSender> getSender(final String tenantId) {
-        Future<MessageSender> result = Future.future();
-        client.getOrCreateEventSender(tenantId, result.completer());
-        return result;
+        return client.getOrCreateEventSender(tenantId);
     }
 
     @Override
     protected Future<MessageSender> getSender(String tenantId, String deviceId) {
-        Future<MessageSender> result = Future.future();
-        client.getOrCreateEventSender(tenantId, deviceId, result.completer());
-        return result;
+        return client.getOrCreateEventSender(tenantId, deviceId);
     }
 
     /**

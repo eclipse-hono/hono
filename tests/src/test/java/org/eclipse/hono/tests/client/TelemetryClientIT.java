@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -20,8 +20,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
@@ -32,13 +31,13 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class TelemetryClientIT extends ClientTestBase {
 
     @Override
-    void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker) {
-        downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, setupTracker);
+    Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
+        return downstreamClient.createTelemetryConsumer(tenantId, messageConsumer);
     }
 
     @Override
-    void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker) {
+    Future<MessageSender> createProducer(final String tenantId) {
 
-        honoClient.getOrCreateTelemetrySender(tenantId, setupTracker);
+        return honoClient.getOrCreateTelemetrySender(tenantId);
     }
 }

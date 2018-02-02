@@ -152,60 +152,66 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public void connect(final ProtonClientOptions options, final Handler<AsyncResult<HonoClient>> connectionHandler) {
-        connect(options, connectionHandler, null);
+    public Future<HonoClient> connect(final ProtonClientOptions options) {
+        return connect(options, null);
     }
 
     @Override
-    public void connect(
+    public Future<HonoClient> connect(
+            final ProtonClientOptions options,
+            final Handler<ProtonConnection> disconnectHandler) {
+
+        final Future<HonoClient> result = Future.future();
+        if (shuttingDown.get()) {
+            result.fail(new IllegalStateException("client is shut down"));
+        } else {
+            connect(options, result.completer(), disconnectHandler);
+        }
+        return result;
+    }
+
+    private void connect(
             final ProtonClientOptions options,
             final Handler<AsyncResult<HonoClient>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
 
-        Objects.requireNonNull(connectionHandler);
+        context.runOnContext(connect -> {
 
-        if (shuttingDown.get()) {
-            connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
-        } else {
+            if (isConnectedInternal()) {
+                LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                connectionHandler.handle(Future.succeededFuture(this));
+            } else if (connecting.compareAndSet(false, true)) {
 
-            context.runOnContext(connect -> {
-
-                if (isConnectedInternal()) {
-                    LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-                    connectionHandler.handle(Future.succeededFuture(this));
-                } else if (connecting.compareAndSet(false, true)) {
-
-                    if (options == null) {
-                        clientOptions = new ProtonClientOptions();
-                    } else {
-                        clientOptions = options;
-                    }
-
-                    connectionFactory.connect(
-                            clientOptions,
-                            remoteClose -> onRemoteClose(remoteClose, disconnectHandler),
-                            failedConnection -> onRemoteDisconnect(failedConnection, disconnectHandler),
-                            conAttempt -> {
-                                connecting.compareAndSet(true, false);
-                                if (conAttempt.failed()) {
-                                    reconnect(connectionHandler, disconnectHandler);
-                                } else {
-                                    setConnection(conAttempt.result());
-                                    if (shuttingDown.get()) {
-                                        // if client was already shutdown in the meantime we give our best to cleanup connection
-                                        shutdownConnection(result -> {});
-                                        connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
-                                    } else {
-                                        connectionHandler.handle(Future.succeededFuture(this));
-                                    }
-                                }
-                            });
+                if (options == null) {
+                    clientOptions = new ProtonClientOptions();
                 } else {
-                    LOG.debug("already trying to connect to server ...");
-                    connectionHandler.handle(Future.failedFuture(new IllegalStateException("already connecting to server")));
+                    clientOptions = options;
                 }
-            });
-        }
+
+                connectionFactory.connect(
+                        clientOptions,
+                        remoteClose -> onRemoteClose(remoteClose, disconnectHandler),
+                        failedConnection -> onRemoteDisconnect(failedConnection, disconnectHandler),
+                        conAttempt -> {
+                            connecting.compareAndSet(true, false);
+                            if (conAttempt.failed()) {
+                                reconnect(connectionHandler, disconnectHandler);
+                            } else {
+                                setConnection(conAttempt.result());
+                                if (shuttingDown.get()) {
+                                    // if client was already shutdown in the meantime we give our best to cleanup connection
+                                    shutdownConnection(result -> {});
+                                    connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
+                                } else {
+                                    connectionHandler.handle(Future.succeededFuture(this));
+                                }
+                            }
+                        });
+            } else {
+                LOG.debug("already trying to connect to server ...");
+                connectionHandler.handle(Future.failedFuture(new IllegalStateException("already connecting to server")));
+            }
+        });
     }
 
     private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose, final Handler<ProtonConnection> connectionLossHandler) {
@@ -263,6 +269,9 @@ public final class HonoClientImpl implements HonoClient {
 
         if (clientOptions == null || clientOptions.getReconnectAttempts() == 0) {
             connectionHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
+        } else if (shuttingDown.get()) {
+            // no need to try to re-connect
+            connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
         } else {
             LOG.trace("scheduling re-connect attempt ...");
             // give Vert.x some time to clean up NetClient
@@ -274,17 +283,17 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public void getOrCreateTelemetrySender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
-        getOrCreateTelemetrySender(tenantId, null, resultHandler);
+    public Future<MessageSender> getOrCreateTelemetrySender(final String tenantId) {
+        return getOrCreateTelemetrySender(tenantId, null);
     }
 
     @Override
-    public void getOrCreateTelemetrySender(final String tenantId, final String deviceId, final Handler<AsyncResult<MessageSender>> resultHandler) {
+    public Future<MessageSender> getOrCreateTelemetrySender(final String tenantId, final String deviceId) {
+
         Objects.requireNonNull(tenantId);
-        getOrCreateSender(
+        return getOrCreateSender(
                 TelemetrySenderImpl.getTargetAddress(tenantId, deviceId),
-                () -> createTelemetrySender(tenantId, deviceId),
-                resultHandler);
+                () -> createTelemetrySender(tenantId, deviceId));
     }
 
     private Future<MessageSender> createTelemetrySender(
@@ -303,22 +312,19 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public void getOrCreateEventSender(final String tenantId, final Handler<AsyncResult<MessageSender>> resultHandler) {
-        getOrCreateEventSender(tenantId, null, resultHandler);
+    public Future<MessageSender> getOrCreateEventSender(final String tenantId) {
+        return getOrCreateEventSender(tenantId, null);
     }
 
     @Override
-    public void getOrCreateEventSender(
+    public Future<MessageSender> getOrCreateEventSender(
             final String tenantId,
-            final String deviceId,
-            final Handler<AsyncResult<MessageSender>> resultHandler) {
+            final String deviceId) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(resultHandler);
-        getOrCreateSender(
+        return getOrCreateSender(
                 EventSenderImpl.getTargetAddress(tenantId, deviceId),
-                () -> createEventSender(tenantId, deviceId),
-                resultHandler);
+                () -> createEventSender(tenantId, deviceId));
     }
 
     private Future<MessageSender> createEventSender(
@@ -336,64 +342,64 @@ public final class HonoClientImpl implements HonoClient {
         });
     }
 
-    void getOrCreateSender(
+    Future<MessageSender> getOrCreateSender(
             final String key,
-            final Supplier<Future<MessageSender>> newSenderSupplier,
-            final Handler<AsyncResult<MessageSender>> resultHandler) {
+            final Supplier<Future<MessageSender>> newSenderSupplier) {
+
+        final Future<MessageSender> result = Future.future();
 
         context.runOnContext(get -> {
             final MessageSender sender = activeSenders.get(key);
             if (sender != null && sender.isOpen()) {
                 LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
-                resultHandler.handle(Future.succeededFuture(sender));
+                result.complete(sender);
             } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
                 // register a handler to be notified if the underlying connection to the server fails
                 // so that we can fail the result handler passed in
                 final Handler<Void> connectionFailureHandler = connectionLost -> {
                     // remove lock so that next attempt to open a sender doesn't fail
                     creationLocks.remove(key);
-                    resultHandler.handle(Future.failedFuture(
-                            new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
+                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
                 };
                 creationRequests.add(connectionFailureHandler);
                 creationLocks.put(key, Boolean.TRUE);
                 LOG.debug("creating new message sender for {}", key);
 
                 newSenderSupplier.get().setHandler(creationAttempt -> {
+                    creationLocks.remove(key);
+                    creationRequests.remove(connectionFailureHandler);
                     if (creationAttempt.succeeded()) {
                         MessageSender newSender = creationAttempt.result();
                         LOG.debug("successfully created new message sender for {}", key);
                         activeSenders.put(key, newSender);
+                        result.tryComplete(newSender);
                     } else {
                         LOG.debug("failed to create new message sender for {}", key, creationAttempt.cause());
                         activeSenders.remove(key);
+                        result.tryFail(creationAttempt.cause());
                     }
-                    creationLocks.remove(key);
-                    creationRequests.remove(connectionFailureHandler);
-                    resultHandler.handle(creationAttempt);
                 });
 
             } else {
                 LOG.debug("already trying to create a message sender for {}", key);
-                resultHandler.handle(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
+                result.fail(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
             }
         });
+        return result;
     }
 
     @Override
-    public void createTelemetryConsumer(
+    public Future<MessageConsumer> createTelemetryConsumer(
             final String tenantId,
-            final Consumer<Message> messageConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Consumer<Message> messageConsumer) {
 
-        createConsumer(
+        return createConsumer(
                 tenantId,
-                () -> createTelemetryConsumer(tenantId, messageConsumer),
-                creationHandler);
+                () -> newTelemetryConsumer(tenantId, messageConsumer));
     }
 
-    private Future<MessageConsumer> createTelemetryConsumer(
+    private Future<MessageConsumer> newTelemetryConsumer(
             final String tenantId,
             final Consumer<Message> messageConsumer) {
 
@@ -406,27 +412,24 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public void createEventConsumer(
+    public Future<MessageConsumer> createEventConsumer(
             final String tenantId,
-            final Consumer<Message> eventConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Consumer<Message> eventConsumer) {
 
-        createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), creationHandler);
+        return createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message));
     }
 
     @Override
-    public void createEventConsumer(
+    public Future<MessageConsumer> createEventConsumer(
             final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final BiConsumer<ProtonDelivery, Message> messageConsumer) {
 
-        createConsumer(
+        return createConsumer(
                 tenantId,
-                () -> createEventConsumer(tenantId, messageConsumer),
-                creationHandler);
+                () -> newEventConsumer(tenantId, messageConsumer));
     }
 
-    private Future<MessageConsumer> createEventConsumer(
+    private Future<MessageConsumer> newEventConsumer(
             final String tenantId,
             final BiConsumer<ProtonDelivery, Message> messageConsumer) {
 
@@ -438,50 +441,52 @@ public final class HonoClientImpl implements HonoClient {
         });
     }
 
-    void createConsumer(
+    Future<MessageConsumer> createConsumer(
             final String tenantId,
-            final Supplier<Future<MessageConsumer>> newConsumerSupplier,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Supplier<Future<MessageConsumer>> newConsumerSupplier) {
 
+        final Future<MessageConsumer> result = Future.future();
         context.runOnContext(get -> {
 
             // register a handler to be notified if the underlying connection to the server fails
             // so that we can fail the result handler passed in
             final Handler<Void> connectionFailureHandler = connectionLost -> {
-                creationHandler.handle(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost")));
+                result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost"));
             };
             creationRequests.add(connectionFailureHandler);
 
             newConsumerSupplier.get().setHandler(attempt -> {
                 creationRequests.remove(connectionFailureHandler);
-                creationHandler.handle(attempt);
+                if (attempt.succeeded()) {
+                    result.tryComplete(attempt.result());
+                } else {
+                    result.tryFail(attempt.cause());
+                }
             });
         });
+        return result;
     }
 
     @Override
-    public void getOrCreateCredentialsClient(
-            final String tenantId,
-            final Handler<AsyncResult<CredentialsClient>> resultHandler) {
+    public Future<CredentialsClient> getOrCreateCredentialsClient(
+            final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(resultHandler);
+        final Future<CredentialsClient> result = Future.future();
         getOrCreateRequestResponseClient(
                 CredentialsClientImpl.getTargetAddress(tenantId),
-                () -> createCredentialsClient(tenantId),
+                () -> newCredentialsClient(tenantId),
                 attempt -> {
                     if (attempt.succeeded()) {
-                        resultHandler.handle(Future.succeededFuture((CredentialsClient) attempt.result()));
+                        result.complete((CredentialsClient) attempt.result());
                     } else {
-                        resultHandler.handle(Future.failedFuture(attempt.cause()));
+                        result.fail(attempt.cause());
                     }
                 });
+        return result;
     }
 
-    private Future<RequestResponseClient> createCredentialsClient(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
+    private Future<RequestResponseClient> newCredentialsClient(final String tenantId) {
 
         return checkConnected().compose(connected -> {
 
@@ -509,25 +514,26 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     @Override
-    public void getOrCreateRegistrationClient(
-            final String tenantId,
-            final Handler<AsyncResult<RegistrationClient>> resultHandler) {
+    public Future<RegistrationClient> getOrCreateRegistrationClient(
+            final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(resultHandler);
+
+        final Future<RegistrationClient> result = Future.future();
         getOrCreateRequestResponseClient(
                 RegistrationClientImpl.getTargetAddress(tenantId),
-                () -> createRegistrationClient(tenantId),
+                () -> newRegistrationClient(tenantId),
                 attempt -> {
                     if (attempt.succeeded()) {
-                        resultHandler.handle(Future.succeededFuture((RegistrationClient) attempt.result()));
+                        result.complete((RegistrationClient) attempt.result());
                     } else {
-                        resultHandler.handle(Future.failedFuture(attempt.cause()));
+                        result.fail(attempt.cause());
                     }
                 });
+        return result;
     }
 
-    private Future<RequestResponseClient> createRegistrationClient(final String tenantId) {
+    private Future<RequestResponseClient> newRegistrationClient(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
 

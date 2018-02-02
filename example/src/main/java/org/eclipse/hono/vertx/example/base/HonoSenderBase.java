@@ -225,32 +225,22 @@ public class HonoSenderBase {
 
     private Future<RegistrationClient> getRegistrationClient() {
 
-        final Future<RegistrationClient> result = Future.future();
-
-        final Future<HonoClient> registryConnectionTracker = Future.future();
-        honoRegistryClient.connect(new ProtonClientOptions(), registryConnectionTracker.completer());
-        registryConnectionTracker.compose(registryClient -> {
-            honoRegistryClient.getOrCreateRegistrationClient(HonoExampleConstants.TENANT_ID, result.completer());
-        }, result);
-
-        return result;
+        return honoRegistryClient
+                .connect(new ProtonClientOptions())
+                .compose(connectedClient -> connectedClient.getOrCreateRegistrationClient(HonoExampleConstants.TENANT_ID));
     }
 
     private Future<MessageSender> getMessageSender() {
 
-        final Future<MessageSender> result = Future.future();
-
-        final Future<HonoClient> messagingConnectionTracker = Future.future();
-        honoMessagingClient.connect(new ProtonClientOptions(), messagingConnectionTracker.completer());
-        messagingConnectionTracker.compose(messagingClient -> {
-            if (isEventMode()) {
-                messagingClient.getOrCreateEventSender(HonoExampleConstants.TENANT_ID, result.completer());
-            } else {
-                messagingClient.getOrCreateTelemetrySender(HonoExampleConstants.TENANT_ID, result.completer());
-            }
-        }, result);
-
-        return result;
+        return honoMessagingClient
+            .connect(new ProtonClientOptions())
+            .compose(connectedClient -> {
+                if (isEventMode()) {
+                    return connectedClient.getOrCreateEventSender(HonoExampleConstants.TENANT_ID);
+                } else {
+                    return connectedClient.getOrCreateTelemetrySender(HonoExampleConstants.TENANT_ID);
+                }
+            });
     }
 
     /**

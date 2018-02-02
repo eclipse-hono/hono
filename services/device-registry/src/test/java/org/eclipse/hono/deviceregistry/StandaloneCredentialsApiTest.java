@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -106,11 +106,6 @@ public class StandaloneCredentialsApiTest {
         server.setConfig(props);
         server.addEndpoint(new CredentialsAmqpEndpoint(vertx));
 
-        Future<CredentialsClient> setupTracker = Future.future();
-        setupTracker.setHandler(ctx.asyncAssertSuccess(r -> {
-            credentialsClient = r;
-        }));
-
         Future<String> credentialsTracker = Future.future();
         vertx.deployVerticle(deviceRegistryImpl,credentialsTracker.completer());
         credentialsTracker.compose(r -> {
@@ -127,12 +122,10 @@ public class StandaloneCredentialsApiTest {
                     .password(PWD)
                     .build());
 
-            Future<HonoClient> clientTracker = Future.future();
-            client.connect(new ProtonClientOptions(), clientTracker.completer());
-            return clientTracker;
-        }).compose(c -> {
-            c.getOrCreateCredentialsClient(Constants.DEFAULT_TENANT, setupTracker.completer());
-        }, setupTracker);
+            return client.connect(new ProtonClientOptions());
+        }).compose(c -> c.getOrCreateCredentialsClient(Constants.DEFAULT_TENANT)).setHandler(ctx.asyncAssertSuccess(r -> {
+            credentialsClient = r;
+        }));
     }
 
     /**

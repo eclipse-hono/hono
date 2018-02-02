@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -25,6 +25,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -38,10 +39,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -95,17 +94,6 @@ public abstract class ClientTestBase {
     @Before
     public void connect(final TestContext ctx) {
 
-        final Async done = ctx.async();
-
-        Future<HonoClient> downstreamTracker = Future.future();
-        Future<HonoClient> honoTracker = Future.future();
-        Future<MessageSender> setupTracker = Future.future();
-        CompositeFuture.all(setupTracker, downstreamTracker).setHandler(ctx.asyncAssertSuccess(s -> {
-            sender = setupTracker.result();
-            LOGGER.info("connections to Hono server, Hono device registry and AMQP messaging network established");
-            done.complete();
-        }));
-
         downstreamClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
                 .host(IntegrationTestSupport.DOWNSTREAM_HOST)
@@ -114,7 +102,6 @@ public abstract class ClientTestBase {
                 .user(IntegrationTestSupport.DOWNSTREAM_USER)
                 .password(IntegrationTestSupport.DOWNSTREAM_PWD)
                 .build());
-        downstreamClient.connect(new ProtonClientOptions(), downstreamTracker.completer());
 
         honoClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
@@ -123,6 +110,7 @@ public abstract class ClientTestBase {
                 .user(IntegrationTestSupport.HONO_USER)
                 .password(IntegrationTestSupport.HONO_PWD)
                 .build());
+
         honoDeviceRegistryClient = new HonoClientImpl(vertx, ConnectionFactoryBuilder.newBuilder()
                 .vertx(vertx)
                 .host(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST)
@@ -131,29 +119,30 @@ public abstract class ClientTestBase {
                 .password(IntegrationTestSupport.HONO_PWD)
                 .build());
 
-        // step 1
-        // connect to Hono server
-        honoClient.connect(new ProtonClientOptions(), honoTracker.completer());
-        honoTracker.compose(hono -> {
-            // step 2
-            // connect to device registry
-            Future<HonoClient> deviceRegistryFuture = Future.future();
-            honoDeviceRegistryClient.connect(new ProtonClientOptions(), deviceRegistryFuture.completer());
-            return deviceRegistryFuture;
-        }).compose(honoDeviceRegistry -> {
-            // step 3
-            // create registration client
-            Future<RegistrationClient> regTracker = Future.future();
-            honoDeviceRegistry.getOrCreateRegistrationClient(TEST_TENANT_ID, regTracker.completer());
-            return regTracker;
-        }).compose(regClient -> {
-            // step 4
-            // create producer client
-            registrationClient = regClient;
-            createProducer(TEST_TENANT_ID, setupTracker.completer());
-        }, setupTracker);
+        // connect to AMQP messaging network
+        final Future<HonoClient> downstreamTracker = downstreamClient.connect(new ProtonClientOptions());
 
-        done.await(5000);
+        // create sender
+        final Future<MessageSender> senderTracker = honoClient
+                .connect(new ProtonClientOptions())
+                .compose(connectedClient -> createProducer(TEST_TENANT_ID))
+                .map(s -> {
+                    sender = s;
+                    return s;
+                });
+
+        // create registration client
+        final Future<RegistrationClient> registrationClientTracker = honoDeviceRegistryClient
+                .connect(new ProtonClientOptions())
+                .compose(connectedClient -> connectedClient.getOrCreateRegistrationClient(TEST_TENANT_ID))
+                .map(c -> {
+                    registrationClient = c;
+                    return c;
+                });
+
+        CompositeFuture.all(downstreamTracker, senderTracker, registrationClientTracker).setHandler(ctx.asyncAssertSuccess(s -> {
+            LOGGER.info("connections to Hono server, Hono device registry and AMQP messaging network established");
+        }));
     }
 
     /**
@@ -227,18 +216,18 @@ public abstract class ClientTestBase {
      * Creates a test specific message sender.
      *
      * @param tenantId     The tenant to create the sender for.
-     * @param setupTracker The handler to invoke with the result.
+     * @return A future succeeding with the created sender.
      */
-    abstract void createProducer(final String tenantId, final Handler<AsyncResult<MessageSender>> setupTracker);
+    abstract Future<MessageSender> createProducer(final String tenantId);
 
     /**
      * Creates a test specific message consumer.
      *
      * @param tenantId        The tenant to create the consumer for.
      * @param messageConsumer The handler to invoke for every message received.
-     * @param setupTracker    The handler to invoke with the result.
+     * @return A future succeeding with the created consumer.
      */
-    abstract void createConsumer(final String tenantId, final Consumer<Message> messageConsumer, final Handler<AsyncResult<MessageConsumer>> setupTracker);
+    abstract Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer);
 
     /**
      * Verifies that a number of messages uploaded to Hono's Telemetry or Event API can be successfully
@@ -252,12 +241,6 @@ public abstract class ClientTestBase {
 
         final CountDownLatch received = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final Async setup = ctx.async();
-
-        final Future<MessageConsumer> setupTracker = Future.future();
-        setupTracker.setHandler(ctx.asyncAssertSuccess(ok -> {
-            consumer = setupTracker.result();
-            setup.complete();
-        }));
 
         Future<RegistrationResult> tokenTracker = Future.future();
 
@@ -275,7 +258,7 @@ public abstract class ClientTestBase {
             return tokenTracker;
         }).compose(r -> {
             if (r.getStatus() == HTTP_OK) {
-                createConsumer(TEST_TENANT_ID, msg -> {
+                return createConsumer(TEST_TENANT_ID, msg -> {
                     LOGGER.trace("received {}", msg);
                     assertMessageProperties(ctx, msg);
                     assertAdditionalMessageProperties(ctx, msg);
@@ -283,11 +266,16 @@ public abstract class ClientTestBase {
                     if (received.getCount() % 200 == 0) {
                         LOGGER.info("messages received: {}", IntegrationTestSupport.MSG_COUNT - received.getCount());
                     }
-                }, setupTracker.completer());
+                });
             } else {
-                setupTracker.fail("cannot assert registration status");
+                return Future.failedFuture(new ServiceInvocationException(r.getStatus()));
             }
-        }, setupTracker);
+        }).map(c -> {
+            consumer = c;
+            return c;
+        }).setHandler(ctx.asyncAssertSuccess(ok -> {
+            setup.complete();
+        }));
 
         setup.await(1000);
 
@@ -331,8 +319,7 @@ public abstract class ClientTestBase {
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testCreateSenderFailsForTenantWithoutAuthorization(final TestContext ctx) {
 
-        createProducer(
-                "non-authorized",
+        createProducer("non-authorized").setHandler(
                 ctx.asyncAssertFailure(failed -> LOGGER.debug("creation of sender failed: {}", failed.getMessage())
         ));
     }
@@ -346,9 +333,7 @@ public abstract class ClientTestBase {
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testCreateConsumerFailsForTenantWithoutAuthorization(final TestContext ctx) {
 
-        createConsumer(
-                "non-authorized",
-                message -> {},
+        createConsumer("non-authorized", message -> {}).setHandler(
                 ctx.asyncAssertFailure(failed -> LOGGER.debug("creation of receiver failed: {}", failed.getMessage())
         ));
     }
