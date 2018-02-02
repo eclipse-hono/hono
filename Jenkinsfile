@@ -16,7 +16,7 @@ node('iothub') {
     def dockerImageOrgName = "eclipse"
 
     stage('Checkout') {
-        git poll: true, url: 'https://products.bosch-si.com/stash/scm/iothub/eclipse-hono.git', credentialsId: "Technical_Bitbucket_User_ID", branch: 'develop'
+        git poll: true, url: 'https://products.bosch-si.com/stash/scm/iothub/eclipse-hono.git', credentialsId: "Technical_Bitbucket_User_ID", branch: "${BRANCH_NAME}"
     }
 
     stage('Deploy') {
