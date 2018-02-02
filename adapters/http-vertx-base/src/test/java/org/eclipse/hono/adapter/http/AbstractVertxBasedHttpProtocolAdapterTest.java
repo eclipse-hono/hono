@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -106,8 +106,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         startup.await();
         verify(server).requestHandler(any(Handler.class));
         verify(server).listen(any(Handler.class));
-        verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
-        verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class));
+        verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class));
+        verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class));
     }
 
     /**
@@ -331,7 +331,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
         adapter.setHonoMessagingClient(messagingClient);
+        when(messagingClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
         adapter.setRegistrationServiceClient(registrationClient);
+        when(registrationClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(registrationClient));
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         RegistrationClient regClient = mock(RegistrationClient.class);
@@ -342,39 +344,25 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             return null;
         }).when(regClient).assertRegistration(anyString(), any(Handler.class));
 
-        doAnswer(invocation -> {
-            Handler<AsyncResult<RegistrationClient>> resultHandler = invocation.getArgumentAt(1, Handler.class);
-            resultHandler.handle(Future.succeededFuture(regClient));
-            return registrationClient;
-        }).when(registrationClient).getOrCreateRegistrationClient(anyString(), any(Handler.class));
+        when(registrationClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
         return adapter;
     }
 
-    @SuppressWarnings("unchecked")
     private void givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.send(any(Message.class))).thenReturn(outcome);
 
-        doAnswer(invocation -> {
-            Handler<AsyncResult<MessageSender>> resultHandler = invocation.getArgumentAt(1, Handler.class);
-            resultHandler.handle(Future.succeededFuture(sender));
-            return messagingClient;
-        }).when(messagingClient).getOrCreateEventSender(anyString(), any(Handler.class));
+        when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
 
-    @SuppressWarnings("unchecked")
     private void givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.send(any(Message.class))).thenReturn(outcome);
 
-        doAnswer(invocation -> {
-            Handler<AsyncResult<MessageSender>> resultHandler = invocation.getArgumentAt(1, Handler.class);
-            resultHandler.handle(Future.succeededFuture(sender));
-            return messagingClient;
-        }).when(messagingClient).getOrCreateTelemetrySender(anyString(), any(Handler.class));
+        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
 
 }

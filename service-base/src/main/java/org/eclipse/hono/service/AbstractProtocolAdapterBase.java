@@ -34,10 +34,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.StringUtils;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
@@ -167,8 +165,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else if (credentialsAuthProvider == null) {
             result.fail(new IllegalStateException("Credentials Authentication Provider must be set"));
         } else {
-            connectToMessaging(null);
-            connectToDeviceRegistration(null);
+            connectToMessaging();
+            connectToDeviceRegistration();
             credentialsAuthProvider.start().compose(s -> {
                 doStart(result);
             }, result);
@@ -249,29 +247,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Connects to the Hono Messaging component using the configured client.
      * 
-     * @param connectHandler The handler to invoke with the outcome of the connection attempt.
-     *                       If {@code null} and the connection attempt failed, this method
-     *                       tries to re-connect until a connection is established.
+     * @return A future that will succeed once the connection has been established.
+     *         The future will fail if the connection cannot be established.
      */
-    protected final void connectToMessaging(final Handler<AsyncResult<HonoClient>> connectHandler) {
+    protected final Future<HonoClient> connectToMessaging() {
 
         if (messaging == null) {
-            if (connectHandler != null) {
-                connectHandler.handle(Future.failedFuture("Hono Messaging client not set"));
-            }
+            return Future.failedFuture(new IllegalStateException("Hono Messaging client not set"));
         } else {
-            messaging.connect(createClientOptions(), connectAttempt -> {
-                if (connectHandler != null) {
-                    connectHandler.handle(connectAttempt);
-                } else {
-                    if (connectAttempt.failed()) {
-                        LOG.warn("failed to connect to Hono Messaging", connectAttempt.cause());
-                    } else {
-                        LOG.info("connected to Hono Messaging");
-                    }
-                }
-            }, this::onDisconnectMessaging
-            );
+            return messaging.connect(createClientOptions(), this::onDisconnectMessaging).map(connectedClient -> {
+                LOG.info("connected to Hono Messaging");
+                return connectedClient;
+            }).recover(t -> {
+                LOG.warn("failed to connect to Hono Messaging", t);
+                return Future.failedFuture(t);
+            });
         }
     }
 
@@ -284,41 +274,34 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
             LOG.info("attempting to reconnect to Hono Messaging");
-            messaging.connect(createClientOptions(), connectAttempt -> {
+            messaging.connect(createClientOptions(), this::onDisconnectMessaging).setHandler(connectAttempt -> {
                 if (connectAttempt.succeeded()) {
                     LOG.info("reconnected to Hono Messaging");
                 } else {
                     LOG.debug("cannot reconnect to Hono Messaging: {}", connectAttempt.cause().getMessage());
                 }
-            }, this::onDisconnectMessaging);
+            });
         });
     }
 
     /**
      * Connects to the Device Registration service using the configured client.
      * 
-     * @param connectHandler The handler to invoke with the outcome of the connection attempt.
-     *                       If {@code null} and the connection attempt failed, this method
-     *                       tries to re-connect until a connection is established.
+     * @return A future that will succeed once the connection has been established.
+     *         The future will fail if the connection cannot be established.
      */
-    protected final void connectToDeviceRegistration(final Handler<AsyncResult<HonoClient>> connectHandler) {
+    protected final Future<HonoClient> connectToDeviceRegistration() {
 
         if (registration == null) {
-            if (connectHandler != null) {
-                connectHandler.handle(Future.failedFuture("Device Registration client not set"));
-            }
+            return Future.failedFuture(new IllegalStateException("Device Registration client not set"));
         } else {
-            registration.connect(createClientOptions(), connectAttempt -> {
-                if (connectHandler != null) {
-                    connectHandler.handle(connectAttempt);
-                } else {
-                    if (connectAttempt.failed()) {
-                        LOG.warn("failed to connect to Device Registration service", connectAttempt.cause());
-                    } else {
-                        LOG.info("connected to Device Registration service");
-                    }
-                }
-            }, this::onDisconnectDeviceRegistry);
+            return registration.connect(createClientOptions(), this::onDisconnectDeviceRegistry).map(connectedClient -> {
+                LOG.info("connected to Device Registration service");
+                return connectedClient;
+            }).recover(t -> {
+                LOG.warn("failed to connect to Device Registration service", t);
+                return Future.failedFuture(t);
+            });
         }
     }
 
@@ -331,13 +314,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
             LOG.info("attempting to reconnect to Device Registration service");
-            registration.connect(createClientOptions(), connectAttempt -> {
+            registration.connect(createClientOptions(), this::onDisconnectDeviceRegistry).setHandler(connectAttempt -> {
                 if (connectAttempt.succeeded()) {
                     LOG.info("reconnected to Device Registration service");
                 } else {
                     LOG.debug("cannot reconnect to Device Registration service: {}", connectAttempt.cause().getMessage());
                 }
-            }, this::onDisconnectDeviceRegistry);
+            });
         });
     }
 
@@ -372,9 +355,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<MessageSender> getTelemetrySender(final String tenantId) {
-        Future<MessageSender> result = Future.future();
-        messaging.getOrCreateTelemetrySender(tenantId, result.completer());
-        return result;
+        return messaging.getOrCreateTelemetrySender(tenantId);
     }
 
     /**
@@ -384,9 +365,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<MessageSender> getEventSender(final String tenantId) {
-        Future<MessageSender> result = Future.future();
-        messaging.getOrCreateEventSender(tenantId, result.completer());
-        return result;
+        return messaging.getOrCreateEventSender(tenantId);
     }
 
     /**
@@ -396,9 +375,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<RegistrationClient> getRegistrationClient(final String tenantId) {
-        Future<RegistrationClient> result = Future.future();
-        getRegistrationServiceClient().getOrCreateRegistrationClient(tenantId, result.completer());
-        return result;
+        return getRegistrationServiceClient().getOrCreateRegistrationClient(tenantId);
     }
 
     /**

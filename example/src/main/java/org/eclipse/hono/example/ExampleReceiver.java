@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -24,9 +24,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
 
 /**
@@ -54,24 +52,21 @@ public class ExampleReceiver extends AbstractExampleClient {
             }
         });
 
-        final Future<HonoClient> connectionTracker = Future.future();
-        client.connect(getClientOptions(), connectionTracker.completer(), this::onDisconnect);
-        connectionTracker.compose(honoClient -> {
-            onConnectionEstablished(startupTracker.completer());
-        }, startupTracker);
+        client
+            .connect(getClientOptions(), this::onDisconnect)
+            .compose(connectedClient -> createConsumer(connectedClient))
+            .setHandler(startupTracker);
     }
 
-    private void onConnectionEstablished(Handler<AsyncResult<MessageConsumer>> handler) {
+    private Future<MessageConsumer> createConsumer(final HonoClient connectedClient) {
 
         if (activeProfiles.contains(PROFILE_EVENT)) {
-            client.createEventConsumer(tenantId,
-                    (msg) -> handleMessage(PROFILE_EVENT, msg),
-                    handler);
+            return connectedClient.createEventConsumer(tenantId,
+                    (msg) -> handleMessage(PROFILE_EVENT, msg));
         } else {
             // default is telemetry consumer
-            client.createTelemetryConsumer(tenantId,
-                    msg -> handleMessage(PROFILE_TELEMETRY, msg),
-                    handler);
+            return connectedClient.createTelemetryConsumer(tenantId,
+                    msg -> handleMessage(PROFILE_TELEMETRY, msg));
         }
     }
 
@@ -80,7 +75,7 @@ public class ExampleReceiver extends AbstractExampleClient {
         // give Vert.x some time to clean up NetClient
         vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
             LOG.info("attempting to re-connect to Hono ...");
-            client.connect(getClientOptions(), connectionAttempt -> onConnectionEstablished(done -> {}), this::onDisconnect);
+            client.connect(getClientOptions(), this::onDisconnect).compose(connectedClient -> createConsumer(connectedClient));
         });
     }
 

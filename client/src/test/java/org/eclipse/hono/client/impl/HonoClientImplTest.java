@@ -101,7 +101,7 @@ public class HonoClientImplTest {
         // GIVEN a client that already tries to create a registration client for "tenant"
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
-        client.connect(new ProtonClientOptions(), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
         client.getOrCreateRequestResponseClient(
@@ -134,7 +134,7 @@ public class HonoClientImplTest {
         // GIVEN a client that tries to create a registration client for "tenant"
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
-        client.connect(new ProtonClientOptions(), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
         final Async creationFailure = ctx.async();
@@ -168,10 +168,10 @@ public class HonoClientImplTest {
         // GIVEN a client that already tries to create a telemetry sender for "tenant"
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
-        client.connect(new ProtonClientOptions(), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
-        client.getOrCreateSender("telemetry/tenant", () -> Future.future(), result -> {});
+        client.getOrCreateSender("telemetry/tenant", () -> Future.future());
 
         // WHEN an additional, concurrent attempt is made to create a telemetry sender for "tenant"
         client.getOrCreateSender(
@@ -179,8 +179,7 @@ public class HonoClientImplTest {
                 () -> {
                     ctx.fail("should not create concurrent client");
                     return Future.succeededFuture(mock(MessageSender.class));
-                },
-                ctx.asyncAssertFailure(t -> {
+                }).setHandler(ctx.asyncAssertFailure(t -> {
                     // THEN the concurrent attempt fails without any attempt being made to create another sender
                     ctx.assertTrue(ServerErrorException.class.isInstance(t));
                 }));
@@ -198,7 +197,7 @@ public class HonoClientImplTest {
         // GIVEN a client that tries to create a telemetry sender for "tenant"
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
-        client.connect(new ProtonClientOptions(), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
         final Async disconnected = ctx.async();
@@ -210,8 +209,7 @@ public class HonoClientImplTest {
                     ctx.assertFalse(disconnected.isCompleted());
                     supplierInvocation.complete();
                     return Future.future();
-                },
-                ctx.asyncAssertFailure(cause -> {
+                }).setHandler(ctx.asyncAssertFailure(cause -> {
                     disconnected.complete();
                 }));
 
@@ -235,11 +233,11 @@ public class HonoClientImplTest {
         // GIVEN a client that already tries to create a telemetry sender for "tenant"
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
-        client.connect(new ProtonClientOptions(), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
         final Async disconnected = ctx.async();
-        client.createTelemetryConsumer("tenant", msg -> {}, ctx.asyncAssertFailure(cause -> {
+        client.createTelemetryConsumer("tenant", msg -> {}).setHandler(ctx.asyncAssertFailure(cause -> {
             disconnected.complete();
         }));
 
@@ -262,11 +260,11 @@ public class HonoClientImplTest {
         // GIVEN a client that already tries to create a telemetry sender for "tenant"
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
-        client.connect(new ProtonClientOptions(), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        client.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
         final Async disconnected = ctx.async();
-        client.createEventConsumer("tenant", msg -> {}, ctx.asyncAssertFailure(cause -> {
+        client.createEventConsumer("tenant", msg -> {}).setHandler(ctx.asyncAssertFailure(cause -> {
             disconnected.complete();
         }));
 
@@ -293,7 +291,7 @@ public class HonoClientImplTest {
         // GIVEN a client trying to create a sender to the peer
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
-        client.connect(new ProtonClientOptions().setReconnectAttempts(1), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        client.connect(new ProtonClientOptions().setReconnectAttempts(1)).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
         // WHEN the downstream connection fails just when the client wants to open a sender link
@@ -301,7 +299,7 @@ public class HonoClientImplTest {
         client.getOrCreateSender("telemetry/tenant", () -> {
             connectionFactory.getDisconnectHandler().handle(con);
             return Future.future();
-        }, ctx.asyncAssertFailure(cause -> senderCreationFailure.complete()));
+        }).setHandler(ctx.asyncAssertFailure(cause -> senderCreationFailure.complete()));
 
         // THEN the sender creation fails,
         senderCreationFailure.await();
@@ -310,8 +308,7 @@ public class HonoClientImplTest {
         // and the next attempt to create a sender succeeds
         client.getOrCreateSender(
                 "telemetry/tenant",
-                () -> Future.succeededFuture(mock(MessageSender.class)),
-                ctx.asyncAssertSuccess());
+                () -> Future.succeededFuture(mock(MessageSender.class))).setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
@@ -330,7 +327,7 @@ public class HonoClientImplTest {
         // GIVEN an client connected to a server
         final Async connected = ctx.async();
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
-        client.connect(new ProtonClientOptions().setReconnectAttempts(1), ctx.asyncAssertSuccess(ok -> connected.complete()));
+        client.connect(new ProtonClientOptions().setReconnectAttempts(1)).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
         // WHEN the downstream connection fails
@@ -358,8 +355,8 @@ public class HonoClientImplTest {
         Async connectionEstablished = ctx.async();
         client.connect(
                 new ProtonClientOptions().setReconnectAttempts(1),
-                ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()),
-                failedCon -> disconnectHandlerInvocation.complete());
+                failedCon -> disconnectHandlerInvocation.complete())
+            .setHandler(ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()));
 
         // THEN the client repeatedly tries to connect
         connectionEstablished.await(4 * Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
@@ -384,8 +381,8 @@ public class HonoClientImplTest {
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         client.connect(
                 new ProtonClientOptions().setReconnectAttempts(1),
-                ctx.asyncAssertSuccess(ok -> connected.complete()),
-                failedCon -> disconnectHandlerInvocation.complete());
+                failedCon -> disconnectHandlerInvocation.complete())
+            .setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
 
         // WHEN the peer closes the connection
@@ -412,8 +409,7 @@ public class HonoClientImplTest {
         client.shutdown();
 
         // WHEN client connects
-        client.connect(
-                new ProtonClientOptions(),
+        client.connect(new ProtonClientOptions()).setHandler(
                 ctx.asyncAssertFailure(cause -> {
                     //THEN connect fails
                 }));
@@ -429,11 +425,10 @@ public class HonoClientImplTest {
     public void testDoesNotTriggerReconnectionAfterShutdown(final TestContext ctx) {
 
         // GIVEN a client that tries to connect to a server but does not succeed
-        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 1, Integer.MAX_VALUE);
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 0, Integer.MAX_VALUE);
         final HonoClientImpl client = new HonoClientImpl(vertx, connectionFactory);
         final Async connectionHandlerInvocation = ctx.async();
-        client.connect(
-                new ProtonClientOptions().setReconnectAttempts(1),
+        client.connect(new ProtonClientOptions().setReconnectAttempts(1)).setHandler(
                 ctx.asyncAssertFailure(cause -> connectionHandlerInvocation.complete()));
 
         // WHEN client gets shutdown

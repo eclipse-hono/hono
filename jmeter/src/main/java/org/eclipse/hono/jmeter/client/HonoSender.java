@@ -108,7 +108,7 @@ public class HonoSender extends AbstractClient {
     private void connect() throws InterruptedException {
         final CountDownLatch connectLatch = new CountDownLatch(1);
         honoClient = new HonoClientImpl(vertx, honoConnectionFactory);
-        honoClient.connect(getClientOptions(MAX_RECONNECT_ATTEMPTS), connectionHandler -> {
+        honoClient.connect(getClientOptions(MAX_RECONNECT_ATTEMPTS)).setHandler(connectionHandler -> {
             if (connectionHandler.failed()) {
                 LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
             }
@@ -120,7 +120,7 @@ public class HonoSender extends AbstractClient {
     private void connectRegistry() throws InterruptedException {
         final CountDownLatch connectLatch = new CountDownLatch(1);
         registrationHonoClient = new HonoClientImpl(vertx, registrationConnectionFactory);
-        registrationHonoClient.connect(getClientOptions(MAX_RECONNECT_ATTEMPTS), connectionHandler -> {
+        registrationHonoClient.connect(getClientOptions(MAX_RECONNECT_ATTEMPTS)).setHandler(connectionHandler -> {
             if (connectionHandler.failed()) {
                 LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
             }
@@ -131,7 +131,7 @@ public class HonoSender extends AbstractClient {
 
     private void createRegistrationClient() throws InterruptedException {
         final CountDownLatch assertionLatch = new CountDownLatch(1);
-        registrationHonoClient.getOrCreateRegistrationClient(sampler.getTenant(), resultHandler -> {
+        registrationHonoClient.getOrCreateRegistrationClient(sampler.getTenant()).setHandler(resultHandler -> {
             if (resultHandler.failed()) {
                 LOGGER.error("HonoClient.getOrCreateRegistrationClient() failed", resultHandler.cause());
             } else {
@@ -150,7 +150,7 @@ public class HonoSender extends AbstractClient {
 
         final CountDownLatch senderLatch = new CountDownLatch(1);
         if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
-            honoClient.getOrCreateTelemetrySender(sampler.getTenant(), resultHandler -> {
+            honoClient.getOrCreateTelemetrySender(sampler.getTenant()).setHandler(resultHandler -> {
                 if (resultHandler.failed()) {
                     LOGGER.error("HonoClient.getOrCreateTelemetrySender() failed", resultHandler.cause());
                 } else {
@@ -159,7 +159,7 @@ public class HonoSender extends AbstractClient {
                 senderLatch.countDown();
             });
         } else {
-            honoClient.getOrCreateEventSender(sampler.getTenant(), resultHandler -> {
+            honoClient.getOrCreateEventSender(sampler.getTenant()).setHandler(resultHandler -> {
                 if (resultHandler.failed()) {
                     LOGGER.error("HonoClient.getOrCreateEventSender() failed", resultHandler.cause());
                 } else {

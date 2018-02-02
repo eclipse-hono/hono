@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2017, 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,17 +58,12 @@ public class CredentialsApiAuthProviderTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Before
     public void setUp() {
         vertx = mock(Vertx.class);
         credentialsClient = mock(CredentialsClient.class);
         honoClient = mock(HonoClient.class);
-        doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
-            handler.handle(Future.succeededFuture(credentialsClient));
-            return null;
-        }).when(honoClient).getOrCreateCredentialsClient(anyString(), any(Handler.class));
+        when(honoClient.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
 
         provider = new CredentialsApiAuthProvider(vertx) {
 

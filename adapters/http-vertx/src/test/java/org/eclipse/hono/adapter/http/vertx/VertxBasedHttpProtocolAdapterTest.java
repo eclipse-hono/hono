@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,16 +13,13 @@
 package org.eclipse.hono.adapter.http.vertx;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
-import org.eclipse.hono.adapter.http.vertx.VertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.service.auth.device.Device;
@@ -42,6 +39,7 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Verifies behavior of {@link VertxBasedHttpProtocolAdapter}.
@@ -66,6 +64,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * 
      * @param context
      */
+    @SuppressWarnings("unchecked")
     @BeforeClass
     public final static void setup(final TestContext context) {
 
@@ -73,7 +72,9 @@ public class VertxBasedHttpProtocolAdapterTest {
         final Async startup = context.async();
 
         messagingClient = mock(HonoClient.class);
+        when(messagingClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
         registrationClient = mock(HonoClient.class);
+        when(registrationClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(registrationClient));
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
         when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
         when(credentialsAuthProvider.stop()).thenReturn(Future.succeededFuture());
@@ -106,7 +107,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     public final void testBasicAuthFailsEmptyHeader(final TestContext context) {
         final Async async = context.async();
 
-        vertx.createHttpClient().get(httpAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
+        vertx.createHttpClient().get(httpAdapter.getInsecurePort(), HOST, "/some-non-existing-route")
                 .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
             response.bodyHandler(totalBuffer -> {

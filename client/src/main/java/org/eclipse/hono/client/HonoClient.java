@@ -49,82 +49,95 @@ public interface HonoClient {
 
     /**
      * Connects to the Hono server using given options.
+     * <p>
+     * This method will (re-)try to establish the connection until it succeeds if
+     * the <em>reconnectAttempts</em> property of the options is &gt; 0.
      * 
-     * @param options The options to use (may be {@code null}).
-     * @param connectionHandler The handler to notify about the outcome of the connection attempt. Always fails if one
-     *            of the shutdown methods was called before.
-     * @throws NullPointerException if the connection handler is {@code null}.
+     * @param options The options to use. If {@code null} a set of default properties will be used.
+     * @return A future that will complete with the connected client once the connection has been established.
+     *         The future will fail if the connection cannot be established, e.g. because one of the client's
+     *         <em>shutdown</em> methods has been invoked already.
      */
-    void connect(ProtonClientOptions options, Handler<AsyncResult<HonoClient>> connectionHandler);
+    Future<HonoClient> connect(ProtonClientOptions options);
 
     /**
      * Connects to the Hono server using given options.
+     * <p>
+     * This method will (re-)try to establish the connection until it succeeds if
+     * the <em>reconnectAttempts</em> property of the options is &gt; 0.
      * 
-     * @param options The options to use (may be {@code null}).
-     * @param connectionHandler The handler to notify about the outcome of the connection attempt. Always fails if one
-     *            of the shutdown methods was called before.
+     * @param options The options to use. If {@code null} a set of default properties will be used.
      * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
+     * @return A future that will complete with the connected client once the connection has been established.
+     *         The future will fail if the connection cannot be established, e.g. because one of the client's
+     *         <em>shutdown</em> methods has been invoked already.
      * @throws NullPointerException if the connection handler is {@code null}.
      */
-    void connect(
+    Future<HonoClient> connect(
             ProtonClientOptions options,
-            Handler<AsyncResult<HonoClient>> connectionHandler,
             Handler<ProtonConnection> disconnectHandler);
 
     /**
      * Gets a client for sending telemetry messages to a Hono server.
      * 
      * @param tenantId The ID of the tenant to send messages for.
-     * @param resultHandler The handler to notify about the client.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @return A future that will complete with the sender once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this
+     *         client is not connected or if a concurrent request to create a sender for the same
+     *         tenant is already being executed.
+     * @throws NullPointerException if the tenant is {@code null}.
      */
-    void getOrCreateTelemetrySender(String tenantId, Handler<AsyncResult<MessageSender>> resultHandler);
+    Future<MessageSender> getOrCreateTelemetrySender(String tenantId);
 
     /**
      * Gets a client for sending telemetry messages to a Hono server.
      * 
      * @param tenantId The ID of the tenant to send messages for.
      * @param deviceId The ID of the device to send events for (may be {@code null}).
-     * @param resultHandler The handler to notify about the client.
-     * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
+     * @return A future that will complete with the sender once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this
+     *         client is not connected or if a concurrent request to create a sender for the same
+     *         tenant and device is already being executed.
+     * @throws NullPointerException if the tenant is {@code null}.
      */
-    void getOrCreateTelemetrySender(String tenantId, String deviceId,
-            Handler<AsyncResult<MessageSender>> resultHandler);
+    Future<MessageSender> getOrCreateTelemetrySender(String tenantId, String deviceId);
 
     /**
      * Gets a client for sending events to a Hono server.
      * 
      * @param tenantId The ID of the tenant to send events for.
-     * @param resultHandler The handler to notify about the client.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @return A future that will complete with the sender once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this
+     *         client is not connected or if a concurrent request to create a sender for the same
+     *         tenant is already being executed.
+     * @throws NullPointerException if the tenant is {@code null}.
      */
-    void getOrCreateEventSender(String tenantId, Handler<AsyncResult<MessageSender>> resultHandler);
+    Future<MessageSender> getOrCreateEventSender(String tenantId);
 
     /**
      * Gets a client for sending events to a Hono server.
      * 
      * @param tenantId The ID of the tenant to send events for.
      * @param deviceId The ID of the device to send events for (may be {@code null}).
-     * @param resultHandler The handler to notify about the client.
-     * @throws NullPointerException if any of the tenantId or resultHandler is {@code null}.
+     * @return A future that will complete with the sender once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this
+     *         client is not connected or if a concurrent request to create a sender for the same
+     *         tenant and device is already being executed.
+     * @throws NullPointerException if the tenant is {@code null}.
      */
-    void getOrCreateEventSender(
-            String tenantId,
-            String deviceId,
-            Handler<AsyncResult<MessageSender>> resultHandler);
+    Future<MessageSender> getOrCreateEventSender(String tenantId, String deviceId);
 
     /**
      * Creates a new consumer of telemetry data for a tenant.
      * 
      * @param tenantId The tenant to consume data for.
      * @param telemetryConsumer The handler to invoke with every message received.
-     * @param creationHandler The handler to invoke with the outcome of the operation.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this
+     *         client is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void createTelemetryConsumer(
-            String tenantId,
-            Consumer<Message> telemetryConsumer,
-            Handler<AsyncResult<MessageConsumer>> creationHandler);
+    Future<MessageConsumer> createTelemetryConsumer(String tenantId, Consumer<Message> telemetryConsumer);
 
     /**
      * Creates a new consumer of events for a tenant.
@@ -134,13 +147,12 @@ public interface HonoClient {
      *
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
-     * @param creationHandler The handler to invoke with the outcome of the operation.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this
+     *         client is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void createEventConsumer(
-            String tenantId,
-            Consumer<Message> eventConsumer,
-            Handler<AsyncResult<MessageConsumer>> creationHandler);
+    Future<MessageConsumer> createEventConsumer(String tenantId, Consumer<Message> eventConsumer);
 
     /**
      * Creates a new consumer of events for a tenant.
@@ -151,35 +163,37 @@ public interface HonoClient {
      *
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
-     * @param creationHandler The handler to invoke with the outcome of the operation.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this
+     *         client is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void createEventConsumer(
-            String tenantId,
-            BiConsumer<ProtonDelivery, Message> eventConsumer,
-            Handler<AsyncResult<MessageConsumer>> creationHandler);
+    Future<MessageConsumer> createEventConsumer(String tenantId, BiConsumer<ProtonDelivery, Message> eventConsumer);
 
     /**
-     * Gets a client for interacting with Hono's <em>Registration</em> API.
+     * Gets a client for invoking operations on a service implementing
+     * Hono's <em>Device Registration</em> API.
      * 
      * @param tenantId The tenant to manage device registration data for.
-     * @param resultHandler The handler to invoke with the result of the operation.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @return A future that will complete with the registration client (if successful) or
+     *         fail if the client cannot be created, e.g. because the underlying connection
+     *         is not established or if a concurrent request to create a client for the same
+     *         tenant is already being executed.
+     * @throws NullPointerException if the tenant is {@code null}.
      */
-    void getOrCreateRegistrationClient(
-            String tenantId,
-            Handler<AsyncResult<RegistrationClient>> resultHandler);
+    Future<RegistrationClient> getOrCreateRegistrationClient(String tenantId);
 
     /**
      * Gets a client for interacting with Hono's <em>Credentials</em> API.
      *
      * @param tenantId The tenant to manage device credentials data for.
-     * @param resultHandler The handler to invoke with the result of the operation.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @return A future that will complete with the credentials client (if successful) or
+     *         fail if the client cannot be created, e.g. because the underlying connection
+     *         is not established or if a concurrent request to create a client for the same
+     *         tenant is already being executed.
+     * @throws NullPointerException if the tenant is {@code null}.
      */
-    void getOrCreateCredentialsClient(
-            String tenantId,
-            Handler<AsyncResult<CredentialsClient>> resultHandler);
+    Future<CredentialsClient> getOrCreateCredentialsClient(String tenantId);
 
     /**
      * Closes this client's connection to the Hono server.
@@ -199,5 +213,4 @@ public interface HonoClient {
      * @throws NullPointerException if the handler is {@code null}.
      */
     void shutdown(Handler<AsyncResult<Void>> completionHandler);
-
 }

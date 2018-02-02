@@ -75,6 +75,7 @@ public class HonoConsumerBase {
      * @throws Exception Thrown if the latch is interrupted during waiting or if the read from System.in throws an IOException.
      */
     protected void consumeData() throws Exception {
+
         final CountDownLatch latch = new CountDownLatch(1);
         final Future<MessageConsumer> consumerFuture = Future.future();
 
@@ -86,19 +87,15 @@ public class HonoConsumerBase {
             latch.countDown();
         });
 
-        final Future<HonoClient> connectionTracker = Future.future();
-
-        honoClient.connect(new ProtonClientOptions(), connectionTracker.completer());
-
-        connectionTracker.compose(honoClient -> {
+        honoClient.connect(new ProtonClientOptions()).compose(connectedClient -> {
             if (eventMode) {
-                honoClient.createEventConsumer(TENANT_ID,
-                        msg -> handleMessage(msg), consumerFuture.completer());
+                return connectedClient.createEventConsumer(TENANT_ID,
+                        msg -> handleMessage(msg));
             } else {
-                honoClient.createTelemetryConsumer(TENANT_ID,
-                        msg -> handleMessage(msg), consumerFuture.completer());
+                return connectedClient.createTelemetryConsumer(TENANT_ID,
+                        msg -> handleMessage(msg));
             }
-        }, consumerFuture);
+        }).setHandler(consumerFuture.completer());
 
         latch.await();
 

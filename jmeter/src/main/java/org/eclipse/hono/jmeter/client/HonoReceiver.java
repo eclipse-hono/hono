@@ -90,7 +90,7 @@ public class HonoReceiver extends AbstractClient {
     private void connect(final ClientConfigProperties config) throws InterruptedException {
         final CountDownLatch receiverConnectLatch = new CountDownLatch(1);
         amqpNetworkClient = new HonoClientImpl(vertx, amqpNetworkConnectionFactory, config);
-        amqpNetworkClient.connect(getClientOptions(Integer.parseInt(sampler.getReconnectAttempts())),
+        amqpNetworkClient.connect(getClientOptions(Integer.parseInt(sampler.getReconnectAttempts()))).setHandler(
                 connectionHandler -> {
                     if (connectionHandler.failed()) {
                         LOGGER.error("HonoClient.connect() failed", connectionHandler.cause());
@@ -106,14 +106,14 @@ public class HonoReceiver extends AbstractClient {
         }
         final CountDownLatch receiverLatch = new CountDownLatch(1);
         if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
-            amqpNetworkClient.createTelemetryConsumer(sampler.getTenant(), this::messageReceived, creationHandler -> {
+            amqpNetworkClient.createTelemetryConsumer(sampler.getTenant(), this::messageReceived).setHandler(creationHandler -> {
                 if (creationHandler.failed()) {
                     LOGGER.error("HonoClient.createTelemetryConsumer() failed", creationHandler.cause());
                 }
                 receiverLatch.countDown();
             });
         } else {
-            amqpNetworkClient.createEventConsumer(sampler.getTenant(), this::messageReceived, creationHandler -> {
+            amqpNetworkClient.createEventConsumer(sampler.getTenant(), this::messageReceived).setHandler(creationHandler -> {
                 if (creationHandler.failed()) {
                     LOGGER.error("HonoClient.createEventConsumer() failed", creationHandler.cause());
                 }
