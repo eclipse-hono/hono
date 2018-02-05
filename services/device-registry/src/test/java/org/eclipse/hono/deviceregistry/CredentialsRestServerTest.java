@@ -628,9 +628,11 @@ public class CredentialsRestServerTest {
                 if (responseBodyHandler != null) {
                     response.bodyHandler(b -> {
                         responseBodyHandler.handle(b);
+                        result.complete(response);
                     });
+                } else {
+                    result.complete(response);
                 }
-                result.complete(response);
             } else {
                 result.fail("expected response [" + expectedStatusCode + "] but got [" + response.statusCode() + "]");
             }
