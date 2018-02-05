@@ -236,7 +236,6 @@ Once the gateway has established a connection to the Kura adapter, all *control*
 1. The adapter treats all messages that are published to a topic starting with the configured `HONO_KURA_CONTROL_PREFIX` as control messages. All other messages are considered to be data messages.
 1. *control* messages with QoS 0 are forwarded to Hono's telemetry endpoint whereas messages with QoS 1 are forwarded to the event endpoint. The corresponding AMQP 1.0 messages that are sent downstream have a content type of `application/vnd.eclipse.kura-control`.
 1. *data* messages with QoS 0 are forwarded to the telemetry endpoint whereas messages with QoS 1 are forwarded to the event endpoint. The corresponding AMQP 1.0 messages that are sent downstream have a content type of `application/vnd.eclipse.kura-data`.
-1. All AMQP messages sent downstream include a `hono-orig-address` application property containing the name of the topic that the message has been originally published to by the gateway.
 
 ## Downstream Meta Data
 
