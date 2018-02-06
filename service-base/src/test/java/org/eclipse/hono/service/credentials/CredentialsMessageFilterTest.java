@@ -11,8 +11,11 @@
  */
 package org.eclipse.hono.service.credentials;
 
-import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonHelper;
+import static org.eclipse.hono.util.CredentialsConstants.OPERATION_GET;
+import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.*;
+
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -20,14 +23,9 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.RequestResponseApiConstants;
-import org.eclipse.hono.util.Constants;
 import org.junit.Test;
 
-import static org.eclipse.hono.util.CredentialsConstants.OPERATION_GET;
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * Test verifying that the filter complies with the credentials message format specification.
@@ -68,24 +66,6 @@ public class CredentialsMessageFilterTest {
         // THEN message validation succeeds
         assertTrue(CredentialsMessageFilter.verify(linkTarget, msg));
         assertMessageAnnotationsContainProperties(msg, DEFAULT_TENANT);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testCredentialsMessageForEventBus() {
-
-        Message msg = ProtonHelper.message();
-        msg.setSubject(CredentialsConstants.OPERATION_GET);
-        MessageHelper.addDeviceId(msg, "4711");
-        MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
-
-        ResourceIdentifier resource = ResourceIdentifier.from(CredentialsConstants.CREDENTIALS_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        MessageHelper.annotate(msg, resource);
-
-        final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg);
-        assertNotNull(credentialsMsg);
-        assertTrue(credentialsMsg.containsKey(RequestResponseApiConstants.FIELD_TENANT_ID));
-        assertTrue(credentialsMsg.containsKey(RequestResponseApiConstants.FIELD_DEVICE_ID));
     }
 
     private void assertMessageAnnotationsContainProperties(final Message msg, final String tenantId) {

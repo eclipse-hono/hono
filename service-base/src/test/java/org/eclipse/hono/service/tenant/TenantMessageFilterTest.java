@@ -21,10 +21,11 @@ import static org.junit.Assert.*;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.util.*;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TenantConstants;
 import org.junit.Test;
 
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
 
 /**
@@ -34,6 +35,10 @@ public class TenantMessageFilterTest {
 
     private static final String DEFAULT_TENANT = "DEFAULT_TENANT";
 
+    /**
+     * Verifies that {@link TenantMessageFilter#verify(ResourceIdentifier, Message)} detects if the mandatory tenantId
+     * property is missing.
+     */
     @Test
     public void testVerifyDetectsMissingTenantProperty() {
         // GIVEN a valid tenant GET message without an AMQP value
@@ -45,6 +50,9 @@ public class TenantMessageFilterTest {
         assertFalse(TenantMessageFilter.verify(linkTarget, msg));
     }
 
+    /**
+     * Verifies that {@link TenantMessageFilter#verify(ResourceIdentifier, Message)} succeeds for a valid message.
+     */
     @Test
     public void testVerifySucceedsForValidGetAction() {
         // GIVEN a tenant GET message for tenant DEFAULT_TENANT
@@ -56,21 +64,6 @@ public class TenantMessageFilterTest {
         // THEN message validation succeeds
         assertTrue(TenantMessageFilter.verify(linkTarget, msg));
         assertMessageAnnotationsContainProperties(msg, DEFAULT_TENANT);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testTenantMessageForEventBus() {
-        Message msg = ProtonHelper.message();
-        msg.setSubject(Action.ACTION_GET.toString());
-        MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
-
-        ResourceIdentifier resource = ResourceIdentifier.from(TenantConstants.TENANT_ENDPOINT, Constants.DEFAULT_TENANT, null);
-        MessageHelper.annotate(msg, resource);
-
-        final JsonObject tenantMsg = TenantConstants.getTenantMsg(msg);
-        assertNotNull(tenantMsg);
-        assertTrue(tenantMsg.containsKey(RequestResponseApiConstants.FIELD_TENANT_ID));
     }
 
     private void assertMessageAnnotationsContainProperties(final Message msg, final String tenantId) {

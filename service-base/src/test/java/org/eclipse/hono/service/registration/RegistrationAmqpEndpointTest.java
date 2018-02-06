@@ -14,7 +14,7 @@
 package org.eclipse.hono.service.registration;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.contains;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,7 +67,7 @@ public class RegistrationAmqpEndpointTest {
     @Test
     public void testProcessMessageSendsRequestViaEventBus() {
 
-        Message msg = ProtonHelper.message();
+        final Message msg = ProtonHelper.message();
         msg.setSubject(RegistrationConstants.ACTION_ASSERT);
         MessageHelper.addDeviceId(msg, "4711");
         MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
@@ -75,6 +75,6 @@ public class RegistrationAmqpEndpointTest {
 
         endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
-        verify(eventBus).send(contains(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN), any(JsonObject.class), any(Handler.class));
+        verify(eventBus).send(eq(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN), any(JsonObject.class), any(Handler.class));
     }
 }

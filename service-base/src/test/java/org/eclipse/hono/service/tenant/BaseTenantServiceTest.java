@@ -66,15 +66,12 @@ public class BaseTenantServiceTest {
     }
 
     /**
-     * Verifies that the base service accepts a request for adding
-     * a tenant that contains the minimum required properties.
+     * Verifies that the base service fails for an incomplete message that does not contain mandatory fields.
      */
     @Test
     public void testAddFailsForIncompleteMessage() {
 
-        final JsonObject testPayload = createValidTenantPayload();
-
-        final Message<JsonObject> msg = createIncompleteMessageMockForPayload(testPayload);
+        final Message<JsonObject> msg = createIncompleteMessageMockForPayload();
         tenantService.processTenantMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST, null));
@@ -118,23 +115,23 @@ public class BaseTenantServiceTest {
     @SuppressWarnings("unchecked")
     private static Message<JsonObject> createMessageMockForPayload(final Action operation, final JsonObject payload) {
 
-        JsonObject requestBody = new JsonObject();
-        requestBody.put(RequestResponseApiConstants.FIELD_TENANT_ID, TEST_TENANT);
+        final JsonObject requestBody = new JsonObject();
+        requestBody.put(TenantConstants.FIELD_TENANT_ID, TEST_TENANT);
         requestBody.put(MessageHelper.SYS_PROPERTY_SUBJECT, operation);
         if (payload != null) {
-            requestBody.put(CredentialsConstants.FIELD_PAYLOAD, payload);
+            requestBody.put(TenantConstants.FIELD_PAYLOAD, payload);
         }
 
-        Message<JsonObject> msg = mock(Message.class);
+        final Message<JsonObject> msg = mock(Message.class);
         when(msg.body()).thenReturn(requestBody);
         return msg;
     }
 
     @SuppressWarnings("unchecked")
-    private static Message<JsonObject> createIncompleteMessageMockForPayload(final JsonObject payload) {
+    private static Message<JsonObject> createIncompleteMessageMockForPayload() {
 
-        JsonObject requestBody = new JsonObject();
-        Message<JsonObject> msg = mock(Message.class);
+        final JsonObject requestBody = new JsonObject();
+        final Message<JsonObject> msg = mock(Message.class);
         when(msg.body()).thenReturn(requestBody);
         return msg;
     }
@@ -142,7 +139,7 @@ public class BaseTenantServiceTest {
     private static JsonObject createValidTenantPayload() {
 
         final JsonObject payload = new JsonObject();
-        payload.put("enabled", "true");
+        payload.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
 
         return payload;
     }
@@ -157,12 +154,12 @@ public class BaseTenantServiceTest {
 
         return new BaseTenantService<ServiceConfigProperties>() {
             @Override
-            public void add(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult>> resultHandler) {
+            public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult>> resultHandler) {
                 resultHandler.handle(Future.succeededFuture(TenantResult.from(HTTP_CREATED)));
             }
 
             @Override
-            public void setConfig(ServiceConfigProperties configuration) {
+            public void setConfig(final ServiceConfigProperties configuration) {
                 setSpecificConfig(configuration);
             }
         };

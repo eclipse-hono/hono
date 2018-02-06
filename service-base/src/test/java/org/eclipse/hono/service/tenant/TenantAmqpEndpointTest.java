@@ -14,15 +14,16 @@
 package org.eclipse.hono.service.tenant;
 
 import static org.eclipse.hono.util.TenantConstants.Action;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.contains;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.util.*;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TenantConstants;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,32 +67,13 @@ public class TenantAmqpEndpointTest {
     @Test
     public void testProcessMessageSendsRequestViaEventBus() {
 
-        Message msg = ProtonHelper.message();
+        final Message msg = ProtonHelper.message();
         msg.setSubject(Action.ACTION_GET.toString());
         MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
         MessageHelper.annotate(msg, resource);
 
         endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
-        verify(eventBus).send(contains(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN), any(JsonObject.class), any(Handler.class));
+        verify(eventBus).send(eq(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN), any(JsonObject.class), any(Handler.class));
     }
-
-    /**
-     * Verifies that the JsonObject constructed for a tenant message on the event bus contains the tenantId
-     * as defined in the {@link RequestResponseApiConstants} class.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testTenantMessageForEventBus() {
-
-        Message msg = ProtonHelper.message();
-        msg.setSubject(Action.ACTION_GET.toString());
-        MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
-        MessageHelper.annotate(msg, resource);
-
-        final JsonObject tenantMsg = TenantConstants.getTenantMsg(msg);
-        assertNotNull(tenantMsg);
-        assertTrue(tenantMsg.containsKey(RequestResponseApiConstants.FIELD_TENANT_ID));
-    }
-
 }
