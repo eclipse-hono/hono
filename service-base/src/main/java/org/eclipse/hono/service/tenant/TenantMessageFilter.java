@@ -59,18 +59,10 @@ public final class TenantMessageFilter extends BaseMessageFilter {
                 LOG.trace("message [{}] contains non-AmqpValue section payload", msg.getMessageId());
                 return false;
             } else {
-                annotate(linkTarget, msg);
                 return true;
             }
         } else {
-            annotate(linkTarget, msg);
             return true;
         }
-    }
-
-    private static void annotate(final ResourceIdentifier linkTarget, final Message msg) {
-        final ResourceIdentifier targetResource = ResourceIdentifier
-                .from(linkTarget.getEndpoint(), linkTarget.getTenantId(), null);
-        MessageHelper.annotate(msg, targetResource);
     }
 }
