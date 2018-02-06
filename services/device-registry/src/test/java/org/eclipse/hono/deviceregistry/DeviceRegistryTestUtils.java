@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.TenantConstants;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -84,6 +85,30 @@ public final class DeviceRegistryTestUtils {
     }
 
     /**
+     * Creates a tenant object for a tenantId.
+     * <p>
+     * The tenant created is configured for the http and the mqtt adapter.
+     *
+     * @param tenantId The tenant identifier.
+     * @return The tenant object.
+     */
+    public static JsonObject buildTenantPayload(final String tenantId) {
+        final JsonObject adapterDetailsHttp = new JsonObject().
+                put(TenantConstants.FIELD_ADAPTERS_TYPE, "hono-http").
+                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, "true").
+                put(TenantConstants.FIELD_ENABLED, "true");
+        final JsonObject adapterDetailsMqtt = new JsonObject().
+                put(TenantConstants.FIELD_ADAPTERS_TYPE, "hono-mqtt").
+                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, "true").
+                put(TenantConstants.FIELD_ENABLED, "true");
+        final JsonObject tenantPayload = new JsonObject().
+                put(TenantConstants.FIELD_TENANT_ID, tenantId).
+                put(TenantConstants.FIELD_ENABLED, "true").
+                put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
+        return tenantPayload;
+    }
+
+    /**
      * Reads the contents from a file using this class' class loader.
      * 
      * @param resourceName The name of the resource to load.
@@ -92,10 +117,10 @@ public final class DeviceRegistryTestUtils {
      */
     public static Buffer readFile(final String resourceName) throws IOException {
 
-        Buffer result = Buffer.buffer();
+        final Buffer result = Buffer.buffer();
         try (InputStream is = DeviceRegistryTestUtils.class.getResourceAsStream(resourceName)) {
             int bytesRead = 0;
-            byte[] readBuffer = new byte[4096];
+            final byte[] readBuffer = new byte[4096];
             while ((bytesRead = is.read(readBuffer)) != -1) {
                 result.appendBytes(readBuffer, 0, bytesRead);
             }

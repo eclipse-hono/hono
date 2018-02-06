@@ -103,11 +103,13 @@ then
   echo "Creating and initializing Docker Volume for Device Registry..."
   docker volume create --label project=$NS device-registry
   docker secret create -l project=$NS example-credentials.json $CONFIG/example-credentials.json
+  docker secret create -l project=$NS example-tenants.json $CONFIG/example-tenants.json
   docker service create --detach=true --name init-device-registry-data \
     --secret example-credentials.json \
+    --secret example-tenants.json \
     --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
     --restart-condition=none \
-    busybox sh -c 'cp -u /run/secrets/example-credentials.json /var/lib/hono/device-registry/credentials.json'
+    busybox sh -c 'cp -u /run/secrets/example-credentials.json /var/lib/hono/device-registry/credentials.json;cp -u /run/secrets/example-tenants.json /var/lib/hono/device-registry/tenants.json'
 
 #   docker run --rm \
 #    --mount type=bind,source=$CONFIG/example-credentials.json,target=/tmp/hono/example-credentials.json \

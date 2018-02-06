@@ -22,6 +22,7 @@ import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
+import org.eclipse.hono.service.tenant.TenantService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -45,6 +46,7 @@ public class Application extends AbstractApplication {
     private AuthenticationService authenticationService;
     private CredentialsService credentialsService;
     private RegistrationService registrationService;
+    private TenantService tenantService;
 
     /**
      * Sets the credentials service implementation this server is based on.
@@ -60,7 +62,7 @@ public class Application extends AbstractApplication {
     /**
      * Sets the registration service implementation this server is based on.
      *
-     * @param registrationService the registrationService to set
+     * @param registrationService The registrationService to set.
      * @throws NullPointerException if service is {@code null}.
      */
     @Autowired
@@ -69,9 +71,20 @@ public class Application extends AbstractApplication {
     }
 
     /**
+     * Sets the tenant service implementation this server is based on.
+     *
+     * @param tenantService The tenantService to set.
+     * @throws NullPointerException if service is {@code null}.
+     */
+    @Autowired
+    public final void setTenantService(final TenantService tenantService) {
+        this.tenantService = Objects.requireNonNull(tenantService);
+    }
+
+    /**
      * Sets the authentication service implementation this server is based on.
      *
-     * @param authenticationService the authenticationService to set
+     * @param authenticationService The authenticationService to set.
      * @throws NullPointerException if service is {@code null}.
      */
     @Autowired
@@ -82,9 +95,10 @@ public class Application extends AbstractApplication {
     @Override
     protected final Future<Void> deployRequiredVerticles(int maxInstances) {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         CompositeFuture.all(
                 deployAuthenticationService(), // we only need 1 authentication service
+                deployTenantService(),
                 deployRegistrationService(),
                 deployCredentialsService()).setHandler(ar -> {
             if (ar.succeeded()) {
@@ -97,14 +111,14 @@ public class Application extends AbstractApplication {
     }
 
     private Future<String> deployCredentialsService() {
-        Future<String> result = Future.future();
+        final Future<String> result = Future.future();
         log.info("Starting credentials service {}", credentialsService);
         getVertx().deployVerticle(credentialsService, result.completer());
         return result;
     }
 
     private Future<String> deployAuthenticationService() {
-        Future<String> result = Future.future();
+        final Future<String> result = Future.future();
         if (!Verticle.class.isInstance(authenticationService)) {
             result.fail("authentication service is not a verticle");
         } else {
@@ -115,9 +129,16 @@ public class Application extends AbstractApplication {
     }
 
     private Future<String> deployRegistrationService() {
-        Future<String> result = Future.future();
+        final Future<String> result = Future.future();
         log.info("Starting registration service {}", registrationService);
         getVertx().deployVerticle(registrationService, result.completer());
+        return result;
+    }
+
+    private Future<String> deployTenantService() {
+        final Future<String> result = Future.future();
+        log.info("Starting tenant service {}", tenantService);
+        getVertx().deployVerticle(tenantService, result.completer());
         return result;
     }
 

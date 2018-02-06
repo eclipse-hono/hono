@@ -23,6 +23,20 @@ spec:
         - sh
         - -c
         - 'cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json'
+      # we use another init container to populate the registry
+      # with some default tenants
+      - name: copy-example-tenants
+        image: busybox
+        volumeMounts:
+        - name: conf
+          mountPath: /tmp/hono/example-tenants.json
+          subPath: example-tenants.json
+        - name: registry
+          mountPath: /var/lib/hono/device-registry
+        command:
+        - sh
+        - -c
+        - 'cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json'
       containers:
       - volumeMounts:
         - name: registry
