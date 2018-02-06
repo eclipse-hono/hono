@@ -237,7 +237,7 @@ public class HonoClientImplTest {
         connected.await();
 
         final Async disconnected = ctx.async();
-        client.createTelemetryConsumer("tenant", msg -> {}).setHandler(ctx.asyncAssertFailure(cause -> {
+        client.createTelemetryConsumer("tenant", msg -> {}, close -> {}).setHandler(ctx.asyncAssertFailure(cause -> {
             disconnected.complete();
         }));
 
@@ -263,7 +263,7 @@ public class HonoClientImplTest {
         connected.await();
 
         final Async disconnected = ctx.async();
-        client.createEventConsumer("tenant", msg -> {}).setHandler(ctx.asyncAssertFailure(cause -> {
+        client.createEventConsumer("tenant", msg -> {}, close -> {}).setHandler(ctx.asyncAssertFailure(cause -> {
             disconnected.complete();
         }));
 

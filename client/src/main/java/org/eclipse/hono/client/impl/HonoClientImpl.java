@@ -403,21 +403,24 @@ public final class HonoClientImpl implements HonoClient {
     @Override
     public Future<MessageConsumer> createTelemetryConsumer(
             final String tenantId,
-            final Consumer<Message> messageConsumer) {
+            final Consumer<Message> messageConsumer,
+            final Handler<Void> closeHandler) {
 
         return createConsumer(
                 tenantId,
-                () -> newTelemetryConsumer(tenantId, messageConsumer));
+                () -> newTelemetryConsumer(tenantId, messageConsumer, closeHandler));
     }
 
     private Future<MessageConsumer> newTelemetryConsumer(
             final String tenantId,
-            final Consumer<Message> messageConsumer) {
+            final Consumer<Message> messageConsumer,
+            final Handler<Void> closeHandler) {
 
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
             TelemetryConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                        connectionFactory.getPathSeparator(), messageConsumer, result.completer());
+                        connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
+                    closeHook -> closeHandler.handle(null));
             return result;
         });
     }
@@ -425,29 +428,33 @@ public final class HonoClientImpl implements HonoClient {
     @Override
     public Future<MessageConsumer> createEventConsumer(
             final String tenantId,
-            final Consumer<Message> eventConsumer) {
+            final Consumer<Message> eventConsumer,
+            final Handler<Void> closeHandler) {
 
-        return createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message));
+        return createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), closeHandler);
     }
 
     @Override
     public Future<MessageConsumer> createEventConsumer(
             final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer) {
+            final BiConsumer<ProtonDelivery, Message> messageConsumer,
+            final Handler<Void> closeHandler) {
 
         return createConsumer(
                 tenantId,
-                () -> newEventConsumer(tenantId, messageConsumer));
+                () -> newEventConsumer(tenantId, messageConsumer, closeHandler));
     }
 
     private Future<MessageConsumer> newEventConsumer(
             final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer) {
+            final BiConsumer<ProtonDelivery, Message> messageConsumer,
+            final Handler<Void> closeHandler) {
 
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
             EventConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                    connectionFactory.getPathSeparator(), messageConsumer, result.completer());
+                    connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
+                    closeHook -> closeHandler.handle(null));
             return result;
         });
     }

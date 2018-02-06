@@ -145,9 +145,11 @@ public final class TestSupport {
 
     public static SenderFactory newMockSenderFactory(final ProtonSender senderToCreate) {
 
-        return (connection, address, qos, drainHandler) -> {
+        return (connection, address, qos, drainHandler, closeHook) -> {
             senderToCreate.sendQueueDrainHandler(drainHandler);
             senderToCreate.open();
+            senderToCreate.closeHandler(remoteClose -> closeHook.handle(null));
+            senderToCreate.detachHandler(remoteDetach -> closeHook.handle(null));
             return Future.succeededFuture(senderToCreate);
         };
     }

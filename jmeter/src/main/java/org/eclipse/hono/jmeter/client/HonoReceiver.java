@@ -127,14 +127,18 @@ public class HonoReceiver extends AbstractClient {
             return Future.failedFuture(new IllegalStateException("not connected to Hono"));
         } else if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
             return amqpNetworkClient
-                    .createTelemetryConsumer(sampler.getTenant(), this::messageReceived)
+                    .createTelemetryConsumer(sampler.getTenant(), this::messageReceived, closeHook -> {
+                        LOGGER.error("consumer {} was closed", sampler.getEndpoint());
+                    })
                     .map(consumer -> {
                         LOGGER.info("created {} consumer", sampler.getEndpoint());
                         return consumer;
                     });
         } else {
             return amqpNetworkClient
-                    .createEventConsumer(sampler.getTenant(), this::messageReceived)
+                    .createEventConsumer(sampler.getTenant(), this::messageReceived, closeHook -> {
+                        LOGGER.error("consumer {} was closed", sampler.getEndpoint());
+                    })
                     .map(consumer -> {
                         LOGGER.info("created {} consumer", sampler.getEndpoint());
                         return consumer;

@@ -196,6 +196,19 @@ public abstract class AbstractHonoClient {
                     result.fail(senderOpen.cause());
                 }
             });
+            sender.detachHandler(remoteDetached -> {
+                if (remoteDetached.succeeded()) {
+                    LOG.debug("sender [{}] detached (with closed=false) by peer [{}]", sender.getRemoteSource(),
+                            con.getRemoteContainer());
+                } else {
+                    LOG.debug("sender [{}] detached (with closed=false) by peer [{}]: {}", sender.getRemoteSource(),
+                            con.getRemoteContainer(), remoteDetached.cause().getMessage());
+                }
+                sender.close();
+                if (closeHook != null) {
+                    closeHook.handle(targetAddress);
+                }
+            });
             sender.closeHandler(senderClosed -> {
                 if (senderClosed.succeeded()) {
                     LOG.debug("sender [{}] closed by peer", targetAddress);
@@ -264,6 +277,10 @@ public abstract class AbstractHonoClient {
                     result.fail(openAttach.cause());
                 }
                 else {
+                    if (LOG.isTraceEnabled()) {
+                        LOG.trace("receiver open attach succeeded [{}] by peer [{}]", receiver.getRemoteSource(),
+                                con.getRemoteContainer());
+                    }
                     result.complete(openAttach.result());
                 }
             });
@@ -272,6 +289,10 @@ public abstract class AbstractHonoClient {
                     LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
                 } else {
                     LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
+                }
+                receiver.close();
+                if (closeHook != null) {
+                    closeHook.handle(sourceAddress);
                 }
             });
             receiver.closeHandler(remoteClosed -> {

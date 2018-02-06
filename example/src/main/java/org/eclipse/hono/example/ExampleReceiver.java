@@ -62,11 +62,23 @@ public class ExampleReceiver extends AbstractExampleClient {
 
         if (activeProfiles.contains(PROFILE_EVENT)) {
             return connectedClient.createEventConsumer(tenantId,
-                    (msg) -> handleMessage(PROFILE_EVENT, msg));
+                    (msg) -> handleMessage(PROFILE_EVENT, msg), closeHandler -> {
+                        LOG.info("close handler of event consumer is called");
+                        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+                            LOG.info("attempting to re-open the EventConsumer link ...");
+                            createConsumer(connectedClient);
+                        });
+                    });
         } else {
             // default is telemetry consumer
             return connectedClient.createTelemetryConsumer(tenantId,
-                    msg -> handleMessage(PROFILE_TELEMETRY, msg));
+                    msg -> handleMessage(PROFILE_TELEMETRY, msg), closeHandler -> {
+                        LOG.info("close handler of event consumer is called");
+                        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+                            LOG.info("attempting to re-open the EventConsumer link ...");
+                            createConsumer(connectedClient);
+                        });
+                    });
         }
     }
 

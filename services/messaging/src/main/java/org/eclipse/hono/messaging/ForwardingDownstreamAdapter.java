@@ -257,10 +257,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             logger.warn("lost connection to downstream container [{}], closing upstream receivers ...", con.getRemoteContainer());
 
             for (UpstreamReceiver client : activeSenders.keySet()) {
-                client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
-                metrics.decrementUpstreamLinks(client.getTargetAddress());
-                metrics.decrementDownstreamSenders(client.getTargetAddress());
-                metrics.submitDownstreamLinkCredits(client.getTargetAddress(),0);
+                closeReceiver(client);
             }
             receiversPerConnection.clear();
             activeSenders.clear();
@@ -276,6 +273,13 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
             reconnect(null);
         }
+    }
+
+    private void closeReceiver(final UpstreamReceiver receiver) {
+        receiver.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
+        metrics.decrementUpstreamLinks(receiver.getTargetAddress());
+        metrics.decrementDownstreamSenders(receiver.getTargetAddress());
+        metrics.submitDownstreamLinkCredits(receiver.getTargetAddress(), 0);
     }
 
     private void reconnect(final Handler<AsyncResult<ProtonConnection>> resultHandler) {
@@ -324,7 +328,10 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             });
 
             final ResourceIdentifier targetAddress = ResourceIdentifier.fromString(client.getTargetAddress());
-            createSender(targetAddress, replenishedSender -> handleFlow(replenishedSender, client)).compose(createdSender -> {
+            createSender(targetAddress, replenishedSender -> handleFlow(replenishedSender, client), closeHook -> {
+                removeSender(client);
+                closeReceiver(client);
+            }).compose(createdSender -> {
                 addSender(client, createdSender);
                 tracker.complete();
             }, tracker);
@@ -366,12 +373,14 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     private Future<ProtonSender> createSender(
             final ResourceIdentifier targetAddress,
-            final Handler<ProtonSender> sendQueueDrainHandler) {
+            final Handler<ProtonSender> sendQueueDrainHandler,
+            final Handler<Void> closeHook) {
 
         if (!isConnected()) {
             return Future.failedFuture("downstream connection must be opened before creating sender");
         } else {
-            return senderFactory.createSender(downstreamConnection, targetAddress, getDownstreamQos(), sendQueueDrainHandler);
+            return senderFactory.createSender(downstreamConnection, targetAddress, getDownstreamQos(),
+                    sendQueueDrainHandler, closeHook);
         }
     }
 

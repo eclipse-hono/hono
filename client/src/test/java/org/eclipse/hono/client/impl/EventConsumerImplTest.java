@@ -16,6 +16,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.function.BiConsumer;
 
+import io.vertx.ext.unit.junit.Timeout;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.message.Message;
@@ -47,6 +48,10 @@ import io.vertx.proton.ProtonReceiver;
 @RunWith(VertxUnitRunner.class)
 public class EventConsumerImplTest {
 
+    /**
+     * Timeout each test after 5 secs.
+     */
+    public Timeout timeout = Timeout.seconds(5);
     private Vertx vertx;
 
     /**
@@ -93,8 +98,8 @@ public class EventConsumerImplTest {
         Async consumerCreation = ctx.async();
         EventConsumerImpl.create(vertx.getOrCreateContext(), new ClientConfigProperties(), con, "tenant", eventConsumer, ctx.asyncAssertSuccess(s -> {
             consumerCreation.complete();
-        }));
-        consumerCreation.await(500);
+        }), closeHook -> {});
+        consumerCreation.await();
 
         // WHEN an event is received
         ProtonDelivery delivery = mock(ProtonDelivery.class);
@@ -106,5 +111,45 @@ public class EventConsumerImplTest {
         messageHandler.getValue().handle(delivery, msg);
         verify(delivery).disposition(any(Released.class), eq(Boolean.TRUE));
     }
+
+    /**
+     * Verifies that the close on receiver calls the closehook.
+     *
+     * @param ctx The test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCloseHookOnDetach(final TestContext ctx) {
+
+        // GIVEN an open event consumer
+        Async consumerCreation = ctx.async();
+        BiConsumer<ProtonDelivery, Message> eventConsumer = mock(BiConsumer.class);
+        ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
+        when(receiver.open()).then(answer -> {
+            consumerCreation.complete();
+            return receiver;
+        });
+
+        ProtonConnection con = mock(ProtonConnection.class);
+        when(con.createReceiver(anyString())).thenReturn(receiver);
+
+        Handler<String> closeHook = mock(Handler.class);
+        ArgumentCaptor<Handler> detachCaptor = ArgumentCaptor.forClass(Handler.class);
+        EventConsumerImpl.create(vertx.getOrCreateContext(), new ClientConfigProperties(), con, "tenant", eventConsumer,
+                ok->{}, closeHook );
+        consumerCreation.await();
+        verify(receiver).detachHandler(detachCaptor.capture());
+
+        // WHEN the receiver link is closed
+        detachCaptor.getValue().handle(Future.succeededFuture(receiver));
+
+        // THEN the close hook is called
+        verify(closeHook).handle(any());
+
+        // and the receiver link is closed
+        verify(receiver).close();
+    }
+
 
 }
