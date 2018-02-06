@@ -34,6 +34,7 @@ public interface SenderFactory {
      * @param address The target address to use for the sender.
      * @param qos The quality of service the sender should use.
      * @param sendQueueDrainHandler The handler to notify about credits the sender is getting replenished with.
+     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @return The outcome of the creation attempt.
      * @throws NullPointerException if any of connection, address or QoS is {@code null}.
      */
@@ -41,5 +42,6 @@ public interface SenderFactory {
             ProtonConnection connection,
             ResourceIdentifier address,
             ProtonQoS qos,
-            Handler<ProtonSender> sendQueueDrainHandler);
+            Handler<ProtonSender> sendQueueDrainHandler,
+            Handler<Void> closeHook);
 }

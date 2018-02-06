@@ -54,7 +54,8 @@ public class SenderFactoryImpl implements SenderFactory {
             final ProtonConnection connection,
             final ResourceIdentifier address,
             final ProtonQoS qos,
-            final Handler<ProtonSender> sendQueueDrainHandler) {
+            final Handler<ProtonSender> sendQueueDrainHandler,
+            final Handler<Void> closeHook) {
 
         Objects.requireNonNull(connection);
         Objects.requireNonNull(address);
@@ -64,7 +65,9 @@ public class SenderFactoryImpl implements SenderFactory {
             return Future.failedFuture("connection is disconnected");
         } else {
             return newSession(connection, address).compose(session -> {
-                return newSender(connection, session, address, qos, sendQueueDrainHandler);
+                return newSender(connection, session, address, qos, sendQueueDrainHandler, hook -> {
+                    closeHook.handle(null);
+                });
             });
         }
     }
@@ -96,7 +99,8 @@ public class SenderFactoryImpl implements SenderFactory {
             final ProtonSession session,
             final ResourceIdentifier address,
             final ProtonQoS qos,
-            final Handler<ProtonSender> sendQueueDrainHandler) {
+            final Handler<ProtonSender> sendQueueDrainHandler,
+            final Handler<String> closeHook) {
 
         Future<ProtonSender> result = Future.future();
         ProtonSender sender = session.createSender(getTenantOnlyTargetAddress(address));
@@ -119,7 +123,26 @@ public class SenderFactoryImpl implements SenderFactory {
         });
         sender.closeHandler(closed -> {
             if (closed.succeeded()) {
-                LOG.debug("sender [{}] for container [{}] closed", address, connection.getRemoteContainer());
+                LOG.debug("sender [{}] for container [{}] closed", address,
+                        connection.getRemoteContainer());
+            } else {
+                LOG.debug("sender [{}] for container [{}] closed: {}", address,
+                        connection.getRemoteContainer(), closed.cause().getMessage());
+            }
+            if (closeHook != null) {
+                closeHook.handle(address.getResourceId());
+            }
+        });
+        sender.detachHandler(detached -> {
+            if (detached.succeeded()) {
+                LOG.debug("sender [{}] detached (with closed=false) by peer [{}]", address,
+                        connection.getRemoteContainer());
+            } else {
+                LOG.debug("sender [{}] detached (with closed=false) by peer [{}]: {}", address,
+                        connection.getRemoteContainer(), detached.cause().getMessage());
+            }
+            if (closeHook != null) {
+                closeHook.handle(address.getResourceId());
             }
         });
         sender.open();

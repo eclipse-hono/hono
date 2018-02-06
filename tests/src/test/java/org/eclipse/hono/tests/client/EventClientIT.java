@@ -33,7 +33,7 @@ public class EventClientIT extends ClientTestBase {
 
     @Override
     Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return downstreamClient.createEventConsumer(tenantId, messageConsumer);
+        return downstreamClient.createEventConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
