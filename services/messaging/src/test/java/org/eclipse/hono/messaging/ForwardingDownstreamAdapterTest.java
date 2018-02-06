@@ -44,6 +44,7 @@ import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonSession;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Verifies standard behavior of {@code ForwardingDownstreamAdapter}.
@@ -266,6 +267,35 @@ public class ForwardingDownstreamAdapterTest {
     }
 
     /**
+     * Verifies that the sender and upstream client are closed when the downstream link is lost
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testDownstreamLinkClosesUpstreamReceivers() {
+
+        final UpstreamReceiver client = newClient();
+        final ProtonSender downstreamSender = newMockSender(false);
+
+        HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con);
+        when(downstreamSender.isOpen()).thenReturn(Boolean.FALSE);
+
+        // GIVEN an adapter connected to a downstream container
+        givenADownstreamAdapter(downstreamSender);
+        adapter.setDownstreamConnectionFactory(factory);
+        adapter.start(Future.future());
+        adapter.onClientAttach(client, s -> {});
+        ArgumentCaptor<Handler> detachHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(downstreamSender).detachHandler(detachHandlerCaptor.capture());
+
+        // WHEN the downstream sender is closed
+        detachHandlerCaptor.getValue().handle(Future.succeededFuture(downstreamSender));
+
+        // THEN the senders should be empty and the upstream client should has been closed
+        verify(client).close(any());
+        assertTrue(adapter.isActiveSendersEmpty());
+    }
+
+    /**
      * Verifies that all requests from upstream clients to attach are failed when the connection to the
      * downstream container is lost.
      * 
@@ -278,7 +308,7 @@ public class ForwardingDownstreamAdapterTest {
         final UpstreamReceiver client = newClient();
         when(client.getTargetAddress()).thenReturn(targetAddress.toString());
         final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con);
-        final SenderFactory senderFactory = (con, address, qos, drainHandler) -> {
+        final SenderFactory senderFactory = (con, address, qos, drainHandler, closeHook) -> {
             Future<ProtonSender> result = Future.future();
             return result;
         };

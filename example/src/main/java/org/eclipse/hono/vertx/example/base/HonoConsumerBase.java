@@ -89,10 +89,10 @@ public class HonoConsumerBase {
         honoClient.connect(new ProtonClientOptions()).compose(connectedClient -> {
             if (eventMode) {
                 return connectedClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
-                        msg -> handleMessage(msg));
+                        this::handleMessage, closeHook -> System.err.println("remotely detached consumer link"));
             } else {
                 return connectedClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
-                        msg -> handleMessage(msg));
+                        this::handleMessage, closeHook -> System.err.println("remotely detached consumer link"));
             }
         }).setHandler(consumerFuture.completer());
 

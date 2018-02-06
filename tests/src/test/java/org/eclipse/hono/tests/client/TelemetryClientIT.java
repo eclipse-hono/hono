@@ -32,7 +32,7 @@ public class TelemetryClientIT extends ClientTestBase {
 
     @Override
     Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return downstreamClient.createTelemetryConsumer(tenantId, messageConsumer);
+        return downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override

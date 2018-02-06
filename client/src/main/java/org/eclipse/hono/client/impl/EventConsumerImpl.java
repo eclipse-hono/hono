@@ -50,7 +50,8 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
      * @param tenantId The tenant to consumer events for.
      * @param eventConsumer The consumer to invoke with each event received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
+     * @throws NullPointerException if any of the parameters except the closeHook is {@code null}.
      */
     public static void create(
             final Context context,
@@ -58,9 +59,10 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
             final ProtonConnection con,
             final String tenantId,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<String> closeHook) {
 
-        create(context, clientConfig, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, eventConsumer, creationHandler);
+        create(context, clientConfig, con, tenantId, Constants.DEFAULT_PATH_SEPARATOR, eventConsumer, creationHandler, closeHook);
     }
 
     /**
@@ -73,7 +75,8 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
      * @param pathSeparator The address path separator character used by the server.
      * @param eventConsumer The consumer to invoke with each event received.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
+     * @throws NullPointerException if any of the parameters except the closeHook is {@code null}.
      */
     public static void create(
             final Context context,
@@ -82,7 +85,8 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
             final String tenantId,
             final String pathSeparator,
             final BiConsumer<ProtonDelivery, Message> eventConsumer,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler) {
+            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<String> closeHook) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(clientConfig);
@@ -93,7 +97,7 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
         Objects.requireNonNull(creationHandler);
 
         createReceiver(context, clientConfig, con, String.format(EVENT_ADDRESS_TEMPLATE, pathSeparator, tenantId),
-                ProtonQoS.AT_LEAST_ONCE, eventConsumer::accept, null).setHandler(created -> {
+                ProtonQoS.AT_LEAST_ONCE, eventConsumer::accept, closeHook).setHandler(created -> {
             if (created.succeeded()) {
                 creationHandler.handle(Future.succeededFuture(
                         new EventConsumerImpl(context, clientConfig, created.result())));

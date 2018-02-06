@@ -132,12 +132,14 @@ public interface HonoClient {
      * 
      * @param tenantId The tenant to consume data for.
      * @param telemetryConsumer The handler to invoke with every message received.
+     * @param closeHandler The handler invoked when the peer detaches the link.
      * @return A future that will complete with the consumer once the link has been established.
      *         The future will fail if the link cannot be established, e.g. because this
      *         client is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<MessageConsumer> createTelemetryConsumer(String tenantId, Consumer<Message> telemetryConsumer);
+    Future<MessageConsumer> createTelemetryConsumer(String tenantId, Consumer<Message> telemetryConsumer,
+            Handler<Void> closeHandler);
 
     /**
      * Creates a new consumer of events for a tenant.
@@ -147,12 +149,14 @@ public interface HonoClient {
      *
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
+     * @param closeHandler The handler invoked when the peer detaches the link.
      * @return A future that will complete with the consumer once the link has been established.
      *         The future will fail if the link cannot be established, e.g. because this
      *         client is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<MessageConsumer> createEventConsumer(String tenantId, Consumer<Message> eventConsumer);
+    Future<MessageConsumer> createEventConsumer(String tenantId, Consumer<Message> eventConsumer,
+            Handler<Void> closeHandler);
 
     /**
      * Creates a new consumer of events for a tenant.
@@ -163,12 +167,14 @@ public interface HonoClient {
      *
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
+     * @param closeHandler The handler invoked when the peer detaches the link.
      * @return A future that will complete with the consumer once the link has been established.
      *         The future will fail if the link cannot be established, e.g. because this
      *         client is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<MessageConsumer> createEventConsumer(String tenantId, BiConsumer<ProtonDelivery, Message> eventConsumer);
+    Future<MessageConsumer> createEventConsumer(String tenantId, BiConsumer<ProtonDelivery, Message> eventConsumer,
+            Handler<Void> closeHandler);
 
     /**
      * Gets a client for invoking operations on a service implementing
