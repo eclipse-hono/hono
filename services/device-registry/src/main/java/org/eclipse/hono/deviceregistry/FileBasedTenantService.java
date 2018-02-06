@@ -332,13 +332,13 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                 }
             }
 
-            JsonObject obj=data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
+            JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
 
             try {
                 final JsonArray adaptersConfigurationArray = obj.getJsonArray(FIELD_ADAPTERS);
                 if (adaptersConfigurationArray != null) {
-                    final Map<String, JsonObject> adapterConfigurationsMap=new HashMap<>();
-                    for (int i=0; i < adaptersConfigurationArray.size(); i++) {
+                    final Map<String, JsonObject> adapterConfigurationsMap = new HashMap<>();
+                    for (int i = 0; i < adaptersConfigurationArray.size(); i++) {
                         final JsonObject adapterConfiguration = adaptersConfigurationArray.getJsonObject(i);
                         final String adapterType = (String) adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
 
