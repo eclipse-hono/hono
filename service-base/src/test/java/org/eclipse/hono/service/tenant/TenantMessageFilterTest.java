@@ -13,13 +13,11 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_RESOURCE;
 import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_TENANT_ID;
 import static org.eclipse.hono.util.TenantConstants.Action;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -63,16 +61,6 @@ public class TenantMessageFilterTest {
 
         // THEN message validation succeeds
         assertTrue(TenantMessageFilter.verify(linkTarget, msg));
-        assertMessageAnnotationsContainProperties(msg, DEFAULT_TENANT);
-    }
-
-    private void assertMessageAnnotationsContainProperties(final Message msg, final String tenantId) {
-        assertNotNull(msg.getMessageAnnotations());
-        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(MessageHelper.APP_PROPERTY_TENANT_ID)),
-                is(tenantId));
-        final ResourceIdentifier expectedResourceIdentifier = getResourceIdentifier(DEFAULT_TENANT);
-        assertThat(msg.getMessageAnnotations().getValue().get(Symbol.valueOf(APP_PROPERTY_RESOURCE)),
-                is(expectedResourceIdentifier.toString()));
     }
 
     private ResourceIdentifier getResourceIdentifier(final String tenant) {
