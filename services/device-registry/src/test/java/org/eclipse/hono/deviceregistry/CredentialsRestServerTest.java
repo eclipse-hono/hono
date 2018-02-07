@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,15 +11,11 @@
  */
 package org.eclipse.hono.deviceregistry;
 
-import static org.eclipse.hono.util.CredentialsConstants.*;
-import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
-
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
@@ -28,8 +24,8 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
@@ -195,7 +191,7 @@ public class CredentialsRestServerTest {
      */
     @Test
     public void testAddCredentialsFailsForMissingDeviceId(final TestContext context) {
-        testAddCredentialsWithMissingPayloadParts(context, FIELD_DEVICE_ID);
+        testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_DEVICE_ID);
     }
 
     /**
@@ -207,7 +203,7 @@ public class CredentialsRestServerTest {
      */
     @Test
     public void testAddCredentialsFailsForMissingType(final TestContext context) {
-        testAddCredentialsWithMissingPayloadParts(context, FIELD_TYPE);
+        testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_TYPE);
     }
 
     /**
@@ -219,7 +215,7 @@ public class CredentialsRestServerTest {
      */
     @Test
     public void testAddCredentialsFailsForMissingAuthId(final TestContext context) {
-        testAddCredentialsWithMissingPayloadParts(context, FIELD_AUTH_ID);
+        testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_AUTH_ID);
     }
 
     /**
@@ -233,14 +229,14 @@ public class CredentialsRestServerTest {
         final String authId = getRandomAuthId(TEST_AUTH_ID);
         final JsonObject orig = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
         final JsonObject altered = orig.copy();
-        altered.put(FIELD_DEVICE_ID, "other-device");
+        altered.put(CredentialsConstants.FIELD_DEVICE_ID, "other-device");
 
         addCredentials(orig).compose(ar -> {
-            return updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered);
+            return updateCredentials(authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, altered);
         }).compose(ur -> {
             context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, ur.statusCode());
-            return getCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, b -> {
-                context.assertEquals("other-device", b.toJsonObject().getString(FIELD_DEVICE_ID));
+            return getCredentials(authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, b -> {
+                context.assertEquals("other-device", b.toJsonObject().getString(CredentialsConstants.FIELD_DEVICE_ID));
             });
         }).setHandler(context.asyncAssertSuccess(gr -> {
             context.assertEquals(HttpURLConnection.HTTP_OK, gr.statusCode());
@@ -258,7 +254,7 @@ public class CredentialsRestServerTest {
         final String authId = getRandomAuthId(TEST_AUTH_ID);
         final JsonObject altered = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
 
-        updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_NOT_FOUND)
+        updateCredentials(authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_NOT_FOUND)
             .setHandler(context.asyncAssertSuccess());
     }
 
@@ -272,10 +268,10 @@ public class CredentialsRestServerTest {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
         final JsonObject orig = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
-        final JsonObject altered = orig.copy().put(FIELD_TYPE, "non-matching-type");
+        final JsonObject altered = orig.copy().put(CredentialsConstants.FIELD_TYPE, "non-matching-type");
 
         addCredentials(orig).compose(ar -> {
-            return updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_BAD_REQUEST);
+            return updateCredentials(authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_BAD_REQUEST);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -290,10 +286,10 @@ public class CredentialsRestServerTest {
 
         final String authId = getRandomAuthId(TEST_AUTH_ID);
         final JsonObject orig = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
-        final JsonObject altered = orig.copy().put(FIELD_AUTH_ID, "non-matching-auth-id");
+        final JsonObject altered = orig.copy().put(CredentialsConstants.FIELD_AUTH_ID, "non-matching-auth-id");
 
         addCredentials(orig).compose(ar -> {
-            return updateCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_BAD_REQUEST);
+            return updateCredentials(authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, altered, HttpURLConnection.HTTP_BAD_REQUEST);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -324,7 +320,7 @@ public class CredentialsRestServerTest {
         final JsonObject credentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
             // now try to remove credentials again
-            return removeCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD);
+            return removeCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         }).setHandler(context.asyncAssertSuccess(rr -> {
             context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, rr.statusCode());
         }));
@@ -374,7 +370,7 @@ public class CredentialsRestServerTest {
 
         addCredentials(requestBody).compose(ar -> {
             // now try to get credentials again
-            return getCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD, b -> {
+            return getCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, b -> {
                 context.assertTrue(DeviceRegistryTestUtils.testJsonObjectToBeContained(b.toJsonObject(), requestBody));
             });
         }).setHandler(context.asyncAssertSuccess());
@@ -398,11 +394,11 @@ public class CredentialsRestServerTest {
         credentialsListToAdd.add(presharedKeyCredentials);
 
         addMultipleCredentials(credentialsListToAdd).compose(ar -> {
-            return getCredentials(authId, SECRETS_TYPE_HASHED_PASSWORD, b -> {
+            return getCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, b -> {
                 context.assertTrue(DeviceRegistryTestUtils.testJsonObjectToBeContained(b.toJsonObject(), hashedPasswordCredentials));
             });
         }).compose(gr -> {
-            return getCredentials(authId, SECRETS_TYPE_PRESHARED_KEY, b -> {
+            return getCredentials(authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, b -> {
                 context.assertTrue(DeviceRegistryTestUtils.testJsonObjectToBeContained(b.toJsonObject(), presharedKeyCredentials));
             });
         }).setHandler(context.asyncAssertSuccess());
@@ -448,7 +444,7 @@ public class CredentialsRestServerTest {
         final List<JsonObject> credentialsToAdd = new ArrayList<>();
         for(int i = 0; i < 5; i++) {
             final JsonObject requestBody = DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey(TEST_DEVICE_ID, authId);
-            requestBody.put(FIELD_TYPE, "type" + i);
+            requestBody.put(CredentialsConstants.FIELD_TYPE, "type" + i);
             credentialsToAdd.add(requestBody);
         }
         addMultipleCredentials(credentialsToAdd).compose(ar -> {
@@ -485,7 +481,7 @@ public class CredentialsRestServerTest {
         final String authId = getRandomAuthId(TEST_AUTH_ID);
         final JsonObject credentials = DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword(TEST_DEVICE_ID, authId);
         addCredentials(credentials).compose(ar -> {
-            return getCredentials("wrong-auth-id", SECRETS_TYPE_HASHED_PASSWORD, HttpURLConnection.HTTP_NOT_FOUND, null);
+            return getCredentials("wrong-auth-id", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, HttpURLConnection.HTTP_NOT_FOUND, null);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -512,11 +508,11 @@ public class CredentialsRestServerTest {
             final List<JsonObject> credentialsList) {
 
         // the response must contain all of the payload of the add request, so test that now
-        context.assertTrue(responseBody.containsKey(FIELD_CREDENTIALS_TOTAL));
-        Integer totalCredentialsFound = responseBody.getInteger(FIELD_CREDENTIALS_TOTAL);
+        context.assertTrue(responseBody.containsKey(CredentialsConstants.FIELD_CREDENTIALS_TOTAL));
+        Integer totalCredentialsFound = responseBody.getInteger(CredentialsConstants.FIELD_CREDENTIALS_TOTAL);
         context.assertEquals(totalCredentialsFound, credentialsList.size());
-        context.assertTrue(responseBody.containsKey(CREDENTIALS_ENDPOINT));
-        final JsonArray credentials = responseBody.getJsonArray(CREDENTIALS_ENDPOINT);
+        context.assertTrue(responseBody.containsKey(CredentialsConstants.CREDENTIALS_ENDPOINT));
+        final JsonArray credentials = responseBody.getJsonArray(CredentialsConstants.CREDENTIALS_ENDPOINT);
         context.assertNotNull(credentials);
         context.assertEquals(credentials.size(), totalCredentialsFound);
         // TODO: add full test if the lists are 'identical' (contain the same JsonObjects by using the

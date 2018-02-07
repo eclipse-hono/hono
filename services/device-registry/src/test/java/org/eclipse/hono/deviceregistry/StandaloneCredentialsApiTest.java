@@ -138,16 +138,13 @@ public class StandaloneCredentialsApiTest {
     public static void shutdown(final TestContext ctx) {
 
         final Future<Void> clientTracker = Future.future();
-        final Future<Void> vertxTracker = Future.future();
         if (client != null) {
             client.shutdown(clientTracker.completer());
         } else {
             clientTracker.complete();
         }
-        clientTracker.compose(s -> {
-            vertx.close(vertxTracker.completer());
-            return vertxTracker;
-        }).recover(t -> {
+        clientTracker.otherwiseEmpty().compose(s -> {
+            final Future<Void> vertxTracker = Future.future();
             vertx.close(vertxTracker.completer());
             return vertxTracker;
         }).setHandler(ctx.asyncAssertSuccess());

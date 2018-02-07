@@ -21,6 +21,7 @@ import org.apache.qpid.proton.message.Message;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.util.MessageHelper;
@@ -43,56 +44,62 @@ public class RequestResponseApiConstants {
     public static final String FIELD_TENANT_ID = "tenant-id";
 
     /**
-     * Build a Proton message as a reply for an endpoint from the json payload that e.g. is received from the vert.x eventbus
-     * from the implementing service.
+     * Creates an AMQP message from a JSON message containing the response to an
+     * invocation of a service operation.
      *
-     * @param endpoint The endpoint the reply message will be built for.
-     * @param payload The json payload received.
-     * @return Message The built Proton message.
+     * @param endpoint The service endpoint that the operation has been invoked on.
+     * @param response The JSON message containing the response.
+     * @return The AMQP message.
+     * @throws NullPointerException if endpoint is {@code null}.
      */
-    public static final Message getAmqpReply(final String endpoint, final JsonObject payload) {
+    public static final Message getAmqpReply(final String endpoint, final JsonObject response) {
 
-        final String tenantId = payload.getString(FIELD_TENANT_ID);
-        final String deviceId = payload.getString(FIELD_DEVICE_ID);
-        final Integer status = payload.getInteger(MessageHelper.APP_PROPERTY_STATUS);
-        final JsonObject correlationIdJson = payload.getJsonObject(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
+        final String tenantId = response.getString(FIELD_TENANT_ID);
+        final String deviceId = response.getString(FIELD_DEVICE_ID);
+        final Integer status = response.getInteger(MessageHelper.APP_PROPERTY_STATUS);
+        final JsonObject correlationIdJson = response.getJsonObject(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
         final Object correlationId = MessageHelper.decodeIdFromJson(correlationIdJson);
-        final boolean isApplCorrelationId = payload.getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
+        final boolean isApplCorrelationId = response.getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
         return getAmqpReply(endpoint, status, correlationId, tenantId, deviceId, isApplCorrelationId,
-                payload.getJsonObject(CredentialsConstants.FIELD_PAYLOAD));
+                response.getJsonObject(CredentialsConstants.FIELD_PAYLOAD));
     }
 
     /**
-     * Build a Proton message containing the reply to a request for the provided endpoint.
+     * Creates an AMQP message for a response to an invocation of a service invocation.
      *
-     * @param endpoint The endpoint the reply message will be built for.
+     * @param endpoint The service endpoint that the operation has been invoked on.
      * @param status The status from the service that processed the message.
      * @param correlationId The UUID to correlate the reply with the originally sent message.
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to.
-     * @param isApplCorrelationId Flag to inidicate if the correlationId has to be available as application property
+     * @param isApplCorrelationId Flag to indicate if the correlationId has to be available as application property
      *        {@link MessageHelper#ANNOTATION_X_OPT_APP_CORRELATION_ID}.
-     * @param payload The payload of the message reply as json object.
-     * @return Message The built Proton message. Maybe null. In that case, the message reply will not contain a body.
+     * @param payload The payload of the message reply as JSON object.
+     * @return The AMQP message.
+     * @throws NullPointerException if any of endpoint, correlation ID or tenant ID is {@code null}.
      */
     public static final Message getAmqpReply(final String endpoint, final Integer status, final Object correlationId,
                                              final String tenantId, final String deviceId, final boolean isApplCorrelationId,
                                              final JsonObject payload) {
 
+        Objects.requireNonNull(correlationId);
         final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
+
         final Message message = ProtonHelper.message();
         message.setMessageId(UUID.randomUUID().toString());
         message.setCorrelationId(correlationId);
         message.setAddress(address.toString());
 
         final Map<String, Object> map = new HashMap<>();
-        map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        if (deviceId != null) {
+            map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        }
         map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         map.put(MessageHelper.APP_PROPERTY_STATUS, status);
         message.setApplicationProperties(new ApplicationProperties(map));
 
         if (isApplCorrelationId) {
-            Map<Symbol, Object> annotations = new HashMap<>();
+            final Map<Symbol, Object> annotations = new HashMap<>();
             annotations.put(Symbol.valueOf(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID), true);
             message.setMessageAnnotations(new MessageAnnotations(annotations));
         }
@@ -105,36 +112,41 @@ public class RequestResponseApiConstants {
     }
 
     /**
-     * Build a Json object as a reply for internal communication via the vert.x event bus.
+     * Builds a JSON object as a reply for internal communication via the vert.x event bus.
      * Service implementations may use this method to build their response when replying to a request that was received for processing.
      *
      * @param status The status from the service that processed the message.
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to.
-     * @return JsonObject The json reply object that is to be sent back via the vert.x event bus.
+     * @return JsonObject The JSON reply object that is to be sent back via the vert.x event bus.
+     * @throws NullPointerException if tenant ID is {@code null}.
      */
     public static final JsonObject getServiceReplyAsJson(final int status, final String tenantId, final String deviceId) {
         return getServiceReplyAsJson(status, tenantId, deviceId, null);
     }
 
     /**
-     * Build a Json object as a reply for internal communication via the vert.x event bus.
+     * Builds a JSON object as a reply for internal communication via the vert.x event bus.
      * Services use this object to build their response when replying to a request that was received for processing.
      *
      * @param status The status from the service that processed the message.
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to.
-     * @param payload The payload of the message reply as json object.
-     * @return JsonObject The json reply object that is to be sent back via the vert.x event bus.
+     * @param payload The payload of the message reply as JSON object.
+     * @return JsonObject The JSON reply object that is to be sent back via the vert.x event bus.
+     * @throws NullPointerException if tenant ID is {@code null}.
      */
     public static final JsonObject getServiceReplyAsJson(final int status, final String tenantId, final String deviceId,
                                                          final JsonObject payload) {
+
+        Objects.requireNonNull(tenantId);
+
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(FIELD_TENANT_ID, tenantId);
+        jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, status);
         if (deviceId != null) {
             jsonObject.put(FIELD_DEVICE_ID, deviceId);
         }
-        jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, status);
         if (payload != null) {
             jsonObject.put(FIELD_PAYLOAD, payload);
         }
@@ -142,30 +154,36 @@ public class RequestResponseApiConstants {
     }
 
     /**
-     * Build a Json object as a request for internal communication via the vert.x event bus.
+     * Builds a JSON object as a request for internal communication via the vert.x event bus.
      * Clients use this object to build their request that is sent to the processing service.
      *
      * @param operation The operation that shall be processed by the service.
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to.
-     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
+     * @return JsonObject The JSON object for the request that is to be sent via the vert.x event bus.
+     * @throws NullPointerException if operation or tenant ID are {@code null}.
      */
     public static final JsonObject getServiceRequestAsJson(final String operation, final String tenantId, final String deviceId) {
         return getServiceRequestAsJson(operation, tenantId, deviceId, null);
     }
 
     /**
-     * Build a Json object as a request for internal communication via the vert.x event bus.
+     * Builds a JSON object as a request for internal communication via the vert.x event bus.
      * Clients use this object to build their request that is sent to the processing service.
      *
      * @param operation The operation that shall be processed by the service.
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to. Maybe null - then no deviceId will be contained.
      * @param payload The payload from the request that is passed to the processing service.
-     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
+     * @return JsonObject The JSON object for the request that is to be sent via the vert.x event bus.
+     * @throws NullPointerException if operation or tenant ID are {@code null}.
      */
     public static final JsonObject getServiceRequestAsJson(final String operation, final String tenantId, final String deviceId,
                                                            final JsonObject payload) {
+
+        Objects.requireNonNull(operation);
+        Objects.requireNonNull(tenantId);
+
         final JsonObject msg = new JsonObject();
         msg.put(MessageHelper.SYS_PROPERTY_SUBJECT, operation);
         msg.put(FIELD_TENANT_ID, tenantId);
