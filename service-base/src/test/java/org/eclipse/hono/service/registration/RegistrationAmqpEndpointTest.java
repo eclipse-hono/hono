@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -14,7 +14,7 @@
 package org.eclipse.hono.service.registration;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.contains;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,14 +67,14 @@ public class RegistrationAmqpEndpointTest {
     @Test
     public void testProcessMessageSendsRequestViaEventBus() {
 
-        Message msg = ProtonHelper.message();
+        final ResourceIdentifier target = ResourceIdentifier.from(
+                RegistrationConstants.REGISTRATION_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final Message msg = ProtonHelper.message();
         msg.setSubject(RegistrationConstants.ACTION_ASSERT);
-        MessageHelper.addDeviceId(msg, "4711");
-        MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
         msg.setBody(new AmqpValue(new JsonObject().put("temp", 15).encode()));
-
+        MessageHelper.annotate(msg, target);
         endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
-        verify(eventBus).send(contains(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN), any(JsonObject.class), any(Handler.class));
+        verify(eventBus).send(eq(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN), any(JsonObject.class), any(Handler.class));
     }
 }

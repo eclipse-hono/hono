@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -17,6 +17,7 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -53,25 +54,35 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The name of the default hash function to use for hashed passwords if not set explicitly.
      */
     public static final String DEFAULT_HASH_FUNCTION             ="sha-256";
-
-    private static final List<String> OPERATIONS = Arrays.asList(OPERATION_GET, OPERATION_ADD, OPERATION_UPDATE, OPERATION_REMOVE);
-
     /**
      * The vert.x event bus address to which inbound credentials messages are published.
      */
     public static final String EVENT_BUS_ADDRESS_CREDENTIALS_IN = "credentials.in";
 
+    private static final List<String> OPERATIONS = Arrays.asList(OPERATION_GET, OPERATION_ADD, OPERATION_UPDATE, OPERATION_REMOVE);
+
     private CredentialsConstants() {
         // prevent instantiation
     }
 
-    public static JsonObject getCredentialsMsg(final Message message) {
+    /**
+     * Creates a JSON message for an AMQP message representing a request to
+     * a Credentials API operation.
+     * 
+     * @param message The request message.
+     * @param target The target address that the request has been sent to.
+     * @return The JSON object to be sent over the vert.x event bus in order to process the request.
+     * @throws DecodeException if the message's payload is not valid JSON.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static JsonObject getCredentialsMsg(final Message message, final ResourceIdentifier target) {
+
         Objects.requireNonNull(message);
+        Objects.requireNonNull(target);
         final String subject = message.getSubject();
-        final String tenantId = MessageHelper.getTenantIdAnnotation(message);
-        final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
+        final String tenantId = target.getTenantId();
         final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getServiceRequestAsJson(subject, tenantId, deviceId, payload);
+        return getServiceRequestAsJson(subject, tenantId, null, payload);
     }
 
     /**
@@ -94,18 +105,14 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * @param deviceId The device that the message relates to.
      * @param authId The authId of the device that the message relates to.
      * @param type The type of credentials that the message relates to.
-     * @param payload The payload from the request that is passed to the processing service. Must not be null.
-     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
-     * @throws NullPointerException if tenant or payload is {@code null}.
+     * @return JsonObject The JSON object for the request that is to be sent via the vert.x event bus.
+     * @throws NullPointerException if tenant is {@code null}.
      */
     public static JsonObject getServiceGetRequestAsJson(final String tenantId, final String deviceId, final String authId,
-                                                        final String type, final JsonObject payload) {
+                                                        final String type) {
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(payload);
 
-        final JsonObject msg = new JsonObject();
-        msg.put(MessageHelper.SYS_PROPERTY_SUBJECT, OPERATION_GET);
-        msg.put(FIELD_TENANT_ID, tenantId);
+        final JsonObject payload = new JsonObject();
         if (deviceId != null) {
             payload.put(FIELD_DEVICE_ID, deviceId);
         }
@@ -115,11 +122,16 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
         if (type != null) {
             payload.put(FIELD_TYPE, type);
         }
-        msg.put(FIELD_PAYLOAD, payload);
 
-        return msg;
+        return getServiceRequestAsJson(OPERATION_GET, tenantId, null, payload);
     }
 
+    /**
+     * Checks if a given subject represents a Credentials API operation.
+     * 
+     * @param subject The subject to check.
+     * @return {@code true} if the subject is one of the Credential API's operations.
+     */
     public static boolean isValidSubject(final String subject) {
         if (subject == null) {
             return false;
@@ -127,6 +139,5 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
             return OPERATIONS.contains(subject);
         }
     }
-
-
 }
+

@@ -268,7 +268,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         logger.debug("getCredentials [tenant: {}, auth-id: {}, type: {}]", tenantId, authId, type);
 
         final JsonObject requestMsg = CredentialsConstants.getServiceGetRequestAsJson(
-                tenantId, null, authId, type, new JsonObject());
+                tenantId, null, authId, type);
 
         doCredentialsAction(ctx, requestMsg, (status, getCredentialsResult) -> {
             final HttpServerResponse response = ctx.response();
@@ -290,7 +290,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         logger.debug("getCredentialsForDevice [tenant: {}, device-id: {}]]", tenantId, deviceId);
 
         final JsonObject requestMsg = CredentialsConstants.getServiceGetRequestAsJson(
-                tenantId, deviceId, null, CredentialsConstants.SPECIFIER_WILDCARD, new JsonObject());
+                tenantId, deviceId, null, CredentialsConstants.SPECIFIER_WILDCARD);
 
         doCredentialsAction(ctx, requestMsg, (status, getCredentialsResult) -> {
             final HttpServerResponse response = ctx.response();
@@ -318,9 +318,9 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
     }
 
     private static void setResponseBody(final JsonObject registrationResult, final HttpServerResponse response) {
-        JsonObject msg = registrationResult.getJsonObject(CredentialsConstants.FIELD_PAYLOAD);
+        final JsonObject msg = registrationResult.getJsonObject(CredentialsConstants.FIELD_PAYLOAD);
         if (msg != null) {
-            String body = msg.encodePrettily();
+            final String body = msg.encodePrettily();
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
                     .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
                     .write(body);

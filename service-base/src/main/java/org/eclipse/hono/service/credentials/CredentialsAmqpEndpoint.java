@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -19,7 +19,6 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -55,7 +54,7 @@ public final class CredentialsAmqpEndpoint extends RequestResponseEndpoint<Servi
     @Override
     public void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
-        final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg);
+        final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg, targetAddress);
 
         vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg,
                 result -> {
@@ -68,7 +67,7 @@ public final class CredentialsAmqpEndpoint extends RequestResponseEndpoint<Servi
                         // we need to inform client about failure
                         response = CredentialsConstants.getServiceReplyAsJson(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                MessageHelper.getTenantIdAnnotation(msg),
+                                targetAddress.getTenantId(),
                                 null,
                                 null);
                     }
@@ -78,12 +77,12 @@ public final class CredentialsAmqpEndpoint extends RequestResponseEndpoint<Servi
     }
 
     @Override
-    protected boolean passesFormalVerification(ResourceIdentifier linkTarget, Message msg) {
+    protected boolean passesFormalVerification(final ResourceIdentifier linkTarget, final Message msg) {
         return CredentialsMessageFilter.verify(linkTarget, msg);
     }
 
     @Override
-    protected Message getAmqpReply(io.vertx.core.eventbus.Message<JsonObject> message) {
+    protected Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
         return CredentialsConstants.getAmqpReply(CredentialsConstants.CREDENTIALS_ENDPOINT, message.body());
     }
 }

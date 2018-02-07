@@ -393,9 +393,9 @@ public final class MessageHelper {
      * <p>
      * In particular, the following annotations are added:
      * <ul>
-     * <li>{@link #APP_PROPERTY_DEVICE_ID} - the ID of the device that reported the data.</li>
-     * <li>{@link #APP_PROPERTY_TENANT_ID} - the ID of the tenant as indicated by the link target's second segment.</li>
-     * <li>{@link #APP_PROPERTY_RESOURCE} - the full resource path including the endpoint, the tenant and the device ID.</li>
+     * <li>{@link #APP_PROPERTY_TENANT_ID} - the tenant ID segment of the resource identifier</li>
+     * <li>{@link #APP_PROPERTY_DEVICE_ID} - the resource ID segment of the resource identifier (if not {@code null}</li>
+     * <li>{@link #APP_PROPERTY_RESOURCE} - the full resource path including the endpoint, the tenant and the resource ID</li>
      * </ul>
      *
      * @param msg the message to add the message annotations to.
@@ -403,7 +403,9 @@ public final class MessageHelper {
      */
     public static void annotate(final Message msg, final ResourceIdentifier resourceIdentifier) {
         MessageHelper.addAnnotation(msg, APP_PROPERTY_TENANT_ID, resourceIdentifier.getTenantId());
-        MessageHelper.addAnnotation(msg, APP_PROPERTY_DEVICE_ID, resourceIdentifier.getResourceId());
+        if (resourceIdentifier.getResourceId() != null) {
+            MessageHelper.addAnnotation(msg, APP_PROPERTY_DEVICE_ID, resourceIdentifier.getResourceId());
+        }
         MessageHelper.addAnnotation(msg, APP_PROPERTY_RESOURCE, resourceIdentifier.toString());
     }
 
