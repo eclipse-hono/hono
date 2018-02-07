@@ -350,6 +350,9 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                     }
                     // all is checked and prepared, now store it internally
                     tenantsAdapterConfigurations.put(tenantId, adapterConfigurationsMap);
+                } else {
+                    // in case of update: remove a possibly existing previous entry
+                    tenantsAdapterConfigurations.remove(tenantId);
                 }
             } catch (ClassCastException cce) {
                 log.debug("addTenant invoked with wrong type for {}: not a JsonArray!", FIELD_ADAPTERS);
