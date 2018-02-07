@@ -39,10 +39,9 @@ public final class RegistrationMessageFilter extends BaseMessageFilter {
      */
      public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
 
-         if (!verifyStandardProperties(linkTarget, msg)) {
+         if (!hasValidDeviceId(linkTarget, msg)) {
              return false;
-         } else if (msg.getMessageId() == null && msg.getCorrelationId() == null) {
-             LOG.trace("message has neither a message-id nor correlation-id");
+         } else if (!hasCorrelationId(msg)) {
              return false;
          } else if (!RegistrationConstants.isValidAction(msg.getSubject())) {
              LOG.trace("message [{}] does not contain valid action property", msg.getMessageId());

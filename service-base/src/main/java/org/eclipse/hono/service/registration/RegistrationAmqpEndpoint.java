@@ -53,7 +53,7 @@ public final class RegistrationAmqpEndpoint extends RequestResponseEndpoint<Serv
     @Override
     public void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
-        final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg);
+        final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg, targetAddress);
 
         vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
                 result -> {
@@ -66,8 +66,8 @@ public final class RegistrationAmqpEndpoint extends RequestResponseEndpoint<Serv
                         // we need to inform client about failure
                         response = RegistrationConstants.getServiceReplyAsJson(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                MessageHelper.getTenantIdAnnotation(msg),
-                                MessageHelper.getDeviceIdAnnotation(msg),
+                                targetAddress.getTenantId(),
+                                MessageHelper.getDeviceId(msg),
                                 null);
                     }
                     addHeadersToResponse(msg, response);
