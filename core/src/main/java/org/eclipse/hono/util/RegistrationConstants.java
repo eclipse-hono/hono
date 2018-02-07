@@ -105,22 +105,23 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      * Creates a JSON object from a Registration API request message.
      *
      * @param message The AMQP 1.0 registration request message.
+     * @param target The target address that the request has been sent to.
      * @return The registration message created from the AMQP message.
-     * @throws NullPointerException if message is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      * @throws DecodeException if the message contains a body that cannot be parsed into a JSON object.
      */
-    public static JsonObject getRegistrationMsg(final Message message) {
+    public static JsonObject getRegistrationMsg(final Message message, final ResourceIdentifier target) {
 
         Objects.requireNonNull(message);
-
-        final String deviceId = MessageHelper.getDeviceIdAnnotation(message);
-        final String tenantId = MessageHelper.getTenantIdAnnotation(message);
+        Objects.requireNonNull(target);
+        final String subject = message.getSubject();
+        final String tenantId = target.getTenantId();
+        final String deviceId = MessageHelper.getDeviceId(message);
         final String gatewayId = MessageHelper.getApplicationProperty(message.getApplicationProperties(),
                 APP_PROPERTY_GATEWAY_ID, String.class);
-        final String operation = message.getSubject();
         final JsonObject payload = MessageHelper.getJsonPayload(message);
 
-        final JsonObject result = getServiceRequestAsJson(operation, tenantId, deviceId, payload);
+        final JsonObject result = getServiceRequestAsJson(subject, tenantId, deviceId, payload);
         if (gatewayId != null) {
             result.put(APP_PROPERTY_GATEWAY_ID, gatewayId);
         }
@@ -144,8 +145,9 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      *  
      * @param msg The message to check.
      * @param expectedStatus The expected status code.
-     * @return {@code true} if the given message has a string typed <em>status</em> property and the property's value is
+     * @return {@code true} if the given message has a string typed <em>status</em> property and the property's value
      *                      is the string representation of the expected status.
+     * @throws NullPointerException if message is {@code null}.
      */
     public static boolean hasStatus(final JsonObject msg, final int expectedStatus) {
 
