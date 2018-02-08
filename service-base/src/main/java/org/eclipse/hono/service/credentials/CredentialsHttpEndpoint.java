@@ -42,7 +42,6 @@ import io.vertx.ext.web.handler.BodyHandler;
  */
 public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
-    private static final String KEY_REQUEST_BODY = "KEY_REQUEST_BODY";
     // path parameters for capturing parts of the URI path
     private static final String PARAM_TENANT_ID = "tenant_id";
     private static final String PARAM_DEVICE_ID = "device_id";
@@ -113,35 +112,6 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
     @Override
     public String getName() {
         return CredentialsConstants.CREDENTIALS_ENDPOINT;
-    }
-
-    /**
-     * 
-     * @param ctx The routing context to retrieve the JSON request body from.
-     */
-    private void extractRequiredJsonPayload(final RoutingContext ctx) {
-
-        final MIMEHeader contentType = ctx.parsedHeaders().contentType();
-        if (contentType == null) {
-            ctx.response().setStatusMessage("Missing Content-Type header");
-            ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
-        } else if (!HttpUtils.CONTENT_TYPE_JSON.equalsIgnoreCase(contentType.value())) {
-            ctx.response().setStatusMessage("Unsupported Content-Type");
-            ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
-        } else {
-            try {
-                if (ctx.getBody() != null) {
-                    ctx.put(KEY_REQUEST_BODY, ctx.getBodyAsJson());
-                    ctx.next();
-                } else {
-                    ctx.response().setStatusMessage("Empty body");
-                    ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
-                }
-            } catch (DecodeException e) {
-                ctx.response().setStatusMessage("Invalid JSON");
-                ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
-            }
-        }
     }
 
     private void addCredentials(final RoutingContext ctx) {
