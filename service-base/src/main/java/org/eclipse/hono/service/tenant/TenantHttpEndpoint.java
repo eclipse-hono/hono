@@ -132,7 +132,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         sendTenantAction(ctx, requestMsg, (status, tenantResult) -> {
             response.setStatusCode(status);
-            if (status >=400) {
+            if (status >= 400) {
                 setResponseBody(tenantResult, response);
             } else if (sendResponseForStatus != null) {
                 if (sendResponseForStatus.test(status)) {

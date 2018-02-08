@@ -19,8 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.ProtocolAdapterConstants;
 import org.eclipse.hono.util.TenantConstants;
 
 import io.vertx.core.buffer.Buffer;
@@ -95,16 +95,16 @@ public final class DeviceRegistryTestUtils {
      */
     public static JsonObject buildTenantPayload(final String tenantId) {
         final JsonObject adapterDetailsHttp = new JsonObject().
-                put(TenantConstants.FIELD_ADAPTERS_TYPE, ProtocolAdapterConstants.TYPE_HTTP).
-                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, "true").
-                put(TenantConstants.FIELD_ENABLED, "true");
+                put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_HTTP).
+                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE).
+                put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         final JsonObject adapterDetailsMqtt = new JsonObject().
-                put(TenantConstants.FIELD_ADAPTERS_TYPE, ProtocolAdapterConstants.TYPE_MQTT).
-                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, "true").
-                put(TenantConstants.FIELD_ENABLED, "true");
+                put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_MQTT).
+                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE).
+                put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         final JsonObject tenantPayload = new JsonObject().
                 put(TenantConstants.FIELD_TENANT_ID, tenantId).
-                put(TenantConstants.FIELD_ENABLED, "true").
+                put(TenantConstants.FIELD_ENABLED, Boolean.TRUE).
                 put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
         return tenantPayload;
     }
@@ -133,8 +133,9 @@ public final class DeviceRegistryTestUtils {
      * A simple implementation of subtree containment: all entries of the JsonObject that is tested to be contained
      * must be contained in the other JsonObject as well. Nested JsonObjects are treated the same by recursively calling
      * this method to test the containment.
-     * Note that currently JsonArrays need to be equal and are not tested for containment (not necessary for our purposes
-     * here).
+     * JsonArrays are tested for containment as well: all elements in a JsonArray belonging to the contained JsonObject
+     * must be present in the corresponding JsonArray of the other JsonObject as well. The sequence of the array elements
+     * is not important (suitable for the current tests).
      * @param jsonObject The JsonObject that must fully contain the other JsonObject (but may contain more entries as well).
      * @param jsonObjectToBeContained The JsonObject that needs to be fully contained inside the other JsonObject.
      * @return The result of the containment test.
@@ -192,7 +193,7 @@ public final class DeviceRegistryTestUtils {
      * must be contained in the other JsonArray as well. Contained JsonObjects are tested for subtree containment as
      * implemented in {@link #testJsonObjectToBeContained(JsonObject, JsonObject)}.
      * <p>
-     * The order sequence of the elements are intentionally not important - the containing array is iterated always from
+     * The order sequence of the elements is intentionally not important - the containing array is always iterated from
      * the beginning and the containment of an element is handled as successful if a suitable element in the containing
      * array was found (sufficient for the current tests).
      * <p>
@@ -219,7 +220,7 @@ public final class DeviceRegistryTestUtils {
                     return false;
                 }
 
-                if (testJsonObjectToBeContained((JsonObject)elemOfBiggerArray, (JsonObject)containedElem)) {
+                if (testJsonObjectToBeContained((JsonObject) elemOfBiggerArray, (JsonObject) containedElem)) {
                     containingElemFound = true;
                     break;
                 }
