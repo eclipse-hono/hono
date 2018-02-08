@@ -1,6 +1,6 @@
 +++
-title = "Setup Secure Communication"
-weight = 240
+title = "Secure Communication"
+weight = 340
 +++
 
 The individual components of an Eclipse Hono&trade; installation, e.g. the *Hono server*, *Dispatch Router*, *MQTT adapter* etc, and the clients attaching to Hono in order to send and receive data all communicate with each other using AMQP 1.0 over TCP. The Hono components and the clients will usually not be located on the same local network but will probably communicate over public internet infrastructure. For most use cases it is therefore desirable, if not necessary, to provide for confidentiality of the data being transferred between these components. This section describes how Hono supports confidentiality by means of *Transport Layer Security* (TLS) and how to configure it.
@@ -23,7 +23,7 @@ Within a Hono installation the following communication channels can be secured w
 
 ## Auth Server
 
-The Auth Server supports the use of TLS for connections to clients. Please refer to the [Auth Server component documentation]({{< relref "user-guide/auth-server.md" >}}) for details regarding the required configuration steps.
+The Auth Server supports the use of TLS for connections to clients. Please refer to the [Auth Server component documentation]({{< relref "admin-guide/auth-server-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder includes the following demo keys and certificates to be used with the Auth Server for that purpose.
 
@@ -49,7 +49,7 @@ The `demo-certs/certs` folder includes the following demo keys and certificates 
 ## Hono Messaging
 
 Hono Messaging supports the use of TLS for connections to protocol adapters, the Dispatch Router and the Auth Server.
-Please refer to the [Hono Messaging component documentation]({{< relref "user-guide/hono-messaging.md" >}}) for details regarding the required configuration steps.
+Please refer to the [Hono Messaging component documentation]({{< relref "admin-guide/hono-messaging-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with Hono Messaging for that purpose.
 
@@ -64,7 +64,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## Device Registry
 
 The Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.
-Please refer to the [Device Registry component documentation]({{< relref "user-guide/device-registry.md" >}}) for details regarding the required configuration steps.
+Please refer to the [Device Registry component documentation]({{< relref "admin-guide/device-registry-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the Device Registry for that purpose.
 
@@ -79,7 +79,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## HTTP Adapter
 
 The HTTP adapter supports the use of TLS for connections to the Device Registration service, the Credentials service and the Hono Messaging component.
-Please refer to the [HTTP adapter component documentation]({{< relref "user-guide/http-adapter.md" >}}) for details regarding the required configuration steps.
+Please refer to the [HTTP adapter component documentation]({{< relref "admin-guide/http-adapter-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the HTTP adapter for that purpose.
 
@@ -93,7 +93,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## MQTT Adapter
 
 The MQTT adapter supports the use of TLS for connections to the Device Registration service, the Credentials service and the Hono Messaging component.
-Please refer to the [MQTT adapter component documentation]({{< relref "user-guide/mqtt-adapter.md" >}}) for details regarding the required configuration steps.
+Please refer to the [MQTT adapter component documentation]({{< relref "admin-guide/mqtt-adapter-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the MQTT adapter for that purpose.
 
@@ -101,6 +101,19 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 | :------------------------ | :--------------------------------------------------------------- |
 | `mqtt-adapter-key.pem`  | The example private key for creating signatures. |
 | `mqtt-adapter-cert.pem` | The example certificate asserting the adapter's identity. |
+| `trusted-certs.pem`     | Trusted CA certificates to use for verifying signatures. |
+
+## Kura Adapter
+
+The Kura adapter supports the use of TLS for connections to the Device Registration service, the Credentials service and the Hono Messaging component.
+Please refer to the [Kura adapter component documentation]({{< relref "admin-guide/kura-adapter-config.md" >}}) for details regarding the required configuration steps.
+
+The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the Kura adapter for that purpose.
+
+| File                      | Description                                                      |
+| :------------------------ | :--------------------------------------------------------------- |
+| `kura-adapter-key.pem`  | The example private key for creating signatures. |
+| `kura-adapter-cert.pem` | The example certificate asserting the adapter's identity. |
 | `trusted-certs.pem`     | Trusted CA certificates to use for verifying signatures. |
 
 

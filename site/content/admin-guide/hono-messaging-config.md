@@ -1,13 +1,13 @@
 +++
-title = "Setup Hono Messaging"
-weight = 280
+title = "Hono Messaging Configuration"
+weight = 310
 +++
 
 The Hono Messaging component exposes service endpoints implementing the *south bound* part of Eclipse Hono&trade;'s [Telemetry]({{< relref "api/Telemetry-API.md" >}}) and [Event]({{< relref "api/Event-API.md" >}}) APIs.
 The south bound API is used by protocol adapters to upload telemetry data and events to be forwarded to downstream consumers.
 <!--more-->
 
-The component is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image created from it.
+The component is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-messaging/) created from it.
 
 ## Service Configuration
 

@@ -8,12 +8,14 @@ weight = 155
 
 ### New Features
 
-* We have added a protocol adapter for allowing [Eclipse Kura](https://www.eclipse.com/kura) gateways to publish *control* and *data* messages to Hono's Telemetry and Event API. See [Kura Adapter]({{< relref "user-guide/kura-adapter.md" >}}) for details.
+* We have added a protocol adapter for allowing [Eclipse Kura](https://www.eclipse.com/kura) gateways to publish *control* and *data* messages to Hono's Telemetry and Event API. See [Kura Adapter]({{< relref "admin-guide/kura-adapter-config.md" >}}) for details.
 * `RegistrationClientImpl` now supports caching of registration assertions received from a Device Registration service. The protocol adapters already make use of this feature  so that they do not need to do a remote service invocation unless a cached assertion has expired. The protocol adapters support two new configuration variables to set the minimum and maximum cache size.
+* Devices can now be configured to act as *gateways* and publish data *on behalf of* other devices that are not connected to a protocol adapter directly but to the gateway. This is useful for receiving data from devices using narrow band radio communication like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). See [Configuring Gateway Devices]({{< relref "admin-guide/device-registry-config.md#configuring-gateway-devices" >}}) for details.
 
 ### Fixes & Enhancements
 
-See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue%20milestone%3A0.5) for the list of issues addressed.
+* See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue%20milestone%3A0.5) for the list of issues addressed.
+* The documentation of Hono's individual components has been split up into information relevant for *using* the components (*User Guide*) and information relevant for *configuring* the components (*Admin Guide*).
 
 ### Configuration Changes
 
@@ -22,7 +24,7 @@ See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue
    * `/home/hono/registration/device-identities.json` has been changed to `/var/lib/hono/device-registry/device-identities.json`
    * `/home/hono/registration/credentials.json` has been changed to `/var/lib/hono/device-registry/credentials.json`
 * The Device Registry used in the *Getting started* guide now by default persists data to a file system volume.
-* The *REST Adapter* has been renamed to *HTTP Adapter* because it does not really comply with the common requirements for RESTful services. As part of this effort, the names of the HTTP adapter's configuration variables have also been changed accordingly. See [HTTP Adapter Service Configuration]({{< relref "user-guide/http-adapter.md#service-configuration" >}}) for details.
+* The *REST Adapter* has been renamed to *HTTP Adapter* because it does not really comply with the common requirements for RESTful services. As part of this effort, the names of the HTTP adapter's configuration variables have also been changed accordingly. See [HTTP Adapter Configuration]({{< relref "admin-guide/http-adapter-config.md#service-configuration" >}}) for details.
 
 ### API Changes
 

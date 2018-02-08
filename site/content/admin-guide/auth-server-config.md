@@ -1,6 +1,6 @@
 +++
-title = "Setup Auth Server"
-weight = 270
+title = "Auth Server Configuration"
+weight = 305
 +++
 
 The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< relref "api/Authentication-API.md" >}}) API. Other services use this component for authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
@@ -10,7 +10,7 @@ This component serves as a default implementation of the *Authentication* API on
 
 In a production environment, a more sophisticated implementation should be used instead.
 
-The Auth Server is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding Docker image (`eclipse/hono-service-auth`) created from it.
+The Auth Server is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-auth/) created from it.
 
 ## Service Configuration
 
@@ -88,7 +88,6 @@ This can be used to narrow the visibility of the insecure port to a local networ
 ### Ephemeral Ports
 
 The server may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
-
 
 ## Run as a Docker Swarm Service
 

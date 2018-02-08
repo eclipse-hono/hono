@@ -1,15 +1,16 @@
 +++
 title = "Load Tests with JMeter"
-weight = 230
+weight = 270
 +++
 
-The Hono project includes a JMeter plugin, which could be used to send and receive telemetry/event data. It uses the 
-Hono client and acts as an adapter on the sender side and as an application/solution on the receiver side.
+Eclipse Hono&trade; comes with an [Apache JMeter](https://jmeter.apache.org) plugin which can be used to send and receive telemetry/event data as part of JMeter test scripts.
 <!--more-->
+
+The plugin provides two JMeter `Sampler`s which can be used to play the roles of a protocol adapter (sender) and an application/solution (consumer).
 
 ## Installation
  
-1. Install [JMeter](http://jmeter.apache.org/download_jmeter.cgi)
+1. Install [JMeter](https://jmeter.apache.org/download_jmeter.cgi)
 2. Copy the `<hono-installation>/jmeter/target/hono-jmeter-<version>-jar-with-dependencies.jar` into the  `<jmeter-installation>/lib/ext` directory.
 3. Start JMeter
 
