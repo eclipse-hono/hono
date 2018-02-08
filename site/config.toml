@@ -62,10 +62,16 @@ pluralizeListTitles = "false"
   weight = 200
 
 [[menu.main]]
+  name   = "Admin Guide"
+  identifier = "Admin Guide"
+  url    = "/admin-guide/"
+  weight = 300
+
+[[menu.main]]
 	name   = "Developer Guide"
 	identifier = "Developer Guide"
 	url    = "/dev-guide/"
-  weight = 395
+  weight = 380
 
 [[menu.main]]
   name   = "API"

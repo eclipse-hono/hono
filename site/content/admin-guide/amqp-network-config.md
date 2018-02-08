@@ -1,9 +1,9 @@
 +++
-title = "Setup AMQP 1.0 Messaging Network"
-weight = 360
+title = "AMQP 1.0 Messaging Network Configuration"
+weight = 335
 +++
 
-The *Dispatch Router*, together with the *Apache Artemis* message broker serves as the default *AMQP 1.0 Messaging Network* that is used in Hono's example deployment as described in the [Getting Started Guide]({{< relref "getting-started.md" >}}).
+The *Dispatch Router*, together with the *Apache Artemis* message broker, serves as the default *AMQP 1.0 Messaging Network* that is used in Hono's example deployment as described in the [Getting Started Guide]({{< relref "getting-started.md" >}}).
 <!--more-->
 
 The Dispatch Router component exposes service endpoints implementing the *north bound* part of Eclipse Hono&trade;'s [Telemetry]({{< relref "api/Telemetry-API.md" >}}) and [Event]({{< relref "api/Event-API.md" >}}) APIs.
