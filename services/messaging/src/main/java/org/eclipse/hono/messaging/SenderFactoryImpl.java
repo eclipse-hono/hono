@@ -49,6 +49,9 @@ public class SenderFactoryImpl implements SenderFactory {
         this.config = Objects.requireNonNull(config);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<ProtonSender> createSender(
             final ProtonConnection connection,
@@ -72,7 +75,7 @@ public class SenderFactoryImpl implements SenderFactory {
         }
     }
 
-    private Future<ProtonSession> newSession(final ProtonConnection con, final ResourceIdentifier targetAddress) {
+    Future<ProtonSession> newSession(final ProtonConnection con, final ResourceIdentifier targetAddress) {
         final Future<ProtonSession> result = Future.future();
         ProtonSession session = con.attachments().get(targetAddress.getEndpoint(), ProtonSession.class);
         if (session != null) {
@@ -94,7 +97,7 @@ public class SenderFactoryImpl implements SenderFactory {
         return result;
     }
 
-    private Future<ProtonSender> newSender(
+    Future<ProtonSender> newSender(
             final ProtonConnection connection,
             final ProtonSession session,
             final ResourceIdentifier address,
@@ -129,6 +132,7 @@ public class SenderFactoryImpl implements SenderFactory {
                 LOG.debug("sender [{}] for container [{}] closed: {}", address,
                         connection.getRemoteContainer(), closed.cause().getMessage());
             }
+            sender.close();
             if (closeHook != null) {
                 closeHook.handle(address.getResourceId());
             }
@@ -141,6 +145,7 @@ public class SenderFactoryImpl implements SenderFactory {
                 LOG.debug("sender [{}] detached (with closed=false) by peer [{}]: {}", address,
                         connection.getRemoteContainer(), detached.cause().getMessage());
             }
+            sender.close();
             if (closeHook != null) {
                 closeHook.handle(address.getResourceId());
             }

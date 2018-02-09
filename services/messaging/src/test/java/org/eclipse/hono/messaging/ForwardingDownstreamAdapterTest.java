@@ -19,6 +19,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.Record;
@@ -267,31 +268,49 @@ public class ForwardingDownstreamAdapterTest {
     }
 
     /**
-     * Verifies that the sender and upstream client are closed when the downstream link is lost
+     * Verifies that the downstream sender's detach handler closes the sender and corresponding
+     * upstream client.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked" })
     @Test
-    public void testDownstreamLinkClosesUpstreamReceivers() {
+    public void testDownstreamLinkDetachHandlerClosesUpstreamReceivers() {
+        testDownstreamLinkHandlerClosesUpstreamReceiver((sender, captor) -> verify(sender).detachHandler(captor.capture()));
+    }
+
+    /**
+     * Verifies that the downstream sender's close handler closes the sender and corresponding
+     * upstream client.
+     */
+    @SuppressWarnings({ "unchecked" })
+    @Test
+    public void testDownstreamLinkCloseHandlerClosesUpstreamReceivers() {
+        testDownstreamLinkHandlerClosesUpstreamReceiver((sender, captor) -> verify(sender).closeHandler(captor.capture()));
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void testDownstreamLinkHandlerClosesUpstreamReceiver(
+            final BiConsumer<ProtonSender, ArgumentCaptor<Handler>> handlerCaptor) {
 
         final UpstreamReceiver client = newClient();
         final ProtonSender downstreamSender = newMockSender(false);
-
-        HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con);
         when(downstreamSender.isOpen()).thenReturn(Boolean.FALSE);
+
+        final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con);
 
         // GIVEN an adapter connected to a downstream container
         givenADownstreamAdapter(downstreamSender);
         adapter.setDownstreamConnectionFactory(factory);
         adapter.start(Future.future());
         adapter.onClientAttach(client, s -> {});
-        ArgumentCaptor<Handler> detachHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        verify(downstreamSender).detachHandler(detachHandlerCaptor.capture());
+        final ArgumentCaptor<Handler> captor = ArgumentCaptor.forClass(Handler.class);
+        handlerCaptor.accept(downstreamSender, captor);
 
-        // WHEN the downstream sender is closed
-        detachHandlerCaptor.getValue().handle(Future.succeededFuture(downstreamSender));
+        // WHEN the downstream container detaches the sender link
+        captor.getValue().handle(Future.succeededFuture(downstreamSender));
 
-        // THEN the senders should be empty and the upstream client should has been closed
+        // THEN the upstream client is closed
         verify(client).close(any());
+        // and the sender is removed from the list of active senders
         assertTrue(adapter.isActiveSendersEmpty());
     }
 
