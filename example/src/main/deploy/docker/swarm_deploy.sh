@@ -108,11 +108,6 @@ then
     --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
     --restart-condition=none \
     busybox sh -c 'cp -u /run/secrets/example-credentials.json /var/lib/hono/device-registry/credentials.json'
-
-#   docker run --rm \
-#    --mount type=bind,source=$CONFIG/example-credentials.json,target=/tmp/hono/example-credentials.json \
-#    --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
-#    busybox sh -c 'cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json'
 fi
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem

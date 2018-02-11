@@ -41,6 +41,9 @@ docker secret rm \
   hono-messaging-cert.pem \
   hono-service-messaging-config.yml
 
+docker service rm init-device-registry-data
+docker secret rm example-credentials.json
+
 docker service rm hono-service-device-registry
 docker secret rm \
   device-registry-key.pem \
