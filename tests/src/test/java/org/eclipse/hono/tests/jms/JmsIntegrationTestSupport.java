@@ -152,7 +152,7 @@ public class JmsIntegrationTestSupport {
                 String.format(
                         AMQP_URI_PATTERN,
                         IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                        IntegrationTestSupport.HONO_DEVICEREGISTRY_PORT,
+                        IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT,
                         HONO_DEVICEREGISTRY,
                         ""));
         final StringBuilder qdrURI = new StringBuilder(

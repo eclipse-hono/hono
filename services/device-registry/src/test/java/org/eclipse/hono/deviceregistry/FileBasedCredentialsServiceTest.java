@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -228,16 +229,20 @@ public class FileBasedCredentialsServiceTest {
         props.setSaveToFile(true);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
         final Async add = ctx.async(2);
+        final CredentialsObject hashedPassword = CredentialsObject.fromHashedPassword(
+                "4700", "bumlux", "secret", "sha-512", null, null, null);
+        final CredentialsObject psk = CredentialsObject.fromPresharedKey(
+                "4711", "sensor1", "sharedkey".getBytes(StandardCharsets.UTF_8), null, null);
         svc.add(
                 Constants.DEFAULT_TENANT,
-                DeviceRegistryTestUtils.buildCredentialsPayloadPresharedKey("4711", "sensor1"),
+                JsonObject.mapFrom(psk),
                 ctx.asyncAssertSuccess(s -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
                     add.countDown();
                 }));
         svc.add(
                 "OTHER_TENANT",
-                DeviceRegistryTestUtils.buildCredentialsPayloadHashedPassword("4700", "bumlux"),
+                JsonObject.mapFrom(hashedPassword),
                 ctx.asyncAssertSuccess(s -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
                     add.countDown();

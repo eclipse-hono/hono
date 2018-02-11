@@ -115,7 +115,7 @@ public abstract class ClientTestBase {
 
         final ClientConfigProperties registryProps = new ClientConfigProperties();
         registryProps.setHost(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST);
-        registryProps.setPort(IntegrationTestSupport.HONO_DEVICEREGISTRY_PORT);
+        registryProps.setPort(IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT);
         registryProps.setUsername(IntegrationTestSupport.HONO_USER);
         registryProps.setPassword(IntegrationTestSupport.HONO_PWD);
         honoDeviceRegistryClient = new HonoClientImpl(
