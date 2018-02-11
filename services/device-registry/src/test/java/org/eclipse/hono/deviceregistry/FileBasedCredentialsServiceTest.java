@@ -89,18 +89,18 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a registration service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
-        props.setCredentialsFilename(FILE_NAME);
+        props.setFilename(FILE_NAME);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
             Handler handler = invocation.getArgumentAt(1, Handler.class);
             handler.handle(Future.succeededFuture());
             return null;
-        }).when(fileSystem).createFile(eq(props.getCredentialsFilename()), any(Handler.class));
+        }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         doAnswer(invocation -> {
             Handler handler = invocation.getArgumentAt(1, Handler.class);
             handler.handle(Future.failedFuture("malformed file"));
             return null;
-        }).when(fileSystem).readFile(eq(props.getCredentialsFilename()), any(Handler.class));
+        }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
         Async startup = ctx.async();
@@ -127,7 +127,7 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a registration service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
-        props.setCredentialsFilename(FILE_NAME);
+        props.setFilename(FILE_NAME);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.FALSE);
 
         // WHEN starting the service but the file cannot be created
@@ -135,7 +135,7 @@ public class FileBasedCredentialsServiceTest {
             Handler handler = invocation.getArgumentAt(1, Handler.class);
             handler.handle(Future.failedFuture("no access"));
             return null;
-        }).when(fileSystem).createFile(eq(props.getCredentialsFilename()), any(Handler.class));
+        }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         Async startup = ctx.async();
         Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertFailure(started -> {
@@ -159,7 +159,7 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a registration service configured to read data from a file
         // that contains malformed JSON
-        props.setCredentialsFilename(FILE_NAME);
+        props.setFilename(FILE_NAME);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
             final Buffer data = mock(Buffer.class);
@@ -167,7 +167,7 @@ public class FileBasedCredentialsServiceTest {
             Handler handler = invocation.getArgumentAt(1, Handler.class);
             handler.handle(Future.succeededFuture(data));
             return null;
-        }).when(fileSystem).readFile(eq(props.getCredentialsFilename()), any(Handler.class));
+        }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
         Async startup = ctx.async();
@@ -191,14 +191,14 @@ public class FileBasedCredentialsServiceTest {
     public void testDoStartLoadsCredentials(final TestContext ctx) {
 
         // GIVEN a service configured with a file name
-        props.setCredentialsFilename(FILE_NAME);
-        when(fileSystem.existsBlocking(props.getCredentialsFilename())).thenReturn(Boolean.TRUE);
+        props.setFilename(FILE_NAME);
+        when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
             final Buffer data = DeviceRegistryTestUtils.readFile(FILE_NAME);
             Handler handler = invocation.getArgumentAt(1, Handler.class);
             handler.handle(Future.succeededFuture(data));
             return null;
-        }).when(fileSystem).readFile(eq(props.getCredentialsFilename()), any(Handler.class));
+        }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
         Async startup = ctx.async();
@@ -225,7 +225,7 @@ public class FileBasedCredentialsServiceTest {
 
         // GIVEN a service configured to persist credentials to file
         // that contains some credentials
-        props.setCredentialsFilename(FILE_NAME);
+        props.setFilename(FILE_NAME);
         props.setSaveToFile(true);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
         final Async add = ctx.async(2);

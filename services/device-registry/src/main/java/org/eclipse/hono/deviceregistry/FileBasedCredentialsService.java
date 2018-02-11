@@ -69,14 +69,14 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     private Future<Void> checkFileExists(final boolean createIfMissing) {
 
         Future<Void> result = Future.future();
-        if (getConfig().getCredentialsFilename() == null) {
+        if (getConfig().getFilename() == null) {
             result.fail("no filename set");
-        } else if (vertx.fileSystem().existsBlocking(getConfig().getCredentialsFilename())) {
+        } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
             result.complete();
         } else if (createIfMissing) {
-            vertx.fileSystem().createFile(getConfig().getCredentialsFilename(), result.completer());
+            vertx.fileSystem().createFile(getConfig().getFilename(), result.completer());
         } else {
-            log.debug("no such file [{}]", getConfig().getCredentialsFilename());
+            log.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
         }
         return result;
@@ -93,7 +93,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
                 log.info("modification of credentials has been disabled");
             }
 
-            if (getConfig().getCredentialsFilename() == null) {
+            if (getConfig().getFilename() == null) {
                 log.debug("credentials filename is not set, no credentials will be loaded");
                 running = true;
                 startFuture.complete();
@@ -118,17 +118,17 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
     Future<Void> loadCredentials() {
 
-        if (getConfig().getCredentialsFilename() == null) {
+        if (getConfig().getFilename() == null) {
             // no need to load anything
             return Future.succeededFuture();
         } else {
             final Future<Buffer> readResult = Future.future();
-            log.debug("trying to load credentials from file {}", getConfig().getCredentialsFilename());
-            vertx.fileSystem().readFile(getConfig().getCredentialsFilename(), readResult.completer());
+            log.debug("trying to load credentials from file {}", getConfig().getFilename());
+            vertx.fileSystem().readFile(getConfig().getFilename(), readResult.completer());
             return readResult.compose(buffer -> {
                 return addAll(buffer);
             }).recover(t -> {
-                log.debug("cannot load credentials from file [{}]: {}", getConfig().getCredentialsFilename(), t.getMessage());
+                log.debug("cannot load credentials from file [{}]: {}", getConfig().getFilename(), t.getMessage());
                 return Future.succeededFuture();
             });
         }
@@ -145,10 +145,10 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
                     credentialsCount += addCredentialsForTenant((JsonObject) obj);
                 }
             }
-            log.info("successfully loaded {} credentials from file [{}]", credentialsCount, getConfig().getCredentialsFilename());
+            log.info("successfully loaded {} credentials from file [{}]", credentialsCount, getConfig().getFilename());
             result.complete();
         } catch (DecodeException e) {
-            log.warn("cannot read malformed JSON from credentials file [{}]", getConfig().getCredentialsFilename());
+            log.warn("cannot read malformed JSON from credentials file [{}]", getConfig().getFilename());
             result.fail(e);
         }
         return result;
@@ -208,15 +208,15 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
                 }
                 Future<Void> writeHandler = Future.future();
                 vertx.fileSystem().writeFile(
-                        getConfig().getCredentialsFilename(),
+                        getConfig().getFilename(),
                         Buffer.buffer(tenants.encodePrettily(), StandardCharsets.UTF_8.name()),
                         writeHandler.completer());
                 return writeHandler.map(ok -> {
                     dirty = false;
-                    log.trace("successfully wrote {} credentials to file {}", idCount.get(), getConfig().getCredentialsFilename());
+                    log.trace("successfully wrote {} credentials to file {}", idCount.get(), getConfig().getFilename());
                     return (Void) null;
                 }).otherwise(t -> {
-                    log.warn("could not write credentials to file {}", getConfig().getCredentialsFilename(), t);
+                    log.warn("could not write credentials to file {}", getConfig().getFilename(), t);
                     return (Void) null;
                 });
             });
@@ -522,6 +522,6 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
     @Override
     public String toString() {
-        return String.format("%s[filename=%s]", FileBasedCredentialsService.class.getSimpleName(), getConfig().getCredentialsFilename());
+        return String.format("%s[filename=%s]", FileBasedCredentialsService.class.getSimpleName(), getConfig().getFilename());
     }
 }
