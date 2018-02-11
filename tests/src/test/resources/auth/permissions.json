@@ -10,6 +10,14 @@
           "activities": [ "EXECUTE" ]
         },
         {
+          "resource": "credentials/DEFAULT_TENANT",
+          "activities": [ "READ", "WRITE" ]
+        },
+        {
+          "operation": "credentials/DEFAULT_TENANT:*",
+          "activities": [ "EXECUTE" ]
+        },
+        {
           "resource": "telemetry/DEFAULT_TENANT",
           "activities": [ "WRITE" ]
         },

@@ -219,6 +219,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <run>
                     <ports>
                       <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
+                      <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -475,6 +476,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.password>pw</downstream.password>
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
+                <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
               <test>*IT</test>
