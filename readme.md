@@ -6,17 +6,17 @@
 
 Please refer to the [Getting Started guide on the project web site](https://www.eclipse.org/hono/getting-started/).
 
+## Running Hono
+
+Eclipse Hono consists of multiple micro service components. Please refer to the [Admin Guide](https://www.eclipse.org/hono/admin-guide/) and [User Guide](https://www.eclipse.org/hono/user-guide/) sections on the project web site for details on how to configure and use these components.
+
 ## Using Hono
 
-Please take a look at the [example clients](client) which illustrate how client code can interact with Hono to send and receive data.
+Please take a look at the [Developer Guide](https://www.eclipse.org/hono/dev-guide/) which provides examples of how clients can interact with Hono and how to create a custom protocol adapter.
 
 ## Remote API
 
 Clients can interact with Hono by means of AMQP 1.0 based message exchanges. Please refer to the corresponding [API documentation pages](https://www.eclipse.org/hono/api/) for details:
-
-## Components
-
-Eclipse Hono consists of multiple micro service components. Please refer to the [Components section on the project web site](https://www.eclipse.org/hono/component/) for details on how to configure and use these components.
 
 ## Get in Touch
 
