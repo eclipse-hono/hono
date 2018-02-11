@@ -197,6 +197,9 @@
                 <name>${docker.image.org-name}/%a:%v</name>
                 <build>
                   <maintainer>The Eclipse Hono project</maintainer>
+                  <tags>
+                    <tag>latest</tag>
+                  </tags>
                 </build>
               </image>
             </images>
