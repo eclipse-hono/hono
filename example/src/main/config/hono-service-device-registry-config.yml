@@ -30,6 +30,6 @@ hono:
         sharedSecret: ${hono.regAssertion.sharedSecret}
   credentials:
     svc:
-      credentialsFilename: /var/lib/hono/device-registry/credentials.json
+      filename: /var/lib/hono/device-registry/credentials.json
       saveToFile: true
 

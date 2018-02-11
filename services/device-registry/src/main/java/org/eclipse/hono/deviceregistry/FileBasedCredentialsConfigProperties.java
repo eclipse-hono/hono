@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -24,9 +24,12 @@ import io.vertx.core.json.JsonObject;
  */
 public final class FileBasedCredentialsConfigProperties {
 
-    private static final String DEFAULT_CREDENTIALS_FILENAME = "/var/lib/hono/device-registry/credentials.json";
+    /**
+     * The default name of the file that the registry persists credentials to.
+     */
+    public static final String DEFAULT_CREDENTIALS_FILENAME = "/var/lib/hono/device-registry/credentials.json";
 
-    private String credentialsFilename = DEFAULT_CREDENTIALS_FILENAME;
+    private String filename = DEFAULT_CREDENTIALS_FILENAME;
     private boolean saveToFile = false;
     private boolean modificationEnabled = true;
 
@@ -87,23 +90,23 @@ public final class FileBasedCredentialsConfigProperties {
      * Gets the path to the file that the credentials registry should be persisted to
      * periodically.
      * <p>
-     * Default value is <em>/home/hono/device-registry/credentials.json</em>.
+     * Default value is {@link #DEFAULT_CREDENTIALS_FILENAME}.
      *
      * @return The file name.
      */
-    public String getCredentialsFilename() {
-        return credentialsFilename;
+    public String getFilename() {
+        return filename;
     }
 
     /**
      * Sets the path to the file that the credentials registry should be persisted to
      * periodically.
      * <p>
-     * Default value is <em>/home/hono/device-registry/credentials.json</em>.
+     * Default value is {@link #DEFAULT_CREDENTIALS_FILENAME}.
      *
      * @param filename The name of the file to persist to (can be a relative or absolute path).
      */
-    public void setCredentialsFilename(final String filename) {
-        this.credentialsFilename = filename;
+    public void setFilename(final String filename) {
+        this.filename = filename;
     }
 }

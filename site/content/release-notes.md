@@ -25,6 +25,7 @@ weight = 155
    * `/home/hono/registration/credentials.json` has been changed to `/var/lib/hono/device-registry/credentials.json`
 * The Device Registry used in the *Getting started* guide now by default persists data to a file system volume.
 * The *REST Adapter* has been renamed to *HTTP Adapter* because it does not really comply with the common requirements for RESTful services. As part of this effort, the names of the HTTP adapter's configuration variables have also been changed accordingly. See [HTTP Adapter Configuration]({{< relref "admin-guide/http-adapter-config.md#service-configuration" >}}) for details.
+* The Device Registry component's `HONO_CREDENTIALS_SRV_CREDENTIALS_FILENAME` configuration variable has been shortened to just `HONO_CREDENTIALS_SVC_FILENAME` to match its counterpart for configuring the filename of the device registration service implementation.
 
 ### API Changes
 

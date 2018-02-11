@@ -20,5 +20,5 @@ hono:
         sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
   credentials:
     svc:
-      credentialsFilename: /etc/hono/credentials.json
+      filename: /etc/hono/credentials.json
       saveToFile: false
