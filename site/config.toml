@@ -91,6 +91,12 @@ pluralizeListTitles = "false"
   url    = "/architecture/"
   weight = 500
 
+[[menu.main]]
+  name   = "Community"
+  identifier = "Community"
+  url    = "/community/"
+  weight = 600
+
 [blackfriday]
 	smartypants	= true
 	fractions = true

@@ -1,11 +1,11 @@
 +++
 title = "Presentations"
-menu = "main"
-weight = 590
+weight = 620
 +++
 
-On this page you can find links to arbitrary material covering Eclipse Hono which has been presented at events, conferences 
-and meetups or are available online.
+On this page you can find links to arbitrary material covering Eclipse Hono which has been presented at events, conferences
+and meet-ups or are available online.
+<!--more-->
 
 ## "Eclipse Hono: Connecting large numbers of IoT devices" (Blog post January 2018)
 
