@@ -18,7 +18,7 @@ The following operations can be used by *Devices* and/or *Protocol Adapters* (to
 
 Both *Devices* as well as *Protocol Adapters* will be referred to as *clients* in the remainder of this section.
 
-## Send Event
+## Upload Event Data
 
 **Preconditions**
 
@@ -31,8 +31,15 @@ Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client theref
 
 **Message Flow**
 
-TBD
+The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* uploading an event data message to Hono Messaging's Event endpoint.
 
+![Upload event data flow](../uploadEvent_Success.png)
+
+1. *MQTT Adapter* sends event data for device `4711`.
+   1. *Hono Messaging* successfully verifies that device `4711` of `TENANT` exists and is enabled by means of validating the *registration assertion* included in the message (see [Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})) and forwards data to *AMQP 1.0 Messaging Network*.
+1. *AMQP 1.0 Messaging Network* acknowledges reception of the message.
+   1. *Hono Messaging* acknowledges reception of the message. In contrast to telemetry data, the protocol adapter awaits the disposition from the AMQP 1.0 Messaging Network before signaling to the device that it has accepted the message for processing.                                                             
+    
 **Message Format**
 
 See [Telemetry API]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) for definition of message format.
@@ -45,7 +52,7 @@ If the event passes formal verification, the outcome signaled to the client is t
 
 # Northbound Operations
 
-## Receive Events
+## Receive Event Data
 
 Hono delivers messages containing event messages reported by a particular device in the same order that they have been received in (using the *Events* operation defined above).
 Hono supports multiple non-competing *Business Application* consumers of event messages for a given tenant. Hono allows each *Business Application* to have multiple competing consumers for event messages for a given tenant to share the load of processing the messages.
@@ -59,7 +66,13 @@ Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client theref
 
 **Message Flow**
 
-TBD
+The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving an event data message from Hono. 
+
+
+![Receive event data flow](../consumeEvent_Success.png)
+
+1. *AMQP 1.0 Messaging Network* delivers event message to *Business Application*.
+1. *Business Application* acknowledges reception of message.
 
 **Message Format**
 
