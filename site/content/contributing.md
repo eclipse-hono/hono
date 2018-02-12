@@ -12,7 +12,7 @@ Here is a (non-exclusive, non-prioritized) list of things you might be able to h
 * bug reports
 * bug fixes
 * improvements regarding code quality e.g. improving readability, performance, modularity etc.
-* documentation (Getting Started guide, Examples, Deployment instructions ni cloud environments)
+* documentation (Getting Started guide, Examples, Deployment instructions for cloud environments)
 * features (both ideas and code are welcome)
 
 You might also want to take a look at our GitHub Issues page (see drawer on the left) and see if you can help out with any of the issues listed. We have put a `help wanted` label on those issues that we are particularly keen on receiving contributions for.
@@ -34,7 +34,7 @@ For you as a contributor, the following preliminary steps are required in order 
 
 1. Add your GiHub username to your Eclipse Foundation account. Log in to Eclipse and go to [Edit my account](https://dev.eclipse.org/site_login/myaccount.php).
 
-The easiest way to contribute code/patches/whatever is by creating a GitHub pull request (PR). When you do make sure that you *Sign-off* your commit records using the same email address used for your Eclipse account.
+The easiest way to contribute code/patches/whatever is by creating a GitHub pull request (PR). When you do, make sure that you *Sign-off* your commit records using the same email address used for your Eclipse account.
 
 You do this by adding the `-s` flag when you make the commit(s), e.g.
 
