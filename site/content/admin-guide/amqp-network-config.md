@@ -12,7 +12,7 @@ The north bound API is used by applications to consume telemetry data and events
 
 ## Dispatch Router Configuration
 
-The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of the [enmasse project's Dispatch Router Docker image](https://hub.docker.com/r/enmasseproject/qdrouterd-base/) created from the Qpid project source code.
+The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of the [EnMasse project's Dispatch Router Docker image](https://hub.docker.com/r/enmasseproject/qdrouterd-base/) created from the Qpid project source code.
 
 The Dispatch Router can be configured by means of configuration files. Hono contains a default configuration in the `dispatchrouter/qpid` folder and in the `dispatchrouter/sasl` for enabling authentication through SASL. Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration file format and options.
 

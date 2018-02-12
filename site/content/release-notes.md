@@ -98,7 +98,7 @@ See [Git Hub](https://github.com/eclipse/hono/issues?utf8=%E2%9C%93&q=is%3Aissue
 
 * The *Device Registry* and *Auth Server* components will support the configuration of API endpoints employing other transport protocols than *AMQP* in the future. In preparation for that, the environment variable names for configuring these components have been adapted accordingly.
 * Metrics default for the *prefix* in the Graphite reporter is now the component's host name.
-* The Docker images for Hono's components do no longer contain demo keys and certificates. The keys, certificates and configuration data are now provided to containers during deployment by means of Docker and/or Kubernetes *Secrets*. Consequently, Hono does no longer provide its custom *Dispatch Router* Docker image but instead uses the standard image provided by the enmasse project.
+* The Docker images for Hono's components do no longer contain demo keys and certificates. The keys, certificates and configuration data are now provided to containers during deployment by means of Docker and/or Kubernetes *Secrets*. Consequently, Hono does no longer provide its custom *Dispatch Router* Docker image but instead uses the standard image provided by the EnMasse project.
 * Hono no longer uses a Docker Compose file for deploying to Docker Swarm. Instead, a shell script is used which runs multiple Docker Swarm commands for deploying Hono. This approach provides for more flexibility and is more consistent with the approach already taken for the deployment to Kubernetes/OpenShift.
 
 See component docs for details.

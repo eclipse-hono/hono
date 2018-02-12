@@ -42,4 +42,4 @@ The diagram below provides an overview of the default implementation of the Mess
 
 {{< figure src="../Messaging-Network.png" >}}
 
-Scaling out messaging infrastructure is a not a trivial task. Hono **does not** provide an out-of-the-box solution to this problem but instead integrates with the [enMasse](http://enmasse.io) project which aims at providing *Messaging as a Service* infrastructure.
+Scaling out messaging infrastructure is a not a trivial task. Hono **does not** provide an out-of-the-box solution to this problem but instead integrates with the [EnMasse](http://enmasse.io) project which aims at providing *Messaging as a Service* infrastructure.
