@@ -37,4 +37,4 @@ The source code can be cloned (using [Git](https://git-scm.com/)) or downloaded 
 
 ## Release Notes
 
-For a list of the changes in this release, take a look at the [release notes]({{< relref "/release-notes.md" >}}).
+For a list of the changes in this release, take a look at the [release notes]({{< relref "release-notes.md" >}}).
