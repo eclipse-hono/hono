@@ -12,10 +12,6 @@ Note that a component implementing this API will most likely need to also provid
 
 In a real world environment there will often already be an *identity management system* in place. In such cases it can make sense to just implement a *facade* exposing the Authentication API operations and mapping them to the underlying existing system's functionality.
 
-{{% warning %}}
-THIS IS THE INITIAL DRAFT VERSION OF THE API SPEC WHICH MAY STILL BE SUBJECT TO CHANGE.
-{{% /warning %}}
-
 # Preconditions
 
 The preconditions for performing any of the operations are as follows:
