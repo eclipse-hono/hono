@@ -3,8 +3,10 @@ title = "EnMasse"
 weight = 475
 +++
 
-For more scalable messaging infrastructure, we should use messaging cloud platform like [EnMasse](http://enmasse.io/) instead of a single router/broker instance. The deployment in this case is very similar to the [standard OpenShift deployment]({{< relref "openshift.md" >}}), so check that out for basic information and prerequisites. For the rest of this guide we will assume that you have Minishift properly installed and configured.
+In the standard setup, Hono uses a single instance of [Apache Qpid Dispatch Router](https://qpid.apache.org) and [Apache Artemis](https://activemq.apache.org/artemis). For a fully scalable messaging infrastructure, the [EnMasse](http://enmasse.io/) messaging cloud platform is supported and recommended instead.
+
 <!--more-->
+The deployment in this case is very similar to the [standard OpenShift deployment]({{< relref "openshift.md" >}}), so check that out for basic information and prerequisites. For the rest of this guide we will assume that you have Minishift properly installed and configured.
 
 {{% warning %}}
 The current deployment is mostly suitable for developing, testing and demo purposes. For full production usage, you'll need to consider the following items:
