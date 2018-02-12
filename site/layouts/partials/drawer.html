@@ -44,43 +44,6 @@
 
         {{ if isset .Site.Params "author" }}
         <hr>
-        <span class="section">Get in touch:</span>
-        
-        <ul>
-          {{ with .Site.Params.repo_url }}
-          <li>
-            <a href="{{ . }}/issues" target="_blank" title="Report an issue">
-              Report an issue
-            </a>
-          </li>
-          {{ end }}
-
-          {{ with .Site.Social.twitter }}
-          <li>
-            <a href="https://twitter.com/{{ . }}" target="_blank" title="@{{ . }} on Twitter">
-              @{{ . }} on Twitter
-            </a>
-          </li>
-          {{ end }}
-
-          {{ with .Site.Social.irc }}
-          <li>
-            <a href="http://webchat.freenode.net/?randomnick=1&prompt=1&channels={{ . }}" target="_blank" title="{{ . }} on IRC">
-              Chat with us on IRC
-            </a>
-          </li>
-          {{ end }}
-
-          {{ with .Site.Social.mailinglist }}
-          <li>
-            <a href="{{ . }}" title="Join mailing list" target="_blank">
-              Join the mailing list
-            </a>
-          </li>
-          {{ end }}
-        </ul>
-
-        <hr>
         <span class="section">Build Status:</span>
 
         <ul>

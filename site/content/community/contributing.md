@@ -1,11 +1,11 @@
 +++
 title = "Contributing"
-menu = "main"
-weight = 620
+weight = 610
 +++
 
-First of all, thanks for considering to contribute to Eclipse Hono&trade;. We really appreciate the time and effort you want to
+Thank you for considering to contribute to Eclipse Hono&trade;. We really appreciate the time and effort you want to
 spend helping to improve things around here. And help we can use :-)
+<!--more-->
 
 Here is a (non-exclusive, non-prioritized) list of things you might be able to help us with:
 
