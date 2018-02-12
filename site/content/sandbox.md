@@ -18,6 +18,6 @@ All services are exposed via the same ports as used in the guide.
 * The certificates used for securing the TLS connections are signed with Hono's demo CA key. When connecting to any of the sandbox services using TLS you therefore need to add the [CA certificate](https://raw.githubusercontent.com/eclipse/hono/master/demo-certs/certs/trusted-certs.pem) to your trust anchor.
 * Devices and credentials can be added but they **cannot be updated or removed**. This is to prevent others from tampering with your devices/credentials.
 * The Grafana dashboard is not publicly available.
-* In order to minimize the risk of collisions of device identities and credentials, you should use a **non-trivial, not easy to guess tenant name** (e.g. a UUID).
-* The Apache Artemis instance we use for brokering events is configured with a maximum queue size of 1MB, i.e. you can only buffer up to 1 MB of events without having any consumer connected that actually processes the events. Once that limit is reached, no more events will be accepted by the protocol adapters.
+* In order to minimize the risk of collisions of device identities and credentials, you should use a **non-trivial, hard-to-guess tenant name** (e.g. a UUID).
+* The Apache Artemis instance we use for brokering events is configured with a maximum queue size of 1MB, i.e. you can only buffer up to 1 MB of events without having any consumer connected that actually processes the events. Once that limit is reached, no more events will be accepted by the protocol adapters for the corresponding tenant.
 
