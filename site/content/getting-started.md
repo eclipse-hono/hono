@@ -20,7 +20,7 @@ In order to enable *Swarm Mode* on your *Docker Engine* run the following comman
 Please refer to the [Docker Swarm Mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
 
 {{% warning %}}
-You will need at least Docker Engine version 1.13.1 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 17.06.0.
+You will need at least Docker Engine version 1.13.1 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 17.12.0.
 {{% /warning %}}
 
 ### Compiling
