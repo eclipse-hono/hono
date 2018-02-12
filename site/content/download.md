@@ -27,7 +27,7 @@ Hono supports deployment to the following container orchestration platforms:
 
 ### Older Versions
 
-These artifacts are available for reference only. Please always use the latest milestone since this is the one we can provide the best support for.
+These artifacts are available for reference only. Please always use the latest version since this is the one we can provide the best support for.
 
 * [0.5-M9 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.5-M9.tar.gz)
 * [0.5-M8 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.5-M8.tar.gz)
@@ -41,3 +41,7 @@ These artifacts are available for reference only. Please always use the latest m
 ## Source Code
 
 The source code can be cloned (using [Git](https://git-scm.com/)) or downloaded from the [Eclipse Hono GitHub repository](https://github.com/eclipse/hono)
+
+## Release Notes
+
+For a list of the changes in this release, take a look at the [release notes]({{< relref "/release-notes.md" >}}).
