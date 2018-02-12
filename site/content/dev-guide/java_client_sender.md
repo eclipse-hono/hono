@@ -7,7 +7,7 @@ To illustrate how Eclipse Hono&trade; can be integrated with Java code, a simple
 to the default tenant from a device. 
 It shall serve as a blueprint to integrate your existing java source code with Hono. 
 
-The code is found in the [example](https://github.com/bsinno/hono/tree/master/example) module in the package [org.eclipse.hono.vertx.example](https://github.com/bsinno/hono/tree/master/example/src/main/java/org/eclipse/hono/vertx/example).
+The code is found in the [example](https://github.com/eclipse/hono/tree/master/example) module in the package [org.eclipse.hono.vertx.example](https://github.com/eclipse/hono/tree/master/example/src/main/java/org/eclipse/hono/vertx/example).
 
 The provided classes are kept as simple as possible (in the tradition of a classical "Hello World" implementation).
 This means that they make use of simple constant definitions, deal with exceptions as rarely as possible and use a few `System.out`'s.
@@ -21,7 +21,7 @@ Note that production ready code likely has to think more about error handling an
 
 ## Configure the example
 
-For simplicity, all configurations are defined as Java constants inside the class [HonoExampleConstants](https://github.com/bsinno/hono/blob/master/example/src/main/java/org/eclipse/hono/vertx/example/base/HonoExampleConstants.java).
+For simplicity, all configurations are defined as Java constants inside the class [HonoExampleConstants](https://github.com/eclipse/hono/blob/master/example/src/main/java/org/eclipse/hono/vertx/example/base/HonoExampleConstants.java).
 
 If you have Hono running in Docker under `localhost`, the example should work out of the box.
 Otherwise, please check and change the values to your needs (they are documented inside the class) and recompile them.
