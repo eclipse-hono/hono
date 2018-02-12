@@ -1,7 +1,5 @@
 +++
 title = "Release Notes"
-menu = "main"
-weight = 155
 +++
 
 ## 0.5 (not released yet)
