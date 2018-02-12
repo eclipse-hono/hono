@@ -40,6 +40,14 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.1.0</version>
+        <configuration>
+          <attach>false</attach>
+          <!-- get all project dependencies -->
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
         <executions>
           <execution>
             <id>jmeter-plugin</id>
@@ -47,13 +55,6 @@
             <goals>
                 <goal>single</goal>
             </goals>
-            <configuration>
-              <attach>false</attach>
-              <!-- get all project dependencies -->
-              <descriptorRefs>
-                <descriptorRef>jar-with-dependencies</descriptorRef>
-              </descriptorRefs>
-            </configuration>
           </execution>
         </executions>
       </plugin>
