@@ -27,7 +27,9 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
@@ -47,6 +49,12 @@ import io.vertx.proton.ProtonClientOptions;
  */
 @RunWith(VertxUnitRunner.class)
 public class VertxBasedHttpProtocolAdapterTest {
+
+    /**
+     * Time out all tests after 5 seconds.
+     */
+    @Rule
+    public Timeout timeout = Timeout.seconds(5);
 
     private static final String HOST = "localhost";
     private static final String AUTHORIZATION_HEADER = "Authorization";
