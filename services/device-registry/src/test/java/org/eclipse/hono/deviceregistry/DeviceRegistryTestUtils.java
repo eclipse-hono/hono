@@ -47,17 +47,17 @@ public final class DeviceRegistryTestUtils {
      * @return The credentials.
      */
     public static JsonObject buildCredentialsPayloadHashedPassword(final String deviceId, final String authId) {
-        final JsonObject secret = new JsonObject().
-                put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00").
-                put(CredentialsConstants.FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00+01:00").
-                put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, "sha-512").
-                put(CredentialsConstants.FIELD_SECRETS_SALT, "aG9ubw==").
-                put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA==");
+        final JsonObject secret = new JsonObject()
+                .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00")
+                .put(CredentialsConstants.FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00+01:00")
+                .put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, "sha-512")
+                .put(CredentialsConstants.FIELD_SECRETS_SALT, "aG9ubw==")
+                .put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA==");
         final JsonObject credPayload = new JsonObject().
-                put(CredentialsConstants.FIELD_DEVICE_ID, deviceId).
-                put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD).
-                put(CredentialsConstants.FIELD_AUTH_ID, authId).
-                put(CredentialsConstants.FIELD_SECRETS, new JsonArray().add(secret));
+                put(CredentialsConstants.FIELD_DEVICE_ID, deviceId)
+                .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
+                .put(CredentialsConstants.FIELD_AUTH_ID, authId)
+                .put(CredentialsConstants.FIELD_SECRETS, new JsonArray().add(secret));
         return credPayload;
     }
 
@@ -73,15 +73,15 @@ public final class DeviceRegistryTestUtils {
      * @return The credentials.
      */
     public static JsonObject buildCredentialsPayloadPresharedKey(final String deviceId, final String authId) {
-        final JsonObject secret = new JsonObject().
-                put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00").
-                put(CredentialsConstants.FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00+01:00").
-                put(CredentialsConstants.FIELD_SECRETS_KEY, "aG9uby1zZWNyZXQ="); // base64 "hono-secret"
-        final JsonObject credPayload = new JsonObject().
-                put(CredentialsConstants.FIELD_DEVICE_ID, deviceId).
-                put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY).
-                put(CredentialsConstants.FIELD_AUTH_ID, authId).
-                put(CredentialsConstants.FIELD_SECRETS, new JsonArray().add(secret));
+        final JsonObject secret = new JsonObject()
+                .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00")
+                .put(CredentialsConstants.FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00+01:00")
+                .put(CredentialsConstants.FIELD_SECRETS_KEY, "aG9uby1zZWNyZXQ="); // base64 "hono-secret"
+        final JsonObject credPayload = new JsonObject()
+                .put(CredentialsConstants.FIELD_DEVICE_ID, deviceId)
+                .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY)
+                .put(CredentialsConstants.FIELD_AUTH_ID, authId)
+                .put(CredentialsConstants.FIELD_SECRETS, new JsonArray().add(secret));
         return credPayload;
     }
 
@@ -94,18 +94,18 @@ public final class DeviceRegistryTestUtils {
      * @return The tenant object.
      */
     public static JsonObject buildTenantPayload(final String tenantId) {
-        final JsonObject adapterDetailsHttp = new JsonObject().
-                put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_HTTP).
-                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE).
-                put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject adapterDetailsMqtt = new JsonObject().
-                put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_MQTT).
-                put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE).
-                put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject tenantPayload = new JsonObject().
-                put(TenantConstants.FIELD_TENANT_ID, tenantId).
-                put(TenantConstants.FIELD_ENABLED, Boolean.TRUE).
-                put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
+        final JsonObject adapterDetailsHttp = new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_HTTP)
+                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+        final JsonObject adapterDetailsMqtt = new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_MQTT)
+                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+        final JsonObject tenantPayload = new JsonObject()
+                .put(TenantConstants.FIELD_TENANT_ID, tenantId)
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
+                .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
         return tenantPayload;
     }
 
