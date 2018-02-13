@@ -84,7 +84,9 @@ public class TenantsRestServerTest {
         restServerProps.setInsecurePortBindAddress(HOST);
 
         deviceRegistryRestServer = new DeviceRegistryRestServer();
-        deviceRegistryRestServer.addEndpoint(new TenantHttpEndpoint(vertx));
+        final TenantHttpEndpoint tenantHttpEndpoint = new TenantHttpEndpoint(vertx);
+        tenantHttpEndpoint.setConfiguration(restServerProps);
+        deviceRegistryRestServer.addEndpoint(tenantHttpEndpoint);
         deviceRegistryRestServer.setConfig(restServerProps);
         vertx.deployVerticle(deviceRegistryRestServer, restServerDeploymentTracker.completer());
 

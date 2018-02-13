@@ -19,19 +19,15 @@ import static org.eclipse.hono.util.TenantConstants.FIELD_TENANT_ID;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -46,9 +42,6 @@ import io.vertx.ext.web.handler.BodyHandler;
  */
 public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
-    // path parameters for capturing parts of the URI path
-    private static final String PARAM_TENANT_ID = "tenant_id";
-
     /**
      * Creates an endpoint for a Vertx instance.
      *
@@ -58,6 +51,11 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
     @Autowired
     public TenantHttpEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
+    }
+
+    @Override
+    protected String getEventBusAddress() {
+        return TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN;
     }
 
     @Override
@@ -71,7 +69,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
         final String path = String.format("/%s", TenantConstants.TENANT_ENDPOINT);
 
         final BodyHandler bodyHandler = BodyHandler.create();
-        bodyHandler.setBodyLimit(2048); // limit body size to 2kb
+        bodyHandler.setBodyLimit(config.getMaxPayloadSize());
 
         // ADD tenant
         router.post(path).handler(bodyHandler);
@@ -96,11 +94,8 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
     }
 
     /**
-     * Check the Content-Type of the request to be 'application/json' and extract the payload if this check was
-     * successful.
-     * <p>
-     * The payload is parsed to ensure it is valid JSON and is put to the RoutingContext ctx with the
-     * key {@link #KEY_REQUEST_BODY}.
+     * Check if the payload (that was put to the RoutingContext ctx with the
+     * key {@link #KEY_REQUEST_BODY}) contains a value for the key {@link TenantConstants#FIELD_TENANT_ID} that is not null.
      *
      * @param ctx The routing context to retrieve the JSON request body from.
      */
@@ -120,63 +115,21 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
         ctx.next();
     }
 
-    private void doTenantHttpRequest(final RoutingContext ctx, final TenantConstants.Action action, final Predicate<Integer> sendResponseForStatus) {
+    private void doTenantHttpRequest(final RoutingContext ctx, final RequestResponseApiConstants.Action action, final Predicate<Integer> sendResponseForStatus) {
 
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
 
         final String tenantId = Optional.ofNullable(getTenantParam(ctx)).orElse(getTenantParamFromPayload(payload));
         logger.debug("http request [{}] for tenant [tenant: {}]", action, tenantId);
 
-        final HttpServerResponse response = ctx.response();
         final JsonObject requestMsg = TenantConstants.getServiceRequestAsJson(action.toString(), tenantId, payload);
 
-        sendTenantAction(ctx, requestMsg, (status, tenantResult) -> {
-            response.setStatusCode(status);
-            if (status >= 400) {
-                setResponseBody(tenantResult, response);
-            } else if (sendResponseForStatus != null) {
-                if (sendResponseForStatus.test(status)) {
-                    if (action == Action.ACTION_ADD) {
-                        response.putHeader(
-                                HttpHeaders.LOCATION,
-                                String.format("/%s/%s", TenantConstants.TENANT_ENDPOINT, tenantId));
-                    }
-                    setResponseBody(tenantResult, response);
-                }
-            }
-            response.end();
-        });
-    }
-
-    private static String getTenantParam(final RoutingContext ctx) {
-        return ctx.request().getParam(PARAM_TENANT_ID);
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, action, sendResponseForStatus,
+                (v) -> String.format("/%s/%s", TenantConstants.TENANT_ENDPOINT, tenantId)));
     }
 
     private static String getTenantParamFromPayload(final JsonObject payload) {
         return (payload != null ? (String) payload.remove(TenantConstants.FIELD_TENANT_ID) : null);
     }
 
-    private static void setResponseBody(final JsonObject tenantResult, final HttpServerResponse response) {
-        final JsonObject msg = tenantResult.getJsonObject(TenantConstants.FIELD_PAYLOAD);
-        if (msg != null) {
-            final String body = msg.encodePrettily();
-            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
-                .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
-                .write(body);
-        }
-    }
-
-    private void sendTenantAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
-
-        vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, requestMsg,
-                invocation -> {
-                    if (invocation.failed()) {
-                        HttpUtils.serviceUnavailable(ctx, 2);
-                    } else {
-                        final JsonObject tenantResult = (JsonObject) invocation.result().body();
-                        final Integer status = tenantResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);
-                        responseHandler.accept(status, tenantResult);
-                    }
-                });
-    }
 }

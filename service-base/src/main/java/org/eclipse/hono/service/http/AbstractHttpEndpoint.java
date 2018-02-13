@@ -14,12 +14,21 @@ package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
+
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.RoutingContext;
 import org.eclipse.hono.service.AbstractEndpoint;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -36,7 +45,12 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     /**
      * The key that is used to put a valid JSON payload to the RoutingContext.
      */
-    public static final String KEY_REQUEST_BODY = "KEY_REQUEST_BODY";
+    protected static final String KEY_REQUEST_BODY = "KEY_REQUEST_BODY";
+
+    // path parameters for capturing parts of the URI path
+    protected static final String PARAM_TENANT_ID = "tenant_id";
+    protected static final String PARAM_DEVICE_ID = "device_id";
+
 
     /**
      * The configuration properties for this endpoint.
@@ -49,7 +63,7 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      * @param vertx The Vertx instance to use.
      * @throws NullPointerException if vertx is {@code null};
      */
-    public AbstractHttpEndpoint(Vertx vertx) {
+    public AbstractHttpEndpoint(final Vertx vertx) {
         super(vertx);
     }
 
@@ -64,6 +78,14 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     public final void setConfiguration(final T props) {
         this.config = Objects.requireNonNull(props);
     }
+
+    /**
+     * Get the event bus address used for the HTTP endpoint. Each HTTP endpoint should have it's own, unique address that
+     * is returned by implementing this method.
+     *
+     * @return The event bus address for processing HTTP requests.
+     */
+    protected abstract String getEventBusAddress();
 
     /**
      * Check the Content-Type of the request to be 'application/json' and extract the payload if this check was
@@ -92,11 +114,107 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
                     ctx.response().setStatusMessage("Empty body");
                     ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
                 }
-            } catch (DecodeException e) {
+            } catch (final DecodeException e) {
                 ctx.response().setStatusMessage("Invalid JSON");
                 ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
             }
         }
+    }
+
+    /**
+     * Set the body of the response for the HTTP request as JSON. It is retrieved from the passed in JSON result (received as answer from a request to the event bus) by
+     * getting the key {@link RequestResponseApiConstants#FIELD_PAYLOAD}.
+     *
+     * @param jsonResult The JSON result returned from the processing event bus consumer.
+     * @param response The HTTP response to which the body is written.
+     */
+    protected void setResponseBody(final JsonObject jsonResult, final HttpServerResponse response) {
+        final JsonObject msg = jsonResult.getJsonObject(RequestResponseApiConstants.FIELD_PAYLOAD);
+        if (msg != null) {
+            final String body = msg.encodePrettily();
+            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
+                    .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
+                    .write(body);
+        }
+    }
+
+    /**
+     * Get a response handler that implements the default behaviour for responding to the HTTP request.
+     *
+     * @param ctx The routing context of the request.
+     * @param action The action of the HTTP request that is being answered.
+     * @param setResponseBodyForStatus A Predicate that defines for which status a response body shall be set. Maybe null.
+     * @param locationFormatter A Function that constructs the String being set as the HTTP location header {@link HttpHeaders#LOCATION}.
+     *                          Must not be null if the HTTP request was to add an object.
+     * @return BiConsumer<Integer, JsonObject> A consumer for the status and the JSON object that implements the default behaviour for responding to the HTTP request.
+     * @throws NullPointerException If ctx is null, if the locationFormatter is null although the request was for adding an object.
+     */
+    protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(
+            final RoutingContext ctx,
+            final RequestResponseApiConstants.Action action,
+            final Predicate<Integer> setResponseBodyForStatus,
+            final Function<Void,String> locationFormatter
+            ) {
+
+        final HttpServerResponse response = ctx.response();
+
+        return (status, jsonResult) -> {
+            response.setStatusCode(status);
+            if (status >= 400) {
+                setResponseBody(jsonResult, response);
+            } else if (setResponseBodyForStatus != null) {
+                if (setResponseBodyForStatus.test(status)) {
+                    if (action == RequestResponseApiConstants.Action.ACTION_ADD) {
+                        response.putHeader(
+                                HttpHeaders.LOCATION,
+                                locationFormatter.apply(null));
+                    }
+                    setResponseBody(jsonResult, response);
+                }
+            }
+            response.end();
+        };
+    }
+
+    /**
+     * Sending a request message to a consumer on the event bus for further processing.
+     *
+     * @param ctx The routing context of the request.
+     * @param requestMsg The JSON object to send via the event bus.
+     * @param responseHandler The handler to be invoked for the response received as answer from the event bus.
+     */
+    protected void sendAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
+
+        vertx.eventBus().send(getEventBusAddress(), requestMsg,
+                invocation -> {
+                    if (invocation.failed()) {
+                        HttpUtils.serviceUnavailable(ctx, 2);
+                    } else {
+                        final JsonObject jsonResult = (JsonObject) invocation.result().body();
+                        final Integer status = jsonResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);
+                        responseHandler.accept(status, jsonResult);
+                    }
+                });
+    }
+
+    /**
+     * Get the tenantId from the standard parameter name {@link #PARAM_TENANT_ID}.
+     *
+     * @param ctx The routing context of the request.
+     * @return The tenantId retrieved from the request.
+     */
+    protected String getTenantParam(final RoutingContext ctx) {
+        return ctx.request().getParam(PARAM_TENANT_ID);
+    }
+
+    /**
+     * Get the deviceId from the standard parameter name {@link #PARAM_DEVICE_ID}.
+     *
+     * @param ctx The routing context of the request.
+     * @return The deviceId retrieved from the request.
+     */
+    protected String getDeviceIdParam(final RoutingContext ctx) {
+        return ctx.request().getParam(PARAM_DEVICE_ID);
     }
 
 }
