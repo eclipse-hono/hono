@@ -27,18 +27,26 @@ public final class TriTuple<A, B, C> {
     private final C three;
 
     private TriTuple(final A one, B two, C three) {
+
+        if (one == null && two == null && three == null) {
+            throw new IllegalArgumentException("at least one argument must be non-null");
+        }
         this.one = one;
         this.two = two;
         this.three = three;
     }
 
     /**
-     * Creates a new tuple for values.
+     * Creates a new tuple for values of arbitrary type.
      * 
      * @param one First value.
      * @param two Second value.
      * @param three Third value.
+     * @param <A> The type of the first value.
+     * @param <B> The type of the second value.
+     * @param <C> The type of the third value.
      * @return The tuple.
+     * @throws IllegalArgumentException if all values are {@code null}.
      */
     public static <A, B, C>  TriTuple<A, B, C> of(final A one, final B two, final C three) {
         return new TriTuple<>(one, two, three);
