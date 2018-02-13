@@ -8,7 +8,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-bom</artifactId>
-    <version>0.6-M1</version>
+    <version>${revision}</version>
     <relativePath>../bom</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -84,8 +84,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>${nexus-staging-maven-plugin.version}</version>
+        <extensions>true</extensions>
+        <configuration>
+          <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+        </configuration>
       </plugin>
     </plugins>
   </build>
@@ -219,7 +224,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <run>
                     <ports>
                       <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
-                      <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -476,7 +480,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.password>pw</downstream.password>
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
-                <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
               <test>*IT</test>

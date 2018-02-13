@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-bom</artifactId>
-    <version>0.6-M1</version>
+    <version>${revision}</version>
     <relativePath>../bom</relativePath>
   </parent>
 
@@ -40,13 +40,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <attach>false</attach>
-          <!-- get all project dependencies -->
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-        </configuration>
+        <version>3.0.0</version>
         <executions>
           <execution>
             <id>jmeter-plugin</id>
@@ -54,6 +48,13 @@
             <goals>
                 <goal>single</goal>
             </goals>
+            <configuration>
+              <attach>false</attach>
+              <!-- get all project dependencies -->
+              <descriptorRefs>
+                <descriptorRef>jar-with-dependencies</descriptorRef>
+              </descriptorRefs>
+            </configuration>
           </execution>
         </executions>
       </plugin>

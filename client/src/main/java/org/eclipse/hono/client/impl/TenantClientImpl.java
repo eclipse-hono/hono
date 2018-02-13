@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
@@ -34,6 +35,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A Vertx-Proton based client for Hono's Tenant API.
@@ -41,8 +44,10 @@ import io.vertx.proton.ProtonConnection;
  */
 public final class TenantClientImpl extends AbstractRequestResponseClient<TenantResult> implements TenantClient {
 
-    private TenantClientImpl(final Context context) {
-        super(context, "NO_TENANT");
+    private static final Logger LOG = LoggerFactory.getLogger(TenantClientImpl.class);
+
+    private TenantClientImpl(final Context context, final ClientConfigProperties config) {
+        super(context, config, "NO_TENANT");
     }
 
     @Override
@@ -71,8 +76,6 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
      *
      * @param context                 The vert.x context to run all interactions with the server on.
      * @param con                     The AMQP connection to the server.
-     * @param receiverPrefetchCredits Number of credits, given initially from receiver to sender.
-     * @param waitForInitialCredits   Milliseconds to wait after link creation if there are no
      *                                credits.
      * @param senderCloseHook         A handler to invoke if the peer closes the sender link
      *                                unexpectedly.
@@ -84,19 +87,28 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
      * @throws IllegalArgumentException if receiverPrefetchCredits is {@code < 0}.
      * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
      */
-    public static void create(final Context context, final ProtonConnection con, final int receiverPrefetchCredits,
-                              final long waitForInitialCredits, final Handler<String> senderCloseHook,
-                              final Handler<String> receiverCloseHook, final Handler<AsyncResult<TenantClient>> creationHandler) {
+    public static void create(
+            final Context context,
+            final ClientConfigProperties clientConfig,
+            final ProtonConnection con,
+            final Handler<String> senderCloseHook,
+            final Handler<String> receiverCloseHook,
+            final Handler<AsyncResult<TenantClient>> creationHandler) {
 
-        final TenantClientImpl client = new TenantClientImpl(context);
-        client.createLinks(con, receiverPrefetchCredits, waitForInitialCredits, senderCloseHook, receiverCloseHook)
+        LOG.debug("creating new tenant client");
+        final TenantClientImpl client = new TenantClientImpl(context, clientConfig);
+        client.createLinks(con, senderCloseHook, receiverCloseHook)
                 .setHandler(s -> {
                     if (s.succeeded()) {
+                        LOG.debug("successfully created tenant client");
                         creationHandler.handle(Future.succeededFuture(client));
                     } else {
+                        LOG.debug("failed to create tenant client", s.cause());
                         creationHandler.handle(Future.failedFuture(s.cause()));
                     }
                 });
+
+
     }
 
     @Override
@@ -135,4 +147,3 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
         return String.format("%s/%s", TenantConstants.TENANT_ENDPOINT, "NO_TENANT");
     }
 }
-

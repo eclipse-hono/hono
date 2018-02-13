@@ -94,64 +94,64 @@ public class BaseTenantServiceTest {
         result.put(MessageHelper.APP_PROPERTY_STATUS, HTTP_BAD_REQUEST);
         verify(msg).reply(result);
     }
-    
+
     @Test
     public void testDefaultEnabledFieldIsAddedForTenantWhenMissing() {
         final JsonObject testData = createValidTenantObject();
         final Message<JsonObject> msg = createMessageMockForPayload(testData);
 
         service.processTenantMessage(msg);
-        
+
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
         verify(service).add(captor.capture(), any());
         JsonObject processedMessage = captor.getValue();
-        
+
         Assert.assertTrue(processedMessage.getBoolean(TenantConstants.FIELD_ENABLED));
     }
-    
+
     @Test
     public void testDefaultEnabledFieldIsAddedForAdapterWhenMissing() {
         final JsonObject adapter = new JsonObject();
         adapter.put(TenantConstants.FIELD_ADAPTERS_TYPE, "foobar");
-        
+
         final JsonArray adapters = new JsonArray();
         adapters.add(adapter);
-        
+
         final JsonObject testData = createValidTenantObject();
         testData.put(TenantConstants.FIELD_ADAPTERS, adapters);
-        
+
         final Message<JsonObject> msg = createMessageMockForPayload(testData);
-       
+
         service.processTenantMessage(msg);
-        
+
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
         verify(service).add(captor.capture(), any());
         JsonObject processedMessage = captor.getValue();
         JsonObject processedAdapter = processedMessage.getJsonArray(TenantConstants.FIELD_ADAPTERS).getJsonObject(0);
-        
+
         Assert.assertTrue(processedAdapter.getBoolean(TenantConstants.FIELD_ENABLED));
     }
-    
+
     @Test
     public void testDefaultDeviceAuthFieldIsAddedForAdapterWhenMissing() {
         final JsonObject adapter = new JsonObject();
         adapter.put(TenantConstants.FIELD_ADAPTERS_TYPE, "foobar");
-        
+
         final JsonArray adapters = new JsonArray();
         adapters.add(adapter);
-        
+
         final JsonObject testData = createValidTenantObject();
         testData.put(TenantConstants.FIELD_ADAPTERS, adapters);
-        
+
         final Message<JsonObject> msg = createMessageMockForPayload(testData);
-       
+
         service.processTenantMessage(msg);
-        
+
         final ArgumentCaptor<JsonObject> captor = ArgumentCaptor.forClass(JsonObject.class);
         verify(service).add(captor.capture(), any());
         JsonObject processedMessage = captor.getValue();
         JsonObject processedAdapter = processedMessage.getJsonArray(TenantConstants.FIELD_ADAPTERS).getJsonObject(0);
-        
+
         Assert.assertTrue(processedAdapter.getBoolean(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
     }
 
@@ -197,7 +197,7 @@ public class BaseTenantServiceTest {
 
             @Override
             public void update(String tenantId, JsonObject tenantObj,
-                    Handler<AsyncResult<TenantResult>> resultHandler) {
+                               Handler<AsyncResult<TenantResult>> resultHandler) {
 
             }
 
@@ -210,6 +210,6 @@ public class BaseTenantServiceTest {
             public void setConfig(ServiceConfigProperties configuration) {
             }
         };
-        
+
     }
 }

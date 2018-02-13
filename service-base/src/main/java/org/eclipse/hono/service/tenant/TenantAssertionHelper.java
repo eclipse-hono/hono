@@ -22,7 +22,7 @@ public interface TenantAssertionHelper {
 
     /**
      * Creates a signed assertion.
-     * 
+     *
      * @param tenantId The tenant to which the device belongs.
      * @param deviceId The device that is subject of the assertion.
      * @return The assertion.
@@ -31,7 +31,7 @@ public interface TenantAssertionHelper {
 
     /**
      * Checks if a given token asserts a particular device's registration status.
-     * 
+     *
      * @param token The token representing the asserted status.
      * @param tenantId The tenant that the device is expected to belong to.
      * @param deviceId The device that is expected to be the subject of the assertion.

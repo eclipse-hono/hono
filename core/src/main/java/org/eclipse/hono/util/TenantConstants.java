@@ -50,7 +50,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
     }
 
     private static JsonObject getTenantRequestAsJson(final String operation, final String tenantId,
-            final JsonObject payload) {
+                                                     final JsonObject payload) {
         final JsonObject msg = new JsonObject();
         msg.put(MessageHelper.SYS_PROPERTY_SUBJECT, operation).put(FIELD_TENANT_ID, tenantId);
         if (payload != null) {

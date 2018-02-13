@@ -43,33 +43,35 @@ node('iothub') {
         }
     }
     stage('Push to Docker Hub') {
+    //TODO add hono grafana image again
         withCredentials([usernamePassword(credentialsId: 'cred-dockerhub-iothubtech', usernameVariable: 'DOCKERHUB_USER_ID', passwordVariable: 'DOCKERHUB_USER_PW')]) {
             // rename/tag images
 
             sh "docker tag ${dockerImageOrgName}/hono-service-messaging:${buildVersion} bsinno/hono-service-messaging:${buildVersion}"
             sh "docker tag ${dockerImageOrgName}/hono-service-auth:${buildVersion} bsinno/hono-service-auth:${buildVersion}"
-            sh "docker tag ${dockerImageOrgName}/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:${buildVersion}"
+            sh "docker tag ${dockerImageOrgName}/hono-adapter-http-vertx:${buildVersion} bsinno/hono-adapter-http-vertx:${buildVersion}"
             sh "docker tag ${dockerImageOrgName}/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
-            sh "docker tag ${dockerImageOrgName}/hono-grafana:${buildVersion} bsinno/hono-grafana:${buildVersion}"
+            sh "docker pull grafana/grafana:4.2.0"
+            sh "docker tag grafana/grafana:4.2.0 bsinno/hono-grafana:${buildVersion}"
 
             // push to dockerhub
             sh "docker login -u $DOCKERHUB_USER_ID -p $DOCKERHUB_USER_PW"
             sh "docker push bsinno/hono-service-messaging:${buildVersion}"
             sh "docker push bsinno/hono-service-auth:${buildVersion}"
-            sh "docker push bsinno/hono-adapter-rest-vertx:${buildVersion}"
+            sh "docker push bsinno/hono-adapter-http-vertx:${buildVersion}"
             sh "docker push bsinno/hono-adapter-mqtt-vertx:${buildVersion}"
             sh "docker push bsinno/hono-grafana:${buildVersion}"
 
             if (BRANCH == "develop") {
                 sh "docker tag ${dockerImageOrgName}/hono-service-messaging:${buildVersion} bsinno/hono-service-messaging:latest"
                 sh "docker tag ${dockerImageOrgName}/hono-service-auth:${buildVersion} bsinno/hono-service-auth:latest"
-                sh "docker tag ${dockerImageOrgName}/hono-adapter-rest-vertx:${buildVersion} bsinno/hono-adapter-rest-vertx:latest"
+                sh "docker tag ${dockerImageOrgName}/hono-adapter-http-vertx:${buildVersion} bsinno/hono-adapter-http-vertx:latest"
                 sh "docker tag ${dockerImageOrgName}/hono-adapter-mqtt-vertx:${buildVersion} bsinno/hono-adapter-mqtt-vertx:latest"
-                sh "docker tag ${dockerImageOrgName}/hono-grafana:${buildVersion} bsinno/hono-grafana:latest"
+                sh "docker grafana/grafana:4.2.0 bsinno/hono-grafana:latest"
 
                 sh "docker push bsinno/hono-service-messaging:latest"
                 sh "docker push bsinno/hono-service-auth:latest"
-                sh "docker push bsinno/hono-adapter-rest-vertx:latest"
+                sh "docker push bsinno/hono-adapter-http-vertx:latest"
                 sh "docker push bsinno/hono-adapter-mqtt-vertx:latest"
                 sh "docker push bsinno/hono-grafana:latest"
             }

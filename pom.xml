@@ -16,7 +16,7 @@
 
   <groupId>org.eclipse.hono</groupId>
   <artifactId>hono-parent</artifactId>
-  <version>0.6-M1</version>
+  <version>${revision}</version>
   <packaging>pom</packaging>
 
   <name>Hono</name>
@@ -38,8 +38,8 @@
   </licenses>
 
   <scm>
-    <developerConnection>scm:git:https://github.com/eclipse/hono.git</developerConnection>
-    <url>https://github.com/eclipse/hono</url>
+    <developerConnection>scm:git:https://products.bosch-si.com/stash/scm/iothub/eclipse-hono.git</developerConnection>
+    <url>https://products.bosch-si.com/stash/projects/IOTHUB/repos/eclipse-hono/browse</url>
     <tag>HEAD</tag>
   </scm>
 
@@ -49,16 +49,17 @@
   </issueManagement>
 
   <distributionManagement>
-    <repository>
-      <id>repo.eclipse.org</id>
-      <name>Hono Releases</name>
-      <url>https://repo.eclipse.org/content/repositories/hono-releases/</url>
-    </repository>
     <snapshotRepository>
-      <id>repo.eclipse.org</id>
-      <name>Hono Snapshots</name>
-      <url>https://repo.eclipse.org/content/repositories/hono-snapshots/</url>
+      <id>3rdparty-snapshots</id>
+      <name>inst-thirdparty-snapshots</name>
+      <uniqueVersion>false</uniqueVersion>
+      <url>https://repo.bosch-si.com/content/repositories/inst-thirdparty-snapshots</url>
     </snapshotRepository>
+    <repository>
+      <id>edc</id>
+      <name>edc-thirdparty</name>
+      <url>https://repo.bosch-si.com/content/repositories/edc-thirdparty</url>
+    </repository>
   </distributionManagement>
 
   <developers>
@@ -132,6 +133,11 @@
   </developers>
 
   <properties>
+    <!-- default when no revision property is passed in from the commandline -->
+    <revision>0-SNAPSHOT</revision>
+    <!-- Plugin versions -->
+    <nexus-staging-maven-plugin.version>1.6.8</nexus-staging-maven-plugin.version>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -147,7 +153,7 @@
      -->
     <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
 
-    <!-- 
+    <!--
       Build images defined in modules with packaging type "pom".
      -->
     <fabric8.skip.build.pom>false</fabric8.skip.build.pom>
@@ -155,7 +161,7 @@
     <!-- 
       The organization name to use for our Docker image names.
      -->
-     <docker.image.org-name>eclipse</docker.image.org-name>
+    <docker.image.org-name>eclipse</docker.image.org-name>
   </properties>
 
   <modules>
@@ -345,7 +351,7 @@
               <configuration>
                 <includeArtifactIds>hono-legal</includeArtifactIds>
                 <outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
-                <excludes>META-INF/**,checkstyle/**</excludes>
+                <excludes>META-INF/**</excludes>
               </configuration>
             </execution>
           </executions>
@@ -368,41 +374,9 @@
           </executions>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-checkstyle-plugin</artifactId>
-          <!--
-            we need to stick to 2.17 as long as m2eclipse checkstyle is
-            not updated to support 3.0.0
-            -->
-          <version>2.17</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.eclipse.hono</groupId>
-              <artifactId>hono-legal</artifactId>
-              <version>${project.version}</version>
-            </dependency>
-            <dependency>
-              <groupId>com.puppycrawl.tools</groupId>
-              <artifactId>checkstyle</artifactId>
-              <version>7.6.1</version>
-            </dependency>
-          </dependencies>
-          <executions>
-            <execution>
-              <id>checkstyle-check</id>
-              <goals>
-                <goal>check</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <configLocation>checkstyle/default.xml</configLocation>
-            <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
-          </configuration>
-        </plugin>
-        <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>3.0.0</version>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>flatten-maven-plugin</artifactId>
+          <version>1.0.0</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -466,7 +440,7 @@
         </executions>
       </plugin>
       <plugin>
-        <!-- 
+        <!--
           Use the Nexus Staging plugin as a full replacement for the standard
           Maven Deploy plugin.
           See https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin
@@ -481,15 +455,50 @@
          -->
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.8</version>
+        <version>${nexus-staging-maven-plugin.version}</version>
         <extensions>true</extensions>
         <configuration>
-          <serverId>ossrh</serverId>
-          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+          <serverId>edc</serverId>
+          <nexusUrl>https://repo.bosch-si.com/</nexusUrl>
           <autoReleaseAfterClose>false</autoReleaseAfterClose>
         </configuration>
       </plugin>
+      <!--execute git commands on maven command line, for instance mvn scm:tag -->
+      <plugin>
+        <artifactId>maven-scm-plugin</artifactId>
+        <version>1.9.4</version>
+        <configuration>
+          <tag>hono-${project.version}</tag>
+        </configuration>
+      </plugin>
 
+      <!--replace target version in POM's  -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.0.0</version>
+        <configuration>
+          <!--flattenMode>minimum</flattenMode-->
+        </configuration>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 

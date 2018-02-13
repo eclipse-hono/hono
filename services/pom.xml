@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-bom</artifactId>
-    <version>0.6-M1</version>
+    <version>${revision}</version>
     <relativePath>../bom</relativePath>
   </parent>
 

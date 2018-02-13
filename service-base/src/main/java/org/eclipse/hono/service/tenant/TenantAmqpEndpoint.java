@@ -53,7 +53,7 @@ public final class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
 
     @Override
     public void processRequest(final Message msg, final ResourceIdentifier targetAddress,
-            final HonoUser clientPrincipal) {
+                               final HonoUser clientPrincipal) {
 
         final JsonObject tenantMsg = TenantConstants.getTenantMsg(msg);
         vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, tenantMsg,

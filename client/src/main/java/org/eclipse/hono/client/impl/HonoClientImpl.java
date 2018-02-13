@@ -27,13 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RequestResponseClient;
-import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.*;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
@@ -631,6 +625,47 @@ public final class HonoClientImpl implements HonoClient {
                         HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
             }
         });
+    }
+
+    private Future<RequestResponseClient> newTenantClient() {
+        return checkConnected().compose(connected -> {
+
+            final Future<TenantClient> result = Future.future();
+            TenantClientImpl.create(
+                    context,
+                    clientConfigProperties,
+                    connection,
+                    this::removeTenantClient,
+                    this::removeTenantClient,
+                    result.completer());
+            return result.map(client -> (RequestResponseClient) client);
+        });
+    }
+
+    @Override
+    public Future<TenantClient> getOrCreateTenantClient() {
+        final Future<TenantClient> result = Future.future();
+        getOrCreateRequestResponseClient(
+                TenantClientImpl.getTargetAddress(),
+                () -> newTenantClient(),
+                attempt -> {
+                    if (attempt.succeeded()) {
+                        result.complete((TenantClient) attempt.result());
+                    } else {
+                        result.fail(attempt.cause());
+                    }
+                });
+        return result;
+    }
+
+    private void removeTenantClient(final String tenantId) {
+
+        final String key = TenantClientImpl.getTargetAddress();
+        final RequestResponseClient client = activeRequestResponseClients.remove(key);
+        if (client != null) {
+            client.close(s -> {});
+            LOG.debug("closed and removed tenant client");
+        }
     }
 
     @Override

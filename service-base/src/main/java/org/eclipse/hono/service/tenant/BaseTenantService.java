@@ -140,26 +140,26 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
             }
 
             switch (operation) {
-            case ACTION_GET:
-                log.debug("retrieving tenant [{}]", tenantId);
-                get(tenantId, result -> reply(tenantMsg, result));
-                break;
-            case ACTION_ADD:
-                JsonObject payload = getRequestPayload(body);
-                log.debug("creating tenant [{}] with data {}", tenantId, payload != null ? payload.encode() : null);
-                add(payload, result -> reply(tenantMsg, result));
-                break;
-            case ACTION_UPDATE:
-                payload = getRequestPayload(body);
-                log.debug("updating tenant [{}] with data {}", tenantId, payload != null ? payload.encode() : null);
-                update(tenantId, payload, result -> reply(tenantMsg, result));
-                break;
-            case ACTION_REMOVE:
-                log.debug("deleting tenant [{}]", tenantId);
-                remove(tenantId, result -> reply(tenantMsg, result));
-                break;
-            default:
-                break;
+                case ACTION_GET:
+                    log.debug("retrieving tenant [{}]", tenantId);
+                    get(tenantId, result -> reply(tenantMsg, result));
+                    break;
+                case ACTION_ADD:
+                    JsonObject payload = getRequestPayload(body);
+                    log.debug("creating tenant [{}] with data {}", tenantId, payload != null ? payload.encode() : null);
+                    add(payload, result -> reply(tenantMsg, result));
+                    break;
+                case ACTION_UPDATE:
+                    payload = getRequestPayload(body);
+                    log.debug("updating tenant [{}] with data {}", tenantId, payload != null ? payload.encode() : null);
+                    update(tenantId, payload, result -> reply(tenantMsg, result));
+                    break;
+                case ACTION_REMOVE:
+                    log.debug("deleting tenant [{}]", tenantId);
+                    remove(tenantId, result -> reply(tenantMsg, result));
+                    break;
+                default:
+                    break;
             }
         } catch (final ClassCastException e) {
             log.debug("malformed request message");
@@ -193,27 +193,27 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
         addNotPresentFieldsWithDefaultValuesForTenant(payload);
         return payload;
     }
-    
+
     private void addNotPresentFieldsWithDefaultValuesForTenant(JsonObject payload) {
         if(!payload.containsKey(TenantConstants.FIELD_ENABLED)) {
             log.debug("adding 'enabled' key to payload because it's not present");
             payload.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         }
-        
+
         JsonArray adapters = payload.getJsonArray(TenantConstants.FIELD_ADAPTERS, new JsonArray());
- 
+
         for (int i = 0; i < adapters.size(); i++) {
             JsonObject current = adapters.getJsonObject(i);
             addNotPresentFieldsWithDefaultValuesForAdapter(current);
         }
     }
-    
+
     private void addNotPresentFieldsWithDefaultValuesForAdapter(JsonObject adapter) {
         if(!adapter.containsKey(TenantConstants.FIELD_ENABLED)) {
             log.debug("adding 'enabled' key to adapter payload because it's not present");
             adapter.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         }
-        
+
         if(!adapter.containsKey(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)) {
             log.debug("adding 'device-authentication-required' key to adapter payload because it's not present");
             adapter.put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE);
