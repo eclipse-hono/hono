@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -16,11 +16,9 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.engine.Record;
@@ -117,29 +115,6 @@ public final class TestSupport {
         message.setContentType("application/json");
         MessageHelper.addDeviceId(message, deviceId);
         message.setBody(new Data(new Binary(String.format("{\"temp\" : %d}", temperature).getBytes())));
-        return message;
-    }
-
-    /**
-     * Creates a new <em>Proton</em> message containing a JSON encoded temperature reading.
-     *
-     * @param messageId the value to set as the message ID.
-     * @param action The value to set for the message's <em>action</em> application property.
-     * @param tenantId the ID of the tenant the device belongs to.
-     * @param deviceId the ID of the device that produced the reading.
-     * @param replyTo The reply-to address to set on the message.
-     * @return the message containing the reading as a binary payload.
-     */
-    public static Message newRegistrationMessage(final String messageId, final String action, final String tenantId, final String deviceId, final String replyTo) {
-        final Message message = ProtonHelper.message();
-        message.setMessageId(messageId);
-        message.setReplyTo(replyTo);
-        final HashMap<String, String> map = new HashMap<>();
-        map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(MessageHelper.SYS_PROPERTY_SUBJECT, action);
-        final ApplicationProperties applicationProperties = new ApplicationProperties(map);
-        message.setApplicationProperties(applicationProperties);
         return message;
     }
 
