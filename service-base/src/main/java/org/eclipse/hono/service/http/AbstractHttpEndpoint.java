@@ -15,10 +15,9 @@ package org.eclipse.hono.service.http;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
-
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.DecodeException;
@@ -142,33 +141,26 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      * Get a response handler that implements the default behaviour for responding to the HTTP request (except for adding an object).
      *
      * @param ctx The routing context of the request.
-     * @param action The action of the HTTP request that is being answered.
      * @return BiConsumer<Integer, JsonObject> A consumer for the status and the JSON object that implements the default behaviour for responding to the HTTP request.
-     * @throws NullPointerException If ctx is null, or if the request was for adding an object.
+     * @throws NullPointerException If ctx is null.
      */
-    protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(
-            final RoutingContext ctx,
-            final RequestResponseApiConstants.StandardAction action
-    ) {
-        return getDefaultResponseHandler(ctx, action, null, null);
+    protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(final RoutingContext ctx) {
+        return getDefaultResponseHandler(ctx, null, null);
     }
 
     /**
      * Get a response handler that implements the default behaviour for responding to the HTTP request.
      *
      * @param ctx The routing context of the request.
-     * @param action The action of the HTTP request that is being answered.
      * @param setResponseBodyForStatus A Predicate that defines for which status a response body shall be set. Maybe null.
-     * @param locationFormatter A Function that constructs the String being set as the HTTP location header {@link HttpHeaders#LOCATION}.
-     *                          Must not be null if the HTTP request was to add an object.
-     * @return BiConsumer<Integer, JsonObject> A consumer for the status and the JSON object that implements the default behaviour for responding to the HTTP request.
-     * @throws NullPointerException If ctx is null, if the locationFormatter is null although the request was for adding an object.
+     * @param responseHandler A handler that enables post processing the http response, e.g. to set the HTTP location header {@link HttpHeaders#LOCATION}
+     *                       in case of an add action. Maybe null.
+     * @throws NullPointerException If ctx is null.
      */
     protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(
             final RoutingContext ctx,
-            final RequestResponseApiConstants.StandardAction action,
             final Predicate<Integer> setResponseBodyForStatus,
-            final Function<Void,String> locationFormatter
+            final Handler<HttpServerResponse> responseHandler
             ) {
 
         final HttpServerResponse response = ctx.response();
@@ -179,10 +171,8 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
                 setResponseBody(jsonResult, response);
             } else if (setResponseBodyForStatus != null) {
                 if (setResponseBodyForStatus.test(status)) {
-                    if (action == RequestResponseApiConstants.StandardAction.ACTION_ADD) {
-                        response.putHeader(
-                                HttpHeaders.LOCATION,
-                                locationFormatter.apply(null));
+                    if (responseHandler != null) {
+                        responseHandler.handle(response);
                     }
                     setResponseBody(jsonResult, response);
                 }
@@ -197,8 +187,9 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      * @param ctx The routing context of the request.
      * @param requestMsg The JSON object to send via the event bus.
      * @param responseHandler The handler to be invoked for the response received as answer from the event bus.
+     * @throws NullPointerException If ctx is null.
      */
-    protected void sendAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
+    protected final void sendAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
 
         vertx.eventBus().send(getEventBusAddress(), requestMsg,
                 invocation -> {
@@ -217,8 +208,9 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      *
      * @param ctx The routing context of the request.
      * @return The tenantId retrieved from the request.
+     * @throws NullPointerException If ctx is null.
      */
-    protected String getTenantParam(final RoutingContext ctx) {
+    protected final String getTenantParam(final RoutingContext ctx) {
         return ctx.request().getParam(PARAM_TENANT_ID);
     }
 
@@ -227,8 +219,9 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      *
      * @param ctx The routing context of the request.
      * @return The deviceId retrieved from the request.
+     * @throws NullPointerException If ctx is null.
      */
-    protected String getDeviceIdParam(final RoutingContext ctx) {
+    protected final String getDeviceIdParam(final RoutingContext ctx) {
         return ctx.request().getParam(PARAM_DEVICE_ID);
     }
 
