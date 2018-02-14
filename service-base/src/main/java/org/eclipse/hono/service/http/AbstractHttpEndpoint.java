@@ -139,6 +139,21 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     }
 
     /**
+     * Get a response handler that implements the default behaviour for responding to the HTTP request (except for adding an object).
+     *
+     * @param ctx The routing context of the request.
+     * @param action The action of the HTTP request that is being answered.
+     * @return BiConsumer<Integer, JsonObject> A consumer for the status and the JSON object that implements the default behaviour for responding to the HTTP request.
+     * @throws NullPointerException If ctx is null, or if the request was for adding an object.
+     */
+    protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(
+            final RoutingContext ctx,
+            final RequestResponseApiConstants.StandardAction action
+    ) {
+        return getDefaultResponseHandler(ctx, action, null, null);
+    }
+
+    /**
      * Get a response handler that implements the default behaviour for responding to the HTTP request.
      *
      * @param ctx The routing context of the request.
@@ -151,7 +166,7 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      */
     protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(
             final RoutingContext ctx,
-            final RequestResponseApiConstants.Action action,
+            final RequestResponseApiConstants.StandardAction action,
             final Predicate<Integer> setResponseBodyForStatus,
             final Function<Void,String> locationFormatter
             ) {
@@ -164,7 +179,7 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
                 setResponseBody(jsonResult, response);
             } else if (setResponseBodyForStatus != null) {
                 if (setResponseBodyForStatus.test(status)) {
-                    if (action == RequestResponseApiConstants.Action.ACTION_ADD) {
+                    if (action == RequestResponseApiConstants.StandardAction.ACTION_ADD) {
                         response.putHeader(
                                 HttpHeaders.LOCATION,
                                 locationFormatter.apply(null));

@@ -11,6 +11,8 @@
  */
 package org.eclipse.hono.service.credentials;
 
+import static org.eclipse.hono.util.RequestResponseApiConstants.StandardAction;
+
 import java.net.HttpURLConnection;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -142,17 +144,17 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
             return;
         }
 
-        switch (subject) {
-            case CredentialsConstants.OPERATION_GET:
+        switch (StandardAction.from(subject)) {
+            case ACTION_GET:
                 processCredentialsMessageGetOperation(regMsg, tenantId, payload);
                 break;
-            case CredentialsConstants.OPERATION_ADD:
+            case ACTION_ADD:
                 processCredentialsMessageAddOperation(regMsg, tenantId, payload);
                 break;
-            case CredentialsConstants.OPERATION_UPDATE:
+            case ACTION_UPDATE:
                 processCredentialsMessageUpdateOperation(regMsg, tenantId, payload);
                 break;
-            case CredentialsConstants.OPERATION_REMOVE:
+            case ACTION_REMOVE:
                 processCredentialsMessageRemoveOperation(regMsg, tenantId, payload);
                 break;
             default:

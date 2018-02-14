@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static org.eclipse.hono.util.TenantConstants.Action;
+import static org.eclipse.hono.util.TenantConstants.StandardAction;
 import static org.eclipse.hono.util.TenantConstants.FIELD_TENANT_ID;
 
 import java.net.HttpURLConnection;
@@ -23,7 +23,6 @@ import java.util.function.Predicate;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -75,22 +74,22 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
         router.post(path).handler(bodyHandler);
         router.post(path).handler(this::extractRequiredJsonPayload);
         router.post(path).handler(this::checkPayloadForTenantId);
-        router.post(path).handler(ctx -> doTenantHttpRequest(ctx, Action.ACTION_ADD,
+        router.post(path).handler(ctx -> doTenantHttpRequest(ctx, StandardAction.ACTION_ADD,
                 status -> status == HttpURLConnection.HTTP_CREATED));
 
         final String pathWithTenant = String.format("/%s/:%s", TenantConstants.TENANT_ENDPOINT, PARAM_TENANT_ID);
 
         // GET tenant
-        router.get(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, Action.ACTION_GET,
+        router.get(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, StandardAction.ACTION_GET,
                 status -> status == HttpURLConnection.HTTP_OK));
 
         // UPDATE tenant
         router.put(pathWithTenant).handler(bodyHandler);
         router.put(pathWithTenant).handler(this::extractRequiredJsonPayload);
-        router.put(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, Action.ACTION_UPDATE, null));
+        router.put(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, StandardAction.ACTION_UPDATE, null));
 
         // REMOVE tenant
-        router.delete(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, Action.ACTION_REMOVE, null));
+        router.delete(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, StandardAction.ACTION_REMOVE, null));
     }
 
     /**
@@ -115,7 +114,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
         ctx.next();
     }
 
-    private void doTenantHttpRequest(final RoutingContext ctx, final RequestResponseApiConstants.Action action, final Predicate<Integer> sendResponseForStatus) {
+    private void doTenantHttpRequest(final RoutingContext ctx, final StandardAction action, final Predicate<Integer> sendResponseForStatus) {
 
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
 
