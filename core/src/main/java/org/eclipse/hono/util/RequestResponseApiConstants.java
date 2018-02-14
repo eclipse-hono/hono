@@ -24,8 +24,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.eclipse.hono.util.MessageHelper;
-
 /**
  * Constants &amp; utility methods that are common to APIs that follow the request response pattern.
  */
@@ -43,20 +41,23 @@ public class RequestResponseApiConstants {
     public static final String FIELD_PAYLOAD   = "payload";
     public static final String FIELD_TENANT_ID = "tenant-id";
 
-    /* request actions */
-    public enum Action {
+    /**
+     * Request standard actions to support the standard lifecycle.
+     * If more or other actions shall be used, an own enum type should be defined.
+    */
+    public enum StandardAction implements RequestResponseAction {
         ACTION_GET, ACTION_ADD, ACTION_UPDATE, ACTION_REMOVE, ACTION_UNKNOWN;
 
         /**
-         * Construct an Action from a subject.
+         * Construct a StandardAction from a subject.
          *
-         * @param subject The subject from which the Action needs to be constructed.
-         * @return Action The Action as enum, or {@link Action#ACTION_UNKNOWN} otherwise.
+         * @param subject The subject from which the StandardAction needs to be constructed.
+         * @return StandardAction The StandardAction as enum, or {@link StandardAction#ACTION_UNKNOWN} otherwise.
          */
-        public static Action from(final String subject) {
+        public static StandardAction from(final String subject) {
             if (subject != null) {
                 try {
-                    return Action.valueOf(subject);
+                    return StandardAction.valueOf(subject);
                 } catch (final IllegalArgumentException e) {
                 }
             }
@@ -70,7 +71,7 @@ public class RequestResponseApiConstants {
          * @return boolean {@link Boolean#TRUE} if the subject denotes a valid action, {@link Boolean#FALSE} otherwise.
          */
         public static boolean isValid(final String subject) {
-            return Action.from(subject) != Action.ACTION_UNKNOWN;
+            return StandardAction.from(subject) != StandardAction.ACTION_UNKNOWN;
         }
     }
 

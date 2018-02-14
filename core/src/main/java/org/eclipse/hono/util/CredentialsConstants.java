@@ -11,8 +11,6 @@
  */
 package org.eclipse.hono.util;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -24,11 +22,6 @@ import io.vertx.core.json.JsonObject;
  * Constants &amp; utility methods used throughout the Credentials API.
  */
 public final class CredentialsConstants extends RequestResponseApiConstants {
-    /* credentials actions */
-    public static final String OPERATION_GET                     = "get";
-    public static final String OPERATION_ADD                     = "add";
-    public static final String OPERATION_UPDATE                  = "update";
-    public static final String OPERATION_REMOVE                  = "remove";
 
     /* message payload fields */
     public static final String FIELD_TYPE                        = "type";
@@ -58,8 +51,6 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The vert.x event bus address to which inbound credentials messages are published.
      */
     public static final String EVENT_BUS_ADDRESS_CREDENTIALS_IN = "credentials.in";
-
-    private static final List<String> OPERATIONS = Arrays.asList(OPERATION_GET, OPERATION_ADD, OPERATION_UPDATE, OPERATION_REMOVE);
 
     private CredentialsConstants() {
         // prevent instantiation
@@ -123,21 +114,8 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
             payload.put(FIELD_TYPE, type);
         }
 
-        return getServiceRequestAsJson(OPERATION_GET, tenantId, null, payload);
+        return getServiceRequestAsJson(StandardAction.ACTION_GET.toString(), tenantId, null, payload);
     }
 
-    /**
-     * Checks if a given subject represents a Credentials API operation.
-     * 
-     * @param subject The subject to check.
-     * @return {@code true} if the subject is one of the Credential API's operations.
-     */
-    public static boolean isValidSubject(final String subject) {
-        if (subject == null) {
-            return false;
-        } else {
-            return OPERATIONS.contains(subject);
-        }
-    }
 }
 

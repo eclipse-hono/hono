@@ -37,7 +37,7 @@ public class CredentialsConstantsTest {
     public void testCredentialsMessageForEventBus() {
 
         final Message msg = ProtonHelper.message();
-        msg.setSubject(CredentialsConstants.OPERATION_GET);
+        msg.setSubject(CredentialsConstants.StandardAction.ACTION_GET.toString());
         final ResourceIdentifier target = ResourceIdentifier.from(
                 CredentialsConstants.CREDENTIALS_ENDPOINT, Constants.DEFAULT_TENANT, null);
 
@@ -45,6 +45,6 @@ public class CredentialsConstantsTest {
 
         assertThat(credentialsMsg.getString(CredentialsConstants.FIELD_TENANT_ID), is(Constants.DEFAULT_TENANT));
         assertFalse(credentialsMsg.containsKey(CredentialsConstants.FIELD_DEVICE_ID));
-        assertThat(credentialsMsg.getString(MessageHelper.SYS_PROPERTY_SUBJECT), is(CredentialsConstants.OPERATION_GET));
+        assertThat(credentialsMsg.getString(MessageHelper.SYS_PROPERTY_SUBJECT), is(CredentialsConstants.StandardAction.ACTION_GET.toString()));
     }
 }
