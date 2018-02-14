@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   labels:
     app: hono-metrics
-    version: ${project.version}
+    version: "${project.version}"
     group: ${project.groupId}
   name: grafana
 spec:
@@ -18,7 +18,7 @@ spec:
       labels:
         role: grafana
         app: hono-metrics
-        version: ${project.version}
+        version: "${project.version}"
         group: ${project.groupId}
     spec:
       serviceAccountName: useroot

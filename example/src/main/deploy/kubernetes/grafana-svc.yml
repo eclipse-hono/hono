@@ -4,7 +4,7 @@ kind: Service
 metadata:
   labels:
     app: hono-metrics
-    version: ${project.version}
+    version: "${project.version}"
     group: ${project.groupId}
   name: grafana
 spec:

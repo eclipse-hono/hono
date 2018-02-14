@@ -4,7 +4,7 @@ kind: PersistentVolume
 metadata:
   labels:
     project: ${project.artifactId}
-    version: ${project.version}
+    version: "${project.version}"
     group: ${project.groupId}
   name: hono
 spec:
