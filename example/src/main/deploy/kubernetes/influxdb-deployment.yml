@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   labels:
     app: hono-metrics
-    version: ${project.version}
+    version: "${project.version}"
     group: ${project.groupId}
   name: influxdb
 spec:
@@ -12,14 +12,13 @@ spec:
   selector:
     matchLabels:
       app: hono-metrics
-      version: ${project.version}
       group: ${project.groupId}
   template:
     metadata:
       labels:
         role: influxdb
         app: hono-metrics
-        version: ${project.version}
+        version: "${project.version}"
         group: ${project.groupId}
     spec:
       containers:
