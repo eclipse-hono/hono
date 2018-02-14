@@ -17,6 +17,7 @@ import static org.eclipse.hono.util.RequestResponseApiConstants.StandardAction;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import io.vertx.core.http.HttpHeaders;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -116,9 +117,12 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_ADD.toString(), tenantId, deviceId, payload);
 
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, StandardAction.ACTION_ADD,
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_CREATED,
-                (v) -> String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, authId, type)));
+                (httpServerResponse) -> httpServerResponse.putHeader(HttpHeaders.LOCATION,
+                        String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, authId, type))
+                )
+        );
     }
 
     private void updateCredentials(final RoutingContext ctx) {
@@ -143,7 +147,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
             final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_UPDATE.toString(), tenantId, deviceId, payload);
 
-            sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, StandardAction.ACTION_UPDATE));
+            sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
         }
     }
 
@@ -163,7 +167,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_REMOVE.toString(),
                 tenantId, null, payload);
 
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, StandardAction.ACTION_REMOVE));
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
     }
 
     private void removeCredentialsForDevice(final RoutingContext ctx) {
@@ -181,7 +185,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_REMOVE.toString(),
                 tenantId, deviceId, payload);
 
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, StandardAction.ACTION_REMOVE));
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
     }
 
     /**
@@ -201,7 +205,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         final JsonObject requestMsg = CredentialsConstants.getServiceGetRequestAsJson(
                 tenantId, null, authId, type);
 
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, StandardAction.ACTION_GET,
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_OK, null));
 
     }
@@ -217,7 +221,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         final JsonObject requestMsg = CredentialsConstants.getServiceGetRequestAsJson(
                 tenantId, deviceId, null, CredentialsConstants.SPECIFIER_WILDCARD);
 
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, StandardAction.ACTION_GET,
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_OK, null));
     }
 
