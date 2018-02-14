@@ -45,7 +45,7 @@ public class RequestResponseApiConstants {
      * Request standard actions to support the standard lifecycle.
      * If more or other actions shall be used, an own enum type should be defined.
     */
-    public enum StandardAction implements RequestResponseAction {
+    public enum StandardAction {
         ACTION_GET, ACTION_ADD, ACTION_UPDATE, ACTION_REMOVE, ACTION_UNKNOWN;
 
         /**
