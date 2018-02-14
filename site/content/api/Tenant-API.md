@@ -1,5 +1,5 @@
 +++
-title = "Tenant API"
+title = "Tenant API (since Hono version 0.6)"
 weight = 407
 +++
 
@@ -8,6 +8,10 @@ A tenant is a logical entity, which groups together a set of devices and consist
 The tenant meta information is used for example to determine if a given tenant is allowed to use a certain protocol adapter or if devices are required to use authentication.
 
 <!--more-->
+
+{{% warning %}}
+This API is defined and implemented in Hono since version 0.6 - the Hono release 0.5 does **not** contain any implementation of it.
+{{% /warning %}}
 
 This document *describes* the Tenant API by means of available operations and data structure format only. 
 For a full outline of the multi tenancy handling in Eclipse Hono please have a look at the [Multi Tenancy]({{< relref "tenancy.md" >}}) page in the concepts section of this documentation.
