@@ -80,7 +80,7 @@ public class EventConsumerImplTest {
      * 
      * @param ctx The test context.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testCreateRegistersBiConsumerAsMessageHandler(final TestContext ctx) {
 
@@ -104,7 +104,8 @@ public class EventConsumerImplTest {
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createReceiver(anyString())).thenReturn(receiver);
         when(receiver.openHandler(any(Handler.class))).thenAnswer(invocation -> {
-            invocation.getArgumentAt(0, Handler.class).handle(Future.succeededFuture(receiver));
+            final Handler handler = invocation.getArgument(0);
+            handler.handle(Future.succeededFuture(receiver));
             return receiver;
         });
         final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);

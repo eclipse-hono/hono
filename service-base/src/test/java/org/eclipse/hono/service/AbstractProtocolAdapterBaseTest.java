@@ -207,7 +207,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter connected to a registration service
         final JsonObject assertionResult = newRegistrationAssertionResult("token");
-        when(registrationClient.assertRegistration(eq("device"), anyString())).thenReturn(Future.succeededFuture(assertionResult));
+        when(registrationClient.assertRegistration(eq("device"), any())).thenReturn(Future.succeededFuture(assertionResult));
 
         // WHEN an assertion for the device is retrieved
         adapter.getRegistrationAssertion("tenant", "device", null).setHandler(ctx.asyncAssertSuccess(result -> {
@@ -226,7 +226,7 @@ public class AbstractProtocolAdapterBaseTest {
     public void testGetRegistrationAssertionFailsWith404ForNonExistingDevice(final TestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
-        when(registrationClient.assertRegistration(eq("non-existent"), anyString())).thenReturn(
+        when(registrationClient.assertRegistration(eq("non-existent"), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         // WHEN an assertion for a non-existing device is retrieved

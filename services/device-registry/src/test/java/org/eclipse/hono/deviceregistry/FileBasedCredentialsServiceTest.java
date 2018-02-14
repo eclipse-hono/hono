@@ -92,12 +92,12 @@ public class FileBasedCredentialsServiceTest {
         props.setFilename(FILE_NAME);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed file"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
@@ -132,7 +132,7 @@ public class FileBasedCredentialsServiceTest {
 
         // WHEN starting the service but the file cannot be created
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("no access"));
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
@@ -164,7 +164,7 @@ public class FileBasedCredentialsServiceTest {
         doAnswer(invocation -> {
             final Buffer data = mock(Buffer.class);
             when(data.getBytes()).thenReturn("NO JSON".getBytes(StandardCharsets.UTF_8));
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
@@ -195,7 +195,7 @@ public class FileBasedCredentialsServiceTest {
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
             final Buffer data = DeviceRegistryTestUtils.readFile(FILE_NAME);
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
@@ -252,7 +252,7 @@ public class FileBasedCredentialsServiceTest {
         // WHEN saving the registry content to the file and clearing the registry
         final Async write = ctx.async();
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(2, Handler.class);
+            Handler handler = invocation.getArgument(2);
             handler.handle(Future.succeededFuture());
             write.complete();
             return null;
@@ -268,7 +268,7 @@ public class FileBasedCredentialsServiceTest {
         // THEN the credentials can be loaded back in from the file
         final Async read = ctx.async();
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(buffer.getValue()));
             read.complete();
             return null;

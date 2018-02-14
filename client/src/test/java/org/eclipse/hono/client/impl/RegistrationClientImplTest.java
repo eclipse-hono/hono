@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -81,7 +80,7 @@ public class RegistrationClientImplTest {
         final Context context = mock(Context.class);
         when(context.owner()).thenReturn(vertx);
         doAnswer(invocation -> {
-            Handler<Void> handler = invocation.getArgumentAt(0, Handler.class);
+            Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
         }).when(context).runOnContext(any(Handler.class));
@@ -142,7 +141,7 @@ public class RegistrationClientImplTest {
         // WHEN getting registration information
         client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the registration information has been retrieved from the service
-            verify(cache, never()).put(anyObject(), any(RegistrationResult.class), any(Instant.class));
+            verify(cache, never()).put(any(), any(RegistrationResult.class), any(Instant.class));
             ctx.assertEquals(registrationAssertion, result);
         }));
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);

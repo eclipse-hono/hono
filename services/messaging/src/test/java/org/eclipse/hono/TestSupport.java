@@ -11,10 +11,7 @@
  */
 package org.eclipse.hono;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -186,7 +183,7 @@ public final class TestSupport {
     @SuppressWarnings("unchecked")
     public static ProtonSender newMockSender(final boolean drainFlag) {
         @SuppressWarnings("rawtypes")
-        ArgumentCaptor<Handler> drainHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler> drainHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
         Record attachments = mock(Record.class);
         ProtonSender sender = mock(ProtonSender.class);
         when(sender.attachments()).thenReturn(attachments);

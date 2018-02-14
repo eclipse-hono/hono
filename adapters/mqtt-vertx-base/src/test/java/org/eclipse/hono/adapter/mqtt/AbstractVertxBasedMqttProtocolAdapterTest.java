@@ -14,7 +14,6 @@ package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -93,7 +92,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
-        when(regClient.assertRegistration(anyString(), anyString())).thenReturn(Future.succeededFuture(result));
+        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(
@@ -237,7 +236,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
         doAnswer(invocation -> {
-            Handler<AsyncResult<Device>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "4711")));
             return null;
         }).when(credentialsAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
@@ -297,7 +296,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         givenATelemetrySenderForOutcome(Future.succeededFuture(mock(ProtonDelivery.class)));
 
         // WHEN an unknown device publishes a telemetry message
-        when(regClient.assertRegistration(eq("unknown"), anyString())).thenReturn(
+        when(regClient.assertRegistration(eq("unknown"), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         adapter.uploadTelemetryMessage(
@@ -396,7 +395,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(server.actualPort()).thenReturn(0, 1883);
         when(server.endpointHandler(any(Handler.class))).thenReturn(server);
         when(server.listen(any(Handler.class))).then(invocation -> {
-            Handler<AsyncResult<MqttServer>> handler = (Handler<AsyncResult<MqttServer>>) invocation.getArgumentAt(0, Handler.class);
+            Handler<AsyncResult<MqttServer>> handler = (Handler<AsyncResult<MqttServer>>) invocation.getArgument(0);
             if (startupShouldFail) {
                 handler.handle(Future.failedFuture("MQTT server intentionally failed to start"));
             } else {

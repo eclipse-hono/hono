@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,10 +13,13 @@
 
 package org.eclipse.hono.service.amqp;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
+import static org.mockito.hamcrest.MockitoHamcrest.booleanThat;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.instanceOf;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -34,11 +37,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -57,7 +59,6 @@ public class RequestResponseEndpointTest {
     private static final ResourceIdentifier resource = ResourceIdentifier.from("endpoint", Constants.DEFAULT_TENANT, null);
 
     @Mock private ProtonConnection connection;
-    @Mock private EventBus         eventBus;
     @Mock private Vertx            vertx;
 
     private ProtonReceiver receiver;
@@ -68,8 +69,6 @@ public class RequestResponseEndpointTest {
      */
     @Before
     public void setUp() {
-
-        when(vertx.eventBus()).thenReturn(eventBus);
 
         receiver = mock(ProtonReceiver.class);
         when(receiver.handler(any())).thenReturn(receiver);
@@ -117,10 +116,7 @@ public class RequestResponseEndpointTest {
     @Test
     public void testOnLinkAttachClosesSenderWithoutAppropriateReplyAddress() {
 
-        Source source = new Source();
-        source.setAddress("endpoint/" + Constants.DEFAULT_TENANT); // not a suitable reply-to-address: missing resource ID
-        when(sender.getRemoteSource()).thenReturn(source);
-        RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true);
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true);
 
         endpoint.onLinkAttach(connection, sender, resource);
 
@@ -212,14 +208,11 @@ public class RequestResponseEndpointTest {
      * Verifies that the JsonObject that is constructed for delegating a request to a service listening on the vertx
      * event bus contains only fields that do not have a "_" in their name.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testJsonKeyNamingConvention() {
 
         final JsonObject serviceRequestJson = RequestResponseApiConstants.getServiceRequestAsJson("test", Constants.DEFAULT_TENANT, "4711", null);
-        assertNotNull(serviceRequestJson);
         serviceRequestJson.fieldNames().stream().forEach(field -> {
-            assertNotNull(field);
             assertFalse(field.contains("_"));
         });
     }

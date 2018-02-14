@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,13 +12,14 @@
  */
 package org.eclipse.hono.service.amqp;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonReceiver;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
@@ -33,15 +34,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonReceiver;
 
 /**
  * Tests verifying behavior of {@link AmqpServiceBase}.
@@ -52,7 +52,6 @@ public class AmqpServiceBaseTest {
     private static final String ENDPOINT = "anEndpoint";
 
     private Vertx vertx;
-    private EventBus eventBus;
     private boolean publishCalled = false;
 
 
@@ -61,9 +60,7 @@ public class AmqpServiceBaseTest {
      */
     @Before
     public void initMocks() {
-        eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
-        when(vertx.eventBus()).thenReturn(eventBus);
     }
 
     private AmqpServiceBase<ServiceConfigProperties> createServer(final AmqpEndpoint amqpEndpoint) {

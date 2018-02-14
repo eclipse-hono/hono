@@ -11,10 +11,14 @@
  */
 package org.eclipse.hono.telemetry.impl;
 
+import static org.eclipse.hono.TestSupport.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.TestSupport;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -152,27 +156,26 @@ public class ForwardingTelemetryDownstreamAdapterTest {
     public void testProcessMessageDiscardsMessageIfNoCreditIsAvailable(final TestContext ctx) {
 
         final UpstreamReceiver client = TestSupport.newClient();
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        when(delivery.remotelySettled()).thenReturn(Boolean.FALSE);
+        final ProtonDelivery upstreamDelivery = mock(ProtonDelivery.class);
+        when(upstreamDelivery.remotelySettled()).thenReturn(Boolean.FALSE);
 
         // GIVEN an adapter with a connection to a downstream container
         ProtonSender sender = TestSupport.newMockSender(false);
         when(sender.sendQueueFull()).thenReturn(true);
-        ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, TestSupport.newMockSenderFactory(sender));
+        final ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
         adapter.setMetrics(mock(MessagingMetrics.class));
         adapter.setDownstreamConnectionFactory(TestSupport.newMockConnectionFactory(false));
         adapter.start(Future.future());
         adapter.addSender(client, sender);
 
         // WHEN processing an event
-        Message msg = ProtonHelper.message(TELEMETRY_MSG_CONTENT);
+        final Message msg = ProtonHelper.message(TELEMETRY_MSG_CONTENT);
         MessageHelper.addDeviceId(msg, DEVICE_ID);
-        adapter.processMessage(client, delivery, msg);
+        adapter.processMessage(client, upstreamDelivery, msg);
 
         // THEN the the message is accepted
-        verify(delivery).disposition(any(Accepted.class), eq(Boolean.TRUE));
+        verify(upstreamDelivery).disposition(any(Released.class), eq(Boolean.TRUE));
         // but is not delivered to the downstream container
         verify(sender, never()).send(any(Message.class), any(Handler.class));
     }
-
 }

@@ -56,7 +56,7 @@ public class EventSenderImplTest {
 
         context = mock(Context.class);
         doAnswer(invocation -> {
-            Handler<Void> handler = invocation.getArgumentAt(0, Handler.class);
+            Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
         }).when(context).runOnContext(any(Handler.class));
@@ -79,7 +79,7 @@ public class EventSenderImplTest {
         MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
         final AtomicReference<Handler<ProtonDelivery>> handlerRef = new AtomicReference<>();
         doAnswer(invocation -> {
-            handlerRef.set(invocation.getArgumentAt(1, Handler.class));
+            handlerRef.set(invocation.getArgument(1));
             return mock(ProtonDelivery.class);
         }).when(sender).send(any(Message.class), any(Handler.class));
 
@@ -114,7 +114,7 @@ public class EventSenderImplTest {
         MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
         final AtomicReference<Handler<ProtonDelivery>> handlerRef = new AtomicReference<>();
         doAnswer(invocation -> {
-            handlerRef.set(invocation.getArgumentAt(1, Handler.class));
+            handlerRef.set(invocation.getArgument(1));
             return mock(ProtonDelivery.class);
         }).when(sender).send(any(Message.class), any(Handler.class));
 

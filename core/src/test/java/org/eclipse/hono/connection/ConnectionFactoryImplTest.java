@@ -144,8 +144,8 @@ public class ConnectionFactoryImplTest {
         factory.connect(null, null, null, c -> {});
 
         // THEN the factory uses TLS when establishing the connection
-        ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), anyString(), anyString(), any(Handler.class));
+        final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), any(Handler.class));
         assertTrue(optionsCaptor.getValue().isSsl());
     }
 
@@ -169,8 +169,8 @@ public class ConnectionFactoryImplTest {
         factory.connect(null, null, null, c -> {});
 
         // THEN the factory uses TLS when establishing the connection
-        ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), anyString(), anyString(), any(Handler.class));
+        final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), any(Handler.class));
         assertTrue(optionsCaptor.getValue().isSsl());
     }
 }

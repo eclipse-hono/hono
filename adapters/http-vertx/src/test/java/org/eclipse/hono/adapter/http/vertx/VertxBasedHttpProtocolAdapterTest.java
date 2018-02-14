@@ -131,7 +131,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .encodeToString("testuser@DEFAULT_TENANT:password123".getBytes(StandardCharsets.UTF_8));
 
         doAnswer(invocation -> {
-            Handler<AsyncResult<User>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials")));
             return null;
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
@@ -154,7 +154,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .encodeToString("existinguser@DEFAULT_TENANT:password123".getBytes(StandardCharsets.UTF_8));
 
         doAnswer(invocation -> {
-            Handler<AsyncResult<User>> resultHandler = invocation.getArgumentAt(1, Handler.class);
+            Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "device_1")));
             return null;
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));

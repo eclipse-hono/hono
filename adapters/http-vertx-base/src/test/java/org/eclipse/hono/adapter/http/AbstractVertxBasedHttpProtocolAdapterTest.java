@@ -282,7 +282,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(server.actualPort()).thenReturn(0, 8080);
         when(server.requestHandler(any(Handler.class))).thenReturn(server);
         when(server.listen(any(Handler.class))).then(invocation -> {
-            Handler<AsyncResult<HttpServer>> handler = (Handler<AsyncResult<HttpServer>>) invocation.getArgumentAt(0, Handler.class);
+            Handler<AsyncResult<HttpServer>> handler = (Handler<AsyncResult<HttpServer>>) invocation.getArgument(0);
             if (startupShouldFail) {
                 handler.handle(Future.failedFuture("http server intentionally failed to start"));
             } else {
@@ -303,7 +303,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @SuppressWarnings("unchecked")
     private AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> getAdapter(final HttpServer server, final Handler<Void> onStartupSuccess) {
 
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties>() {
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties>() {
 
             @Override
             protected String getTypeName() {
@@ -332,7 +332,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         final RegistrationClient regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
-        when(regClient.assertRegistration(anyString(), anyString())).thenReturn(Future.succeededFuture(result));
+        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
 
         when(registrationClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 

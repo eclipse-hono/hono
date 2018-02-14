@@ -64,7 +64,7 @@ public class ForwardingEventDownstreamAdapterTest {
      * 
      * @param ctx The test context.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testProcessMessageForwardsMessageToDownstreamSender(final TestContext ctx) {
 
@@ -79,7 +79,8 @@ public class ForwardingEventDownstreamAdapterTest {
         ProtonSender sender = newMockSender(false);
         when(sender.send(any(Message.class), any(Handler.class))).then(invocation -> {
             msgSent.complete();
-            invocation.getArgumentAt(1, Handler.class).handle(downstreamDelivery);
+            final Handler handler = invocation.getArgument(1);
+            handler.handle(downstreamDelivery);
             return null;
         });
         ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));

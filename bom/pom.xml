@@ -41,9 +41,9 @@
     <jjwt.version>0.7.0</jjwt.version>
     <junit.version>4.12</junit.version>
     <logback.version>1.2.3</logback.version>
-    <mockito.version>1.10.19</mockito.version>
+    <mockito.version>2.10.0</mockito.version>
     <netty.version>4.1.15.Final</netty.version>
-    <objenesis.version>2.4</objenesis.version>
+    <objenesis.version>2.6</objenesis.version>
     <proton.version>0.25.0</proton.version>
     <qpid-jms.version>0.29.0</qpid-jms.version>
     <slf4j.version>1.7.24</slf4j.version>
@@ -190,12 +190,6 @@
         <scope>runtime</scope>
       </dependency>
       <dependency>
-        <groupId>org.objenesis</groupId>
-        <artifactId>objenesis</artifactId>
-        <version>${objenesis.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.apache.qpid</groupId>
         <artifactId>qpid-jms-client</artifactId>
         <version>${qpid-jms.version}</version>
@@ -307,6 +301,27 @@
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-codegen</artifactId>
+        <version>${vertx.version}</version>
+        <classifier>processor</classifier>
+        <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
     </dependencies>
   </dependencyManagement>

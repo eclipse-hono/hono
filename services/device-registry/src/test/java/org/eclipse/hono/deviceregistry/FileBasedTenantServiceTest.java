@@ -26,7 +26,9 @@ import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
@@ -50,6 +52,12 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  */
 @RunWith(VertxUnitRunner.class)
 public class FileBasedTenantServiceTest {
+
+    /**
+     * Time out each test after five seconds.
+     */
+    @Rule
+    public final Timeout timeout = Timeout.seconds(5);
 
     private static final String FILE_NAME = "/tenants.json";
 
@@ -92,26 +100,26 @@ public class FileBasedTenantServiceTest {
         props.setFilename(FILE_NAME);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed file"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
             startup.complete();
         }));
         svc.doStart(startupTracker);
 
         // THEN the file gets created
-        startup.await(2000);
+        startup.await();
         verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
     }
 
@@ -132,19 +140,13 @@ public class FileBasedTenantServiceTest {
 
         // WHEN starting the service but the file cannot be created
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("no access"));
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertFailure(started -> {
-            startup.complete();
-        }));
+        final Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertFailure());
         svc.doStart(startupTracker);
-
-        // THEN startup has failed
-        startup.await(2000);
     }
 
     /**
@@ -164,21 +166,17 @@ public class FileBasedTenantServiceTest {
         doAnswer(invocation -> {
             final Buffer data = mock(Buffer.class);
             when(data.getBytes()).thenReturn("NO JSON".getBytes(StandardCharsets.UTF_8));
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
-            startup.complete();
+            // THEN startup succeeds
         }));
         svc.doStart(startupTracker);
-
-        // THEN startup succeeds
-        startup.await(2000);
     }
 
     /**
@@ -195,21 +193,21 @@ public class FileBasedTenantServiceTest {
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
             final Buffer data = DeviceRegistryTestUtils.readFile(FILE_NAME);
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        Async startup = ctx.async();
-        Future<Void> startFuture = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startFuture = Future.future();
         startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
         svc.doStart(startFuture);
 
         // THEN the credentials from the file are loaded
-        startup.await(2000);
+        startup.await();
         assertTenantExists(svc, Constants.DEFAULT_TENANT, ctx);
     }
 
@@ -231,20 +229,20 @@ public class FileBasedTenantServiceTest {
         final Async countDown = ctx.async(2);
         addTenant(svc, ctx, countDown, Constants.DEFAULT_TENANT);
         addTenant(svc, ctx, countDown, "OTHER_TENANT");
-        countDown.await(2000);
+        countDown.await();
 
         // WHEN saving the content to the file and clearing the tenant registry
         final Async write = ctx.async();
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(2, Handler.class);
+            final Handler handler = invocation.getArgument(2);
             handler.handle(Future.succeededFuture());
             write.complete();
             return null;
         }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
 
         svc.saveToFile();
-        write.await(2000);
-        ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
+        write.await();
+        final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
         verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
         svc.clear();
         assertTenantDoesNotExist(svc, Constants.DEFAULT_TENANT, ctx);
@@ -252,13 +250,13 @@ public class FileBasedTenantServiceTest {
         // THEN the tenants can be loaded back in from the file
         final Async read = ctx.async();
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(buffer.getValue()));
             read.complete();
             return null;
         }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
         svc.loadTenantData();
-        read.await(2000);
+        read.await();
         assertTenantExists(svc, Constants.DEFAULT_TENANT, ctx);
         assertTenantExists(svc, "OTHER_TENANT", ctx);
     }
@@ -274,17 +272,14 @@ public class FileBasedTenantServiceTest {
 
         final Async countDown = ctx.async();
         addTenant(svc, ctx, countDown, "tenant");
-        countDown.await(2000);
+        countDown.await();
 
-        final Async add = ctx.async();
         svc.add(
                 "tenant",
                 buildTenantPayload("tenant"),
                 ctx.asyncAssertSuccess(s -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
-                    add.complete();
                 }));
-        add.await(1000);
     }
 
     /**
@@ -300,14 +295,10 @@ public class FileBasedTenantServiceTest {
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        Async addFailure = ctx.async();
         svc.add("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
+            // THEN the update fails
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            addFailure.complete();
         }));
-
-        // THEN the update fails
-        addFailure.await(2000);
     }
 
     /**
@@ -318,12 +309,9 @@ public class FileBasedTenantServiceTest {
     @Test
     public void testGetTenantFailsForNonExistingTenant(final TestContext ctx) {
 
-        final Async get = ctx.async();
         svc.get("notExistingTenant" , ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
-                    get.complete();
                 }));
-        get.await(2000);
     }
 
     /**
@@ -336,16 +324,13 @@ public class FileBasedTenantServiceTest {
 
         final Async add = ctx.async();
         addTenant(svc, ctx, add, "tenant");
-        add.await(2000);
+        add.await();
 
-        final Async get = ctx.async();
         svc.get("tenant", ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
                     assertThat(s.getPayload().getString(TenantConstants.FIELD_TENANT_ID), is("tenant"));
                     assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
-                    get.complete();
                 }));
-        get.await(2000);
     }
 
 
@@ -359,15 +344,12 @@ public class FileBasedTenantServiceTest {
 
         final Async add = ctx.async();
         addTenant(svc, ctx, add, "tenant");
-        add.await(2000);
+        add.await();
 
-        final Async remove = ctx.async();
         svc.remove("tenant", ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
             assertTenantDoesNotExist(svc, "tenant", ctx);
-            remove.complete();
         }));
-        remove.await(2000);
     }
 
     /**
@@ -383,14 +365,10 @@ public class FileBasedTenantServiceTest {
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        Async removeFailure = ctx.async();
         svc.remove("tenant", ctx.asyncAssertSuccess(s -> {
+            // THEN the update fails
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            removeFailure.complete();
         }));
-
-        // THEN the update fails
-        removeFailure.await(2000);
     }
 
     /**
@@ -403,7 +381,7 @@ public class FileBasedTenantServiceTest {
 
         final Async add = ctx.async();
         addTenant(svc, ctx, add, "tenant");
-        add.await(2000);
+        add.await();
 
         final Async update = ctx.async();
         JsonObject tenantPayload = buildTenantPayload("tenant");
@@ -415,7 +393,7 @@ public class FileBasedTenantServiceTest {
             assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
             get.complete();
         }));
-        get.await(2000);
+        get.await();
 
         svc.update(
                 "tenant",
@@ -424,7 +402,7 @@ public class FileBasedTenantServiceTest {
                     ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
                     update.complete();
                 }));
-        update.await(2000);
+        update.await();
 
         final Async getAgain = ctx.async();
         svc.get("tenant", ctx.asyncAssertSuccess(s -> {
@@ -432,7 +410,7 @@ public class FileBasedTenantServiceTest {
             assertThat(s.getPayload().getString(TenantConstants.FIELD_ENABLED), is("false"));
             getAgain.complete();
         }));
-        getAgain.await(2000);
+        getAgain.await();
     }
 
     /**
@@ -448,32 +426,24 @@ public class FileBasedTenantServiceTest {
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        Async updateFailure = ctx.async();
         svc.update("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
+            // THEN the update fails
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            updateFailure.complete();
         }));
-
-        // THEN the update fails
-        updateFailure.await(2000);
     }
 
     private static void assertTenantExists(final TenantService svc, final String tenant, final TestContext ctx) {
-        Async tenantCheck = ctx.async();
+
         svc.get(tenant, ctx.asyncAssertSuccess(t -> {
             assertThat(t.getStatus(), is(HttpURLConnection.HTTP_OK));
-            tenantCheck.complete();
         }));
-        tenantCheck.await(300);
     }
 
     private static void assertTenantDoesNotExist(final TenantService svc, final String tenant, final TestContext ctx) {
-        Async registration = ctx.async();
+
         svc.get(tenant, ctx.asyncAssertSuccess(t -> {
             assertThat(t.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
-            registration.complete();
         }));
-        registration.await(300);
     }
 
     private static void addTenant(final TenantService svc, final TestContext ctx, final Async countDown, final String tenantId) {

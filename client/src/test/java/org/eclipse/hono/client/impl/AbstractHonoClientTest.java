@@ -72,7 +72,7 @@ public class AbstractHonoClientTest {
         props = new ClientConfigProperties();
         context = mock(Context.class);
         doAnswer(invocation -> {
-            final Handler<Void> handler = invocation.getArgumentAt(0, Handler.class);
+            final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
         }).when(context).runOnContext(any(Handler.class));

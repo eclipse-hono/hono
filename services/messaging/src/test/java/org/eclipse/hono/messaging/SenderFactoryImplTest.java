@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.messaging;
 
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.util.function.BiConsumer;
@@ -95,6 +94,6 @@ public class SenderFactoryImplTest {
         // THEN the sender gets closed
         verify(sender).close();
         // and the close hook is called
-        verify(closeHook).handle(anyString());
+        verify(closeHook).handle(any());
     }
 }

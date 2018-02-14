@@ -99,13 +99,13 @@ public class FileBasedRegistrationServiceTest {
         // GIVEN a registration service configured with a non-existing file
         props.setSaveToFile(true);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(2, Handler.class);
+            Handler handler = invocation.getArgument(2);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).writeFile(eq(props.getFilename()), any(Buffer.class), any(Handler.class));
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
@@ -136,12 +136,12 @@ public class FileBasedRegistrationServiceTest {
         props.setSaveToFile(true);
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed file"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
@@ -175,7 +175,7 @@ public class FileBasedRegistrationServiceTest {
 
         // WHEN starting the service but the file cannot be created
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("no access"));
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
@@ -206,7 +206,7 @@ public class FileBasedRegistrationServiceTest {
         doAnswer(invocation -> {
             final Buffer data = mock(Buffer.class);
             when(data.getBytes()).thenReturn("NO JSON".getBytes(StandardCharsets.UTF_8));
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
@@ -236,7 +236,7 @@ public class FileBasedRegistrationServiceTest {
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
             final Buffer data = DeviceRegistryTestUtils.readFile(FILE_NAME);
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
@@ -381,7 +381,7 @@ public class FileBasedRegistrationServiceTest {
         props.setSaveToFile(false);
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed file"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
@@ -411,7 +411,7 @@ public class FileBasedRegistrationServiceTest {
         props.setSaveToFile(false);
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgumentAt(1, Handler.class);
+            Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed data"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));

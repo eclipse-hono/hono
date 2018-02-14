@@ -78,7 +78,7 @@ public class AbstractRequestResponseClientTest {
         vertx = mock(Vertx.class);
         context = mock(Context.class);
         doAnswer(invocation -> {
-            Handler<Void> handler = invocation.getArgumentAt(0, Handler.class);
+            Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
         }).when(context).runOnContext(any(Handler.class));
@@ -235,7 +235,7 @@ public class AbstractRequestResponseClientTest {
         doAnswer(invocation -> {
             // do not wait 200ms before running the timeout task but instead
             // run it immediately
-            Handler<Long> task = invocation.getArgumentAt(1, Handler.class);
+            Handler<Long> task = invocation.getArgument(1);
             task.handle(1L);
             return null;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));

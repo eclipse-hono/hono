@@ -13,8 +13,8 @@
 package org.eclipse.hono.messaging;
 
 import static org.eclipse.hono.TestSupport.*;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
 import java.util.concurrent.CountDownLatch;
@@ -25,12 +25,13 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -45,7 +46,6 @@ import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonSession;
-import org.mockito.ArgumentCaptor;
 
 /**
  * Verifies standard behavior of {@code ForwardingDownstreamAdapter}.
@@ -120,7 +120,7 @@ public class ForwardingDownstreamAdapterTest {
         adapter.handleFlow(drainingSender, client);
 
         // THEN assert that the upstream client has been drained
-        verify(client).drain(anyInt(), any(Handler.class));
+        verify(client).drain(anyLong(), any(Handler.class));
     }
 
     /**

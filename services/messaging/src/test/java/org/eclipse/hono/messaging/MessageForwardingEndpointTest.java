@@ -15,7 +15,6 @@ package org.eclipse.hono.messaging;
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.EnumSet;
@@ -68,7 +67,7 @@ public class MessageForwardingEndpointTest {
     /**
      * Verifies that the endpoint rejects messages that do not pass formal verification.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testMessageHandlerRejectsMalformedMessage() {
 
@@ -83,7 +82,8 @@ public class MessageForwardingEndpointTest {
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
         final DownstreamAdapter adapter = mock(DownstreamAdapter.class);
         doAnswer(invocation -> {
-            invocation.getArgumentAt(1, Handler.class).handle(Future.succeededFuture(null));
+            final Handler handler = invocation.getArgument(1);
+            handler.handle(Future.succeededFuture(null));
             return null;
         }).when(adapter).onClientAttach(any(UpstreamReceiver.class), any(Handler.class));
 
@@ -108,7 +108,7 @@ public class MessageForwardingEndpointTest {
      * Verifies that the endpoint does not open a link with a client if the
      * downstream messaging network is not available.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testOnLinkAttachClosesLinkIfDownstreamIsNotAvailable() {
 
@@ -119,7 +119,8 @@ public class MessageForwardingEndpointTest {
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
         final DownstreamAdapter adapter = mock(DownstreamAdapter.class);
         doAnswer(invocation -> {
-            invocation.getArgumentAt(1, Handler.class).handle(Future.failedFuture("downstream not available"));
+            final Handler handler = invocation.getArgument(1);
+            handler.handle(Future.failedFuture("downstream not available"));
             return null;
         }).when(adapter).onClientAttach(any(UpstreamReceiver.class), any(Handler.class));
 
