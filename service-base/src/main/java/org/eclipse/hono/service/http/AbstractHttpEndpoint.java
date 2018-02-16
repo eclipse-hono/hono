@@ -182,6 +182,16 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     }
 
     /**
+     * Return a Handler that puts the HTTP location header {@link HttpHeaders#LOCATION} to the passed location String.
+     *
+     * @param location The location to set in the HTTP response.
+     * @return Handler The Handler that puts the location header to the HTTP response.
+     */
+    protected Handler<HttpServerResponse> getLocationHeaderHandler(final String location) {
+        return response ->  response.putHeader(HttpHeaders.LOCATION, location);
+    }
+
+    /**
      * Sending a request message to a consumer on the event bus for further processing.
      *
      * @param ctx The routing context of the request.
@@ -223,6 +233,17 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      */
     protected final String getDeviceIdParam(final RoutingContext ctx) {
         return ctx.request().getParam(PARAM_DEVICE_ID);
+    }
+
+    /**
+     * Get a predicate that checks if a given HTTP status is set to the passed value.
+     *
+     * @param statusToCheckFor The HTTP status, e.g. {@link HttpURLConnection#HTTP_OK}.
+     * @return The predicate.
+     */
+    protected final Predicate<Integer> getHttpStatusPredicate(final int statusToCheckFor) {
+        final Predicate<Integer> httpStatusPredicate = status -> status == statusToCheckFor;
+        return httpStatusPredicate;
     }
 
 }
