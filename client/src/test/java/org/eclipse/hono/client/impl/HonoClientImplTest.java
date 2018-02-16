@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 import java.util.concurrent.CountDownLatch;
@@ -315,7 +316,14 @@ public class HonoClientImplTest {
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN the adapter reconnects to the downstream container
-        connectionFactory.await(1, TimeUnit.SECONDS);
+        assertTrue(connectionFactory.await(1, TimeUnit.SECONDS));
+
+        // and when the downstream connection fails again
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
+        connectionFactory.getDisconnectHandler().handle(con);
+
+        // THEN the adapter reconnects to the downstream container again
+        assertTrue(connectionFactory.await(1, TimeUnit.SECONDS));
     }
 
     /**
@@ -421,7 +429,7 @@ public class HonoClientImplTest {
 
         private Handler<ProtonConnection> disconnectHandler;
         private Handler<AsyncResult<ProtonConnection>> closeHandler;
-        private CountDownLatch expectedSucceedingConnectionAttemps;
+        private CountDownLatch expectedSucceedingConnectionAttempts;
         private CountDownLatch expectedFailingConnectionAttempts;
         private ProtonConnection connectionToCreate;
 
@@ -436,7 +444,7 @@ public class HonoClientImplTest {
         public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate, final int expectedSucceedingConnectionAttempts,
                 final int expectedFailingConnectionAttempts) {
             this.connectionToCreate = conToCreate;
-            this.expectedSucceedingConnectionAttemps = new CountDownLatch(expectedSucceedingConnectionAttempts);
+            this.expectedSucceedingConnectionAttempts = new CountDownLatch(expectedSucceedingConnectionAttempts);
             this.expectedFailingConnectionAttempts = new CountDownLatch(expectedFailingConnectionAttempts);
         }
 
@@ -465,7 +473,7 @@ public class HonoClientImplTest {
                 expectedFailingConnectionAttempts.countDown();
             } else {
                 connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
-                expectedSucceedingConnectionAttemps.countDown();
+                expectedSucceedingConnectionAttempts.countDown();
             }
         }
 
@@ -497,9 +505,13 @@ public class HonoClientImplTest {
             return closeHandler;
         }
 
+        public void setExpectedSucceedingConnectionAttempts(final int attempts) {
+            expectedSucceedingConnectionAttempts = new CountDownLatch(attempts);
+        }
+
         public boolean await(long timeout, TimeUnit unit) {
             try {
-                return expectedSucceedingConnectionAttemps.await(timeout, unit);
+                return expectedSucceedingConnectionAttempts.await(timeout, unit);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;

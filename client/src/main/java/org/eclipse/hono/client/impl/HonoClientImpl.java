@@ -264,7 +264,7 @@ public final class HonoClientImpl implements HonoClient {
         if (connectionLossHandler != null) {
             connectionLossHandler.handle(failedConnection);
         } else {
-            reconnect(attempt -> {}, failedCon -> onRemoteDisconnect(failedCon, null));
+            reconnect(attempt -> {}, null);
         }
     }
 
