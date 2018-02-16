@@ -13,13 +13,9 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static org.eclipse.hono.util.TenantConstants.StandardAction;
-import static org.eclipse.hono.util.TenantConstants.FIELD_TENANT_ID;
-
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.vertx.core.Handler;
@@ -78,27 +74,20 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
         router.post(path).handler(bodyHandler);
         router.post(path).handler(this::extractRequiredJsonPayload);
         router.post(path).handler(this::checkPayloadForTenantId);
-        router.post(path).handler(ctx -> doTenantHttpRequest(ctx, StandardAction.ACTION_ADD,
-                status -> status == HttpURLConnection.HTTP_CREATED,
-                tenantId -> response -> response.putHeader(HttpHeaders.LOCATION,
-                        String.format("/%s/%s", TenantConstants.TENANT_ENDPOINT, tenantId))
-        ));
+        router.post(path).handler(this::addTenant);
 
         final String pathWithTenant = String.format("/%s/:%s", TenantConstants.TENANT_ENDPOINT, PARAM_TENANT_ID);
 
         // GET tenant
-        router.get(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, StandardAction.ACTION_GET,
-                status -> status == HttpURLConnection.HTTP_OK, null) );
+        router.get(pathWithTenant).handler(this::getTenant);
 
         // UPDATE tenant
         router.put(pathWithTenant).handler(bodyHandler);
         router.put(pathWithTenant).handler(this::extractRequiredJsonPayload);
-        router.put(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, StandardAction.ACTION_UPDATE,
-                null, null));
+        router.put(pathWithTenant).handler(this::updateTenant);
 
         // REMOVE tenant
-        router.delete(pathWithTenant).handler(ctx -> doTenantHttpRequest(ctx, StandardAction.ACTION_REMOVE,
-                null, null));
+        router.delete(pathWithTenant).handler(this::removeTenant);
     }
 
     /**
@@ -111,32 +100,67 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
 
-        final Object tenantId = payload.getValue(FIELD_TENANT_ID);
+        final Object tenantId = payload.getValue(TenantConstants.FIELD_TENANT_ID);
 
         if (tenantId == null) {
-            ctx.response().setStatusMessage(String.format("'%s' param is required", FIELD_TENANT_ID));
+            ctx.response().setStatusMessage(String.format("'%s' param is required", TenantConstants.FIELD_TENANT_ID));
             ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
         } else if (!(tenantId instanceof String)) {
-            ctx.response().setStatusMessage(String.format("'%s' must be a string", FIELD_TENANT_ID));
+            ctx.response().setStatusMessage(String.format("'%s' must be a string", TenantConstants.FIELD_TENANT_ID));
             ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
         }
         ctx.next();
     }
 
-    private void doTenantHttpRequest(final RoutingContext ctx, final StandardAction action, final Predicate<Integer> sendResponseForStatus,
-                                     final Function<String, Handler<HttpServerResponse>> httpServerResponseHandlerForTenant) {
+    private String getTenantIdFromContext(final RoutingContext ctx) {
+        final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
+        return Optional.ofNullable(getTenantParam(ctx)).orElse(getTenantParamFromPayload(payload));
+    }
+
+    private void addTenant(final RoutingContext ctx) {
+
+        final String tenantId = getTenantIdFromContext(ctx);
+
+        final String location = String.format("/%s/%s", TenantConstants.TENANT_ENDPOINT, tenantId);
+
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_ADD,
+                status -> status == HttpURLConnection.HTTP_CREATED,
+                response ->  response.putHeader(HttpHeaders.LOCATION, location)
+        );
+    }
+
+    private void getTenant(final RoutingContext ctx) {
+
+        final String tenantId = getTenantIdFromContext(ctx);
+
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_GET,
+                status -> status == HttpURLConnection.HTTP_OK, null);
+    }
+
+    private void updateTenant(final RoutingContext ctx) {
+
+        final String tenantId = getTenantIdFromContext(ctx);
+
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_UPDATE, null, null);
+    }
+
+    private void removeTenant(final RoutingContext ctx) {
+
+        final String tenantId = getTenantIdFromContext(ctx);
+
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_REMOVE, null, null);
+    }
+
+    private void doTenantHttpRequest(final RoutingContext ctx, final String tenantId, final TenantConstants.StandardAction action, final Predicate<Integer> sendResponseBodyForStatus,
+                                     final Handler<HttpServerResponse> httpServerResponseHandler) {
+
+        logger.debug("http request [{}] for tenant [tenant: {}]", action, tenantId);
 
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
 
-        final String tenantId = Optional.ofNullable(getTenantParam(ctx)).orElse(getTenantParamFromPayload(payload));
-        logger.debug("http request [{}] for tenant [tenant: {}]", action, tenantId);
-
         final JsonObject requestMsg = TenantConstants.getServiceRequestAsJson(action.toString(), tenantId, payload);
 
-        final Handler<HttpServerResponse> httpServerResponseHandler =
-                (httpServerResponseHandlerForTenant != null ? httpServerResponseHandlerForTenant.apply(tenantId) : null);
-
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, sendResponseForStatus, httpServerResponseHandler));
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, sendResponseBodyForStatus, httpServerResponseHandler));
     }
 
     private static String getTenantParamFromPayload(final JsonObject payload) {
