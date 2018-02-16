@@ -24,8 +24,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.eclipse.hono.util.MessageHelper;
-
 /**
  * Constants &amp; utility methods that are common to APIs that follow the request response pattern.
  */
@@ -42,6 +40,40 @@ public class RequestResponseApiConstants {
     public static final String FIELD_ERROR     = "error";
     public static final String FIELD_PAYLOAD   = "payload";
     public static final String FIELD_TENANT_ID = "tenant-id";
+
+    /**
+     * Request standard actions to support the standard lifecycle.
+     * If more or other actions shall be used, an own enum type should be defined.
+    */
+    public enum StandardAction {
+        ACTION_GET, ACTION_ADD, ACTION_UPDATE, ACTION_REMOVE, ACTION_UNKNOWN;
+
+        /**
+         * Construct a StandardAction from a subject.
+         *
+         * @param subject The subject from which the StandardAction needs to be constructed.
+         * @return StandardAction The StandardAction as enum, or {@link StandardAction#ACTION_UNKNOWN} otherwise.
+         */
+        public static StandardAction from(final String subject) {
+            if (subject != null) {
+                try {
+                    return StandardAction.valueOf(subject);
+                } catch (final IllegalArgumentException e) {
+                }
+            }
+            return ACTION_UNKNOWN;
+        }
+
+        /**
+         * Helper method to check if a subject is a valid Request Response API action.
+         *
+         * @param subject The subject to validate.
+         * @return boolean {@link Boolean#TRUE} if the subject denotes a valid action, {@link Boolean#FALSE} otherwise.
+         */
+        public static boolean isValid(final String subject) {
+            return StandardAction.from(subject) != StandardAction.ACTION_UNKNOWN;
+        }
+    }
 
     /**
      * Creates an AMQP message from a JSON message containing the response to an
@@ -159,6 +191,7 @@ public class RequestResponseApiConstants {
      *
      * @param operation The operation that shall be processed by the service.
      * @param tenantId The tenant for which the message was processed.
+     * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
      * @throws NullPointerException if operation or tenant ID are {@code null}.
      * @return JsonObject The json object for the request that is to be sent via the vert.x event bus.
      */

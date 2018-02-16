@@ -25,37 +25,6 @@ import io.vertx.core.json.JsonObject;
 
 public final class TenantConstants extends RequestResponseApiConstants {
 
-    /* tenant actions */
-    public enum Action {
-        ACTION_GET, ACTION_ADD, ACTION_UPDATE, ACTION_REMOVE, ACTION_UNKNOWN;
-
-        /**
-         * Construct an Action from a subject.
-         *
-         * @param subject The subject from which the Action needs to be constructed.
-         * @return Action The Action as enum, or {@link Action#ACTION_UNKNOWN} otherwise.
-         */
-        public static Action from(final String subject) {
-            if (subject != null) {
-                try {
-                    return Action.valueOf(subject);
-                } catch (IllegalArgumentException e) {
-                }
-            }
-            return ACTION_UNKNOWN;
-        }
-
-        /**
-         * Helper method to check if a subject is a valid Tenant API action.
-         *
-         * @param subject The subject to validate.
-         * @return boolean {@link Boolean#TRUE} if the subject denotes a valid action, {@link Boolean#FALSE} otherwise.
-         */
-        public static boolean isValid(final String subject) {
-            return Action.from(subject) != Action.ACTION_UNKNOWN;
-        }
-    }
-
     /* message payload fields */
     public static final String FIELD_ADAPTERS                    = "adapters";
     public static final String FIELD_ADAPTERS_TYPE               = "type";

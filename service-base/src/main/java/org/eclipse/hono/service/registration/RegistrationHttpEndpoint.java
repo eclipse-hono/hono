@@ -43,10 +43,6 @@ import io.vertx.ext.web.RoutingContext;
  */
 public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
-    // path parameters for capturing parts of the URI path
-    private static final String PARAM_TENANT_ID = "tenant_id";
-    private static final String PARAM_DEVICE_ID = "device_id";
-
     /**
      * Creates an endpoint for a Vertx instance.
      * 
@@ -56,6 +52,11 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     @Autowired
     public RegistrationHttpEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
+    }
+
+    @Override
+    protected String getEventBusAddress() {
+        return RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
     }
 
     @Override
@@ -88,24 +89,6 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         router.route(HttpMethod.DELETE, pathWithTenantAndDeviceId).handler(this::doUnregisterDevice);
     }
 
-    private static String getTenantParam(final RoutingContext ctx) {
-        return ctx.request().getParam(PARAM_TENANT_ID);
-    }
-
-    private static String getDeviceIdParam(final RoutingContext ctx) {
-        return ctx.request().getParam(PARAM_DEVICE_ID);
-    }
-
-    private static void setResponseBody(final JsonObject registrationResult, final HttpServerResponse response) {
-        JsonObject msg = registrationResult.getJsonObject(RegistrationConstants.FIELD_PAYLOAD);
-        if (msg != null) {
-            String body = msg.encodePrettily();
-            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
-                .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
-                .write(body);
-        }
-    }
-
     private void doGetDevice(final RoutingContext ctx) {
 
         final String deviceId = getDeviceIdParam(ctx);
@@ -113,7 +96,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         final HttpServerResponse response = ctx.response();
         final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_GET, tenantId, deviceId);
 
-        doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
+        sendAction(ctx, requestMsg, (status, registrationResult) -> {
             response.setStatusCode(status);
             switch (status) {
                 case HttpURLConnection.HTTP_OK:
@@ -135,7 +118,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                 payload = ctx.getBodyAsJson();
             }
             registerDevice(ctx, payload);
-        } catch (DecodeException e) {
+        } catch (final DecodeException e) {
             HttpUtils.badRequest(ctx, "body does not contain a valid JSON object");
         }
     }
@@ -145,7 +128,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         if (payload == null) {
             HttpUtils.badRequest(ctx, "missing body");
         } else {
-            Object deviceId = payload.remove(FIELD_DEVICE_ID);
+            final Object deviceId = payload.remove(FIELD_DEVICE_ID);
             if (deviceId == null) {
                 HttpUtils.badRequest(ctx, String.format("'%s' param is required", FIELD_DEVICE_ID));
             } else if (!(deviceId instanceof String)) {
@@ -155,7 +138,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                 logger.debug("registering data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
                 final HttpServerResponse response = ctx.response();
                 final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_REGISTER, tenantId, (String) deviceId, payload);
-                doRegistrationAction(ctx,requestMsg, (status, registrationResult) -> {
+                sendAction(ctx,requestMsg, (status, registrationResult) -> {
                         response.setStatusCode(status);
                         switch(status) {
                         case HttpURLConnection.HTTP_CREATED:
@@ -178,7 +161,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
                 payload = ctx.getBodyAsJson();
             }
             updateRegistration(getDeviceIdParam(ctx), payload, ctx);
-        } catch (DecodeException e) {
+        } catch (final DecodeException e) {
             HttpUtils.badRequest(ctx, "body does not contain a valid JSON object");
         }
     }
@@ -193,7 +176,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         final HttpServerResponse response = ctx.response();
         final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_UPDATE, tenantId, deviceId, payload);
 
-        doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
+        sendAction(ctx, requestMsg, (status, registrationResult) -> {
                 response.setStatusCode(status);
                 if (status >=400) {
                     setResponseBody(registrationResult, response);
@@ -209,7 +192,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         logger.debug("removing registration information for device [tenant: {}, device: {}]", tenantId, deviceId);
         final HttpServerResponse response = ctx.response();
         final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_DEREGISTER, tenantId, deviceId);
-        doRegistrationAction(ctx, requestMsg, (status, registrationResult) -> {
+        sendAction(ctx, requestMsg, (status, registrationResult) -> {
                 response.setStatusCode(status);
                 if (status >= 400) {
                     setResponseBody(registrationResult, response);
@@ -218,17 +201,4 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         });
     }
 
-    private void doRegistrationAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
-
-        vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, requestMsg,
-                invocation -> {
-                    if (invocation.failed()) {
-                        HttpUtils.serviceUnavailable(ctx, 2);
-                    } else {
-                        final JsonObject registrationResult = (JsonObject) invocation.result().body();
-                        final Integer status = registrationResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);
-                        responseHandler.accept(status, registrationResult);
-                    }
-                });
-    }
 }
