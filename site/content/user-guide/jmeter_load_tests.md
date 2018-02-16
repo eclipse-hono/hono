@@ -22,7 +22,7 @@ threads (devices/solution-receivers). It assumes the typical Hono "get started" 
 
 You may need to change some properties of the Hono Sender/Hono Receiver - e.g. the trust store path, ports etc.
 
-There is also the test plan `<hono-installation>/jmeter/src/jmeter/hono_jmeter_runtime_adapters.jmx`, which provides a receiver (AMQP 1.0) and senders for the REST/MQTT/Kura adapters. To use the MQTT/Kura senders you need the JMeter plugin for MQTT in your JMeter installation.
+There is also the test plan `<hono-installation>/jmeter/src/jmeter/hono_jmeter_runtime_adapters.jmx`, which provides a receiver (AMQP 1.0) and senders for the HTTP/MQTT/Kura adapters. To use the MQTT/Kura senders you need the JMeter plugin for MQTT in your JMeter installation.
 
 ## Important
 
