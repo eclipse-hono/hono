@@ -13,20 +13,17 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.eclipse.hono.util.TenantConstants.StandardAction;
-import static org.eclipse.hono.util.TenantConstants.FIELD_TENANT_ID;
-
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -104,13 +101,13 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
 
-        final Object tenantId = payload.getValue(FIELD_TENANT_ID);
+        final Object tenantId = payload.getValue(TenantConstants.FIELD_TENANT_ID);
 
         if (tenantId == null) {
-            ctx.response().setStatusMessage(String.format("'%s' param is required", FIELD_TENANT_ID));
+            ctx.response().setStatusMessage(String.format("'%s' param is required", TenantConstants.FIELD_TENANT_ID));
             ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
         } else if (!(tenantId instanceof String)) {
-            ctx.response().setStatusMessage(String.format("'%s' must be a string", FIELD_TENANT_ID));
+            ctx.response().setStatusMessage(String.format("'%s' must be a string", TenantConstants.FIELD_TENANT_ID));
             ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
         }
         ctx.next();
@@ -128,32 +125,35 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String location = String.format("/%s/%s", TenantConstants.TENANT_ENDPOINT, tenantId);
 
-        doTenantHttpRequest(ctx, tenantId, StandardAction.ACTION_ADD, getHttpStatusPredicate(HTTP_CREATED),
-                getLocationHeaderHandler(location));
+        doTenantHttpRequest(ctx, tenantId, RequestResponseApiConstants.StandardAction.ACTION_ADD,
+                status -> status == HttpURLConnection.HTTP_CREATED,
+                response ->  response.putHeader(HttpHeaders.LOCATION, location)
+        );
     }
 
     private void getTenant(final RoutingContext ctx) {
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, StandardAction.ACTION_GET, getHttpStatusPredicate(HTTP_OK), null);
+        doTenantHttpRequest(ctx, tenantId, RequestResponseApiConstants.StandardAction.ACTION_GET,
+                status -> status == HttpURLConnection.HTTP_OK, null);
     }
 
     private void updateTenant(final RoutingContext ctx) {
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, StandardAction.ACTION_UPDATE,null, null);
+        doTenantHttpRequest(ctx, tenantId, RequestResponseApiConstants.StandardAction.ACTION_UPDATE,null, null);
     }
 
     private void removeTenant(final RoutingContext ctx) {
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, StandardAction.ACTION_REMOVE,null, null);
+        doTenantHttpRequest(ctx, tenantId, RequestResponseApiConstants.StandardAction.ACTION_REMOVE,null, null);
     }
 
-    private void doTenantHttpRequest(final RoutingContext ctx, final String tenantId, final StandardAction action, final Predicate<Integer> sendResponseBodyForStatus,
+    private void doTenantHttpRequest(final RoutingContext ctx, final String tenantId, final RequestResponseApiConstants.StandardAction action, final Predicate<Integer> sendResponseBodyForStatus,
                                      final Handler<HttpServerResponse> httpServerResponseHandler) {
 
         logger.debug("http request [{}] for tenant [tenant: {}]", action, tenantId);
