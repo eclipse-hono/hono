@@ -67,12 +67,10 @@ public class RegistrationAmqpEndpointTest {
     @Test
     public void testProcessMessageSendsRequestViaEventBus() {
 
-        final ResourceIdentifier target = ResourceIdentifier.from(
-                RegistrationConstants.REGISTRATION_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final Message msg = ProtonHelper.message();
         msg.setSubject(RegistrationConstants.ACTION_ASSERT);
         msg.setBody(new AmqpValue(new JsonObject().put("temp", 15).encode()));
-        MessageHelper.annotate(msg, target);
+        MessageHelper.annotate(msg, resource);
         endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
         verify(eventBus).send(eq(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN), any(JsonObject.class), any(Handler.class));
