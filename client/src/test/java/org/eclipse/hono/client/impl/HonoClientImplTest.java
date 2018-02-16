@@ -286,7 +286,7 @@ public class HonoClientImplTest {
         // THEN the sender creation fails,
         senderCreationFailure.await();
         // the connection is re-established
-        connectionFactory.await(1, TimeUnit.SECONDS);
+        assertTrue(connectionFactory.await(1, TimeUnit.SECONDS));
         // and the next attempt to create a sender succeeds
         client.getOrCreateSender(
                 "telemetry/tenant",
