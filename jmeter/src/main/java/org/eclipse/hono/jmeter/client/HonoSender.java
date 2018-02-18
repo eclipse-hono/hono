@@ -15,6 +15,7 @@ package org.eclipse.hono.jmeter.client;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
@@ -23,8 +24,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.jmeter.samplers.SampleResult;
 import org.eclipse.hono.client.HonoClient;
@@ -37,6 +36,7 @@ import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.jmeter.HonoSampler;
 import org.eclipse.hono.jmeter.HonoSenderSampler;
+import org.eclipse.hono.util.JwtHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +52,7 @@ import io.vertx.proton.ProtonDelivery;
  */
 public class HonoSender extends AbstractClient {
 
-    private static final int MAX_RECONNECT_ATTEMPTS      = 0;
+    private static final int    MAX_RECONNECT_ATTEMPTS = 10;
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSender.class);
 
     private final AtomicBoolean     running = new AtomicBoolean(false);
@@ -61,10 +61,10 @@ public class HonoSender extends AbstractClient {
     private final HonoClient        honoClient;
     private final ConnectionFactory registrationConnectionFactory;
     private final HonoClient        registrationHonoClient;
+    private final byte[]            payload;
 
-    private RegistrationClient registrationClient;
-    private String             token;
-    private MessageSender      messageSender;
+    private String assertion;
+    private Instant assertionExpiration;
 
     /**
      * Creates a new sender for configuration properties.
@@ -75,6 +75,7 @@ public class HonoSender extends AbstractClient {
 
         super();
         this.sampler = sampler;
+        this.payload = sampler.getData().getBytes(StandardCharsets.UTF_8);
 
         // hono config
         final ClientConfigProperties honoProps = new ClientConfigProperties();
@@ -109,6 +110,9 @@ public class HonoSender extends AbstractClient {
 
     /**
      * Starts this sender.
+     * <p>
+     * As part of the startup the sender connects to Hono Messaging and the
+     * Device Registration service.
      * 
      * @param deviceId The device to send messages for.
      * @return A future indicating the outcome of the startup process.
@@ -122,8 +126,8 @@ public class HonoSender extends AbstractClient {
             LOGGER.debug("create hono sender - tenant: {}  deviceId: {}", sampler.getTenant(), sampler.getDeviceId());
 
             CompositeFuture.all(
-                    connect().compose(ok -> createSender()),
-                    connectRegistry().compose(ok -> createRegistrationClient()).compose(ok -> createDevice(deviceId)).compose(ok -> updateAssertion(deviceId)))
+                    connectToHonoMessaging(),
+                    connectToRegistrationService().compose(ok -> createDevice(deviceId)))
                 .setHandler(startup -> {
                     if (startup.succeeded()) {
                         result.complete(null);
@@ -136,12 +140,12 @@ public class HonoSender extends AbstractClient {
                     }
                 });
         } else {
-            result.completeExceptionally(new javax.jms.IllegalStateException("sender is already starting"));
+            result.completeExceptionally(new IllegalStateException("sender is already starting"));
         }
         return result;
     }
 
-    private Future<HonoClient> connect() {
+    private Future<HonoClient> connectToHonoMessaging() {
 
         return honoClient
                 .connect(getClientOptions(MAX_RECONNECT_ATTEMPTS))
@@ -151,7 +155,7 @@ public class HonoSender extends AbstractClient {
                 });
     }
 
-    private Future<HonoClient> connectRegistry() {
+    private Future<HonoClient> connectToRegistrationService() {
 
         return registrationHonoClient
                 .connect(getClientOptions(MAX_RECONNECT_ATTEMPTS))
@@ -161,81 +165,64 @@ public class HonoSender extends AbstractClient {
                 });
     }
 
-    private Future<RegistrationClient> createRegistrationClient() {
+    private Future<RegistrationClient> getRegistrationClient() {
 
-        return registrationHonoClient
-                .getOrCreateRegistrationClient(sampler.getTenant())
-                .map(client -> {
-                    registrationClient = client;
-                    return client;
-                });
+        return registrationHonoClient.getOrCreateRegistrationClient(sampler.getTenant());
     }
 
-    private Future<MessageSender> createSender() {
+    private Future<MessageSender> getSender() {
 
         if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
-            return honoClient
-                    .getOrCreateTelemetrySender(sampler.getTenant())
-                    .map(sender -> {
-                        messageSender = sender;
-                        return sender;
-                    });
+            return honoClient.getOrCreateTelemetrySender(sampler.getTenant());
         } else {
-            return honoClient
-                    .getOrCreateEventSender(sampler.getTenant())
-                    .map(sender -> {
-                        messageSender = sender;
-                        return sender;
-                    });
+            return honoClient.getOrCreateEventSender(sampler.getTenant());
         }
     }
 
     private Future<Void> createDevice(final String deviceId) {
 
-        if (registrationClient == null) {
-            return Future.failedFuture(new IllegalStateException("no registration client available"));
-        } else {
-
-            final JsonObject data = new JsonObject().put("type", "jmeter test device");
-            LOGGER.info("registering device [{}]", deviceId);
-            return registrationClient.register(deviceId, data).recover(t -> {
-                final ServiceInvocationException e = (ServiceInvocationException) t;
-                if (e.getErrorCode() == HttpURLConnection.HTTP_CONFLICT) {
-                    // ignore if device already exists
-                    LOGGER.info("device {} already exists", deviceId);
-                    return Future.succeededFuture();
-                } else {
-                    return Future.failedFuture(e);
-                }
-            }).map(ok -> {
-                LOGGER.info("registered device {}", deviceId);
-                return (Void) null;
-            });
-        }
+        final JsonObject data = new JsonObject().put("type", "jmeter test device");
+        LOGGER.info("registering device [{}]", deviceId);
+        return getRegistrationClient()
+                .compose(client -> client.register(deviceId, data))
+                .recover(t -> {
+                    final ServiceInvocationException e = (ServiceInvocationException) t;
+                    if (e.getErrorCode() == HttpURLConnection.HTTP_CONFLICT) {
+                        // ignore if device already exists
+                        LOGGER.info("device {} already exists", deviceId);
+                        return Future.succeededFuture();
+                    } else {
+                        return Future.failedFuture(e);
+                    }
+                }).map(ok -> {
+                    LOGGER.info("registered device {}", deviceId);
+                    return (Void) null;
+                });
     }
 
     private Future<Void> removeDevice(final String deviceId) {
 
-        if (registrationClient == null) {
-            return Future.failedFuture(new IllegalStateException("no registration client available"));
-        } else {
-            return registrationClient.deregister(deviceId).map(ok -> {
-                LOGGER.info("removed device: {}", deviceId);
-                return (Void) null;
-            });
-        }
+        return getRegistrationClient()
+                .compose(client -> client.deregister(deviceId))
+                .map(ok -> {
+                    LOGGER.info("removed device: {}", deviceId);
+                    return (Void) null;
+                });
     }
 
-    private Future<String> updateAssertion(final String deviceId) {
+    private Future<String> getRegistrationAssertion(final String deviceId) {
 
-        if (registrationClient == null) {
-            return Future.failedFuture(new IllegalStateException("no registration client available"));
+        if (assertion != null && Instant.now().isBefore(assertionExpiration)) {
+            return Future.succeededFuture(assertion);
         } else {
-            return registrationClient.assertRegistration(deviceId).map(regInfo -> {
-                token = regInfo.getString(RegistrationConstants.FIELD_ASSERTION);
-                LOGGER.info("got registration assertion for device [{}]: {}", deviceId, token);
-                return token;
-            });
+            return getRegistrationClient()
+                    .compose(client -> client.assertRegistration(deviceId))
+                    .map(regInfo -> {
+                        assertion = regInfo.getString(RegistrationConstants.FIELD_ASSERTION);
+                        assertionExpiration = JwtHelper.getExpiration(assertion).toInstant();
+                        LOGGER.info("got registration assertion for device [{}], expires: {}", deviceId, assertionExpiration);
+                        return assertion;
+                    });
         }
     }
 
@@ -248,19 +235,12 @@ public class HonoSender extends AbstractClient {
      */
     public void send(final SampleResult sampleResult, final String deviceId, final boolean waitOnCredits) {
 
+        final CompletableFuture<SampleResult> tracker = new CompletableFuture<>();
+
         // start sample
         sampleResult.sampleStart();
-
-        if (messageSender == null) {
-            sampleResult.setSuccessful(false);
-            sampleResult.setResponseMessage("sender is not connected");
-            sampleResult.setResponseCode("503");
-        } else {
-
-            final AtomicInteger messagesSent = new AtomicInteger(0);
-            final AtomicLong bytesSent = new AtomicLong(0);
-            final byte[] payload = sampler.getData().getBytes(StandardCharsets.UTF_8);
-            final CompletableFuture<Void> tracker = new CompletableFuture<>();
+        final Future<MessageSender> senderFuture = getSender();
+        senderFuture.compose(ok -> getRegistrationAssertion(deviceId)).map(token -> {
 
             final Future<ProtonDelivery> deliveryTracker = Future.future();
             final Future<Void> creditTracker = Future.future();
@@ -274,7 +254,7 @@ public class HonoSender extends AbstractClient {
 
             if (waitOnCredits) {
 
-                messageSender.send(
+                senderFuture.result().send(
                         deviceId,
                         properties,
                         sampler.getData(),
@@ -285,7 +265,7 @@ public class HonoSender extends AbstractClient {
             } else {
 
                 creditTracker.complete();
-                messageSender.send(
+                senderFuture.result().send(
                         deviceId,
                         properties,
                         sampler.getData(),
@@ -295,27 +275,31 @@ public class HonoSender extends AbstractClient {
 
             CompositeFuture.all(deliveryTracker, creditTracker).setHandler(send -> {
                 if (send.succeeded()) {
-                    bytesSent.addAndGet(payload.length);
-                    messagesSent.incrementAndGet();
-                    tracker.complete(null);
+                    sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", sampler.getEndpoint(), sampler.getTenant(), deviceId));
+                    sampleResult.setSentBytes(payload.length);
+                    sampleResult.setSampleCount(1);
+                    tracker.complete(sampleResult);
                 } else {
                     tracker.completeExceptionally(send.cause());
                 }
             });
 
-            try {
-                tracker.get(1, TimeUnit.SECONDS);
-                sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", sampler.getEndpoint(), sampler.getTenant(), deviceId));
-                sampleResult.setSentBytes(bytesSent.get());
-                sampleResult.setSampleCount(messagesSent.get());
-                LOGGER.debug("{}: sent batch of {} messages for device [{}]", sampler.getThreadName(), messagesSent.get(), deviceId);
-            } catch (InterruptedException | CancellationException | ExecutionException | TimeoutException e) {
-                sampleResult.setSuccessful(false);
-                sampleResult.setResponseMessage(e.getCause().getMessage());
-                sampleResult.setResponseCode("500");
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
+            return null;
+
+        }).otherwise(t -> {
+            tracker.completeExceptionally(new IllegalStateException("sender is not connected"));
+            return null;
+        });
+
+        try {
+            tracker.get(1, TimeUnit.SECONDS);
+            LOGGER.debug("{}: sent message for device [{}]", sampler.getThreadName(), deviceId);
+        } catch (InterruptedException | CancellationException | ExecutionException | TimeoutException e) {
+            sampleResult.setSuccessful(false);
+            sampleResult.setResponseMessage(e.getCause() != null ? e.getCause().getMessage() : e.getClass().getSimpleName());
+            sampleResult.setResponseCode("500");
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
             }
         }
         sampleResult.sampleEnd();
