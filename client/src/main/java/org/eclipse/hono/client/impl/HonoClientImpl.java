@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -73,6 +74,7 @@ public final class HonoClientImpl implements HonoClient {
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
     private CacheManager cacheManager;
+    private AtomicInteger reconnectAttempts = new AtomicInteger(0);
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -126,6 +128,9 @@ public final class HonoClientImpl implements HonoClient {
         this.cacheManager = Objects.requireNonNull(manager);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<Boolean> isConnected() {
 
@@ -162,11 +167,33 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public Future<HonoClient> connect(final ProtonClientOptions options) {
-        return connect(options, null);
+    public Future<HonoClient> connect() {
+        return connect(null, null);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<HonoClient> connect(final ProtonClientOptions options) {
+        return connect(Objects.requireNonNull(options), null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<HonoClient> connect(final Handler<ProtonConnection> disconnectHandler) {
+        return connect(null, Objects.requireNonNull(disconnectHandler));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<HonoClient> connect(
             final ProtonClientOptions options,
@@ -194,7 +221,11 @@ public final class HonoClientImpl implements HonoClient {
             } else if (connecting.compareAndSet(false, true)) {
 
                 if (options == null) {
-                    clientOptions = new ProtonClientOptions();
+                    // by default, try to re-connect forever
+                    clientOptions = new ProtonClientOptions()
+                            .setConnectTimeout(200)
+                            .setReconnectAttempts(-1)
+                            .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
                 } else {
                     clientOptions = options;
                 }
@@ -206,9 +237,15 @@ public final class HonoClientImpl implements HonoClient {
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                reconnect(connectionHandler, disconnectHandler);
+                                if (conAttempt.cause() instanceof SecurityException) {
+                                    connectionHandler.handle(Future.failedFuture(conAttempt.cause()));
+                                } else {
+                                    reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
+                                }
                             } else {
                                 setConnection(conAttempt.result());
+                                // make sure we try to re-connect as often as we tried to connect initially
+                                reconnectAttempts = new AtomicInteger(0);
                                 if (shuttingDown.get()) {
                                     // if client was already shutdown in the meantime we give our best to cleanup connection
                                     shutdownConnection(result -> {});
@@ -277,27 +314,50 @@ public final class HonoClientImpl implements HonoClient {
     }
 
     private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler, final Handler<ProtonConnection> disconnectHandler) {
+        reconnect(null, connectionHandler, disconnectHandler);
+    }
 
-        if (clientOptions == null || clientOptions.getReconnectAttempts() == 0) {
-            connectionHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
-        } else if (shuttingDown.get()) {
+    private void reconnect(
+            final Throwable connectionFailureCause,
+            final Handler<AsyncResult<HonoClient>> connectionHandler,
+            final Handler<ProtonConnection> disconnectHandler) {
+
+        if (shuttingDown.get()) {
             // no need to try to re-connect
             connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
+        } else if (clientOptions.getReconnectAttempts() - reconnectAttempts.get() == 0) {
+            reconnectAttempts = new AtomicInteger(0);
+            LOG.debug("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
+                    clientOptions.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
+            if (connectionFailureCause == null) {
+                connectionHandler.handle(Future.failedFuture(
+                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
+            } else {
+                connectionHandler.handle(Future.failedFuture(connectionFailureCause));
+            }
         } else {
-            LOG.trace("scheduling re-connect attempt ...");
+            LOG.trace("scheduling attempt to re-connect ...");
+            reconnectAttempts.getAndIncrement();
             // give Vert.x some time to clean up NetClient
-            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, tid -> {
-                LOG.debug("attempting to re-connect to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+            vertx.setTimer(clientOptions.getReconnectInterval(), tid -> {
+                LOG.debug("starting attempt [#{}] to re-connect to server [{}:{}]",
+                        reconnectAttempts.get(), connectionFactory.getHost(), connectionFactory.getPort());
                 connect(clientOptions, connectionHandler, disconnectHandler);
             });
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<MessageSender> getOrCreateTelemetrySender(final String tenantId) {
         return getOrCreateTelemetrySender(tenantId, null);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<MessageSender> getOrCreateTelemetrySender(final String tenantId, final String deviceId) {
 
@@ -322,11 +382,17 @@ public final class HonoClientImpl implements HonoClient {
         });
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<MessageSender> getOrCreateEventSender(final String tenantId) {
         return getOrCreateEventSender(tenantId, null);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<MessageSender> getOrCreateEventSender(
             final String tenantId,
@@ -400,6 +466,9 @@ public final class HonoClientImpl implements HonoClient {
         return result;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<MessageConsumer> createTelemetryConsumer(
             final String tenantId,
@@ -425,6 +494,9 @@ public final class HonoClientImpl implements HonoClient {
         });
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<MessageConsumer> createEventConsumer(
             final String tenantId,
@@ -434,6 +506,9 @@ public final class HonoClientImpl implements HonoClient {
         return createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), closeHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<MessageConsumer> createEventConsumer(
             final String tenantId,
@@ -485,6 +560,9 @@ public final class HonoClientImpl implements HonoClient {
         return result;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<CredentialsClient> getOrCreateCredentialsClient(
             final String tenantId) {
@@ -531,6 +609,9 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<RegistrationClient> getOrCreateRegistrationClient(
             final String tenantId) {
@@ -633,6 +714,9 @@ public final class HonoClientImpl implements HonoClient {
         });
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void shutdown() {
 
@@ -653,6 +737,9 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
 

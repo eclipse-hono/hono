@@ -16,6 +16,7 @@ package org.eclipse.hono.client.impl;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
+import java.net.InetAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -95,6 +96,32 @@ public class HonoClientImplTest {
             vertx.close(ctx.asyncAssertSuccess());
         }
     }
+
+    /**
+     * Verifies that the client tries to connect a limited
+     * number of times only.
+     * 
+     * @param ctx The vert.x test client.
+     */
+    @Test
+    public void testConnectFailsAfterMaxConnectionAttempts(final TestContext ctx) {
+
+        // GIVEN a client that is configured to connect
+        // to a peer that is not listening
+        props.setHost(InetAddress.getLoopbackAddress().getHostAddress());
+        props.setPort(45000);
+        client = new HonoClientImpl(vertx, props);
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setConnectTimeout(50)
+                .setReconnectAttempts(3)
+                .setReconnectInterval(50);
+
+        // WHEN the client tries to connect
+        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection attempt fails
+        }));
+    }
+
     /**
      * Verifies that a concurrent request to create a request-response client fails the given
      * future for tracking the attempt.
@@ -268,13 +295,16 @@ public class HonoClientImplTest {
         // expect the connection factory to be invoked twice
         // first on initial connection
         // second on reconnect
-        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 2);
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
 
-        // GIVEN a client trying to create a sender to the peer
-        final Async connected = ctx.async();
+        // GIVEN a client trying to create a sender to a peer
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setReconnectInterval(50)
+                .setReconnectAttempts(3);
         client = new HonoClientImpl(vertx, connectionFactory, props);
-        client.connect(new ProtonClientOptions().setReconnectAttempts(1)).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
+        client.connect(options).setHandler(ctx.asyncAssertSuccess());
+        assertTrue(connectionFactory.await(1, TimeUnit.SECONDS));
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
         // WHEN the downstream connection fails just when the client wants to open a sender link
         final Async senderCreationFailure = ctx.async();
@@ -296,30 +326,32 @@ public class HonoClientImplTest {
     /**
      * Verifies that the client tries to re-establish a lost connection to a server.
      * 
-     * @param ctx The Vertx test context.
+     * @param ctx The vert.x test context.
      */
     @Test
     public void testDownstreamDisconnectTriggersReconnect(final TestContext ctx) {
 
-        // expect the connection factory to be invoked twice
-        // first on initial connection
-        // second on re-connect attempt
-        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 2);
-
-        // GIVEN an client connected to a server
-        final Async connected = ctx.async();
+        // GIVEN an client that is connected to a peer to which the
+        // connection can be established on the third attempt only
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 1, 2);
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setReconnectInterval(50)
+                .setReconnectAttempts(3);
         client = new HonoClientImpl(vertx, connectionFactory, props);
-        client.connect(new ProtonClientOptions().setReconnectAttempts(1)).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
+        client.connect(options).setHandler(ctx.asyncAssertSuccess());
+        assertTrue(connectionFactory.await(1, TimeUnit.SECONDS));
+        connectionFactory.setExpectedFailingConnectionAttempts(2);
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
         // WHEN the downstream connection fails
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN the adapter reconnects to the downstream container
         assertTrue(connectionFactory.await(1, TimeUnit.SECONDS));
+        connectionFactory.setExpectedFailingConnectionAttempts(2);
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
         // and when the downstream connection fails again
-        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN the adapter reconnects to the downstream container again
@@ -327,29 +359,31 @@ public class HonoClientImplTest {
     }
 
     /**
-     * Verifies that the client adapter repeatedly tries to connect until a connection is established.
+     * Verifies that the client repeatedly tries to connect until a connection is established.
      * 
      * @param ctx The test context.
      */
     @Test
     public void testConnectTriesToReconnectOnFailedConnectAttempt(final TestContext ctx) {
 
-        // GIVEN a client that cannot connect to the server
-        // expect the connection factory to fail twice and succeed on third connect attempt
+        // GIVEN a client that is configured to connect to a peer
+        // to which the connection can be established on the third attempt only
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con, 1, 2);
         client = new HonoClientImpl(vertx, connectionFactory, props);
 
         // WHEN trying to connect
-        Async disconnectHandlerInvocation = ctx.async();
-        Async connectionEstablished = ctx.async();
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setReconnectInterval(50)
+                .setReconnectAttempts(3);
+        final Async disconnectHandlerInvocation = ctx.async();
         client.connect(
-                new ProtonClientOptions().setReconnectAttempts(1),
+                options,
                 failedCon -> disconnectHandlerInvocation.complete())
-            .setHandler(ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()));
+            .setHandler(ctx.asyncAssertSuccess());
 
-        // THEN the client repeatedly tries to connect
-        connectionEstablished.await(4 * Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
-        // and sets the disconnect handler provided as a param in the connect method invocation
+        // THEN the client succeeds to connect on the third attempt
+        assertTrue(connectionFactory.await(1, TimeUnit.SECONDS));
+        // and sets the disconnect handler provided as a parameter to the connect method
         connectionFactory.getDisconnectHandler().handle(con);
         disconnectHandlerInvocation.await();
     }
@@ -503,6 +537,10 @@ public class HonoClientImplTest {
 
         public Handler<AsyncResult<ProtonConnection>> getCloseHandler() {
             return closeHandler;
+        }
+
+        public void setExpectedFailingConnectionAttempts(final int attempts) {
+            expectedFailingConnectionAttempts = new CountDownLatch(attempts);
         }
 
         public void setExpectedSucceedingConnectionAttempts(final int attempts) {

@@ -15,10 +15,7 @@ package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 
@@ -29,6 +26,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Before;
@@ -38,6 +36,7 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -86,7 +85,7 @@ public class AbstractProtocolAdapterBaseTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testStartUpFailsIfNoTypeNameIsDefined(final TestContext ctx) {
+    public void testStartInternalFailsIfNoTypeNameIsDefined(final TestContext ctx) {
 
         // GIVEN an adapter that does not define a type name
         adapter = newProtocolAdapter(properties, null);
@@ -95,6 +94,40 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN starting the adapter
         // THEN startup fails
         adapter.startInternal().setHandler(ctx.asyncAssertFailure());
+    }
+
+    /**
+     * Verifies that the adapter connects to required services during
+     * startup and invokes the <em>doStart</em> method.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testStartInternalConnectsToServices(final TestContext ctx) {
+
+        // GIVEN an adapter configured with service clients
+        final Handler<Void> startupHandler = mock(Handler.class);
+        adapter = newProtocolAdapter(properties, "test", startupHandler);
+        final HonoClient registrationService = mock(HonoClient.class);
+        when(registrationService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationService));
+        adapter.setRegistrationServiceClient(registrationService);
+        final HonoClient messagingService = mock(HonoClient.class);
+        when(messagingService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingService));
+        adapter.setHonoMessagingClient(messagingService);
+        final HonoClientBasedAuthProvider authProvider = mock(HonoClientBasedAuthProvider.class);
+        when(authProvider.start()).thenReturn(Future.succeededFuture());
+        adapter.setCredentialsAuthProvider(authProvider);
+
+        // WHEN starting the adapter
+        adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
+            // THEN the service clients have connected
+            verify(registrationService).connect(any(Handler.class));
+            verify(messagingService).connect(any(Handler.class));
+            verify(authProvider).start();
+            // and the startup handler has been invoked
+            verify(startupHandler).handle(null);
+        }));
     }
 
     /**
@@ -231,8 +264,15 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props, final String typeName) {
+        return newProtocolAdapter(props, typeName, start -> {});
+    }
 
-        AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<ProtocolAdapterProperties>() {
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
+            final ProtocolAdapterProperties props,
+            final String typeName,
+            final Handler<Void> startupHandler) {
+
+        final AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<ProtocolAdapterProperties>() {
 
             @Override
             public String getTypeName() {
@@ -243,20 +283,26 @@ public class AbstractProtocolAdapterBaseTest {
             public int getPortDefaultValue() {
                 return 0;
             }
-            
+
             @Override
             public int getInsecurePortDefaultValue() {
                 return 0;
             }
-            
+
             @Override
             protected int getActualPort() {
                 return 0;
             }
-            
+
             @Override
             protected int getActualInsecurePort() {
                 return 0;
+            }
+
+            @Override
+            protected void doStart(final Future<Void> startFuture) {
+                startupHandler.handle(null);
+                startFuture.complete();
             }
         };
         result.setConfig(props);

@@ -30,12 +30,15 @@ import io.vertx.proton.ProtonDelivery;
  * A factory maintains a single AMQP 1.0 connection and a single
  * session to the peer. This session is shared by all AMQP 1.0 links
  * established for <em>senders</em>, <em>consumers</em> and <em>clients</em>
- * created using the factory methods.
+ * created using the corresponding factory methods.
  * <p>
  * The <em>getOrCreate</em> factory methods return an existing client for the
  * given address if available. Note that factory methods for creating consumers
- * <em>always</em> return a new instance so that all messages received are processed
- * by the given handler passed in to the factory method.
+ * <em>always</em> return a new instance so that all messages received are only
+ * processed by the handler passed in to the factory method.
+ * <p>
+ * Before any of the factory methods can be invoked successfully, the client needs
+ * to connect to Hono. This is done by invoking any of the client's <em>connect</em> methods.
  */
 public interface HonoClient {
 
@@ -48,30 +51,84 @@ public interface HonoClient {
     Future<Boolean> isConnected();
 
     /**
-     * Connects to the Hono server using given options.
+     * Connects to the Hono server using default options.
      * <p>
-     * This method will (re-)try to establish the connection until it succeeds if
-     * the <em>reconnectAttempts</em> property of the options is &gt; 0.
+     * Using the default options, the client will try to (re-)connect to the peer
+     * an unlimited number of times.
      * 
-     * @param options The options to use. If {@code null} a set of default properties will be used.
-     * @return A future that will complete with the connected client once the connection has been established.
-     *         The future will fail if the connection cannot be established, e.g. because one of the client's
-     *         <em>shutdown</em> methods has been invoked already.
+     * @return A future that will succeed with the connected client once the connection has been established.
+     *         The future will fail if the connection cannot be established, e.g. because
+     *         <ul>
+     *         <li>authentication of the client failed, or</li>
+     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the
+     *         connection could be established.</li>
+     *         </ul>
      */
-    Future<HonoClient> connect(ProtonClientOptions options);
+    Future<HonoClient> connect();
 
     /**
      * Connects to the Hono server using given options.
      * <p>
-     * This method will (re-)try to establish the connection until it succeeds if
-     * the <em>reconnectAttempts</em> property of the options is &gt; 0.
+     * The number of times that the client tries to (re-)connect to the peer is determined
+     * by the <em>reconnectAttempts</em> property of the given options. If set to -1 then
+     * the client will try to (re-)connect an unlimited number of times.
+     * 
+     * @param options The options to use. If {@code null} a set of default properties will be used.
+     * @return A future that will succeed with the connected client once the connection has been established.
+     *         The future will fail if the connection cannot be established, e.g. because
+     *         <ul>
+     *         <li>authentication of the client failed, or</li>
+     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the
+     *         connection could be established, or</li>
+     *         <li>the maximum number of (unsuccessful) (re-)connection attempts have been made.</li>
+     *         </ul>
+     * @throws NullPointerException if the options are {@code null}.
+     */
+    Future<HonoClient> connect(ProtonClientOptions options);
+
+    /**
+     * Connects to the Hono server using default options.
+     * <p>
+     * Using the default options, the client will try to <em>initially</em> connect to the peer
+     * an unlimited number of times. When an established connection to the server fails, the
+     * disconnect handler will be invoked. The client will <em>not</em> automatically try to
+     * re-connect to the server in this case.
+     * 
+     * @param disconnectHandler A handler to notify about connection loss.
+     * @return A future that will succeed with the connected client once the connection has been established.
+     *         The future will fail if the connection cannot be established, e.g. because
+     *         <ul>
+     *         <li>authentication of the client failed, or</li>
+     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the
+     *         connection could be established.</li>
+     *         </ul>
+     * @throws NullPointerException if the disconnect handler is {@code null}.
+     */
+    Future<HonoClient> connect(Handler<ProtonConnection> disconnectHandler);
+
+    /**
+     * Connects to the Hono server using given options.
+     * <p>
+     * The number of times that the client tries to <em>initially</em> connect to the peer
+     * is determined by the <em>reconnectAttempts</em> property of the given options.
+     * If set to -1 then the client will try to connect an unlimited number of times.
+     * <p>
+     * When an established connection to the server fails, the disconnect handler will be
+     * invoked (if not {@code null}) and the client will <em>not</em> automatically try to
+     * re-connect to the server in this case. If the disconnect handler is {@code null},
+     * the client will try to re-connect to the server using the same number of attempts
+     * as for the initial connection.
      * 
      * @param options The options to use. If {@code null} a set of default properties will be used.
      * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
-     * @return A future that will complete with the connected client once the connection has been established.
-     *         The future will fail if the connection cannot be established, e.g. because one of the client's
-     *         <em>shutdown</em> methods has been invoked already.
-     * @throws NullPointerException if the connection handler is {@code null}.
+     * @return A future that will succeed with the connected client once the connection has been established.
+     *         The future will fail if the connection cannot be established, e.g. because
+     *         <ul>
+     *         <li>authentication of the client failed, or</li>
+     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the
+     *         connection could be established, or</li>
+     *         <li>the maximum number of (unsuccessful) (re-)connection attempts have been made.</li>
+     *         </ul>
      */
     Future<HonoClient> connect(
             ProtonClientOptions options,

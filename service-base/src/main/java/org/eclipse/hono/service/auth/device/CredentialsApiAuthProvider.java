@@ -38,7 +38,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
-import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 
 
@@ -117,7 +116,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
             return Future.failedFuture(new IllegalStateException("Credentials service client is not set"));
         } else {
             return credentialsClient
-                    .connect(createClientOptions(), this::onDisconnectCredentialsService)
+                    .connect(this::onDisconnectCredentialsService)
                     .map(connectedClient -> {
                         log.info("connected to Credentials service");
                         return (Void) null;
@@ -140,7 +139,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
         } else {
             vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
                 log.info("attempting to reconnect to Credentials service");
-                credentialsClient.connect(createClientOptions(), this::onDisconnectCredentialsService).setHandler(connectAttempt -> {
+                credentialsClient.connect(this::onDisconnectCredentialsService).setHandler(connectAttempt -> {
                     if (connectAttempt.succeeded()) {
                         log.info("reconnected to Credentials service");
                     } else {
@@ -165,13 +164,6 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
             credentialsClient.shutdown(result.completer());
         }
         return result;
-    }
-
-    private ProtonClientOptions createClientOptions() {
-        return new ProtonClientOptions()
-                .setConnectTimeout(200)
-                .setReconnectAttempts(1)
-                .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
     }
 
     /**

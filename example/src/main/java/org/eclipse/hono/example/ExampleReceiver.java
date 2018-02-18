@@ -41,21 +41,18 @@ public class ExampleReceiver extends AbstractExampleClient {
     @PostConstruct
     private void start() {
 
-        final Future<MessageConsumer> startupTracker = Future.future();
-        startupTracker.setHandler(startup -> {
-            if (startup.succeeded()) {
-                String consumerType = activeProfiles.contains(PROFILE_EVENT) ? PROFILE_EVENT : PROFILE_TELEMETRY;
-                LOG.info("Receiver [tenant: {}, type: {}] created successfully, hit ctrl-c to exit", tenantId, consumerType);
-            } else {
-                LOG.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
-                vertx.close();
-            }
-        });
-
-        client
-            .connect(getClientOptions(), this::onDisconnect)
+        client.connect(getClientOptions(), this::onDisconnect)
             .compose(connectedClient -> createConsumer(connectedClient))
-            .setHandler(startupTracker);
+            .setHandler(startup -> {
+                if (startup.succeeded()) {
+                    String consumerType = activeProfiles.contains(PROFILE_EVENT) ? PROFILE_EVENT : PROFILE_TELEMETRY;
+                    LOG.info("Receiver [tenant: {}, type: {}] created successfully, hit ctrl-c to exit", tenantId, consumerType);
+                } else {
+                    LOG.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
+                    vertx.close();
+                }
+            });
+
     }
 
     private Future<MessageConsumer> createConsumer(final HonoClient connectedClient) {

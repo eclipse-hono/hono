@@ -40,7 +40,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
-import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 
@@ -256,7 +255,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (messaging == null) {
             return Future.failedFuture(new IllegalStateException("Hono Messaging client not set"));
         } else {
-            return messaging.connect(createClientOptions(), this::onDisconnectMessaging).map(connectedClient -> {
+            return messaging.connect(this::onDisconnectMessaging).map(connectedClient -> {
                 LOG.info("connected to Hono Messaging");
                 return connectedClient;
             }).recover(t -> {
@@ -275,7 +274,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
             LOG.info("attempting to reconnect to Hono Messaging");
-            messaging.connect(createClientOptions(), this::onDisconnectMessaging).setHandler(connectAttempt -> {
+            messaging.connect(this::onDisconnectMessaging).setHandler(connectAttempt -> {
                 if (connectAttempt.succeeded()) {
                     LOG.info("reconnected to Hono Messaging");
                 } else {
@@ -296,7 +295,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (registration == null) {
             return Future.failedFuture(new IllegalStateException("Device Registration client not set"));
         } else {
-            return registration.connect(createClientOptions(), this::onDisconnectDeviceRegistry).map(connectedClient -> {
+            return registration.connect(this::onDisconnectDeviceRegistry).map(connectedClient -> {
                 LOG.info("connected to Device Registration service");
                 return connectedClient;
             }).recover(t -> {
@@ -315,7 +314,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
             LOG.info("attempting to reconnect to Device Registration service");
-            registration.connect(createClientOptions(), this::onDisconnectDeviceRegistry).setHandler(connectAttempt -> {
+            registration.connect(this::onDisconnectDeviceRegistry).setHandler(connectAttempt -> {
                 if (connectAttempt.succeeded()) {
                     LOG.info("reconnected to Device Registration service");
                 } else {
@@ -323,13 +322,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 }
             });
         });
-    }
-
-    private ProtonClientOptions createClientOptions() {
-        return new ProtonClientOptions()
-                .setConnectTimeout(200)
-                .setReconnectAttempts(1)
-                .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
     }
 
     /**

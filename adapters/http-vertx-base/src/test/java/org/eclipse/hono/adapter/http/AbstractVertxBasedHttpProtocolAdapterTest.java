@@ -12,7 +12,6 @@
 
 package org.eclipse.hono.adapter.http;
 
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -43,7 +42,6 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -70,53 +68,50 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @Before
     public void setup() {
 
+        config = new HttpProtocolAdapterProperties();
+        config.setInsecurePortEnabled(true);
+
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
         when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
-        config = new HttpProtocolAdapterProperties();
-        config.setInsecurePortEnabled(true);
     }
 
     /**
-     * Verifies that a client provided http server is started instead of creating and starting a new http server.
+     * Verifies that a client provided HTTP server is started instead of creating and starting a new http server.
      * 
      * @param ctx The helper to use for running async tests on vertx.
-     * @throws Exception if the test fails.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testStartUsesClientProvidedHttpServer(final TestContext ctx) throws Exception {
+    public void testStartUsesClientProvidedHttpServer(final TestContext ctx) {
 
-        // GIVEN an adapter with a client provided http server
-        HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        // GIVEN an adapter with a client provided HTTP server
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
         adapter.setCredentialsAuthProvider(credentialsAuthProvider);
 
         // WHEN starting the adapter
-        Async startup = ctx.async();
+        final Async startup = ctx.async();
         Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
         adapter.start(startupTracker);
 
-        // THEN the client provided http server has been configured and started
+        // THEN the client provided HTTP server has been configured and started
         startup.await();
         verify(server).requestHandler(any(Handler.class));
         verify(server).listen(any(Handler.class));
-        verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class));
-        verify(registrationClient).connect(any(ProtonClientOptions.class), any(Handler.class));
     }
 
     /**
      * Verifies that the <me>onStartupSuccess</em> method is invoked if the http server has been started successfully.
      * 
      * @param ctx The helper to use for running async tests on vertx.
-     * @throws Exception if the test fails.
      */
     @Test
-    public void testStartInvokesOnStartupSuccess(final TestContext ctx) throws Exception {
+    public void testStartInvokesOnStartupSuccess(final TestContext ctx) {
 
         // GIVEN an adapter with a client provided http server
         HttpServer server = getHttpServer(false);
@@ -330,9 +325,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
         adapter.setHonoMessagingClient(messagingClient);
-        when(messagingClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+        when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
         adapter.setRegistrationServiceClient(registrationClient);
-        when(registrationClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(registrationClient));
+        when(registrationClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationClient));
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         final RegistrationClient regClient = mock(RegistrationClient.class);

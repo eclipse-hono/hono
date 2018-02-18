@@ -58,7 +58,6 @@ import io.vertx.mqtt.MqttAuth;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.messages.MqttPublishMessage;
-import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -98,12 +97,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(
-                any(ProtonClientOptions.class),
                 any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
 
         deviceRegistryClient = mock(HonoClient.class);
         when(deviceRegistryClient.connect(
-                any(ProtonClientOptions.class),
                 any(Handler.class))).thenReturn(Future.succeededFuture(deviceRegistryClient));
         when(deviceRegistryClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
@@ -144,8 +141,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         verify(server).listen(any(Handler.class));
         verify(server).endpointHandler(any(Handler.class));
-        verify(messagingClient).connect(any(ProtonClientOptions.class), any(Handler.class));
-        verify(deviceRegistryClient).connect(any(ProtonClientOptions.class), any(Handler.class));
     }
 
     // TODO: startup fail test

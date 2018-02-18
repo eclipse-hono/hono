@@ -116,7 +116,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         }
 
         Objects.requireNonNull(connectionResultHandler);
-        final ProtonClientOptions clientOptions = options != null ? options : new ProtonClientOptions();
+        final ProtonClientOptions clientOptions = options != null ? options : createClientOptions();
         final String effectiveUsername = username == null ? config.getUsername() : username;
         final String effectivePassword = password == null ? config.getPassword() : password;
         addOptions(clientOptions, effectiveUsername, effectivePassword);
@@ -212,6 +212,11 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                 clientOptions.addEnabledSaslMechanism(ProtonSaslExternalImpl.MECH_NAME);
             }
         }
+    }
+
+    private ProtonClientOptions createClientOptions() {
+        final ProtonClientOptions options = new ProtonClientOptions();
+        return options;
     }
 
     /**

@@ -123,12 +123,14 @@ public abstract class ClientTestBase {
                 ConnectionFactoryBuilder.newBuilder(registryProps).vertx(vertx).build(),
                 registryProps);
 
+        final ProtonClientOptions options = new ProtonClientOptions();
+
         // connect to AMQP messaging network
-        final Future<HonoClient> downstreamTracker = downstreamClient.connect(new ProtonClientOptions());
+        final Future<HonoClient> downstreamTracker = downstreamClient.connect(options);
 
         // create sender
         final Future<MessageSender> senderTracker = honoClient
-                .connect(new ProtonClientOptions())
+                .connect(options)
                 .compose(connectedClient -> createProducer(TEST_TENANT_ID))
                 .map(s -> {
                     sender = s;
@@ -137,7 +139,7 @@ public abstract class ClientTestBase {
 
         // create registration client
         final Future<RegistrationClient> registrationClientTracker = honoDeviceRegistryClient
-                .connect(new ProtonClientOptions())
+                .connect(options)
                 .compose(connectedClient -> connectedClient.getOrCreateRegistrationClient(TEST_TENANT_ID))
                 .map(c -> {
                     registrationClient = c;

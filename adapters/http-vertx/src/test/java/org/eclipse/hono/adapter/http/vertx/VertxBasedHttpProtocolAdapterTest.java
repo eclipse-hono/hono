@@ -41,7 +41,6 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Verifies behavior of {@link VertxBasedHttpProtocolAdapter}.
@@ -80,9 +79,9 @@ public class VertxBasedHttpProtocolAdapterTest {
         final Async startup = context.async();
 
         messagingClient = mock(HonoClient.class);
-        when(messagingClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+        when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
         registrationClient = mock(HonoClient.class);
-        when(registrationClient.connect(any(ProtonClientOptions.class), any(Handler.class))).thenReturn(Future.succeededFuture(registrationClient));
+        when(registrationClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationClient));
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
         when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
         when(credentialsAuthProvider.stop()).thenReturn(Future.succeededFuture());
