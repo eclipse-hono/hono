@@ -23,7 +23,6 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -115,8 +114,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
     private String getTenantIdFromContext(final RoutingContext ctx) {
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
-        final String tenantId = Optional.ofNullable(getTenantParam(ctx)).orElse(getTenantParamFromPayload(payload));
-        return tenantId;
+        return Optional.ofNullable(getTenantParam(ctx)).orElse(getTenantParamFromPayload(payload));
     }
 
     private void addTenant(final RoutingContext ctx) {
@@ -125,7 +123,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String location = String.format("/%s/%s", TenantConstants.TENANT_ENDPOINT, tenantId);
 
-        doTenantHttpRequest(ctx, tenantId, RequestResponseApiConstants.StandardAction.ACTION_ADD,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_ADD,
                 status -> status == HttpURLConnection.HTTP_CREATED,
                 response ->  response.putHeader(HttpHeaders.LOCATION, location)
         );
@@ -135,7 +133,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, RequestResponseApiConstants.StandardAction.ACTION_GET,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_GET,
                 status -> status == HttpURLConnection.HTTP_OK, null);
     }
 
@@ -143,17 +141,17 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, RequestResponseApiConstants.StandardAction.ACTION_UPDATE,null, null);
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_UPDATE, null, null);
     }
 
     private void removeTenant(final RoutingContext ctx) {
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, RequestResponseApiConstants.StandardAction.ACTION_REMOVE,null, null);
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_REMOVE, null, null);
     }
 
-    private void doTenantHttpRequest(final RoutingContext ctx, final String tenantId, final RequestResponseApiConstants.StandardAction action, final Predicate<Integer> sendResponseBodyForStatus,
+    private void doTenantHttpRequest(final RoutingContext ctx, final String tenantId, final TenantConstants.StandardAction action, final Predicate<Integer> sendResponseBodyForStatus,
                                      final Handler<HttpServerResponse> httpServerResponseHandler) {
 
         logger.debug("http request [{}] for tenant [tenant: {}]", action, tenantId);
