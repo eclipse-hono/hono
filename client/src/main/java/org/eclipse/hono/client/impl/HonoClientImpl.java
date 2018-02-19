@@ -36,6 +36,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
@@ -611,11 +612,16 @@ public final class HonoClientImpl implements HonoClient {
 
     private void removeCredentialsClient(final String tenantId) {
 
-        final String key = CredentialsClientImpl.getTargetAddress(tenantId);
-        final RequestResponseClient client = activeRequestResponseClients.remove(key);
+        final String targetAddress = CredentialsClientImpl.getTargetAddress(tenantId);
+        removeActiveRequestResponseClient(targetAddress);
+    }
+
+    private void removeActiveRequestResponseClient(final String targetAddress) {
+
+        final RequestResponseClient client = activeRequestResponseClients.remove(targetAddress);
         if (client != null) {
             client.close(s -> {});
-            LOG.debug("closed and removed credentials client for [{}]", tenantId);
+            LOG.debug("closed and removed client for [{}]", targetAddress);
         }
     }
 
@@ -664,12 +670,55 @@ public final class HonoClientImpl implements HonoClient {
 
     private void removeRegistrationClient(final String tenantId) {
 
-        final String key = RegistrationClientImpl.getTargetAddress(tenantId);
-        final RequestResponseClient client = activeRequestResponseClients.remove(key);
-        if (client != null) {
-            client.close(s -> {});
-            LOG.debug("closed and removed registration client for [{}]", tenantId);
-        }
+        final String targetAddress = RegistrationClientImpl.getTargetAddress(tenantId);
+        removeActiveRequestResponseClient(targetAddress);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<TenantClient> getOrCreateTenantClient(final String tenantId) {
+
+        Objects.requireNonNull(tenantId);
+
+        final Future<TenantClient> result = Future.future();
+        getOrCreateRequestResponseClient(
+                TenantClientImpl.getTargetAddress(tenantId),
+                () -> newTenantClient(tenantId),
+                attempt -> {
+                    if (attempt.succeeded()) {
+                        result.complete((TenantClient) attempt.result());
+                    } else {
+                        result.fail(attempt.cause());
+                    }
+                });
+        return result;
+    }
+
+    private Future<RequestResponseClient> newTenantClient(final String tenantId) {
+
+        Objects.requireNonNull(tenantId);
+
+        return checkConnected().compose(connected -> {
+
+            final Future<TenantClient> result = Future.future();
+            TenantClientImpl.create(
+                    context,
+                    clientConfigProperties,
+                    connection,
+                    tenantId,
+                    this::removeTenantClient,
+                    this::removeTenantClient,
+                    result.completer());
+            return result.map(client -> (RequestResponseClient) client);
+        });
+    }
+
+    private void removeTenantClient(final String tenantId) {
+
+        final String targetAddress = TenantClientImpl.getTargetAddress(tenantId);
+        removeActiveRequestResponseClient(targetAddress);
     }
 
     /**

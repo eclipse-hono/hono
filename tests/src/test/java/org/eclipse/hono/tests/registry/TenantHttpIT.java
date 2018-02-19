@@ -288,14 +288,13 @@ public class TenantHttpIT {
      */
     private static JsonObject buildTenantPayload(final String tenantId) {
         final JsonObject adapterDetailsHttp = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_HTTP)
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         final JsonObject adapterDetailsMqtt = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_MQTT)
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject tenantPayload = new JsonObject()
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);        final JsonObject tenantPayload = new JsonObject()
                 .put(TenantConstants.FIELD_TENANT_ID, tenantId)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
                 .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));

@@ -24,6 +24,8 @@ import io.vertx.core.json.JsonObject;
  */
 
 public final class TenantConstants extends RequestResponseApiConstants {
+    /* message id prefix */
+    public static final String MESSAGE_ID_PREFIX = "tenant-client";
 
     /* message payload fields */
     public static final String FIELD_ADAPTERS                    = "adapters";

@@ -263,6 +263,18 @@ public interface HonoClient {
     Future<CredentialsClient> getOrCreateCredentialsClient(String tenantId);
 
     /**
+     * Gets a client for interacting with Hono's <em>Tenant</em> API.
+     *
+     * @param tenantId The tenant to manage data for.
+     * @return A future that will complete with the tenant client (if successful) or
+     *         fail if the client cannot be created, e.g. because the underlying connection
+     *         is not established or if a concurrent request to create a client for the same
+     *         tenant is already being executed.
+     * @throws NullPointerException if the tenant is {@code null}.
+     */
+    Future<TenantClient> getOrCreateTenantClient(String tenantId);
+
+    /**
      * Closes this client's connection to the Hono server.
      * <p>
      * This method waits for at most 5 seconds for the connection to be closed properly. Any subsequent attempts to 

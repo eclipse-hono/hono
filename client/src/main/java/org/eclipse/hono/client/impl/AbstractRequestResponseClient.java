@@ -65,6 +65,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     private final Map<Object, Handler<AsyncResult<R>>> replyMap = new ConcurrentHashMap<>();
     private final String replyToAddress;
     private final String targetAddress;
+    private final String tenantId;
 
     /**
      * A cache to use for responses received from the service.
@@ -90,6 +91,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         this.requestTimeoutMillis = config.getRequestTimeout();
         this.targetAddress = String.format("%s/%s", getName(), tenantId);
         this.replyToAddress = String.format("%s/%s/%s", getName(), tenantId, UUID.randomUUID());
+        this.tenantId = tenantId;
     }
 
     /**
@@ -473,5 +475,13 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         } else {
             responseCache.put(key, response, expirationTime);
         }
+    }
+
+    /**
+     * Get the tenantId of the tenant for that this client was created for.
+     * @return The tenantId for that this client was created for.
+     */
+    protected final String getTenantId() {
+        return tenantId;
     }
 }
