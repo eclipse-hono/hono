@@ -24,6 +24,14 @@
       {
         "operation": "credentials/*:get",
         "activities": [ "EXECUTE" ]
+      },
+      {
+        "resource": "tenant/*",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "tenant/*:get",
+        "activities": [ "EXECUTE" ]
       }
     ],
     "device-manager": [
