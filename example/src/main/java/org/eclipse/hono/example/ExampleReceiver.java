@@ -14,6 +14,7 @@ package org.eclipse.hono.example;
 
 import javax.annotation.PostConstruct;
 
+import io.vertx.core.Handler;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
@@ -56,26 +57,18 @@ public class ExampleReceiver extends AbstractExampleClient {
     }
 
     private Future<MessageConsumer> createConsumer(final HonoClient connectedClient) {
-
+        Handler<Void> closeHandler = closeHook -> {
+            LOG.info("close handler of consumer is called");
+            vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+                LOG.info("attempting to re-open the consumer link ...");
+                createConsumer(connectedClient);
+            });
+        };
         if (activeProfiles.contains(PROFILE_EVENT)) {
-            return connectedClient.createEventConsumer(tenantId,
-                    (msg) -> handleMessage(PROFILE_EVENT, msg), closeHandler -> {
-                        LOG.info("close handler of event consumer is called");
-                        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
-                            LOG.info("attempting to re-open the EventConsumer link ...");
-                            createConsumer(connectedClient);
-                        });
-                    });
+            return connectedClient.createEventConsumer(tenantId, msg -> handleMessage(PROFILE_EVENT, msg), closeHandler);
         } else {
             // default is telemetry consumer
-            return connectedClient.createTelemetryConsumer(tenantId,
-                    msg -> handleMessage(PROFILE_TELEMETRY, msg), closeHandler -> {
-                        LOG.info("close handler of event consumer is called");
-                        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
-                            LOG.info("attempting to re-open the EventConsumer link ...");
-                            createConsumer(connectedClient);
-                        });
-                    });
+            return connectedClient.createTelemetryConsumer(tenantId, msg -> handleMessage(PROFILE_TELEMETRY, msg), closeHandler);
         }
     }
 
