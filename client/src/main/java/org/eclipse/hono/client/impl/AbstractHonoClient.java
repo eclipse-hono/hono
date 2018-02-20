@@ -205,7 +205,7 @@ public abstract class AbstractHonoClient {
                             con.getRemoteContainer(), remoteDetached.cause().getMessage());
                 }
                 sender.close();
-                if (closeHook != null) {
+                if (closeHook != null && !result.failed()) {
                     closeHook.handle(targetAddress);
                 }
             });
@@ -216,7 +216,7 @@ public abstract class AbstractHonoClient {
                     LOG.debug("sender [{}] closed by peer: {}", targetAddress, senderClosed.cause().getMessage());
                 }
                 sender.close();
-                if (closeHook != null) {
+                if (closeHook != null && !result.failed()) {
                     closeHook.handle(targetAddress);
                 }
             });
@@ -291,7 +291,7 @@ public abstract class AbstractHonoClient {
                     LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
                 }
                 receiver.close();
-                if (closeHook != null) {
+                if (closeHook != null && !result.failed()) {
                     closeHook.handle(sourceAddress);
                 }
             });
@@ -302,7 +302,7 @@ public abstract class AbstractHonoClient {
                     LOG.debug("receiver [{}] closed by peer [{}]: {}", sourceAddress, con.getRemoteContainer(), remoteClosed.cause().getMessage());
                 }
                 receiver.close();
-                if (closeHook != null) {
+                if (closeHook != null && !result.failed()) {
                     closeHook.handle(sourceAddress);
                 }
             });
