@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -128,7 +129,7 @@ public abstract class AbstractHonoClient {
      */
     protected static final void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
         if (properties != null) {
-
+            final Map<String, Object> propsToAdd = new HashMap<>();
             // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
             for (final Map.Entry<String, ?> entry: properties.entrySet()) {
                 if (entry.getValue() instanceof List) {
@@ -137,10 +138,12 @@ public abstract class AbstractHonoClient {
                     throw new IllegalArgumentException(String.format("Application property %s can't be a Map", entry.getKey()));
                 } else if (entry.getValue().getClass().isArray()) {
                     throw new IllegalArgumentException(String.format("Application property %s can't be an Array", entry.getKey()));
+                } else {
+                    propsToAdd.put(entry.getKey(), entry.getValue());
                 }
             }
 
-            final ApplicationProperties applicationProperties = new ApplicationProperties(properties);
+            final ApplicationProperties applicationProperties = new ApplicationProperties(propsToAdd);
             msg.setApplicationProperties(applicationProperties);
         }
     }
