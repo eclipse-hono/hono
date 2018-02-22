@@ -13,15 +13,14 @@
 
 package org.eclipse.hono.util;
 
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.json.DecodeException;
-
 /**
  * A container for the result returned by Hono's Tenant API.
  *
+ * @param <T> denotes the concrete type of the payload that is conveyed in the result.
+ *
  */
-public final class TenantResult extends RequestResponseResult<JsonObject> {
-    private TenantResult(final int status, final JsonObject payload) {
+public final class TenantResult<T> extends RequestResponseResult<T> {
+    private TenantResult(final int status, final T payload) {
         super(status, payload);
     }
 
@@ -42,23 +41,7 @@ public final class TenantResult extends RequestResponseResult<JsonObject> {
      * @param payload The payload to convey to the sender of the request.
      * @return The result.
      */
-    public static TenantResult from(final int status, final JsonObject payload) {
-        return new TenantResult(status, payload);
-    }
-
-    /**
-     * Creates a new result for a status code and payload represented as String.
-     *
-     * @param status The status code indicating the outcome of the request.
-     * @param payloadString The payload to convey to the sender of the request, represented as String.
-     * @return The result.
-     * @throws DecodeException if the given payload is not valid JSON.
-     */
-    public static TenantResult from(final int status, final String payloadString) {
-        if (payloadString != null) {
-            return new TenantResult(status, new JsonObject(payloadString));
-        } else {
-            return new TenantResult(status, null);
-        }
+    public static <T> TenantResult<T> from(final int status, final T payload) {
+        return new TenantResult<>(status, payload);
     }
 }

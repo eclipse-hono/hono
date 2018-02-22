@@ -153,7 +153,7 @@ public class BaseTenantServiceTest {
 
         return new BaseTenantService<ServiceConfigProperties>() {
             @Override
-            public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult>> resultHandler) {
+            public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
                 resultHandler.handle(Future.succeededFuture(TenantResult.from(HTTP_CREATED)));
             }
 

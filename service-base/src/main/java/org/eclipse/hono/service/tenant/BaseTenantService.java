@@ -171,7 +171,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
         }
     }
 
-    private void reply(final Message<JsonObject> request, final AsyncResult<TenantResult> asyncActionResult) {
+    private void reply(final Message<JsonObject> request, final AsyncResult<TenantResult<JsonObject>> asyncActionResult) {
         if (asyncActionResult.succeeded()) {
             if (asyncActionResult.result() != null) {
                 reply(request, asyncActionResult.result());
@@ -299,7 +299,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
-    public void get(final String tenantId, final Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -309,7 +309,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
-    public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -319,7 +319,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
-    public void update(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void update(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -329,11 +329,11 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
-    public void remove(final String tenantId, final Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void remove(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
-    private void handleUnimplementedOperation(final Handler<AsyncResult<TenantResult>> resultHandler) {
+    private void handleUnimplementedOperation(final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
     }
 

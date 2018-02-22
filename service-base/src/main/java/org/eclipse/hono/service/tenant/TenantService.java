@@ -36,7 +36,7 @@ public interface TenantService extends Verticle {
      *            <em>status</em> will be {@link HttpURLConnection#HTTP_OK} and the <em>payload</em> will contain the
      *            tenant object. Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
-    void get(String tenantId, Handler<AsyncResult<TenantResult>> resultHandler);
+    void get(String tenantId, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
 
     /**
      * Creates a new Tenant.
@@ -47,7 +47,7 @@ public interface TenantService extends Verticle {
      *            not yet exist, the <em>status</em> will be {@link HttpURLConnection#HTTP_CREATED}.
      *            Otherwise the status will be {@link HttpURLConnection#HTTP_CONFLICT}.
      */
-    void add(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult>> resultHandler);
+    void add(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
 
     /**
      * Updates tenant data.
@@ -58,7 +58,7 @@ public interface TenantService extends Verticle {
      *         and was updated, the <em>status</em> will be {@link HttpURLConnection#HTTP_NO_CONTENT}.
                Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
-    void update(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult>> resultHandler);
+    void update(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
 
     /**
      * Removes a tenant.
@@ -68,5 +68,5 @@ public interface TenantService extends Verticle {
      *            <em>status</em> will be {@link HttpURLConnection#HTTP_NO_CONTENT}. Otherwise the status will be
      *            {@link HttpURLConnection#HTTP_NOT_FOUND}.
      */
-    void remove(String tenantId, Handler<AsyncResult<TenantResult>> resultHandler);
+    void remove(String tenantId, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
 }

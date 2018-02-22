@@ -55,9 +55,9 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
     public static final String FIELD_DATA = "data";
 
     // <tenantId, tenantPropertyValueObject>
-    private Map<String, JsonObject> tenants = new HashMap<>();
+    private final Map<String, JsonObject> tenants = new HashMap<>();
     // <tenantId, <adapterType, adapterDataObject>>
-    private Map<String, Map<String, JsonObject>> tenantsAdapterConfigurations = new HashMap<>();
+    private final Map<String, Map<String, JsonObject>> tenantsAdapterConfigurations = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
 
@@ -68,7 +68,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
     }
 
     @Override
-    protected void doStart(Future<Void> startFuture) {
+    protected void doStart(final Future<Void> startFuture) {
 
         if (running) {
             startFuture.complete();
@@ -106,7 +106,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         if (getConfig().getFilename() == null) {
             return Future.succeededFuture();
         } else {
-            Future<Buffer> readResult = Future.future();
+            final Future<Buffer> readResult = Future.future();
             vertx.fileSystem().readFile(getConfig().getFilename(), readResult.completer());
             return readResult.compose(buffer -> {
                 return addAll(buffer);
@@ -119,7 +119,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
 
     private Future<Void> checkFileExists(final boolean createIfMissing) {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         if (getConfig().getFilename() == null) {
             result.fail("no filename set");
         } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
@@ -139,7 +139,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         try {
             int tenantCount = 0;
             final JsonArray allObjects = tenantsBuffer.toJsonArray();
-            for (Object obj : allObjects) {
+            for (final Object obj : allObjects) {
                 if (JsonObject.class.isInstance(obj)) {
                     tenantCount++;
                     addTenants((JsonObject) obj);
@@ -147,7 +147,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             }
             log.info("successfully loaded {} tenants from file [{}]", tenantCount, getConfig().getFilename());
             result.complete();
-        } catch (DecodeException e) {
+        } catch (final DecodeException e) {
             log.warn("cannot read malformed JSON from tenants file [{}]", getConfig().getFilename());
             result.fail(e);
         }
@@ -242,13 +242,13 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
     }
 
     @Override
-    public void get(final String tenantId, final Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
         resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId)));
     }
 
-    TenantResult getTenantResult(final String tenantId) {
+    TenantResult<JsonObject> getTenantResult(final String tenantId) {
         final JsonObject data = tenants.get(tenantId);
 
         if (data != null) {
@@ -265,7 +265,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             return null;
         }
         final JsonArray adapterDataArray = new JsonArray();
-        for (Entry<String, JsonObject> configEntry : adapterConfigurations.entrySet()) {
+        for (final Entry<String, JsonObject> configEntry : adapterConfigurations.entrySet()) {
             final JsonObject data = new JsonObject();
             data.put(FIELD_ADAPTERS_TYPE, configEntry.getKey()).mergeIn(configEntry.getValue());
             adapterDataArray.add(data);
@@ -274,7 +274,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
     }
 
     @Override
-    public void remove(final String tenantId, final Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void remove(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
         resultHandler.handle(Future.succeededFuture(removeTenant(tenantId)));
@@ -298,13 +298,12 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
     }
 
     @Override
-    public void add(final String tenantId, final JsonObject data,
-            final Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(data);
+        Objects.requireNonNull(tenantObj);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(addOrUpdateTenant(tenantId, data, false)));
+        resultHandler.handle(Future.succeededFuture(addOrUpdateTenant(tenantId, tenantObj, false)));
     }
 
     /**
@@ -332,7 +331,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                 }
             }
 
-            JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
+            final JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
 
             try {
                 final JsonArray adaptersConfigurationArray = obj.getJsonArray(FIELD_ADAPTERS);
@@ -355,7 +354,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                     // in case of update: remove a possibly existing previous entry
                     tenantsAdapterConfigurations.remove(tenantId);
                 }
-            } catch (ClassCastException cce) {
+            } catch (final ClassCastException cce) {
                 log.debug("addTenant invoked with wrong type for {}: not a JsonArray!", FIELD_ADAPTERS);
                 return TenantResult.from(HTTP_BAD_REQUEST);
             }
@@ -374,13 +373,12 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         }
     }
 
-    @Override
-    public void update(final String tenantId, final JsonObject data, final Handler<AsyncResult<TenantResult>> resultHandler) {
+    public void update(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(data);
+        Objects.requireNonNull(tenantObj);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(addOrUpdateTenant(tenantId, data, true)));
+        resultHandler.handle(Future.succeededFuture(addOrUpdateTenant(tenantId, tenantObj, true)));
     }
 
     /**
