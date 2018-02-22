@@ -284,6 +284,23 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     }
 
     @Override
+    public void removeAllDevices(String tenantId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        Objects.requireNonNull(tenantId);
+
+        if (getConfig().isModificationEnabled()) {
+            if(identities.keySet().contains(tenantId)) {
+                identities.remove(tenantId);
+                dirty = true;
+                resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HTTP_NO_CONTENT)));
+            } else {
+                resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HTTP_NOT_FOUND)));
+            }
+        } else {
+            resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HTTP_FORBIDDEN)));
+        }
+    }
+
+    @Override
     public void addDevice(final String tenantId, final String deviceId, final JsonObject data, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         Objects.requireNonNull(tenantId);

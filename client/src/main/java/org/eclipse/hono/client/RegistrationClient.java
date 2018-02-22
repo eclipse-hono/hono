@@ -28,7 +28,7 @@ public interface RegistrationClient extends RequestResponseClient {
 
     /**
      * Asserts that a device is registered and <em>enabled</em>.
-     * 
+     *
      * @param deviceId The ID of the device to get the assertion for.
      * @return A future indicating the result of the operation.
      *         <p>
@@ -46,7 +46,7 @@ public interface RegistrationClient extends RequestResponseClient {
 
     /**
      * Asserts that a device is registered and <em>enabled</em>.
-     * 
+     *
      * @param deviceId The ID of the device to get the assertion for.
      * @param gatewayId The gateway that wants to act on behalf of the device.
      *                  <p>
@@ -130,7 +130,7 @@ public interface RegistrationClient extends RequestResponseClient {
     /**
      * Deregisters a device from Hono.
      * <p>
-     * Once a device has been (successfully) deregistered, no more telemtry data can be uploaded
+     * Once a device has been (successfully) deregistered, no more telemetry data can be uploaded
      * for it nor can commands be sent to it anymore.
      *
      * @param deviceId The id of the device to deregister.
@@ -145,4 +145,23 @@ public interface RegistrationClient extends RequestResponseClient {
      * @see RequestResponseClient#setRequestTimeout(long)
      */
     Future<Void> deregister(String deviceId);
+
+    /**
+     * Deregisters all the devices in the tenant scope.
+     * <p>
+     *     Once the devices of a tenant are deregistered, no more telemetry data can be uploaded
+     *     for any of the devices belonging to the tenant.
+     *
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed if a response with status 204 has been received from the
+     *         registration service.
+     *         <p>
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code returned by the service.
+     * </p>
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    Future<Void> deregisterAll();
+
 }

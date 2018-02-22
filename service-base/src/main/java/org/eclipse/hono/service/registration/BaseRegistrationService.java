@@ -181,6 +181,10 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
                 log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
                 removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
+            case RegistrationConstants.ACTION_DEREGISTER_ALL:
+                log.debug("deregistering all devices of tenant [{}]", tenantId);
+                removeAllDevices(tenantId, result -> reply(regMsg, result));
+                break;
             default:
                 log.info("operation [{}] not supported", operation);
                 reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
