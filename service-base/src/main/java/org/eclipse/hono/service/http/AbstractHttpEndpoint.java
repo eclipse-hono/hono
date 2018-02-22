@@ -141,7 +141,7 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      * Get a response handler that implements the default behaviour for responding to the HTTP request (except for adding an object).
      *
      * @param ctx The routing context of the request.
-     * @return BiConsumer<Integer, JsonObject> A consumer for the status and the JSON object that implements the default behaviour for responding to the HTTP request.
+     * @return BiConsumer&lt;Integer, JsonObject&gt; A consumer for the status and the JSON object that implements the default behaviour for responding to the HTTP request.
      * @throws NullPointerException If ctx is null.
      */
     protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(final RoutingContext ctx) {
