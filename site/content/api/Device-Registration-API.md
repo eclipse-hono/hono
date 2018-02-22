@@ -238,6 +238,39 @@ The response may contain the following status codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
+## Deregister All Devices
+
+Clients use this command to *remove* all devices belonging to a tenant from Hono. Once the devices are deregistered, clients can no longer use Hono to interact with those devices nor can they consume any more data produced by them.
+
+This operation is *optional*, implementors of this API may provide other means for deleting all devices in a tenant, e.g. a RESTful API or a configuration file.
+
+**Message Flow**
+
+The following sequence diagram illustrates the flow of messages involved in a *Client*  deregistering all devices.
+
+![Deregister All_Devices message flow](../deregisterAllDeviceInformation_Success.png.png)
+
+
+**Request Message Format**
+
+There are no additional client properties required in addition to  [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+The body of the message SHOULD be empty and will be ignored if it is not.
+
+
+**Response Message Format**
+
+A response to a *deregister device* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The response may contain the following status codes:
+
+| Code  | Description |
+| :---- | :---------- |
+| *204* | No Content, the devices have been successfully deregistered. |
+| *404* | Not Found, there is no such *tenant_id*. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
 # Standard Message Properties
 
 Due to the nature of the request/response message pattern of the operations of the Device Registration API, there are some standard properties shared by all of the request and response messages exchanged as part of the operations.

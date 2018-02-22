@@ -216,6 +216,30 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
     }
 
     /**
+     * Invokes the <em>Deregister All Devices</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
+    @Override
+    public Future<Void> deregisterAll() {
+
+        final Future<RegistrationResult> regResultTracker = Future.future();
+        createAndSendRequest(
+                RegistrationConstants.ACTION_DEREGISTER_ALL,
+                null,
+                null,
+                regResultTracker.completer());
+        return regResultTracker.map(response -> {
+            switch(response.getStatus()) {
+            case HttpURLConnection.HTTP_NO_CONTENT:
+                return null;
+            default:
+                throw StatusCodeMapper.from(response);
+            }
+        });
+    }
+
+    /**
      * Invokes the <em>Get Registration Information</em> operation of Hono's
      * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
