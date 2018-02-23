@@ -37,16 +37,12 @@ import org.mockito.ArgumentCaptor;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
 
 
 /**
@@ -54,7 +50,7 @@ import io.vertx.proton.ProtonSender;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class RegistrationClientImplTest {
+public class RegistrationClientImplTest extends AbstractClientUnitTestSupport {
 
     /**
      * Time out test cases after 5 seconds.
@@ -64,8 +60,6 @@ public class RegistrationClientImplTest {
 
     private RegistrationClientImpl client;
     private ExpiringValueCache<Object, RegistrationResult> cache;
-    private ProtonSender sender;
-    private ProtonReceiver receiver;
 
     /**
      * Sets up the fixture.
@@ -74,23 +68,10 @@ public class RegistrationClientImplTest {
     @Before
     public void setUp() {
 
-        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        final Vertx vertx = mock(Vertx.class);
-
-        final Context context = mock(Context.class);
-        when(context.owner()).thenReturn(vertx);
-        doAnswer(invocation -> {
-            Handler<Void> handler = invocation.getArgument(0);
-            handler.handle(null);
-            return null;
-        }).when(context).runOnContext(any(Handler.class));
-
-        sender = mock(ProtonSender.class);
-        when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        receiver = mock(ProtonReceiver.class);
-        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
+        createMocks();
 
         cache = mock(ExpiringValueCache.class);
+        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         client = new RegistrationClientImpl(context, config, "tenant", sender, receiver);
     }
 
