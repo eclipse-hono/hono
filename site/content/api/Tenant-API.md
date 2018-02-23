@@ -263,6 +263,33 @@ If any of the mandatory members is either missing or present with invalid data i
 Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
 This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
 
+### Examples
+Below is an example for a request payload defining an *enabled* tenant.
+Devices belonging to the tenant can connect to Hono via the rest-adapter only and are required to authenticate with the adapter on connection.
+
+**NB** The id of the tenant is not part of the json as it is defined in the application properties of the amqp message.
+
+~~~json
+{
+  "enabled": true,
+  "adapters": [
+    {
+      "type": "http",
+      "enabled": true,
+      "device-authentication-required": true
+    }
+  ]
+}
+~~~
+
+In the following example the tenant is allowed to use **all** adapters, as the `adapters` property is omitted in the tenant configuration:
+
+~~~json
+{
+  "enabled": true
+}
+~~~
+
 ## Response Payload
 The table below provides an overview of the standard members defined for the JSON response object:
 
@@ -289,29 +316,22 @@ Protocol Adapters SHOULD use the configuration properties set for a tenant when 
 
 Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
 
-## Examples
+### Examples
 
-Below is an example for a request payload defining an *enabled* tenant.
-Devices belonging to the tenant can connect to Hono via the rest-adapter only and are required to authenticate with the adapter on connection.
-**NB** The id of the tenant is not part of the json as it is defined in the application properties of the amqp message.
+Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`.
 
 ~~~json
 {
-  "enabled": true,
-  "adapters": [
-    {
-      "type": "http",
-      "enabled": true,
-      "device-authentication-required": true
-    }
-  ]
-}
-~~~
-
-In the following example the tenant is allowed to use **all** adapters, as the `adapters` property is omitted in the tenant configuration:
-
-~~~json
-{
-  "enabled": true
+  "tenant-id" : "TEST_TENANT",
+  "enabled" : true,
+  "adapters" : [ {
+    "type" : "mqtt",
+    "enabled" : true,
+    "device-authentication-required" : true
+  }, {
+    "type" : "http",
+    "enabled" : true,
+    "device-authentication-required" : true
+  } ]
 }
 ~~~
