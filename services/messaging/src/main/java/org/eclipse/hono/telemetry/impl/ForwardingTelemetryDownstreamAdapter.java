@@ -46,9 +46,28 @@ public final class ForwardingTelemetryDownstreamAdapter extends ForwardingDownst
         super(vertx, senderFactory);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     protected void forwardMessage(final ProtonSender sender, final Message msg, final ProtonDelivery upstreamDelivery) {
-        ProtonHelper.accepted(upstreamDelivery, true);
-        sender.send(msg);
+
+        if (upstreamDelivery.remotelySettled()) {
+            // client uses AT_MOST_ONCE delivery semantics
+            // forward message
+            sender.send(msg);
+            // and accept & settle the message with the client regardless of whether
+            // the downstream AMQP Messaging Network accepts the message or not
+            ProtonHelper.accepted(upstreamDelivery, true);
+        } else {
+            // client uses AT_LEAST_ONCE delivery semantics
+            // forward message
+            sender.send(msg, updatedDownstreamDelivery -> {
+                // and forward disposition received from downstream AMQP Messaging Network
+                // to upstream client
+                upstreamDelivery.disposition(updatedDownstreamDelivery.getRemoteState(), updatedDownstreamDelivery.remotelySettled());
+            });
+        }
     }
 
     @Override
