@@ -28,24 +28,20 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonSender;
 
 /**
  * Tests verifying behavior of {@link EventSenderImpl}.
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class EventSenderImplTest {
+public class EventSenderImplTest extends AbstractClientUnitTestSupport {
 
-    private Context context;
     private ClientConfigProperties config;
-    private ProtonSender sender;
 
     /**
      * Sets up the fixture.
@@ -54,14 +50,8 @@ public class EventSenderImplTest {
     @Before
     public void setUp() {
 
-        context = mock(Context.class);
-        doAnswer(invocation -> {
-            Handler<Void> handler = invocation.getArgument(0);
-            handler.handle(null);
-            return null;
-        }).when(context).runOnContext(any(Handler.class));
+        createMocks();
         config = new ClientConfigProperties();
-        sender = mock(ProtonSender.class);
     }
 
     /**

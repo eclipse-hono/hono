@@ -54,7 +54,7 @@ import io.vertx.proton.ProtonSender;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class AbstractRequestResponseClientTest {
+public class AbstractRequestResponseClientTest extends AbstractClientUnitTestSupport {
 
     /**
      * Global timeout for all test cases.
@@ -63,10 +63,6 @@ public class AbstractRequestResponseClientTest {
     public Timeout timeout = Timeout.seconds(5);
 
     private static final String MESSAGE_ID = "messageid";
-    private ProtonReceiver recv;
-    private ProtonSender sender;
-    private Context context;
-    private Vertx vertx;
     private AbstractRequestResponseClient<SimpleRequestResponseResult> client;
 
     /**
@@ -75,26 +71,16 @@ public class AbstractRequestResponseClientTest {
     @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
-        vertx = mock(Vertx.class);
-        context = mock(Context.class);
-        doAnswer(invocation -> {
-            Handler<Void> handler = invocation.getArgument(0);
-            handler.handle(null);
-            return null;
-        }).when(context).runOnContext(any(Handler.class));
-        when(context.owner()).thenReturn(vertx);
+        createMocks();
+
 
         Target target = mock(Target.class);
         when(target.getAddress()).thenReturn("peer/tenant");
 
-        recv = mock(ProtonReceiver.class);
-        when(recv.isOpen()).thenReturn(Boolean.TRUE);
-        sender = mock(ProtonSender.class);
         when(sender.getCredit()).thenReturn(10);
         when(sender.getRemoteTarget()).thenReturn(target);
-        when(sender.isOpen()).thenReturn(Boolean.TRUE);
 
-        client = getClient("tenant", sender, recv);
+        client = getClient("tenant", sender, receiver);
         // do not time out requests by default
         client.setRequestTimeout(0);
     }
@@ -282,7 +268,7 @@ public class AbstractRequestResponseClientTest {
     public void testCreateAndSendRequestFailsIfReceiverIsNotOpen(final TestContext ctx) {
 
         // GIVEN a client whose sender and receiver are not open
-        when(recv.isOpen()).thenReturn(Boolean.FALSE);
+        when(receiver.isOpen()).thenReturn(Boolean.FALSE);
 
         // WHEN sending a request
         Async requestFailure = ctx.async();
