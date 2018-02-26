@@ -73,7 +73,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      */
     @SuppressWarnings("unchecked")
     @BeforeClass
-    public final static void setup(final TestContext context) {
+    public static final void setup(final TestContext context) {
 
         vertx = Vertx.vertx();
         final Async startup = context.async();
@@ -106,7 +106,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * Shuts down the server.
      */
     @AfterClass
-    public final static void shutDown() {
+    public static final void shutDown() {
         vertx.close();
     }
 

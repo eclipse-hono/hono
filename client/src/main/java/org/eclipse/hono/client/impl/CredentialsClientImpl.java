@@ -39,29 +39,29 @@ import io.vertx.proton.ProtonConnection;
  * A Vertx-Proton based client for Hono's Credentials API.
  *
  */
-public final class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsResult<CredentialsObject>> implements CredentialsClient {
+public class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsResult<CredentialsObject>> implements CredentialsClient {
 
     private static Logger LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private CredentialsClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
+    protected CredentialsClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
         super(context, config, tenantId);
     }
 
     @Override
-    protected String getName() {
+    protected final String getName() {
 
         return CredentialsConstants.CREDENTIALS_ENDPOINT;
     }
 
     @Override
-    protected String createMessageId() {
+    protected final String createMessageId() {
 
         return String.format("cred-client-%s", UUID.randomUUID());
     }
 
     @Override
-    protected CredentialsResult<CredentialsObject> getResult(final int status, final String payload) {
+    protected final CredentialsResult<CredentialsObject> getResult(final int status, final String payload) {
         try {
             if (status == HttpURLConnection.HTTP_OK) {
                 return CredentialsResult.from(status, objectMapper.readValue(payload, CredentialsObject.class));
@@ -80,7 +80,7 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
      * @return The target address.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public static String getTargetAddress(final String tenantId) {
+    public static final String getTargetAddress(final String tenantId) {
         return String.format("%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, Objects.requireNonNull(tenantId));
     }
 
@@ -96,7 +96,7 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static void create(
+    public static final void create(
             final Context context,
             final ClientConfigProperties clientConfig,
             final ProtonConnection con,
@@ -124,7 +124,7 @@ public final class CredentialsClientImpl extends AbstractRequestResponseClient<C
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public Future<CredentialsObject> get(final String type, final String authId) {
+    public final Future<CredentialsObject> get(final String type, final String authId) {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(authId);

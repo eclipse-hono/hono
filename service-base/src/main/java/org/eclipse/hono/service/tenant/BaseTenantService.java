@@ -162,8 +162,8 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
                 remove(tenantId, result -> reply(tenantMsg, result));
                 break;
             default:
-                log.debug("invalid action in request message [{}]", subject);
-                reply(tenantMsg, TenantResult.from(HTTP_BAD_REQUEST));
+                processCustomTenantMessage(tenantMsg, subject);
+                break;
             }
         } catch (final ClassCastException e) {
             log.debug("malformed request message [{}]", e.getMessage());
@@ -171,7 +171,34 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
         }
     }
 
-    private void reply(final Message<JsonObject> request, final AsyncResult<TenantResult<JsonObject>> asyncActionResult) {
+    /**
+     * Override the following method to extend TenantService with implementation
+     * specific operations. Consequently, once the operation is completed, a {@link TenantResult} must be
+     * set as reply to this tenantMsg. Use the {@link #reply(Message, AsyncResult)} for sending
+     * the response for the Message. For example, if some concrete action looks like
+     * <pre>{@code
+     *     void doSomeSpecificAction(final Message<JsonObject> tenantMsg, final Handler<AsyncResult<TenantResult>> resultHandler);
+     * }</pre>
+     * then the overriding method would look like
+     *  <pre>{@code
+     *     processCustomTenantMessage(final Message<JsonObject> tenantMsg, String action) {
+     *          if(action.equals("expected-action")) {
+     *            doSomeSpecificAction(tenantMsg, result -> reply(tenantMsg, result));
+     *          } else {
+     *             reply(tenantMsg, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+     *         }
+     *       }
+     * }</pre>
+     *
+     * @param tenantMsg target tenant message to be processed.
+     * @param action implementation specific action to be executed.
+     */
+    protected void processCustomTenantMessage(final Message<JsonObject> tenantMsg, String action) {
+        log.debug("invalid action in request message [{}]", action);
+        reply(tenantMsg, TenantResult.from(HTTP_BAD_REQUEST));
+    }
+
+    protected final void reply(final Message<JsonObject> request, final AsyncResult<TenantResult<JsonObject>> asyncActionResult) {
         if (asyncActionResult.succeeded()) {
             if (asyncActionResult.result() != null) {
                 reply(request, asyncActionResult.result());
@@ -282,7 +309,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * @param adapterConfigurations The adapter configurations data for the tenant as JsonArray.
      * @return The JSON structure.
      */
-    protected final static JsonObject getResultPayload(final String tenantId, final JsonObject data,
+    protected static final JsonObject getResultPayload(final String tenantId, final JsonObject data,
                                                        final JsonArray adapterConfigurations) {
         final JsonObject result = new JsonObject()
                 .put(TenantConstants.FIELD_TENANT_ID, tenantId)
