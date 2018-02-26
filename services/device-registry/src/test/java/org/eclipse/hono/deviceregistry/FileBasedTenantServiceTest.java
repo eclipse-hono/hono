@@ -37,6 +37,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -278,7 +279,7 @@ public class FileBasedTenantServiceTest {
         final Async add = ctx.async();
         svc.add(
                 "tenant",
-                DeviceRegistryTestUtils.buildTenantPayload("tenant"),
+                buildTenantPayload("tenant"),
                 ctx.asyncAssertSuccess(s -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
                     add.complete();
@@ -405,7 +406,7 @@ public class FileBasedTenantServiceTest {
         add.await(2000);
 
         final Async update = ctx.async();
-        JsonObject tenantPayload = DeviceRegistryTestUtils.buildTenantPayload("tenant");
+        JsonObject tenantPayload = buildTenantPayload("tenant");
         tenantPayload.put(TenantConstants.FIELD_ENABLED, "false");
 
         final Async get = ctx.async();
@@ -478,10 +479,34 @@ public class FileBasedTenantServiceTest {
     private static void addTenant(final TenantService svc, final TestContext ctx, final Async countDown, final String tenantId) {
         svc.add(
                 tenantId,
-                DeviceRegistryTestUtils.buildTenantPayload(tenantId),
+                buildTenantPayload(tenantId),
                 ctx.asyncAssertSuccess(s -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
                     countDown.countDown();
                 }));
+    }
+
+    /**
+     * Creates a tenant object for a tenantId.
+     * <p>
+     * The tenant object created contains configurations for the http and the mqtt adapter.
+     *
+     * @param tenantId The tenant identifier.
+     * @return The tenant object.
+     */
+    private static JsonObject buildTenantPayload(final String tenantId) {
+        final JsonObject adapterDetailsHttp = new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_HTTP)
+                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+        final JsonObject adapterDetailsMqtt = new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.TYPE_MQTT)
+                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+        final JsonObject tenantPayload = new JsonObject()
+                .put(TenantConstants.FIELD_TENANT_ID, tenantId)
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
+                .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
+        return tenantPayload;
     }
 }
