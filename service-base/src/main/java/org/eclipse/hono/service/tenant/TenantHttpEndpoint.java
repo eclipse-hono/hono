@@ -125,7 +125,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_ADD,
                 status -> status == HttpURLConnection.HTTP_CREATED,
-                response ->  response.putHeader(HttpHeaders.LOCATION, location)
+                response -> response.putHeader(HttpHeaders.LOCATION, location)
         );
     }
 
@@ -141,30 +141,34 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_UPDATE, null, null);
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_UPDATE,
+                status -> status == HttpURLConnection.HTTP_NO_CONTENT, null);
     }
 
     private void removeTenant(final RoutingContext ctx) {
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_REMOVE, null, null);
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_REMOVE,
+                status -> status == HttpURLConnection.HTTP_NO_CONTENT, null);
     }
 
-    private void doTenantHttpRequest(final RoutingContext ctx, final String tenantId, final TenantConstants.StandardAction action, final Predicate<Integer> sendResponseBodyForStatus,
-                                     final Handler<HttpServerResponse> httpServerResponseHandler) {
+    private void doTenantHttpRequest(
+            final RoutingContext ctx,
+            final String tenantId,
+            final TenantConstants.StandardAction action,
+            final Predicate<Integer> successfulOutcomeFilter,
+            final Handler<HttpServerResponse> httpServerResponseHandler) {
 
         logger.debug("http request [{}] for tenant [tenant: {}]", action, tenantId);
 
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
-
         final JsonObject requestMsg = TenantConstants.getServiceRequestAsJson(action.toString(), tenantId, payload);
 
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, sendResponseBodyForStatus, httpServerResponseHandler));
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, successfulOutcomeFilter, httpServerResponseHandler));
     }
 
     private static String getTenantParamFromPayload(final JsonObject payload) {
         return (payload != null ? (String) payload.remove(TenantConstants.FIELD_TENANT_ID) : null);
     }
-
 }

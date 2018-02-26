@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -16,12 +16,10 @@ import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -100,11 +98,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
             response.setStatusCode(status);
             switch (status) {
                 case HttpURLConnection.HTTP_OK:
-                    final String msg = registrationResult.getJsonObject(RegistrationConstants.FIELD_PAYLOAD).encodePrettily();
-                    response
-                            .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
-                            .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(msg.length()))
-                            .write(msg);
+                    HttpUtils.setResponseBody(ctx.response(), registrationResult);
                 default:
                     response.end();
                 }
@@ -136,19 +130,13 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
             } else {
                 final String tenantId = getTenantParam(ctx);
                 logger.debug("registering data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
-                final HttpServerResponse response = ctx.response();
-                final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_REGISTER, tenantId, (String) deviceId, payload);
-                sendAction(ctx,requestMsg, (status, registrationResult) -> {
-                        response.setStatusCode(status);
-                        switch(status) {
-                        case HttpURLConnection.HTTP_CREATED:
-                            response.putHeader(
-                                        HttpHeaders.LOCATION,
-                                        String.format("/%s/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId));
-                        default:
-                            response.end();
-                        }
-                });
+                final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_REGISTER,
+                        tenantId, (String) deviceId, payload);
+                sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
+                        status -> status == HttpURLConnection.HTTP_CREATED,
+                        response -> response.putHeader(
+                                HttpHeaders.LOCATION,
+                                String.format("/%s/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId, deviceId))));
             }
         }
     }
@@ -173,16 +161,8 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         }
         final String tenantId = getTenantParam(ctx);
         logger.debug("updating registration data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
-        final HttpServerResponse response = ctx.response();
         final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_UPDATE, tenantId, deviceId, payload);
-
-        sendAction(ctx, requestMsg, (status, registrationResult) -> {
-                response.setStatusCode(status);
-                if (status >=400) {
-                    setResponseBody(registrationResult, response);
-                }
-                response.end();
-        });
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
     }
 
     private void doUnregisterDevice(final RoutingContext ctx) {
@@ -190,15 +170,8 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         final String deviceId = getDeviceIdParam(ctx);
         final String tenantId = getTenantParam(ctx);
         logger.debug("removing registration information for device [tenant: {}, device: {}]", tenantId, deviceId);
-        final HttpServerResponse response = ctx.response();
         final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_DEREGISTER, tenantId, deviceId);
-        sendAction(ctx, requestMsg, (status, registrationResult) -> {
-                response.setStatusCode(status);
-                if (status >= 400) {
-                    setResponseBody(registrationResult, response);
-                }
-                response.end();
-        });
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
     }
 
 }

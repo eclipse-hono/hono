@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,12 +13,16 @@
 package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -145,5 +149,26 @@ public final class HttpUtils {
     public static String getContentType(final RoutingContext ctx) {
 
         return Objects.requireNonNull(ctx).parsedHeaders().contentType().value();
+    }
+
+    /**
+     * Writes a JSON object to an HTTP response body.
+     * <p>
+     * This method also sets the <em>content-type</em> and <em>content-length</em>
+     * headers of the HTTP response accordingly but does not end the response.
+     * 
+     * @param response The HTTP response.
+     * @param body The JSON object to serialize to the response body (may be {@code null}).
+     * @throws NullPointerException if response is {@code null}.
+     */
+    public static void setResponseBody(final HttpServerResponse response, final JsonObject body) {
+        Objects.requireNonNull(response);
+        if (body != null) {
+            final Buffer buffer = Buffer.buffer();
+            buffer.appendBytes(body.encodePrettily().getBytes(StandardCharsets.UTF_8));
+            response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON_UFT8)
+                    .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buffer.length()))
+                    .write(buffer);
+        }
     }
 }

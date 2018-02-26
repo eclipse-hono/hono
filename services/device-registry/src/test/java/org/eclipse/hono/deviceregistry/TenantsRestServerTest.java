@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import static org.eclipse.hono.util.TenantConstants.FIELD_ENABLED;
+import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_ENABLED;
 
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -23,7 +23,11 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.tenant.TenantHttpEndpoint;
 import org.eclipse.hono.util.TenantConstants;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;

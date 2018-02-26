@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Red Hat and others
+ * Copyright (c) 2016, 2018 Red Hat and others
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -24,7 +24,6 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -119,7 +118,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_CREATED,
-                (httpServerResponse) -> httpServerResponse.putHeader(HttpHeaders.LOCATION,
+                httpServerResponse -> httpServerResponse.putHeader(HttpHeaders.LOCATION,
                         String.format("/%s/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, authId, type))
                 )
         );
@@ -159,7 +158,6 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         logger.debug("removeCredentials [tenant: {}, type: {}, authId: {}]", tenantId, type, authId);
 
-        final HttpServerResponse response = ctx.response();
         final JsonObject payload = new JsonObject();
         payload.put(CredentialsConstants.FIELD_TYPE, type);
         payload.put(CredentialsConstants.FIELD_AUTH_ID, authId);
@@ -167,7 +165,9 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_REMOVE.toString(),
                 tenantId, null, payload);
 
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
+                status -> status == HttpURLConnection.HTTP_NO_CONTENT,
+                null));
     }
 
     private void removeCredentialsForDevice(final RoutingContext ctx) {
@@ -177,7 +177,6 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         logger.debug("removeCredentialsForDevice: [tenant: {}, device-id: {}]", tenantId, deviceId);
 
-        final HttpServerResponse response = ctx.response();
         final JsonObject payload = new JsonObject();
         payload.put(CredentialsConstants.FIELD_DEVICE_ID, deviceId);
         payload.put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SPECIFIER_WILDCARD);
@@ -185,7 +184,9 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_REMOVE.toString(),
                 tenantId, deviceId, payload);
 
-        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
+        sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
+                status -> status == HttpURLConnection.HTTP_NO_CONTENT,
+                null));
     }
 
     /**
@@ -206,7 +207,8 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                 tenantId, null, authId, type);
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
-                status -> status == HttpURLConnection.HTTP_OK, null));
+                status -> status == HttpURLConnection.HTTP_OK,
+                null));
 
     }
 
@@ -222,7 +224,8 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                 tenantId, deviceId, null, CredentialsConstants.SPECIFIER_WILDCARD);
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
-                status -> status == HttpURLConnection.HTTP_OK, null));
+                status -> status == HttpURLConnection.HTTP_OK,
+                null));
     }
 
 }

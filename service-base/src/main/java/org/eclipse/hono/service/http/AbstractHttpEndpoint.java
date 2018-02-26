@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -17,13 +17,6 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.MIMEHeader;
-import io.vertx.ext.web.RoutingContext;
 import org.eclipse.hono.service.AbstractEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -31,7 +24,13 @@ import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.MIMEHeader;
+import io.vertx.ext.web.RoutingContext;
 
 
 /**
@@ -45,11 +44,14 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      * The key that is used to put a valid JSON payload to the RoutingContext.
      */
     protected static final String KEY_REQUEST_BODY = "KEY_REQUEST_BODY";
-
-    // path parameters for capturing parts of the URI path
+    /**
+     * The name of the URI path parameter for the tenant ID.
+     */
     protected static final String PARAM_TENANT_ID = "tenant_id";
+    /**
+     * The name of the URI path parameter for the device ID.
+     */
     protected static final String PARAM_DEVICE_ID = "device_id";
-
 
     /**
      * The configuration properties for this endpoint.
@@ -121,60 +123,53 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     }
 
     /**
-     * Set the body of the response for the HTTP request as JSON. It is retrieved from the passed in JSON result (received as answer from a request to the event bus) by
-     * getting the key {@link RequestResponseApiConstants#FIELD_PAYLOAD}.
-     *
-     * @param jsonResult The JSON result returned from the processing event bus consumer.
-     * @param response The HTTP response to which the body is written.
-     */
-    protected void setResponseBody(final JsonObject jsonResult, final HttpServerResponse response) {
-        final JsonObject msg = jsonResult.getJsonObject(RequestResponseApiConstants.FIELD_PAYLOAD);
-        if (msg != null) {
-            final String body = msg.encodePrettily();
-            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON_UFT8)
-                    .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length()))
-                    .write(body);
-        }
-    }
-
-    /**
-     * Get a response handler that implements the default behaviour for responding to the HTTP request (except for adding an object).
+     * Get a response handler that implements the default behavior for responding to the HTTP request (except for adding an object).
      *
      * @param ctx The routing context of the request.
-     * @return BiConsumer&lt;Integer, JsonObject&gt; A consumer for the status and the JSON object that implements the default behaviour for responding to the HTTP request.
+     * @return BiConsumer&lt;Integer, JsonObject&gt; A consumer for the status and the JSON object that implements the default behavior for responding to the HTTP request.
      * @throws NullPointerException If ctx is null.
      */
     protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(final RoutingContext ctx) {
-        return getDefaultResponseHandler(ctx, null, null);
+        return getDefaultResponseHandler(ctx, status -> false , null);
     }
 
     /**
-     * Get a response handler that implements the default behaviour for responding to the HTTP request.
-     *
+     * Gets a response handler that implements the default behavior for responding to an HTTP request.
+     * <p>
+     * The default behavior is as follows:
+     * <ol>
+     * <li>Set the status code on the response.</li>
+     * <li>If the status code represents an error condition (i.e. the code is &gt;= 400),
+     * then the JSON object passed in to the returned handler is written to the response body.</li>
+     * <li>Otherwise, if the given filter evaluates to {@code true} for the status code,
+     * the JSON object is written to the response body and the given custom handler is
+     * invoked (if not {@code null}).</li>
+     * </ol>
+     * 
      * @param ctx The routing context of the request.
-     * @param setResponseBodyForStatus A Predicate that defines for which status a response body shall be set. Maybe null.
-     * @param responseHandler A handler that enables post processing the http response, e.g. to set the HTTP location header {@link HttpHeaders#LOCATION}
-     *                       in case of an add action. Maybe null.
-     * @throws NullPointerException If ctx is null.
+     * @param successfulOutcomeFilter A predicate that evaluates to {@code true} for the status code(s) representing a
+     *                           successful outcome.
+     * @param customHandler An (optional) handler for post processing the HTTP response, e.g. to set any additional HTTP
+     *                        headers. The handler <em>must not</em> write to response body. May be {@code null}.
+     * @return The created handler for processing responses.
+     * @throws NullPointerException If routing context or filter is {@code null}.
      */
     protected final BiConsumer<Integer, JsonObject> getDefaultResponseHandler(
             final RoutingContext ctx,
-            final Predicate<Integer> setResponseBodyForStatus,
-            final Handler<HttpServerResponse> responseHandler
-            ) {
+            final Predicate<Integer> successfulOutcomeFilter,
+            final Handler<HttpServerResponse> customHandler) {
 
+        Objects.requireNonNull(successfulOutcomeFilter);
         final HttpServerResponse response = ctx.response();
 
         return (status, jsonResult) -> {
             response.setStatusCode(status);
             if (status >= 400) {
-                setResponseBody(jsonResult, response);
-            } else if (setResponseBodyForStatus != null) {
-                if (setResponseBodyForStatus.test(status)) {
-                    if (responseHandler != null) {
-                        responseHandler.handle(response);
-                    }
-                    setResponseBody(jsonResult, response);
+                HttpUtils.setResponseBody(response, jsonResult);
+            } else if (successfulOutcomeFilter.test(status)) {
+                HttpUtils.setResponseBody(response, jsonResult);
+                if (customHandler != null) {
+                    customHandler.handle(response);
                 }
             }
             response.end();
@@ -182,25 +177,31 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     }
 
     /**
-     * Sending a request message to a consumer on the event bus for further processing.
-     *
+     * Sends a request message to an address via the vert.x event bus for further processing.
+     * <p>
+     * The address is determined by invoking {@link #getEventBusAddress()}.
+     * 
      * @param ctx The routing context of the request.
      * @param requestMsg The JSON object to send via the event bus.
-     * @param responseHandler The handler to be invoked for the response received as answer from the event bus.
-     * @throws NullPointerException If ctx is null.
+     * @param responseHandler The handler to be invoked for the message received in response to the request.
+     *                        <p>
+     *                        The handler will be invoked with the <em>status code</em> retrieved from the
+     *                        {@link MessageHelper#APP_PROPERTY_STATUS} field and the <em>payload</em>
+     *                        retrieved from the {@link RequestResponseApiConstants#FIELD_PAYLOAD} field.
+     * @throws NullPointerException If the routing context is {@code null}.
      */
     protected final void sendAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
 
-        vertx.eventBus().send(getEventBusAddress(), requestMsg,
-                invocation -> {
-                    if (invocation.failed()) {
-                        HttpUtils.serviceUnavailable(ctx, 2);
-                    } else {
-                        final JsonObject jsonResult = (JsonObject) invocation.result().body();
-                        final Integer status = jsonResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);
-                        responseHandler.accept(status, jsonResult);
-                    }
-                });
+        vertx.eventBus().send(getEventBusAddress(), requestMsg, invocation -> {
+            if (invocation.failed()) {
+                HttpUtils.serviceUnavailable(ctx, 2);
+            } else {
+                final JsonObject jsonResult = (JsonObject) invocation.result().body();
+                final Integer status = jsonResult.getInteger(MessageHelper.APP_PROPERTY_STATUS);
+                final JsonObject payload = jsonResult.getJsonObject(RequestResponseApiConstants.FIELD_PAYLOAD);
+                responseHandler.accept(status, payload);
+            }
+        });
     }
 
     /**
