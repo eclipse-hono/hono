@@ -41,7 +41,6 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -51,16 +50,17 @@ import io.vertx.proton.ProtonClientOptions;
  * Tests verifying the behavior of the Device Registry component's Credentials AMQP endpoint.
  */
 @RunWith(VertxUnitRunner.class)
-public class CredentialsAmqpIT {
+public class CredentialsAmqpIT extends AbstractDeviceRegistryAmqpSupportIT {
 
     private static final String CREDENTIALS_AUTHID1 = "sensor1";
     private static final String CREDENTIALS_AUTHID2 = "little-sensor2";
     private static final String CREDENTIALS_USER_PASSWORD = "hono-secret";
     private static final byte[] CREDENTIALS_PASSWORD_SALT = "hono".getBytes(StandardCharsets.UTF_8);
     private static final String DEFAULT_DEVICE_ID = "4711";
-    private static final Vertx  vertx = Vertx.vertx();
 
-    private static HonoClient        client;
+    private static final Vertx vertx = Vertx.vertx();
+
+    private static HonoClient client;
     private static CredentialsClient credentialsClient;
 
     /**
@@ -77,13 +77,7 @@ public class CredentialsAmqpIT {
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) {
 
-        final ClientConfigProperties clientProps = new ClientConfigProperties();
-        clientProps.setName("test");
-        clientProps.setHost(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST);
-        clientProps.setPort(IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT);
-        clientProps.setUsername(IntegrationTestSupport.HONO_USER);
-        clientProps.setPassword(IntegrationTestSupport.HONO_PWD);
-        client = new HonoClientImpl(vertx, clientProps);
+        client = prepareDeviceRegistryClient(vertx);
 
         client.connect(new ProtonClientOptions())
             .compose(c -> c.getOrCreateCredentialsClient(Constants.DEFAULT_TENANT))
@@ -100,17 +94,8 @@ public class CredentialsAmqpIT {
     @AfterClass
     public static void shutdown(final TestContext ctx) {
 
-        final Future<Void> clientTracker = Future.future();
-        if (client != null) {
-            client.shutdown(clientTracker.completer());
-        } else {
-            clientTracker.complete();
-        }
-        clientTracker.otherwiseEmpty().compose(s -> {
-            final Future<Void> vertxTracker = Future.future();
-            vertx.close(vertxTracker.completer());
-            return vertxTracker;
-        }).setHandler(ctx.asyncAssertSuccess());
+        shutdownDeviceRegistryClient(ctx, vertx, client);
+
     }
 
     /**
