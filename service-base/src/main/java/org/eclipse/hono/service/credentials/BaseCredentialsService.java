@@ -158,8 +158,8 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
                 processCredentialsMessageRemoveOperation(regMsg, tenantId, payload);
                 break;
             default:
-                log.debug("operation [{}] not supported", subject);
-                reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+                processCustomCredentialMessage(regMsg, subject);
+                break;
         }
     }
 
@@ -230,6 +230,34 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
                     type, deviceId, authId);
             reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+    }
+
+    /**
+     * Override the following method to extend CredentialService with implementation
+     * specific operations. Consequently, once the operation is completed, a {@link CredentialsResult} must be
+     * set as reply to this credMsg. Use the {@link #reply(Message, AsyncResult)} for sending
+     * the response for the Message. For example, if some concrete action looks like
+     * <pre>{@code
+     *     void doSomeSpecificAction(final Message<JsonObject> regMsg, final Handler<AsyncResult<CredentialsResult>> resultHandler);
+     * }</pre>
+     * then the overriding method would look like
+     *  <pre>{@code
+     *     processCustomCredentialMessage(final Message<JsonObject> credMsg, String action) {
+     *          if(action.equals("expected-action")) {
+     *            doSomeSpecificAction(credMsg, result -> reply(credMsg, result));
+     *          } else {
+     *             reply(credMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+     *         }
+     *       }
+     * }</pre>
+     *
+     *
+     * @param credMsg credential message to be processed
+     * @param action implementation specific operation to be executed.
+     */
+    public void processCustomCredentialMessage(final Message<JsonObject> credMsg, String action) {
+        log.debug("invalid action in request message [{}]", action);
+        reply(credMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
     /**
@@ -404,7 +432,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         }
     }
 
-    private void reply(final Message<JsonObject> request, final AsyncResult<CredentialsResult<JsonObject>> result) {
+    protected final void reply(final Message<JsonObject> request, final AsyncResult<CredentialsResult<JsonObject>> result) {
 
         if (result.succeeded()) {
             reply(request, result.result());
@@ -463,7 +491,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
      * @param secrets The secrets that need to be used in conjunction with the authentication identifier.
      * @return The JSON structure.
      */
-    protected final static JsonObject getResultPayload(final String deviceId, final  String type, final String authId, final boolean enabled, final JsonArray secrets) {
+    protected static final JsonObject getResultPayload(final String deviceId, final  String type, final String authId, final boolean enabled, final JsonArray secrets) {
         return new JsonObject().
                 put(CredentialsConstants.FIELD_DEVICE_ID, deviceId).
                 put(CredentialsConstants.FIELD_TYPE, type).

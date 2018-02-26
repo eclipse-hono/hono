@@ -182,14 +182,42 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
                 removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
                 break;
             default:
-                log.info("operation [{}] not supported", operation);
-                reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+                processCustomRegistrationMessage(regMsg, operation);
+                break;
             }
         } catch (ClassCastException e) {
             log.debug("malformed request message");
             reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         }
     }
+
+    /**
+      * Override the following method to extend RegistrationService with implementation
+      * specific operations. Consequently, once the operation is completed, a {@link RegistrationResult} must be
+      * set as reply to this regMsg. Use the {@link #reply(Message, AsyncResult)} for sending
+      * the response for the Message. For example, if some concrete action looks like
+      * <pre>{@code
+      *     void doSomeSpecificAction(final Message<JsonObject> regMsg, final Handler<AsyncResult<RegistrationResult>> resultHandler);
+      * }</pre>
+      * then the overriding method would look like
+      *  <pre>{@code
+      *     processCustomRegistrationMessage(final Message<JsonObject> regMsg, String action) {
+     *          if(action.equals("expected-action")) {
+      *            doSomeSpecificAction(regMsg, result -> reply(regMsg, result));
+     *          } else {
+     *             reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+      *         }
+     *       }
+      * }</pre>
+      *
+      *
+      * @param regMsg registration message to be processed
+      * @param action implementation specific operation to be executed.
+      */
+    public void processCustomRegistrationMessage(final Message<JsonObject> regMsg, String action) {
+        log.debug("invalid action in request message [{}]", action);
+        reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+    };
 
     /**
      * {@inheritDoc}
@@ -325,7 +353,7 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
         return result;
     }
 
-    private void reply(final Message<JsonObject> request, final AsyncResult<RegistrationResult> result) {
+    protected final void reply(final Message<JsonObject> request, final AsyncResult<RegistrationResult> result) {
 
         if (result.succeeded()) {
             reply(request, result.result());
@@ -368,7 +396,7 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
      * @param data The registration data.
      * @return The JSON structure.
      */
-    protected final static JsonObject getResultPayload(final String deviceId, final JsonObject data) {
+    protected static final JsonObject getResultPayload(final String deviceId, final JsonObject data) {
 
         return new JsonObject()
                 .put(RegistrationConstants.FIELD_DEVICE_ID, deviceId)

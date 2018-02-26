@@ -46,16 +46,16 @@ import io.vertx.proton.ProtonSender;
  * A Vertx-Proton based client for Hono's Registration API.
  *
  */
-public final class RegistrationClientImpl extends AbstractRequestResponseClient<RegistrationResult> implements RegistrationClient {
+public class RegistrationClientImpl extends AbstractRequestResponseClient<RegistrationResult> implements RegistrationClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
 
-    RegistrationClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
+    protected RegistrationClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
 
         super(context, config, tenantId);
     }
 
-    RegistrationClientImpl(final Context context, final ClientConfigProperties config, final String tenantId,
+    protected RegistrationClientImpl(final Context context, final ClientConfigProperties config, final String tenantId,
             final ProtonSender sender, final ProtonReceiver receiver) {
 
         super(context, config, tenantId, sender, receiver);
@@ -68,24 +68,24 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * @return The target address.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public static String getTargetAddress(final String tenantId) {
+    public static final String getTargetAddress(final String tenantId) {
         return String.format("%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, Objects.requireNonNull(tenantId));
     }
 
     @Override
-    protected String getName() {
+    protected final String getName() {
 
         return RegistrationConstants.REGISTRATION_ENDPOINT;
     }
 
     @Override
-    protected String createMessageId() {
+    protected final String createMessageId() {
 
         return String.format("reg-client-%s", UUID.randomUUID());
     }
 
     @Override
-    protected RegistrationResult getResult(final int status, final String payload) {
+    protected final RegistrationResult getResult(final int status, final String payload) {
 
         return RegistrationResult.from(status, payload);
     }
@@ -104,7 +104,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters other than cache manager is {@code null}.
      */
-    public static void create(
+    public static final void create(
             final Context context,
             final ClientConfigProperties clientConfig,
             final CacheManager cacheManager,
@@ -143,7 +143,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public Future<Void> register(final String deviceId, final JsonObject data) {
+    public final Future<Void> register(final String deviceId, final JsonObject data) {
 
         Objects.requireNonNull(deviceId);
 
@@ -169,7 +169,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public Future<Void> update(final String deviceId, final JsonObject data) {
+    public final Future<Void> update(final String deviceId, final JsonObject data) {
 
         Objects.requireNonNull(deviceId);
 
@@ -195,7 +195,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public Future<Void> deregister(final String deviceId) {
+    public final Future<Void> deregister(final String deviceId) {
 
         Objects.requireNonNull(deviceId);
 
@@ -221,7 +221,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public Future<JsonObject> get(final String deviceId) {
+    public final Future<JsonObject> get(final String deviceId) {
 
         Objects.requireNonNull(deviceId);
         final Future<RegistrationResult> resultTracker = Future.future();
@@ -249,7 +249,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * as the <em>gatewayId</em>.
      */
     @Override
-    public Future<JsonObject> assertRegistration(final String deviceId) {
+    public final Future<JsonObject> assertRegistration(final String deviceId) {
         return assertRegistration(deviceId, null);
     }
 
@@ -259,7 +259,7 @@ public final class RegistrationClientImpl extends AbstractRequestResponseClient<
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public Future<JsonObject> assertRegistration(final String deviceId, final String gatewayId) {
+    public final Future<JsonObject> assertRegistration(final String deviceId, final String gatewayId) {
 
         Objects.requireNonNull(deviceId);
 
