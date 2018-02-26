@@ -33,6 +33,7 @@
     <logger name="org.eclipse.hono.server" level="DEBUG"/>
     <logger name="org.eclipse.hono.service.credentials.impl" level="DEBUG"/>
     <logger name="org.eclipse.hono.service.registration.impl" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.tenant.impl" level="DEBUG"/>
     <logger name="org.eclipse.hono.telemetry.impl" level="DEBUG"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>

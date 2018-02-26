@@ -24,6 +24,14 @@
         {
           "resource": "event/DEFAULT_TENANT",
           "activities": [ "WRITE" ]
+        },
+        {
+          "resource": "tenant/HTTP_TENANT",
+          "activities": [ "READ", "WRITE" ]
+        },
+        {
+          "operation": "tenant/HTTP_TENANT:*",
+          "activities": [ "EXECUTE" ]
         }
       ],
       "connector": [
