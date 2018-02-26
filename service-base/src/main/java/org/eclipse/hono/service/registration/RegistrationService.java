@@ -29,7 +29,7 @@ public interface RegistrationService extends Verticle {
 
     /**
      * Gets device registration data by device ID.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get registration data for.
      * @param resultHandler The handler to invoke with the result of the operation. If a device with the
@@ -42,7 +42,7 @@ public interface RegistrationService extends Verticle {
 
     /**
      * Asserts that a device is registered with a given tenant and is enabled.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
      * @param resultHandler The handler to invoke with the result of the operation.
@@ -62,7 +62,7 @@ public interface RegistrationService extends Verticle {
      * <p>
      * In particular, this means that the gateway and the device are registered with the tenant, are enabled
      * and that the gateway device is allowed to <em>act on behalf of</em> the other device.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
      * @param gatewayId The gateway that wants to act on behalf of the device.
@@ -89,7 +89,7 @@ public interface RegistrationService extends Verticle {
 
     /**
      * Registers a device.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID the device should be registered under.
      * @param otherKeys A map containing additional properties to be registered with the device (may be {@code null}).
@@ -102,7 +102,7 @@ public interface RegistrationService extends Verticle {
 
     /**
      * Updates device registration data.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to update the registration for.
      * @param otherKeys A map containing additional properties to be registered with the device (may be {@code null}).
@@ -116,7 +116,7 @@ public interface RegistrationService extends Verticle {
 
     /**
      * Removes a device.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to remove.
      * @param resultHandler The handler to invoke with the result of the operation. If the device has been removed,
@@ -126,4 +126,15 @@ public interface RegistrationService extends Verticle {
      */
     void removeDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
+
+    /**
+     * Removes all devices those belonging to the given tenant.
+     *
+     * @param tenantId the tenant the devices belong to.
+     * @param resultHandler The handler to invoke with the result of the operation. If the devices has been removed,
+     *         the <em>status</em> will be {@link HttpURLConnection#HTTP_NO_CONTENT}.
+     *         Otherwise the status will be {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    void removeAllDevices(final String tenantId, final Handler<AsyncResult<RegistrationResult>> resultHandler);
 }

@@ -1,0 +1,8 @@
+title Deregister all Devices (success)
+
+Client->+Device Registration Service: transfer("registration/TENANT", "deregisterAll")
+note over Device Registration Service:
+removed devices
+end note
+
+Device Registration Service->-Client: transfer("registration/TENANT/${reply-to}", "204")

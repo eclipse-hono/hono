@@ -269,6 +269,10 @@ public class BaseRegistrationServiceTest {
             }
 
             @Override
+            public void removeAllDevices(String tenantId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+            }
+
+            @Override
             public void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
                 devices.apply(deviceId).setHandler(resultHandler);
             }

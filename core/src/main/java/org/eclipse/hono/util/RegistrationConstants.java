@@ -47,6 +47,11 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String ACTION_UPDATE     = "update";
 
     /**
+     * The AMQP 1.0 <em>subject</em> to use for the <em>deregistering all devices of a tenant</em> operation.
+     */
+    public static final String ACTION_DEREGISTER_ALL = "deregister-all";
+
+    /**
      * The name of the AMQP 1.0 message application property containing the id of the gateway
      * that wants to report data on behalf of another device.
      */
