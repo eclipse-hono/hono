@@ -13,8 +13,12 @@
 
 package org.eclipse.hono.client;
 
+import java.net.HttpURLConnection;
+import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RequestResponseResult;
@@ -72,6 +76,24 @@ public abstract class StatusCodeMapper {
             return new ServerErrorException(statusCode, detailMessage);
         } else {
             return new ServiceInvocationException(statusCode, detailMessage);
+        }
+    }
+
+    /**
+     * Creates an exception for an AMQP error condition.
+     * 
+     * @param error The error condition.
+     * @return The exception.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    public static final ServiceInvocationException from(final ErrorCondition error) {
+
+        Objects.requireNonNull(error);
+
+        if (AmqpError.RESOURCE_LIMIT_EXCEEDED.equals(error.getCondition())) {
+            return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, error.getDescription());
+        } else {
+            return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, error.getDescription());
         }
     }
 }

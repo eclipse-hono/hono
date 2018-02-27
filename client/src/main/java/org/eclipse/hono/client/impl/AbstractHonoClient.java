@@ -13,13 +13,18 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -158,7 +163,7 @@ public abstract class AbstractHonoClient {
      * @param qos The quality of service to use for the link.
      * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
-     *         The future will fail if the link cannot be opened.
+     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
      * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
      */
     protected static final Future<ProtonSender> createSender(
@@ -195,8 +200,14 @@ public abstract class AbstractHonoClient {
                         result.complete(sender);
                     }
                 } else {
-                    LOG.debug("opening sender [{}] failed: {}", targetAddress, senderOpen.cause().getMessage());
-                    result.fail(senderOpen.cause());
+                    final ErrorCondition error = sender.getRemoteCondition();
+                    if (error == null) {
+                        LOG.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
+                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender", senderOpen.cause()));
+                    } else {
+                        LOG.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
+                        result.fail(StatusCodeMapper.from(error));
+                    }
                 }
             });
             sender.detachHandler(remoteDetached -> {
@@ -242,7 +253,7 @@ public abstract class AbstractHonoClient {
      * @param messageHandler The handler to invoke with every message received.
      * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
-     *         The future will fail if the link cannot be opened.
+     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
      * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
      */
     protected static final Future<ProtonReceiver> createReceiver(
@@ -274,17 +285,19 @@ public abstract class AbstractHonoClient {
                     LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]", delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
                 }
             });
-            receiver.openHandler(openAttach -> {
-                if(openAttach.failed()) {
-                    LOG.debug("receiver open attach failed [{}] by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), openAttach.cause().getMessage());
-                    result.fail(openAttach.cause());
-                }
-                else {
-                    if (LOG.isTraceEnabled()) {
-                        LOG.trace("receiver open attach succeeded [{}] by peer [{}]", receiver.getRemoteSource(),
-                                con.getRemoteContainer());
+            receiver.openHandler(recvOpen -> {
+                if(recvOpen.succeeded()) {
+                    LOG.debug("receiver open [source: {}]", sourceAddress);
+                    result.complete(recvOpen.result());
+                } else {
+                    final ErrorCondition error = receiver.getRemoteCondition();
+                    if (error == null) {
+                        LOG.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
+                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open receiver", recvOpen.cause()));
+                    } else {
+                        LOG.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
+                        result.fail(StatusCodeMapper.from(error));
                     }
-                    result.complete(openAttach.result());
                 }
             });
             receiver.detachHandler(remoteDetached -> {
@@ -312,6 +325,5 @@ public abstract class AbstractHonoClient {
             receiver.open();
         });
         return result;
-
     }
 }
