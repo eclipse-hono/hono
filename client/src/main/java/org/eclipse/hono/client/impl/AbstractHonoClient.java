@@ -47,6 +47,11 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class AbstractHonoClient {
 
+    /**
+     * The key under which the link status is stored in the link's attachments.
+     */
+    protected static final String KEY_LINK_ESTABLISHED = "linkEstablished";
+
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**
@@ -183,12 +188,15 @@ public abstract class AbstractHonoClient {
         final Future<ProtonSender> result = Future.future();
 
         ctx.runOnContext(create -> {
+
             final ProtonSender sender = con.createSender(targetAddress);
+            sender.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.FALSE);
             sender.setQoS(qos);
             sender.setAutoSettle(true);
             sender.openHandler(senderOpen -> {
                 if (senderOpen.succeeded()) {
                     LOG.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
+                    sender.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.TRUE);
                     // wait on credits a little time, if not already given
                     if (sender.sendQueueFull()) {
                         ctx.owner().setTimer(clientConfig.getFlowLatency(), timerID -> {
@@ -210,30 +218,8 @@ public abstract class AbstractHonoClient {
                     }
                 }
             });
-            sender.detachHandler(remoteDetached -> {
-                if (remoteDetached.succeeded()) {
-                    LOG.debug("sender [{}] detached (with closed=false) by peer [{}]", sender.getRemoteSource(),
-                            con.getRemoteContainer());
-                } else {
-                    LOG.debug("sender [{}] detached (with closed=false) by peer [{}]: {}", sender.getRemoteSource(),
-                            con.getRemoteContainer(), remoteDetached.cause().getMessage());
-                }
-                sender.close();
-                if (closeHook != null && !result.failed()) {
-                    closeHook.handle(targetAddress);
-                }
-            });
-            sender.closeHandler(senderClosed -> {
-                if (senderClosed.succeeded()) {
-                    LOG.debug("sender [{}] closed by peer", targetAddress);
-                } else {
-                    LOG.debug("sender [{}] closed by peer: {}", targetAddress, senderClosed.cause().getMessage());
-                }
-                sender.close();
-                if (closeHook != null && !result.failed()) {
-                    closeHook.handle(targetAddress);
-                }
-            });
+            sender.detachHandler(remoteDetached -> onRemoteDetach(sender, con.getRemoteContainer(), false, closeHook));
+            sender.closeHandler(remoteClosed -> onRemoteDetach(sender, con.getRemoteContainer(), true, closeHook));
             sender.open();
         });
 
@@ -274,7 +260,9 @@ public abstract class AbstractHonoClient {
 
         final Future<ProtonReceiver> result = Future.future();
         ctx.runOnContext(go -> {
+
             final ProtonReceiver receiver = con.createReceiver(sourceAddress);
+            receiver.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.FALSE);
             receiver.setAutoAccept(true);
             receiver.setQoS(qos);
             receiver.setPrefetch(clientConfig.getInitialCredits());
@@ -282,12 +270,14 @@ public abstract class AbstractHonoClient {
                 messageHandler.handle(delivery, message);
                 if (LOG.isTraceEnabled()) {
                     int remainingCredits = receiver.getCredit() - receiver.getQueued();
-                    LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]", delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                    LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
+                            delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
                 }
             });
             receiver.openHandler(recvOpen -> {
                 if(recvOpen.succeeded()) {
                     LOG.debug("receiver open [source: {}]", sourceAddress);
+                    receiver.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.TRUE);
                     result.complete(recvOpen.result());
                 } else {
                     final ErrorCondition error = receiver.getRemoteCondition();
@@ -300,30 +290,52 @@ public abstract class AbstractHonoClient {
                     }
                 }
             });
-            receiver.detachHandler(remoteDetached -> {
-                if (remoteDetached.succeeded()) {
-                    LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]", receiver.getRemoteSource(), con.getRemoteContainer());
-                } else {
-                    LOG.debug("receiver [{}] detached (with closed=false) by peer [{}]: {}", receiver.getRemoteSource(), con.getRemoteContainer(), remoteDetached.cause().getMessage());
-                }
-                receiver.close();
-                if (closeHook != null && !result.failed()) {
-                    closeHook.handle(sourceAddress);
-                }
-            });
-            receiver.closeHandler(remoteClosed -> {
-                if (remoteClosed.succeeded()) {
-                    LOG.debug("receiver [{}] closed by peer [{}]", sourceAddress, con.getRemoteContainer());
-                } else {
-                    LOG.debug("receiver [{}] closed by peer [{}]: {}", sourceAddress, con.getRemoteContainer(), remoteClosed.cause().getMessage());
-                }
-                receiver.close();
-                if (closeHook != null && !result.failed()) {
-                    closeHook.handle(sourceAddress);
-                }
-            });
+            receiver.detachHandler(remoteDetached -> onRemoteDetach(receiver, con.getRemoteContainer(), false, closeHook));
+            receiver.closeHandler(remoteClosed -> onRemoteDetach(receiver, con.getRemoteContainer(), true, closeHook));
             receiver.open();
         });
         return result;
+    }
+
+    private static void onRemoteDetach(
+            final ProtonSender sender,
+            final String remoteContainer,
+            final boolean closed,
+            final Handler<String> closeHook) {
+
+        final ErrorCondition error = sender.getRemoteCondition();
+        if (error == null) {
+            LOG.debug("sender [{}] detached (with closed={}) by peer [{}]",
+                    sender.getTarget().getAddress(), closed, remoteContainer);
+        } else {
+            LOG.debug("sender [{}] detached (with closed={}) by peer [{}]: {} - {}",
+                    sender.getTarget().getAddress(), closed, remoteContainer, error.getCondition(), error.getDescription());
+        }
+        sender.close();
+        final boolean linkEstablished = sender.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class);
+        if (linkEstablished && closeHook != null) {
+            closeHook.handle(sender.getTarget().getAddress());
+        }
+    }
+
+    private static void onRemoteDetach(
+            final ProtonReceiver receiver,
+            final String remoteContainer,
+            final boolean closed,
+            final Handler<String> closeHook) {
+
+        final ErrorCondition error = receiver.getRemoteCondition();
+        if (error == null) {
+            LOG.debug("receiver [{}] detached (with closed={}) by peer [{}]",
+                    receiver.getSource().getAddress(), closed, remoteContainer);
+        } else {
+            LOG.debug("receiver [{}] detached (with closed={}) by peer [{}]: {} - {}",
+                    receiver.getSource().getAddress(), closed, remoteContainer, error.getCondition(), error.getDescription());
+        }
+        receiver.close();
+        final boolean linkEstablished = receiver.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class);
+        if (linkEstablished && closeHook != null) {
+            closeHook.handle(receiver.getSource().getAddress());
+        }
     }
 }

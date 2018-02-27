@@ -13,18 +13,19 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.engine.Record;
+import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -80,41 +81,41 @@ public class AbstractHonoClientTest {
     /**
      * Verifies that the attempt to create a sender fails with a
      * {@code ServiceInvocationException} if the remote peer refuses
-     * to open the link.
+     * to open the link with an error condition.
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testCreateSenderFailsForErrorCondition(final TestContext ctx) {
 
-        final ProtonSender sender = mock(ProtonSender.class);
-        when(sender.getRemoteCondition()).thenReturn(new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"));
-        final ProtonConnection con = mock(ProtonConnection.class);
-        when(con.createSender(anyString())).thenReturn(sender);
-
-        final Future<ProtonSender> result = AbstractHonoClient.createSender(context, props, con,
-                "target", ProtonQoS.AT_LEAST_ONCE, null);
-
-        final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(sender).openHandler(openHandler.capture());
-        openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
-        assertTrue(result.failed());
-        assertThat(result.cause(), instanceOf(ServiceInvocationException.class));
+        testCreateSenderFails(() -> (ErrorCondition) new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"), cause -> {
+            return cause instanceof ServiceInvocationException;
+        });
     }
 
     /**
      * Verifies that the attempt to create a sender fails with a
-     * {@code ServiceInvocationException} if the remote peer refuses
-     * to open the link.
+     * {@code ClientErrorException} if the remote peer refuses
+     * to open the link without an error condition.
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testCreateSenderFailsWithoutErrorCondition(final TestContext ctx) {
 
+        testCreateSenderFails(() -> (ErrorCondition) null, cause -> {
+            return cause instanceof ClientErrorException &&
+                ((ClientErrorException) cause).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND;
+        });
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void testCreateSenderFails(final Supplier<ErrorCondition> errorSupplier, final Predicate<Throwable> failureAssertion) {
+
+        final Record attachments = new RecordImpl();
         final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.getRemoteCondition()).thenReturn(errorSupplier.get());
+        when(sender.attachments()).thenReturn(attachments);
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createSender(anyString())).thenReturn(sender);
 
@@ -125,57 +126,57 @@ public class AbstractHonoClientTest {
         verify(sender).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
         assertTrue(result.failed());
-        assertThat(((ClientErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_NOT_FOUND));
+        assertTrue(failureAssertion.test(result.cause()));
     }
 
     /**
      * Verifies that the attempt to create a receiver fails with a
      * {@code ServiceInvocationException} if the remote peer refuses
-     * to open the link.
+     * to open the link with an error condition.
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testCreateReceiverFailsForErrorCondition(final TestContext ctx) {
 
-        final ProtonReceiver sender = mock(ProtonReceiver.class);
-        when(sender.getRemoteCondition()).thenReturn(new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"));
-        final ProtonConnection con = mock(ProtonConnection.class);
-        when(con.createReceiver(anyString())).thenReturn(sender);
-
-        final Future<ProtonReceiver> result = AbstractHonoClient.createReceiver(context, props, con,
-                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, null);
-
-        final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(sender).openHandler(openHandler.capture());
-        openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
-        assertTrue(result.failed());
-        assertThat(result.cause(), instanceOf(ServiceInvocationException.class));
+        testCreateReceiverFails(() -> new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"), cause -> {
+            return cause instanceof ServiceInvocationException;
+        });
     }
 
     /**
      * Verifies that the attempt to create a receiver fails with a
-     * {@code ServiceInvocationException} if the remote peer refuses
-     * to open the link.
+     * {@code ClientErrorException} if the remote peer refuses
+     * to open the link without an error condition.
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testCreateReceiverFailsWithoutErrorCondition(final TestContext ctx) {
 
-        final ProtonReceiver sender = mock(ProtonReceiver.class);
+        testCreateReceiverFails(() -> (ErrorCondition) null, cause -> {
+            return cause instanceof ClientErrorException &&
+                    ((ClientErrorException) cause).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND;
+        });
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void testCreateReceiverFails(final Supplier<ErrorCondition> errorSupplier, final Predicate<Throwable> failureAssertion) {
+
+        final Record attachments = new RecordImpl();
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.getRemoteCondition()).thenReturn(errorSupplier.get());
+        when(receiver.attachments()).thenReturn(attachments);
         final ProtonConnection con = mock(ProtonConnection.class);
-        when(con.createReceiver(anyString())).thenReturn(sender);
+        when(con.createReceiver(anyString())).thenReturn(receiver);
 
         final Future<ProtonReceiver> result = AbstractHonoClient.createReceiver(context, props, con,
                 "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, null);
 
         final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(sender).openHandler(openHandler.capture());
+        verify(receiver).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
         assertTrue(result.failed());
-        assertThat(((ClientErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_NOT_FOUND));
+        assertTrue(failureAssertion.test(result.cause()));
     }
 }
