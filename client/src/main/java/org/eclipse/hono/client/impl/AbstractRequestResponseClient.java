@@ -188,23 +188,21 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
-     * @throws NullPointerException if con is {@code null}.
+     * @throws NullPointerException if connection is {@code null}.
      */
     protected final Future<Void> createLinks(final ProtonConnection con, final Handler<String> senderCloseHook, final Handler<String> receiverCloseHook) {
-        Future<Void> result = Future.future();
-        createReceiver(con, replyToAddress, receiverCloseHook).compose(recv -> {
-            this.receiver = recv;
-            return createSender(con, targetAddress, senderCloseHook);
-        }).setHandler(s -> {
-            if (s.succeeded()) {
-                LOG.debug("request-response client for peer [{}] created", con.getRemoteContainer());
-                this.sender = s.result();
-                result.complete();
-            } else {
-                result.fail(s.cause());
-            }
-        });
-        return result;
+
+        Objects.requireNonNull(con);
+
+        return createReceiver(con, replyToAddress, receiverCloseHook)
+                .compose(recv -> {
+                    this.receiver = recv;
+                    return createSender(con, targetAddress, senderCloseHook);
+                }).compose(sender -> {
+                    LOG.debug("request-response client for peer [{}] created", con.getRemoteContainer());
+                    this.sender = sender;
+                    return Future.succeededFuture();
+                });
     }
 
     private Future<ProtonSender> createSender(final ProtonConnection con, final String targetAddress, final Handler<String> closeHook) {
