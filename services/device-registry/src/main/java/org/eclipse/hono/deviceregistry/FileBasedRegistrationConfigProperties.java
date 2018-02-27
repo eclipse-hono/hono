@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,17 +13,13 @@
 package org.eclipse.hono.deviceregistry;
 
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
-import org.eclipse.hono.service.registration.RegistrationService;
-
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 
 
 /**
- * Configuration properties for the Hono's device registry as own server.
+ * Configuration properties for Hono's registration API as own server.
  *
  */
-public final class FileBasedRegistrationConfigProperties {
+public final class FileBasedRegistrationConfigProperties extends AbstractFileBasedRegistryConfigProperties {
 
     /**
      * The default number of devices that can be registered for each tenant.
@@ -32,88 +28,7 @@ public final class FileBasedRegistrationConfigProperties {
     private static final String DEFAULT_DEVICES_FILENAME = "/var/lib/hono/device-registry/device-identities.json";
     private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
 
-    // the name of the file used to persist the registry content
-    private String filename = DEFAULT_DEVICES_FILENAME;
-    private boolean saveToFile = false;
-    private boolean modificationEnabled = true;
     private int maxDevicesPerTenant = DEFAULT_MAX_DEVICES_PER_TENANT;
-
-    /**
-     * Gets the path to the file that the content of the device registry should be persisted to
-     * periodically.
-     * <p>
-     * Default value is <em>/home/hono/device-registry/device-identities.json</em>.
-     * 
-     * @return The file name.
-     */
-    public String getFilename() {
-        return filename;
-    }
-
-    /**
-     * Sets the path to the file that the content of the device registry should be persisted to
-     * periodically.
-     * <p>
-     * Default value is <em>/home/hono/device-registry/device-identities.json</em>.
-     * 
-     * @param filename The name of the file to persist to (can be a relative or absolute path).
-     */
-    public void setFilename(final String filename) {
-        this.filename = filename;
-    }
-
-    /**
-     * Checks whether the content of the registry should be persisted to the file system
-     * periodically.
-     * <p>
-     * Default value is {@code false}.
-     * 
-     * @return {@code true} if registry content should be persisted.
-     */
-    public boolean isSaveToFile() {
-        return saveToFile;
-    }
-
-    /**
-     * Sets whether the content of the registry should be persisted to the file system
-     * periodically.
-     * <p>
-     * Default value is {@code false}.
-     * 
-     * @param enabled {@code true} if registry content should be persisted.
-     * @throws IllegalStateException if this registry is already running.
-     */
-    public void setSaveToFile(final boolean enabled) {
-        this.saveToFile = enabled;
-    }
-
-    /**
-     * Checks whether this registry allows modification and removal of registered devices.
-     * <p>
-     * If set to {@code false} then the methods {@link RegistrationService#updateDevice(String, String, JsonObject, Handler)}
-     * and {@link RegistrationService#removeDevice(String, String, Handler)} always return a <em>403 Forbidden</em> response.
-     * <p>
-     * The default value of this property is {@code true}.
-     * 
-     * @return The flag.
-     */
-    public boolean isModificationEnabled() {
-        return modificationEnabled;
-    }
-
-    /**
-     * Sets whether this registry allows modification and removal of registered devices.
-     * <p>
-     * If set to {@code false} then the methods {@link RegistrationService#updateDevice(String, String, JsonObject, Handler)}
-     * and {@link RegistrationService#removeDevice(String, String, Handler)} always return a <em>403 Forbidden</em> response.
-     * <p>
-     * The default value of this property is {@code true}.
-     * 
-     * @param flag The flag.
-     */
-    public void setModificationEnabled(final boolean flag) {
-        modificationEnabled = flag;
-    }
 
     /**
      * Gets the maximum number of devices that can be registered for each tenant.
@@ -148,5 +63,13 @@ public final class FileBasedRegistrationConfigProperties {
      */
     public SignatureSupportingConfigProperties getSigning() {
         return registrationAssertionProperties;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected String getDefaultFileName() {
+        return DEFAULT_DEVICES_FILENAME;
     }
 }
