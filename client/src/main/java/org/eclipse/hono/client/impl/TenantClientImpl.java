@@ -45,7 +45,7 @@ import io.vertx.proton.ProtonConnection;
  * A Vertx-Proton based client for Hono's Tenant API.
  *
  */
-public final class TenantClientImpl extends AbstractRequestResponseClient<TenantResult<TenantObject>>
+public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult<TenantObject>>
         implements TenantClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantClientImpl.class);
@@ -62,19 +62,19 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
     }
 
     @Override
-    protected String getName() {
+    protected final String getName() {
 
         return TenantConstants.TENANT_ENDPOINT;
     }
 
     @Override
-    protected String createMessageId() {
+    protected final String createMessageId() {
 
         return String.format("%s-%s", TenantConstants.MESSAGE_ID_PREFIX, UUID.randomUUID());
     }
 
     @Override
-    protected TenantResult<TenantObject> getResult(final int status, final String payload) {
+    protected final TenantResult<TenantObject> getResult(final int status, final String payload) {
         try {
             if (status == HttpURLConnection.HTTP_OK) {
                 return TenantResult.from(status, objectMapper.readValue(payload, TenantObject.class));
@@ -93,7 +93,7 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
      * @return The target address.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public static String getTargetAddress(final String tenantId) {
+    public final static String getTargetAddress(final String tenantId) {
         return String.format("%s/%s", TenantConstants.TENANT_ENDPOINT, Objects.requireNonNull(tenantId));
     }
 
@@ -109,7 +109,7 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static void create(
+    public final static void create(
             final Context context,
             final ClientConfigProperties clientConfig,
             final ProtonConnection con,
@@ -132,7 +132,7 @@ public final class TenantClientImpl extends AbstractRequestResponseClient<Tenant
     }
 
     @Override
-    public Future<TenantObject> get() {
+    public final Future<TenantObject> get() {
 
         final Future<TenantResult<TenantObject>> responseTracker = Future.future();
         createAndSendRequest(TenantConstants.StandardAction.ACTION_GET.toString(), createTenantProperties(), null,
