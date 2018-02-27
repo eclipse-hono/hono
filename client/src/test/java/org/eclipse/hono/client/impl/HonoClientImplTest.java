@@ -16,10 +16,12 @@ package org.eclipse.hono.client.impl;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
@@ -119,6 +121,7 @@ public class HonoClientImplTest {
         // WHEN the client tries to connect
         client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
         }));
     }
 
@@ -433,6 +436,7 @@ public class HonoClientImplTest {
         client.connect(new ProtonClientOptions()).setHandler(
                 ctx.asyncAssertFailure(cause -> {
                     //THEN connect fails
+                    ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, ((ClientErrorException) cause).getErrorCode());
                 }));
     }
 

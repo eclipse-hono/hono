@@ -57,7 +57,8 @@ public interface HonoClient {
      * an unlimited number of times.
      * 
      * @return A future that will succeed with the connected client once the connection has been established.
-     *         The future will fail if the connection cannot be established, e.g. because
+     *         The future will fail with a {@link ServiceInvocationException} if the connection cannot be established,
+     *         e.g. because
      *         <ul>
      *         <li>authentication of the client failed, or</li>
      *         <li>one of the client's <em>shutdown</em> methods has been invoked before the
@@ -75,7 +76,8 @@ public interface HonoClient {
      * 
      * @param options The options to use. If {@code null} a set of default properties will be used.
      * @return A future that will succeed with the connected client once the connection has been established.
-     *         The future will fail if the connection cannot be established, e.g. because
+     *         The future will fail with a {@link ServiceInvocationException} if the connection cannot be established,
+     *         e.g. because
      *         <ul>
      *         <li>authentication of the client failed, or</li>
      *         <li>one of the client's <em>shutdown</em> methods has been invoked before the
@@ -96,7 +98,8 @@ public interface HonoClient {
      * 
      * @param disconnectHandler A handler to notify about connection loss.
      * @return A future that will succeed with the connected client once the connection has been established.
-     *         The future will fail if the connection cannot be established, e.g. because
+     *         The future will fail with a {@link ServiceInvocationException} if the connection cannot be established,
+     *         e.g. because
      *         <ul>
      *         <li>authentication of the client failed, or</li>
      *         <li>one of the client's <em>shutdown</em> methods has been invoked before the
@@ -122,7 +125,8 @@ public interface HonoClient {
      * @param options The options to use. If {@code null} a set of default properties will be used.
      * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
      * @return A future that will succeed with the connected client once the connection has been established.
-     *         The future will fail if the connection cannot be established, e.g. because
+     *         The future will fail with a {@link ServiceInvocationException} if the connection cannot be established,
+     *         e.g. because
      *         <ul>
      *         <li>authentication of the client failed, or</li>
      *         <li>one of the client's <em>shutdown</em> methods has been invoked before the

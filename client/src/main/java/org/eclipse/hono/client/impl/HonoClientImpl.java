@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -201,7 +202,7 @@ public final class HonoClientImpl implements HonoClient {
 
         final Future<HonoClient> result = Future.future();
         if (shuttingDown.get()) {
-            result.fail(new IllegalStateException("client is shut down"));
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down"));
         } else {
             connect(options, result.completer(), disconnectHandler);
         }
@@ -238,26 +239,34 @@ public final class HonoClientImpl implements HonoClient {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
                                 if (conAttempt.cause() instanceof SecurityException) {
-                                    connectionHandler.handle(Future.failedFuture(conAttempt.cause()));
+                                    // SASL handshake has failed
+                                    connectionHandler.handle(Future.failedFuture(
+                                            new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with server")));
                                 } else {
                                     reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
                                 }
                             } else {
-                                setConnection(conAttempt.result());
                                 // make sure we try to re-connect as often as we tried to connect initially
                                 reconnectAttempts = new AtomicInteger(0);
+                                final ProtonConnection newConnection = conAttempt.result();
                                 if (shuttingDown.get()) {
-                                    // if client was already shutdown in the meantime we give our best to cleanup connection
-                                    shutdownConnection(result -> {});
-                                    connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
+                                    // if client was shut down in the meantime, we need to immediately
+                                    // close again the newly created connection
+                                    newConnection.closeHandler(null);
+                                    newConnection.disconnectHandler(null);
+                                    newConnection.close();
+                                    connectionHandler.handle(Future.failedFuture(
+                                            new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down")));
                                 } else {
+                                    setConnection(newConnection);
                                     connectionHandler.handle(Future.succeededFuture(this));
                                 }
                             }
                         });
             } else {
                 LOG.debug("already trying to connect to server ...");
-                connectionHandler.handle(Future.failedFuture(new IllegalStateException("already connecting to server")));
+                connectionHandler.handle(Future.failedFuture(
+                        new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already connecting to server")));
             }
         });
     }
@@ -333,7 +342,8 @@ public final class HonoClientImpl implements HonoClient {
                 connectionHandler.handle(Future.failedFuture(
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
             } else {
-                connectionHandler.handle(Future.failedFuture(connectionFailureCause));
+                connectionHandler.handle(Future.failedFuture(
+                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect", connectionFailureCause)));
             }
         } else {
             LOG.trace("scheduling attempt to re-connect ...");
