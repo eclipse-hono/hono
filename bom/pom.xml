@@ -39,6 +39,7 @@
     <jackson.version>2.9.0</jackson.version>
     <java-base-image.name>openjdk:8u151-jre-slim</java-base-image.name>
     <jjwt.version>0.7.0</jjwt.version>
+    <jmeter.version>3.3</jmeter.version>
     <junit.version>4.12</junit.version>
     <logback.version>1.2.3</logback.version>
     <mockito.version>2.10.0</mockito.version>
@@ -52,7 +53,6 @@
     <spring-boot.version>1.5.8.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.5.0</vertx.version>
-    <jmeter.version>3.2</jmeter.version>
   </properties>
 
   <dependencyManagement>
