@@ -186,7 +186,7 @@ public class FileBasedTenantServiceTest {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartLoadsCredentials(final TestContext ctx) {
+    public void testDoStartLoadsTenants(final TestContext ctx) {
 
         // GIVEN a service configured with a file name
         props.setFilename(FILE_NAME);
