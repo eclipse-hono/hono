@@ -183,12 +183,12 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.23.0</version>
+          <version>0.24.0</version>
         </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>fabric8-maven-plugin</artifactId>
-          <version>3.5.33</version>
+          <version>3.5.34</version>
           <configuration>
             <mode>kubernetes</mode>
             <profile>minimal</profile>
@@ -246,7 +246,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.3</version>
+          <version>3.7.0</version>
           <configuration>
             <source>1.8</source>
             <target>1.8</target>
@@ -271,79 +271,23 @@
             </archive>
           </configuration>
         </plugin>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>buildnumber-maven-plugin</artifactId>
-                    <versionRange>[1.4,)</versionRange>
-                    <goals>
-                      <goal>create-timestamp</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <execute>
-                      <runOnConfiguration>true</runOnConfiguration>
-                      <runOnIncremental>true</runOnIncremental>
-                    </execute>
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <!--
-                   Disable unpack-dependecies goal in order to prevent the m2eclipse
-                   error "Artifact has not been packaged yet..."
-                   -->
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-dependency-plugin</artifactId>
-                    <versionRange>[3,)</versionRange>
-                    <goals>
-                      <goal>unpack-dependencies</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore></ignore>
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
-          </configuration>
-        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.10.4</version>
           <configuration>
-            <excludePackageNames>
-              org.eclipse.hono.tests.*
-            </excludePackageNames>
+            <doclint>all,-accessibility</doclint>
           </configuration>
-          <executions>
-            <execution>
-              <id>aggregate-javadoc</id>
-              <goals>
-                <goal>aggregate</goal>
-              </goals>
-              <phase>site</phase>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.19.1</version>
+          <version>2.20.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.19.1</version>
+          <version>2.20.1</version>
         </plugin>
         <plugin>
           <!-- 
@@ -352,7 +296,7 @@
            -->
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.0.1</version>
+          <version>3.0.2</version>
           <executions>
             <execution>
               <id>copy_legal_docs</id>
@@ -371,7 +315,7 @@
         <plugin>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
-          <version>${spring-boot.version}</version>
+          <version>1.5.8.RELEASE</version>
           <executions>
             <execution>
               <goals>
@@ -512,6 +456,71 @@
   </build>
 
   <profiles>
+    <profile>
+      <!-- 
+        This profile is activated by Eclipse IDE automatically.
+       -->
+      <id>eclipse-only</id>
+      <activation>
+        <property>
+          <name>m2e.version</name>
+        </property>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <!--
+                This plugin's configuration is used to store Eclipse m2e settings only.
+                It has no influence on the Maven build itself.
+              -->
+              <groupId>org.eclipse.m2e</groupId>
+              <artifactId>lifecycle-mapping</artifactId>
+              <version>1.0.0</version>
+                <configuration>
+                  <lifecycleMappingMetadata>
+                    <pluginExecutions>
+                      <pluginExecution>
+                        <pluginExecutionFilter>
+                          <groupId>org.codehaus.mojo</groupId>
+                          <artifactId>buildnumber-maven-plugin</artifactId>
+                          <versionRange>[1.4,)</versionRange>
+                          <goals>
+                            <goal>create-timestamp</goal>
+                          </goals>
+                        </pluginExecutionFilter>
+                        <action>
+                          <execute>
+                            <runOnConfiguration>true</runOnConfiguration>
+                            <runOnIncremental>true</runOnIncremental>
+                          </execute>
+                        </action>
+                      </pluginExecution>
+                      <pluginExecution>
+                        <!--
+                         Disable unpack-dependecies goal in order to prevent the m2eclipse
+                         error "Artifact has not been packaged yet..."
+                         -->
+                        <pluginExecutionFilter>
+                          <groupId>org.apache.maven.plugins</groupId>
+                          <artifactId>maven-dependency-plugin</artifactId>
+                          <versionRange>[3,)</versionRange>
+                          <goals>
+                            <goal>unpack-dependencies</goal>
+                          </goals>
+                        </pluginExecutionFilter>
+                        <action>
+                          <ignore></ignore>
+                        </action>
+                      </pluginExecution>
+                    </pluginExecutions>
+                  </lifecycleMappingMetadata>
+                </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
     <profile>
       <!--
         this profile generates JavaDoc jar files
