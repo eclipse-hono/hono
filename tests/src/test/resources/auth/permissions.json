@@ -26,11 +26,15 @@
           "activities": [ "WRITE" ]
         },
         {
-          "resource": "tenant/HTTP_TENANT",
+          "resource": "tenant/*",
           "activities": [ "READ", "WRITE" ]
         },
         {
-          "operation": "tenant/HTTP_TENANT:*",
+          "operation": "tenant/DEFAULT_TENANT:*",
+          "activities": [ "EXECUTE" ]
+        },
+        {
+          "operation": "tenant/NOT_CREATED_TENANT:*",
           "activities": [ "EXECUTE" ]
         }
       ],

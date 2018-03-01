@@ -27,6 +27,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.ExpiringValueCache;
 import org.eclipse.hono.util.MessageHelper;
@@ -82,12 +83,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tenantId The identifier of the tenant that the client is scoped to.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param tenantId The identifier of the tenant that the client can be scoped to. May be {@code null}.
+     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
      */
     AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
         super(context, config);
-        Objects.requireNonNull(tenantId);
         this.requestTimeoutMillis = config.getRequestTimeout();
         this.targetAddress = String.format("%s/%s", getName(), tenantId);
         this.replyToAddress = String.format("%s/%s/%s", getName(), tenantId, UUID.randomUUID());
@@ -99,9 +99,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tenantId The identifier of the tenant that the client is scoped to.
+     * @param tenantId The identifier of the tenant that the client can be scoped to. May be {@code null}.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
+     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
      */
     AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId,
             final ProtonSender sender, final ProtonReceiver receiver) {
@@ -379,8 +380,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         if (rejected.getError() != null) {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                     targetAddress, request.getSubject(), correlationId, rejected.getError());
-                            cancelRequest(correlationId, Future.failedFuture(new ClientErrorException(
-                                    HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getCondition().toString())));
+
+                            cancelRequest(correlationId, Future.failedFuture(StatusCodeMapper.from(rejected.getError())));
                         } else {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]",
                                     targetAddress, request.getSubject(), correlationId);

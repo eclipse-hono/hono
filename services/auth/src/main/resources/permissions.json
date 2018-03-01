@@ -30,7 +30,7 @@
         "activities": [ "READ", "WRITE" ]
       },
       {
-        "operation": "tenant/*:get",
+        "operation": "tenant/*:*",
         "activities": [ "EXECUTE" ]
       }
     ],

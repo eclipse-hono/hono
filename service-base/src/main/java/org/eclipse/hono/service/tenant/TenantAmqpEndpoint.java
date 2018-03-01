@@ -17,6 +17,7 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 import java.util.Objects;
 
+import io.vertx.core.Future;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -51,6 +52,27 @@ public final class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
     @Override
     public String getName() {
         return TenantConstants.TENANT_ENDPOINT;
+    }
+
+    /**
+     * Checks if the client of the tenant API is authorized to execute a given operation.
+     * <p>
+     * This check makes use of the provided tenantId by enriching the resource with it.
+     * So permission checks can be done on a per tenant level, although the endpoint the client
+     * connects to does not include the tenantId (like for several other of Hono's APIs).
+     *
+     * @param clientPrincipal The client.
+     * @param resource The resource the operation belongs to.
+     * @param tenantId The tenantId that is used to access the tenant API.
+     * @param operation The operation.
+     * @return The outcome of the check.
+     */
+    @Override
+    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final String tenantId, final String operation) {
+        final ResourceIdentifier specificTenantAddress =
+                ResourceIdentifier.from(resource.getEndpoint(), tenantId, null);
+
+        return getAuthorizationService().isAuthorized(clientPrincipal, specificTenantAddress, operation);
     }
 
     @Override
