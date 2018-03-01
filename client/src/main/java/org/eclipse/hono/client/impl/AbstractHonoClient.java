@@ -142,15 +142,16 @@ public abstract class AbstractHonoClient {
             final Map<String, Object> propsToAdd = new HashMap<>();
             // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
             for (final Map.Entry<String, ?> entry: properties.entrySet()) {
-                if (entry.getValue() instanceof List) {
-                    throw new IllegalArgumentException(String.format("Application property %s can't be a List", entry.getKey()));
-                } else if (entry.getValue() instanceof Map) {
-                    throw new IllegalArgumentException(String.format("Application property %s can't be a Map", entry.getKey()));
-                } else if (entry.getValue().getClass().isArray()) {
-                    throw new IllegalArgumentException(String.format("Application property %s can't be an Array", entry.getKey()));
-                } else {
-                    propsToAdd.put(entry.getKey(), entry.getValue());
+                if (entry.getValue() != null) {
+                    if (entry.getValue() instanceof List) {
+                        throw new IllegalArgumentException(String.format("Application property %s can't be a List", entry.getKey()));
+                    } else if (entry.getValue() instanceof Map) {
+                        throw new IllegalArgumentException(String.format("Application property %s can't be a Map", entry.getKey()));
+                    } else if (entry.getValue().getClass().isArray()) {
+                        throw new IllegalArgumentException(String.format("Application property %s can't be an Array", entry.getKey()));
+                    }
                 }
+                propsToAdd.put(entry.getKey(), entry.getValue());
             }
 
             final ApplicationProperties applicationProperties = new ApplicationProperties(propsToAdd);

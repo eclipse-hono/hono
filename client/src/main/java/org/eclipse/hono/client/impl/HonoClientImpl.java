@@ -678,14 +678,12 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<TenantClient> getOrCreateTenantClient(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
+    public Future<TenantClient> getOrCreateTenantClient() {
 
         final Future<TenantClient> result = Future.future();
         getOrCreateRequestResponseClient(
-                TenantClientImpl.getTargetAddress(tenantId),
-                () -> newTenantClient(tenantId),
+                TenantClientImpl.getTargetAddress(),
+                () -> newTenantClient(),
                 attempt -> {
                     if (attempt.succeeded()) {
                         result.complete((TenantClient) attempt.result());
@@ -696,9 +694,7 @@ public final class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    private Future<RequestResponseClient> newTenantClient(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
+    private Future<RequestResponseClient> newTenantClient() {
 
         return checkConnected().compose(connected -> {
 
@@ -707,7 +703,6 @@ public final class HonoClientImpl implements HonoClient {
                     context,
                     clientConfigProperties,
                     connection,
-                    tenantId,
                     this::removeTenantClient,
                     this::removeTenantClient,
                     result.completer());
@@ -715,9 +710,13 @@ public final class HonoClientImpl implements HonoClient {
         });
     }
 
+    /**
+     *
+     * @param tenantId The tenantId (not used for this client).
+     */
     private void removeTenantClient(final String tenantId) {
 
-        final String targetAddress = TenantClientImpl.getTargetAddress(tenantId);
+        final String targetAddress = TenantClientImpl.getTargetAddress();
         removeActiveRequestResponseClient(targetAddress);
     }
 

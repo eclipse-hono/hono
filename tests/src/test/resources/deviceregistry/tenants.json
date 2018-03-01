@@ -3,20 +3,30 @@
     "tenant": "DEFAULT_TENANT",
     "data": {
       "enabled": "true"
+    },
+    "adapters": {
+      "hono-http": {
+        "enabled": true,
+        "device-authentication-required": true
+      },
+      "hono-mqtt": {
+        "enabled": true,
+        "device-authentication-required": true
+      }
     }
   },
   {
-    "tenant": "HTTP_TENANT",
+    "tenant": "HTTP_ONLY_TENANT",
     "data": {
       "enabled": "true"
     },
     "adapters": {
       "hono-http": {
         "enabled": true,
-        "device-authentication-required": false
+        "device-authentication-required": true
       },
       "hono-mqtt": {
-        "enabled": true,
+        "enabled": false,
         "device-authentication-required": true
       }
     }

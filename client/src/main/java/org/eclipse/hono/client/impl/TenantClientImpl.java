@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import io.vertx.core.AsyncResult;
@@ -51,14 +50,14 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     private static final Logger LOG = LoggerFactory.getLogger(TenantClientImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private TenantClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
-        super(context, config, tenantId);
+    protected TenantClientImpl(final Context context, final ClientConfigProperties config) {
+        super(context, config, null);
     }
 
-    TenantClientImpl(final Context context, final ClientConfigProperties config, final String tenantId,
+    protected TenantClientImpl(final Context context, final ClientConfigProperties config,
                            final ProtonSender sender, final ProtonReceiver receiver) {
 
-        super(context, config, tenantId, sender, receiver);
+        super(context, config, null, sender, receiver);
     }
 
     @Override
@@ -89,12 +88,11 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     /**
      * Gets the AMQP <em>target</em> address to use for sending requests to Hono's Tenant API endpoint.
      *
-     * @param tenantId The tenant to upload data for.
      * @return The target address.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public final static String getTargetAddress(final String tenantId) {
-        return String.format("%s/%s", TenantConstants.TENANT_ENDPOINT, Objects.requireNonNull(tenantId));
+    public final static String getTargetAddress() {
+        return String.format("%s", TenantConstants.TENANT_ENDPOINT);
     }
 
     /**
@@ -103,7 +101,6 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
      * @param con The AMQP connection to the server.
-     * @param tenantId The tenant for which the API is accessed.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
@@ -113,29 +110,31 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             final Context context,
             final ClientConfigProperties clientConfig,
             final ProtonConnection con,
-            final String tenantId,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<TenantClient>> creationHandler) {
 
-        LOG.debug("creating new tenant API client for [{}]", tenantId);
-        final TenantClientImpl client = new TenantClientImpl(context, clientConfig, tenantId);
+        LOG.debug("creating new tenant API client.");
+        final TenantClientImpl client = new TenantClientImpl(context, clientConfig);
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
-                LOG.debug("successfully created tenant API client for [{}]", tenantId);
+                LOG.debug("successfully created tenant API client");
                 creationHandler.handle(Future.succeededFuture(client));
             } else {
-                LOG.debug("failed to create tenant API client for [{}]", tenantId, s.cause());
+                LOG.debug("failed to create tenant API client", s.cause());
                 creationHandler.handle(Future.failedFuture(s.cause()));
             }
         });
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public final Future<TenantObject> get() {
+    public final Future<TenantObject> get(final String tenantId) {
 
         final Future<TenantResult<TenantObject>> responseTracker = Future.future();
-        createAndSendRequest(TenantConstants.StandardAction.ACTION_GET.toString(), createTenantProperties(), null,
+        createAndSendRequest(TenantConstants.StandardAction.ACTION_GET.toString(), createTenantProperties(tenantId), null,
                 responseTracker.completer());
         return responseTracker.map(response -> {
             switch (response.getStatus()) {
@@ -147,9 +146,9 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         });
     }
 
-    private Map<String, Object> createTenantProperties() {
+    private Map<String, Object> createTenantProperties(final String tenantId) {
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(MessageHelper.APP_PROPERTY_TENANT_ID, getTenantId());
+        properties.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         return properties;
     }
 }

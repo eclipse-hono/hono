@@ -46,7 +46,7 @@ public class TenantClientImplTest extends AbstractClientUnitTestSupport {
      * Time out test cases after 5 seconds.
      */
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(5);
+    public Timeout globalTimeout = Timeout.seconds(5000);
 
     private TenantClientImpl client;
 
@@ -60,7 +60,7 @@ public class TenantClientImplTest extends AbstractClientUnitTestSupport {
         createMocks();
 
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        client = new TenantClientImpl(context, config, "tenant", sender, receiver);
+        client = new TenantClientImpl(context, config, sender, receiver);
     }
 
     /**
@@ -76,7 +76,7 @@ public class TenantClientImplTest extends AbstractClientUnitTestSupport {
         // GIVEN an adapter
 
         // WHEN getting tenant information
-        client.get();
+        client.get("tenant");
 
         // THEN the message being sent contains the tenant ID from the created client as application property
         // and the passed tenant to the get operation is ignored
@@ -99,7 +99,7 @@ public class TenantClientImplTest extends AbstractClientUnitTestSupport {
         // GIVEN an adapter
 
         // WHEN getting tenant information
-        client.get();
+        client.get("tenant");
 
         // THEN the message being sent uses the correct message id prefix
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
