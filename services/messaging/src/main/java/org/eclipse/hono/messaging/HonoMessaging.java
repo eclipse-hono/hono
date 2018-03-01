@@ -86,7 +86,8 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
             if (sessionResult.succeeded()) {
                 sessionResult.result().close();
             }
-        }).open();
+        });
+        session.open();
     }
 
 }

@@ -22,7 +22,6 @@ import java.util.UUID;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.util.Constants;
@@ -48,7 +47,7 @@ import io.vertx.proton.ProtonReceiver;
  * 
  * @param <T> The type of configuration properties this endpoint understands.
  */
-public abstract class MessageForwardingEndpoint<T extends ServiceConfigProperties> extends AbstractAmqpEndpoint<T> {
+public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigProperties> extends AbstractAmqpEndpoint<T> {
 
     private MessagingMetrics            metrics;
     private DownstreamAdapter           downstreamAdapter;
@@ -91,9 +90,16 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
     protected final void doStart(final Future<Void> startFuture) {
         if (downstreamAdapter == null) {
             startFuture.fail("no downstream adapter configured on endpoint");
-        } else if (registrationAssertionValidator == null) {
+        } else if (config.isAssertionValidationRequired() && registrationAssertionValidator == null) {
             startFuture.fail("no registration assertion validator has been set");
         } else {
+            if (!config.isAssertionValidationRequired()) {
+                final String msg = new StringBuilder()
+                        .append("validation of registration assertions is disabled, ")
+                        .append("all clients may publish data on behalf of any device")
+                        .toString();
+                logger.warn(msg);
+            }
             clientDisconnectListener = vertx.eventBus().consumer(
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,
                     msg -> onClientDisconnect(msg));
@@ -149,13 +155,15 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
                         onLinkDetach(link);
                         downstreamAdapter.onClientDetach(link);
                         metrics.decrementUpstreamLinks(targetAddress.toString());
-                    }).handler((delivery, message) -> {
+                    });
+                    receiver.handler((delivery, message) -> {
                         if (passesFormalVerification(targetAddress, message)) {
                             forwardMessage(link, delivery, message);
                         } else {
                             rejectMessage(delivery, ProtonHelper.condition(AmqpError.DECODE_ERROR, "malformed message"), link);
                         }
-                    }).open();
+                    });
+                    receiver.open();
                     logger.debug("establishing link with client [{}]", con.getRemoteContainer());
                     metrics.incrementUpstreamLinks(targetAddress.toString());
                 } else {
@@ -205,11 +213,16 @@ public abstract class MessageForwardingEndpoint<T extends ServiceConfigPropertie
 
     private boolean assertRegistration(final String token, final ResourceIdentifier resource) {
 
-        if (token == null) {
-            logger.debug("token is null");
-            return false;
+        if (config.isAssertionValidationRequired()) {
+            if (token == null) {
+                logger.debug("registration assertion validation failed due to missing token");
+                return false;
+            } else {
+                return registrationAssertionValidator.isValid(token, resource.getTenantId(), resource.getResourceId());
+            }
         } else {
-            return registrationAssertionValidator.isValid(token, resource.getTenantId(), resource.getResourceId());
+            // validation has been disabled explicitly
+            return true;
         }
     }
 

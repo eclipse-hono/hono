@@ -29,6 +29,7 @@ public class HonoMessagingConfigProperties extends ServiceConfigProperties {
 
     private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
     private int maxSessionWindow = DEFAULT_MAX_SESSION_WINDOW;
+    private boolean assertionValidationRequired = true;
 
     /**
      * Gets the properties for determining key material for validating registration assertion tokens.
@@ -63,5 +64,35 @@ public class HonoMessagingConfigProperties extends ServiceConfigProperties {
      */
     public final void setMaxSessionWindow(int maxSessionWindowSize) {
         this.maxSessionWindow = maxSessionWindowSize;
+    }
+
+    /**
+     * Checks whether messages published by devices are required to contain
+     * a valid <em>registration assertion</em>.
+     * <p>
+     * The default value of this property is {@code true}. Disabling validation
+     * effectively allows custom protocol adapters to publish any data on behalf
+     * of any device. This property should therefore be used with caution.
+     * 
+     * @return {@code true} if messages that do not contain a valid assertion will be
+     *         rejected.
+     */
+    public final boolean isAssertionValidationRequired() {
+        return assertionValidationRequired;
+    }
+
+    /**
+     * Sets whether messages published by devices are required to contain
+     * a valid <em>registration assertion</em>.
+     * <p>
+     * The default value of this property is {@code true}. Disabling validation
+     * effectively allows custom protocol adapters to publish any data on behalf
+     * of any device. This property should therefore be used with caution.
+     * 
+     * @param assertionRequired {@code true} if messages that do not contain a valid
+     *                          assertion should be rejected.
+     */
+    public final void setAssertionValidationRequired(boolean assertionRequired) {
+        this.assertionValidationRequired = assertionRequired;
     }
 }
