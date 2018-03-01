@@ -172,7 +172,7 @@ public final class MessageHelper {
     /**
      * Gets the registration assertion conveyed in an AMQP 1.0 message.
      * <p>
-     * The assertion is expected to be contained in the messages's <em>delivery-annotation</em>
+     * The assertion is expected to be contained in the messages's <em>application-properties</em>
      * under key {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
      * 
      * @param msg The message.
@@ -186,7 +186,7 @@ public final class MessageHelper {
     /**
      * Gets and removes the registration assertion conveyed in an AMQP 1.0 message.
      * <p>
-     * The assertion is expected to be contained in the messages's <em>delivery-annotation</em>
+     * The assertion is expected to be contained in the messages's <em>application-properties</em>
      * under key {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
      * 
      * @param msg The message.
@@ -200,7 +200,7 @@ public final class MessageHelper {
     private static String getRegistrationAssertion(final Message msg, final boolean removeAssertion) {
         Objects.requireNonNull(msg);
         String assertion = null;
-        ApplicationProperties properties = msg.getApplicationProperties();
+        final ApplicationProperties properties = msg.getApplicationProperties();
         if (properties != null) {
             Object obj = null;
             if (removeAssertion) {
@@ -366,7 +366,6 @@ public final class MessageHelper {
      * @param key The property key.
      * @param value The property value.
      */
-    @SuppressWarnings("unchecked")
     public static void addProperty(final Message msg, final String key, final Object value) {
         ApplicationProperties props = msg.getApplicationProperties();
         if (props == null) {
