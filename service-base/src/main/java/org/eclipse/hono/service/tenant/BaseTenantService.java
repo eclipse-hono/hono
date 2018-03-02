@@ -15,7 +15,6 @@ package org.eclipse.hono.service.tenant;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static org.eclipse.hono.util.TenantConstants.StandardAction;
 
 import java.net.HttpURLConnection;
 
@@ -137,7 +136,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
             final String subject = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
             final JsonObject payload;
 
-            switch (StandardAction.from(subject)) {
+            switch (TenantConstants.TenantAction.from(subject)) {
             case get:
                 log.debug("retrieving tenant [{}]", tenantId);
                 get(tenantId, result -> reply(tenantMsg, result));

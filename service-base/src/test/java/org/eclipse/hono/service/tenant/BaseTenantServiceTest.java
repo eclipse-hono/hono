@@ -58,7 +58,7 @@ public class BaseTenantServiceTest {
 
         final JsonObject testPayload = createValidTenantPayload();
 
-        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.StandardAction.add, testPayload);
+        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.TenantAction.add, testPayload);
         tenantService.processTenantMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_CREATED, TEST_TENANT));
@@ -86,7 +86,7 @@ public class BaseTenantServiceTest {
         final JsonObject testPayload = createValidTenantPayload();
         testPayload.put(TenantConstants.FIELD_ADAPTERS, new JsonArray());
 
-        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.StandardAction.add, testPayload);
+        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.TenantAction.add, testPayload);
         tenantService.processTenantMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST, TEST_TENANT));
@@ -105,14 +105,14 @@ public class BaseTenantServiceTest {
         adapterArray.add(new JsonObject());
         testPayload.put(TenantConstants.FIELD_ADAPTERS, adapterArray);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.StandardAction.add, testPayload);
+        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.TenantAction.add, testPayload);
         tenantService.processTenantMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST, TEST_TENANT));
     }
 
     @SuppressWarnings("unchecked")
-    private static Message<JsonObject> createMessageMockForPayload(final TenantConstants.StandardAction action, final JsonObject payload) {
+    private static Message<JsonObject> createMessageMockForPayload(final TenantConstants.TenantAction action, final JsonObject payload) {
 
         final JsonObject requestBody = new JsonObject();
         requestBody.put(TenantConstants.FIELD_TENANT_ID, TEST_TENANT);

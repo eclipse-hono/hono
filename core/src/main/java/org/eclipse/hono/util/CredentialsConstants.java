@@ -52,6 +52,40 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      */
     public static final String EVENT_BUS_ADDRESS_CREDENTIALS_IN = "credentials.in";
 
+    /**
+     * Request actions that belong to the Credentials API.
+     */
+    public enum CredentialsAction {
+        get, add, update, remove, unknown;
+
+        /**
+         * Construct a CredentialsAction from a subject.
+         *
+         * @param subject The subject from which the CredentialsAction needs to be constructed.
+         * @return CredentialsAction The CredentialsAction as enum, or {@link CredentialsAction#unknown} otherwise.
+         */
+        public static CredentialsAction from(final String subject) {
+            if (subject != null) {
+                try {
+                    return CredentialsAction.valueOf(subject);
+                } catch (final IllegalArgumentException e) {
+                }
+            }
+            return unknown;
+        }
+
+        /**
+         * Helper method to check if a subject is a valid Credentials API action.
+         *
+         * @param subject The subject to validate.
+         * @return boolean {@link Boolean#TRUE} if the subject denotes a valid action, {@link Boolean#FALSE} otherwise.
+         */
+        public static boolean isValid(final String subject) {
+            return CredentialsAction.from(subject) != CredentialsAction.unknown;
+        }
+    }
+
+
     private CredentialsConstants() {
         // prevent instantiation
     }
@@ -114,7 +148,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
             payload.put(FIELD_TYPE, type);
         }
 
-        return getServiceRequestAsJson(StandardAction.get.toString(), tenantId, null, payload);
+        return getServiceRequestAsJson(CredentialsAction.get.toString(), tenantId, null, payload);
     }
 
 }

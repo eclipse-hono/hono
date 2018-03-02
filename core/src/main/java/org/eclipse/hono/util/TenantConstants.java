@@ -43,6 +43,39 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String EVENT_BUS_ADDRESS_TENANT_IN = "tenant.in";
 
     /**
+     * Request actions that belong to the Tenant API.
+     */
+    public enum TenantAction {
+        get, add, update, remove, unknown;
+
+        /**
+         * Construct a TenantAction from a subject.
+         *
+         * @param subject The subject from which the TenantAction needs to be constructed.
+         * @return TenantAction The TenantAction as enum, or {@link TenantAction#unknown} otherwise.
+         */
+        public static TenantAction from(final String subject) {
+            if (subject != null) {
+                try {
+                    return TenantAction.valueOf(subject);
+                } catch (final IllegalArgumentException e) {
+                }
+            }
+            return unknown;
+        }
+
+        /**
+         * Helper method to check if a subject is a valid Tenant API action.
+         *
+         * @param subject The subject to validate.
+         * @return boolean {@link Boolean#TRUE} if the subject denotes a valid action, {@link Boolean#FALSE} otherwise.
+         */
+        public static boolean isValid(final String subject) {
+            return TenantAction.from(subject) != TenantAction.unknown;
+        }
+    }
+
+    /**
      * Creates a JSON object from a Tenant API request message.
      *
      * @param message The AMQP 1.0 tenant request message.

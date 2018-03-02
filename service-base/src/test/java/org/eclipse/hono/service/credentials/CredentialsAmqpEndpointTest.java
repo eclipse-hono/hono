@@ -68,7 +68,7 @@ public class CredentialsAmqpEndpointTest {
     public void testProcessMessageSendsRequestViaEventBus() {
 
         final Message msg = ProtonHelper.message();
-        msg.setSubject(CredentialsConstants.StandardAction.add.toString());
+        msg.setSubject(CredentialsConstants.CredentialsAction.add.toString());
         MessageHelper.addDeviceId(msg, "4711");
         MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
         MessageHelper.annotate(msg, resource);

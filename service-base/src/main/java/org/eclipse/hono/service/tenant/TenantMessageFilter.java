@@ -48,7 +48,7 @@ public final class TenantMessageFilter extends BaseMessageFilter {
         } else if (msg.getMessageId() == null && msg.getCorrelationId() == null) {
             LOG.trace("message has neither a message-id nor correlation-id");
             return false;
-        } else if (!TenantConstants.StandardAction.isValid(msg.getSubject())) {
+        } else if (!TenantConstants.TenantAction.isValid(msg.getSubject())) {
             LOG.trace("message [{}] does not contain valid action property", msg.getMessageId());
             return false;
         } else if (msg.getReplyTo() == null) {

@@ -123,7 +123,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String location = String.format("/%s/%s", TenantConstants.TENANT_ENDPOINT, tenantId);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.add,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.TenantAction.add,
                 status -> status == HttpURLConnection.HTTP_CREATED,
                 response -> response.putHeader(HttpHeaders.LOCATION, location)
         );
@@ -133,7 +133,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.get,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.TenantAction.get,
                 status -> status == HttpURLConnection.HTTP_OK, null);
     }
 
@@ -141,7 +141,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.update,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.TenantAction.update,
                 status -> status == HttpURLConnection.HTTP_NO_CONTENT, null);
     }
 
@@ -149,14 +149,14 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.remove,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.TenantAction.remove,
                 status -> status == HttpURLConnection.HTTP_NO_CONTENT, null);
     }
 
     private void doTenantHttpRequest(
             final RoutingContext ctx,
             final String tenantId,
-            final TenantConstants.StandardAction action,
+            final TenantConstants.TenantAction action,
             final Predicate<Integer> successfulOutcomeFilter,
             final Handler<HttpServerResponse> httpServerResponseHandler) {
 

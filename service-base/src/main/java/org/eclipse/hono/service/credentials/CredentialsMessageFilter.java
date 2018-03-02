@@ -42,7 +42,7 @@ public final class CredentialsMessageFilter {
         if (msg.getMessageId() == null && msg.getCorrelationId() == null) {
             LOG.trace("message has neither a message-id nor correlation-id");
             return false;
-        } else if (!CredentialsConstants.StandardAction.isValid(msg.getSubject())) {
+        } else if (!CredentialsConstants.CredentialsAction.isValid(msg.getSubject())) {
             LOG.trace("message [{}] does not contain valid subject property", msg.getMessageId());
             return false;
         } else if (msg.getReplyTo() == null) {

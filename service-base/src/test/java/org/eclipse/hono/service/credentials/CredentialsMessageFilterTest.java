@@ -56,7 +56,7 @@ public class CredentialsMessageFilterTest {
     public void testVerifyFailsForMissingBody() {
 
         // GIVEN a valid credentials GET message without an AMQP value
-        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.StandardAction.get);
+        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.CredentialsAction.get);
 
         // WHEN receiving the message via a link with any tenant
         final boolean filterResult = CredentialsMessageFilter.verify(target, msg);
@@ -73,7 +73,7 @@ public class CredentialsMessageFilterTest {
     public void testVerifyFailsForNonAmqpValuedBody() {
 
         // GIVEN a message with an unsupported subject
-        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.StandardAction.unknown);
+        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.CredentialsAction.unknown);
         msg.setBody(new Data(new Binary(BILLIE_HASHED_PASSWORD.getBytes(StandardCharsets.UTF_8))));
         msg.setContentType("application/json");
 
@@ -112,7 +112,7 @@ public class CredentialsMessageFilterTest {
     public void testVerifyFailsForUnknownAction() {
 
         // GIVEN a message with an unsupported subject
-        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.StandardAction.unknown);
+        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.CredentialsAction.unknown);
         msg.setBody(new AmqpValue(BILLIE_HASHED_PASSWORD));
         msg.setContentType("application/json");
 
@@ -130,7 +130,7 @@ public class CredentialsMessageFilterTest {
     public void testVerifySucceedsForValidGetAction() {
 
         // GIVEN a credentials message for user billie
-        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.StandardAction.get);
+        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.CredentialsAction.get);
         msg.setBody(new AmqpValue(BILLIE_HASHED_PASSWORD));
         msg.setContentType("application/json");
 
@@ -141,7 +141,7 @@ public class CredentialsMessageFilterTest {
         assertTrue(filterResult);
     }
 
-    private static Message givenAValidMessageWithoutBody(final CredentialsConstants.StandardAction action) {
+    private static Message givenAValidMessageWithoutBody(final CredentialsConstants.CredentialsAction action) {
         final Message msg = ProtonHelper.message();
         msg.setMessageId("msg");
         msg.setReplyTo("reply");

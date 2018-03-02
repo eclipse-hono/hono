@@ -11,8 +11,6 @@
  */
 package org.eclipse.hono.service.credentials;
 
-import static org.eclipse.hono.util.RequestResponseApiConstants.StandardAction;
-
 import java.net.HttpURLConnection;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -144,7 +142,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
             return;
         }
 
-        switch (StandardAction.from(subject)) {
+        switch (CredentialsConstants.CredentialsAction.from(subject)) {
             case get:
                 processCredentialsMessageGetOperation(regMsg, tenantId, payload);
                 break;

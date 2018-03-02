@@ -42,40 +42,6 @@ public class RequestResponseApiConstants {
     public static final String FIELD_TENANT_ID = "tenant-id";
 
     /**
-     * Request standard actions to support the standard lifecycle.
-     * If more or other actions shall be used, an own enum type should be defined.
-    */
-    public enum StandardAction {
-        get, add, update, remove, unknown;
-
-        /**
-         * Construct a StandardAction from a subject.
-         *
-         * @param subject The subject from which the StandardAction needs to be constructed.
-         * @return StandardAction The StandardAction as enum, or {@link StandardAction#unknown} otherwise.
-         */
-        public static StandardAction from(final String subject) {
-            if (subject != null) {
-                try {
-                    return StandardAction.valueOf(subject);
-                } catch (final IllegalArgumentException e) {
-                }
-            }
-            return unknown;
-        }
-
-        /**
-         * Helper method to check if a subject is a valid Request Response API action.
-         *
-         * @param subject The subject to validate.
-         * @return boolean {@link Boolean#TRUE} if the subject denotes a valid action, {@link Boolean#FALSE} otherwise.
-         */
-        public static boolean isValid(final String subject) {
-            return StandardAction.from(subject) != StandardAction.unknown;
-        }
-    }
-
-    /**
      * Creates an AMQP message from a JSON message containing the response to an
      * invocation of a service operation.
      *

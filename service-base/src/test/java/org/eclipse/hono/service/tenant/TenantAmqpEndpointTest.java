@@ -67,7 +67,7 @@ public class TenantAmqpEndpointTest {
     public void testProcessMessageSendsRequestViaEventBus() {
 
         final Message msg = ProtonHelper.message();
-        msg.setSubject(TenantConstants.StandardAction.get.toString());
+        msg.setSubject(TenantConstants.TenantAction.get.toString());
         MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
         MessageHelper.annotate(msg, resource);
 
