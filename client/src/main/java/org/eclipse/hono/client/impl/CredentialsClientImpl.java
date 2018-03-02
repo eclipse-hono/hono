@@ -140,7 +140,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
         final JsonObject specification = new JsonObject()
                 .put(CredentialsConstants.FIELD_TYPE, type)
                 .put(CredentialsConstants.FIELD_AUTH_ID, authId);
-        createAndSendRequest(CredentialsConstants.StandardAction.ACTION_GET.toString(), specification, responseTracker.completer());
+        createAndSendRequest(CredentialsConstants.StandardAction.get.toString(), specification, responseTracker.completer());
         return responseTracker.map(response -> {
             switch(response.getStatus()) {
             case HttpURLConnection.HTTP_OK:

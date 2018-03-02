@@ -114,7 +114,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
             payload.put(FIELD_TYPE, type);
         }
 
-        return getServiceRequestAsJson(StandardAction.ACTION_GET.toString(), tenantId, null, payload);
+        return getServiceRequestAsJson(StandardAction.get.toString(), tenantId, null, payload);
     }
 
 }

@@ -197,7 +197,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
             final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
             isAuthorized(clientPrincipal, targetAddress, message.getSubject()).compose(authorized -> {
-                logger.debug("client [{}] is {}authorized to {}:{}", clientPrincipal.getName(), authorized ? "" : "not ",
+                logger.debug("client [{}] is {} authorized to {}:{}", clientPrincipal.getName(), authorized ? "" : "not ",
                         targetAddress, message.getSubject());
                 if (authorized) {
                     try {

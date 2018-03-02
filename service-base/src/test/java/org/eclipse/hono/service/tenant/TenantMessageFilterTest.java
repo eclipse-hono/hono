@@ -40,7 +40,7 @@ public class TenantMessageFilterTest {
     @Test
     public void testVerifyDetectsMissingTenantProperty() {
         // GIVEN a valid tenant GET message without an AMQP value
-        final Message msg = givenAMessageHavingProperties(CredentialsConstants.StandardAction.ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(CredentialsConstants.StandardAction.get);
         // WHEN receiving the message via a link with any tenant
         final ResourceIdentifier linkTarget = getResourceIdentifier(DEFAULT_TENANT);
 
@@ -54,7 +54,7 @@ public class TenantMessageFilterTest {
     @Test
     public void testVerifySucceedsForValidGetAction() {
         // GIVEN a tenant GET message for tenant DEFAULT_TENANT
-        final Message msg = givenAMessageHavingProperties(CredentialsConstants.StandardAction.ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(CredentialsConstants.StandardAction.get);
         MessageHelper.addProperty(msg, APP_PROPERTY_TENANT_ID, DEFAULT_TENANT);
         // WHEN receiving the message via a link with matching target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(DEFAULT_TENANT);

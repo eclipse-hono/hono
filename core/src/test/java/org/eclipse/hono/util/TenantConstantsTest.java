@@ -37,7 +37,7 @@ public class TenantConstantsTest {
     public void testTenantMessageForEventBus() {
 
         final Message msg = ProtonHelper.message();
-        msg.setSubject(TenantConstants.StandardAction.ACTION_GET.toString());
+        msg.setSubject(TenantConstants.StandardAction.get.toString());
         MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
         MessageHelper.annotate(msg, resource);
 

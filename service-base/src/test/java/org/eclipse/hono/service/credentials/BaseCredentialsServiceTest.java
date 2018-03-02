@@ -58,7 +58,7 @@ public class BaseCredentialsServiceTest {
     public void testAddSucceedsForMinimalData() {
         final JsonObject testData = createValidCredentialsObject();
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_ADD, testData);
+        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.add, testData);
         service.processCredentialsMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_CREATED));
@@ -77,7 +77,7 @@ public class BaseCredentialsServiceTest {
         final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
         firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, iso8601TimeStamp);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_ADD, testData);
+        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.add, testData);
         service.processCredentialsMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_CREATED));
@@ -96,7 +96,7 @@ public class BaseCredentialsServiceTest {
         final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
         firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, iso8601TimeStamp);
         
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_ADD, testData);
+        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.add, testData);
         service.processCredentialsMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_CREATED));
@@ -114,7 +114,7 @@ public class BaseCredentialsServiceTest {
         final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
         firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, malformedTimestamp);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_ADD, testData);
+        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.add, testData);
         service.processCredentialsMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST));
@@ -130,7 +130,7 @@ public class BaseCredentialsServiceTest {
 
         testData.remove(CredentialsConstants.FIELD_SECRETS);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_ADD, testData);
+        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.add, testData);
         service.processCredentialsMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST));
@@ -145,7 +145,7 @@ public class BaseCredentialsServiceTest {
         final JsonObject testData = createValidCredentialsObject();
         testData.put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_ADD, testData);
+        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.add, testData);
         service.processCredentialsMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST));
@@ -164,7 +164,7 @@ public class BaseCredentialsServiceTest {
 
         testData.put(CredentialsConstants.FIELD_SECRETS, secrets);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_ADD, testData);
+        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.StandardAction.add, testData);
         service.processCredentialsMessage(msg);
 
         verify(msg).reply(resultWithStatusCode(HTTP_CREATED));
@@ -179,11 +179,11 @@ public class BaseCredentialsServiceTest {
 
         // GIVEN a request for getting credentials that does not specify a type
         JsonObject malformedPayload = CredentialsConstants.getServiceRequestAsJson(
-                CredentialsConstants.StandardAction.ACTION_GET.toString(),
+                CredentialsConstants.StandardAction.get.toString(),
                 TEST_TENANT,
                 null, // no device ID required for get operation
                 new JsonObject().put(CredentialsConstants.FIELD_AUTH_ID, "bumlux"));
-        Message<JsonObject> request = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_GET, malformedPayload);
+        Message<JsonObject> request = createMessageMockForPayload(CredentialsConstants.StandardAction.get, malformedPayload);
 
         // WHEN processing the request
         service.processCredentialsMessage(request);
@@ -201,11 +201,11 @@ public class BaseCredentialsServiceTest {
 
         // GIVEN a request for getting credentials that does not specify an auth ID
         JsonObject malformedPayload = CredentialsConstants.getServiceRequestAsJson(
-                CredentialsConstants.StandardAction.ACTION_GET.toString(),
+                CredentialsConstants.StandardAction.get.toString(),
                 TEST_TENANT,
                 null, // no device ID required for get operation
                 new JsonObject().put(CredentialsConstants.FIELD_TYPE, "myType"));
-        Message<JsonObject> request = createMessageMockForPayload(CredentialsConstants.StandardAction.ACTION_GET, malformedPayload);
+        Message<JsonObject> request = createMessageMockForPayload(CredentialsConstants.StandardAction.get, malformedPayload);
 
         // WHEN processing the request
         service.processCredentialsMessage(request);

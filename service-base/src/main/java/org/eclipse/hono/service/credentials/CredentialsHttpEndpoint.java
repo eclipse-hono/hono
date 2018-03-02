@@ -114,7 +114,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         final String tenantId = getTenantParam(ctx);
         logger.debug("adding credentials [tenant: {}, device-id: {}, auth-id: {}, type: {}]", tenantId, deviceId, authId, type);
 
-        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_ADD.toString(), tenantId, deviceId, payload);
+        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.add.toString(), tenantId, deviceId, payload);
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_CREATED,
@@ -144,7 +144,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         } else {
             logger.debug("updating credentials [tenant: {}, device-id: {}, auth-id: {}, type: {}]", tenantId, deviceId, authId, type);
 
-            final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_UPDATE.toString(), tenantId, deviceId, payload);
+            final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.update.toString(), tenantId, deviceId, payload);
 
             sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
         }
@@ -162,7 +162,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         payload.put(CredentialsConstants.FIELD_TYPE, type);
         payload.put(CredentialsConstants.FIELD_AUTH_ID, authId);
 
-        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_REMOVE.toString(),
+        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.remove.toString(),
                 tenantId, null, payload);
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
@@ -181,7 +181,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         payload.put(CredentialsConstants.FIELD_DEVICE_ID, deviceId);
         payload.put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SPECIFIER_WILDCARD);
 
-        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.ACTION_REMOVE.toString(),
+        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(StandardAction.remove.toString(),
                 tenantId, deviceId, payload);
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,

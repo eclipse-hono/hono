@@ -123,7 +123,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String location = String.format("/%s/%s", TenantConstants.TENANT_ENDPOINT, tenantId);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_ADD,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.add,
                 status -> status == HttpURLConnection.HTTP_CREATED,
                 response -> response.putHeader(HttpHeaders.LOCATION, location)
         );
@@ -133,7 +133,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_GET,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.get,
                 status -> status == HttpURLConnection.HTTP_OK, null);
     }
 
@@ -141,7 +141,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_UPDATE,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.update,
                 status -> status == HttpURLConnection.HTTP_NO_CONTENT, null);
     }
 
@@ -149,7 +149,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final String tenantId = getTenantIdFromContext(ctx);
 
-        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.ACTION_REMOVE,
+        doTenantHttpRequest(ctx, tenantId, TenantConstants.StandardAction.remove,
                 status -> status == HttpURLConnection.HTTP_NO_CONTENT, null);
     }
 

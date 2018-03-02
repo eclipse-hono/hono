@@ -145,16 +145,16 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         }
 
         switch (StandardAction.from(subject)) {
-            case ACTION_GET:
+            case get:
                 processCredentialsMessageGetOperation(regMsg, tenantId, payload);
                 break;
-            case ACTION_ADD:
+            case add:
                 processCredentialsMessageAddOperation(regMsg, tenantId, payload);
                 break;
-            case ACTION_UPDATE:
+            case update:
                 processCredentialsMessageUpdateOperation(regMsg, tenantId, payload);
                 break;
-            case ACTION_REMOVE:
+            case remove:
                 processCredentialsMessageRemoveOperation(regMsg, tenantId, payload);
                 break;
             default:

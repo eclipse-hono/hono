@@ -138,11 +138,11 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
             final JsonObject payload;
 
             switch (StandardAction.from(subject)) {
-            case ACTION_GET:
+            case get:
                 log.debug("retrieving tenant [{}]", tenantId);
                 get(tenantId, result -> reply(tenantMsg, result));
                 break;
-            case ACTION_ADD:
+            case add:
                 if (!isValidRequestPayload(body)) {
                     log.debug("tenant request contains invalid structure");
                     reply(tenantMsg, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -152,12 +152,12 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
                 log.debug("creating tenant [{}]", tenantId);
                 add(tenantId, payload, result -> reply(tenantMsg, result));
                 break;
-            case ACTION_UPDATE:
+            case update:
                 payload = getRequestPayload(body);
                 log.debug("updating tenant [{}]", tenantId);
                 update(tenantId, payload, result -> reply(tenantMsg, result));
                 break;
-            case ACTION_REMOVE:
+            case remove:
                 log.debug("deleting tenant [{}]", tenantId);
                 remove(tenantId, result -> reply(tenantMsg, result));
                 break;

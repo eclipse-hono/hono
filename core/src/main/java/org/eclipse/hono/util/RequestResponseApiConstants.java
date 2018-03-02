@@ -46,13 +46,13 @@ public class RequestResponseApiConstants {
      * If more or other actions shall be used, an own enum type should be defined.
     */
     public enum StandardAction {
-        ACTION_GET, ACTION_ADD, ACTION_UPDATE, ACTION_REMOVE, ACTION_UNKNOWN;
+        get, add, update, remove, unknown;
 
         /**
          * Construct a StandardAction from a subject.
          *
          * @param subject The subject from which the StandardAction needs to be constructed.
-         * @return StandardAction The StandardAction as enum, or {@link StandardAction#ACTION_UNKNOWN} otherwise.
+         * @return StandardAction The StandardAction as enum, or {@link StandardAction#unknown} otherwise.
          */
         public static StandardAction from(final String subject) {
             if (subject != null) {
@@ -61,7 +61,7 @@ public class RequestResponseApiConstants {
                 } catch (final IllegalArgumentException e) {
                 }
             }
-            return ACTION_UNKNOWN;
+            return unknown;
         }
 
         /**
@@ -71,7 +71,7 @@ public class RequestResponseApiConstants {
          * @return boolean {@link Boolean#TRUE} if the subject denotes a valid action, {@link Boolean#FALSE} otherwise.
          */
         public static boolean isValid(final String subject) {
-            return StandardAction.from(subject) != StandardAction.ACTION_UNKNOWN;
+            return StandardAction.from(subject) != StandardAction.unknown;
         }
     }
 
