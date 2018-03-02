@@ -15,6 +15,7 @@ package org.eclipse.hono.connection;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -163,8 +164,15 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                             downstreamConnection.closeHandler(closeHandler);
                             connectionResultHandler.handle(Future.succeededFuture(downstreamConnection));
                         } else {
-                            logger.warn("can't open connection to container [{}] at [{}://{}:{}]", downstreamConnection.getRemoteContainer(),
-                                    clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort(), openCon.cause());
+                            final ErrorCondition error = downstreamConnection.getRemoteCondition();
+                            if (error == null) {
+                                logger.warn("can't open connection to container [{}] at [{}://{}:{}]", downstreamConnection.getRemoteContainer(),
+                                        clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort(), openCon.cause());
+                            } else {
+                                logger.warn("can't open connection to container [{}] at [{}://{}:{}]: {} -{}",
+                                        downstreamConnection.getRemoteContainer(), clientOptions.isSsl() ? "amqps" : "amqp",
+                                        config.getHost(), config.getPort(), error.getCondition(), error.getDescription());
+                            }
                             connectionResultHandler.handle(Future.failedFuture(openCon.cause()));
                         }
                     }).open();
