@@ -44,6 +44,13 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
     private static Logger LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * Creates a new client for accessing the Credentials service.
+     * 
+     * @param context The vert.x context to use for interacting with the service.
+     * @param config The configuration properties.
+     * @param tenantId The identifier of the tenant for which the client should be created.
+     */
     protected CredentialsClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
         super(context, config, tenantId);
     }

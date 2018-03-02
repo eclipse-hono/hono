@@ -50,11 +50,27 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
 
+    /**
+     * Creates a new client for accessing the Device Registration service.
+     * 
+     * @param context The vert.x context to use for interacting with the service.
+     * @param config The configuration properties.
+     * @param tenantId The identifier of the tenant for which the client should be created.
+     */
     protected RegistrationClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
 
         super(context, config, tenantId);
     }
 
+    /**
+     * Creates a new client for accessing the Device Registration service.
+     * 
+     * @param context The vert.x context to use for interacting with the service.
+     * @param config The configuration properties.
+     * @param tenantId The identifier of the tenant for which the client should be created.
+     * @param sender The AMQP link to use for sending requests to the service.
+     * @param receiver The AMQP link to use for receiving responses from the service.
+     */
     protected RegistrationClientImpl(final Context context, final ClientConfigProperties config, final String tenantId,
             final ProtonSender sender, final ProtonReceiver receiver) {
 
