@@ -18,6 +18,7 @@ import org.apache.jmeter.samplers.Entry;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.jmeter.testelement.ThreadListener;
 import org.eclipse.hono.jmeter.client.HonoSender;
+import org.eclipse.hono.jmeter.ui.ServerOptionsPanel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,9 +33,9 @@ import org.slf4j.LoggerFactory;
  */
 public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(HonoSenderSampler.class);
+    private static final long serialVersionUID = -1386211797024120743L;
 
-    private HonoSender honoSender;
+    private static final Logger LOGGER = LoggerFactory.getLogger(HonoSenderSampler.class);
 
     private static final String REGISTRY_HOST              = "registryHost";
     private static final String REGISTRY_USER              = "registryUser";
@@ -49,6 +50,25 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     private static final String WAIT_FOR_CREDITS           = "waitForCredits";
     private static final String WAIT_FOR_RECEIVERS         = "waitForReceivers";
     private static final String WAIT_FOR_RECEIVERS_TIMEOUT = "waitForReceiversTimeout";
+    private static final String PROPERTY_REGISTRATION_ASSERTION = "PROPERTY_REGISTRATION_ASSERTION";
+
+    private HonoSender honoSender;
+
+    public void modifyRegistrationServiceOptions(final ServerOptionsPanel serverOptions) {
+        setRegistryHost(serverOptions.getHost());
+        setRegistryPort(serverOptions.getPort());
+        setRegistryUser(serverOptions.getUser());
+        setRegistryPwd(serverOptions.getPwd());
+        setRegistryTrustStorePath(serverOptions.getTrustStorePath());
+    }
+
+    public void configureRegistrationServiceOptions(final ServerOptionsPanel serverOptions) {
+        serverOptions.setHost(getRegistryHost());
+        serverOptions.setPort(getRegistryPort());
+        serverOptions.setUser(getRegistryUser());
+        serverOptions.setPwd(getRegistryPwd());
+        serverOptions.setTrustStorePath(getRegistryTrustStorePath());
+    }
 
     public String getRegistryTrustStorePath() {
         return getPropertyAsString(REGISTRY_TRUSTSTORE_PATH);
@@ -82,6 +102,15 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         setProperty(REGISTRY_PWD, pwd);
     }
 
+    public int getRegistryPortAsInt() {
+        final String portString = getRegistryPort();
+        try {
+            return Integer.parseInt(portString);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     public String getRegistryPort() {
         return getPropertyAsString(REGISTRY_PORT);
     }
@@ -90,12 +119,30 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         setProperty(REGISTRY_PORT, port);
     }
 
+    public int getWaitForReceiversAsInt() {
+        final String value = getPropertyAsString(WAIT_FOR_RECEIVERS);
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     public String getWaitForReceivers() {
         return getPropertyAsString(WAIT_FOR_RECEIVERS);
     }
 
     public void setWaitForReceivers(final String waitForReceivers) {
         setProperty(WAIT_FOR_RECEIVERS, waitForReceivers);
+    }
+
+    public int getWaitForReceiversTimeoutAsInt() {
+        final String value = getPropertyAsString(WAIT_FOR_RECEIVERS_TIMEOUT);
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     public String getWaitForReceiversTimeout() {
@@ -146,6 +193,14 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         setProperty(DATA, data);
     }
 
+    public String getRegistrationAssertion() {
+        return getPropertyAsString(PROPERTY_REGISTRATION_ASSERTION);
+    }
+
+    public void setRegistrationAssertion(final String assertion) {
+        setProperty(PROPERTY_REGISTRATION_ASSERTION, assertion);
+    }
+
     @Override
     public SampleResult sample(final Entry entry) {
 
@@ -162,19 +217,8 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     public void threadStarted() {
 
         int activeReceivers = getSemaphores();
-        int waitOn = 0;
-        try {
-            waitOn = Integer.parseInt(getWaitForReceivers());
-        } catch (NumberFormatException t) {
-            LOGGER.error("wait on receivers value is not an integer - using default (0)");
-        }
-
-        int waitOnTimeout = 0;
-        try {
-            waitOnTimeout = Integer.parseInt(getWaitForReceiversTimeout());
-        } catch (NumberFormatException t) {
-            LOGGER.error("wait on receivers timeout value is not an integer - using default (0)");
-        }
+        int waitOn = getWaitForReceiversAsInt();
+        int waitOnTimeout = getWaitForReceiversTimeoutAsInt();
 
         honoSender = new HonoSender(this);
 
@@ -193,8 +237,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         }
 
         try {
-            LOGGER.info("deviceId on threadStart: {}", getDeviceId());
-            honoSender.start(getDeviceId()).join();
+            honoSender.start().join();
         } catch (CompletionException e) {
             LOGGER.error("error initializing sender: {}/{} ({})", getEndpoint(), getTenant(),
                     Thread.currentThread().getName(), e);
@@ -205,7 +248,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     public void threadFinished() {
         if (honoSender != null) {
             try {
-                honoSender.close(getDeviceId()).join();
+                honoSender.close().join();
             } catch (CompletionException e) {
                 LOGGER.error("error during shut down of sender", e);
             }

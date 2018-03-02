@@ -12,34 +12,26 @@
 
 package org.eclipse.hono.jmeter.client;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.text.MessageFormat;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import javax.jms.IllegalStateException;
 
 import org.apache.jmeter.samplers.SampleResult;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Data;
-import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.jmeter.HonoReceiverSampler;
 import org.eclipse.hono.jmeter.HonoSampler;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Receiver, which connects to the AMQP network; asynchronous API needs to be used synchronous for JMeters threading
@@ -49,16 +41,15 @@ public class HonoReceiver extends AbstractClient {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HonoReceiver.class);
 
-    private final ConnectionFactory   amqpNetworkConnectionFactory;
     private final HonoClient          amqpNetworkClient;
     private final HonoReceiverSampler sampler;
 
     private final transient Object lock = new Object();
 
     private long sampleStart;
-    private int messageCount;
+    private int  messageCount;
     private long totalSampleDeliveryTime;
-    private long messageSize;
+    private long bytesReceived;
 
     /**
      * Creates a new receiver.
@@ -76,7 +67,7 @@ public class HonoReceiver extends AbstractClient {
         final ClientConfigProperties clientConfig = new ClientConfigProperties();
         clientConfig.setHostnameVerificationRequired(false);
         clientConfig.setHost(sampler.getHost());
-        clientConfig.setPort(Integer.parseInt(sampler.getPort()));
+        clientConfig.setPort(sampler.getPortAsInt());
         clientConfig.setName(sampler.getContainer());
         clientConfig.setUsername(sampler.getUser());
         clientConfig.setPassword(sampler.getPwd());
@@ -84,10 +75,7 @@ public class HonoReceiver extends AbstractClient {
         clientConfig.setInitialCredits(Integer.parseInt(sampler.getPrefetch()));
 
         // amqp network config
-        amqpNetworkConnectionFactory = ConnectionFactoryImpl.ConnectionFactoryBuilder.newBuilder(clientConfig)
-                .vertx(vertx)
-                .build();
-        amqpNetworkClient = new HonoClientImpl(vertx, amqpNetworkConnectionFactory, clientConfig);
+        amqpNetworkClient = new HonoClientImpl(vertx, clientConfig);
     }
 
     /**
@@ -98,11 +86,11 @@ public class HonoReceiver extends AbstractClient {
     public CompletableFuture<Void> start() {
 
         final CompletableFuture<Void> result = new CompletableFuture<>();
-
-        connect().compose(client -> createConsumer()).setHandler(attempt -> {
+        final String endpoint = sampler.getEndpoint();
+        final String tenant = sampler.getTenant();
+        connect().compose(client -> createConsumer(endpoint, tenant)).setHandler(attempt -> {
             if (attempt.succeeded()) {
-                LOGGER.debug("receiver active: {}/{} ({})", sampler.getEndpoint(), sampler.getTenant(),
-                        Thread.currentThread().getName());
+                LOGGER.debug("receiver active: {}/{} ({})", endpoint, tenant, Thread.currentThread().getName());
                 result.complete(null);
             } else {
                 result.completeExceptionally(attempt.cause());
@@ -113,49 +101,50 @@ public class HonoReceiver extends AbstractClient {
 
     private Future<HonoClient> connect() {
 
+        final int reconnectAttempts = Integer.parseInt(sampler.getReconnectAttempts());
         return amqpNetworkClient
-                .connect(getClientOptions(Integer.parseInt(sampler.getReconnectAttempts())))
+                .connect(getClientOptions(reconnectAttempts))
                 .map(client -> {
                     LOGGER.info("connected to AMQP Messaging Network [{}:{}]", sampler.getHost(), sampler.getPort());
                     return client;
                 });
     }
 
-    private Future<MessageConsumer> createConsumer() {
+    private Future<MessageConsumer> createConsumer(final String endpoint, final String tenant) {
 
         if (amqpNetworkClient == null) {
             return Future.failedFuture(new IllegalStateException("not connected to Hono"));
-        } else if (sampler.getEndpoint().equals(HonoSampler.Endpoint.telemetry.toString())) {
+        } else if (endpoint.equals(HonoSampler.Endpoint.telemetry.toString())) {
             return amqpNetworkClient
-                    .createTelemetryConsumer(sampler.getTenant(), this::messageReceived, closeHook -> {
-                        LOGGER.error("consumer {} was closed", sampler.getEndpoint());
-                    })
-                    .map(consumer -> {
-                        LOGGER.info("created {} consumer", sampler.getEndpoint());
+                    .createTelemetryConsumer(tenant, this::messageReceived, closeHook -> {
+                        LOGGER.error("telemetry consumer was closed");
+                    }).map(consumer -> {
+                        LOGGER.info("created telemetry consumer [{}]", tenant);
                         return consumer;
                     });
         } else {
             return amqpNetworkClient
-                    .createEventConsumer(sampler.getTenant(), this::messageReceived, closeHook -> {
-                        LOGGER.error("consumer {} was closed", sampler.getEndpoint());
-                    })
-                    .map(consumer -> {
-                        LOGGER.info("created {} consumer", sampler.getEndpoint());
+                    .createEventConsumer(tenant, this::messageReceived, closeHook -> {
+                        LOGGER.error("event consumer was closed");
+                    }).map(consumer -> {
+                        LOGGER.info("created event consumer [{}]", tenant);
                         return consumer;
                     });
         }
     }
 
+    /**
+     * Takes a sample.
+     * 
+     * @param result The result to set the sampler's current statistics on.
+     */
     public void sample(final SampleResult result) {
         synchronized (lock) {
             long elapsed = 0;
             result.setResponseCodeOK();
             result.setSuccessful(true);
             result.setSampleCount(messageCount);
-            result.setBytes(messageSize);
-            result.setResponseMessage(
-                    MessageFormat.format("count: {0}, bytes received: {1}, period: {2}", messageCount,
-                            messageSize, elapsed));
+            result.setBytes(bytesReceived);
             if (sampler.isUseSenderTime() && messageCount > 0) {
                 elapsed = totalSampleDeliveryTime / messageCount;
                 result.setStampAndTime(sampleStart, elapsed);
@@ -169,9 +158,12 @@ public class HonoReceiver extends AbstractClient {
             }
             LOGGER.info("{}: received batch of {} messages in {} milliseconds", sampler.getThreadName(), messageCount,
                     elapsed);
+            result.setResponseMessage(
+                    String.format("messages received: %d, bytes received: %d, time elapsed: %d",
+                            messageCount, bytesReceived, elapsed));
             // reset all counters
             totalSampleDeliveryTime = 0;
-            messageSize = 0;
+            bytesReceived = 0;
             messageCount = 0;
             sampleStart = 0;
         }
@@ -195,56 +187,53 @@ public class HonoReceiver extends AbstractClient {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> getJSONValue(final Section message) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        Map<String, Object> result;
+    private Long getSenderTimeFromJsonPayload(final byte[] payload) {
+
         try {
-            result = objectMapper.readValue(getValue(message),
-                    HashMap.class);
-            if (result == null) {
-                result = Collections.emptyMap();
-            }
-        } catch (IOException e) {
+            final JsonObject jsonObject = Buffer.buffer(payload).toJsonObject();
+            return jsonObject.getLong(sampler.getSenderTimeVariableName(), null);
+        } catch (DecodeException e) {
             LOGGER.warn("Could not parse the received message", e);
-            result = Collections.emptyMap();
+            return null;
         }
-        return result;
     }
 
-    private byte[] getValue(final Section body) {
-        if (body instanceof Data) {
-            return ((Data) body).getValue().getArray();
-        } else if (body instanceof AmqpValue) {
-            return ((AmqpValue) body).getValue().toString().getBytes(StandardCharsets.UTF_8);
-        } else {
-            return new byte[0];
-        }
+    private Long getSenderTimeFromMessageProperties(final Message message) {
+
+        return MessageHelper.getApplicationProperty(
+                message.getApplicationProperties(),
+                TIME_STAMP_VARIABLE,
+                Long.class);
     }
 
     private void messageReceived(final Message message) {
-        synchronized (lock) {
-            messageCount++;
-            LOGGER.trace("Received message. count : {}", messageCount);
-            byte[] messageBody = getValue(message.getBody());
-            messageSize += messageBody.length;
 
-            if (sampler.isUseSenderTime()) {
-                long sampleReceivedTime = System.currentTimeMillis();
-                LOGGER.debug("Message received time : {}", sampleReceivedTime);
-                if (sampler.isSenderTimeInPayload()) {
-                    final Long time = (Long) getJSONValue(message.getBody())
-                            .get(sampler.getSenderTimeVariableName());
-                    verifySenderTimeAndSetSamplingTime(time, sampleReceivedTime);
-                } else {
-                    final Long time = (Long) message.getApplicationProperties().getValue().get("timeStamp");
-                    verifySenderTimeAndSetSamplingTime(time, sampleReceivedTime);
-                }
-            } else {
-                if (sampleStart == 0) {
+        if (message.getBody() instanceof Data) {
+
+            final long sampleReceivedTime = System.currentTimeMillis();
+            final byte[] messageBody = ((Data) message.getBody()).getValue().getArray();
+            synchronized (lock) {
+                messageCount++;
+                LOGGER.trace("Received message. count : {}", messageCount);
+                bytesReceived += messageBody.length;
+
+                if (sampler.isUseSenderTime()) {
+                    LOGGER.debug("Message received time : {}", sampleReceivedTime);
+                    if (sampler.isSenderTimeInPayload()) {
+                        verifySenderTimeAndSetSamplingTime(
+                                getSenderTimeFromJsonPayload(messageBody),
+                                sampleReceivedTime);
+                    } else {
+                        verifySenderTimeAndSetSamplingTime(
+                                getSenderTimeFromMessageProperties(message),
+                                sampleReceivedTime);
+                    }
+                } else if (sampleStart == 0) {
                     sampleStart = System.currentTimeMillis();
                 }
             }
+        } else {
+            LOGGER.trace("discarding message with non-Data body section");
         }
     }
 

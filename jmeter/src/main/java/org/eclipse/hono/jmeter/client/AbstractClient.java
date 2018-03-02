@@ -12,7 +12,7 @@ import io.vertx.proton.ProtonClientOptions;
  */
 public abstract class AbstractClient {
 
-    static final int    DEFAULT_CONNECT_TIMEOUT_MILLIS            = 2000;
+    static final int    DEFAULT_CONNECT_TIMEOUT_MILLIS            = 1000;
     static final int    DEFAULT_ADDRESS_RESOLUTION_TIMEOUT_MILLIS = 2000;
     static final String TIME_STAMP_VARIABLE                       = "timeStamp";
 
@@ -28,7 +28,7 @@ public abstract class AbstractClient {
         vertx = vertx();
     }
 
-    Vertx vertx() {
+    final Vertx vertx() {
         VertxOptions options = new VertxOptions()
                 .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
@@ -39,13 +39,18 @@ public abstract class AbstractClient {
         return Vertx.vertx(options);
     }
 
-    ProtonClientOptions getClientOptions(int reconnectAttempts) {
+    final ProtonClientOptions getClientOptions(int reconnectAttempts) {
         return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS)
                 .setReconnectAttempts(reconnectAttempts);
     }
 
+    /**
+     * Closes the vert.x instance.
+     * 
+     * @return A future that will succeed once the instance is closed.
+     */
     protected final Future<Void> closeVertx() {
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         vertx.close(result.completer());
         return result;
     }

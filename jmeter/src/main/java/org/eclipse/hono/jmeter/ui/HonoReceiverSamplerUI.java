@@ -12,35 +12,71 @@
 
 package org.eclipse.hono.jmeter.ui;
 
+import java.util.stream.Stream;
+
 import javax.swing.BorderFactory;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
 import org.apache.jmeter.gui.util.VerticalPanel;
 import org.apache.jmeter.testelement.TestElement;
+import org.apache.jorphan.gui.JLabeledChoice;
 import org.apache.jorphan.gui.JLabeledTextField;
 import org.eclipse.hono.jmeter.HonoReceiverSampler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eclipse.hono.jmeter.HonoSampler;
 
 /**
- * Swing UI for receiver sampler
+ * Swing UI for receiver sampler.
  */
 public class HonoReceiverSamplerUI extends HonoSamplerUI {
 
     private static final long serialVersionUID = 2577635965483186422L;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(HonoReceiverSamplerUI.class);
+    private final JCheckBox          useSenderTime;
+    private final JCheckBox          senderTimeInPayload;
+    private final JLabeledTextField  senderTimeVariableName;
+    private final JLabeledTextField  prefetch;
+    private final JLabeledTextField  reconnectAttempts;
+    private final JLabeledTextField  tenant;
+    private final JLabeledTextField  container;
+    private final JLabeledChoice     endpoint;
+    private final ServerOptionsPanel honoServerOptions;
 
-    private final JCheckBox         useSenderTime          = new JCheckBox("Use sender time");
-    private final JCheckBox         senderTimeInPayload    = new JCheckBox("Sender time in Payload");
-    private final JLabeledTextField senderTimeVariableName = new JLabeledTextField("Sender time variable name");
-    private final JLabeledTextField prefetch               = new JLabeledTextField("Prefetch");
-    private final JLabeledTextField reconnectAttempts      = new JLabeledTextField("Max reconnect attempts");
-
+    /**
+     * Creates a new UI that provides means to configure
+     * the northbound Telemetry &amp; Event API endpoint to connect to
+     * for receiving messages.
+     */
     public HonoReceiverSamplerUI() {
-        super("Qpid Dispatch Router");
-        addDefaultOptions();
+
+        honoServerOptions = new ServerOptionsPanel("Telemetry & Event Endpoint");
+        tenant = new JLabeledTextField("Tenant");
+        container = new JLabeledTextField("Name");
+        endpoint = new JLabeledChoice("Endpoint",
+                Stream.of(HonoSampler.Endpoint.values()).map(HonoSampler.Endpoint::name).toArray(String[]::new));
+        endpoint.setToolTipText("<html>The name of the endpoint to send the AMQP message to.</html>");
+        useSenderTime = new JCheckBox("Use sender time");
+        useSenderTime.setToolTipText(new StringBuilder()
+                .append("<html>")
+                .append("When checked, the sending time of received messages will be determined from information")
+                .append(" contained in the messages as follows:")
+                .append("<ul>")
+                .append("<li>If <em>Sender time in Payload</em> is unchecked, the sending time is retrieved from the ")
+                .append("message's application property <em>timeStamp</em>.</li>")
+                .append("<li>Otherwise, it will be retrieved from the message's JSON payload using the property name ")
+                .append("set in the <em>Sender time variable name</em>.</li>")
+                .append("</ul>")
+                .append("</html>")
+                .toString());
+        senderTimeInPayload = new JCheckBox("Sender time in Payload");
+        senderTimeVariableName = new JLabeledTextField("Sender time variable name");
+        prefetch = new JLabeledTextField("Prefetch");
+        reconnectAttempts = new JLabeledTextField("Max reconnect attempts");
+
+        addOption(honoServerOptions);
+        addOption(tenant);
+        addOption(container);
+        addOption(endpoint);
         addOption(prefetch);
         addOption(reconnectAttempts);
         addOption(createTimeStampPanel());
@@ -60,8 +96,14 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
 
     @Override
     public void modifyTestElement(final TestElement testElement) {
-        super.modifyTestElement(testElement);
-        HonoReceiverSampler sampler = (HonoReceiverSampler) testElement;
+
+        super.configureTestElement(testElement);
+        final HonoReceiverSampler sampler = (HonoReceiverSampler) testElement;
+        sampler.modifyServerOptions(honoServerOptions);
+        sampler.setEndpoint(HonoSampler.Endpoint.valueOf(endpoint.getText()));
+        sampler.setTenant(tenant.getText());
+        sampler.setContainer(container.getText());
+
         sampler.setPrefetch(prefetch.getText());
         sampler.setReconnectAttempts(reconnectAttempts.getText());
         sampler.setUseSenderTime(useSenderTime.isSelected());
@@ -72,7 +114,11 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
     @Override
     public void configure(final TestElement element) {
         super.configure(element);
-        HonoReceiverSampler sampler = (HonoReceiverSampler) element;
+        final HonoReceiverSampler sampler = (HonoReceiverSampler) element;
+        sampler.configureServerOptions(honoServerOptions);
+        endpoint.setText(sampler.getEndpoint());
+        tenant.setText(sampler.getTenant());
+        container.setText(sampler.getContainer());
         prefetch.setText(sampler.getPrefetch());
         reconnectAttempts.setText(sampler.getReconnectAttempts());
         useSenderTime.setSelected(sampler.isUseSenderTime());
@@ -83,7 +129,10 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
     @Override
     public void clearGui() {
         super.clearGui();
-        LOGGER.debug("clearGui() invoked");
+        honoServerOptions.clearGui();
+        endpoint.setSelectedIndex(0);
+        tenant.setText("");
+        container.setText("");
         reconnectAttempts.setText("0");
         prefetch.setText("50");
         useSenderTime.setSelected(false);
@@ -92,8 +141,7 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
     }
 
     private JPanel createTimeStampPanel() {
-        LOGGER.debug("createTimeStampPanel() invoked");
-        JPanel timeStampPanel = new VerticalPanel();
+        final JPanel timeStampPanel = new VerticalPanel();
         timeStampPanel.setBorder(
                 BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Timestamp used for sampling"));
         timeStampPanel.add(useSenderTime);

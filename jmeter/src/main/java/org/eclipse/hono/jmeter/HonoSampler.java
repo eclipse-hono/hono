@@ -14,6 +14,7 @@ package org.eclipse.hono.jmeter;
 
 import org.apache.jmeter.samplers.AbstractSampler;
 import org.apache.jmeter.util.JMeterUtils;
+import org.eclipse.hono.jmeter.ui.ServerOptionsPanel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,22 @@ public abstract class HonoSampler extends AbstractSampler {
     private static final String TENANT                   = "tenant";
     private static final String ENDPOINT                 = "endpoint";
 
+    public void modifyServerOptions(final ServerOptionsPanel serverOptions) {
+        setHost(serverOptions.getHost());
+        setPort(serverOptions.getPort());
+        setUser(serverOptions.getUser());
+        setPwd(serverOptions.getPwd());
+        setTrustStorePath(serverOptions.getTrustStorePath());
+    }
+
+    public void configureServerOptions(final ServerOptionsPanel serverOptions) {
+        serverOptions.setHost(getHost());
+        serverOptions.setPort(getPort());
+        serverOptions.setUser(getUser());
+        serverOptions.setPwd(getPwd());
+        serverOptions.setTrustStorePath(getTrustStorePath());
+    }
+
     public String getTrustStorePath() {
         return getPropertyAsString(TRUSTSTORE_PATH);
     }
@@ -81,6 +98,15 @@ public abstract class HonoSampler extends AbstractSampler {
         setProperty(PWD, pwd);
     }
 
+    public int getPortAsInt() {
+        final String portString = getPort();
+        try {
+            return Integer.parseInt(portString);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     public String getPort() {
         return getPropertyAsString(PORT);
     }
@@ -100,19 +126,21 @@ public abstract class HonoSampler extends AbstractSampler {
     public String getTenant() {
         return getPropertyAsString(TENANT);
     }
+
     public void setTenant(final String tenant) {
-        setProperty(TENANT,tenant);
+        setProperty(TENANT, tenant);
     }
 
     public String getEndpoint() {
         return getPropertyAsString(ENDPOINT);
     }
+
     public void setEndpoint(final Endpoint endpoint) {
-        setProperty(ENDPOINT,endpoint.toString());
+        setProperty(ENDPOINT, endpoint.toString());
     }
 
     protected String getAddress() {
-        return getEndpoint()+"/"+getTenant();
+        return getEndpoint() + "/" + getTenant();
     }
 
     void addSemaphore() {
