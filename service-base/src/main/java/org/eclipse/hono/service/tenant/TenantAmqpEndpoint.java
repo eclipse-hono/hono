@@ -63,16 +63,20 @@ public final class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
      *
      * @param clientPrincipal The client.
      * @param resource The resource the operation belongs to.
-     * @param tenantId The tenantId that is used to access the tenant API.
-     * @param operation The operation.
+     * @param message The message for which the authorization shall be checked.
      * @return The outcome of the check.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Override
-    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final String tenantId, final String operation) {
+    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final Message message) {
+
+        Objects.requireNonNull(message);
+
+        final String tenantId = MessageHelper.getTenantId(message);
         final ResourceIdentifier specificTenantAddress =
                 ResourceIdentifier.from(resource.getEndpoint(), tenantId, null);
 
-        return getAuthorizationService().isAuthorized(clientPrincipal, specificTenantAddress, operation);
+        return getAuthorizationService().isAuthorized(clientPrincipal, specificTenantAddress, message.getSubject());
     }
 
     @Override

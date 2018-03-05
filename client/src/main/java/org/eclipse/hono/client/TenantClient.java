@@ -29,7 +29,6 @@ public interface TenantClient extends RequestResponseClient {
      * Gets the details of the tenant that this client was created for.
      *
      * @param tenantId The id of the tenant to retrieve details for.
-     *
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the

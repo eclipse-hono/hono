@@ -24,7 +24,10 @@ import io.vertx.core.json.JsonObject;
  */
 
 public final class TenantConstants extends RequestResponseApiConstants {
-    /* message id prefix */
+
+    /**
+     *  All messages for the Tenant API will start with this prefix.
+     */
     public static final String MESSAGE_ID_PREFIX = "tenant-client";
 
     /* message payload fields */

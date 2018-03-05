@@ -83,7 +83,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tenantId The identifier of the tenant that the client can be scoped to. May be {@code null}.
+     * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
      * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
      */
     AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
@@ -99,7 +99,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tenantId The identifier of the tenant that the client can be scoped to. May be {@code null}.
+     * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
      * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
@@ -480,6 +480,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Get the tenantId of the tenant for that this client was created for.
+
      * @return The tenantId for that this client was created for.
      */
     protected final String getTenantId() {
