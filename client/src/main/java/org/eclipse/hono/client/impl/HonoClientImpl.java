@@ -57,7 +57,7 @@ import io.vertx.proton.ProtonDelivery;
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
  */
-public final class HonoClientImpl implements HonoClient {
+public class HonoClientImpl implements HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClientImpl.class);
 
@@ -126,7 +126,7 @@ public final class HonoClientImpl implements HonoClient {
      * @param manager The cache manager.
      * @throws NullPointerException if manager is {@code null}.
      */
-    public void setCacheManager(final CacheManager manager) {
+    public final void setCacheManager(final CacheManager manager) {
         this.cacheManager = Objects.requireNonNull(manager);
     }
 
@@ -134,7 +134,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<Boolean> isConnected() {
+    public final Future<Boolean> isConnected() {
 
         final Future<Boolean> result = Future.future();
         context.runOnContext(check -> {
@@ -143,7 +143,7 @@ public final class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    private Future<Void> checkConnected() {
+    protected final Future<Void> checkConnected() {
 
         final Future<Void> result = Future.future();
         if (isConnectedInternal()) {
@@ -169,11 +169,17 @@ public final class HonoClientImpl implements HonoClient {
         }
     }
 
+    protected final ProtonConnection getConnection() {
+        synchronized (connectionLock) {
+            return this.connection;
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<HonoClient> connect() {
+    public final Future<HonoClient> connect() {
         return connect(null, null);
     }
 
@@ -181,7 +187,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<HonoClient> connect(final ProtonClientOptions options) {
+    public final Future<HonoClient> connect(final ProtonClientOptions options) {
         return connect(Objects.requireNonNull(options), null);
     }
 
@@ -189,7 +195,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<HonoClient> connect(final Handler<ProtonConnection> disconnectHandler) {
+    public final Future<HonoClient> connect(final Handler<ProtonConnection> disconnectHandler) {
         return connect(null, Objects.requireNonNull(disconnectHandler));
     }
 
@@ -197,7 +203,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<HonoClient> connect(
+    public final Future<HonoClient> connect(
             final ProtonClientOptions options,
             final Handler<ProtonConnection> disconnectHandler) {
 
@@ -362,7 +368,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<MessageSender> getOrCreateTelemetrySender(final String tenantId) {
+    public final Future<MessageSender> getOrCreateTelemetrySender(final String tenantId) {
         return getOrCreateTelemetrySender(tenantId, null);
     }
 
@@ -370,7 +376,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<MessageSender> getOrCreateTelemetrySender(final String tenantId, final String deviceId) {
+    public final Future<MessageSender> getOrCreateTelemetrySender(final String tenantId, final String deviceId) {
 
         Objects.requireNonNull(tenantId);
         return getOrCreateSender(
@@ -397,7 +403,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<MessageSender> getOrCreateEventSender(final String tenantId) {
+    public final Future<MessageSender> getOrCreateEventSender(final String tenantId) {
         return getOrCreateEventSender(tenantId, null);
     }
 
@@ -405,7 +411,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<MessageSender> getOrCreateEventSender(
+    public final Future<MessageSender> getOrCreateEventSender(
             final String tenantId,
             final String deviceId) {
 
@@ -481,7 +487,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<MessageConsumer> createTelemetryConsumer(
+    public final Future<MessageConsumer> createTelemetryConsumer(
             final String tenantId,
             final Consumer<Message> messageConsumer,
             final Handler<Void> closeHandler) {
@@ -509,7 +515,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<MessageConsumer> createEventConsumer(
+    public final Future<MessageConsumer> createEventConsumer(
             final String tenantId,
             final Consumer<Message> eventConsumer,
             final Handler<Void> closeHandler) {
@@ -521,7 +527,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<MessageConsumer> createEventConsumer(
+    public final Future<MessageConsumer> createEventConsumer(
             final String tenantId,
             final BiConsumer<ProtonDelivery, Message> messageConsumer,
             final Handler<Void> closeHandler) {
@@ -575,7 +581,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<CredentialsClient> getOrCreateCredentialsClient(
+    public final Future<CredentialsClient> getOrCreateCredentialsClient(
             final String tenantId) {
 
         Objects.requireNonNull(tenantId);
@@ -593,7 +599,18 @@ public final class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    private Future<RequestResponseClient> newCredentialsClient(final String tenantId) {
+    /**
+     * Creates a new instance of {@link CredentialsClient} scoped for the given tenant identifier.
+     * <p>
+     * Custom implementation of {@link CredentialsClient} can be instantiated by overriding this method. Any such
+     * instance should be scoped to the given tenantId. Custom extension of {@link HonoClientImpl} must invoke
+     * {@link #removeCredentialsClient(String)} to cleanup when finished with the client.
+     *  
+     * @param tenantId tenant scope for which the client is instantiated
+     * @return a future containing an instance of {@link CredentialsClient}
+     * @see CredentialsClient
+     */
+    protected Future<RequestResponseClient> newCredentialsClient(final String tenantId) {
 
         return checkConnected().compose(connected -> {
 
@@ -610,7 +627,7 @@ public final class HonoClientImpl implements HonoClient {
         });
     }
 
-    private void removeCredentialsClient(final String tenantId) {
+    protected final void removeCredentialsClient(final String tenantId) {
 
         final String targetAddress = CredentialsClientImpl.getTargetAddress(tenantId);
         removeActiveRequestResponseClient(targetAddress);
@@ -629,7 +646,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public Future<RegistrationClient> getOrCreateRegistrationClient(
+    public final Future<RegistrationClient> getOrCreateRegistrationClient(
             final String tenantId) {
 
         Objects.requireNonNull(tenantId);
@@ -648,7 +665,18 @@ public final class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    private Future<RequestResponseClient> newRegistrationClient(final String tenantId) {
+    /**
+     * Creates a new instance of {@link RegistrationClient} scoped for the given tenantId.
+     * <p>
+     * Custom implementation of {@link RegistrationClient} can be instantiated by overriding this method. Any such
+     * instance should be scoped to the given tenantId. Custom extension of {@link HonoClientImpl} must invoke
+     * {@link #removeRegistrationClient(String)} to cleanup when finished with the client.
+     *
+     * @param tenantId tenant scope for which the client is instantiated
+     * @return a future containing an instance of {@link RegistrationClient}
+     * @see RegistrationClient
+     */
+    protected Future<RequestResponseClient> newRegistrationClient(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
 
@@ -668,7 +696,7 @@ public final class HonoClientImpl implements HonoClient {
         });
     }
 
-    private void removeRegistrationClient(final String tenantId) {
+    protected final void removeRegistrationClient(final String tenantId) {
 
         final String targetAddress = RegistrationClientImpl.getTargetAddress(tenantId);
         removeActiveRequestResponseClient(targetAddress);
@@ -776,7 +804,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public void shutdown() {
+    public final void shutdown() {
 
         final CountDownLatch latch = new CountDownLatch(1);
         shutdown(done -> {
@@ -799,7 +827,7 @@ public final class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
+    public final void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
 
         if (shuttingDown.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
             context.runOnContext(shutDown -> {
