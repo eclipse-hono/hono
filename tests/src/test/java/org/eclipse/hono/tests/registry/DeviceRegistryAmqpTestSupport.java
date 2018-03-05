@@ -22,15 +22,18 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 
 /**
- * Abstract class to support integration tests for the device registry.
+ * Helper class to support integration tests for the device registry.
  *
  */
-public abstract class AbstractDeviceRegistryAmqpSupportIT {
+public final class DeviceRegistryAmqpTestSupport {
+
+    private DeviceRegistryAmqpTestSupport() {}
 
     /**
      * Build a HonoClient to access the device registry service.
-     * @param vertx
-     * @return
+     *
+     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
+     * @return The client that is configured for accessing the device registry.
      */
     protected static HonoClient prepareDeviceRegistryClient(final Vertx vertx) {
 
@@ -44,6 +47,17 @@ public abstract class AbstractDeviceRegistryAmqpSupportIT {
 
     }
 
+    /**
+     * Closes the connection of the provided client to the device registry service.
+     * <p>
+     * Any senders or consumers opened by this client will be implicitly closed as well. Any subsequent attempts to
+     * connect this client again will fail.
+     *
+     * @param vertx The Vert.x instance on which the client is executed on.
+     * @param ctx The test context that the tests are executed on.
+     * @param client The client to shutdown.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
     protected static void shutdownDeviceRegistryClient(final TestContext ctx, final Vertx vertx, final HonoClient client) {
 
         final Future<Void> clientTracker = Future.future();
