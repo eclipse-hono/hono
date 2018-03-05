@@ -217,7 +217,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * @param tenantResult The tenant result that should be conveyed in the response.
      * @throws NullPointerException If request or tenantResult is null.
      */
-    protected final void reply(final Message<JsonObject> request, final TenantResult tenantResult) {
+    protected final void reply(final Message<JsonObject> request, final TenantResult<?> tenantResult) {
         final JsonObject body = request.body();
         request.reply(TenantConstants.getServiceReplyAsJson(body.getString(TenantConstants.FIELD_TENANT_ID), tenantResult));
     }
@@ -286,13 +286,13 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
             adapters.forEach(elem -> addNotPresentFieldsWithDefaultValuesForAdapter((JsonObject) elem));
         }
     }
-    
+
     private void addNotPresentFieldsWithDefaultValuesForAdapter(final JsonObject adapter) {
         if (!adapter.containsKey(TenantConstants.FIELD_ENABLED)) {
             log.trace("adding 'enabled' key to payload");
             adapter.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         }
-        
+
         if (!adapter.containsKey(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)) {
             log.trace("adding 'device-authentication-required' key to adapter payload");
             adapter.put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE);

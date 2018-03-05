@@ -30,8 +30,8 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
      * @param status The status code indicating the outcome of the request.
      * @return The result.
      */
-    public static TenantResult from(final int status) {
-        return new TenantResult(status, null);
+    public static <T> TenantResult<T> from(final int status) {
+        return new TenantResult<T>(status, null);
     }
 
     /**
