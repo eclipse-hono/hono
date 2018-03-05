@@ -24,9 +24,7 @@ import java.util.Objects;
 
 /**
  * Encapsulates the tenant information that was found by the get operation of the
- * <a href="https://www.eclipse.org/hono/api/Tenant-API/">Tenant API</a>.
- * <p>
- * Is mapped internally from json representation by jackson-databind.
+ * <a href="https://www.eclipse.org/hono/api/tenant-api/">Tenant API</a>.
  */
 public final class TenantObject {
 
@@ -73,6 +71,14 @@ public final class TenantObject {
         adapterConfigurations.add(adapterConfiguration);
     }
 
+    /**
+     * Creates a {@link TenantObject} for a tenantId and the enabled property.
+     *
+     * @param tenantId The tenant for which the object is constructed.
+     * @param enabled {@code true} if the tenant shall be enabled.
+     * @return The TenantObject.
+     * @throws NullPointerException if any of tenantId or enabled is {@code null}.
+     */
     public static TenantObject from(final String tenantId, final Boolean enabled) {
 
         Objects.requireNonNull(tenantId);

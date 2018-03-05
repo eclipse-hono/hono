@@ -166,7 +166,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * <ul>
      * <li>the message does not pass {@linkplain #passesFormalVerification(ResourceIdentifier, Message) formal verification}
      * or</li>
-     * <li>the client is not {@linkplain #isAuthorized(HonoUser, ResourceIdentifier, String, String) authorized to execute the operation}
+     * <li>the client is not {@linkplain #isAuthorized(HonoUser, ResourceIdentifier, Message) authorized to execute the operation}
      * indicated by the message's <em>subject</em> or</li>
      * <li>its payload cannot be parsed</li>
      * </ul>
@@ -198,7 +198,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
             final String tenantId = MessageHelper.getTenantId(message);
 
-            isAuthorized(clientPrincipal, targetAddress, tenantId, message.getSubject()).compose(authorized -> {
+            isAuthorized(clientPrincipal, targetAddress, message).compose(authorized -> {
                 logger.error("client [{}] is {} authorized to {}:{}", clientPrincipal.getName(), authorized ? "" : "not ",
                         targetAddress, message.getSubject());
                 if (authorized) {
@@ -227,13 +227,15 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * Subclasses may override this method in order to do more sophisticated checks.
      * 
      * @param clientPrincipal The client.
-     * @param tenantId The tenantId (if not part of the endpoint of the resource already).
-     * @param resource The resource the operation belongs to.
-     * @param operation The operation.
+     * @param resource The resource the message belongs to.
+     * @param message The message for which the authorization shall be checked.
      * @return The outcome of the check.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final String tenantId, final String operation) {
-        return getAuthorizationService().isAuthorized(clientPrincipal, resource, operation);
+    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final Message message) {
+
+        Objects.requireNonNull(message);
+        return getAuthorizationService().isAuthorized(clientPrincipal, resource, message.getSubject());
     }
 
     /**

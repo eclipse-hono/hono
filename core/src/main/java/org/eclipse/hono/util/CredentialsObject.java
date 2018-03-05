@@ -28,9 +28,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Encapsulates the credentials information for a device that was found by the get operation of the
- * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
- * <p>
- * Is mapped internally from json representation by jackson-databind.
+ * <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>.
  */
 public final class CredentialsObject {
 

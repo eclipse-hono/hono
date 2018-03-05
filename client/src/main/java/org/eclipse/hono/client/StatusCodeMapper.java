@@ -93,7 +93,7 @@ public abstract class StatusCodeMapper {
         if (AmqpError.RESOURCE_LIMIT_EXCEEDED.equals(error.getCondition())) {
             return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, error.getDescription());
         } else if (AmqpError.UNAUTHORIZED_ACCESS.equals(error.getCondition())) {
-            return new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, error.getDescription());
+            return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, error.getDescription());
         } else {
             return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, error.getDescription());
         }

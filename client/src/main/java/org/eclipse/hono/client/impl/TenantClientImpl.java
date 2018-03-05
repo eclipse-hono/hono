@@ -50,10 +50,27 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     private static final Logger LOG = LoggerFactory.getLogger(TenantClientImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+
+    /**
+     * Creates a tenant API client.
+     *
+     * @param context The Vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
     protected TenantClientImpl(final Context context, final ClientConfigProperties config) {
         super(context, config, null);
     }
 
+    /**
+     * Creates a tenant API client.
+     *
+     * @param context The Vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param sender The AMQP 1.0 link to use for sending requests to the peer.
+     * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
     protected TenantClientImpl(final Context context, final ClientConfigProperties config,
                            final ProtonSender sender, final ProtonReceiver receiver) {
 
@@ -92,11 +109,11 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @throws NullPointerException if tenant is {@code null}.
      */
     public final static String getTargetAddress() {
-        return String.format("%s", TenantConstants.TENANT_ENDPOINT);
+        return TenantConstants.TENANT_ENDPOINT;
     }
 
     /**
-     * Creates a new tenant API client for a tenant.
+     * Creates a new tenant API client.
      *
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
@@ -104,7 +121,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters, except for senderCloseHook and receiverCloseHook, is {@code null}.
      */
     public final static void create(
             final Context context,
