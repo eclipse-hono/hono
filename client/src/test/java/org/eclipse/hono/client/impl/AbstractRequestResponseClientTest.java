@@ -54,7 +54,12 @@ import io.vertx.proton.ProtonSender;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class AbstractRequestResponseClientTest extends AbstractClientUnitTestSupport {
+public class AbstractRequestResponseClientTest  {
+
+    private Vertx vertx;
+    private Context context;
+    private ProtonReceiver receiver;
+    private ProtonSender sender;
 
     /**
      * Global timeout for all test cases.
@@ -71,8 +76,11 @@ public class AbstractRequestResponseClientTest extends AbstractClientUnitTestSup
     @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
-        createMocks();
 
+        vertx = mock(Vertx.class);
+        context = HonoClientUnitTestHelper.mockContext(vertx);
+        receiver = HonoClientUnitTestHelper.mockProtonReceiver();
+        sender = HonoClientUnitTestHelper.mockProtonSender();
 
         Target target = mock(Target.class);
         when(target.getAddress()).thenReturn("peer/tenant");

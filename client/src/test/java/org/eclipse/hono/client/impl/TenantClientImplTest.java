@@ -19,6 +19,10 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
@@ -40,7 +44,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class TenantClientImplTest extends AbstractClientUnitTestSupport {
+public class TenantClientImplTest {
 
     /**
      * Time out test cases after 5 seconds.
@@ -48,6 +52,9 @@ public class TenantClientImplTest extends AbstractClientUnitTestSupport {
     @Rule
     public Timeout globalTimeout = Timeout.seconds(5000);
 
+    private Vertx vertx;
+    private Context context;
+    private ProtonSender sender;
     private TenantClientImpl client;
 
     /**
@@ -57,7 +64,10 @@ public class TenantClientImplTest extends AbstractClientUnitTestSupport {
     @Before
     public void setUp() {
 
-        createMocks();
+        vertx = mock(Vertx.class);
+        context = HonoClientUnitTestHelper.mockContext(vertx);
+        final ProtonReceiver receiver = HonoClientUnitTestHelper.mockProtonReceiver();
+        sender = HonoClientUnitTestHelper.mockProtonSender();
 
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         client = new TenantClientImpl(context, config, sender, receiver);

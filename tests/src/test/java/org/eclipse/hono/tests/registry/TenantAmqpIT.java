@@ -39,7 +39,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -47,7 +46,7 @@ import static org.junit.Assert.assertTrue;
  * Tests verifying the behavior of the Device Registry component's Tenant AMQP endpoint.
  */
 @RunWith(VertxUnitRunner.class)
-public class TenantAmqpIT extends AbstractDeviceRegistryAmqpSupportIT {
+public class TenantAmqpIT {
 
     private static final String TEST_CONFIGURED_BUT_NOT_CREATED_TENANT = "NOT_CREATED_TENANT";
     private static final String TEST_NOT_CONFIGURED_TENANT = "NOT_CONFIGURED_TENANT";
@@ -71,7 +70,7 @@ public class TenantAmqpIT extends AbstractDeviceRegistryAmqpSupportIT {
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) {
 
-        client = prepareDeviceRegistryClient(vertx);
+        client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx);
 
         client.connect(new ProtonClientOptions())
             .compose(c -> c.getOrCreateTenantClient())
@@ -88,7 +87,7 @@ public class TenantAmqpIT extends AbstractDeviceRegistryAmqpSupportIT {
     @AfterClass
     public static void shutdown(final TestContext ctx) {
 
-        shutdownDeviceRegistryClient(ctx, vertx, client);
+        DeviceRegistryAmqpTestSupport.shutdownDeviceRegistryClient(ctx, vertx, client);
 
     }
 
@@ -120,7 +119,7 @@ public class TenantAmqpIT extends AbstractDeviceRegistryAmqpSupportIT {
                 .get(TEST_NOT_CONFIGURED_TENANT)
                 .setHandler(ctx.asyncAssertFailure(t -> {
                     ctx.assertEquals(
-                            HttpURLConnection.HTTP_UNAUTHORIZED,
+                            HttpURLConnection.HTTP_FORBIDDEN,
                             ((ServiceInvocationException) t).getErrorCode());
                 }));
     }

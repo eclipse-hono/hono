@@ -19,6 +19,9 @@ import static org.mockito.Mockito.*;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
@@ -39,7 +42,11 @@ import io.vertx.proton.ProtonDelivery;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class EventSenderImplTest extends AbstractClientUnitTestSupport {
+public class EventSenderImplTest {
+
+    private Vertx vertx;
+    private Context context;
+    private ProtonSender sender;
 
     private ClientConfigProperties config;
 
@@ -50,7 +57,10 @@ public class EventSenderImplTest extends AbstractClientUnitTestSupport {
     @Before
     public void setUp() {
 
-        createMocks();
+        vertx = mock(Vertx.class);
+        context = HonoClientUnitTestHelper.mockContext(vertx);
+        sender = HonoClientUnitTestHelper.mockProtonSender();
+
         config = new ClientConfigProperties();
     }
 

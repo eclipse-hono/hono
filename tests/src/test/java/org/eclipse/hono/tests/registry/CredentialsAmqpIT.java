@@ -50,7 +50,7 @@ import io.vertx.proton.ProtonClientOptions;
  * Tests verifying the behavior of the Device Registry component's Credentials AMQP endpoint.
  */
 @RunWith(VertxUnitRunner.class)
-public class CredentialsAmqpIT extends AbstractDeviceRegistryAmqpSupportIT {
+public class CredentialsAmqpIT {
 
     private static final String CREDENTIALS_AUTHID1 = "sensor1";
     private static final String CREDENTIALS_AUTHID2 = "little-sensor2";
@@ -77,7 +77,7 @@ public class CredentialsAmqpIT extends AbstractDeviceRegistryAmqpSupportIT {
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) {
 
-        client = prepareDeviceRegistryClient(vertx);
+        client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx);
 
         client.connect(new ProtonClientOptions())
             .compose(c -> c.getOrCreateCredentialsClient(Constants.DEFAULT_TENANT))
@@ -94,7 +94,7 @@ public class CredentialsAmqpIT extends AbstractDeviceRegistryAmqpSupportIT {
     @AfterClass
     public static void shutdown(final TestContext ctx) {
 
-        shutdownDeviceRegistryClient(ctx, vertx, client);
+        DeviceRegistryAmqpTestSupport.shutdownDeviceRegistryClient(ctx, vertx, client);
 
     }
 

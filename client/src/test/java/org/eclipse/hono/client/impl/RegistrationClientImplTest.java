@@ -21,6 +21,10 @@ import java.net.HttpURLConnection;
 import java.sql.Date;
 import java.time.Instant;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.util.ExpiringValueCache;
@@ -50,7 +54,11 @@ import io.vertx.proton.ProtonHelper;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class RegistrationClientImplTest extends AbstractClientUnitTestSupport {
+public class RegistrationClientImplTest {
+
+    private Vertx vertx;
+    private Context context;
+    private ProtonSender sender;
 
     /**
      * Time out test cases after 5 seconds.
@@ -68,7 +76,10 @@ public class RegistrationClientImplTest extends AbstractClientUnitTestSupport {
     @Before
     public void setUp() {
 
-        createMocks();
+        vertx = mock(Vertx.class);
+        context = HonoClientUnitTestHelper.mockContext(vertx);
+        final ProtonReceiver receiver = HonoClientUnitTestHelper.mockProtonReceiver();
+        sender = HonoClientUnitTestHelper.mockProtonSender();
 
         cache = mock(ExpiringValueCache.class);
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
