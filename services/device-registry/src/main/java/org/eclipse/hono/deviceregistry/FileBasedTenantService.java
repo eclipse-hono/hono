@@ -280,7 +280,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         resultHandler.handle(Future.succeededFuture(removeTenant(tenantId)));
     }
 
-    TenantResult removeTenant(final String tenantId) {
+    TenantResult<JsonObject> removeTenant(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
 
@@ -315,7 +315,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
      *               in {@link java.net.HttpURLConnection#HTTP_CONFLICT};
      * @return The outcome of the operation indicating success or failure.
      */
-    public TenantResult addOrUpdateTenant(final String tenantId, final JsonObject data, final boolean update) {
+    public TenantResult<JsonObject> addOrUpdateTenant(final String tenantId, final JsonObject data, final boolean update) {
 
         if (!getConfig().isModificationEnabled()) {
             return TenantResult.from(HTTP_FORBIDDEN);
