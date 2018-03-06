@@ -72,24 +72,24 @@ public class VertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter rejects QoS 1 messages published to the <em>telemetry</em> endpoint.
+     * Verifies that the adapter rejects QoS 2 messages published to the <em>telemetry</em> endpoint.
      * 
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicFailsForQoS1TelemetryMessage(final TestContext ctx) {
+    public void testMapTopicFailsForQoS2TelemetryMessage(final TestContext ctx) {
 
         givenAnAdapter();
 
-        // WHEN a device publishes a message with QoS 1 to a "telemetry" topic
-        final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
+        // WHEN a device publishes a message with QoS 2 to a "telemetry" topic
+        final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN no downstream sender can be created for the message
         }));
     }
 
     /**
-     * Verifies that the adapter rejects QoS 1 messages published to the <em>telemetry</em> endpoint.
+     * Verifies that the adapter rejects QoS 0 messages published to the <em>event</em> endpoint.
      * 
      * @param ctx The helper to use for running tests on vert.x.
      */
@@ -100,6 +100,23 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message with QoS 0 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, EventConstants.EVENT_ENDPOINT);
+        adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN no downstream sender can be created for the message
+        }));
+    }
+
+    /**
+     * Verifies that the adapter rejects QoS 2 messages published to the <em>event</em> endpoint.
+     * 
+     * @param ctx The helper to use for running tests on vert.x.
+     */
+    @Test
+    public void testMapTopicFailsForQoS2EventMessage(final TestContext ctx) {
+
+        givenAnAdapter();
+
+        // WHEN a device publishes a message with QoS 2 to an "event" topic
+        final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, EventConstants.EVENT_ENDPOINT);
         adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN no downstream sender can be created for the message
         }));

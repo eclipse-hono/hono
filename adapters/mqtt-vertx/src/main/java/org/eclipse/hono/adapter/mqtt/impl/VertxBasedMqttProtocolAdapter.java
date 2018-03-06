@@ -62,9 +62,9 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
         try {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(message.topicName());
             if (TelemetryConstants.TELEMETRY_ENDPOINT.equals(topic.getEndpoint())) {
-                if (!MqttQoS.AT_MOST_ONCE.equals(message.qosLevel())) {
-                    // client tries to send telemetry message using QoS 1 or 2
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Only QoS 0 supported for telemetry messages"));
+                if (MqttQoS.EXACTLY_ONCE.equals(message.qosLevel())) {
+                    // client tries to send telemetry message using QoS 2
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "QoS 2 not supported for telemetry messages"));
                 } else {
                     return Future.succeededFuture(topic);
                 }

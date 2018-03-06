@@ -14,10 +14,12 @@ package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -323,18 +325,48 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // GIVEN an adapter with a downstream event consumer
         final Future<ProtonDelivery> outcome = Future.future();
         givenAnEventSenderForOutcome(outcome);
+        testUploadQoS1MessageSendsPubAckOnSuccess(outcome, (adapter, mqttContext) -> {
+            adapter.uploadEventMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
+                .setHandler(ctx.asyncAssertSuccess());
+        });
+    }
+
+    /**
+     * Verifies that the adapter waits for a QoS 1 telemetry message being settled
+     * and accepted by a downstream peer before sending a PUBACK package to the device.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadTelemetryMessageSendsPubAckOnSuccess(final TestContext ctx) {
+
+        // GIVEN an adapter with a downstream telemetry consumer
+        final Future<ProtonDelivery> outcome = Future.future();
+        givenATelemetrySenderForOutcome(outcome);
+        testUploadQoS1MessageSendsPubAckOnSuccess(outcome, (adapter, mqttContext) -> {
+            adapter.uploadTelemetryMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
+                .setHandler(ctx.asyncAssertSuccess());
+        });
+    }
+
+    private void testUploadQoS1MessageSendsPubAckOnSuccess(
+            final Future<ProtonDelivery> outcome,
+            final BiConsumer<AbstractVertxBasedMqttProtocolAdapter<?>, MqttContext> upload) {
+
+        // GIVEN an adapter with a downstream event consumer
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
 
         // WHEN a device publishes an event
-        final Buffer payload = Buffer.buffer("some payload");
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        final Buffer payload = Buffer.buffer("some payload");
         final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
+        when(messageFromDevice.payload()).thenReturn(payload);
         final MqttContext context = new MqttContext(messageFromDevice, endpoint);
-        adapter.uploadEventMessage(context, "my-tenant", "4712", payload).setHandler(ctx.asyncAssertSuccess());
+        upload.accept(adapter, context);
 
         // THEN the device does not receive a PUBACK
         verify(endpoint, never()).publishAcknowledge(anyInt());

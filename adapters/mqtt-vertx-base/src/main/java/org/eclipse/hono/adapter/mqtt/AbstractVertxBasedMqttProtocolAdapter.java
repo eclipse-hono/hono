@@ -459,11 +459,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
                 metrics.incrementProcessedMqttMessages(endpointName, tenant);
                 onMessageSent(ctx);
-                if (EventConstants.EVENT_ENDPOINT.equals(endpointName)) {
-                    // check that the remote MQTT client is still connected before sending PUBACK
-                    if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                        ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
-                    }
+                // check that the remote MQTT client is still connected before sending PUBACK
+                if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                    ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
                 }
                 return Future.<Void> succeededFuture();
 
