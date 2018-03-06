@@ -2,6 +2,16 @@
 title = "Release Notes"
 +++
 
+## 0.6-M1 (not released yet)
+
+### New Features
+
+* The MQTT protocol adapter now supports publishing telemetry data using either QoS 0 or QoS 1. In case of QoS 1 the adapter will send an MQTT *PUBACK* to the device once the downstream peer has settled the message with the AMQP *accepted* outcome.
+
+### Fixes & Enhancements
+
+* HonoClient now fails all futures it returns with instances of `org.eclipse.hono.client.ServiceInvocationException` if something goes wrong. Client code can inspect the exception's *errorCode* property to get a better understanding of the reason for the failure.
+
 ## 0.5
 
 ### New Features
