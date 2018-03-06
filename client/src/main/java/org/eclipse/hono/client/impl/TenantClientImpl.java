@@ -151,7 +151,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     public final Future<TenantObject> get(final String tenantId) {
 
         final Future<TenantResult<TenantObject>> responseTracker = Future.future();
-        createAndSendRequest(TenantConstants.StandardAction.ACTION_GET.toString(), createTenantProperties(tenantId), null,
+        createAndSendRequest(TenantConstants.TenantAction.get.toString(), createTenantProperties(tenantId), null,
                 responseTracker.completer());
         return responseTracker.map(response -> {
             switch (response.getStatus()) {
