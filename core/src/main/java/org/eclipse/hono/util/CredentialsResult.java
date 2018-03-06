@@ -31,7 +31,7 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
      * @return The result.
      */
     public static <T> CredentialsResult<T> from(final int status) {
-        return new CredentialsResult<T>(status, null);
+        return new CredentialsResult<>(status, null);
     }
 
     /**
@@ -43,6 +43,6 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
      * @return The result.
      */
     public static <T> CredentialsResult<T> from(final int status, final T payload) {
-        return new CredentialsResult<T>(status, payload);
+        return new CredentialsResult<>(status, payload);
     }
 }

@@ -100,7 +100,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * @return JsonObject The JSON reply object.
      * @throws NullPointerException If tenantResult is null.
      */
-    public static JsonObject getServiceReplyAsJson(final String tenantId, final TenantResult<?> tenantResult) {
+    public static JsonObject getServiceReplyAsJson(final String tenantId, final TenantResult<JsonObject> tenantResult) {
         Objects.requireNonNull(tenantResult);
         final JsonObject jsonObject = new JsonObject();
         jsonObject.put(RequestResponseApiConstants.FIELD_TENANT_ID, tenantId);

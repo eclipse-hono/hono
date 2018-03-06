@@ -217,7 +217,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * @param tenantResult The tenant result that should be conveyed in the response.
      * @throws NullPointerException If request or tenantResult is null.
      */
-    protected final void reply(final Message<JsonObject> request, final TenantResult<?> tenantResult) {
+    protected final void reply(final Message<JsonObject> request, final TenantResult<JsonObject> tenantResult) {
         final JsonObject body = request.body();
         request.reply(TenantConstants.getServiceReplyAsJson(body.getString(TenantConstants.FIELD_TENANT_ID), tenantResult));
     }

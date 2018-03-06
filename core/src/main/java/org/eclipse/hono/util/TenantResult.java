@@ -31,7 +31,7 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
      * @return The result.
      */
     public static <T> TenantResult<T> from(final int status) {
-        return new TenantResult<T>(status, null);
+        return new TenantResult<>(status, null);
     }
 
     /**
