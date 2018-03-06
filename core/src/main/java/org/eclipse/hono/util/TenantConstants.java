@@ -26,7 +26,7 @@ import io.vertx.core.json.JsonObject;
 public final class TenantConstants extends RequestResponseApiConstants {
 
     /**
-     *  All messages for the Tenant API will start with this prefix.
+     *  Messages that are sent by the Hono client for the Tenant API use this as a prefix for the messageId.
      */
     public static final String MESSAGE_ID_PREFIX = "tenant-client";
 
