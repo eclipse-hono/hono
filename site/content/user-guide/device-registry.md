@@ -6,8 +6,12 @@ weight = 205
 In addition to the AMQP 1.0 based API endpoints, the Device Registry also exposes HTTP resources for managing the contents of the registry.
 
 <!--more-->
-Please note that the HTTP resources exposed by the Device Registry are **not** part of the *official* definition of the Device Registration and Credentials APIs but have
-been implemented to provide convenient access to the registry using command line tools like *curl* or *HTTPie*. 
+Please note that the HTTP resources exposed by the Device Registry are **not** part of the *official* definition of the Device Registration, the Credentials and (since Hono version 0.6) the Tenant APIs.
+ 
+{{% warning %}}
+The HTTP resources offered here are not secured and are not supposed to be used in production scenarios. 
+They have been implemented to provide convenient access to the registry using command line tools like *curl* or *HTTPie*. 
+{{% /warning %}}
 
 ## Managing Device Registration Information
 
@@ -131,7 +135,7 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
   * (required) `secrets`: The secrets of the credentials to add. This is a JSON array and must contain at least one element. The content of each element is defined in the [Credentials API]({{< relref "api/Credentials-API.md" >}}).
 * Status Codes:
   * 201 (Created): Credentials have been added successfully under the resource indicated by `Location` header.
-  * 400 (Bad Request): The credentials have not been updated because the request was malformed, e .g. because the payload did not contain required values. The response body may contain hints regarding the cause of the problem.
+  * 400 (Bad Request): The credentials have not been added because the request was malformed, e .g. because the payload did not contain required values. The response body may contain hints regarding the cause of the problem.
   * 409 (Conflict): Credentials of the given type for the given *auth-id* already exist for the tenant. The request has not been processed.
 * Response Headers:
   * `Location`: The URI under which the newly created resource can be accessed.
@@ -333,6 +337,143 @@ Removes all credentials registered for a particular device.
 **Example**
 
     $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4720
+
+The response will look similar to this:
+
+    HTTP/1.1 204 No Content
+    Content-Length: 0
+
+## Managing Tenants (since Hono version 0.6)
+
+The following sections describe the resources representing the operations of the Tenant API and how they can be used to manage tenants.
+Please refer to the [Tenant API]({{< relref "api/Tenant-API.md" >}}) for the specific elements that are explained in detail there.
+
+### Add a Tenant
+
+* URI: `/tenant`
+* Method: `POST`
+* Request Headers:
+  * (required) `Content-Type`: `application/json` (no other type supported)
+* Request Body (encoded as a JSON object):
+  * (required) `tenant-id`: The id of the tenant that shall be created.
+  * (optional) `enabled`: The status of the tenant - if set to `false`, the tenant is not ready to be used. 
+  * (optional) `adapters`: The adapter configurations for the tenant. This is a JSON array and must contain at least one element. The content of each element is defined in the [Tenant API]({{< relref "api/Tenant-API.md" >}}).
+* Status Codes:
+  * 201 (Created): Tenant has been added successfully under the resource indicated by `Location` header.
+  * 400 (Bad Request): The tenant has not been created because the request was malformed, e .g. because the payload was malformed. The response body may contain hints regarding the cause of the problem.
+  * 409 (Conflict): A tenant with the given `tenant-id` already exists. The request has not been processed.
+* Response Headers:
+  * `Location`: The URI under which the newly created resource can be accessed.
+
+**Example**
+
+The following commands add some tenants with different adapter configurations:
+
+Add a tenant that has all adapters set to enabled:
+
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+        "tenant-id": "tenantAllAdapters"
+      }' http://localhost:28080/tenant
+
+The response will look like this:
+
+    HTTP/1.1 201 Created
+    Location:  /tenant/tenantAllAdapters
+    Content-Length: 0
+
+Add a tenant that has only the mqtt adapter set to enabled:
+
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+        "tenant-id": "tenantMqttAdapter",
+        "adapters" : [ {
+            "type" : "hono-mqtt",
+            "enabled" : true,
+            "device-authentication-required" : true
+            } ]
+      }' http://localhost:28080/tenant
+
+The response will look like this:
+
+    HTTP/1.1 201 Created
+    Location:  /tenant/tenantMqttAdapter
+    Content-Length: 0
+
+
+### Get configuration details of a Tenant
+
+* URI: `/tenant/${tenantId}`
+* Method: `GET`
+* Status Codes:
+  * 200 (OK): A tenant for the given tenantId has been found, body contains the tenant data.
+  * 404 (Not Found): No tenant for the given `tenantId` is registered.
+
+**Example**
+
+The following command retrieves the details for the tenant `tenantMqttAdapter`:
+
+    $ curl -i http://localhost:28080/tenant/tenantMqttAdapter
+
+The response will look similar to this:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/json; charset=utf-8
+    Content-Length: 172
+    
+    {
+         "tenant-id" : "tenantMqttAdapter",
+         "enabled" : true,
+         "adapters" : [ {
+             "type" : "hono-mqtt",
+             "enabled" : true,
+             "device-authentication-required" : true
+         } ]
+    }
+
+### Update Tenant
+
+* URI: `/tenant/${tenantId}`
+* Method: `PUT`
+* Request Headers:
+  * (required) `Content-Type`: `application/json` (no other type supported)
+* Request Body (encoded as a JSON object):
+  * (optional) `enabled`: The status of the tenant - if set to `false`, the tenant is not ready to be used. 
+  * (optional) `adapters`: The adapter configurations for the tenant. This is a JSON array and must contain at least one element. The content of each element is defined in the [Tenant API]({{< relref "api/Tenant-API.md" >}}).
+* Status Codes:
+  * 204 (No Content): The tenant has been updated successfully.
+  * 400 (Bad Request): The tenant has not been updated because the request was malformed, e .g. because the payload was malformed. The response body may contain hints regarding the cause of the problem.
+  * 404 (Not Found): The request could not be processed because no tenant with the given `tenantId` exists.
+
+This resource can be used to change the configuration of a particular tenant.
+
+**Example**
+
+The following command changes the configuration of the mqtt adapter to not require authentication of devices that belong to the tenant `tenantMqttAdapter`:
+
+    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+          "adapters" : [ {
+              "type" : "hono-mqtt",
+              "enabled" : true,
+              "device-authentication-required" : false
+              } ]
+      }' http://localhost:28080/tenant/tenantMqttAdapter
+
+The response will look like this:
+
+    HTTP/1.1 204 No Content
+    Content-Length: 0
+
+
+### Delete Tenant
+
+* URI: `/tenant/${tenantId}`
+* Method: `DELETE`
+* Status Codes:
+  * 204 (No Content): The tenant with the given `tenantId` has been deleted.
+  * 404 (Not Found): The request could not be processed because no tenant with the given `tenantId` exists.
+
+**Example**
+
+    $ curl -i -X DELETE http://localhost:28080/tenant/tenantMqttAdapter
 
 The response will look similar to this:
 
