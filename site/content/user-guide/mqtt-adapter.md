@@ -14,6 +14,16 @@ When running the Hono example installation as described in the [Getting Started 
 There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for a discussion of the concepts.
 {{% /note %}}
 
+## Publishing Telemetry Data
+
+The MQTT adapter supports the publishing of telemetry data by means of MQTT *PUBLISH* packets using either QoS 0 or QoS 1.
+Using QoS 1 will result in the adapter sending an MQTT *PUBACK* packet to the client once the message has been settled with the *accepted* outcome by the AMQP 1.0 Messaging Network.
+
+This requires that
+
+* the AMQP 1.0 Messaging Network has capacity to process telemetry messages for the client's tenant and
+* the messages published by the client comply with the format defined by the Tenant API.
+
 ## Publish Telemetry Data (authenticated Device)
 
 * Topic: `telemetry`
@@ -64,6 +74,16 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
     $ mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t telemetry/DEFAULT_TENANT/4712 -m '{"temp": 5}'
 
 **NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
+
+## Publishing Events
+
+The MQTT adapter supports the publishing of events by means of MQTT *PUBLISH* packets using QoS 1 only.
+The adapter will send an MQTT *PUBACK* packet to the client once the event has been settled with the *accepted* outcome by the AMQP 1.0 Messaging Network.
+
+This requires that
+
+* the AMQP 1.0 Messaging Network has capacity to process events for the client's tenant and
+* the events published by the client comply with the format defined by the Event API.
 
 ## Publish an Event (authenticated Device)
 
