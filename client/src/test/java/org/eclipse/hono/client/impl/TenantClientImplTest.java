@@ -94,7 +94,7 @@ public class TenantClientImplTest {
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         final Message sentMessage = messageCaptor.getValue();
         assertThat(MessageHelper.getTenantId(sentMessage), is("tenant"));
-        assertThat(sentMessage.getSubject(), is(TenantConstants.StandardAction.ACTION_GET.toString()));
+        assertThat(sentMessage.getSubject(), is(TenantConstants.TenantAction.get.toString()));
     }
 
     /**
