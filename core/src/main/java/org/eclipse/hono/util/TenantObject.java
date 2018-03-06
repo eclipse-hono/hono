@@ -72,7 +72,7 @@ public final class TenantObject {
     }
 
     /**
-     * Creates a {@link TenantObject} for a tenantId and the enabled property.
+     * Creates a TenantObject for a tenantId and the enabled property.
      *
      * @param tenantId The tenant for which the object is constructed.
      * @param enabled {@code true} if the tenant shall be enabled.

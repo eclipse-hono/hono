@@ -33,9 +33,9 @@ public final class HonoClientUnitTestHelper {
     private HonoClientUnitTestHelper() {}
 
     /**
-     * Create a mock for the Vert.x context that is used for the unit test.
+     * Creates a mocked vert.x Context which immediately invokes any handler that is passed to its runOnContext method.
      *
-     * @param vertx The Vert.x instance that the mock of the context is created for.
+     * @param vertx The vert.x instance that the mock of the context is created for.
      * @return The mocked context.
      */
     public static final Context mockContext(final Vertx vertx) {
@@ -52,7 +52,7 @@ public final class HonoClientUnitTestHelper {
     }
 
     /**
-     * Create a mock for a Proton sender, usable for a Hono client in the unit test.
+     * Creates a mocked Proton sender which always returns {@code true} when its isOpen method is called.
      *
      * @return The mocked sender.
      */
@@ -65,7 +65,7 @@ public final class HonoClientUnitTestHelper {
     }
 
     /**
-     * Create a mock for a Proton receiver, usable for a Hono client in the unit test.
+     * Creates a mocked Proton receiver which always returns {@code true} when its isOpen method is called.
      *
      * @return The mocked receiver.
      */
