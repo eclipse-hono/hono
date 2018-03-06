@@ -274,7 +274,7 @@ Devices belonging to the tenant can connect to Hono via the rest-adapter only an
   "enabled": true,
   "adapters": [
     {
-      "type": "http",
+      "type": "hono-http",
       "enabled": true,
       "device-authentication-required": true
     }
@@ -325,11 +325,11 @@ Below is an example for a payload of the response to a *get* request for tenant 
   "tenant-id" : "TEST_TENANT",
   "enabled" : true,
   "adapters" : [ {
-    "type" : "mqtt",
+    "type" : "hono-mqtt",
     "enabled" : true,
     "device-authentication-required" : true
   }, {
-    "type" : "http",
+    "type" : "hono-http",
     "enabled" : true,
     "device-authentication-required" : true
   } ]
