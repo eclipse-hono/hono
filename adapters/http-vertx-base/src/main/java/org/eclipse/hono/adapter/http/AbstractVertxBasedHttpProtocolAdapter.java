@@ -25,6 +25,7 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -261,6 +262,23 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         // this default implementation does nothing
     }
 
+    /**
+     * Gets the authenticated device identity from the routing context.
+     * 
+     * @param ctx The routing context.
+     * @return The device or {@code null} if the device has not been authenticated.
+     */
+    protected final Device getAuthenticatedDevice(final RoutingContext ctx) {
+
+        return Optional.ofNullable(ctx.user()).map(user -> {
+            if (Device.class.isInstance(user)) {
+                return (Device) user;
+            } else {
+                return null;
+            }
+        }).orElse(null);
+    }
+
     private Future<HttpServer> bindSecureHttpServer(final Router router) {
 
         if (isSecurePortEnabled()) {
@@ -466,33 +484,33 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             HttpUtils.badRequest(ctx, "missing body");
         } else {
 
-            final Device authenticatedDevice = Optional.ofNullable(ctx.user()).map(user -> {
-                if (Device.class.isInstance(user)) {
-                    return (Device) user;
-                } else {
-                    return null;
-                }
-            }).orElse(null);
+            final Device authenticatedDevice = getAuthenticatedDevice(ctx);
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
+            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
 
-            CompositeFuture.all(tokenTracker, senderTracker).compose(ok -> {
+            CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
-                final Message downstreamMessage = newMessage(
-                        String.format("%s/%s", endpointName, tenant),
-                        deviceId,
-                        ctx.request().uri(),
-                        contentType,
-                        payload,
-                        tokenTracker.result());
-                customizeDownstreamMessage(downstreamMessage, ctx);
-                return senderTracker.result().send(downstreamMessage);
-            }).map(delivery -> {
+                if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+                    final Message downstreamMessage = newMessage(
+                            String.format("%s/%s", endpointName, tenant),
+                            deviceId,
+                            ctx.request().uri(),
+                            contentType,
+                            payload,
+                            tokenTracker.result());
+                    customizeDownstreamMessage(downstreamMessage, ctx);
+                    return senderTracker.result().send(downstreamMessage);
+                } else {
+                    // this adapter is not enabled for the tenant
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                }
+            }).compose(delivery -> {
                 LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         tenant, deviceId, endpointName);
                 metrics.incrementProcessedHttpMessages(endpointName, tenant);
                 ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
-                return (Void) null;
-            }).otherwise(t -> {
+                return Future.succeededFuture();
+            }).recover(t -> {
                 if (ClientErrorException.class.isInstance(t)) {
                     ClientErrorException e = (ClientErrorException) t;
                     LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
@@ -504,7 +522,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
                     HttpUtils.serviceUnavailable(ctx, 2);
                 }
-                return (Void) null;
+                return Future.failedFuture(t);
             });
         }
     }

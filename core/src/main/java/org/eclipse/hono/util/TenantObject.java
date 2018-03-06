@@ -146,6 +146,30 @@ public final class TenantObject {
     }
 
     /**
+     * Checks if a given protocol adapter is enabled for this tenant.
+     * 
+     * @param typeName The type name of the adapter.
+     * @return {@code true} if this tenant and the given adapter are enabled.
+     */
+    public boolean isAdapterEnabled(final String typeName) {
+
+        if (!enabled) {
+            return false;
+        } else if (adapterConfigurations == null) {
+            // all adapters are enabled
+            return true;
+        } else {
+            final JsonObject config = adapterConfigurations.get(typeName);
+            if (config == null) {
+                // if not explicitly configured, the adapter is disabled by default
+                return false;
+            } else {
+                return config.getBoolean(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
+            }
+        }
+    }
+
+    /**
      * Creates a TenantObject for a tenantId and the enabled property.
      *
      * @param tenantId The tenant for which the object is constructed.

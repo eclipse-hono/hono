@@ -30,6 +30,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -293,28 +294,38 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
 
             } else {
-                getCredentialsAuthProvider().authenticate(credentials, attempt -> {
-                    if (attempt.failed()) {
 
-                        LOG.debug("cannot authenticate device [tenant-id: {}, auth-id: {}]: {}",
-                                credentials.getTenantId(), credentials.getAuthId(), attempt.cause().getMessage());
-                        if (ServerErrorException.class.isInstance(attempt.cause())) {
-                            // credentials service might not be available (yet)
-                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                        } else {
-                            // validation of credentials has failed
-                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-                        }
-
+                getTenantConfiguration(credentials.getTenantId()).compose(tenantConfig -> {
+                    if (tenantConfig.isAdapterEnabled(getTypeName())) {
+                        LOG.debug("protocol adapter [{}] is enabled for tenant [{}]",
+                                getTypeName(), credentials.getTenantId());
+                        return Future.succeededFuture(tenantConfig);
                     } else {
-
-                        final Device authenticatedDevice = attempt.result();
-                        LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
-                                authenticatedDevice.getTenantId(), credentials.getAuthId(), authenticatedDevice.getDeviceId());
-                        onAuthenticationSuccess(endpoint, authenticatedDevice);
+                        LOG.debug("protocol adapter [{}] is disabled for tenant [{}]",
+                                getTypeName(), credentials.getTenantId());
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "adapter disabled for tenant"));
                     }
+                }).compose(tenantConfig -> {
+                    final Future<Device> result = Future.future();
+                    getCredentialsAuthProvider().authenticate(credentials, result.completer());
+                    return result;
+                }).map(authenticatedDevice -> {
+                    LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
+                            authenticatedDevice.getTenantId(), credentials.getAuthId(), authenticatedDevice.getDeviceId());
+                    onAuthenticationSuccess(endpoint, authenticatedDevice);
+                    return null;
+                }).otherwise(t -> {
+                    LOG.debug("cannot authenticate device [tenant-id: {}, auth-id: {}]",
+                            credentials.getTenantId(), credentials.getAuthId(), t);
+                    if (ServerErrorException.class.isInstance(t)) {
+                        // one of the services we depend on might not be available (yet)
+                        endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                    } else {
+                        // validation of credentials has failed
+                        endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                    }
+                    return null;
                 });
-
             }
         }
     }
@@ -439,18 +450,24 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         } else {
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, ctx.authenticatedDevice());
+            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
 
-            return CompositeFuture.all(tokenTracker, senderTracker).compose(ok -> {
+            return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
-                final Message downstreamMessage = newMessage(
-                        String.format("%s/%s", endpointName, tenant),
-                        deviceId,
-                        ctx.message().topicName(),
-                        ctx.contentType(),
-                        payload,
-                        tokenTracker.result());
-                customizeDownstreamMessage(downstreamMessage, ctx);
-                return senderTracker.result().send(downstreamMessage);
+                if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+                    final Message downstreamMessage = newMessage(
+                            String.format("%s/%s", endpointName, tenant),
+                            deviceId,
+                            ctx.message().topicName(),
+                            ctx.contentType(),
+                            payload,
+                            tokenTracker.result());
+                    customizeDownstreamMessage(downstreamMessage, ctx);
+                    return senderTracker.result().send(downstreamMessage);
+                } else {
+                    // this adapter is not enabled for the tenant
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                }
 
             }).compose(delivery -> {
 

@@ -26,6 +26,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
@@ -35,6 +36,8 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,6 +71,8 @@ import io.vertx.proton.ProtonDelivery;
 @RunWith(VertxUnitRunner.class)
 public class AbstractVertxBasedMqttProtocolAdapterTest {
 
+    private static final String ADAPTER_TYPE = "mqtt";
+
     private static Vertx vertx = Vertx.vertx();
 
     /**
@@ -76,10 +81,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Rule
     public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
 
-    private HonoClient tenantClient;
+    private HonoClient tenantServiceClient;
     private HonoClient messagingClient;
-    private HonoClient deviceRegistryClient;
+    private HonoClient deviceRegistrationServiceClient;
     private RegistrationClient regClient;
+    private TenantClient tenantClient;
     private HonoClientBasedAuthProvider credentialsAuthProvider;
     private ProtocolAdapterProperties config;
 
@@ -97,18 +103,21 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
         when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
 
-        tenantClient = mock(HonoClient.class);
-        when(tenantClient.connect(
-                any(Handler.class))).thenReturn(Future.succeededFuture(tenantClient));
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(anyString())).thenAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        });
+
+        tenantServiceClient = mock(HonoClient.class);
+        when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
+        when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         messagingClient = mock(HonoClient.class);
-        when(messagingClient.connect(
-                any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+        when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
 
-        deviceRegistryClient = mock(HonoClient.class);
-        when(deviceRegistryClient.connect(
-                any(Handler.class))).thenReturn(Future.succeededFuture(deviceRegistryClient));
-        when(deviceRegistryClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+        deviceRegistrationServiceClient = mock(HonoClient.class);
+        when(deviceRegistrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(deviceRegistrationServiceClient));
+        when(deviceRegistrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
         when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
@@ -187,6 +196,34 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the connection is established
         verify(endpoint).accept(false);
+    }
+
+    /**
+     * Verifies that an adapter rejects a connection attempt from a device that
+     * belongs to a tenant for which the adapter is disabled.
+     */
+    @Test
+    public void testEndpointHandlerRejectsDeviceOfDisabledTenant() {
+
+        // GIVEN an adapter
+        final MqttServer server = getMqttServer(false);
+        // which is disabled for tenant "my-tenant"
+        final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
+        myTenantConfig.addAdapterConfiguration(new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
+                .put(TenantConstants.FIELD_ENABLED, false));
+        when(tenantClient.get("my-tenant")).thenReturn(Future.succeededFuture(myTenantConfig));
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
+
+        // WHEN a device of "my-tenant" tries to connect
+        final MqttAuth deviceCredentials = new MqttAuth("device@my-tenant", "irrelevant");
+        final MqttEndpoint endpoint = mock(MqttEndpoint.class);
+        when(endpoint.auth()).thenReturn(deviceCredentials);
+        adapter.handleEndpointConnection(endpoint);
+
+        // THEN the connection is not established
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
     }
 
     /**
@@ -305,15 +342,54 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // WHEN an unknown device publishes a telemetry message
         when(regClient.assertRegistration(eq("unknown"), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        final MessageSender sender = mock(MessageSender.class);
+        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
 
         adapter.uploadTelemetryMessage(
                 new MqttContext(mock(MqttPublishMessage.class), mock(MqttEndpoint.class)),
                 "my-tenant",
                 "unknown",
                 Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the message has not been sent downstream because the device's
-                    // registration status could not be asserted
+                    // THEN the message has not been sent downstream
+                    verify(sender, never()).send(any(Message.class));
+                    // because the device's registration status could not be asserted
                     ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+                            ((ClientErrorException) t).getErrorCode());
+                }));
+    }
+
+    /**
+     * Verifies that the adapter does not forward a message published by a device
+     * if the device belongs to a tenant for which the adapter has been disabled.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadTelemetryMessageFailsForDisabledTenant(final TestContext ctx) {
+
+        // GIVEN an adapter
+        final MqttServer server = getMqttServer(false);
+        // which is disabled for tenant "my-tenant"
+        final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
+        myTenantConfig.addAdapterConfiguration(new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
+                .put(TenantConstants.FIELD_ENABLED, false));
+        when(tenantClient.get("my-tenant")).thenReturn(Future.succeededFuture(myTenantConfig));
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
+        final MessageSender sender = mock(MessageSender.class);
+        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+
+        // WHEN a device of "my-tenant" publishes a telemetry message
+        adapter.uploadTelemetryMessage(
+                new MqttContext(mock(MqttPublishMessage.class), mock(MqttEndpoint.class)),
+                "my-tenant",
+                "the-device",
+                Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
+                    // THEN the message has not been sent downstream
+                    verify(sender, never()).send(any(Message.class));
+                    // because the tenant is not enabled
+                    ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
                             ((ClientErrorException) t).getErrorCode());
                 }));
     }
@@ -415,9 +491,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     private void forceClientMocksToConnected() {
-        when(tenantClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(tenantServiceClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
-        when(deviceRegistryClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(deviceRegistrationServiceClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
     }
 
     private MqttEndpoint getMqttEndpointAuthenticated() {
@@ -451,7 +527,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
             @Override
             protected String getTypeName() {
-                return "mqtt";
+                return ADAPTER_TYPE;
             }
 
             @Override
@@ -462,9 +538,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         };
         adapter.setConfig(config);
         adapter.setMetrics(new MqttAdapterMetrics());
-        adapter.setTenantServiceClient(tenantClient);
+        adapter.setTenantServiceClient(tenantServiceClient);
         adapter.setHonoMessagingClient(messagingClient);
-        adapter.setRegistrationServiceClient(deviceRegistryClient);
+        adapter.setRegistrationServiceClient(deviceRegistrationServiceClient);
         adapter.setCredentialsAuthProvider(credentialsAuthProvider);
 
         if (server != null) {

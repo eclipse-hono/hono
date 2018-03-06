@@ -62,4 +62,47 @@ public class TenantObjectTest {
         final TenantObject obj = mapper.readValue(jsonString, TenantObject.class);
         assertNotNull(obj);
     }
+
+    /**
+     * Verifies that all adapters are enabled if no specific
+     * configuration has been set.
+     */
+    @Test
+    public void testIsAdapterEnabledForEmptyConfiguration() {
+
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
+        assertTrue(obj.isAdapterEnabled("any-type"));
+        assertTrue(obj.isAdapterEnabled("any-other-type"));
+    }
+
+    /**
+     * Verifies that all adapters are disabled for a disabled tenant.
+     */
+    @Test
+    public void testIsAdapterEnabledForDisabledTenant() {
+
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.FALSE);
+        obj.addAdapterConfiguration(getConfiguration("type-one", true));
+        assertFalse(obj.isAdapterEnabled("type-one"));
+        assertFalse(obj.isAdapterEnabled("any-other-type"));
+    }
+
+    /**
+     * Verifies that all adapters are disabled by default except for
+     * the ones explicitly configured.
+     */
+    @Test
+    public void testIsAdapterEnabledForNonEmptyConfiguration() {
+
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
+        obj.addAdapterConfiguration(getConfiguration("type-one", true));
+        assertTrue(obj.isAdapterEnabled("type-one"));
+        assertFalse(obj.isAdapterEnabled("any-other-type"));
+    }
+
+    private static JsonObject getConfiguration(final String typeName, final boolean enabled) {
+        return new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, typeName)
+                .put(TenantConstants.FIELD_ENABLED, enabled);
+    }
 }

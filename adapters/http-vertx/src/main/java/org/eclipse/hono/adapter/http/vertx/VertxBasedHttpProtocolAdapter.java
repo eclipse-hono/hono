@@ -78,9 +78,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             // route for posting telemetry data using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/telemetry").handler(this::handlePostTelemetry);
-            // route for asserting that authenticated identity matches path variables
+            // route for asserting that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(this::assertDeviceIdentity);
+                .handler(this::assertTenant);
         }
 
         // route for uploading telemetry data
@@ -94,9 +94,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             // route for posting events using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/event").handler(this::handlePostEvent);
-            // route for asserting that authenticated identity matches path variables
+            // route for asserting that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(this::assertDeviceIdentity);
+                .handler(this::assertTenant);
         }
 
         // route for sending event messages
@@ -136,7 +136,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         }
     }
 
-    void assertDeviceIdentity(final RoutingContext ctx) {
+    void assertTenant(final RoutingContext ctx) {
 
         if (Device.class.isInstance(ctx.user())) {
             Device device = (Device) ctx.user();

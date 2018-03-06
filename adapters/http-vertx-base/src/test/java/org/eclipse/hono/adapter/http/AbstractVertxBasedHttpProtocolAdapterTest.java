@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.adapter.http;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -21,8 +22,11 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,30 +55,52 @@ import io.vertx.proton.ProtonDelivery;
 @RunWith(VertxUnitRunner.class)
 public class AbstractVertxBasedHttpProtocolAdapterTest {
 
+    private static final String ADAPTER_TYPE = "http";
+
     /**
      * Global timeout for all test cases.
      */
     @Rule
     public Timeout globalTimeout = Timeout.seconds(5);
 
-    private HonoClient                    tenantClient;
+    private HonoClient                    tenantServiceClient;
     private HonoClient                    messagingClient;
-    private HonoClient                    registrationClient;
+    private HonoClient                    registrationServiceClient;
+    private RegistrationClient            regClient;
+    private TenantClient                  tenantClient;
     private HonoClientBasedAuthProvider   credentialsAuthProvider;
     private HttpProtocolAdapterProperties config;
 
     /**
      * Sets up common fixture.
      */
+    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
 
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
 
-        tenantClient = mock(HonoClient.class);
+        regClient = mock(RegistrationClient.class);
+        final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
+        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
+
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(anyString())).thenAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        });
+
+        tenantServiceClient = mock(HonoClient.class);
+        when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
+        when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+
         messagingClient = mock(HonoClient.class);
-        registrationClient = mock(HonoClient.class);
+        when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+
+        registrationServiceClient = mock(HonoClient.class);
+        when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
+        when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
         when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
     }
@@ -179,6 +205,38 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has not been invoked
+    }
+
+    /**
+     * Verifies that the adapter fails the upload of an event with a 403
+     * result if the device belongs to a tenant for which the adapter is
+     * disabled.
+     */
+    @Test
+    public void testUploadTelemetryFailsForDisabledTenant() {
+
+        // GIVEN an adapter
+        final HttpServer server = getHttpServer(false);
+        final MessageSender sender = mock(MessageSender.class);
+        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        // which is disabled for tenant "my-tenant"
+        final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
+        myTenantConfig.addAdapterConfiguration(new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
+                .put(TenantConstants.FIELD_ENABLED, false));
+        when(tenantClient.get("my-tenant")).thenReturn(Future.succeededFuture(myTenantConfig));
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device that belongs to "my-tenant" publishes a telemetry message
+        final Buffer payload = Buffer.buffer("some payload");
+        final RoutingContext ctx = newRoutingContext(payload);
+
+        adapter.uploadTelemetryMessage(ctx, "my-tenant", "the-device", payload, "application/text");
+
+        // THEN the device gets a 403
+        verify(ctx).fail(HttpURLConnection.HTTP_FORBIDDEN);
+        // and the message has not been forwarded downstream
+        verify(sender, never()).send(any(Message.class));
     }
 
     /**
@@ -302,14 +360,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      * @param onStartupSuccess The handler to invoke on successful startup.
      * @return The adapter.
      */
-    @SuppressWarnings("unchecked")
-    private AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> getAdapter(final HttpServer server, final Handler<Void> onStartupSuccess) {
+    private AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> getAdapter(
+            final HttpServer server,
+            final Handler<Void> onStartupSuccess) {
 
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties>() {
 
             @Override
             protected String getTypeName() {
-                return "http";
+                return ADAPTER_TYPE;
             }
 
             @Override
@@ -326,19 +385,10 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
-        adapter.setTenantServiceClient(tenantClient);
-        when(tenantClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantClient));
+        adapter.setTenantServiceClient(tenantServiceClient);
         adapter.setHonoMessagingClient(messagingClient);
-        when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
-        adapter.setRegistrationServiceClient(registrationClient);
-        when(registrationClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationClient));
+        adapter.setRegistrationServiceClient(registrationServiceClient);
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
-
-        final RegistrationClient regClient = mock(RegistrationClient.class);
-        final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
-        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
-
-        when(registrationClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
         return adapter;
     }
