@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="3.2" jmeter="3.3 r1808647">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="AMQP throughput test" enabled="true">
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <stringProp name="TestPlan.comments">Tests throughput at the AMQP message level. Can be used to determine the maximum number of telemetry messages or events that can be processed by e.g. Hono Messaging in conjunction with a Qpid Dispatch Router and/or Artemis broker.</stringProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <collectionProp name="TestPlan.thread_groups"/>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="Benutzer definierte Variablen" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="honoTenant" elementType="Argument">
+            <stringProp name="Argument.name">honoTenant</stringProp>
+            <stringProp name="Argument.value">${__P(tenant,DEFAULT_TENANT)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="honoDevices" elementType="Argument">
+            <stringProp name="Argument.name">honoDevices</stringProp>
+            <stringProp name="Argument.value">${__P(deviceCount, 3)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="honoSolutionConsumers" elementType="Argument">
+            <stringProp name="Argument.name">honoSolutionConsumers</stringProp>
+            <stringProp name="Argument.value">${__P(consumerCount, 2)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="honoTestRuntime" elementType="Argument">
+            <stringProp name="Argument.name">honoTestRuntime</stringProp>
+            <stringProp name="Argument.value">${__P(testRuntime, 60)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="honoTestRuntimeReceiverLag" elementType="Argument">
+            <stringProp name="Argument.name">honoTestRuntimeReceiverLag</stringProp>
+            <stringProp name="Argument.value">${__P(consumerLag, 5)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="honoTrustStorePath" elementType="Argument">
+            <stringProp name="Argument.name">honoTrustStorePath</stringProp>
+            <stringProp name="Argument.value">${__P(defaultTrustStorePath,)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Receiver Thread Group" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${honoSolutionConsumers}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <longProp name="ThreadGroup.start_time">1495533707000</longProp>
+        <longProp name="ThreadGroup.end_time">1495533707000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.delayedStart">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <RunTime guiclass="RunTimeGui" testclass="RunTime" testname="Run n seconds" enabled="true">
+          <stringProp name="RunTime.seconds">${__intSum(${honoTestRuntime},${honoTestRuntimeReceiverLag})}</stringProp>
+        </RunTime>
+        <hashTree>
+          <org.eclipse.hono.jmeter.HonoReceiverSampler guiclass="org.eclipse.hono.jmeter.ui.HonoReceiverSamplerUI" testclass="org.eclipse.hono.jmeter.HonoReceiverSampler" testname="Hono Receiver" enabled="true">
+            <stringProp name="host">${__P(router.host, 127.0.0.1)}</stringProp>
+            <stringProp name="port">${__P(router.port, 15671)}</stringProp>
+            <stringProp name="user">${__P(receiver.user, consumer@HONO)}</stringProp>
+            <stringProp name="pwd">${__P(receiver.password, verysecret)}</stringProp>
+            <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
+            <stringProp name="container">receiver</stringProp>
+            <stringProp name="trustStorePath">${__P(receiver.trustStorePath, ${honoTrustStorePath})}</stringProp>
+            <stringProp name="tenant">${honoTenant}</stringProp>
+            <boolProp name="useSenderTime">true</boolProp>
+            <stringProp name="endpoint">telemetry</stringProp>
+            <stringProp name="prefetch">50</stringProp>
+            <stringProp name="reconnectAttempts">3</stringProp>
+            <boolProp name="senderTimeInPayload">false</boolProp>
+            <stringProp name="senderTimeVariableName">timeStamp</stringProp>
+            <stringProp name="TestPlan.comments">Consumes Telemetry messages or Events from a service implementing the northbound operations of the Telemetry and/or Event APIs.</stringProp>
+          </org.eclipse.hono.jmeter.HonoReceiverSampler>
+          <hashTree/>
+          <Summariser guiclass="SummariserGui" testclass="Summariser" testname="received" enabled="true"/>
+          <hashTree/>
+          <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Constant Timer" enabled="true">
+            <stringProp name="ConstantTimer.delay">1000</stringProp>
+            <stringProp name="TestPlan.comments">Wait for incoming messages from Hono/AMQP-Network</stringProp>
+          </ConstantTimer>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Sender Thread Group" enabled="true">
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.num_threads">${honoDevices}</stringProp>
+        <stringProp name="ThreadGroup.delay">2</stringProp>
+        <longProp name="ThreadGroup.start_time">1495623196000</longProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <longProp name="ThreadGroup.end_time">1495623196000</longProp>
+        <boolProp name="ThreadGroup.delayedStart">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Register Device" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&quot;device-id&quot;: &quot;device_${__threadNum}&quot;}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${__P(registration.host, 127.0.0.1)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(registration.http.port, 28080)}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+          <stringProp name="HTTPSampler.path">/registration/${honoTenant}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+          <stringProp name="HTTPSampler.response_timeout"></stringProp>
+          <stringProp name="TestPlan.comments">Registers a device with the configured tenant using a device identifier based on the thread number.</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">content-type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Assert success" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49587">201</stringProp>
+              <stringProp name="51517">409</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">true</boolProp>
+            <intProp name="Assertion.test_type">40</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <RunTime guiclass="RunTimeGui" testclass="RunTime" testname="Run n seconds" enabled="true">
+          <stringProp name="RunTime.seconds">${honoTestRuntime}</stringProp>
+        </RunTime>
+        <hashTree>
+          <org.eclipse.hono.jmeter.HonoSenderSampler guiclass="org.eclipse.hono.jmeter.ui.HonoSenderSamplerUI" testclass="org.eclipse.hono.jmeter.HonoSenderSampler" testname="Hono Sender" enabled="true">
+            <stringProp name="host">${__P(messaging.host, 127.0.0.1)}</stringProp>
+            <stringProp name="port">${__P(messaging.port, 5671)}</stringProp>
+            <stringProp name="user">${__P(sender.user, hono-client@HONO)}</stringProp>
+            <stringProp name="pwd">${__P(sender.password, secret)}</stringProp>
+            <stringProp name="address">telemetry/DEFAULT_TENANT</stringProp>
+            <stringProp name="container">sender</stringProp>
+            <stringProp name="trustStorePath">${__P(sender.trustStorePath, ${honoTrustStorePath})}</stringProp>
+            <stringProp name="deviceId">device_${__threadNum}</stringProp>
+            <stringProp name="tenant">${honoTenant}</stringProp>
+            <boolProp name="setSenderTime">true</boolProp>
+            <stringProp name="contentType">text/plain</stringProp>
+            <stringProp name="data">This is an arbitrary Hono test message.</stringProp>
+            <stringProp name="waitForReceivers">${honoSolutionConsumers}</stringProp>
+            <stringProp name="waitForReceiversTimeout">5000</stringProp>
+            <boolProp name="waitForCredits">true</boolProp>
+            <stringProp name="endpoint">telemetry</stringProp>
+            <stringProp name="registryHost">${__P(registration.host, 127.0.0.1)}</stringProp>
+            <stringProp name="registryPort">${__P(registration.port, 25671)}</stringProp>
+            <stringProp name="registryUser">${__P(registration.user, hono-client@HONO)}</stringProp>
+            <stringProp name="registryPwd">${__P(registration.password, secret)}</stringProp>
+            <stringProp name="registryTrustStorePath">${__P(registration.trustStorePath, ${honoTrustStorePath})}</stringProp>
+            <stringProp name="PROPERTY_REGISTRATION_ASSERTION">${__P(staticAssertion, )}</stringProp>
+            <stringProp name="TestPlan.comments">Sends a Telemetry message or Event to a service implementing the southbound operations of the Telemetry and/or Event APIs.</stringProp>
+          </org.eclipse.hono.jmeter.HonoSenderSampler>
+          <hashTree/>
+          <Summariser guiclass="SummariserGui" testclass="Summariser" testname="sent" enabled="true"/>
+          <hashTree/>
+          <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Constant Timer" enabled="false">
+            <stringProp name="ConstantTimer.delay">5</stringProp>
+            <stringProp name="TestPlan.comments">Only needed if you do not wait for credits - adjust this together with the threads to not overload Hono</stringProp>
+          </ConstantTimer>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Unregister Device" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${__P(registration.host, 127.0.0.1)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(registration.http.port, 28080)}</stringProp>
+          <stringProp name="HTTPSampler.protocol"></stringProp>
+          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+          <stringProp name="HTTPSampler.path">/registration/${honoTenant}/device_${__threadNum}</stringProp>
+          <stringProp name="HTTPSampler.method">DELETE</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+          <stringProp name="HTTPSampler.response_timeout"></stringProp>
+          <stringProp name="TestPlan.comments">Unregisters the device that has been registered during startup of the thread group.</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Assert success" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49590">204</stringProp>
+              <stringProp name="51512">404</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">true</boolProp>
+            <intProp name="Assertion.test_type">40</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="false">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+    </hashTree>
+    <WorkBench guiclass="WorkBenchGui" testclass="WorkBench" testname="WorkBench" enabled="true">
+      <boolProp name="WorkBench.save">true</boolProp>
+    </WorkBench>
+    <hashTree/>
+  </hashTree>
+</jmeterTestPlan>
