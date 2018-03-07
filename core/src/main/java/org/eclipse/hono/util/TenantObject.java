@@ -57,7 +57,7 @@ public final class TenantObject {
     }
 
     public List<Map<String, String>> getAdapterConfigurations() {
-        return Collections.unmodifiableList(adapterConfigurations);
+        return adapterConfigurations != null ? Collections.unmodifiableList(adapterConfigurations) : null;
     }
 
     public void setAdapterConfigurations(final List<Map<String, String>> adapterConfigurations) {
