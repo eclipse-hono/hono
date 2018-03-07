@@ -30,6 +30,7 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.StringUtils;
@@ -425,6 +426,29 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     "cannot publish data for device of other tenant"));
         }
         return result;
+    }
+
+    /**
+     * Gets configuration information for a tenant.
+     * <p>
+     * The returned JSON object contains information as defined by Hono's
+     * <a href="https://www.eclipse.org/hono/api/tenant-api/#response-payload">Tenant API</a>.
+     * 
+     * @param tenantId The tenant to retrieve information for.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will fail if the information cannot be retrieved. The cause will be
+     *         a {@link ServiceInvocationException} containing a corresponding error code.
+     *         <p>
+     *         Otherwise the future will contain the configuration information.
+     * @throws NullPointerException if tenant ID is {@code null}.
+     */
+    protected final Future<TenantObject> getTenantConfiguration(final String tenantId) {
+
+        Objects.requireNonNull(tenantId);
+        // TODO retrieve data from Tenant service
+        final TenantObject tenantData = TenantObject.from(tenantId, true);
+        return Future.succeededFuture(tenantData);
     }
 
     /**
