@@ -109,6 +109,9 @@ public class AbstractProtocolAdapterBaseTest {
         // GIVEN an adapter configured with service clients
         final Handler<Void> startupHandler = mock(Handler.class);
         adapter = newProtocolAdapter(properties, "test", startupHandler);
+        final HonoClient tenantService = mock(HonoClient.class);
+        when(tenantService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantService));
+        adapter.setTenantServiceClient(tenantService);
         final HonoClient registrationService = mock(HonoClient.class);
         when(registrationService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationService));
         adapter.setRegistrationServiceClient(registrationService);
@@ -122,6 +125,7 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
             // THEN the service clients have connected
+            verify(tenantService).connect(any(Handler.class));
             verify(registrationService).connect(any(Handler.class));
             verify(messagingService).connect(any(Handler.class));
             verify(authProvider).start();

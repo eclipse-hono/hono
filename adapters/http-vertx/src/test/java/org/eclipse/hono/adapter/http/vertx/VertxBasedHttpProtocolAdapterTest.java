@@ -58,6 +58,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static final String HOST = "localhost";
     private static final String AUTHORIZATION_HEADER = "Authorization";
 
+    private static HonoClient tenantClient;
     private static HonoClient messagingClient;
     private static HonoClient registrationClient;
     private static HonoClientBasedAuthProvider credentialsAuthProvider;
@@ -78,6 +79,8 @@ public class VertxBasedHttpProtocolAdapterTest {
         vertx = Vertx.vertx();
         final Async startup = context.async();
 
+        tenantClient = mock(HonoClient.class);
+        when(tenantClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantClient));
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
         registrationClient = mock(HonoClient.class);
@@ -92,6 +95,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         httpAdapter = new VertxBasedHttpProtocolAdapter();
         httpAdapter.setConfig(config);
+        httpAdapter.setTenantServiceClient(tenantClient);
         httpAdapter.setHonoMessagingClient(messagingClient);
         httpAdapter.setRegistrationServiceClient(registrationClient);
         httpAdapter.setCredentialsAuthProvider(credentialsAuthProvider);

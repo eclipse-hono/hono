@@ -76,6 +76,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Rule
     public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
 
+    private HonoClient tenantClient;
     private HonoClient messagingClient;
     private HonoClient deviceRegistryClient;
     private RegistrationClient regClient;
@@ -95,6 +96,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
         when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
+
+        tenantClient = mock(HonoClient.class);
+        when(tenantClient.connect(
+                any(Handler.class))).thenReturn(Future.succeededFuture(tenantClient));
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(
@@ -410,6 +415,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     private void forceClientMocksToConnected() {
+        when(tenantClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
         when(deviceRegistryClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
     }
@@ -456,6 +462,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         };
         adapter.setConfig(config);
         adapter.setMetrics(new MqttAdapterMetrics());
+        adapter.setTenantServiceClient(tenantClient);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(deviceRegistryClient);
         adapter.setCredentialsAuthProvider(credentialsAuthProvider);

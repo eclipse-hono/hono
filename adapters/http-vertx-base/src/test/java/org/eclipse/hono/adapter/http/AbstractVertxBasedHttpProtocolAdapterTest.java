@@ -57,6 +57,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @Rule
     public Timeout globalTimeout = Timeout.seconds(5);
 
+    private HonoClient                    tenantClient;
     private HonoClient                    messagingClient;
     private HonoClient                    registrationClient;
     private HonoClientBasedAuthProvider   credentialsAuthProvider;
@@ -71,6 +72,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
 
+        tenantClient = mock(HonoClient.class);
         messagingClient = mock(HonoClient.class);
         registrationClient = mock(HonoClient.class);
         credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
@@ -324,6 +326,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
+        adapter.setTenantServiceClient(tenantClient);
+        when(tenantClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantClient));
         adapter.setHonoMessagingClient(messagingClient);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
         adapter.setRegistrationServiceClient(registrationClient);
