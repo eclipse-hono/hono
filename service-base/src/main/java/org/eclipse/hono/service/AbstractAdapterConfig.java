@@ -290,7 +290,7 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for connections to the credentials service
+     * Exposes a factory for connections to the tenant service
      * as a Spring bean.
      *
      * @return The connection factory.
