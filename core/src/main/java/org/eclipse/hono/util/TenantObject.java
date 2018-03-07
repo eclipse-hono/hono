@@ -13,13 +13,16 @@
 
 package org.eclipse.hono.util;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 
 /**
@@ -32,23 +35,17 @@ public final class TenantObject {
     private String tenantId;
     @JsonProperty(TenantConstants.FIELD_ENABLED)
     private Boolean enabled;
-    /*
-     * Since the format of the adapters field is not determined by the Tenant API, they are best represented as
-     * key-value maps with key and value both of type String.
-     * The further processing of adapterConfigurations is part of the validator for the specific type.
-     */
-    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
-    private List<Map<String, String>> adapterConfigurations;
+    private Map<String, JsonObject> adapterConfigurations;
 
     public String getTenantId() {
         return tenantId;
     }
 
     public void setTenantId(final String tenantId) {
-        this.tenantId=tenantId;
+        this.tenantId = tenantId;
     }
 
-    public Boolean getEnabled() {
+    public Boolean isEnabled() {
         return enabled;
     }
 
@@ -56,19 +53,96 @@ public final class TenantObject {
         this.enabled = enabled;
     }
 
-    public List<Map<String, String>> getAdapterConfigurations() {
-        return adapterConfigurations != null ? Collections.unmodifiableList(adapterConfigurations) : null;
-    }
-
-    public void setAdapterConfigurations(final List<Map<String, String>> adapterConfigurations) {
-        this.adapterConfigurations= new LinkedList<>(adapterConfigurations);
-    }
-
-    public void addAdapterConfiguration(final Map<String, String> adapterConfiguration) {
+    /**
+     * Gets the configuration information for this tenant's
+     * configured adapters.
+     * 
+     * @return An unmodifiable list of configuration properties or
+     *         {@code null} if no specific configuration has been
+     *         set for any protocol adapter.
+     */
+    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
+    public List<Map<String, Object>> getAdapterConfigurationsAsMaps() {
         if (adapterConfigurations == null) {
-            adapterConfigurations= new LinkedList<>();
+            return null;
+        } else {
+            final List<Map<String, Object>> result = new LinkedList<>();
+            adapterConfigurations.values().forEach(config -> result.add(((JsonObject) config).getMap()));
+            return result;
         }
-        adapterConfigurations.add(adapterConfiguration);
+    }
+
+    /**
+     * Gets the configuration information for this tenant's
+     * configured adapters.
+     * 
+     * @return The configuration properties for this tenant's
+     *         configured adapters or {@code null} if no specific
+     *         configuration has been set for any protocol adapter.
+     */
+    public JsonArray getAdapterConfigurations() {
+        if (adapterConfigurations == null) {
+            return null;
+        } else {
+            final JsonArray result = new JsonArray();
+            adapterConfigurations.values().forEach(config -> result.add((JsonObject) config));
+            return result;
+        }
+    }
+
+    /**
+     * Sets the configuration information for this tenant's
+     * configured adapters.
+     * 
+     * @param configurations A list of configuration properties, one set of properties
+     *                              for each configured adapter. The list's content will be
+     *                              copied into a new list in order to prevent modification
+     *                              of the list after this method has been invoked.
+     * @throws NullPointerException if the list is {@code null}.
+     */
+    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
+    public void setAdapterConfigurations(final List<Map<String, Object>> configurations) {
+        if (configurations == null) {
+            this.adapterConfigurations = null;
+        } else {
+            configurations.stream().forEach(config -> {
+                addAdapterConfiguration(new JsonObject(config));
+            });
+        }
+    }
+
+    /**
+     * Sets the configuration information for this tenant's
+     * configured adapters.
+     * 
+     * @param configurations The configuration properties for this tenant's
+     *                       configured adapters or {@code null} in order to
+     *                       remove any existing configuration.
+     */
+    public void setAdapterConfigurations(final JsonArray configurations) {
+        if (configurations == null) {
+            this.adapterConfigurations = null;
+        } else {
+            this.adapterConfigurations = new HashMap<>();
+            configurations.stream().filter(obj -> JsonObject.class.isInstance(obj)).forEach(config -> {
+                addAdapterConfiguration((JsonObject) config);
+            });
+        }
+    }
+
+    /**
+     * Adds configuration information for a protocol adapter.
+     * 
+     * @param config The configuration properties to add.
+     */
+    public void addAdapterConfiguration(final JsonObject config) {
+        final String type = config.getString(TenantConstants.FIELD_ADAPTERS_TYPE);
+        if (type != null) {
+            if (adapterConfigurations == null) {
+                adapterConfigurations= new HashMap<>();
+            }
+            adapterConfigurations.put(type, config);
+        }
     }
 
     /**

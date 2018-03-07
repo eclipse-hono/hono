@@ -26,13 +26,13 @@ import io.vertx.proton.ProtonHelper;
  * Tests TenantConstants.
  */
 public class TenantConstantsTest {
+
     private static final ResourceIdentifier resource = ResourceIdentifier.from(TenantConstants.TENANT_ENDPOINT, Constants.DEFAULT_TENANT, null);
 
     /**
-     * Verifies that the JsonObject constructed for a tenant message (intended for the event bus) contains the tenantId
-     * as defined in the {@link RequestResponseApiConstants} class.
+     * Verifies that the JsonObject constructed for a tenant message (intended for the event bus)
+     * contains the tenant Id.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testTenantMessageForEventBus() {
 
@@ -43,6 +43,6 @@ public class TenantConstantsTest {
 
         final JsonObject tenantMsg = TenantConstants.getTenantMsg(msg);
         assertNotNull(tenantMsg);
-        assertTrue(tenantMsg.containsKey(RequestResponseApiConstants.FIELD_TENANT_ID));
+        assertTrue(tenantMsg.containsKey(TenantConstants.FIELD_TENANT_ID));
     }
 }

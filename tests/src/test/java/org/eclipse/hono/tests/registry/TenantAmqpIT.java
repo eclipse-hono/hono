@@ -13,14 +13,11 @@
 
 package org.eclipse.hono.tests.registry;
 
-
+import static org.junit.Assert.*;
 
 import java.net.HttpURLConnection;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import io.vertx.core.Vertx;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
@@ -34,13 +31,12 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests verifying the behavior of the Device Registry component's Tenant AMQP endpoint.
@@ -145,30 +141,28 @@ public class TenantAmqpIT {
     private void checkTenantPayload(final TenantObject tenantObject, final String tenantToTest) {
         assertNotNull(tenantObject);
         assertEquals(tenantObject.getTenantId(), tenantToTest);
-        assertTrue(tenantObject.getEnabled());
+        assertTrue(tenantObject.isEnabled());
         checkTenantAdapterConfigurations(tenantObject);
     }
 
     private void checkTenantAdapterConfigurations(final TenantObject tenantObject) {
+
         assertNotNull(tenantObject.getAdapterConfigurations());
-        final List<Map<String, String>> adapterConfigurations = tenantObject.getAdapterConfigurations();
+        final JsonArray adapterConfigurations = tenantObject.getAdapterConfigurations();
         assertEquals(adapterConfigurations.size(), 2);
-        for (final Map<String, String> adapterConfiguration: adapterConfigurations) {
-            assertNotNull(adapterConfiguration);
-            assertTrue(adapterConfiguration.containsKey(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
-            assertTrue(adapterConfiguration.containsKey(TenantConstants.FIELD_ENABLED));
-            assertTrue(adapterConfiguration.containsKey(TenantConstants.FIELD_ADAPTERS_TYPE));
+        adapterConfigurations.stream().filter(obj -> obj instanceof JsonObject)
+            .map(obj -> (JsonObject) obj).forEach(config -> {
+                assertTrue(config.containsKey(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
+                assertTrue(config.containsKey(TenantConstants.FIELD_ENABLED));
 
-            final String type = adapterConfiguration.get(TenantConstants.FIELD_ADAPTERS_TYPE);
-            switch (type) {
-                case Constants.PROTOCOL_ADAPTER_TYPE_HTTP:
-                    assertTrue(Boolean.valueOf(adapterConfiguration.get(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)));
-                    break;
-                case Constants.PROTOCOL_ADAPTER_TYPE_MQTT:
-                    assertTrue(Boolean.valueOf(adapterConfiguration.get(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)));
-                    break;
-            }
-        }
+                final String type = config.getString(TenantConstants.FIELD_ADAPTERS_TYPE);
+                assertNotNull(type);
+                switch (type) {
+                    case Constants.PROTOCOL_ADAPTER_TYPE_HTTP:
+                    case Constants.PROTOCOL_ADAPTER_TYPE_MQTT:
+                        assertTrue(config.getBoolean(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
+                        break;
+                }
+            });
     }
-
 }
