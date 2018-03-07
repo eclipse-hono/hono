@@ -32,7 +32,7 @@ import io.vertx.core.json.JsonObject;
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */
-public final class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
+public class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates a new credentials endpoint for a vertx instance.
@@ -46,13 +46,13 @@ public final class CredentialsAmqpEndpoint extends RequestResponseEndpoint<Servi
 
 
     @Override
-    public String getName() {
+    public final String getName() {
         return CredentialsConstants.CREDENTIALS_ENDPOINT;
     }
 
 
     @Override
-    public void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
+    public final void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
         final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg, targetAddress);
 
@@ -82,7 +82,7 @@ public final class CredentialsAmqpEndpoint extends RequestResponseEndpoint<Servi
     }
 
     @Override
-    protected Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
+    protected final Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
         return CredentialsConstants.getAmqpReply(CredentialsConstants.CREDENTIALS_ENDPOINT, message.body());
     }
 }
