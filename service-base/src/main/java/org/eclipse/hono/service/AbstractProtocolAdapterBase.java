@@ -25,6 +25,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
@@ -86,7 +87,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Autowired
-    public final void setTenantClient(final HonoClient tenantClient) {
+    public final void setTenantServiceClient(final HonoClient tenantClient) {
         this.tenantClient = Objects.requireNonNull(tenantClient);
     }
 
@@ -95,8 +96,17 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @return The client.
      */
-    public final HonoClient getTenantClient() {
+    public final HonoClient getTenantServiceClient() {
         return tenantClient;
+    }
+
+    /**
+     * Gets a client for interacting with the Tenant service.
+     *
+     * @return The client.
+     */
+    protected final Future<TenantClient> getTenantClient() {
+        return getTenantServiceClient().getOrCreateTenantClient();
     }
 
     /**
@@ -461,9 +471,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<TenantObject> getTenantConfiguration(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        // TODO retrieve data from Tenant service
-        final TenantObject tenantData = TenantObject.from(tenantId, true);
-        return Future.succeededFuture(tenantData);
+
+        return getTenantClient().compose(client -> client.get(tenantId));
     }
 
     /**
