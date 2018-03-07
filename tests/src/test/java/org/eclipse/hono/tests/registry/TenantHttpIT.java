@@ -294,7 +294,8 @@ public class TenantHttpIT {
         final JsonObject adapterDetailsMqtt = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);        final JsonObject tenantPayload = new JsonObject()
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+        final JsonObject tenantPayload = new JsonObject()
                 .put(TenantConstants.FIELD_TENANT_ID, tenantId)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
                 .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
