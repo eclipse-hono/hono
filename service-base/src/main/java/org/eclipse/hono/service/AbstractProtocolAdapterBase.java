@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.vertx.core.Handler;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
@@ -31,6 +32,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.StringUtils;
@@ -58,8 +60,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
 
-    private HonoClient messaging;
-    private HonoClient registration;
+    private HonoClient messagingClient;
+    private HonoClient registrationClient;
+    private HonoClient tenantClient;
     private HonoClientBasedAuthProvider credentialsAuthProvider;
 
     /**
@@ -76,6 +79,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Sets the client to use for connecting to the Tenant service.
+     *
+     * @param tenantClient The client.
+     * @throws NullPointerException if the client is {@code null}.
+     */
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @Autowired
+    public final void setTenantClient(final HonoClient tenantClient) {
+        this.tenantClient = Objects.requireNonNull(tenantClient);
+    }
+
+    /**
+     * Gets the client used for connecting to the Tenant service.
+     *
+     * @return The client.
+     */
+    public final HonoClient getTenantClient() {
+        return tenantClient;
+    }
+
+    /**
      * Sets the client to use for connecting to the Hono Messaging component.
      * 
      * @param honoClient The client.
@@ -84,7 +108,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Autowired
     public final void setHonoMessagingClient(final HonoClient honoClient) {
-        this.messaging = Objects.requireNonNull(honoClient);
+        this.messagingClient = Objects.requireNonNull(honoClient);
     }
 
     /**
@@ -93,7 +117,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     public final HonoClient getHonoMessagingClient() {
-        return messaging;
+        return messagingClient;
     }
 
     /**
@@ -105,7 +129,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Autowired
     public final void setRegistrationServiceClient(final HonoClient registrationServiceClient) {
-        this.registration = Objects.requireNonNull(registrationServiceClient);
+        this.registrationClient = Objects.requireNonNull(registrationServiceClient);
     }
 
     /**
@@ -114,7 +138,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     public final HonoClient getRegistrationServiceClient() {
-        return registration;
+        return registrationClient;
     }
 
     /**
@@ -156,18 +180,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     @Override
     protected final Future<Void> startInternal() {
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         if (StringUtils.isEmpty(getTypeName())) {
             result.fail(new IllegalStateException("adapter does not define a typeName"));
-        } else if (messaging == null) {
+        } else if (tenantClient == null) {
+            result.fail(new IllegalStateException("Hono Tenant client must be set"));
+        } else if (messagingClient == null) {
             result.fail(new IllegalStateException("Hono Messaging client must be set"));
-        } else if (registration == null) {
+        } else if (registrationClient == null) {
             result.fail(new IllegalStateException("Device Registration client must be set"));
         } else if (credentialsAuthProvider == null) {
             result.fail(new IllegalStateException("Credentials Authentication Provider must be set"));
         } else {
-            connectToMessaging();
-            connectToDeviceRegistration();
+            connectToService(tenantClient, "Tenant service");
+            connectToService(messagingClient, "Messaging");
+            connectToService(registrationClient, "Device Registration service");
             credentialsAuthProvider.start().compose(s -> {
                 doStart(result);
             }, result);
@@ -191,8 +218,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<Void> stopInternal() {
 
         LOG.info("stopping protocol adapter");
-        Future<Void> result = Future.future();
-        Future<Void> doStopResult = Future.future();
+        final Future<Void> result = Future.future();
+        final Future<Void> doStopResult = Future.future();
         doStop(doStopResult);
         doStopResult
             .compose(s -> closeServiceClients())
@@ -208,19 +235,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     private CompositeFuture closeServiceClients() {
 
-        Future<Void> messagingTracker = Future.future();
-        if (messaging == null) {
-            messagingTracker.complete();
-        } else {
-            messaging.shutdown(messagingTracker.completer());
-        }
-
-        Future<Void> registrationTracker = Future.future();
-        if (registration == null) {
-            registrationTracker.complete();
-        } else {
-            registration.shutdown(registrationTracker.completer());
-        }
+        final Future<Void> tenantShutdownTracker = closeServiceClient(tenantClient);
+        final Future<Void> messagingShutdownTracker = closeServiceClient(messagingClient);
+        final Future<Void> registrationShutdownTracker = closeServiceClient(registrationClient);
 
         Future<Void> credentialsTracker = Future.future();
         if (credentialsAuthProvider == null) {
@@ -228,7 +245,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else {
             credentialsTracker = credentialsAuthProvider.stop();
         }
-        return CompositeFuture.all(messagingTracker, registrationTracker, credentialsTracker);
+        return CompositeFuture.all(tenantShutdownTracker, messagingShutdownTracker, registrationShutdownTracker, credentialsTracker);
+    }
+
+    private Future<Void> closeServiceClient(final HonoClient client) {
+
+        final Future<Void> shutdownTracker = Future.future();
+        if (client == null) {
+            shutdownTracker.complete();
+        } else {
+            client.shutdown(shutdownTracker.completer());
+        }
+
+        return shutdownTracker;
     }
 
     /**
@@ -246,83 +275,56 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Connects to the Hono Messaging component using the configured client.
-     * 
+     * Connects to a Hono Service component using the configured client.
+     *
+     * @param client The Hono client for the service that is to be connected.
+     * @param serviceName The name of the service that is to be connected (used for logging).
      * @return A future that will succeed once the connection has been established.
      *         The future will fail if the connection cannot be established.
+     * @throws NullPointerException if serviceName is {@code null}.
+     * @throws IllegalArgumentException if client is {@code null}.
      */
-    protected final Future<HonoClient> connectToMessaging() {
+    protected final Future<HonoClient> connectToService(final HonoClient client, final String serviceName) {
 
-        if (messaging == null) {
-            return Future.failedFuture(new IllegalStateException("Hono Messaging client not set"));
+        Objects.requireNonNull(serviceName);
+
+        if (client == null) {
+            return Future.failedFuture(new IllegalStateException(String.format("Hono %s client not set", serviceName)));
         } else {
-            return messaging.connect(this::onDisconnectMessaging).map(connectedClient -> {
-                LOG.info("connected to Hono Messaging");
+            final Handler<ProtonConnection> disconnectHandler = getHandlerForDisconnectHonoService(client, serviceName);
+
+            return client.connect(disconnectHandler).map(connectedClient -> {
+                LOG.info("connected to {}", serviceName);
                 return connectedClient;
             }).recover(t -> {
-                LOG.warn("failed to connect to Hono Messaging", t);
+                LOG.warn("failed to connect to {}", serviceName, t);
                 return Future.failedFuture(t);
             });
         }
     }
 
     /**
-     * Attempts a reconnect for the Hono Messaging client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
+     * Gets a handler that attempts a reconnect for a Hono service client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
      *
-     * @param con The connection that was disonnected.
+     * @param client The Hono client for the service that is to be connected.
+     * @param serviceName The name of the service that is to be connected (used for logging).
+     * @return A handler that attempts the reconnect.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    private void onDisconnectMessaging(final ProtonConnection con) {
+    private Handler<ProtonConnection> getHandlerForDisconnectHonoService(final HonoClient client, final String serviceName) {
 
-        vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-            LOG.info("attempting to reconnect to Hono Messaging");
-            messaging.connect(this::onDisconnectMessaging).setHandler(connectAttempt -> {
-                if (connectAttempt.succeeded()) {
-                    LOG.info("reconnected to Hono Messaging");
-                } else {
-                    LOG.debug("cannot reconnect to Hono Messaging: {}", connectAttempt.cause().getMessage());
-                }
+        return (connection) -> {
+            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+                LOG.info("attempting to reconnect to {}", serviceName);
+                client.connect(getHandlerForDisconnectHonoService(client, serviceName)).setHandler(connectAttempt -> {
+                    if (connectAttempt.succeeded()) {
+                        LOG.info("reconnected to {}", serviceName);
+                    } else {
+                        LOG.debug("cannot reconnect to {}: {}", serviceName, connectAttempt.cause().getMessage());
+                    }
+                });
             });
-        });
-    }
-
-    /**
-     * Connects to the Device Registration service using the configured client.
-     * 
-     * @return A future that will succeed once the connection has been established.
-     *         The future will fail if the connection cannot be established.
-     */
-    protected final Future<HonoClient> connectToDeviceRegistration() {
-
-        if (registration == null) {
-            return Future.failedFuture(new IllegalStateException("Device Registration client not set"));
-        } else {
-            return registration.connect(this::onDisconnectDeviceRegistry).map(connectedClient -> {
-                LOG.info("connected to Device Registration service");
-                return connectedClient;
-            }).recover(t -> {
-                LOG.warn("failed to connect to Device Registration service", t);
-                return Future.failedFuture(t);
-            });
-        }
-    }
-
-    /**
-     * Attempts a reconnect for the Hono Device Registration client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
-     *
-     * @param con The connection that was disonnected.
-     */
-    private void onDisconnectDeviceRegistry(final ProtonConnection con) {
-
-        vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-            LOG.info("attempting to reconnect to Device Registration service");
-            registration.connect(this::onDisconnectDeviceRegistry).setHandler(connectAttempt -> {
-                if (connectAttempt.succeeded()) {
-                    LOG.info("reconnected to Device Registration service");
-                } else {
-                    LOG.debug("cannot reconnect to Device Registration service: {}", connectAttempt.cause().getMessage());
-                }
-            });
-        });
+        };
     }
 
     /**
@@ -340,12 +342,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, the future will fail.
      */
     protected final Future<Void> isConnected() {
-        final Future<Boolean> messagingCheck = Optional.ofNullable(messaging)
+        final Future<Boolean> tenantCheck = Optional.ofNullable(tenantClient)
                 .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
-        final Future<Boolean> registrationCheck = Optional.ofNullable(registration)
+        final Future<Boolean> messagingCheck = Optional.ofNullable(messagingClient)
                 .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
-        return CompositeFuture.all(messagingCheck, registrationCheck).compose(ok -> {
-            if (messagingCheck.result() && registrationCheck.result()) {
+        final Future<Boolean> registrationCheck = Optional.ofNullable(registrationClient)
+                .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
+        return CompositeFuture.all(tenantCheck, messagingCheck, registrationCheck).compose(ok -> {
+            if (tenantCheck.result() && messagingCheck.result() && registrationCheck.result()) {
                 return Future.succeededFuture();
             } else {
                 return Future.failedFuture(new IllegalStateException("not connected"));
@@ -360,7 +364,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<MessageSender> getTelemetrySender(final String tenantId) {
-        return messaging.getOrCreateTelemetrySender(tenantId);
+        return getHonoMessagingClient().getOrCreateTelemetrySender(tenantId);
     }
 
     /**
@@ -370,7 +374,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<MessageSender> getEventSender(final String tenantId) {
-        return messaging.getOrCreateEventSender(tenantId);
+        return getHonoMessagingClient().getOrCreateEventSender(tenantId);
     }
 
     /**

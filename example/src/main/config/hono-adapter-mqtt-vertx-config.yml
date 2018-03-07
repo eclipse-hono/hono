@@ -30,6 +30,13 @@ hono:
     username: ${hono.adapter.mqtt.username}
     password: ${hono.adapter.mqtt.password}
     trustStorePath: ${hono.trustStore.path}
+  tenant:
+    name: 'Hono MQTT Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.mqtt.username}
+    password: ${hono.adapter.mqtt.password}
+    trustStorePath: ${hono.trustStore.path}
   metric:
     reporter:
       graphite:

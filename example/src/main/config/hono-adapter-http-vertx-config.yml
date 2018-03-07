@@ -30,6 +30,13 @@ hono:
     username: ${hono.adapter.http.username}
     password: ${hono.adapter.http.password}
     trustStorePath: ${hono.trustStore.path}
+  tenant:
+    name: 'Hono REST Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.http.username}
+    password: ${hono.adapter.http.password}
+    trustStorePath: ${hono.trustStore.path}
   metric:
     reporter:
       graphite:

@@ -23,6 +23,7 @@ import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -248,8 +249,6 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes a client for the <em>Credentials</em> API as a Spring bean.
-     * If no property {@code hono.credentials} is configured, no bean will be created
-     * (and internally the registration client bean is used instead).
      *
      * @return The client.
      */
@@ -258,5 +257,59 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public HonoClient credentialsServiceClient() {
         return new HonoClientImpl(vertx(), credentialsServiceConnectionFactory(), credentialsServiceClientConfig());
+    }
+
+    /**
+     * Exposes configuration properties for accessing the tenant service as a Spring bean.
+     * <p>
+     * Sets the <em>amqpHostname</em> to {@code hono-device-registry} if not set explicitly (reflecting that Hono is
+     * providing the tenant API as part of the device registry component).
+     *
+     * @return The properties.
+     */
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @ConfigurationProperties(prefix = "hono.tenant")
+    @Bean
+    public ClientConfigProperties tenantServiceClientConfig() {
+        RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        customizeTenantServiceClientConfig(config);
+        return config;
+    }
+
+    /**
+     * Further customizes the properties provided by the {@link #tenantServiceClientConfig()}
+     * method.
+     * <p>
+     * This method does nothing by default. Subclasses may override this method to set additional
+     * properties programmatically.
+     *
+     * @param config The configuration to customize.
+     */
+    protected void customizeTenantServiceClientConfig(final RequestResponseClientConfigProperties config) {
+        // empty by default
+    }
+
+    /**
+     * Exposes a factory for connections to the credentials service
+     * as a Spring bean.
+     *
+     * @return The connection factory.
+     */
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @Bean
+    public ConnectionFactory tenantServiceConnectionFactory() {
+        return new ConnectionFactoryImpl(vertx(), tenantServiceClientConfig());
+    }
+
+    /**
+     * Exposes a client for the <em>Tenant</em> API as a Spring bean.
+     *
+     * @return The client.
+     */
+    @Bean
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @Scope("prototype")
+    public HonoClient tenantServiceClient() {
+        return new HonoClientImpl(vertx(), tenantServiceConnectionFactory(), tenantServiceClientConfig());
     }
 }
