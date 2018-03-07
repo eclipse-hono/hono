@@ -33,7 +33,7 @@ import io.vertx.core.json.JsonObject;
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */
-public final class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
+public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates a new registration endpoint for a vertx instance.
@@ -46,12 +46,12 @@ public final class RegistrationAmqpEndpoint extends RequestResponseEndpoint<Serv
     }
 
     @Override
-    public String getName() {
+    public final String getName() {
         return RegistrationConstants.REGISTRATION_ENDPOINT;
     }
 
     @Override
-    public void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
+    public final void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
         final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg, targetAddress);
 
@@ -81,7 +81,7 @@ public final class RegistrationAmqpEndpoint extends RequestResponseEndpoint<Serv
     }
 
     @Override
-    protected Message getAmqpReply(io.vertx.core.eventbus.Message<JsonObject> message) {
+    protected final Message getAmqpReply(io.vertx.core.eventbus.Message<JsonObject> message) {
         return RegistrationConstants.getAmqpReply(RegistrationConstants.REGISTRATION_ENDPOINT, message.body());
     }
 }

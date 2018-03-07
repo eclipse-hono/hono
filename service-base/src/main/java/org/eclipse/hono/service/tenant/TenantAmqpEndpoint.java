@@ -37,7 +37,7 @@ import io.vertx.core.json.JsonObject;
  * messages representing requests and sends them to an address on the vertx event bus for processing. The outcome is
  * then returned to the peer in a response message.
  */
-public final class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
+public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates a new tenant endpoint for a vertx instance.
@@ -50,7 +50,7 @@ public final class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
     }
 
     @Override
-    public String getName() {
+    public final String getName() {
         return TenantConstants.TENANT_ENDPOINT;
     }
 
@@ -80,8 +80,8 @@ public final class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
     }
 
     @Override
-    public void processRequest(final Message msg, final ResourceIdentifier targetAddress,
-            final HonoUser clientPrincipal) {
+    public final void processRequest(final Message msg, final ResourceIdentifier targetAddress,
+                               final HonoUser clientPrincipal) {
 
         final JsonObject tenantMsg = TenantConstants.getTenantMsg(msg);
         vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, tenantMsg,
@@ -106,7 +106,7 @@ public final class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
     }
 
     @Override
-    protected Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
+    protected final Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
         return TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, message.body());
     }
 }
