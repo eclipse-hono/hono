@@ -237,18 +237,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         LOG.debug("connection request from client [clientId: {}]", endpoint.clientIdentifier());
 
-        isConnected().map(connected -> {
-            if (connected) {
-                if (getConfig().isAuthenticationRequired()) {
-                    handleEndpointConnectionWithAuthentication(endpoint);
-                } else {
-                    handleEndpointConnectionWithoutAuthentication(endpoint);
-                }
+        isConnected().map(ok -> {
+            if (getConfig().isAuthenticationRequired()) {
+                handleEndpointConnectionWithAuthentication(endpoint);
             } else {
-                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                LOG.debug("connection request from client [clientId: {}] rejected: {}",
-                        endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                handleEndpointConnectionWithoutAuthentication(endpoint);
             }
+            return null;
+        }).otherwise(t -> {
+            LOG.debug("connection request from client [clientId: {}] rejected: {}",
+                    endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
             return null;
         });
     }

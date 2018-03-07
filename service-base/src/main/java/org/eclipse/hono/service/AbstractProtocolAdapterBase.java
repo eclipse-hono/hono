@@ -326,19 +326,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Checks if this adapter is connected to <em>Hono Messaging</em>
+     * Checks if this adapter is connected to the services it depends on.
+     * 
+     * <em>Hono Messaging</em>
      * and the <em>Device Registration</em> service.
      * 
-     * @return A succeeded future containing {@code true} if and only if
-     *         this adapter is connected to both services.
+     * @return A future indicating the outcome of the check.
+     *         The future will succeed if this adapter is currently connected to
+     *         <ul>
+     *         <li>the Device Registration service</li>
+     *         <li>a service implementing the Telemetry & Event APIs</li>
+     *         </ul>
+     *         Otherwise, the future will fail.
      */
-    protected final Future<Boolean> isConnected() {
+    protected final Future<Void> isConnected() {
         final Future<Boolean> messagingCheck = Optional.ofNullable(messaging)
                 .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
         final Future<Boolean> registrationCheck = Optional.ofNullable(registration)
                 .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
         return CompositeFuture.all(messagingCheck, registrationCheck).compose(ok -> {
-            return Future.succeededFuture(messagingCheck.result() && registrationCheck.result());
+            if (messagingCheck.result() && registrationCheck.result()) {
+                return Future.succeededFuture();
+            } else {
+                return Future.failedFuture(new IllegalStateException("not connected"));
+            }
         });
     }
 
@@ -535,11 +546,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     public void registerReadinessChecks(final HealthCheckHandler handler) {
         handler.register("connection-to-services", status -> {
             isConnected().map(connected -> {
-                if (connected) {
-                    status.tryComplete(Status.OK());
-                } else {
-                    status.tryComplete(Status.KO());
-                }
+                status.tryComplete(Status.OK());
+                return null;
+            }).otherwise(t -> {
+                status.tryComplete(Status.KO());
                 return null;
             });
         });
