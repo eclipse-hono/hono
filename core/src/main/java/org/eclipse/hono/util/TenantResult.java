@@ -16,10 +16,11 @@ package org.eclipse.hono.util;
 /**
  * A container for the result returned by Hono's Tenant API.
  *
- * @param <T> denotes the concrete type of the payload that is conveyed in the result.
+ * @param <T> The concrete type of the payload that is conveyed in the result.
  *
  */
 public final class TenantResult<T> extends RequestResponseResult<T> {
+
     private TenantResult(final int status, final T payload) {
         super(status, payload);
     }
@@ -28,6 +29,7 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
      * Creates a new result for a status code.
      *
      * @param status The status code indicating the outcome of the request.
+     * @param <T> The type of the payload conveyed in the result.
      * @return The result.
      */
     public static <T> TenantResult<T> from(final int status) {
@@ -39,6 +41,7 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
      *
      * @param status The status code indicating the outcome of the request.
      * @param payload The payload to convey to the sender of the request.
+     * @param <T> The type of the payload conveyed in the result.
      * @return The result.
      */
     public static <T> TenantResult<T> from(final int status, final T payload) {

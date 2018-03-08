@@ -347,7 +347,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         The future will succeed if this adapter is currently connected to
      *         <ul>
      *         <li>the Device Registration service</li>
-     *         <li>a service implementing the Telemetry & Event APIs</li>
+     *         <li>a service implementing the Telemetry &amp; Event APIs</li>
      *         </ul>
      *         Otherwise, the future will fail.
      */

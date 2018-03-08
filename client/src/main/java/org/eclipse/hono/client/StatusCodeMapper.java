@@ -36,6 +36,7 @@ public abstract class StatusCodeMapper {
      * Creates an exception for a generic result of a service invocation.
      * 
      * @param result The result containing the status code.
+     * @param <T> The type of the payload contained in the result.
      * @return The exception.
      * @throws NullPointerException if response is {@code null}.
      */

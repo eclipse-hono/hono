@@ -200,11 +200,12 @@ public class HonoSender extends AbstractClient {
     }
 
     /**
-     * Publishes a batch of messages to Hono Messaging.
+     * Publishes a message to Hono.
      * 
-     * @param sampleResult
-     * @param deviceId
-     * @param waitOnCredits
+     * @param sampleResult The result object representing the outcome of the sample.
+     * @param deviceId The identifier if the device to send a message for.
+     * @param waitOnCredits A flag indicating whether the sender should wait for more
+     *                      credits being available after having sent the message.
      */
     public void send(final SampleResult sampleResult, final String deviceId, final boolean waitOnCredits) {
 

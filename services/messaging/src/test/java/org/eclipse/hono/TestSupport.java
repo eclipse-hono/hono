@@ -83,6 +83,7 @@ public final class TestSupport {
      * @param address the address to expect the message to be sent to.
      * @param msg the message to expect.
      * @param reply the reply to send.
+     * @param <T> The type of the reply message.
      */
     @SuppressWarnings("unchecked")
     public static <T> void expectReplyForMessage(final EventBus bus, final String address, final Object msg, final T reply) {
