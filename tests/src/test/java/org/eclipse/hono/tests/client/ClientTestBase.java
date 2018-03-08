@@ -96,8 +96,8 @@ public abstract class ClientTestBase {
         downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setPathSeparator(IntegrationTestSupport.PATH_SEPARATOR);
-        downstreamProps.setUsername(IntegrationTestSupport.DOWNSTREAM_USER);
-        downstreamProps.setPassword(IntegrationTestSupport.DOWNSTREAM_PWD);
+        downstreamProps.setUsername(IntegrationTestSupport.RESTRICTED_CONSUMER_NAME);
+        downstreamProps.setPassword(IntegrationTestSupport.RESTRICTED_CONSUMER_PWD);
         downstreamClient = new HonoClientImpl(
                 vertx,
                 ConnectionFactoryBuilder.newBuilder(downstreamProps).vertx(vertx).build(),

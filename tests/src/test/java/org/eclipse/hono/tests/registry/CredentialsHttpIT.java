@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.eclipse.hono.tests.CrudHttpClient;
+import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -34,7 +34,6 @@ import org.junit.runner.RunWith;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -49,13 +48,10 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class CredentialsHttpIT {
 
     private static final String TENANT = Constants.DEFAULT_TENANT;
-    private static final String URI_ADD_CREDENTIALS = "/" + CredentialsConstants.CREDENTIALS_ENDPOINT + "/" + TENANT;
-    private static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%s/%%s/%%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT);
-    private static final String TEMPLATE_URI_CREDENTIALS_BY_DEVICE = String.format("/%s/%s/%%s", CredentialsConstants.CREDENTIALS_ENDPOINT, TENANT);
     private static final String TEST_AUTH_ID = "sensor20";
     private static final Vertx vertx = Vertx.vertx();
 
-    private static CrudHttpClient httpClient;
+    private static DeviceRegistryHttpClient registry;
 
     /**
      * Time out each test after 5 secs.
@@ -76,7 +72,7 @@ public class CredentialsHttpIT {
     @BeforeClass
     public static void setUpClient(final TestContext ctx) {
 
-        httpClient = new CrudHttpClient(
+        registry = new DeviceRegistryHttpClient(
                 vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
@@ -101,12 +97,12 @@ public class CredentialsHttpIT {
     @After
     public void removeCredentials(final TestContext ctx) {
         final Async deletion = ctx.async();
-        removeCredentials(deviceId, HttpURLConnection.HTTP_NO_CONTENT).setHandler(attempt -> deletion.complete());
+        registry.removeAllCredentials(TENANT, deviceId, HttpURLConnection.HTTP_NO_CONTENT).setHandler(attempt -> deletion.complete());
         deletion.await();
     }
 
     /**
-     * Shuts down the server.
+     * Shuts down the client.
      * 
      * @param context The vert.x test context.
      */
@@ -124,7 +120,7 @@ public class CredentialsHttpIT {
     @Test
     public void testAddCredentialsSucceeds(final TestContext context)  {
 
-        addCredentials(hashedPasswordCredentials).setHandler(context.asyncAssertSuccess());
+        registry.addCredentials(TENANT, hashedPasswordCredentials).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -136,9 +132,9 @@ public class CredentialsHttpIT {
     @Test
     public void testAddCredentialsRejectsDuplicateRegistration(final TestContext context)  {
 
-        addCredentials(hashedPasswordCredentials).compose(ar -> {
+        registry.addCredentials(TENANT, hashedPasswordCredentials).compose(ar -> {
             // now try to add credentials again
-            return addCredentials(hashedPasswordCredentials, HttpURLConnection.HTTP_CONFLICT);
+            return registry.addCredentials(TENANT, hashedPasswordCredentials, HttpURLConnection.HTTP_CONFLICT);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -151,7 +147,8 @@ public class CredentialsHttpIT {
     @Test
     public void testAddCredentialsFailsForWrongContentType(final TestContext context)  {
 
-        addCredentials(
+        registry.addCredentials(
+                TENANT,
                 hashedPasswordCredentials,
                 "application/x-www-form-urlencoded",
                 HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
@@ -165,7 +162,7 @@ public class CredentialsHttpIT {
     @Test
     public void testAddCredentialsFailsForEmptyBody(final TestContext context) {
 
-        addCredentials(null, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+        registry.addCredentials(TENANT, null, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -208,7 +205,8 @@ public class CredentialsHttpIT {
 
         hashedPasswordCredentials.remove(fieldMissing);
 
-        addCredentials(
+        registry.addCredentials(
+                TENANT,
                 hashedPasswordCredentials,
                 HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
@@ -224,9 +222,9 @@ public class CredentialsHttpIT {
         final JsonObject altered = hashedPasswordCredentials.copy();
         altered.put(CredentialsConstants.FIELD_DEVICE_ID, "other-device");
 
-        addCredentials(hashedPasswordCredentials)
-            .compose(ar -> updateCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, altered))
-            .compose(ur -> getCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
+        registry.addCredentials(TENANT, hashedPasswordCredentials)
+            .compose(ar -> registry.updateCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, altered))
+            .compose(ur -> registry.getCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
             .setHandler(context.asyncAssertSuccess(gr -> {
                 context.assertEquals("other-device", gr.toJsonObject().getString(CredentialsConstants.FIELD_DEVICE_ID));
             }));
@@ -240,7 +238,12 @@ public class CredentialsHttpIT {
     @Test
     public void testUpdateCredentialsFailsForNonExistingCredentials(final TestContext context) {
 
-        updateCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, hashedPasswordCredentials, HttpURLConnection.HTTP_NOT_FOUND)
+        registry.updateCredentials(
+                TENANT,
+                authId,
+                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                hashedPasswordCredentials,
+                HttpURLConnection.HTTP_NOT_FOUND)
             .setHandler(context.asyncAssertSuccess());
     }
 
@@ -254,8 +257,13 @@ public class CredentialsHttpIT {
 
         final JsonObject altered = hashedPasswordCredentials.copy().put(CredentialsConstants.FIELD_TYPE, "non-matching-type");
 
-        addCredentials(hashedPasswordCredentials).compose(ar -> {
-            return updateCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, altered, HttpURLConnection.HTTP_BAD_REQUEST);
+        registry.addCredentials(TENANT, hashedPasswordCredentials).compose(ar -> {
+            return registry.updateCredentials(
+                    TENANT,
+                    authId,
+                    CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    altered,
+                    HttpURLConnection.HTTP_BAD_REQUEST);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -270,8 +278,13 @@ public class CredentialsHttpIT {
 
         final JsonObject altered = hashedPasswordCredentials.copy().put(CredentialsConstants.FIELD_AUTH_ID, "non-matching-auth-id");
 
-        addCredentials(hashedPasswordCredentials).compose(ar -> {
-            return updateCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, altered, HttpURLConnection.HTTP_BAD_REQUEST);
+        registry.addCredentials(TENANT, hashedPasswordCredentials).compose(ar -> {
+            return registry.updateCredentials(
+                    TENANT,
+                    authId,
+                    CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    altered,
+                    HttpURLConnection.HTTP_BAD_REQUEST);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -283,8 +296,8 @@ public class CredentialsHttpIT {
     @Test
     public void testRemoveCredentialsForDeviceSucceeds(final TestContext context) {
 
-        addCredentials(hashedPasswordCredentials).compose(ar -> {
-            return removeCredentials(deviceId, HttpURLConnection.HTTP_NO_CONTENT);
+        registry.addCredentials(TENANT, hashedPasswordCredentials).compose(ar -> {
+            return registry.removeAllCredentials(TENANT, deviceId, HttpURLConnection.HTTP_NO_CONTENT);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -296,9 +309,9 @@ public class CredentialsHttpIT {
     @Test
     public void testRemoveCredentialsSucceeds(final TestContext context) {
 
-        addCredentials(hashedPasswordCredentials).compose(ar -> {
+        registry.addCredentials(TENANT, hashedPasswordCredentials).compose(ar -> {
             // now try to remove credentials again
-            return removeCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+            return registry.removeCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -310,9 +323,9 @@ public class CredentialsHttpIT {
     @Test
     public void testRemoveCredentialsFailsForWrongType(final TestContext context) {
 
-        addCredentials(hashedPasswordCredentials).compose(ar -> {
+        registry.addCredentials(TENANT, hashedPasswordCredentials).compose(ar -> {
             // now try to remove credentials again
-            return removeCredentials(authId, "wrong-type");
+            return registry.removeCredentials(TENANT, authId, "wrong-type");
         }).setHandler(context.asyncAssertFailure());
     }
 
@@ -325,7 +338,8 @@ public class CredentialsHttpIT {
     @Test
     public void testRemoveCredentialsForDeviceFailsForNonExistingCredentials(final TestContext context) {
 
-        removeCredentials("non-existing-device", HttpURLConnection.HTTP_NOT_FOUND).setHandler(context.asyncAssertSuccess());
+        registry.removeAllCredentials(TENANT, "non-existing-device", HttpURLConnection.HTTP_NOT_FOUND)
+            .setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -336,8 +350,8 @@ public class CredentialsHttpIT {
     @Test
     public void testGetAddedCredentials(final TestContext context)  {
 
-        addCredentials(hashedPasswordCredentials)
-            .compose(ar -> getCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
+        registry.addCredentials(TENANT, hashedPasswordCredentials)
+            .compose(ar -> registry.getCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
             .setHandler(context.asyncAssertSuccess(b -> {
                 context.assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(b.toJsonObject(), hashedPasswordCredentials));
             }));
@@ -357,10 +371,10 @@ public class CredentialsHttpIT {
         credentialsListToAdd.add(pskCredentials);
 
         addMultipleCredentials(credentialsListToAdd)
-            .compose(ar -> getCredentials(authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
+            .compose(ar -> registry.getCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
             .compose(hashedPwdSecret -> {
                 context.assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(hashedPwdSecret.toJsonObject(), hashedPasswordCredentials));
-                return getCredentials(authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
+                return registry.getCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
             }).setHandler(context.asyncAssertSuccess(pskSecret -> {
                 context.assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(pskSecret.toJsonObject(), pskCredentials));
             }));
@@ -383,7 +397,7 @@ public class CredentialsHttpIT {
         credentialsListToAdd.add(newPskCredentials(deviceId, "other-auth"));
 
         addMultipleCredentials(credentialsListToAdd)
-            .compose(ar -> getCredentials(deviceId))
+            .compose(ar -> registry.getCredentials(TENANT, deviceId))
             .setHandler(context.asyncAssertSuccess(b -> {
                 assertResponseBodyContainsAllCredentials(context, b.toJsonObject(), credentialsListToAdd);
             }));
@@ -403,13 +417,13 @@ public class CredentialsHttpIT {
 
         final String pskAuthId = getRandomAuthId(TEST_AUTH_ID);
         final List<JsonObject> credentialsToAdd = new ArrayList<>();
-        for(int i = 0; i < 5; i++) {
+        for (int i = 0; i < 5; i++) {
             final JsonObject requestBody = newPskCredentials(deviceId, pskAuthId);
             requestBody.put(CredentialsConstants.FIELD_TYPE, "type" + i);
             credentialsToAdd.add(requestBody);
         }
         addMultipleCredentials(credentialsToAdd)
-            .compose(ar -> getCredentials(deviceId))
+            .compose(ar -> registry.getCredentials(TENANT, deviceId))
             .setHandler(context.asyncAssertSuccess(b -> {
                 assertResponseBodyContainsAllCredentials(context, b.toJsonObject(), credentialsToAdd);
             }));
@@ -423,8 +437,8 @@ public class CredentialsHttpIT {
     @Test
     public void testGetAddedCredentialsButWithWrongType(final TestContext context)  {
 
-        addCredentials(hashedPasswordCredentials)
-            .compose(ar -> getCredentials(authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND))
+        registry.addCredentials(TENANT, hashedPasswordCredentials)
+            .compose(ar -> registry.getCredentials(TENANT, authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND))
             .setHandler(context.asyncAssertSuccess());
     }
 
@@ -436,8 +450,12 @@ public class CredentialsHttpIT {
     @Test
     public void testGetAddedCredentialsButWithWrongAuthId(final TestContext context)  {
 
-        addCredentials(hashedPasswordCredentials)
-            .compose(ar -> getCredentials("wrong-auth-id", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, HttpURLConnection.HTTP_NOT_FOUND))
+        registry.addCredentials(TENANT, hashedPasswordCredentials)
+            .compose(ar -> registry.getCredentials(
+                    TENANT,
+                    "wrong-auth-id",
+                    CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    HttpURLConnection.HTTP_NOT_FOUND))
             .setHandler(context.asyncAssertSuccess());
     }
 
@@ -447,7 +465,7 @@ public class CredentialsHttpIT {
         @SuppressWarnings("rawtypes")
         final List<Future> addTrackers = new ArrayList<>();
         for (JsonObject creds : credentialsList) {
-            addTrackers.add(addCredentials(creds));
+            addTrackers.add(registry.addCredentials(TENANT, creds));
         }
 
         CompositeFuture.all(addTrackers).setHandler(r -> {
@@ -477,57 +495,6 @@ public class CredentialsHttpIT {
 
     private static String getRandomAuthId(final String authIdPrefix) {
         return authIdPrefix + "." + UUID.randomUUID();
-    }
-
-    private static Future<Void> addCredentials(final JsonObject requestPayload) {
-        return addCredentials(requestPayload, HttpURLConnection.HTTP_CREATED);
-    }
-
-    private static Future<Void> addCredentials(final JsonObject requestPayload, final int expectedStatusCode) {
-        return addCredentials(requestPayload, "application/json", expectedStatusCode);
-    }
-
-    private static Future<Void> addCredentials(final JsonObject requestPayload, final String contentType, final int expectedStatusCode) {
-
-        return httpClient.create(URI_ADD_CREDENTIALS, requestPayload, contentType, response -> response.statusCode() == expectedStatusCode);
-    }
-
-    private static final Future<Buffer> getCredentials(final String deviceId) {
-
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_BY_DEVICE, deviceId);
-        return httpClient.get(uri, status -> true);
-    }
-
-    private static final Future<Buffer> getCredentials(final String authId, final String type) {
-        return getCredentials(authId, type, HttpURLConnection.HTTP_OK);
-    }
-
-    private static final Future<Buffer> getCredentials(final String authId, final String type, final int expectedStatusCode) {
-
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_INSTANCE, authId, type);
-        return httpClient.get(uri, status -> status == expectedStatusCode);
-    }
-
-    private static final Future<Void> updateCredentials(final String authId, final String type, final JsonObject requestPayload) {
-        return updateCredentials(authId, type, requestPayload, HttpURLConnection.HTTP_NO_CONTENT);
-    }
-
-    private static final Future<Void> updateCredentials(final String authId, final String type, final JsonObject requestPayload, final int expectedResult) {
-
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_INSTANCE, authId, type);
-        return httpClient.update(uri, requestPayload, status -> status == expectedResult);
-    }
-
-    private static final Future<Void> removeCredentials(final String authId, final String type) {
-
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_INSTANCE, authId, type);
-        return httpClient.delete(uri, status -> status == HttpURLConnection.HTTP_NO_CONTENT);
-    }
-
-    private static final Future<Void> removeCredentials(final String deviceId, final int expectedResponseStatus) {
-
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_BY_DEVICE, deviceId);
-        return httpClient.delete(uri, status -> status == expectedResponseStatus);
     }
 
     private static JsonObject newHashedPasswordCredentials(final String deviceId, final String authId) {

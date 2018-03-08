@@ -154,7 +154,7 @@ public class AbstractApplication implements ApplicationRunner {
             Thread.currentThread().interrupt();
             shutdown();
         } catch (ExecutionException e) {
-            log.error("failed during startup, shutting down ...");
+            log.error("exception occurred during startup, shutting down ...", e);
             shutdown();
         }
     }

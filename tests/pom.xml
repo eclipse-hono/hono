@@ -425,6 +425,61 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </wait>
                   </run>
                 </image>
+                <!-- ##### HTTP adapter ##### -->
+                <image>
+                  <name>${docker.image.org-name}/hono-adapter-http-test</name>
+                  <alias>http-adapter</alias>
+                  <build>
+                    <from>${docker.image.org-name}/hono-adapter-http-vertx:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/hono</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/src/test/resources/http</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/config/hono-demo-certs-jar</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>http-adapter-*.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <ports>
+                      <port>+http.ip:http.port:8080</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>hono-adapter-http-vertx.hono</alias>
+                    </network>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
+                      <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
+                    </env>
+                    <log>
+                      <prefix>HTTP</prefix>
+                    </log>
+                    <wait>
+                      <log>^.*(Started \w*Application in).*$</log>
+                      <time>40000</time>
+                    </wait>
+                  </run>
+                </image>
               </images>
             </configuration>
             <executions>
@@ -472,11 +527,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <hono.password>secret</hono.password>
                 <downstream.host>${qpid.ip}</downstream.host>
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
-                <downstream.username>user1@HONO</downstream.username>
-                <downstream.password>pw</downstream.password>
+                <downstream.username>consumer@HONO</downstream.username>
+                <downstream.password>verysecret</downstream.password>
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
+                <http.host>${http.ip}</http.host>
+                <http.port>${http.port}</http.port>
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
               <test>*IT</test>

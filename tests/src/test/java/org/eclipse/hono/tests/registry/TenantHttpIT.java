@@ -16,7 +16,7 @@ package org.eclipse.hono.tests.registry;
 import java.net.HttpURLConnection;
 import java.util.UUID;
 
-import org.eclipse.hono.tests.CrudHttpClient;
+import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
@@ -32,7 +32,6 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -46,12 +45,10 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class TenantHttpIT {
 
-    private static final String TENANT = "testTenant";
-    private static final String URI_ADD_TENANTS= "/" + TenantConstants.TENANT_ENDPOINT;
-    private static final String TEMPLATE_URI_TENANTS_INSTANCE = String.format("/%s/%%s", TenantConstants.TENANT_ENDPOINT);
+    private static final String TENANT_PREFIX = "testTenant";
     private static final Vertx vertx = Vertx.vertx();
 
-    private static CrudHttpClient httpClient;
+    private static DeviceRegistryHttpClient registry;
 
     private String tenantId;
 
@@ -70,7 +67,7 @@ public class TenantHttpIT {
     @BeforeClass
     public static void setUpClient(final TestContext ctx) {
 
-        httpClient = new CrudHttpClient(
+        registry = new DeviceRegistryHttpClient(
                 vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
@@ -81,7 +78,7 @@ public class TenantHttpIT {
      */
     @Before
     public void setUp() {
-        tenantId = TENANT + "." + UUID.randomUUID();
+        tenantId = TENANT_PREFIX + "." + UUID.randomUUID();
     }
 
     /**
@@ -92,12 +89,12 @@ public class TenantHttpIT {
     @After
     public void removeTenant(final TestContext ctx) {
         final Async deletion = ctx.async();
-        removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT).setHandler(attempt -> deletion.complete());
+        registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT).setHandler(attempt -> deletion.complete());
         deletion.await();
     }
 
     /**
-     * Shuts down the server.
+     * Shuts down the client.
      * 
      * @param context The vert.x test context.
      */
@@ -116,7 +113,7 @@ public class TenantHttpIT {
     public void testAddTenantSucceeds(final TestContext context)  {
 
         final JsonObject requestBodyAddTenant = buildTenantPayload(tenantId);
-        addTenant(requestBodyAddTenant).setHandler(context.asyncAssertSuccess());
+        registry.addTenant(requestBodyAddTenant).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -130,9 +127,9 @@ public class TenantHttpIT {
 
         final JsonObject payload = buildTenantPayload(tenantId);
 
-        addTenant(payload).compose(ar -> {
+        registry.addTenant(payload).compose(ar -> {
             // now try to add the tenant again
-            return addTenant(payload, HttpURLConnection.HTTP_CONFLICT);
+            return registry.addTenant(payload, HttpURLConnection.HTTP_CONFLICT);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -145,7 +142,7 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantFailsForWrongContentType(final TestContext context)  {
 
-        addTenant(
+        registry.addTenant(
                 buildTenantPayload(tenantId),
                 "application/x-www-form-urlencoded",
                 HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
@@ -159,7 +156,7 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantFailsForEmptyBody(final TestContext context) {
 
-        addTenant(null, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+        registry.addTenant(null, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -174,9 +171,9 @@ public class TenantHttpIT {
         final JsonObject altered = orig.copy();
         altered.put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
 
-        addTenant(orig)
-            .compose(ar -> updateTenant(tenantId, altered, HttpURLConnection.HTTP_NO_CONTENT))
-            .compose(ur -> getTenant(tenantId))
+        registry.addTenant(orig)
+            .compose(ar -> registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NO_CONTENT))
+            .compose(ur -> registry.getTenant(tenantId))
             .compose(b -> {
                 // compare the changed field only
                 context.assertFalse(b.toJsonObject().getBoolean(TenantConstants.FIELD_ENABLED, Boolean.TRUE));
@@ -194,7 +191,7 @@ public class TenantHttpIT {
 
         final JsonObject altered = buildTenantPayload(tenantId);
 
-        updateTenant(tenantId, altered, HttpURLConnection.HTTP_NOT_FOUND)
+        registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NOT_FOUND)
             .setHandler(context.asyncAssertSuccess());
     }
 
@@ -208,8 +205,8 @@ public class TenantHttpIT {
     public void testRemoveTenantSucceeds(final TestContext context) {
 
         final JsonObject tenantPayload = buildTenantPayload(tenantId);
-        addTenant(tenantPayload)
-            .compose(ar -> removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
+        registry.addTenant(tenantPayload)
+            .compose(ar -> registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
             .setHandler(context.asyncAssertSuccess());
     }
 
@@ -222,7 +219,7 @@ public class TenantHttpIT {
     @Test
     public void testRemoveTenantFailsForNonExistingTenant(final TestContext context) {
 
-        removeTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND).setHandler(context.asyncAssertSuccess());
+        registry.removeTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -235,47 +232,12 @@ public class TenantHttpIT {
 
         final JsonObject requestBody = buildTenantPayload(tenantId);
 
-        addTenant(requestBody)
-            .compose(ar -> getTenant(tenantId))
+        registry.addTenant(requestBody)
+            .compose(ar -> registry.getTenant(tenantId))
             .compose(b -> {
                 context.assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(b.toJsonObject(), requestBody));
                 return Future.succeededFuture();
             }).setHandler(context.asyncAssertSuccess());
-    }
-
-    private static Future<Void> addTenant(final JsonObject requestPayload) {
-        return addTenant(requestPayload, HttpURLConnection.HTTP_CREATED);
-    }
-
-    private static Future<Void> addTenant(final JsonObject requestPayload, final int expectedStatusCode) {
-        return addTenant(requestPayload, "application/json", expectedStatusCode);
-    }
-
-    private static Future<Void> addTenant(final JsonObject requestPayload, final String contentType, final int expectedStatusCode) {
-
-        return httpClient.create(URI_ADD_TENANTS, requestPayload, contentType, response -> response.statusCode() == expectedStatusCode);
-    }
-
-    private static final Future<Buffer> getTenant(final String tenantId) {
-        return getTenant(tenantId, HttpURLConnection.HTTP_OK);
-    }
-
-    private static final Future<Buffer> getTenant(final String tenantId, final int expectedStatusCode) {
-
-        final String uri = String.format(TEMPLATE_URI_TENANTS_INSTANCE, tenantId);
-        return httpClient.get(uri, status -> status == expectedStatusCode);
-    }
-
-    private static final Future<Void> updateTenant(final String tenantId, final JsonObject requestPayload, final int expectedResult) {
-
-        final String uri = String.format(TEMPLATE_URI_TENANTS_INSTANCE, tenantId);
-        return httpClient.update(uri, requestPayload, status -> status == expectedResult);
-    }
-
-    private static final Future<Void> removeTenant(final String tenantId, final int expectedResponseStatus) {
-
-        final String uri = String.format(TEMPLATE_URI_TENANTS_INSTANCE, tenantId);
-        return httpClient.delete(uri, status -> status == expectedResponseStatus);
     }
 
     /**

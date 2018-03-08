@@ -14,6 +14,7 @@
 package org.eclipse.hono.tests;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -30,7 +31,7 @@ import io.vertx.core.json.JsonObject;
  * A vert.x based HTTP client for invoking generic CRUD operations on HTTP APIs.
  *
  */
-public class CrudHttpClient {
+public final class CrudHttpClient {
 
     private static final String CONTENT_TYPE_JSON = "application/json";
 
@@ -77,6 +78,20 @@ public class CrudHttpClient {
      */
     public Future<Void> create(final String uri, final JsonObject body, final String contentType, final Predicate<HttpClientResponse> successPredicate) {
 
+        return create(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate);
+    }
+
+    /**
+     * Creates a resource using HTTP POST.
+     * 
+     * @param uri The URI to post to.
+     * @param body The body to post (may be {@code null}).
+     * @param contentType The content type to set in the request (may be {@code null}).
+     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @return A future that will succeed if the predicate evaluates to {@code true}.
+     */
+    public Future<Void> create(final String uri, final Buffer body, final String contentType, final Predicate<HttpClientResponse> successPredicate) {
+
         Objects.requireNonNull(uri);
         Objects.requireNonNull(successPredicate);
 
@@ -98,7 +113,7 @@ public class CrudHttpClient {
         if (body == null) {
             req.end();
         } else {
-            req.end(body.encode());
+            req.end(body);
         }
         return result;
     }
@@ -127,6 +142,19 @@ public class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      */
     public Future<Void> update(final String uri, final JsonObject body, final String contentType, final Predicate<Integer> successPredicate) {
+        return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate);
+    }
+
+    /**
+     * Updates a resource using HTTP PUT.
+     * 
+     * @param uri The resource to update.
+     * @param body The content to update the resource with.
+     * @param contentType The content type to set in the request.
+     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @return A future that will succeed if the predicate evaluates to {@code true}.
+     */
+    public Future<Void> update(final String uri, final Buffer body, final String contentType, final Predicate<Integer> successPredicate) {
 
         final Future<Void> result = Future.future();
 
@@ -146,7 +174,7 @@ public class CrudHttpClient {
         if (body == null) {
             req.end();
         } else {
-            req.end(body.encode());
+            req.end(body);
         }
         return result;
     }

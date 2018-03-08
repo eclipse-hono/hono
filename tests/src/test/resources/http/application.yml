@@ -1,0 +1,44 @@
+hono:
+  app:
+    maxInstances: 1
+    startupTimeout: 65
+  http:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    keyPath: /etc/hono/certs/http-adapter-key.pem
+    certPath: /etc/hono/certs/http-adapter-cert.pem
+    authenticationRequired: false
+  messaging:
+    name: 'Hono REST Adapter'
+    host: hono-service-messaging.hono
+    port: 5672
+    username: http-adapter@HONO
+    password: http-secret
+  registration:
+    name: 'Hono REST Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: http-adapter@HONO
+    password: http-secret
+  credentials:
+    name: 'Hono REST Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: http-adapter@HONO
+    password: http-secret
+  tenant:
+    name: 'Hono REST Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: http-adapter@HONO
+    password: http-secret
+  metric:
+    reporter:
+      graphite:
+        active: false
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: false

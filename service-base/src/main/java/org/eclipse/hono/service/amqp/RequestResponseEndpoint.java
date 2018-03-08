@@ -196,10 +196,9 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         if (passesFormalVerification(targetAddress, message)) {
 
             final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
-            final String tenantId = MessageHelper.getTenantId(message);
 
             isAuthorized(clientPrincipal, targetAddress, message).compose(authorized -> {
-                logger.error("client [{}] is {} authorized to {}:{}", clientPrincipal.getName(), authorized ? "" : "not ",
+                logger.debug("client [{}] is {}authorized to {}:{}", clientPrincipal.getName(), authorized ? "" : "not ",
                         targetAddress, message.getSubject());
                 if (authorized) {
                     try {

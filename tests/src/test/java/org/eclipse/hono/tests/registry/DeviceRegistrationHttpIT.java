@@ -15,7 +15,7 @@ import java.net.HttpURLConnection;
 import java.util.UUID;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.tests.CrudHttpClient;
+import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -30,7 +30,6 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -43,10 +42,10 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class DeviceRegistrationHttpIT {
 
-    private static final String REGISTRATION_URI = String.format("/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, Constants.DEFAULT_TENANT);
+    private static final String TENANT = Constants.DEFAULT_TENANT;
 
     private static Vertx vertx = Vertx.vertx();
-    private static CrudHttpClient httpClient;
+    private static DeviceRegistryHttpClient registry;
 
     private String deviceId;
 
@@ -65,7 +64,7 @@ public class DeviceRegistrationHttpIT {
     @BeforeClass
     public static void setUpClient(final TestContext ctx) {
 
-        httpClient = new CrudHttpClient(
+        registry = new DeviceRegistryHttpClient(
                 vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
@@ -87,12 +86,12 @@ public class DeviceRegistrationHttpIT {
     @After
     public void removeDevice(final TestContext ctx) {
         final Async deletion = ctx.async();
-        deregisterDevice(deviceId).setHandler(attempt -> deletion.complete());
+        registry.deregisterDevice(TENANT, deviceId).setHandler(attempt -> deletion.complete());
         deletion.await();
     }
 
     /**
-     * Shuts down the server.
+     * Shuts down the client.
      * 
      * @param ctx The vert.x test context.
      */
@@ -112,7 +111,7 @@ public class DeviceRegistrationHttpIT {
         final JsonObject requestBody = new JsonObject()
                 .put("test", "test");
 
-        registerDevice(deviceId, requestBody).setHandler(ctx.asyncAssertSuccess());
+        registry.registerDevice(TENANT, deviceId, requestBody).setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
@@ -124,7 +123,7 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testAddDeviceFailsWithoutDeviceId(final TestContext ctx) {
 
-        registerDevice(null, new JsonObject().put("test", "test"), HttpURLConnection.HTTP_BAD_REQUEST)
+        registry.registerDevice(TENANT, null, new JsonObject().put("test", "test"), HttpURLConnection.HTTP_BAD_REQUEST)
             .setHandler(ctx.asyncAssertSuccess());
     }
 
@@ -138,9 +137,9 @@ public class DeviceRegistrationHttpIT {
 
         final JsonObject data = new JsonObject();
         // add the device
-        registerDevice(deviceId, data).setHandler(ctx.asyncAssertSuccess(s -> {
+        registry.registerDevice(TENANT, deviceId, data).setHandler(ctx.asyncAssertSuccess(s -> {
             // now try to add the device again
-            registerDevice(deviceId, data, HttpURLConnection.HTTP_CONFLICT).setHandler(ctx.asyncAssertSuccess());
+            registry.registerDevice(TENANT, deviceId, data, HttpURLConnection.HTTP_CONFLICT).setHandler(ctx.asyncAssertSuccess());
         }));
     }
 
@@ -153,7 +152,8 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testAddDeviceFailsForMissingContentType(final TestContext ctx) {
 
-        registerDevice(
+        registry.registerDevice(
+                TENANT,
                 deviceId,
                 new JsonObject().put("key", "value"),
                 null,
@@ -169,7 +169,7 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testAddDeviceFailsForMissingBody(final TestContext ctx) {
 
-        registerDevice(deviceId, null, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(ctx.asyncAssertSuccess());
+        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
@@ -187,8 +187,8 @@ public class DeviceRegistrationHttpIT {
                 .put("testBoolean", Boolean.FALSE)
                 .put(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
 
-        registerDevice(deviceId, data)
-            .compose(ok -> getRegistrationInfo(deviceId))
+        registry.registerDevice(TENANT, deviceId, data)
+            .compose(ok -> registry.getRegistrationInfo(TENANT, deviceId))
             .compose(info -> {
                 assertRegistrationInformation(ctx, info.toJsonObject(), deviceId, data);
                 return Future.succeededFuture();
@@ -204,7 +204,7 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testGetDeviceFailsForNonExistingDevice(final TestContext ctx) {
 
-        getRegistrationInfo("non-existing-device").setHandler(ctx.asyncAssertFailure(t -> {
+        registry.getRegistrationInfo(TENANT, "non-existing-device").setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
@@ -226,9 +226,9 @@ public class DeviceRegistrationHttpIT {
                 .put("newKey1", "newValue1")
                 .put(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
 
-        registerDevice(deviceId, originalData)
-            .compose(ok -> updateDevice(deviceId, updatedData))
-            .compose(ok -> getRegistrationInfo(deviceId))
+        registry.registerDevice(TENANT, deviceId, originalData)
+            .compose(ok -> registry.updateDevice(TENANT, deviceId, updatedData))
+            .compose(ok -> registry.getRegistrationInfo(TENANT, deviceId))
             .compose(info -> {
                 assertRegistrationInformation(ctx, info.toJsonObject(), deviceId, updatedData);
                 return Future.succeededFuture();
@@ -243,7 +243,7 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testUpdateDeviceFailsForNonExistingDevice(final TestContext ctx) {
 
-        updateDevice("non-existing-device", new JsonObject().put("test", "test")).setHandler(ctx.asyncAssertFailure(t -> {
+        registry.updateDevice(TENANT, "non-existing-device", new JsonObject().put("test", "test")).setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
@@ -256,11 +256,11 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testUpdateDeviceFailsForMissingContentType(final TestContext context) {
 
-        registerDevice(deviceId, new JsonObject())
+        registry.registerDevice(TENANT, deviceId, new JsonObject())
             .compose(ok -> {
                 // now try to update the device with missing content type
                 final JsonObject requestBody = new JsonObject().put(RegistrationConstants.FIELD_DEVICE_ID, deviceId).put("newKey1", "newValue1");
-                return updateDevice(deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
+                return registry.updateDevice(TENANT, deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
             }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -273,10 +273,10 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testDeregisterDeviceSucceeds(final TestContext ctx) {
 
-        registerDevice(deviceId, new JsonObject())
-            .compose(ok -> deregisterDevice(deviceId))
+        registry.registerDevice(TENANT, deviceId, new JsonObject())
+            .compose(ok -> registry.deregisterDevice(TENANT, deviceId))
             .compose(ok -> {
-                return getRegistrationInfo(deviceId)
+                return registry.getRegistrationInfo(TENANT, deviceId)
                         .compose(info -> Future.failedFuture("get registration info should have failed"))
                         .recover(t -> {
                             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
@@ -293,53 +293,9 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testDeregisterDeviceFailsForNonExisingDevice(final TestContext ctx) {
 
-        deregisterDevice("non-existing-device").setHandler(ctx.asyncAssertFailure(t -> {
+        registry.deregisterDevice(TENANT, "non-existing-device").setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));
-    }
-
-    private Future<Void> registerDevice(final String deviceId, final JsonObject data) {
-        return registerDevice(deviceId, data, HttpURLConnection.HTTP_CREATED);
-    }
-
-    private Future<Void> registerDevice(final String deviceId, final JsonObject data, int expectedStatus) {
-        return registerDevice(deviceId, data, "application/json", expectedStatus);
-    }
-
-    private Future<Void> registerDevice(final String deviceId, final JsonObject data, final String contentType, int expectedStatus) {
-
-        JsonObject requestJson = null;
-        if (data != null) {
-            requestJson = data.copy();
-            if (deviceId != null) {
-                requestJson.put(RegistrationConstants.FIELD_DEVICE_ID, deviceId);
-            }
-        }
-        return httpClient.create(REGISTRATION_URI, requestJson, contentType, response -> response.statusCode() == expectedStatus);
-    }
-
-    private Future<Void> updateDevice(final String deviceId, final JsonObject data) {
-        return updateDevice(deviceId, data, "application/json", HttpURLConnection.HTTP_NO_CONTENT);
-    }
-
-    private Future<Void> updateDevice(final String deviceId, final JsonObject data, final String contentType, final int expectedStatus) {
-
-        final String requestUri = String.format("/%s/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, Constants.DEFAULT_TENANT, deviceId);
-        final JsonObject requestJson = data.copy();
-        requestJson.put(RegistrationConstants.FIELD_DEVICE_ID, deviceId);
-        return httpClient.update(requestUri, requestJson, contentType, status -> status == expectedStatus);
-    }
-
-    private Future<Buffer> getRegistrationInfo(final String deviceId) {
-
-        final String requestUri = String.format("/%s/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, Constants.DEFAULT_TENANT, deviceId);
-        return httpClient.get(requestUri, status -> status == HttpURLConnection.HTTP_OK);
-    }
-
-    private Future<Void> deregisterDevice(final String deviceId) {
-
-        final String requestUri = String.format("/%s/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, Constants.DEFAULT_TENANT, deviceId);
-        return httpClient.delete(requestUri, status -> status == HttpURLConnection.HTTP_NO_CONTENT);
     }
 
     private static void assertRegistrationInformation(
@@ -354,6 +310,4 @@ public class DeviceRegistrationHttpIT {
             ctx.assertEquals(expectedData.getValue(entry.getKey()), entry.getValue());
         });
     }
-
-
 }

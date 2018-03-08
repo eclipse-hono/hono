@@ -1,80 +1,184 @@
 {
   "roles": {
-      "DEFAULT_TENANT-manager": [
-        {
-          "resource": "registration/DEFAULT_TENANT",
-          "activities": [ "READ", "WRITE" ]
-        },
-        {
-          "operation": "registration/DEFAULT_TENANT:*",
-          "activities": [ "EXECUTE" ]
-        },
-        {
-          "resource": "credentials/DEFAULT_TENANT",
-          "activities": [ "READ", "WRITE" ]
-        },
-        {
-          "operation": "credentials/DEFAULT_TENANT:*",
-          "activities": [ "EXECUTE" ]
-        },
-        {
-          "resource": "telemetry/DEFAULT_TENANT",
-          "activities": [ "WRITE" ]
-        },
-        {
-          "resource": "event/DEFAULT_TENANT",
-          "activities": [ "WRITE" ]
-        },
-        {
-          "resource": "tenant/*",
-          "activities": [ "READ", "WRITE" ]
-        },
-        {
-          "operation": "tenant/DEFAULT_TENANT:*",
-          "activities": [ "EXECUTE" ]
-        },
-        {
-          "operation": "tenant/NOT_CREATED_TENANT:*",
-          "activities": [ "EXECUTE" ]
-        }
-      ],
-      "connector": [
-        {
-          "resource": "telemetry/DEFAULT_TENANT/fluxcapacitor",
-          "activities": [ "WRITE" ]
-        }
-      ],
-      "provisioner": [
-        {
-          "resource": "registration/DEFAULT_TENANT",
-          "activities": [ "READ" ]
-        },
-        {
-          "resource": "registration/DEFAULT_TENANT/fluxcapacitor",
-          "activities": [ "WRITE" ]
-        }
-      ]
+    "protocol-adapter": [
+      {
+        "resource": "telemetry/*",
+        "activities": [
+          "WRITE"
+        ]
+      },
+      {
+        "resource": "event/*",
+        "activities": [
+          "WRITE"
+        ]
+      },
+      {
+        "resource": "registration/*",
+        "activities": [
+          "READ",
+          "WRITE"
+        ]
+      },
+      {
+        "operation": "registration/*:assert",
+        "activities": [
+          "EXECUTE"
+        ]
+      },
+      {
+        "resource": "credentials/*",
+        "activities": [
+          "READ",
+          "WRITE"
+        ]
+      },
+      {
+        "operation": "credentials/*:get",
+        "activities": [
+          "EXECUTE"
+        ]
+      },
+      {
+        "resource": "tenant/*",
+        "activities": [
+          "READ",
+          "WRITE"
+        ]
+      },
+      {
+        "operation": "tenant/*:*",
+        "activities": [
+          "EXECUTE"
+        ]
+      }
+    ],
+    "DEFAULT_TENANT-manager": [
+      {
+        "resource": "registration/DEFAULT_TENANT",
+        "activities": [
+          "READ",
+          "WRITE"
+        ]
+      },
+      {
+        "operation": "registration/DEFAULT_TENANT:*",
+        "activities": [
+          "EXECUTE"
+        ]
+      },
+      {
+        "resource": "credentials/DEFAULT_TENANT",
+        "activities": [
+          "READ",
+          "WRITE"
+        ]
+      },
+      {
+        "operation": "credentials/DEFAULT_TENANT:*",
+        "activities": [
+          "EXECUTE"
+        ]
+      },
+      {
+        "resource": "telemetry/DEFAULT_TENANT",
+        "activities": [
+          "WRITE"
+        ]
+      },
+      {
+        "resource": "event/DEFAULT_TENANT",
+        "activities": [
+          "WRITE"
+        ]
+      },
+      {
+        "resource": "tenant/*",
+        "activities": [
+          "READ",
+          "WRITE"
+        ]
+      },
+      {
+        "operation": "tenant/DEFAULT_TENANT:*",
+        "activities": [
+          "EXECUTE"
+        ]
+      },
+      {
+        "operation": "tenant/NOT_CREATED_TENANT:*",
+        "activities": [
+          "EXECUTE"
+        ]
+      }
+    ],
+    "connector": [
+      {
+        "resource": "telemetry/DEFAULT_TENANT/fluxcapacitor",
+        "activities": [
+          "WRITE"
+        ]
+      }
+    ],
+    "provisioner": [
+      {
+        "resource": "registration/DEFAULT_TENANT",
+        "activities": [
+          "READ"
+        ]
+      },
+      {
+        "resource": "registration/DEFAULT_TENANT/fluxcapacitor",
+        "activities": [
+          "WRITE"
+        ]
+      }
+    ]
   },
   "users": {
+    "http-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "http-secret",
+      "authorities": [
+        "hono-component",
+        "protocol-adapter"
+      ]
+    },
+    "mqtt-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "mqtt-secret",
+      "authorities": [
+        "hono-component",
+        "protocol-adapter"
+      ]
+    },
     "hono-client": {
       "mechanism": "PLAIN",
       "password": "secret",
-      "authorities": [ "DEFAULT_TENANT-manager" ]
+      "authorities": [
+        "DEFAULT_TENANT-manager"
+      ]
     },
     "honodr-client": {
       "mechanism": "PLAIN",
       "password": "secret",
-      "authorities": [ "DEFAULT_TENANT-manager" ]
+      "authorities": [
+        "DEFAULT_TENANT-manager"
+      ]
     },
     "connector-client": {
       "mechanism": "PLAIN",
       "password": "connector-secret",
-      "authorities": [ "connector" ]
+      "authorities": [
+        "connector"
+      ]
     },
     "provisioner-client": {
       "mechanism": "PLAIN",
       "password": "secret",
-      "authorities": [ "provisioner" ]
+      "authorities": [
+        "provisioner"
+      ]
     }
   }
 }
