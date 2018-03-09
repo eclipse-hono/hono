@@ -19,6 +19,7 @@ import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -35,11 +36,11 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
     /**
      * {@inheritDoc}
      * 
-     * @return <em>hono-mqtt</em>
+     * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_MQTT}
      */
     @Override
     protected String getTypeName() {
-        return "hono-mqtt";
+        return Constants.PROTOCOL_ADAPTER_TYPE_MQTT;
     }
 
     /**
@@ -50,11 +51,11 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
 
         return mapTopic(ctx.message())
         .compose(address -> checkAddress(ctx, address))
+        .compose(address -> uploadMessage(ctx, address, ctx.message().payload()))
         .recover(t -> {
             LOG.debug("discarding message [topic: {}] from device: {}", ctx.message().topicName(), t.getMessage());
             return Future.failedFuture(t);
-        })
-        .compose(address -> uploadMessage(ctx, address, ctx.message().payload()));
+        });
     }
 
     Future<ResourceIdentifier> mapTopic(final MqttPublishMessage message) {

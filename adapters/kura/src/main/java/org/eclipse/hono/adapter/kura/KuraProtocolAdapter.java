@@ -19,6 +19,7 @@ import java.util.Arrays;
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -35,11 +36,11 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
     /**
      * Gets this adapter's type name.
      * 
-     * @return <em>hono-kura-mqtt</em>
+     * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_KURA}
      */
     @Override
     protected String getTypeName() {
-        return "hono-kura-mqtt";
+        return Constants.PROTOCOL_ADAPTER_TYPE_KURA;
     }
 
     /**

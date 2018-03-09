@@ -20,6 +20,7 @@ import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,9 +37,14 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_HTTP}
+     */
     @Override
     protected String getTypeName() {
-        return "hono-http";
+        return Constants.PROTOCOL_ADAPTER_TYPE_HTTP;
     }
 
     @Override
