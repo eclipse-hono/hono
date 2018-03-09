@@ -353,6 +353,12 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
         return result;
     }
 
+    /**
+     * Sends a response to a registration request over the vert.x event bus.
+     * 
+     * @param request The message to respond to.
+     * @param result The registration result that should be conveyed in the response.
+     */
     protected final void reply(final Message<JsonObject> request, final AsyncResult<RegistrationResult> result) {
 
         if (result.succeeded()) {
@@ -363,7 +369,7 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     }
 
     /**
-     * Sends a response to a registration request over the Vertx event bus.
+     * Sends a response to a registration request over the vert.x event bus.
      * 
      * @param request The message to respond to.
      * @param result The registration result that should be conveyed in the response.
@@ -382,7 +388,7 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
         final JsonObject payload = request.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
         Boolean enabled = payload.getBoolean(RegistrationConstants.FIELD_ENABLED);
         if (enabled == null) {
-            log.debug("adding 'enabled' key to payload");
+            log.debug("adding 'enabled=true' property to request payload");
             payload.put(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
         }
         return payload;

@@ -430,6 +430,12 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         }
     }
 
+    /**
+     * Sends a response to a credentials request over the vert.x event bus.
+     * 
+     * @param request The message to respond to.
+     * @param result The credentials result that should be conveyed in the response.
+     */
     protected final void reply(final Message<JsonObject> request, final AsyncResult<CredentialsResult<JsonObject>> result) {
 
         if (result.succeeded()) {
@@ -440,7 +446,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     }
 
     /**
-     * Sends a response to a credentials request over the Vertx event bus.
+     * Sends a response to a credentials request over the vert.x event bus.
      * 
      * @param request The message to respond to.
      * @param result The credentials result that should be conveyed in the response.
@@ -470,7 +476,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
             if (JsonObject.class.isInstance(payloadObject)) {
                 payload = (JsonObject) payloadObject;
                 if (!payload.containsKey(CredentialsConstants.FIELD_ENABLED)) {
-                    log.debug("adding 'enabled' key to payload");
+                    log.debug("adding 'enabled=true' property to request payload");
                     payload.put(CredentialsConstants.FIELD_ENABLED, Boolean.TRUE);
                 }
             }
