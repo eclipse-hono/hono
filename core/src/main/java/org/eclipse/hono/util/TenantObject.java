@@ -34,7 +34,7 @@ public final class TenantObject {
     @JsonProperty(TenantConstants.FIELD_TENANT_ID)
     private String tenantId;
     @JsonProperty(TenantConstants.FIELD_ENABLED)
-    private Boolean enabled;
+    private boolean enabled = true;
     private Map<String, JsonObject> adapterConfigurations;
 
     public String getTenantId() {
@@ -45,11 +45,11 @@ public final class TenantObject {
         this.tenantId = tenantId;
     }
 
-    public Boolean isEnabled() {
+    public boolean isEnabled() {
         return enabled;
     }
 
-    public void setEnabled(final Boolean enabled) {
+    public void setEnabled(final boolean enabled) {
         this.enabled = enabled;
     }
 
