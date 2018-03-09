@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+  </root>
+
+  <springProfile name="dev">
+    <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client.impl.AbstractRequestResponseClient" level="DEBUG"/>
+    <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.auth.device" level="DEBUG"/>
+  </springProfile>
+
+  <springProfile name="prod">
+    <logger name="org.eclipse.hono" level="INFO"/>
+  </springProfile>
+
+  <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>
+
+  <logger name="io.vertx.proton.impl" level="INFO"/>
+  <logger name="io.vertx.core.net.impl" level="INFO"/>
+
+</configuration>

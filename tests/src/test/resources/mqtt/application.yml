@@ -1,0 +1,45 @@
+hono:
+  app:
+    maxInstances: 1
+    startupTimeout: 65
+  mqtt:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
+    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    authenticationRequired: true
+  messaging:
+    name: 'Hono MQTT Adapter'
+    host: hono-service-messaging.hono
+    port: 5672
+    username: mqtt-adapter@HONO
+    password: mqtt-secret
+  registration:
+    name: 'Hono MQTT Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: mqtt-adapter@HONO
+    password: mqtt-secret
+  credentials:
+    name: 'Hono MQTT Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: mqtt-adapter@HONO
+    password: mqtt-secret
+  tenant:
+    name: 'Hono MQTT Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: mqtt-adapter@HONO
+    password: mqtt-secret
+  metric:
+    reporter:
+      graphite:
+        active: false
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: false
+

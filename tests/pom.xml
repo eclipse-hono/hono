@@ -79,6 +79,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-mqtt</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -480,6 +485,61 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </wait>
                   </run>
                 </image>
+                <!-- ##### MQTT adapter ##### -->
+                <image>
+                  <name>${docker.image.org-name}/hono-adapter-mqtt-test</name>
+                  <alias>http-adapter</alias>
+                  <build>
+                    <from>${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/hono</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/src/test/resources/mqtt</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/config/hono-demo-certs-jar</directory>
+                            <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>mqtt-adapter-*.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <ports>
+                      <port>+mqtt.ip:mqtt.port:1883</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>hono-adapter-mqtt-vertx.hono</alias>
+                    </network>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
+                      <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
+                    </env>
+                    <log>
+                      <prefix>MQTT</prefix>
+                    </log>
+                    <wait>
+                      <log>^.*(Started \w*Application in).*$</log>
+                      <time>40000</time>
+                    </wait>
+                  </run>
+                </image>
               </images>
             </configuration>
             <executions>
@@ -534,6 +594,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
                 <http.host>${http.ip}</http.host>
                 <http.port>${http.port}</http.port>
+                <mqtt.host>${mqtt.ip}</mqtt.host>
+                <mqtt.port>${mqtt.port}</mqtt.port>
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
               <test>*IT</test>
