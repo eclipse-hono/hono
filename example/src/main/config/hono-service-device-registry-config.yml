@@ -34,6 +34,6 @@ hono:
       saveToFile: true
   tenants:
     svc:
-      tenantsFilename: /var/lib/hono/device-registry/tenants.json
+      filename: /var/lib/hono/device-registry/tenants.json
       saveToFile: true
 
