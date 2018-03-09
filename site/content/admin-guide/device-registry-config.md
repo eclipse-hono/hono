@@ -10,9 +10,9 @@ Protocol adapters use these APIs to assert a device's registration status, e.g. 
 
 <!--more-->
 
-There is no particular technical reason to implement these two API's in one component, so for production scenarios there might be two different components each implementing one of the API's.
+There is no particular technical reason to implement these three API's in one component, so for production scenarios there might be up to three different components each implementing one of the API's.
 
-The Device Registry component also exposes [HTTP based resources]({{< relref "user-guide/device-registry.md" >}}) for managing both registration information and credentials of devices.
+The Device Registry component also exposes [HTTP based resources]({{< relref "user-guide/device-registry.md" >}}) for managing tenants and the registration information and credentials of devices.
 
 The Device Registry is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry/) created from it.
 
@@ -47,7 +47,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_REGISTRY_SVC_FILENAME`<br>`--hono.registry.svc.filename` | no | `/var/lib/hono/device-registry/`<br>`device-identities.json` | The path to the file where the server stores identities of registered devices. Hono tries to read device identities from this file during start-up and writes out all identities to this file periodically if property `HONO_REGISTRY_SVC_SAVE_TO_FILE` is set to `true`.<br>Please refer to [Device Identities File Format]({{< relref "#device-identities-file-format" >}}) for details regarding the file's format. |
 | `HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT`<br>`--hono.registry.svc.maxDevicesPerTenant` | no | `100` | The number of devices that can be registered for each tenant. It is an error to set this property to a value <= 0. |
 | `HONO_REGISTRY_SVC_MODIFICATION_ENABLED`<br>`--hono.registry.svc.modificationEnabled` | no | `true` | When set to `false` the device information contained in the registry cannot be updated nor removed from the registry. |
-| `HONO_REGISTRY_SVC_SAVE_TO_FILE`<br>`--hono.registry.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered device information to the file specified by the `HONO_REGISTRY_FILENAME` property. |
+| `HONO_REGISTRY_SVC_SAVE_TO_FILE`<br>`--hono.registry.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered device information to the file specified by the `HONO_REGISTRY_SVC_FILENAME` property. |
 | `HONO_REGISTRY_SVC_SIGNING_KEY_PATH`<br>`--hono.registry.svc.signing.keyPath` | no  | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for signing tokens asserting a device's registration status. When using this variable, other services that need to validate the tokens issued by this service need to be configured with the corresponding certificate/public key. Alternatively, a symmetric key can be used for signing (and validating) by setting the `HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_REGISTRY_AMP_KEY_PATH` variable. If that variable is also not set, startup of the server fails. |
 | `HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET`<br>`--hono.registry.svc.signing.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for signing tokens asserting a device's registration status. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the signing key using this variable, other services that need to validate the tokens issued by this service need to be configured with the same key. Alternatively, an asymmetric key pair can be used for signing (and validating) by setting the `HONO_REGISTRY_SVC_SIGNING_KEY_PATH` variable. If none of these variables is set, startup of the server fails. |
 | `HONO_REGISTRY_SVC_SIGNING_TOKEN_EXPIRATION`<br>`--hono.registry.svc.signing.tokenExpiration` | no | `10` | The expiration period to use for the tokens asserting the registration status of devices. |
@@ -137,6 +137,11 @@ The *Getting started Guide* includes an example configuration which illustrates 
 The Device Registry supports persisting the devices' credentials to a JSON file in the local file system.
 The *Getting started Guide* includes an example configuration which illustrates the file format used. The configuration file's location is `/example/src/main/config/example-credentials.json`.
 
+## Tenants File Format
+
+The Device Registry supports persisting tenants to a JSON file in the local file system.
+The configuration file's location is `/example/src/main/config/example-tenants.json`.
+
 ## Configuring Gateway Devices
 
 The Device Registry supports devices to *act on behalf of* other devices. This is particularly useful for cases where a device does not connect directly to a Hono protocol adapter but is connected to a *gateway* component that is usually specific to the device's communication protocol. It is the gateway component which then connects to a Hono protocol adapter and publishes data on behalf of the device(s). Examples of such a set up include devices using [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/) for communication.
@@ -180,6 +185,7 @@ The Device Registry can be run as a Docker container from the command line. The 
 > -e 'HONO_REGISTRY_AMQP_CERT_PATH=/run/secrets/device-registry-cert.pem' \
 > -e 'HONO_REGISTRY_SVC_FILENAME=file:/run/secrets/device-identities.json' \
 > -e 'HONO_CREDENTIALS_SVC_FILENAME=file:/run/secrets/credentials.json' \
+> -e 'HONO_TENANTS_SVC_FILENAME=file:/run/secrets/credentials.json' \
 > -e 'HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=asharedsecretforvalidatingassertions' \
 > eclipse/hono-service-device-registry:latest
 ~~~

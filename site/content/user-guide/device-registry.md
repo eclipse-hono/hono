@@ -343,7 +343,8 @@ The response will look similar to this:
     HTTP/1.1 204 No Content
     Content-Length: 0
 
-## Managing Tenants (since Hono version 0.6)
+## Managing Tenants
+(since Hono 0.6)
 
 The following sections describe the resources representing the operations of the Tenant API and how they can be used to manage tenants.
 Please refer to the [Tenant API]({{< relref "api/Tenant-API.md" >}}) for the specific elements that are explained in detail there.

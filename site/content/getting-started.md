@@ -213,6 +213,13 @@ or (using HTTPie):
 $ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event alarm=fire
 ~~~
 
+## Adding another tenant
+
+In the above examples, we have always used the `DEFAULT_TENANT`, which is preconfigured in the example setup.
+
+You can add more tenants to Hono by using the HTTP Tenant endpoints of the device registry that are described [here]({{< relref "user-guide/device-registry.md#managing-tenants" >}}).
+Each tenant you create can have its own configuration, e.g. which protocol adapters are enabled.
+
 ## Stopping Hono
 
 The Hono instance's services can be stopped and removed using the following command:
