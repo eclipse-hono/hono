@@ -120,7 +120,6 @@ public class TenantClientImplTest {
 
         // GIVEN an adapter with an empty cache
         client.setResponseCache(cache);
-        client.setResponseCacheTimeoutSeconds(600);
         final JsonObject tenantResult = newTenantResult("tenant");
         final Message response = ProtonHelper.message(tenantResult.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
@@ -149,7 +148,6 @@ public class TenantClientImplTest {
 
         // GIVEN an adapter with a cache containing a tenant
         client.setResponseCache(cache);
-        client.setResponseCacheTimeoutSeconds(600);
 
         final JsonObject tenantJsonObject = newTenantResult("tenant");
         final TenantResult<TenantObject> tenantResult = client.getResult(HttpURLConnection.HTTP_OK, tenantJsonObject.toString());

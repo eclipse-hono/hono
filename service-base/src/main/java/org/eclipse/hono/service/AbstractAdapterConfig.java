@@ -17,8 +17,6 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -107,18 +105,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for connections to the Hono Messaging component
-     * as a Spring bean.
-     *
-     * @return The connection factory.
-     */
-    @Qualifier(Constants.QUALIFIER_MESSAGING)
-    @Bean
-    public ConnectionFactory messagingConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx(), messagingClientConfig());
-    }
-
-    /**
      * Exposes a client for the <em>Hono Messaging</em> component as a Spring bean.
      * <p>
      * The client is configured with the properties provided by {@link #messagingClientConfig()}.
@@ -129,7 +115,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public HonoClient messagingClient() {
-        return new HonoClientImpl(vertx(), messagingConnectionFactory(), messagingClientConfig());
+        return new HonoClientImpl(vertx(), messagingClientConfig());
     }
 
     /**
@@ -162,18 +148,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for connections to the registration service
-     * as a Spring bean.
-     *
-     * @return The connection factory.
-     */
-    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    @Bean
-    public ConnectionFactory registrationServiceConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx(), registrationServiceClientConfig());
-    }
-
-    /**
      * Exposes a client for the <em>Device Registration</em> API as a Spring bean.
      *
      * @return The client.
@@ -183,7 +157,7 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public HonoClient registrationServiceClient() {
         final HonoClientImpl result = 
-                new HonoClientImpl(vertx(), registrationServiceConnectionFactory(), registrationServiceClientConfig());
+                new HonoClientImpl(vertx(), registrationServiceClientConfig());
         final int minCacheSize = registrationServiceClientConfig().getResponseCacheMinSize();
         final long maxCacheSize = registrationServiceClientConfig().getResponseCacheMaxSize();
         if (maxCacheSize > 0) {
@@ -192,24 +166,8 @@ public abstract class AbstractAdapterConfig {
         return result;
     }
 
-    private CacheManager newCacheManager(final int initialCapacity, final long maxCapacity) {
-
-        final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
-                .concurrencyLevel(1)
-                .initialCapacity(initialCapacity)
-                .maximumSize(maxCapacity);
-
-        final GuavaCacheManager manager = new GuavaCacheManager();
-        manager.setAllowNullValues(false);
-        manager.setCacheBuilder(builder);
-        return manager;
-    }
-
     /**
      * Exposes configuration properties for accessing the credentials service as a Spring bean.
-     * <p>
-     * Sets the <em>amqpHostname</em> to {@code hono-device-registry} if not set explicitly (reflecting that Hono is
-     * providing the credentials API as part of the device registry component).
      *
      * @return The properties.
      */
@@ -236,18 +194,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for connections to the credentials service
-     * as a Spring bean.
-     *
-     * @return The connection factory.
-     */
-    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
-    @Bean
-    public ConnectionFactory credentialsServiceConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx(), credentialsServiceClientConfig());
-    }
-
-    /**
      * Exposes a client for the <em>Credentials</em> API as a Spring bean.
      *
      * @return The client.
@@ -256,14 +202,11 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public HonoClient credentialsServiceClient() {
-        return new HonoClientImpl(vertx(), credentialsServiceConnectionFactory(), credentialsServiceClientConfig());
+        return new HonoClientImpl(vertx(), credentialsServiceClientConfig());
     }
 
     /**
      * Exposes configuration properties for accessing the tenant service as a Spring bean.
-     * <p>
-     * Sets the <em>amqpHostname</em> to {@code hono-device-registry} if not set explicitly (reflecting that Hono is
-     * providing the tenant API as part of the device registry component).
      *
      * @return The properties.
      */
@@ -290,18 +233,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for connections to the tenant service
-     * as a Spring bean.
-     *
-     * @return The connection factory.
-     */
-    @Qualifier(TenantConstants.TENANT_ENDPOINT)
-    @Bean
-    public ConnectionFactory tenantServiceConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx(), tenantServiceClientConfig());
-    }
-
-    /**
      * Exposes a client for the <em>Tenant</em> API as a Spring bean.
      *
      * @return The client.
@@ -311,13 +242,25 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public HonoClient tenantServiceClient() {
 
-        final HonoClientImpl result = new HonoClientImpl(vertx(), tenantServiceConnectionFactory(), tenantServiceClientConfig());
+        final HonoClientImpl result = new HonoClientImpl(vertx(), tenantServiceClientConfig());
         final int minCacheSize = tenantServiceClientConfig().getResponseCacheMinSize();
         final long maxCacheSize = tenantServiceClientConfig().getResponseCacheMaxSize();
-        final int responseCacheTimeoutSeconds = tenantServiceClientConfig().getResponseCacheDefaultTimeout();
         if (maxCacheSize > 0) {
-            result.setCacheManager(newCacheManager(minCacheSize, Math.max(minCacheSize, maxCacheSize)), responseCacheTimeoutSeconds);
+            result.setCacheManager(newCacheManager(minCacheSize, Math.max(minCacheSize, maxCacheSize)));
         }
         return result;
+    }
+
+    private static CacheManager newCacheManager(final int initialCapacity, final long maxCapacity) {
+
+        final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
+                .concurrencyLevel(1)
+                .initialCapacity(initialCapacity)
+                .maximumSize(maxCapacity);
+
+        final GuavaCacheManager manager = new GuavaCacheManager();
+        manager.setAllowNullValues(false);
+        manager.setCacheBuilder(builder);
+        return manager;
     }
 }

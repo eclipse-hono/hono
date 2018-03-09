@@ -20,29 +20,28 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
-
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.SpringBasedExpiringValueCache;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
-import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
  * A Vertx-Proton based client for Hono's Tenant API.
@@ -120,6 +119,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      *
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
+     * @param cacheManager A factory for cache instances for tenant configuration results. If {@code null}
+     *                     the client will not cache any results from the Tenant service.
      * @param con The AMQP connection to the server.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
@@ -130,7 +131,6 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             final Context context,
             final ClientConfigProperties clientConfig,
             final CacheManager cacheManager,
-            final int responseCacheTimeoutInSeconds,
             final ProtonConnection con,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
@@ -141,7 +141,6 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         if (cacheManager != null) {
             final Cache cache = cacheManager.getCache(TenantClientImpl.getTargetAddress());
             client.setResponseCache(new SpringBasedExpiringValueCache<>(cache));
-            client.setResponseCacheTimeoutSeconds(responseCacheTimeoutInSeconds);
         }
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
@@ -168,7 +167,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
                 switch(result.getStatus()) {
                     case HttpURLConnection.HTTP_OK:
                         if (isCachingEnabled()) {
-                            putResponseToCache(tenantId, result, Instant.now().plusSeconds(getResponseCacheTimeoutSeconds()));
+                            putResponseToCache(tenantId, result, Instant.now().plus(getResponseCacheTimeoutSeconds()));
                         }
                     default:
                         return result;

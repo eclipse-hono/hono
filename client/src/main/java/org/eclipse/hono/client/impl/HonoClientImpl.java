@@ -76,7 +76,6 @@ public class HonoClientImpl implements HonoClient {
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
     private CacheManager cacheManager;
-    private int responseCacheDefaultTimeoutSeconds;
     private AtomicInteger reconnectAttempts = new AtomicInteger(0);
 
     /**
@@ -128,19 +127,7 @@ public class HonoClientImpl implements HonoClient {
      * @throws NullPointerException if manager is {@code null}.
      */
     public final void setCacheManager(final CacheManager manager) {
-        this.setCacheManager(manager, 0);
-    }
-
-    /**
-     * Sets a manager for creating cache instances to be used in Hono clients and set a default timeout for entries.
-     *
-     * @param manager The cache manager.
-     * @param defaultTimeoutInSeconds The timeout in seconds that may be used for new entries.
-     * @throws NullPointerException if manager is {@code null}.
-     */
-    public final void setCacheManager(final CacheManager manager, final int defaultTimeoutInSeconds) {
         this.cacheManager = Objects.requireNonNull(manager);
-        this.responseCacheDefaultTimeoutSeconds = defaultTimeoutInSeconds;
     }
 
     /**
@@ -156,6 +143,11 @@ public class HonoClientImpl implements HonoClient {
         return result;
     }
 
+    /**
+     * Checks if this client is currently connected to the server.
+     * 
+     * @return A succeeded future if this client is connected.
+     */
     protected final Future<Void> checkConnected() {
 
         final Future<Void> result = Future.future();
@@ -182,6 +174,12 @@ public class HonoClientImpl implements HonoClient {
         }
     }
 
+    /**
+     * Gets the underlying connection object that this client
+     * uses to interact with the server.
+     * 
+     * @return The connection.
+     */
     protected final ProtonConnection getConnection() {
         synchronized (connectionLock) {
             return this.connection;
@@ -640,6 +638,16 @@ public class HonoClientImpl implements HonoClient {
         });
     }
 
+    /**
+     * Removes a credentials client from the list of active clients.
+     * <p>
+     * Once a client has been removed, the next invocation
+     * of the corresponding <em>getOrCreateCredentialsClient</em>
+     * method will result in a new client being created
+     * (and added to the list of active clients).
+     * 
+     * @param tenantId The tenant that the client is scoped to.
+     */
     protected final void removeCredentialsClient(final String tenantId) {
 
         final String targetAddress = CredentialsClientImpl.getTargetAddress(tenantId);
@@ -709,6 +717,16 @@ public class HonoClientImpl implements HonoClient {
         });
     }
 
+    /**
+     * Removes a registration client from the list of active clients.
+     * <p>
+     * Once a client has been removed, the next invocation
+     * of the corresponding <em>getOrCreateRegistrationClient</em>
+     * method will result in a new client being created
+     * (and added to the list of active clients).
+     * 
+     * @param tenantId The tenant that the client is scoped to.
+     */
     protected final void removeRegistrationClient(final String tenantId) {
 
         final String targetAddress = RegistrationClientImpl.getTargetAddress(tenantId);
@@ -744,7 +762,6 @@ public class HonoClientImpl implements HonoClient {
                     context,
                     clientConfigProperties,
                     cacheManager,
-                    responseCacheDefaultTimeoutSeconds,
                     connection,
                     this::removeTenantClient,
                     this::removeTenantClient,

@@ -13,6 +13,7 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
@@ -26,6 +27,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.RequestResponseClient;
+import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -61,7 +63,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         extends AbstractHonoClient implements RequestResponseClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractRequestResponseClient.class);
-    private static final long DEFAULT_TIMEOUT_MILLIS = 200L;
 
     private final Map<Object, Handler<AsyncResult<R>>> replyMap = new ConcurrentHashMap<>();
     private final String replyToAddress;
@@ -73,12 +74,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     private ExpiringValueCache<Object, R> responseCache;
 
-    /**
-     * The default timeout for the response cache that may be used when putting new entries to the cache.
-     */
-    private int responseCacheTimeoutSeconds;
-
-    private long requestTimeoutMillis = DEFAULT_TIMEOUT_MILLIS;
+    private long requestTimeoutMillis;
 
     /**
      * Creates a request-response client.
@@ -127,21 +123,26 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * Gets the timeout in seconds that may be used when putting new entries to the response cache.
+     * Gets the period of time after which an entry in the response cache
+     * is considered invalid.
+     * <p>
+     * The value is derived from the configuration properties as follows:
+     * <ol>
+     * <li>if the properties are of type {@link RequestResponseClientConfigProperties}
+     * then its <em>responseCacheDefaultTimeout</em> property is used</li>
+     * <li>otherwise the {@linkplain RequestResponseClientConfigProperties#DEFAULT_RESPONSE_CACHE_TIMEOUT
+     * default timeout value} is used</li>
+     * </ol>
      *
-     * @return The timeout for new entries.
+     * @return The timeout period in seconds.
      */
-    public int getResponseCacheTimeoutSeconds() {
-        return responseCacheTimeoutSeconds;
-    }
-
-    /**
-     * Sets the timeout in seconds that may be used when putting new entries to the response cache.
-     *
-     * @param responseCacheTimeoutSeconds The timeout for new entries.
-     */
-    public void setResponseCacheTimeoutSeconds(final int responseCacheTimeoutSeconds) {
-        this.responseCacheTimeoutSeconds = responseCacheTimeoutSeconds;
+    public Duration getResponseCacheTimeoutSeconds() {
+        if (config instanceof RequestResponseClientConfigProperties) {
+            return Duration.ofSeconds(
+                    ((RequestResponseClientConfigProperties) config).getResponseCacheDefaultTimeout());
+        } else {
+            return Duration.ofSeconds(RequestResponseClientConfigProperties.DEFAULT_RESPONSE_CACHE_TIMEOUT);
+        }
     }
 
     /**
