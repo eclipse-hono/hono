@@ -129,7 +129,7 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
      */
     protected final void addHeadersToResponse(final Message request, final JsonObject message) {
         final boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
-        logger.debug("registration request [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
+        logger.trace("request message [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
         if (isApplicationCorrelationId) {
             message.put(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
         }

@@ -302,7 +302,7 @@ public final class MessageHelper {
 
         Objects.requireNonNull(msg);
         if (msg.getBody() == null) {
-            LOG.debug("message has no body");
+            LOG.trace("message has no body");
             return null;
         }
 
