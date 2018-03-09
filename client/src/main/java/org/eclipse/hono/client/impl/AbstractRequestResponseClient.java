@@ -73,6 +73,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     private ExpiringValueCache<Object, R> responseCache;
 
+    /**
+     * The default timeout for the response cache that may be used when putting new entries to the cache.
+     */
+    private int responseCacheTimeoutSeconds;
+
     private long requestTimeoutMillis = DEFAULT_TIMEOUT_MILLIS;
 
     /**
@@ -119,6 +124,24 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     public final void setResponseCache(final ExpiringValueCache<Object, R> cache) {
         this.responseCache = cache;
         LOG.info("enabling caching of responses from {}", targetAddress);
+    }
+
+    /**
+     * Gets the timeout in seconds that may be used when putting new entries to the response cache.
+     *
+     * @return The timeout for new entries.
+     */
+    public int getResponseCacheTimeoutSeconds() {
+        return responseCacheTimeoutSeconds;
+    }
+
+    /**
+     * Sets the timeout in seconds that may be used when putting new entries to the response cache.
+     *
+     * @param responseCacheTimeoutSeconds The timeout for new entries.
+     */
+    public void setResponseCacheTimeoutSeconds(final int responseCacheTimeoutSeconds) {
+        this.responseCacheTimeoutSeconds = responseCacheTimeoutSeconds;
     }
 
     /**
@@ -235,7 +258,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
         final Handler<AsyncResult<R>> handler = replyMap.remove(message.getCorrelationId());
         if (handler != null) {
-            R response = getRequestResponseResult(message);
+            final R response = getRequestResponseResult(message);
             LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
                     replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
             handler.handle(Future.succeededFuture(response));
@@ -262,7 +285,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         if (!result.failed()) {
             throw new IllegalArgumentException("result must be failed");
         } else {
-            Handler<AsyncResult<R>> responseHandler = replyMap.remove(correlationId);
+            final Handler<AsyncResult<R>> responseHandler = replyMap.remove(correlationId);
             if (responseHandler != null) {
                 LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
                         targetAddress, correlationId, result.cause().getMessage());

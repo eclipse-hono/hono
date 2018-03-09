@@ -553,7 +553,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Registers a check that succeeds if this component is connected to Hono Messaging,
-     * the Device Registration and the Credentials service.
+     * the Tenant Service, the Device Registration and the Credentials service.
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {

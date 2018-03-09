@@ -76,6 +76,7 @@ public class HonoClientImpl implements HonoClient {
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
     private CacheManager cacheManager;
+    private int responseCacheDefaultTimeoutSeconds;
     private AtomicInteger reconnectAttempts = new AtomicInteger(0);
 
     /**
@@ -127,7 +128,19 @@ public class HonoClientImpl implements HonoClient {
      * @throws NullPointerException if manager is {@code null}.
      */
     public final void setCacheManager(final CacheManager manager) {
+        this.setCacheManager(manager, 0);
+    }
+
+    /**
+     * Sets a manager for creating cache instances to be used in Hono clients and set a default timeout for entries.
+     *
+     * @param manager The cache manager.
+     * @param defaultTimeoutInSeconds The timeout in seconds that may be used for new entries.
+     * @throws NullPointerException if manager is {@code null}.
+     */
+    public final void setCacheManager(final CacheManager manager, final int defaultTimeoutInSeconds) {
         this.cacheManager = Objects.requireNonNull(manager);
+        this.responseCacheDefaultTimeoutSeconds = defaultTimeoutInSeconds;
     }
 
     /**
@@ -730,6 +743,8 @@ public class HonoClientImpl implements HonoClient {
             TenantClientImpl.create(
                     context,
                     clientConfigProperties,
+                    cacheManager,
+                    responseCacheDefaultTimeoutSeconds,
                     connection,
                     this::removeTenantClient,
                     this::removeTenantClient,

@@ -64,7 +64,7 @@ public abstract class AbstractAdapterConfig {
      */
     @Bean
     public Vertx vertx() {
-        VertxOptions options = new VertxOptions()
+        final VertxOptions options = new VertxOptions()
                 .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
@@ -88,7 +88,7 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.messaging")
     @Bean
     public ClientConfigProperties messagingClientConfig() {
-        ClientConfigProperties config = new ClientConfigProperties();
+        final ClientConfigProperties config = new ClientConfigProperties();
         customizeMessagingClientConfig(config);
         return config;
     }
@@ -143,7 +143,7 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.registration")
     @Bean
     public RequestResponseClientConfigProperties registrationServiceClientConfig() {
-        RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         customizeRegistrationServiceClientConfig(config);
         return config;
     }
@@ -217,7 +217,7 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.credentials")
     @Bean
     public ClientConfigProperties credentialsServiceClientConfig() {
-        RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         customizeCredentialsServiceClientConfig(config);
         return config;
     }
@@ -270,8 +270,8 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.tenant")
     @Bean
-    public ClientConfigProperties tenantServiceClientConfig() {
-        RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+    public RequestResponseClientConfigProperties tenantServiceClientConfig() {
+        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         customizeTenantServiceClientConfig(config);
         return config;
     }
@@ -310,6 +310,14 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public HonoClient tenantServiceClient() {
-        return new HonoClientImpl(vertx(), tenantServiceConnectionFactory(), tenantServiceClientConfig());
+
+        final HonoClientImpl result = new HonoClientImpl(vertx(), tenantServiceConnectionFactory(), tenantServiceClientConfig());
+        final int minCacheSize = tenantServiceClientConfig().getResponseCacheMinSize();
+        final long maxCacheSize = tenantServiceClientConfig().getResponseCacheMaxSize();
+        final int responseCacheTimeoutSeconds = tenantServiceClientConfig().getResponseCacheDefaultTimeout();
+        if (maxCacheSize > 0) {
+            result.setCacheManager(newCacheManager(minCacheSize, Math.max(minCacheSize, maxCacheSize)), responseCacheTimeoutSeconds);
+        }
+        return result;
     }
 }

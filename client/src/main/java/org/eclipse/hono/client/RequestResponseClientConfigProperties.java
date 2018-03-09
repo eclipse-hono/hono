@@ -31,9 +31,14 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * The default maximum size of response caches.
      */
     public static final long DEFAULT_RESPONSE_CACHE_MAX_SIZE = 1000L;
+    /**
+     * The default timeout for cached responses in seconds until they are considered invalid.
+     */
+    public static final int DEFAULT_RESPONSE_CACHE_TIMEOUT = 600;
 
     private int responseCacheMinSize = DEFAULT_RESPONSE_CACHE_MIN_SIZE;
     private long responseCacheMaxSize = DEFAULT_RESPONSE_CACHE_MAX_SIZE;
+    private int responseCacheDefaultTimeout = DEFAULT_RESPONSE_CACHE_TIMEOUT;
 
     /**
      * Gets the minimum size of the response cache.
@@ -58,7 +63,7 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * @param size The maximum number of results to keep in the cache.
      * @throws IllegalArgumentException if size is &lt; 0.
      */
-    public final void setResponseCacheMinSize(int size) {
+    public final void setResponseCacheMinSize(final int size) {
         if (size < 0) {
             throw new IllegalArgumentException("minimum cache size must not be negative");
         }
@@ -94,10 +99,38 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * @param size The maximum number of results to keep in the cache.
      * @throws IllegalArgumentException if size is &lt; 0.
      */
-    public final void setResponseCacheMaxSize(long size) {
+    public final void setResponseCacheMaxSize(final long size) {
         if (size < 0) {
             throw new IllegalArgumentException("maximum cache size must not be negative");
         }
         this.responseCacheMaxSize = size;
+    }
+
+    /**
+     * Gets the configured default timeout {@link #DEFAULT_RESPONSE_CACHE_TIMEOUT} for cached responses in seconds.
+     * <p>
+     * When a response is put to the cache, this value is taken as the default timeout before the cached response is
+     * considered invalid.
+     *
+     * @return The default timeout for cached responses.
+     */
+    public final int getResponseCacheDefaultTimeout() {
+        return responseCacheDefaultTimeout;
+    }
+
+    /**
+     * Set the configured default timeout {@link #DEFAULT_RESPONSE_CACHE_TIMEOUT} for cached responses in seconds.
+     * <p>
+     * When a response is put to the cache, this value is taken as the default timeout before the cached response is
+     * considered invalid.
+     *
+     * @param timeoutInSeconds The timeout in seconds.
+     * @throws IllegalArgumentException if size is &lt;= 0.
+     */
+    public final void setResponseCacheDefaultTimeout(final int timeoutInSeconds) {
+        if (timeoutInSeconds <= 0) {
+            throw new IllegalArgumentException("default cache timeout must be greater than zero");
+        }
+        this.responseCacheDefaultTimeout = timeoutInSeconds;
     }
 }

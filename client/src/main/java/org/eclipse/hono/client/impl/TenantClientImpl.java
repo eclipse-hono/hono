@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -24,8 +25,9 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.config.ClientConfigProperties;
 
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.SpringBasedExpiringValueCache;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -39,6 +41,8 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 
 /**
  * A Vertx-Proton based client for Hono's Tenant API.
@@ -49,7 +53,6 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantClientImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
-
 
     /**
      * Creates a tenant API client.
@@ -126,6 +129,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     public final static void create(
             final Context context,
             final ClientConfigProperties clientConfig,
+            final CacheManager cacheManager,
+            final int responseCacheTimeoutInSeconds,
             final ProtonConnection con,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
@@ -133,6 +138,11 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
         LOG.debug("creating new tenant API client.");
         final TenantClientImpl client = new TenantClientImpl(context, clientConfig);
+        if (cacheManager != null) {
+            final Cache cache = cacheManager.getCache(TenantClientImpl.getTargetAddress());
+            client.setResponseCache(new SpringBasedExpiringValueCache<>(cache));
+            client.setResponseCacheTimeoutSeconds(responseCacheTimeoutInSeconds);
+        }
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
                 LOG.debug("successfully created tenant API client");
@@ -150,15 +160,26 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     @Override
     public final Future<TenantObject> get(final String tenantId) {
 
-        final Future<TenantResult<TenantObject>> responseTracker = Future.future();
-        createAndSendRequest(TenantConstants.TenantAction.get.toString(), createTenantProperties(tenantId), null,
-                responseTracker.completer());
-        return responseTracker.map(response -> {
-            switch (response.getStatus()) {
-            case HttpURLConnection.HTTP_OK:
-                return response.getPayload();
-            default:
-                throw StatusCodeMapper.from(response);
+        return getCachedTenantResult(tenantId).recover(t -> {
+            final Future<TenantResult<TenantObject>> tenantResult = Future.future();
+            createAndSendRequest(TenantConstants.TenantAction.get.toString(), createTenantProperties(tenantId), null,
+                    tenantResult.completer());
+            return tenantResult.map(result -> {
+                switch(result.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        if (isCachingEnabled()) {
+                            putResponseToCache(tenantId, result, Instant.now().plusSeconds(getResponseCacheTimeoutSeconds()));
+                        }
+                    default:
+                        return result;
+                }
+            });
+        }).map(result -> {
+            switch(result.getStatus()) {
+                case HttpURLConnection.HTTP_OK:
+                    return result.getPayload();
+                default:
+                    throw StatusCodeMapper.from(result);
             }
         });
     }
@@ -167,5 +188,15 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         final Map<String, Object> properties = new HashMap<>();
         properties.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         return properties;
+    }
+
+    private Future<TenantResult<TenantObject>> getCachedTenantResult(final String key) {
+
+        final TenantResult<TenantObject> result = getResponseFromCache(key);
+        if (result == null) {
+            return Future.failedFuture("tenant cache miss");
+        } else {
+            return Future.succeededFuture(result);
+        }
     }
 }
