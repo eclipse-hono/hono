@@ -39,7 +39,7 @@ public abstract class AbstractDeviceCredentials implements DeviceCredentials {
             return false;
         } else if (!getType().equals(credentialsOnRecord.getType())) {
             return false;
-        } else if (!credentialsOnRecord.getEnabled()) {
+        } else if (!credentialsOnRecord.isEnabled()) {
             return false;
         } else {
 

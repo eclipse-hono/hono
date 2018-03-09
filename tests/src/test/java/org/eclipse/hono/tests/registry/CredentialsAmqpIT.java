@@ -289,7 +289,7 @@ public class CredentialsAmqpIT {
         assertNotNull(payload.getDeviceId());
         assertEquals(payload.getDeviceId(), DEFAULT_DEVICE_ID);
 
-        return (payload.getEnabled());
+        return (payload.isEnabled());
     }
 
     private byte[] hashPassword(final String hashFunction, final byte[] hashSalt, final String passwordToHash) {

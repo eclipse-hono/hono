@@ -39,7 +39,7 @@ public final class CredentialsObject {
     @JsonProperty(CredentialsConstants.FIELD_AUTH_ID)
     private String authId;
     @JsonProperty(CredentialsConstants.FIELD_ENABLED)
-    private Boolean enabled;
+    private boolean enabled = true;
     /*
      * Since the format of the secrets field is not determined by the Credentials API, they are best represented as
      * key-value maps with key and value both of type String.
@@ -47,6 +47,27 @@ public final class CredentialsObject {
      */
     @JsonProperty(CredentialsConstants.FIELD_SECRETS)
     private List<Map<String, String>> secrets;
+
+    /**
+     * Empty default constructor.
+     */
+    public CredentialsObject() {
+        super();
+    }
+
+    private CredentialsObject(
+            final String deviceId,
+            final String authId,
+            final String type) {
+
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(authId);
+        Objects.requireNonNull(type);
+
+        setDeviceId(deviceId);
+        setType(type);
+        setAuthId(authId);
+    }
 
     public String getDeviceId() {
         return deviceId;
@@ -72,11 +93,11 @@ public final class CredentialsObject {
         this.authId = authId;
     }
 
-    public Boolean getEnabled() {
+    public boolean isEnabled() {
         return enabled;
     }
 
-    public void setEnabled(final Boolean enabled) {
+    public void setEnabled(final boolean enabled) {
         this.enabled = enabled;
     }
 
@@ -93,22 +114,6 @@ public final class CredentialsObject {
             secrets = new LinkedList<>();
         }
         secrets.add(secret);
-    }
-
-    public static CredentialsObject from(
-            final String deviceId,
-            final String authId,
-            final String type) {
-
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(authId);
-        Objects.requireNonNull(type);
-
-        final CredentialsObject result = new CredentialsObject();
-        result.setDeviceId(deviceId);
-        result.setType(type);
-        result.setAuthId(authId);
-        return result;
     }
 
     /**
@@ -143,7 +148,7 @@ public final class CredentialsObject {
 
         try {
             final MessageDigest digest = MessageDigest.getInstance(hashAlgorithm);
-            final CredentialsObject result = CredentialsObject.from(deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+            final CredentialsObject result = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
             final Map<String, String> secret = newSecret(notBefore, notAfter);
             secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, hashAlgorithm);
             if (salt != null) {
@@ -185,7 +190,7 @@ public final class CredentialsObject {
             final Instant notAfter) {
 
         Objects.requireNonNull(key);
-        final CredentialsObject result = CredentialsObject.from(deviceId, authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
+        final CredentialsObject result = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
         final Map<String, String> secret = newSecret(notBefore, notAfter);
         secret.put(CredentialsConstants.FIELD_SECRETS_KEY, Base64.getEncoder().encodeToString(key));
         result.addSecret(secret);
