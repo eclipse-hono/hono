@@ -237,6 +237,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         Objects.requireNonNull(type);
         Objects.requireNonNull(authId);
         Objects.requireNonNull(resultHandler);
+
         final JsonObject data = getSingleCredentials(tenantId, authId, type);
         if (data == null) {
             resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
@@ -329,15 +330,17 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     private CredentialsResult<JsonObject> addCredentialsResult(final String tenantId, final JsonObject credentialsToAdd) {
 
         String authId = credentialsToAdd.getString(CredentialsConstants.FIELD_AUTH_ID);
+        String type = credentialsToAdd.getString(CredentialsConstants.FIELD_TYPE);
+        log.debug("adding credentials for device [tenant-id: {}, auth-id: {}, type: {}]", tenantId, authId, type);
 
         Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
 
         JsonArray authIdCredentials = getAuthIdCredentials(authId, credentialsForTenant);
 
-        // check if credentials already exist with the type and auth-id for the device-id from the payload.
+        // check if credentials already exist with the type and auth-id from the payload
         for (Object credentialsObj: authIdCredentials) {
             JsonObject credentials = (JsonObject) credentialsObj;
-            if (credentials.getString(CredentialsConstants.FIELD_TYPE).equals(credentialsToAdd.getString(CredentialsConstants.FIELD_TYPE))) {
+            if (credentials.getString(CredentialsConstants.FIELD_TYPE).equals(type)) {
                 return CredentialsResult.from(HttpURLConnection.HTTP_CONFLICT);
             }
         }
@@ -357,6 +360,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         if (getConfig().isModificationEnabled()) {
             final String authId = newCredentials.getString(CredentialsConstants.FIELD_AUTH_ID);
             final String type = newCredentials.getString(CredentialsConstants.FIELD_TYPE);
+            log.debug("updating credentials for device [tenant-id: {}, auth-id: {}, type: {}]", tenantId, authId, type);
 
             Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
             if (credentialsForTenant == null) {
