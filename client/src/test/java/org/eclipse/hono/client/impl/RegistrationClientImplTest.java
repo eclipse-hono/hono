@@ -15,16 +15,14 @@ package org.eclipse.hono.client.impl;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 import java.sql.Date;
 import java.time.Instant;
 
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.util.ExpiringValueCache;
@@ -41,12 +39,17 @@ import org.mockito.ArgumentCaptor;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 
 /**
@@ -103,16 +106,16 @@ public class RegistrationClientImplTest {
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
 
         // WHEN getting registration information
-        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> {
-            // THEN the registration information has been added to the cache
-            verify(cache).put(eq(TriTuple.of("assert", "device", null)), any(RegistrationResult.class), any(Instant.class));
-            ctx.assertEquals(registrationAssertion, result);
-        }));
+        final Async assertion = ctx.async();
+        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
+
+        // THEN the registration information has been added to the cache
+        verify(cache).put(eq(TriTuple.of("assert", "device", null)), any(RegistrationResult.class), any(Instant.class));
     }
 
     /**
@@ -131,16 +134,19 @@ public class RegistrationClientImplTest {
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
 
         // WHEN getting registration information
-        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> {
-            // THEN the registration information has been retrieved from the service
-            verify(cache, never()).put(any(), any(RegistrationResult.class), any(Instant.class));
-            ctx.assertEquals(registrationAssertion, result);
-        }));
+        final Async assertion = ctx.async();
+        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
+
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
+
+        // THEN the registration information has been retrieved from the service
+        assertion.await();
+        // and not been put to the cache
+        verify(cache, never()).put(any(), any(RegistrationResult.class), any(Instant.class));
     }
 
     /**

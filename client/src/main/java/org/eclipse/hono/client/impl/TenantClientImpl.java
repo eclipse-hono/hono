@@ -173,12 +173,12 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
                         return result;
                 }
             });
-        }).map(result -> {
-            switch(result.getStatus()) {
+        }).map(tenantResult -> {
+            switch(tenantResult.getStatus()) {
                 case HttpURLConnection.HTTP_OK:
-                    return result.getPayload();
+                    return tenantResult.getPayload();
                 default:
-                    throw StatusCodeMapper.from(result);
+                    throw StatusCodeMapper.from(tenantResult);
             }
         });
     }

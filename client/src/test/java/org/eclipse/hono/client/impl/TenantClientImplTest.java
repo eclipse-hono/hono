@@ -41,6 +41,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Handler;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -125,16 +126,18 @@ public class TenantClientImplTest {
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
 
         // WHEN getting tenant information
-        client.get("tenant").setHandler(ctx.asyncAssertSuccess(result -> {
-            // THEN the tenant result has been added to the cache
-            verify(cache).put(eq("tenant"), any(TenantResult.class), any(Instant.class));
-        }));
+        final Async get = ctx.async();
+        client.get("tenant").setHandler(ctx.asyncAssertSuccess(tenant -> get.complete()));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
+
+        // THEN the tenant result has been added to the cache
+        get.await();
+        verify(cache).put(eq("tenant"), any(TenantResult.class), any(Instant.class));
     }
 
     /**

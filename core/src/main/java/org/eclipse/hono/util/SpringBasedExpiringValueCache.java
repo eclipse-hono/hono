@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.util;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -55,6 +56,16 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
         } else {
             throw new IllegalArgumentException("value is already expired");
         }
+    }
+
+    @Override
+    public void put(K key, V value, Duration maxAge) {
+
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+        Objects.requireNonNull(maxAge);
+
+        put(key, value, Instant.now().plus(maxAge));
     }
 
     @Override

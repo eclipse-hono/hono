@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.util;
 
+import java.time.Duration;
 import java.time.Instant;
 
 /**
@@ -36,6 +37,20 @@ public interface ExpiringValueCache<K, V> {
      * @throws IllegalArgumentException if the expiration time is not in the future.
      */
     void put(K key, V value, Instant expirationTime);
+
+    /**
+     * Puts a value to the cache.
+     * <p>
+     * Any previous value for the key will be replaced with the new one.
+     * 
+     * @param key The key under which the value is stored.
+     * @param value The value to store.
+     * @param maxAge The duration (starting from now) after which the
+     *               value should be considered invalid.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the expiration time is not in the future.
+     */
+    void put(K key, V value, Duration maxAge);
 
     /**
      * Gets a value from the cache.
