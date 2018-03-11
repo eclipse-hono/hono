@@ -16,18 +16,15 @@ package org.eclipse.hono.client.impl;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
+import java.net.HttpURLConnection;
+import java.time.Duration;
+
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.ExpiringValueCache;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
@@ -42,13 +39,17 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-
-import java.net.HttpURLConnection;
-import java.time.Instant;
+import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 
 /**
@@ -62,7 +63,7 @@ public class TenantClientImplTest {
      * Time out test cases after 5 seconds.
      */
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(5000);
+    public Timeout globalTimeout = Timeout.seconds(5);
 
     private Vertx vertx;
     private Context context;
@@ -124,8 +125,6 @@ public class TenantClientImplTest {
         // GIVEN an adapter with an empty cache
         client.setResponseCache(cache);
         final JsonObject tenantResult = newTenantResult("tenant");
-        final Message response = ProtonHelper.message(tenantResult.encode());
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
 
         // WHEN getting tenant information
         final Async get = ctx.async();
@@ -133,13 +132,16 @@ public class TenantClientImplTest {
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        final Message response = ProtonHelper.message(tenantResult.encode());
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
 
         // THEN the tenant result has been added to the cache
         get.await();
-        verify(cache).put(eq(TriTuple.of(TenantAction.get, "tenant", null)), any(TenantResult.class), any(Instant.class));
+        verify(cache).put(eq(TriTuple.of(TenantAction.get, "tenant", null)), any(TenantResult.class), any(Duration.class));
     }
 
     /**
@@ -155,7 +157,7 @@ public class TenantClientImplTest {
         client.setResponseCache(cache);
 
         final JsonObject tenantJsonObject = newTenantResult("tenant");
-        final TenantResult<TenantObject> tenantResult = client.getResult(HttpURLConnection.HTTP_OK, tenantJsonObject.toString());
+        final TenantResult<TenantObject> tenantResult = client.getResult(HttpURLConnection.HTTP_OK, tenantJsonObject.toString(), null);
 
         when(cache.get(any(TriTuple.class))).thenReturn(tenantResult);
 

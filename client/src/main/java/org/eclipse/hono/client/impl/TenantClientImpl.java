@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,6 +22,7 @@ import java.util.UUID;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.SpringBasedExpiringValueCache;
 import org.eclipse.hono.util.TenantConstants;
@@ -53,7 +53,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         implements TenantClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantClientImpl.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * Creates a tenant API client.
@@ -94,15 +94,17 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     }
 
     @Override
-    protected final TenantResult<TenantObject> getResult(final int status, final String payload) {
-        try {
-            if (status == HttpURLConnection.HTTP_OK) {
-                return TenantResult.from(status, objectMapper.readValue(payload, TenantObject.class));
-            } else {
-                return TenantResult.from(status);
+    protected final TenantResult<TenantObject> getResult(final int status, final String payload, final CacheDirective cacheDirective) {
+
+        if (payload == null) {
+            return TenantResult.from(status);
+        } else {
+            try {
+                return TenantResult.from(status, OBJECT_MAPPER.readValue(payload, TenantObject.class), cacheDirective);
+            } catch (final IOException e) {
+                LOG.warn("received malformed payload from Tenant service", e);
+                return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
             }
-        } catch (final IOException e) {
-            return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
         }
     }
 
@@ -166,17 +168,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         return getResponseFromCache(key).recover(t -> {
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
             createAndSendRequest(TenantConstants.TenantAction.get.toString(), createTenantProperties(tenantId), null,
-                    tenantResult.completer());
-            return tenantResult.map(result -> {
-                switch(result.getStatus()) {
-                    case HttpURLConnection.HTTP_OK:
-                        if (isCachingEnabled()) {
-                            putResponseToCache(key, result, Instant.now().plus(getResponseCacheTimeoutSeconds()));
-                        }
-                    default:
-                        return result;
-                }
-            });
+                    tenantResult.completer(), key);
+            return tenantResult;
         }).map(tenantResult -> {
             switch(tenantResult.getStatus()) {
                 case HttpURLConnection.HTTP_OK:

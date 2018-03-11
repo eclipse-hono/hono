@@ -22,7 +22,7 @@ import java.util.UUID;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.JwtHelper;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -37,6 +37,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
@@ -101,9 +102,18 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
     }
 
     @Override
-    protected final RegistrationResult getResult(final int status, final String payload) {
+    protected final RegistrationResult getResult(final int status, final String payload, final CacheDirective cacheDirective) {
 
-        return RegistrationResult.from(status, payload);
+        if (payload == null) {
+            return RegistrationResult.from(status);
+        } else {
+            try {
+                return RegistrationResult.from(status, new JsonObject(payload), cacheDirective);
+            } catch (final DecodeException e) {
+                LOG.warn("received malformed payload from Device Registration service", e);
+                return RegistrationResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            }
+        }
     }
 
     /**
@@ -286,18 +296,8 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             if (gatewayId != null) {
                 properties.put(RegistrationConstants.APP_PROPERTY_GATEWAY_ID, gatewayId);
             }
-            createAndSendRequest(RegistrationConstants.ACTION_ASSERT, properties, null, regResult.completer());
-            return regResult.map(response -> {
-                switch(response.getStatus()) {
-                case HttpURLConnection.HTTP_OK:
-                    if (isCachingEnabled()) {
-                        final String token = response.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
-                        putResponseToCache(key, response, JwtHelper.getExpiration(token).toInstant());
-                    }
-                default:
-                    return response;
-                }
-            });
+            createAndSendRequest(RegistrationConstants.ACTION_ASSERT, properties, null, regResult.completer(), key);
+            return regResult;
         }).map(result -> {
             switch(result.getStatus()) {
             case HttpURLConnection.HTTP_OK:

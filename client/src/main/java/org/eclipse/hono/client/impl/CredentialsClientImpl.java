@@ -20,6 +20,7 @@ import java.util.UUID;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
@@ -42,7 +43,7 @@ import io.vertx.proton.ProtonConnection;
 public class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsResult<CredentialsObject>> implements CredentialsClient {
 
     private static Logger LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * Creates a new client for accessing the Credentials service.
@@ -68,15 +69,17 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
     }
 
     @Override
-    protected final CredentialsResult<CredentialsObject> getResult(final int status, final String payload) {
-        try {
-            if (status == HttpURLConnection.HTTP_OK) {
-                return CredentialsResult.from(status, objectMapper.readValue(payload, CredentialsObject.class));
-            } else {
-                return CredentialsResult.from(status);
+    protected final CredentialsResult<CredentialsObject> getResult(final int status, final String payload, final CacheDirective cacheDirective) {
+
+        if (payload == null) {
+            return CredentialsResult.from(status);
+        } else {
+            try {
+                return CredentialsResult.from(status, OBJECT_MAPPER.readValue(payload, CredentialsObject.class), cacheDirective);
+            } catch (final IOException e) {
+                LOG.warn("received malformed payload from Credentials service", e);
+                return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
             }
-        } catch (IOException e) {
-            return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
         }
     }
 

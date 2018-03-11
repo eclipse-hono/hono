@@ -14,11 +14,13 @@ package org.eclipse.hono.client.impl;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 
@@ -26,8 +28,11 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.ExpiringValueCache;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Rule;
@@ -56,10 +61,7 @@ import io.vertx.proton.ProtonSender;
 @RunWith(VertxUnitRunner.class)
 public class AbstractRequestResponseClientTest  {
 
-    private Vertx vertx;
-    private Context context;
-    private ProtonReceiver receiver;
-    private ProtonSender sender;
+    private static final String MESSAGE_ID = "messageid";
 
     /**
      * Global timeout for all test cases.
@@ -67,8 +69,13 @@ public class AbstractRequestResponseClientTest  {
     @Rule
     public Timeout timeout = Timeout.seconds(5);
 
-    private static final String MESSAGE_ID = "messageid";
     private AbstractRequestResponseClient<SimpleRequestResponseResult> client;
+    private ExpiringValueCache<Object, SimpleRequestResponseResult> cache;
+    private Vertx vertx;
+    private Context context;
+    private ProtonReceiver receiver;
+    private ProtonSender sender;
+
 
     /**
      * Sets up the fixture.
@@ -87,6 +94,8 @@ public class AbstractRequestResponseClientTest  {
 
         when(sender.getCredit()).thenReturn(10);
         when(sender.getRemoteTarget()).thenReturn(target);
+
+        cache = mock(ExpiringValueCache.class);
 
         client = getClient("tenant", sender, receiver);
         // do not time out requests by default
@@ -136,12 +145,12 @@ public class AbstractRequestResponseClientTest  {
         client.createAndSendRequest("get", props, payload, s -> {});
 
         // THEN the message is sent and the message being sent contains the headers as application properties
-        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         assertThat(messageCaptor.getValue(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), instanceOf(AmqpValue.class));
-        AmqpValue body = (AmqpValue) messageCaptor.getValue().getBody();
+        final AmqpValue body = (AmqpValue) messageCaptor.getValue().getBody();
         assertThat(body.getValue(), is(payload.encode()));
         assertThat(messageCaptor.getValue().getApplicationProperties(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key"), is("test-value"));
@@ -193,7 +202,7 @@ public class AbstractRequestResponseClientTest  {
 
         // GIVEN a request message that has been sent to a peer
         final Async responseReceived = ctx.async();
-        client.createAndSendRequest("request", null, null, ctx.asyncAssertSuccess(s -> {
+        client.createAndSendRequest("request", null, (JsonObject) null, ctx.asyncAssertSuccess(s -> {
             ctx.assertEquals(200, s.getStatus());
             ctx.assertEquals("payload", s.getPayload());
             responseReceived.complete();
@@ -234,7 +243,7 @@ public class AbstractRequestResponseClientTest  {
             return null;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
         final Async requestFailure = ctx.async();
-        client.createAndSendRequest("request", null, null, ctx.asyncAssertFailure(t -> {
+        client.createAndSendRequest("request", null, (JsonObject) null, ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(ServerErrorException.class.isInstance(t));
             requestFailure.complete();
         }));
@@ -289,6 +298,122 @@ public class AbstractRequestResponseClientTest  {
         requestFailure.await();
     }
 
+    /**
+     * Verifies that the adapter puts the response from the service to the cache
+     * using the default cache timeout if the response does not contain a
+     * <em>no-cache</em> cache directive.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateAndSendRequestAddsResponseToCache(final TestContext ctx) {
+
+        // GIVEN an adapter with an empty cache
+        client.setResponseCache(cache);
+
+        // WHEN sending a request
+        client.createAndSendRequest("get", (JsonObject) null, ctx.asyncAssertSuccess(result -> {
+            // THEN the response has been put to the cache
+            verify(cache).put(eq("cacheKey"), any(SimpleRequestResponseResult.class),
+                    eq(Duration.ofSeconds(RequestResponseClientConfigProperties.DEFAULT_RESPONSE_CACHE_TIMEOUT)));
+        }), "cacheKey");
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        final Message response = ProtonHelper.message("result");
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        client.handleResponse(delivery, response);
+    }
+
+    /**
+     * Verifies that the adapter puts the response from the service to the cache
+     * using the max age indicated by a response's <em>max-age</em> cache directive.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateAndSendRequestAddsResponseToCacheWithMaxAge(final TestContext ctx) {
+
+        // GIVEN an adapter with an empty cache
+        client.setResponseCache(cache);
+
+        // WHEN sending a request
+        client.createAndSendRequest("get", (JsonObject) null, ctx.asyncAssertSuccess(result -> {
+            // THEN the response has been put to the cache
+            verify(cache).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), eq(Duration.ofSeconds(35)));
+        }), "cacheKey");
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        final Message response = ProtonHelper.message("result");
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(35));
+        response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        client.handleResponse(delivery, response);
+    }
+
+    /**
+     * Verifies that the adapter does not put the response from the service to the cache
+     * if the response contains a <em>no-cache</em> cache directive.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateAndSendRequestDoesNotAddResponseToCache(final TestContext ctx) {
+
+        // GIVEN an adapter with an empty cache
+        client.setResponseCache(cache);
+
+        // WHEN sending a request
+        client.createAndSendRequest("get", (JsonObject) null, ctx.asyncAssertSuccess(result -> {
+            // THEN the response is not put to the cache
+            verify(cache, never()).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), any(Duration.class));
+        }), "cacheKey");
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        final Message response = ProtonHelper.message("result");
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        MessageHelper.addCacheDirective(response, CacheDirective.noCacheDirective());
+        response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        client.handleResponse(delivery, response);
+    }
+
+    /**
+     * Verifies that the adapter does not put a response from the service to the cache
+     * that does not contain any cache directive but has a <em>non-cacheable</em> status code.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateAndSendRequestDoesNotAddNonCacheableResponseToCache(final TestContext ctx) {
+
+        // GIVEN an adapter with an empty cache
+        client.setResponseCache(cache);
+
+        // WHEN getting a 404 response to a request which contains
+        // no cache directive
+        final Async invocation = ctx.async();
+        client.createAndSendRequest("get", (JsonObject) null, ctx.asyncAssertSuccess(result -> invocation.complete()), "cacheKey");
+
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        final Message response = ProtonHelper.message();
+        response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_NOT_FOUND);
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        client.handleResponse(delivery, response);
+
+        // THEN the response is not put to the cache
+        invocation.await();
+        verify(cache, never()).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), any(Duration.class));
+    }
+
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {
 
         return new AbstractRequestResponseClient<SimpleRequestResponseResult>(context, new ClientConfigProperties(), tenant, sender, receiver) {
@@ -304,8 +429,8 @@ public class AbstractRequestResponseClientTest  {
             }
 
             @Override
-            protected SimpleRequestResponseResult getResult(int status, String payload) {
-                return SimpleRequestResponseResult.from(status, payload);
+            protected SimpleRequestResponseResult getResult(final int status, final String payload, final CacheDirective cacheDirective) {
+                return SimpleRequestResponseResult.from(status, payload, cacheDirective);
             }
         };
     }

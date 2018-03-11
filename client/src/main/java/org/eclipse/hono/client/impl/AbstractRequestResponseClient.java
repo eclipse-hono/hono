@@ -14,7 +14,7 @@ package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
-import java.time.Instant;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -31,10 +31,12 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.ExpiringValueCache;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.RequestResponseResult;
+import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,8 +65,16 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         extends AbstractHonoClient implements RequestResponseClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractRequestResponseClient.class);
+    private static final int[] CACHEABLE_STATUS_CODES = new int[] {
+                            HttpURLConnection.HTTP_OK,
+                            HttpURLConnection.HTTP_NOT_AUTHORITATIVE,
+                            HttpURLConnection.HTTP_PARTIAL,
+                            HttpURLConnection.HTTP_MULT_CHOICE,
+                            HttpURLConnection.HTTP_MOVED_PERM,
+                            HttpURLConnection.HTTP_GONE
+    };
 
-    private final Map<Object, Handler<AsyncResult<R>>> replyMap = new ConcurrentHashMap<>();
+    private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Object>> replyMap = new ConcurrentHashMap<>();
     private final String replyToAddress;
     private final String targetAddress;
     private final String tenantId;
@@ -123,25 +133,24 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * Gets the period of time after which an entry in the response cache
+     * Gets the default value for the period of time after which an entry in the response cache
      * is considered invalid.
      * <p>
      * The value is derived from the configuration properties as follows:
      * <ol>
      * <li>if the properties are of type {@link RequestResponseClientConfigProperties}
-     * then its <em>responseCacheDefaultTimeout</em> property is used</li>
+     * then the value of its <em>responseCacheDefaultTimeout</em> property is used</li>
      * <li>otherwise the {@linkplain RequestResponseClientConfigProperties#DEFAULT_RESPONSE_CACHE_TIMEOUT
      * default timeout value} is used</li>
      * </ol>
      *
      * @return The timeout period in seconds.
      */
-    public Duration getResponseCacheTimeoutSeconds() {
+    protected final long getResponseCacheDefaultTimeout() {
         if (config instanceof RequestResponseClientConfigProperties) {
-            return Duration.ofSeconds(
-                    ((RequestResponseClientConfigProperties) config).getResponseCacheDefaultTimeout());
+            return ((RequestResponseClientConfigProperties) config).getResponseCacheDefaultTimeout();
         } else {
-            return Duration.ofSeconds(RequestResponseClientConfigProperties.DEFAULT_RESPONSE_CACHE_TIMEOUT);
+            return RequestResponseClientConfigProperties.DEFAULT_RESPONSE_CACHE_TIMEOUT;
         }
     }
 
@@ -188,10 +197,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * Creates a result object from the status and payload of a response received from the endpoint.
      *
      * @param status The status of the response.
-     * @param payload The json payload of the response as String.
+     * @param payload The String representation of the response's JSON payload (may be {@code null}).
+     * @param cacheDirective Restrictions regarding the caching of the payload (may be {@code null}).
      * @return The result object.
      */
-    protected abstract R getResult(final int status, final String payload);
+    protected abstract R getResult(final int status, final String payload, final CacheDirective cacheDirective);
 
     /**
      * Creates the sender and receiver links to the peer for sending requests
@@ -251,18 +261,23 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <p>
      * If the response cannot be correlated to a request, e.g. because the request has timed
      * out, then the delivery is <em>released</em> and the message is silently discarded.
+     * <p>
+     * If the client has specified a cache key for the response when sending the request, then the
+     * {@link #addToCache(Object, RequestResponseResult)} method is invoked
+     * in order to add the response to the configured cache.
      * 
      * @param delivery The handle for accessing the message's disposition.
      * @param message The response message.
      */
     protected final void handleResponse(final ProtonDelivery delivery, final Message message) {
 
-        final Handler<AsyncResult<R>> handler = replyMap.remove(message.getCorrelationId());
+        final TriTuple<Handler<AsyncResult<R>>, Object, Object> handler = replyMap.remove(message.getCorrelationId());
         if (handler != null) {
             final R response = getRequestResponseResult(message);
             LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
                     replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
-            handler.handle(Future.succeededFuture(response));
+            addToCache(handler.two(), response);
+            handler.one().handle(Future.succeededFuture(response));
             ProtonHelper.accepted(delivery, true);
         } else {
             LOG.debug("discarding unexpected response [reply-to: {}, correlation ID: {}]",
@@ -270,6 +285,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             ProtonHelper.released(delivery, true);
         }
     }
+
 
     /**
      * Cancels an outstanding request with a given result.
@@ -286,11 +302,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         if (!result.failed()) {
             throw new IllegalArgumentException("result must be failed");
         } else {
-            final Handler<AsyncResult<R>> responseHandler = replyMap.remove(correlationId);
-            if (responseHandler != null) {
+            final TriTuple<Handler<AsyncResult<R>>, Object, Object> handler = replyMap.remove(correlationId);
+            if (handler != null) {
                 LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
                         targetAddress, correlationId, result.cause().getMessage());
-                responseHandler.handle(result);
+                handler.one().handle(result);
             }
         }
     }
@@ -301,7 +317,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 MessageHelper.APP_PROPERTY_STATUS,
                 Integer.class);
         final String payload = MessageHelper.getPayload(message);
-        return getResult(status, payload);
+        final CacheDirective cacheDirective = CacheDirective.from(MessageHelper.getCacheDirective(message));
+
+        return getResult(status, payload, cacheDirective);
     }
 
     /**
@@ -341,8 +359,31 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param resultHandler The handler to notify about the outcome of the request.
      * @throws NullPointerException if any of action or result handler is {@code null}.
      */
-    protected final void createAndSendRequest(final String action, final JsonObject payload, final Handler<AsyncResult<R>> resultHandler) {
+    protected final void createAndSendRequest(
+            final String action,
+            final JsonObject payload,
+            final Handler<AsyncResult<R>> resultHandler) {
         createAndSendRequest(action, null, payload, resultHandler);
+    }
+
+    /**
+     * Creates a request message for a payload and sends it to the peer.
+     * <p>
+     * This method simply invokes {@link #createAndSendRequest(String, Map, JsonObject, Handler)}
+     * with {@code null} for the properties parameter.
+     * 
+     * @param action The operation that the request is supposed to trigger/invoke.
+     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param resultHandler The handler to notify about the outcome of the request.
+     * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @throws NullPointerException if any of action, result handler or cacheKey is {@code null}.
+     */
+    protected final void createAndSendRequest(
+            final String action,
+            final JsonObject payload,
+            final Handler<AsyncResult<R>> resultHandler,
+            final Object cacheKey) {
+        createAndSendRequest(action, null, payload, resultHandler, cacheKey);
     }
 
     /**
@@ -361,6 +402,34 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     protected final void createAndSendRequest(final String action, final Map<String, Object> properties, final JsonObject payload,
                                       final Handler<AsyncResult<R>> resultHandler) {
+        createAndSendRequest(action, properties, payload, resultHandler, null);
+    }
+
+    /**
+     * Creates a request message for a payload and headers and sends it to the peer.
+     * <p>
+     * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
+     * Otherwise, the request message is sent and a timer is started which fails the result handler,
+     * if no response is received within <em>requestTimeout</em> milliseconds.
+     * 
+     * @param action The operation that the request is supposed to trigger/invoke.
+     * @param properties The headers to include in the request message as AMQP application properties.
+     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
+     *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
+     *                      e.g. because there is no connection to the service or there are no credits available
+     *                      for sending the request or the request timed out.
+     * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @throws NullPointerException if action or result handler are {@code null}.
+     * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     */
+    protected final void createAndSendRequest(
+            final String action,
+            final Map<String, Object> properties,
+            final JsonObject payload,
+            final Handler<AsyncResult<R>> resultHandler,
+            final Object cacheKey) {
 
         Objects.requireNonNull(action);
         Objects.requireNonNull(resultHandler);
@@ -371,7 +440,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 request.setContentType(RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON);
                 request.setBody(new AmqpValue(payload.encode()));
             }
-            sendRequest(request, resultHandler);
+            sendRequest(request, resultHandler, cacheKey);
         } else {
             resultHandler.handle(Future.failedFuture(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
@@ -387,8 +456,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * 
      * @param request The message to send.
      * @param resultHandler The handler to notify about the outcome of the request.
+     * @param cacheKey The key to use for caching the response (if the service allows caching).
      */
-    private final void sendRequest(final Message request, final Handler<AsyncResult<R>> resultHandler) {
+    private final void sendRequest(final Message request, final Handler<AsyncResult<R>> resultHandler, final Object cacheKey) {
 
         context.runOnContext(req -> {
             if (sender.sendQueueFull()) {
@@ -397,7 +467,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
             } else {
                 final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(request.getMessageId());
-                replyMap.put(correlationId, resultHandler);
+                final TriTuple<Handler<AsyncResult<R>>, Object, Object> handler = TriTuple.of(resultHandler, cacheKey, null);
+                replyMap.put(correlationId, handler);
                 sender.send(request, deliveryUpdated -> {
                     if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
                         final Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
@@ -492,20 +563,50 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Adds a response to the cache.
+     * <p>
+     * If the cache key is {@code null} or no cache is configured then this method does nothing.
+     * <p>
+     * Otherwise
+     * <ol>
+     * <li>if the response does not contain any cache directive and the response's status code is
+     * one of the codes defined by <a href="https://tools.ietf.org/html/rfc2616#section-13.4">
+     * RFC 2616, Section 13.4 Response Cacheability</a>, the response is put to the cache using
+     * the default timeout returned by {@link #getResponseCacheDefaultTimeout()}<li>
+     * <li>else if the response contains a <em>max-age</em> directive, the response
+     * is put to the cache using the max age from the directive.</li>
+     * <li>else if the response contains a <em>no-cache</em> directive, the response
+     * is not put to the cache.</li>
+     * </ol>
      * 
-     * @param key The key to store the value under.
-     * @param response The response to cache. Any existing response for the key will be replaced.
-     * @param expirationTime The time after which the response should be considered invalid.
-     * @throws IllegalArgumentException if the current time is not before the expiration time.
-     * @throws IllegalStateException if no cache has been configured.
+     * @param key The key to use for the response.
+     * @param response The response to cache.
+     * @throws NullPointerException if response is {@code null}.
      */
-    protected final void putResponseToCache(final Object key, final R response, final Instant expirationTime) {
+    protected final void addToCache(final Object key, final R response) {
 
-        if (responseCache == null) {
-            throw new IllegalStateException("no cache configured");
-        } else {
-            responseCache.put(key, response, expirationTime);
+        Objects.requireNonNull(response);
+
+        if (responseCache != null && key != null) {
+
+            final CacheDirective cacheDirective = Optional.ofNullable(response.getCacheDirective())
+                    .orElseGet(() -> {
+                        if (isCacheableStatusCode(response.getStatus())) {
+                            return CacheDirective.maxAgeDirective(getResponseCacheDefaultTimeout());
+                        } else {
+                            return CacheDirective.noCacheDirective();
+                        }
+                    });
+
+            if (cacheDirective.isCachingAllowed()) {
+                if (cacheDirective.getMaxAge() > 0) {
+                    responseCache.put(key, response, Duration.ofSeconds(cacheDirective.getMaxAge()));
+                }
+            }
         }
+    }
+
+    private boolean isCacheableStatusCode(final int code) {
+        return Arrays.binarySearch(CACHEABLE_STATUS_CODES, code) >= 0;
     }
 
     /**
