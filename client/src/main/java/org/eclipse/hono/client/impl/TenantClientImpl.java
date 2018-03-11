@@ -26,8 +26,10 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.SpringBasedExpiringValueCache;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantConstants.TenantAction;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
@@ -159,7 +161,9 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     @Override
     public final Future<TenantObject> get(final String tenantId) {
 
-        return getCachedTenantResult(tenantId).recover(t -> {
+        final TriTuple<TenantAction, String, Object> key = TriTuple.of(TenantAction.get, tenantId, null);
+
+        return getResponseFromCache(key).recover(t -> {
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
             createAndSendRequest(TenantConstants.TenantAction.get.toString(), createTenantProperties(tenantId), null,
                     tenantResult.completer());
@@ -167,7 +171,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
                 switch(result.getStatus()) {
                     case HttpURLConnection.HTTP_OK:
                         if (isCachingEnabled()) {
-                            putResponseToCache(tenantId, result, Instant.now().plus(getResponseCacheTimeoutSeconds()));
+                            putResponseToCache(key, result, Instant.now().plus(getResponseCacheTimeoutSeconds()));
                         }
                     default:
                         return result;
@@ -187,15 +191,5 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         final Map<String, Object> properties = new HashMap<>();
         properties.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         return properties;
-    }
-
-    private Future<TenantResult<TenantObject>> getCachedTenantResult(final String key) {
-
-        final TenantResult<TenantObject> result = getResponseFromCache(key);
-        if (result == null) {
-            return Future.failedFuture("tenant cache miss");
-        } else {
-            return Future.succeededFuture(result);
-        }
     }
 }

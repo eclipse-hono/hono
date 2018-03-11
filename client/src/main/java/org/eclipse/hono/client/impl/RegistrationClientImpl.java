@@ -279,8 +279,8 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
         Objects.requireNonNull(deviceId);
 
-        final TriTuple<String, String, String> key = TriTuple.of("assert", deviceId, gatewayId);
-        return getCachedRegistrationAssertion(key).recover(t -> {
+        final TriTuple<String, String, String> key = TriTuple.of(RegistrationConstants.ACTION_ASSERT, deviceId, gatewayId);
+        return getResponseFromCache(key).recover(t -> {
             final Future<RegistrationResult> regResult = Future.future();
             final Map<String, Object> properties = createDeviceIdProperties(deviceId);
             if (gatewayId != null) {
@@ -306,15 +306,5 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                 throw StatusCodeMapper.from(result);
             }
         });
-    }
-
-    private Future<RegistrationResult> getCachedRegistrationAssertion(final TriTuple<String, String, String> key) {
-
-        final RegistrationResult result = getResponseFromCache(key);
-        if (result == null) {
-            return Future.failedFuture("cache miss");
-        } else {
-            return Future.succeededFuture(result);
-        }
     }
 }

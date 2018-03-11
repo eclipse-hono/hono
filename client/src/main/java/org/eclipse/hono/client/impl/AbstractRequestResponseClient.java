@@ -472,15 +472,21 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * Gets a response from the cache.
      * 
      * @param key The key to get the response for.
-     * @return The value or {@code null} if no response exists for the key
+     * @return A succeeded future containing the response from the cache
+     *         or a failed future if no response exists for the key
      *         or the response is expired.
      */
-    protected final R getResponseFromCache(final Object key) {
+    protected Future<R> getResponseFromCache(final Object key) {
 
         if (responseCache == null) {
-            return null;
+            return Future.failedFuture(new IllegalStateException("no cache configured"));
         } else {
-            return responseCache.get(key);
+            final R result = responseCache.get(key);
+            if (result == null) {
+                return Future.failedFuture("cache miss");
+            } else {
+                return Future.succeededFuture(result);
+            }
         }
     }
 

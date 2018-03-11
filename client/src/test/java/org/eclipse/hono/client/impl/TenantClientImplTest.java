@@ -33,6 +33,8 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.eclipse.hono.util.TriTuple;
+import org.eclipse.hono.util.TenantConstants.TenantAction;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -137,7 +139,7 @@ public class TenantClientImplTest {
 
         // THEN the tenant result has been added to the cache
         get.await();
-        verify(cache).put(eq("tenant"), any(TenantResult.class), any(Instant.class));
+        verify(cache).put(eq(TriTuple.of(TenantAction.get, "tenant", null)), any(TenantResult.class), any(Instant.class));
     }
 
     /**
@@ -155,7 +157,7 @@ public class TenantClientImplTest {
         final JsonObject tenantJsonObject = newTenantResult("tenant");
         final TenantResult<TenantObject> tenantResult = client.getResult(HttpURLConnection.HTTP_OK, tenantJsonObject.toString());
 
-        when(cache.get(eq("tenant"))).thenReturn(tenantResult);
+        when(cache.get(any(TriTuple.class))).thenReturn(tenantResult);
 
         // WHEN getting tenant information
         client.get("tenant").setHandler(ctx.asyncAssertSuccess(result -> {
