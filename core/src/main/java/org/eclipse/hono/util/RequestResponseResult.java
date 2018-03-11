@@ -16,22 +16,27 @@ import java.net.HttpURLConnection;
 /**
  * A container for the result returned by a Hono API that implements the request response pattern.
  *
- * @param <T> denotes the concrete type of the payload that is part of the result
+ * @param <T> The type of the payload contained in the result.
  */
 public class RequestResponseResult<T> {
 
     private final int status;
     private final T payload;
+    private final CacheDirective cacheDirective;
 
     /**
      * Creates a new result for a status code and payload.
      * 
      * @param status The code indicating the outcome of processing the request.
-     * @param payload The payload to convey to the sender of the request.
+     * @param payload The payload to convey to the sender of the request (may be {@code null}).
+     * @param directive Restrictions regarding the caching of the payload by
+     *                       the receiver of the result (may be {@code null}).
      */
-    protected RequestResponseResult(final int status, final T payload) {
+    protected RequestResponseResult(final int status, final T payload, final CacheDirective directive) {
+
         this.status = status;
         this.payload = payload;
+        this.cacheDirective = directive;
     }
 
     /**
@@ -50,6 +55,16 @@ public class RequestResponseResult<T> {
      */
     public final T getPayload() {
         return payload;
+    }
+
+    /**
+     * Gets the cache directive specifying how the payload of this
+     * response may be cached.
+     * 
+     * @return The directive or {@code null} if not set.
+     */
+    public final CacheDirective getCacheDirective() {
+        return cacheDirective;
     }
 
     /**

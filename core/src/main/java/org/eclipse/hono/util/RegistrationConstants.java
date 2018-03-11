@@ -129,14 +129,18 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     }
 
     /**
-     * Build a JSON object as a reply to a registration request via the vert.x event bus.
+     * Creates a JSON object as a reply to a registration request via the vert.x event bus.
      *
      * @param tenantId The tenant for which the message was processed.
      * @param deviceId The device that the message relates to.
      * @param result The {@link RegistrationResult} object with the payload for the reply object.
      * @return JsonObject The JSON reply object that is to be sent back via the vert.x event bus.
      */
-    public static JsonObject getServiceReplyAsJson(final String tenantId, final String deviceId, final RegistrationResult result) {
+    public static JsonObject getServiceReplyAsJson(
+            final String tenantId,
+            final String deviceId,
+            final RegistrationResult result) {
+
         return getServiceReplyAsJson(result.getStatus(), tenantId, deviceId, result.getPayload());
     }
 

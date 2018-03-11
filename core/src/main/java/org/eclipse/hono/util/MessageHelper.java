@@ -48,6 +48,11 @@ public final class MessageHelper {
     public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID = "x-opt-app-correlation-id";
 
     /**
+     * The name of the AMQP 1.0 message application property containing the caching directive
+     * to follow for the body of the message.
+     */
+    public static final String APP_PROPERTY_CACHE_CONTROL          = "cache_control";
+    /**
      * The name of the AMQP 1.0 message application property containing the id of the device that has reported the data
      * belongs to.
      */
@@ -355,6 +360,29 @@ public final class MessageHelper {
      */
     public static void addRegistrationAssertion(final Message msg, final String token) {
         addProperty(msg, APP_PROPERTY_REGISTRATION_ASSERTION, token);
+    }
+
+    /**
+     * Adds a caching directive to an AMQP 1.0 message.
+     * <p>
+     * The directive is put to the message's <em>application-properties</em> under key
+     * {@link #APP_PROPERTY_CACHE_CONTROL}.
+     * 
+     * @param msg The message to add the directive to.
+     * @param cacheDirective The cache directive.
+     */
+    public static void addCacheDirective(final Message msg, final CacheDirective cacheDirective) {
+        addProperty(msg, APP_PROPERTY_CACHE_CONTROL, cacheDirective.toString());
+    }
+
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_CACHE_CONTROL} application property.
+     * 
+     * @param msg The message to get the property from.
+     * @return The property value or {@code null} if not set.
+     */
+    public static String getCacheDirective(final Message msg) {
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_CACHE_CONTROL, String.class);
     }
 
     /**
