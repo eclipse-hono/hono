@@ -118,4 +118,9 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
             return false;
         }
     }
+
+    @Override
+    public long getAssertionLifetime() {
+        return getTokenLifetime().getSeconds();
+    }
 }

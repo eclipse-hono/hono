@@ -21,6 +21,7 @@ import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedLong;
+import org.apache.qpid.proton.message.Message;
 import org.junit.Test;
 
 import io.vertx.core.json.JsonObject;
@@ -80,5 +81,26 @@ public class RequestResponseApiConstantsTest {
         final JsonObject json   = RequestResponseApiConstants.encodeIdToJson(MSG_ID_UUID);
         final Object id = RequestResponseApiConstants.decodeIdFromJson(json);
         assertThat(id, is(MSG_ID_UUID));
+    }
+
+    /**
+     * Verifies that the AMQP reply created by the helper from a JSON response
+     * contains a cache control property.
+     */
+    @Test
+    public void testGetAmqpReplyAddsCacheDirective() {
+
+        // GIVEN a response that is not supposed to be cached by a client
+        final CacheDirective directive = CacheDirective.noCacheDirective();
+        final String correlationId = "message-id";
+        final JsonObject response = RequestResponseApiConstants.getServiceReplyAsJson(
+                200, "my-tenant", "my-device", null, directive);
+        response.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, RegistrationConstants.encodeIdToJson(correlationId));
+
+        // WHEN creating the AMQP message for the response
+        final Message reply = RequestResponseApiConstants.getAmqpReply("endpoint", response);
+
+        // THEN the message contains the corresponding cache control property
+        assertThat(MessageHelper.getCacheDirective(reply), is(directive.toString()));
     }
 }

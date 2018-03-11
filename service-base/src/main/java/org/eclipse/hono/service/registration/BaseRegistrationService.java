@@ -14,11 +14,11 @@ package org.eclipse.hono.service.registration;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -242,7 +242,8 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
             if (isDeviceEnabled(result)) {
                 return RegistrationResult.from(
                         HttpURLConnection.HTTP_OK,
-                        getAssertionPayload(tenantId, deviceId, result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA)));
+                        getAssertionPayload(tenantId, deviceId, result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA)),
+                        CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime()));
             } else {
                 return RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND);
             }
@@ -290,7 +291,8 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
                 if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
                     return Future.succeededFuture(RegistrationResult.from(
                         HttpURLConnection.HTTP_OK,
-                        getAssertionPayload(tenantId, deviceId, deviceData)));
+                        getAssertionPayload(tenantId, deviceId, deviceData),
+                        CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime())));
                 } else {
                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
                 }
@@ -377,8 +379,8 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     protected final void reply(final Message<JsonObject> request, final RegistrationResult result) {
 
         final JsonObject body = request.body();
-        final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
-        final String deviceId = body.getString(RequestResponseApiConstants.FIELD_DEVICE_ID);
+        final String tenantId = body.getString(RegistrationConstants.FIELD_TENANT_ID);
+        final String deviceId = body.getString(RegistrationConstants.FIELD_DEVICE_ID);
 
         request.reply(RegistrationConstants.getServiceReplyAsJson(tenantId, deviceId, result));
     }

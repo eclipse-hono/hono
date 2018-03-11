@@ -141,7 +141,12 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
             final String deviceId,
             final RegistrationResult result) {
 
-        return getServiceReplyAsJson(result.getStatus(), tenantId, deviceId, result.getPayload());
+        return getServiceReplyAsJson(
+                result.getStatus(),
+                tenantId,
+                deviceId,
+                result.getPayload(),
+                result.getCacheDirective());
     }
 
     /**

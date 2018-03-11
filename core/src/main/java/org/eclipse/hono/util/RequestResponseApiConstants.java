@@ -59,61 +59,51 @@ public class RequestResponseApiConstants {
      */
     public static final Message getAmqpReply(final String endpoint, final JsonObject response) {
 
-        final String tenantId = response.getString(FIELD_TENANT_ID);
-        final String deviceId = response.getString(FIELD_DEVICE_ID);
-        final Integer status = response.getInteger(MessageHelper.APP_PROPERTY_STATUS);
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(response);
+
         final JsonObject correlationIdJson = response.getJsonObject(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
         final Object correlationId = decodeIdFromJson(correlationIdJson);
-        final boolean isApplCorrelationId = response.getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
-        return getAmqpReply(endpoint, status, correlationId, tenantId, deviceId, isApplCorrelationId,
-                response.getJsonObject(CredentialsConstants.FIELD_PAYLOAD));
-    }
 
-    /**
-     * Creates an AMQP message for a response to an invocation of a service invocation.
-     *
-     * @param endpoint The service endpoint that the operation has been invoked on.
-     * @param status The status from the service that processed the message.
-     * @param correlationId The UUID to correlate the reply with the originally sent message.
-     * @param tenantId The tenant for which the message was processed.
-     * @param deviceId The device that the message relates to.
-     * @param isApplCorrelationId Flag to indicate if the correlationId has to be available as application property
-     *        {@link MessageHelper#ANNOTATION_X_OPT_APP_CORRELATION_ID}.
-     * @param payload The payload of the message reply as JSON object.
-     * @return The AMQP message.
-     * @throws NullPointerException if any of endpoint, correlation ID or tenant ID is {@code null}.
-     */
-    public static final Message getAmqpReply(final String endpoint, final Integer status, final Object correlationId,
-                                             final String tenantId, final String deviceId, final boolean isApplCorrelationId,
-                                             final JsonObject payload) {
+        if (correlationId == null) {
+            throw new IllegalArgumentException("response must contain correlation ID");
+        } else {
+            final String tenantId = response.getString(FIELD_TENANT_ID);
+            final String deviceId = response.getString(FIELD_DEVICE_ID);
+            final Integer status = response.getInteger(MessageHelper.APP_PROPERTY_STATUS);
+            final boolean isApplCorrelationId = response.getBoolean(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, false);
+            final String cacheDirective = response.getString(MessageHelper.APP_PROPERTY_CACHE_CONTROL);
+            final JsonObject payload = response.getJsonObject(FIELD_PAYLOAD);
+            final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
 
-        Objects.requireNonNull(correlationId);
-        final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
+            final Message message = ProtonHelper.message();
+            message.setMessageId(UUID.randomUUID().toString());
+            message.setCorrelationId(correlationId);
+            message.setAddress(address.toString());
 
-        final Message message = ProtonHelper.message();
-        message.setMessageId(UUID.randomUUID().toString());
-        message.setCorrelationId(correlationId);
-        message.setAddress(address.toString());
+            final Map<String, Object> map = new HashMap<>();
+            map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+            map.put(MessageHelper.APP_PROPERTY_STATUS, status);
+            if (deviceId != null) {
+                map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+            }
+            if (cacheDirective != null) {
+                map.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, cacheDirective);
+            }
+            message.setApplicationProperties(new ApplicationProperties(map));
 
-        final Map<String, Object> map = new HashMap<>();
-        if (deviceId != null) {
-            map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+            if (isApplCorrelationId) {
+                final Map<Symbol, Object> annotations = new HashMap<>();
+                annotations.put(Symbol.valueOf(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID), true);
+                message.setMessageAnnotations(new MessageAnnotations(annotations));
+            }
+
+            if (payload != null) {
+                message.setContentType(CONTENT_TYPE_APPLICATION_JSON);
+                message.setBody(new AmqpValue(payload.encode()));
+            }
+            return message;
         }
-        map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        map.put(MessageHelper.APP_PROPERTY_STATUS, status);
-        message.setApplicationProperties(new ApplicationProperties(map));
-
-        if (isApplCorrelationId) {
-            final Map<Symbol, Object> annotations = new HashMap<>();
-            annotations.put(Symbol.valueOf(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID), true);
-            message.setMessageAnnotations(new MessageAnnotations(annotations));
-        }
-
-        if (payload != null) {
-            message.setContentType(CONTENT_TYPE_APPLICATION_JSON);
-            message.setBody(new AmqpValue(payload.encode()));
-        }
-        return message;
     }
 
     /**
@@ -126,7 +116,11 @@ public class RequestResponseApiConstants {
      * @return JsonObject The JSON reply object that is to be sent back via the vert.x event bus.
      * @throws NullPointerException if tenant ID is {@code null}.
      */
-    public static final JsonObject getServiceReplyAsJson(final int status, final String tenantId, final String deviceId) {
+    public static final JsonObject getServiceReplyAsJson(
+            final int status,
+            final String tenantId,
+            final String deviceId) {
+
         return getServiceReplyAsJson(status, tenantId, deviceId, null);
     }
 
@@ -141,8 +135,34 @@ public class RequestResponseApiConstants {
      * @return JsonObject The JSON reply object that is to be sent back via the vert.x event bus.
      * @throws NullPointerException if tenant ID is {@code null}.
      */
-    public static final JsonObject getServiceReplyAsJson(final int status, final String tenantId, final String deviceId,
-                                                         final JsonObject payload) {
+    public static final JsonObject getServiceReplyAsJson(
+            final int status,
+            final String tenantId,
+            final String deviceId,
+            final JsonObject payload) {
+
+        return getServiceReplyAsJson(status, tenantId, deviceId, payload, null);
+    }
+
+    /**
+     * Builds a JSON object as a reply for internal communication via the vert.x event bus.
+     * Services use this object to build their response when replying to a request that was received for processing.
+     *
+     * @param status The status from the service that processed the message.
+     * @param tenantId The tenant for which the message was processed.
+     * @param deviceId The device that the message relates to.
+     * @param payload The payload of the message reply as JSON object.
+     * @param cacheDirective Restrictions regarding the caching of the payload by
+     *                       the receiver of the reply (may be {@code null}).
+     * @return JsonObject The JSON reply object that is to be sent back via the vert.x event bus.
+     * @throws NullPointerException if tenant ID is {@code null}.
+     */
+    public static final JsonObject getServiceReplyAsJson(
+            final int status,
+            final String tenantId,
+            final String deviceId,
+            final JsonObject payload,
+            final CacheDirective cacheDirective) {
 
         Objects.requireNonNull(tenantId);
 
@@ -154,6 +174,9 @@ public class RequestResponseApiConstants {
         }
         if (payload != null) {
             jsonObject.put(FIELD_PAYLOAD, payload);
+        }
+        if (cacheDirective != null) {
+            jsonObject.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, cacheDirective.toString());
         }
         return jsonObject;
     }

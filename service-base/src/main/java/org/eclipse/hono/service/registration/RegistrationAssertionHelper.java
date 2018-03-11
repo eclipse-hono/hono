@@ -41,4 +41,11 @@ public interface RegistrationAssertionHelper {
      */
     boolean isValid(String token, String tenantId, String deviceId);
 
+    /**
+     * Gets the lifetime of the assertions created by the <em>getAssertion</em>
+     * method.
+     * 
+     * @return The lifetime in seconds.
+     */
+    long getAssertionLifetime();
 }
