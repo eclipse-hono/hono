@@ -238,6 +238,7 @@ The following table provides an overview of the properties shared by all respons
 | *device_id*      | yes       | *application-properties* | *string*     | Contains the ID of the device. |
 | *tenant_id*      | yes       | *application-properties* | *string*     | Contains the ID of the tenant to which the device belongs. |
 | *status*         | yes       | *application-properties* | *int*        | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
+| *cache_control*  | no        | *application-properties* | *string*     | Contains an [RFC 2616](https://tools.ietf.org/html/rfc2616#section-14.9) compliant <em>cache directive</em>. The directive contained in the property MUST be obeyed by clients that are caching responses. |
 
 ## Delivery States
 
