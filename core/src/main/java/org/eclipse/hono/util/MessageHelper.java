@@ -12,14 +12,10 @@
 package org.eclipse.hono.util;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Objects;
-import java.util.UUID;
 
-import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
@@ -498,60 +494,6 @@ public final class MessageHelper {
             } else {
                 return null;
             }
-        }
-    }
-
-    /**
-     * Encodes the given ID object to JSON representation. Supported types for AMQP 1.0 correlation/messageIds are
-     * String, UnsignedLong, UUID and Binary.
-     * 
-     * @param id The identifier to encode to JSON
-     * @return A JsonObject containing the JSON representation of the identifier.
-     * @throws IllegalArgumentException if the type is not supported
-     */
-    public static JsonObject encodeIdToJson(final Object id) {
-
-        final JsonObject json = new JsonObject();
-        if (id instanceof String) {
-            json.put("type", "string");
-            json.put("id", id);
-        } else if (id instanceof UnsignedLong) {
-            json.put("type", "ulong");
-            json.put("id", id.toString());
-        } else if (id instanceof UUID) {
-            json.put("type", "uuid");
-            json.put("id", id.toString());
-        } else if (id instanceof Binary) {
-            json.put("type", "binary");
-            final Binary binary = (Binary) id;
-            json.put("id", Base64.getEncoder().encodeToString(binary.getArray()));
-        } else {
-            throw new IllegalArgumentException("type " + id.getClass().getName() + " is not supported");
-        }
-        return json;
-    }
-
-    /**
-     * Decodes the given JsonObject to JSON representation.
-     * Supported types for AMQP 1.0 correlation/messageIds are String, UnsignedLong, UUID and Binary.
-     * @param json JSON representation of an ID
-     * @return an ID object of correct type
-     */
-    public static Object decodeIdFromJson(final JsonObject json)
-    {
-        final String type = json.getString("type");
-        final String id = json.getString("id");
-        switch (type) {
-            case "string":
-                return id;
-            case "ulong":
-                return UnsignedLong.valueOf(id);
-            case "uuid":
-                return UUID.fromString(id);
-            case "binary":
-                return new Binary(Base64.getDecoder().decode(id));
-            default:
-                throw new IllegalArgumentException("type " + type + " is not supported");
         }
     }
 }

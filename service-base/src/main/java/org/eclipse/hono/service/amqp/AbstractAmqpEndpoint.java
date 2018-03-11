@@ -11,8 +11,6 @@
  */
 package org.eclipse.hono.service.amqp;
 
-import static org.eclipse.hono.util.MessageHelper.encodeIdToJson;
-
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
@@ -20,13 +18,11 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.service.AbstractEndpoint;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
@@ -119,37 +115,6 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
         logger.info("Endpoint [{}] does not support data retrieval, closing link.", getName());
         sender.setCondition(ProtonHelper.condition(AmqpError.NOT_IMPLEMENTED, "resource cannot be read from"));
         sender.close();
-    }
-
-    /**
-     * Adds correlation id related properties on a response to be sent in reply to a request.
-     * 
-     * @param request The request to correlate to.
-     * @param message The response message.
-     */
-    protected final void addHeadersToResponse(final Message request, final JsonObject message) {
-        final boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
-        logger.trace("request message [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
-        if (isApplicationCorrelationId) {
-            message.put(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
-        }
-        final JsonObject correlationIdJson = encodeIdToJson(getCorrelationId(request));
-        message.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationIdJson);
-    }
-
-    /**
-     * @param request the request message from which to extract the correlationId
-     * @return The ID used to correlate the given request message. This can either be the provided correlationId
-     * (Correlation ID Pattern) or the messageId of the request (Message ID Pattern, if no correlationId is provided).
-     */
-    protected final Object getCorrelationId(final Message request) {
-        /* if a correlationId is provided, we use it to correlate the response -> Correlation ID Pattern */
-        if (request.getCorrelationId() != null) {
-            return request.getCorrelationId();
-        } else {
-           /* otherwise we use the message id -> Message ID Pattern */
-            return request.getMessageId();
-        }
     }
 
     /**

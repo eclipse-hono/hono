@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -10,8 +10,6 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 package org.eclipse.hono.service.amqp;
-
-import static io.vertx.proton.ProtonHelper.condition;
 
 import java.util.Objects;
 
@@ -24,6 +22,7 @@ import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -143,7 +142,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             logger.debug("client wants to use unsupported AT MOST ONCE delivery mode for endpoint [{}], closing link ...", getName());
-            receiver.setCondition(condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
+            receiver.setCondition(ProtonHelper.condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
             receiver.close();
         } else {
 
@@ -275,6 +274,38 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                 }
             });
             sender.open();
+        }
+    }
+
+    /**
+     * Adds correlation id related properties on a response to be sent in reply to a request.
+     * 
+     * @param request The request to correlate to.
+     * @param response The response message.
+     */
+    protected final void addHeadersToResponse(final Message request, final JsonObject response) {
+
+        final boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
+        logger.trace("request message [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
+        if (isApplicationCorrelationId) {
+            response.put(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
+        }
+        final JsonObject correlationIdJson = RequestResponseApiConstants.encodeIdToJson(getCorrelationId(request));
+        response.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationIdJson);
+    }
+
+    /**
+     * @param request the request message from which to extract the correlationId
+     * @return The ID used to correlate the given request message. This can either be the provided correlationId
+     * (Correlation ID Pattern) or the messageId of the request (Message ID Pattern, if no correlationId is provided).
+     */
+    private Object getCorrelationId(final Message request) {
+        /* if a correlationId is provided, we use it to correlate the response -> Correlation ID Pattern */
+        if (request.getCorrelationId() != null) {
+            return request.getCorrelationId();
+        } else {
+           /* otherwise we use the message id -> Message ID Pattern */
+            return request.getMessageId();
         }
     }
 }
