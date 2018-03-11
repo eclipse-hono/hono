@@ -13,17 +13,15 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import static java.net.HttpURLConnection.*;
-import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_ENABLED;
-import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS;
-import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS_TYPE;
-
+import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
 import org.eclipse.hono.service.tenant.BaseTenantService;
+import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -53,6 +51,8 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
      * The name of the JSON property containing the tenant data.
      */
     public static final String FIELD_DATA = "data";
+
+    private static final long MAX_AGE_GET_TENANT = 180L; // seconds
 
     // <tenantId, tenantPropertyValueObject>
     private final Map<String, JsonObject> tenants = new HashMap<>();
@@ -162,7 +162,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             final JsonObject tenantData = (JsonObject) tenant.getJsonObject(FIELD_DATA);
 
             tenants.put(tenantId, tenantData);
-            final JsonObject adaptersData = (JsonObject) tenant.getJsonObject(FIELD_ADAPTERS);
+            final JsonObject adaptersData = (JsonObject) tenant.getJsonObject(TenantConstants.FIELD_ADAPTERS);
 
             if (adaptersData != null) {
                 final Map<String, JsonObject> adapterPropertiesMap = new HashMap<>();
@@ -216,7 +216,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                             final String adapterType = adapterEntry.getKey();
                             adaptersJson.put(adapterType, adapterEntry.getValue());
                         }
-                        tenantJson.put(FIELD_ADAPTERS, adaptersJson);
+                        tenantJson.put(TenantConstants.FIELD_ADAPTERS, adaptersJson);
                     }
 
                     tenantsJson.add(tenantJson);
@@ -253,9 +253,12 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
 
         if (data != null) {
             final JsonArray adapterConfigurationsJson = getAdapterConfigurationsData(tenantId);
-            return TenantResult.from(HTTP_OK, getResultPayload(tenantId, data, adapterConfigurationsJson));
+            return TenantResult.from(
+                    HttpURLConnection.HTTP_OK,
+                    getResultPayload(tenantId, data, adapterConfigurationsJson),
+                    CacheDirective.maxAgeDirective(MAX_AGE_GET_TENANT));
         } else {
-            return TenantResult.from(HTTP_NOT_FOUND);
+            return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
         }
     }
 
@@ -267,7 +270,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         final JsonArray adapterDataArray = new JsonArray();
         for (final Entry<String, JsonObject> configEntry : adapterConfigurations.entrySet()) {
             final JsonObject data = new JsonObject();
-            data.put(FIELD_ADAPTERS_TYPE, configEntry.getKey()).mergeIn(configEntry.getValue());
+            data.put(TenantConstants.FIELD_ADAPTERS_TYPE, configEntry.getKey()).mergeIn(configEntry.getValue());
             adapterDataArray.add(data);
         }
         return adapterDataArray;
@@ -288,12 +291,12 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             if (tenants.remove(tenantId) != null) {
                 dirty = true;
                 tenantsAdapterConfigurations.remove(tenantId);
-                return TenantResult.from(HTTP_NO_CONTENT);
+                return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
             } else {
-                return TenantResult.from(HTTP_NOT_FOUND);
+                return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
             }
         } else {
-            return TenantResult.from(HTTP_FORBIDDEN);
+            return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
     }
 
@@ -318,34 +321,34 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
     public TenantResult<JsonObject> addOrUpdateTenant(final String tenantId, final JsonObject data, final boolean update) {
 
         if (!getConfig().isModificationEnabled()) {
-            return TenantResult.from(HTTP_FORBIDDEN);
+            return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
         } else {
             Objects.requireNonNull(tenantId);
             if (update) {
                 if (!tenants.containsKey(tenantId)) {
-                    return TenantResult.from(HTTP_NOT_FOUND);
+                    return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
                 }
             } else {
                 if (tenants.containsKey(tenantId)) {
-                    return TenantResult.from(HTTP_CONFLICT);
+                    return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
                 }
             }
 
-            final JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
+            final JsonObject obj = data != null ? data : new JsonObject().put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
 
             try {
-                final JsonArray adaptersConfigurationArray = obj.getJsonArray(FIELD_ADAPTERS);
+                final JsonArray adaptersConfigurationArray = obj.getJsonArray(TenantConstants.FIELD_ADAPTERS);
                 if (adaptersConfigurationArray != null) {
                     final Map<String, JsonObject> adapterConfigurationsMap = new HashMap<>();
                     for (int i = 0; i < adaptersConfigurationArray.size(); i++) {
                         final JsonObject adapterConfiguration = adaptersConfigurationArray.getJsonObject(i);
-                        final String adapterType = (String) adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
+                        final String adapterType = (String) adapterConfiguration.remove(TenantConstants.FIELD_ADAPTERS_TYPE);
 
                         if (adapterType != null) {
-                            adapterConfiguration.remove(FIELD_ADAPTERS_TYPE);
+                            adapterConfiguration.remove(TenantConstants.FIELD_ADAPTERS_TYPE);
                             adapterConfigurationsMap.put(adapterType, adapterConfiguration);
                         } else {
-                            return TenantResult.from(HTTP_BAD_REQUEST);
+                            return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
                         }
                     }
                     // all is checked and prepared, now store it internally
@@ -355,20 +358,20 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                     tenantsAdapterConfigurations.remove(tenantId);
                 }
             } catch (final ClassCastException cce) {
-                log.debug("addTenant invoked with wrong type for {}: not a JsonArray!", FIELD_ADAPTERS);
-                return TenantResult.from(HTTP_BAD_REQUEST);
+                log.debug("addTenant invoked with wrong type for {}: not a JsonArray!", TenantConstants.FIELD_ADAPTERS);
+                return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
             }
 
             dirty = true;
 
             obj.remove(FIELD_TENANT);
-            obj.remove(FIELD_ADAPTERS);
+            obj.remove(TenantConstants.FIELD_ADAPTERS);
             tenants.put(tenantId, obj);
 
             if (update) {
-                return TenantResult.from(HTTP_NO_CONTENT);
+                return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
             } else {
-                return TenantResult.from(HTTP_CREATED);
+                return TenantResult.from(HttpURLConnection.HTTP_CREATED);
             }
         }
     }
