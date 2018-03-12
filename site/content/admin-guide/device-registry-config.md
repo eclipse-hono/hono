@@ -185,7 +185,7 @@ The Device Registry can be run as a Docker container from the command line. The 
 > -e 'HONO_REGISTRY_AMQP_CERT_PATH=/run/secrets/device-registry-cert.pem' \
 > -e 'HONO_REGISTRY_SVC_FILENAME=file:/run/secrets/device-identities.json' \
 > -e 'HONO_CREDENTIALS_SVC_FILENAME=file:/run/secrets/credentials.json' \
-> -e 'HONO_TENANTS_SVC_FILENAME=file:/run/secrets/credentials.json' \
+> -e 'HONO_TENANT_SVC_FILENAME=file:/run/secrets/credentials.json' \
 > -e 'HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=asharedsecretforvalidatingassertions' \
 > eclipse/hono-service-device-registry:latest
 ~~~
