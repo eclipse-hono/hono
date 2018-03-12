@@ -7,6 +7,8 @@ title = "Release Notes"
 ### New Features
 
 * The MQTT protocol adapter now supports publishing telemetry data using either QoS 0 or QoS 1. In case of QoS 1 the adapter will send an MQTT *PUBACK* to the device once the downstream peer has settled the message with the AMQP *accepted* outcome.
+* `org.eclipse.hono.client.impl.AbstractRequestResponseClient` now supports generic caching of responses to service invocations based on *cache directives*. See [Hono Client Configuration]({{< relref "admin-guide/hono-client-configuration" >}}) for details.
+* The protocol adapters now can be enabled/disabled *per tenant* using the [Tenant API]({{< relref "api/Tenant-API"). A protocol adapter that has been disabled for a tenant will reject telemetry messages and events published by any device that belongs to the particular tenant.
 
 ### Fixes & Enhancements
 
