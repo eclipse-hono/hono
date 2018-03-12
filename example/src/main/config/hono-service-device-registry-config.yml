@@ -32,7 +32,7 @@ hono:
     svc:
       filename: /var/lib/hono/device-registry/credentials.json
       saveToFile: true
-  tenants:
+  tenant:
     svc:
       filename: /var/lib/hono/device-registry/tenants.json
       saveToFile: true

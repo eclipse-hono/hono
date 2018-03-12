@@ -245,7 +245,7 @@ public class ApplicationConfig {
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.tenants.svc")
+    @ConfigurationProperties(prefix = "hono.tenant.svc")
     public FileBasedTenantsConfigProperties tenantsProperties() {
         return new FileBasedTenantsConfigProperties();
     }
