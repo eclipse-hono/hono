@@ -84,7 +84,7 @@ public final class AuthenticationServerClient {
      * @param authcid The username.
      * @param password The password.
      * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
-     *                                    the result contains a JWT with the the authenticated user's claims.
+     *                                    the result contains a JWT with the authenticated user's claims.
      */
     public void verifyPlain(final String authzid, final String authcid, final String password,
             final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {

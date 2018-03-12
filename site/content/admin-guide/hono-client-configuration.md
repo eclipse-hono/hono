@@ -16,13 +16,13 @@ The variable names contain `${PREFIX}` as a placeholder for the particular *comm
 
 | Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
 | :------------------------------------------ | :-------: | :------------ | :------------|
-| `${PREFIX}_FLOW_LATENCY`<br>`--${prefix}.flowLatency` | no | `20` | The maximum amount of time (milliseconds) that the adapter should wait for *credits* after a link to the component has been established. |
+| `${PREFIX}_FLOW_LATENCY`<br>`--${prefix}.flowLatency` | no | `20` | The maximum amount of time (milliseconds) that the adapter should wait for *credits* after a link to the service has been established. |
 | `${PREFIX}_HOST`<br>`--${prefix}.host` | yes | `localhost` | The IP address or name of the host to connect to. NB: This needs to be set to an address that can be resolved within the network the adapter runs on. When running as a Docker container, use Docker's `--network` command line option to attach the adapter container to the Docker network that the *Hono Server* container is running on. |
-| `${PREFIX}_PORT`<br>`--${prefix}.port` | yes | `5671` | The port that the component is listening on. |
-| `${PREFIX}_USERNAME`<br>`--${prefix}.username` | yes | - | The username to use for authenticating to the component. |
-| `${PREFIX}_PASSWORD`<br>`--${prefix}.password` | yes | - | The password to use for authenticating to the component. |
+| `${PREFIX}_PORT`<br>`--${prefix}.port` | yes | `5671` | The port that the service is listening on. |
+| `${PREFIX}_USERNAME`<br>`--${prefix}.username` | yes | - | The username to use for authenticating to the service. |
+| `${PREFIX}_PASSWORD`<br>`--${prefix}.password` | yes | - | The password to use for authenticating to the service. |
 | `${PREFIX}_TLS_ENABLED`<br>`--${prefix}.tlsEnabled` | no | `false` | If set to `true` the connection to the peer will be encrypted using TLS and the peer's identity will be verified using the JVM's configured standard trust store.<br>This variable only needs to be set to enable TLS explicitly if no specific trust store is configured using the `${PREFIX}_TRUST_STORE_PATH` variable. |
-| `${PREFIX}_TRUST_STORE_PATH`<br>`--${prefix}.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the component. This property **must** be set if the component has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
+| `${PREFIX}_TRUST_STORE_PATH`<br>`--${prefix}.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the adapter uses for authenticating the service. This property **must** be set if the service has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
 | `${PREFIX}_TRUST_STORE_PASSWORD`<br>`--${prefix}.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 
 ## Response Caching
