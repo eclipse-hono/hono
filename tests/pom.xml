@@ -426,7 +426,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <log>^.*(Started \w*Application in).*$</log>
-                      <time>40000</time>
+                      <time>60000</time>
                     </wait>
                   </run>
                 </image>
@@ -481,7 +481,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <log>^.*(Started \w*Application in).*$</log>
-                      <time>40000</time>
+                      <time>60000</time>
                     </wait>
                   </run>
                 </image>
@@ -536,7 +536,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <log>^.*(Started \w*Application in).*$</log>
-                      <time>40000</time>
+                      <time>60000</time>
                     </wait>
                   </run>
                 </image>

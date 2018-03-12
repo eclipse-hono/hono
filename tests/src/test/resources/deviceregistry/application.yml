@@ -22,7 +22,7 @@ hono:
     svc:
       filename: /etc/hono/credentials.json
       saveToFile: false
-  tenants:
+  tenant:
     svc:
       filename: /etc/hono/tenants.json
       saveToFile: false
