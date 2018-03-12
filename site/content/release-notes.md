@@ -7,14 +7,14 @@ title = "Release Notes"
 ### New Features
 
 * The MQTT protocol adapter now supports publishing telemetry data using either QoS 0 or QoS 1. In case of QoS 1 the adapter will send an MQTT *PUBACK* to the device once the downstream peer has settled the message with the AMQP *accepted* outcome.
-* Hono now specifies a [Tenant API]({{< relref "api/Tenant-API.md" >}}) and contains an examplatory implementation of this API.
+* Hono now specifies a [Tenant API]({{< relref "api/Tenant-API.md" >}}) and contains an exemplary implementation of this API.
   The purpose of the API is to make Hono aware of the tenants that are available in an installation. This comprises of:
   * a file-based version of the Tenant API service that implements all mandatory and optional operations
   * the implementation of the AMQP 1.0 endpoint as part of the device registry component
   * the AMQP 1.0 based implementation of the mandatory **get** operation of the API
-  * a HTTP endpoint to support lifecycle operations for tenants (GET, POST, PUT, DELETE) for convenience  
-* `org.eclipse.hono.client.impl.AbstractRequestResponseClient` now supports generic caching of responses to service invocations based on *cache directives*. See [Hono Client Configuration]({{< relref "admin-guide/hono-client-configuration" >}}) for details.
-* The protocol adapters now can be enabled/disabled *per tenant* using the [Tenant API]({{< relref "api/Tenant-API"). A protocol adapter that has been disabled for a tenant will reject telemetry messages and events published by any device that belongs to the particular tenant.
+  * an HTTP endpoint to support CRUD operations for tenants (GET, POST, PUT, DELETE) for convenience
+* `org.eclipse.hono.client.impl.AbstractRequestResponseClient` now supports generic caching of responses to service invocations based on *cache directives*. See [Hono Client Configuration]({{< relref "admin-guide/hono-client-configuration.md" >}}) for details.
+* The protocol adapters now can be enabled/disabled *per tenant* using the [Tenant API]({{< relref "api/Tenant-API" >}}). A protocol adapter that has been disabled for a tenant will reject telemetry messages and events published by any device that belongs to the particular tenant.
 
 ### Fixes & Enhancements
 
