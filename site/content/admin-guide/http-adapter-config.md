@@ -88,6 +88,14 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
 
+## Hono Messaging Connection Configuration
+
+The adapter requires a connection to the Hono Messaging component in order to forward [telemetry]({{< relref "api/Telemetry-API" >}}) data and [events]({{< relref "api/Event-API" >}}) received from devices to downstream consumers.
+
+The connection to Hono Messaging is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration" >}})
+where the `${PREFIX}` is set to `HONO_MESSAGING`. Since Hono Messaging does not allow caching of the responses, the cache properties
+can be ignored.
+
 ## Tenant Service Connection Configuration
 
 The adapter requires a connection to an implementation of Hono's [Tenant API]({{< relref "api/Tenant-API" >}}) in order to retrieve information for a tenant.
@@ -97,13 +105,6 @@ where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for resp
 
 The adapter caches the responses for the *get* operation until they expire. This greatly reduces load on the Tenant service.
 
-## Hono Messaging Connection Configuration
-
-The adapter requires a connection to the Hono Messaging component in order to forward [telemetry]({{< relref "api/Telemetry-API" >}}) data and [events]({{< relref "api/Event-API" >}}) received from devices to downstream consumers.
-
-The connection to Hono Messaging is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration" >}})
-where the `${PREFIX}` is set to `HONO_MESSAGING`. Since Hono Messaging does not allow caching of the responses, the cache properties
-can be ignored.
 
 ## Device Registration Service Connection Configuration
 
@@ -141,10 +142,18 @@ The HTTP adapter can be run as a Docker container from the command line. The fol
 > -e 'HONO_MESSAGING_USERNAME=http-adapter@HONO' \
 > -e 'HONO_MESSAGING_PASSWORD=http-secret' \
 > -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+> -e 'HONO_TENANT_HOST=hono-service-device-registry.hono' \
+> -e 'HONO_TENANT_USERNAME=http-adapter@HONO' \
+> -e 'HONO_TENANT_PASSWORD=http-secret' \
+> -e 'HONO_TENANT_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
 > -e 'HONO_REGISTRATION_USERNAME=http-adapter@HONO' \
 > -e 'HONO_REGISTRATION_PASSWORD=http-secret' \
 > -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+> -e 'HONO_CREDENTIALS_HOST=hono-service-device-registry.hono' \
+> -e 'HONO_CREDENTIALS_USERNAME=http-adapter@HONO' \
+> -e 'HONO_CREDENTIALS_PASSWORD=http-secret' \
+> -e 'HONO_CREDENTIALS_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
 > -e 'HONO_HTTP_BIND_ADDRESS=0.0.0.0' \
 > -e 'HONO_HTTP_KEY_PATH=/run/secrets/http-adapter-key.pem' \
 > -e 'HONO_HTTP_CERT_PATH=/run/secrets/http-adapter-cert.pem' \
@@ -188,12 +197,20 @@ The corresponding command to start up the adapter with the configuration used in
 > --hono.messaging.host=hono-service-messaging.hono,\
 > --hono.messaging.username=http-adapter@HONO,\
 > --hono.messaging.password=http-secret,\
-> --hono.messaging.trustStorePath=target/certs/trusted-certs.pem \
+> --hono.messaging.trustStorePath=target/certs/trusted-certs.pem,\
+> --hono.tenant.host=hono-service-device-registry.hono,\
+> --hono.tenant.username=http-adapter@HONO,\
+> --hono.tenant.password=http-secret,\
+> --hono.tenant.trustStorePath=target/certs/trusted-certs.pem,\
 > --hono.registration.host=hono-service-device-registry.hono,\
 > --hono.registration.username=http-adapter@HONO,\
 > --hono.registration.password=http-secret,\
-> --hono.registration.trustStorePath=target/certs/trusted-certs.pem \
-> --hono.http.bindAddress=0.0.0.0 \
+> --hono.registration.trustStorePath=target/certs/trusted-certs.pem,\
+> --hono.credentials.host=hono-service-device-registry.hono,\
+> --hono.credentials.username=http-adapter@HONO,\
+> --hono.credentials.password=http-secret,\
+> --hono.credentials.trustStorePath=target/certs/trusted-certs.pem,\
+> --hono.http.bindAddress=0.0.0.0,\
 > --hono.http.insecurePortEnabled=true,\
 > --hono.http.insecurePortBindAddress=0.0.0.0
 ~~~

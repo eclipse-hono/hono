@@ -54,9 +54,9 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_CREDENTIALS_SVC_FILENAME`<br>`--hono.credentials.svc.filename` | no | `/var/lib/hono/device-registry/`<br>`credentials.json` | The path to the file where the server stores credentials of devices. Hono tries to read credentials from this file during start-up and writes out all identities to this file periodically if property `HONO_CREDENTIALS_SVC_SAVE_TO_FILE` is set to `true`.<br>Please refer to [Credentials File Format]({{< relref "#credentials-file-format" >}}) for details regarding the file's format. |
 | `HONO_CREDENTIALS_SVC_MODIFICATION_ENABLED`<br>`--hono.credentials.svc.modificationEnabled` | no | `true` | When set to `false` the credentials contained in the registry cannot be updated nor removed. |
 | `HONO_CREDENTIALS_SVC_SAVE_TO_FILE`<br>`--hono.credentials.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered credentials to the file specified by the `HONO_CREDENTIALS_SVC_FILENAME` property. |
-| `HONO_TENANT_SVC_FILENAME`<br>`--hono.tenant.svc.filename` | no | `/var/lib/hono/device-registry/`<br>`tenants.json` | The path to the file where the server stores tenants. Hono tries to read tenants from this file during start-up and writes out all identities to this file periodically if property `HONO_TENANTS_SVC_SAVE_TO_FILE` is set to `true`.<br>Please refer to [Tenants File Format]({{< relref "#tenants-file-format" >}}) for details regarding the file's format. |
+| `HONO_TENANT_SVC_FILENAME`<br>`--hono.tenant.svc.filename` | no | `/var/lib/hono/device-registry/`<br>`tenants.json` | The path to the file where the server stores tenants. Hono tries to read tenants from this file during start-up and writes out all identities to this file periodically if property `HONO_TENANT_SVC_SAVE_TO_FILE` is set to `true`.<br>Please refer to [Tenants File Format]({{< relref "#tenants-file-format" >}}) for details regarding the file's format. |
 | `HONO_TENANT_SVC_MODIFICATION_ENABLED`<br>`--hono.tenant.svc.modificationEnabled` | no | `true` | When set to `false` the tenants contained in the registry cannot be updated nor removed. |
-| `HONO_TENANT_SVC_SAVE_TO_FILE`<br>`--hono.tenant.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered tenants to the file specified by the `HONO_TENANTS_SVC_TENANTS_FILENAME` property. |
+| `HONO_TENANT_SVC_SAVE_TO_FILE`<br>`--hono.tenant.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered tenants to the file specified by the `HONO_TENANTS_SVC_TENANT_FILENAME` property. |
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -174,6 +174,7 @@ The Device Registry can be run as a Docker container from the command line. The 
 > --secret device-registry-key.pem \
 > --secret device-registry-cert.pem \
 > --secret trusted-certs.pem \
+> --secret tenants.json \
 > --secret device-identities.json \
 > --secret credentials.json \
 > -e 'HONO_AUTH_HOST=<name or address of the auth-server>' \
@@ -183,9 +184,9 @@ The Device Registry can be run as a Docker container from the command line. The 
 > -e 'HONO_REGISTRY_AMQP_BIND_ADDRESS=0.0.0.0'
 > -e 'HONO_REGISTRY_AMQP_KEY_PATH=/run/secrets/device-registry-key.pem' \
 > -e 'HONO_REGISTRY_AMQP_CERT_PATH=/run/secrets/device-registry-cert.pem' \
+> -e 'HONO_TENANT_SVC_FILENAME=file:/run/secrets/tenants.json' \
 > -e 'HONO_REGISTRY_SVC_FILENAME=file:/run/secrets/device-identities.json' \
 > -e 'HONO_CREDENTIALS_SVC_FILENAME=file:/run/secrets/credentials.json' \
-> -e 'HONO_TENANT_SVC_FILENAME=file:/run/secrets/credentials.json' \
 > -e 'HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=asharedsecretforvalidatingassertions' \
 > eclipse/hono-service-device-registry:latest
 ~~~
