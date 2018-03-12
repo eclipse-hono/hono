@@ -29,7 +29,7 @@ public interface CredentialsService extends Verticle {
      * Adds credentials for a device.
      *
      * @param tenantId The tenant the device belongs to.
-     * @param credentialsObject The credentials to add</a>.
+     * @param credentialsObject The credentials to add.
      * @param resultHandler The handler to invoke with the result of the operation.
      *         The <em>status</em> will be
      *         <ul>
