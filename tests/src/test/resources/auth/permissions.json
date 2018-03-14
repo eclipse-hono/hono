@@ -106,7 +106,7 @@
         ]
       },
       {
-        "operation": "tenant/NOT_CREATED_TENANT:*",
+        "operation": "tenant/NON_EXISTING_TENANT:*",
         "activities": [
           "EXECUTE"
         ]

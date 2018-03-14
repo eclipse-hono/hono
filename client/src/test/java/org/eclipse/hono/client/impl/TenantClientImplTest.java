@@ -15,12 +15,14 @@ package org.eclipse.hono.client.impl;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -100,16 +102,16 @@ public class TenantClientImplTest {
 
         // GIVEN an adapter
 
-        // WHEN getting tenant information
+        // WHEN getting tenant information by ID
         client.get("tenant");
 
-        // THEN the message being sent contains the tenant ID from the created client as application property
-        // and the passed tenant to the get operation is ignored
+        // THEN the message being sent contains the tenant ID as search criteria
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         final Message sentMessage = messageCaptor.getValue();
-        assertThat(MessageHelper.getTenantId(sentMessage), is("tenant"));
+        assertNull(MessageHelper.getTenantId(sentMessage));
         assertThat(sentMessage.getSubject(), is(TenantConstants.TenantAction.get.toString()));
+        assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
     }
 
     /**
@@ -168,6 +170,31 @@ public class TenantClientImplTest {
             verify(sender, never()).send(any(Message.class));
         }));
 
+    }
+
+    /**
+     * Verifies that the client includes the required information in the request
+     * message sent to the Tenant service.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testGetTenantByCaUsesRFC2253SubjectDn(final TestContext ctx) {
+
+        // GIVEN an adapter
+
+        // WHEN getting tenant information for a subject DN
+        final X500Principal dn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
+        client.get(dn);
+
+        // THEN the message being sent contains the subject DN in RFC 2253 format in the
+        // payload
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        final Message sentMessage = messageCaptor.getValue();
+        final JsonObject payload = MessageHelper.getJsonPayload(sentMessage);
+        assertThat(payload.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN), is("CN=ca,OU=Hono,O=Eclipse"));
     }
 
     /**

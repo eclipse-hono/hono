@@ -16,10 +16,13 @@ package org.eclipse.hono.tests.registry;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TenantConstants;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -28,6 +31,7 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
@@ -37,9 +41,6 @@ import io.vertx.proton.ProtonClientOptions;
  */
 @RunWith(VertxUnitRunner.class)
 public class TenantAmqpIT {
-
-    private static final String TEST_CONFIGURED_BUT_NOT_CREATED_TENANT = "NOT_CREATED_TENANT";
-    private static final String TEST_NOT_CONFIGURED_TENANT = "NOT_CONFIGURED_TENANT";
 
     private static final Vertx vertx = Vertx.vertx();
 
@@ -82,7 +83,8 @@ public class TenantAmqpIT {
     }
 
     /**
-     * Verify that the details of the tenant configured for the user (that was used during client creation) can be retrieved.
+     * Verifies that a client can use the get operation to retrieve information for an existing
+     * tenant.
      * 
      * @param ctx The vert.x test context.
      */
@@ -93,13 +95,12 @@ public class TenantAmqpIT {
             .get(Constants.DEFAULT_TENANT)
             .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
                 ctx.assertEquals(Constants.DEFAULT_TENANT, tenantObject.getTenantId());
-                ctx.assertTrue(tenantObject.isEnabled());
             }));
     }
 
     /**
-     * Verify that the details of a tenant that is NOT configured for the user (that was used during client creation)
-     * are not retrievable.
+     * Verifies that a client cannot retrieve information for a tenant that he is not authorized to
+     * get information for.
      *
      * @param ctx The vert.x test context.
      */
@@ -107,7 +108,7 @@ public class TenantAmqpIT {
     public void testGetNotConfiguredTenantReturnsUnauthorized(final TestContext ctx) {
 
         tenantClient
-                .get(TEST_NOT_CONFIGURED_TENANT)
+                .get("HTTP_ONLY")
                 .setHandler(ctx.asyncAssertFailure(t -> {
                     ctx.assertEquals(
                             HttpURLConnection.HTTP_FORBIDDEN,
@@ -116,8 +117,8 @@ public class TenantAmqpIT {
     }
 
     /**
-     * Verify that retrieving the details of a tenant that is configured for the user (that was used during client creation)
-     * but that was not created returns {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * Verifies that a request to retrieve information for a non existing tenant
+     * fails with a {@link HttpURLConnection#HTTP_NOT_FOUND}.
      *
      * @param ctx The vert.x test context.
      */
@@ -125,10 +126,52 @@ public class TenantAmqpIT {
     public void testGetConfiguredButNotCreatedTenantReturnsNotFound(final TestContext ctx) {
 
         tenantClient
-                .get(TEST_CONFIGURED_BUT_NOT_CREATED_TENANT)
+                .get("NON_EXISTING_TENANT")
                 .setHandler(ctx.asyncAssertFailure(t -> {
                     ctx.assertEquals(
                             HttpURLConnection.HTTP_NOT_FOUND,
+                            ((ServiceInvocationException) t).getErrorCode());
+                }));
+    }
+
+    /**
+     * Verifies that a client can use the getByCa operation to retrieve information for
+     * a tenant by the subject DN of the trusted certificate authority.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetByCaSucceeds(final TestContext ctx) {
+
+        final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
+        tenantClient
+                .get(subjectDn)
+                .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
+                    ctx.assertEquals(Constants.DEFAULT_TENANT, tenantObject.getTenantId());
+                    final JsonObject trustedCa = tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+                    ctx.assertNotNull(trustedCa);
+                    final X500Principal trustedSubjectDn = new X500Principal(trustedCa.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN));
+                    ctx.assertEquals(subjectDn, trustedSubjectDn);
+                }));
+    }
+
+    /**
+     * Verifies that a request to retrieve information for a tenant by the
+     * subject DN of the trusted certificate authority fails with a
+     * <em>403 Forbidden</em> if the client is not authorized to retrieve
+     * information for the tenant.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetByCaFailsIfNotAuthorized(final TestContext ctx) {
+
+        final X500Principal subjectDn = new X500Principal("CN=ca-http, OU=Hono, O=Eclipse");
+        tenantClient
+                .get(subjectDn)
+                .setHandler(ctx.asyncAssertFailure(t -> {
+                    ctx.assertEquals(
+                            HttpURLConnection.HTTP_FORBIDDEN,
                             ((ServiceInvocationException) t).getErrorCode());
                 }));
     }

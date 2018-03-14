@@ -1,11 +1,19 @@
 [
   {
     "tenant-id": "DEFAULT_TENANT",
-    "enabled": true
+    "enabled": true,
+    "trusted-ca": {
+      "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
+      "public-key": "NOTAPUBLICKEY"
+    }
   },
   {
     "tenant-id": "HTTP_ONLY",
     "enabled": true,
+    "trusted-ca": {
+      "subject-dn": "CN=ca-http,OU=Hono,O=Eclipse",
+      "public-key": "NOTAPUBLICKEY"
+    },
     "adapters": [
       {
         "type": "hono-http",

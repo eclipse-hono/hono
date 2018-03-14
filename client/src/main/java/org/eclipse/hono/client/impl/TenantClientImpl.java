@@ -15,16 +15,15 @@ package org.eclipse.hono.client.impl;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantConstants.TenantAction;
 import org.eclipse.hono.util.TenantObject;
@@ -39,6 +38,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -164,7 +164,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
         return getResponseFromCache(key).recover(t -> {
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
-            createAndSendRequest(TenantConstants.TenantAction.get.toString(), createTenantProperties(tenantId), null,
+            final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+            createAndSendRequest(TenantConstants.TenantAction.get.toString(), null, payload,
                     tenantResult.completer(), key);
             return tenantResult;
         }).map(tenantResult -> {
@@ -177,9 +178,26 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         });
     }
 
-    private Map<String, Object> createTenantProperties(final String tenantId) {
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        return properties;
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<TenantObject> get(final X500Principal subjectDn) {
+
+        final TriTuple<TenantAction, X500Principal, Object> key = TriTuple.of(TenantAction.get, subjectDn, null);
+
+        return getResponseFromCache(key).recover(t -> {
+            final Future<TenantResult<TenantObject>> tenantResult = Future.future();
+            final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
+            createAndSendRequest(TenantConstants.TenantAction.get.toString(), null, payload, tenantResult.completer(), key);
+            return tenantResult;
+        }).map(tenantResult -> {
+            switch(tenantResult.getStatus()) {
+                case HttpURLConnection.HTTP_OK:
+                    return tenantResult.getPayload();
+                default:
+                    throw StatusCodeMapper.from(tenantResult);
+            }
+        });
     }
 }
