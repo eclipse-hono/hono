@@ -33,7 +33,7 @@ import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
- * A Vertx-Proton based client for uploading telemtry data to a Hono server.
+ * A Vertx-Proton based client for uploading telemetry data to a Hono server.
  */
 public final class TelemetrySenderImpl extends AbstractSender {
 
