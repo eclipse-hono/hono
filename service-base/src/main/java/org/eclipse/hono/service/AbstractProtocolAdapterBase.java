@@ -26,7 +26,9 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -42,6 +44,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.proton.ProtonConnection;
@@ -280,6 +283,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
         stopFuture.complete();
+    }
+
+    /**
+     * Gets the options for configuring the server side trust anchor.
+     * <p>
+     * This implementation returns the options returned by
+     * {@link AbstractConfig#getTrustOptions()} if not {@code null}.
+     * Otherwise, it returns trust options for using the configured
+     * Tenant service client for retrieving tenant specific trust anchor
+     * configuration.
+     * 
+     * @return The trust options.
+     */
+    protected TrustOptions getServerTrustOptions() {
+
+        return Optional.ofNullable(getConfig().getTrustOptions())
+                .orElse(new TenantApiTrustOptions(getTenantServiceClient()));
     }
 
     /**

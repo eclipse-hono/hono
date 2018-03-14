@@ -1,5 +1,6 @@
 package org.eclipse.hono.service;
 
+import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.Constants;
@@ -292,10 +293,13 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     }
 
     /**
-     * Copies TLS trust store configuration to a given set of server options.
+     * Adds TLS trust anchor configuration to a given set of server options.
      * <p>
-     * The trust store configuration is taken from <em>config</em> and will
-     * be added only if the <em>ssl</em> flag is set on the given server options.
+     * The options for configuring the server side trust anchor are
+     * determined by invoking the {@link #getServerTrustOptions()} method.
+     * However, the trust anchor options returned by that method will only be added to the
+     * given server options if its <em>ssl</em> flag is set to {@code true} and if its
+     * <em>trustOptions</em> property is {@code null}.
      * 
      * @param serverOptions The options to add configuration to.
      */
@@ -303,16 +307,32 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
 
         if (serverOptions.isSsl() && serverOptions.getTrustOptions() == null) {
 
-            TrustOptions trustOptions = getConfig().getTrustOptions();
+            final TrustOptions trustOptions = getServerTrustOptions();
             if (trustOptions != null) {
                 serverOptions.setTrustOptions(trustOptions).setClientAuth(ClientAuth.REQUEST);
-                LOG.info("enabling TLS for client authentication");
+                LOG.info("enabling client authentication using certificates [{}]", trustOptions.getClass().getName());
             }
         }
     }
 
     /**
-     * Copies TLS key &amp; certificate configuration to a given set of server options.
+     * Gets the options for configuring the server side trust anchor.
+     * <p>
+     * This default implementation returns the options returned by
+     * {@link AbstractConfig#getTrustOptions()}.
+     * <p>
+     * Subclasses may override this method in order to e.g. use a
+     * non-key store based trust manager.
+     * 
+     * @return The trust options or {@code null} if authentication of devices
+     *         based on certificates should be disabled.
+     */
+    protected TrustOptions getServerTrustOptions() {
+        return getConfig().getTrustOptions();
+    }
+
+    /**
+     * Adds TLS key &amp; certificate configuration to a given set of server options.
      * <p>
      * If <em>config</em> contains key &amp; certificate configuration it is added to
      * the given server options and the <em>ssl</em> flag is set to {@code true}.
@@ -321,7 +341,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     protected final void addTlsKeyCertOptions(final NetServerOptions serverOptions) {
 
-        KeyCertOptions keyCertOptions = getConfig().getKeyCertOptions();
+        final KeyCertOptions keyCertOptions = getConfig().getKeyCertOptions();
 
         if (keyCertOptions != null) {
             serverOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
