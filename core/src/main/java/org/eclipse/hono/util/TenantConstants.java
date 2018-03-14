@@ -35,8 +35,6 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_ADAPTERS_TYPE               = "type";
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
 
-    public static final String FIELD_RESPONSE_STATUS = "status";
-
     /**
      * The name of the Tenant API endpoint.
      */
@@ -108,11 +106,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static JsonObject getServiceReplyAsJson(final String tenantId, final TenantResult<JsonObject> tenantResult) {
         Objects.requireNonNull(tenantResult);
         final JsonObject jsonObject = new JsonObject();
-        jsonObject.put(RequestResponseApiConstants.FIELD_TENANT_ID, tenantId);
+        jsonObject.put(TenantConstants.FIELD_TENANT_ID, tenantId);
 
-        jsonObject.put(FIELD_RESPONSE_STATUS, tenantResult.getStatus());
+        jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, tenantResult.getStatus());
         if (tenantResult.getPayload() != null) {
-            jsonObject.put(RequestResponseApiConstants.FIELD_PAYLOAD, tenantResult.getPayload());
+            jsonObject.put(TenantConstants.FIELD_PAYLOAD, tenantResult.getPayload());
         }
 
         return jsonObject;
