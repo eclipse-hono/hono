@@ -13,6 +13,17 @@
 
 package org.eclipse.hono.util;
 
+import java.io.ByteArrayInputStream;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.TrustAnchor;
+import java.security.cert.X509Certificate;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -58,6 +69,9 @@ public final class TenantObject {
         return json.getMap();
     }
 
+    @JsonIgnore
+    private TrustAnchor trustAnchor;
+
     /**
      * Gets a property value.
      * 
@@ -79,7 +93,6 @@ public final class TenantObject {
             return null;
         }
     }
-
     /**
      * Adds a property to this tenant.
      * 
@@ -153,6 +166,152 @@ public final class TenantObject {
         } else {
             return Optional.ofNullable((String) getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN))
                     .map(dn -> new X500Principal(dn)).orElse(null);
+        }
+    }
+
+    /**
+     * Sets the trusted certificate authority to use for authenticating
+     * devices of this tenant.
+     * 
+     * @param publicKey The CA's public key.
+     * @param subjectDn The CA's subject DN.
+     * @return This tenant for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    @JsonIgnore
+    public TenantObject setTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn) {
+
+        Objects.requireNonNull(publicKey);
+        Objects.requireNonNull(subjectDn);
+
+        final JsonObject trustedCa = new JsonObject();
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.CANONICAL));
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
+        setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+        return this;
+    }
+
+    /**
+     * Sets the trusted certificate authority to use for authenticating
+     * devices of this tenant.
+     * 
+     * @param certificate The CA certificate.
+     * @return This tenant for command chaining.
+     * @throws NullPointerException if certificate is {@code null}.
+     * @throws IllegalArgumentException if the certificate cannot be (binary) encoded.
+     */
+    @JsonIgnore
+    public TenantObject setTrustAnchor(final X509Certificate certificate) {
+
+        Objects.requireNonNull(certificate);
+
+        try {
+            final JsonObject trustedCa = new JsonObject()
+                    .put(TenantConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
+            setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+            return this;
+        } catch (CertificateEncodingException e) {
+            throw new IllegalArgumentException("cannot encode certificate");
+        }
+    }
+
+    /**
+     * Gets the trusted certificate authority configured for this tenant.
+     * <p>
+     * This method tries to extract the certificate from the data contained in
+     * the JSON object of the <em>trusted-ca</em> property.
+     * The value of the JSON object's <em>cert</em> property is expected to contain
+     * the Base64 encoded <em>binary</em> DER-encoding of the certificate, i.e. the same
+     * value as the <em>printable</em> form but without the leading {@code -----BEGIN CERTIFICATE-----}
+     * and trailing {@code -----END CERTIFICATE-----}.
+     * 
+     * @return The certificate or {@code null} if no certificate authority
+     *         has been set or the certificate is not DER encoded.
+     */
+    @JsonIgnore
+    public X509Certificate getTrustedCertificateAuthority() {
+
+        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+        if (trustedCa == null) {
+            return null;
+        } else {
+            return Optional.ofNullable(trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT)).map(obj -> {
+                if (obj instanceof String) {
+                    try {
+                        final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                        final byte[] derEncodedCert = Base64.getDecoder().decode(((String) obj));
+                        return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(derEncodedCert));
+                    } catch (CertificateException e) {
+                        return null;
+                    }
+                } else {
+                    return null;
+                }
+            }).orElse(null);
+        }
+    }
+
+    /**
+     * Gets the trust anchor for this tenant.
+     * <p>
+     * This method tries to create the trust anchor based on the information
+     * from the JSON object contained in the <em>trusted-ca</em> property.
+     * <p>
+     * <ol>
+     * <li>If the object contains a <em>cert</em> property then its content is
+     * expected to contain the Base64 encoded (binary) DER encoding of the
+     * trusted certificate. The returned trust anchor will contain this certificate.</li>
+     * <li>Otherwise, if the object contains <em>public-key</em> and <em>subject-dn</em>
+     * properties, then the public key property is expected to contain the Base64 encoded
+     * DER encoding of the trusted certificate's public key. The returned trust anchor
+     * will contain this public key.</li>
+     * <li>Otherwise, this method returns {@code null}.</li>
+     * </ol>
+     * <p>
+     * Once a (non {@code null}) trust anchor has been created, it will be cached and
+     * returned on subsequent invocations of this method.
+     * 
+     * @return The trust anchor or {@code null} if no trusted certificate authority
+     *         has been set.
+     */
+    @JsonIgnore
+    public TrustAnchor getTrustAnchor() {
+
+        if (trustAnchor != null) {
+            return trustAnchor;
+        } else {
+            final X509Certificate cert = getTrustedCertificateAuthority();
+            if (cert != null) {
+                trustAnchor = new TrustAnchor(cert, null);
+                return trustAnchor;
+            } else {
+                return getTrustAnchorForPublicKey(getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA));
+            }
+        }
+    }
+
+    @JsonIgnore
+    private TrustAnchor getTrustAnchorForPublicKey(final JsonObject keyProps) {
+
+        if (keyProps == null) {
+            return null;
+        } else {
+            final String subjectDn = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+            final String encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY);
+            if (subjectDn == null || encodedKey == null) {
+                return null;
+            } else {
+                try {
+                    final String type = Optional.ofNullable((String) getProperty(keyProps, TenantConstants.FIELD_ADAPTERS_TYPE)).orElse("RSA");
+                    final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
+                    final KeyFactory factory = KeyFactory.getInstance(type);
+                    final PublicKey publicKey = factory.generatePublic(keySpec);
+                    trustAnchor = new TrustAnchor(subjectDn, publicKey, null);
+                    return trustAnchor;
+                } catch (GeneralSecurityException e) {
+                    return null;
+                }
+            }
         }
     }
 

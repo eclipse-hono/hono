@@ -16,6 +16,15 @@ package org.eclipse.hono.util;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.TrustAnchor;
+import java.security.cert.X509Certificate;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -31,6 +40,8 @@ import io.vertx.core.json.JsonObject;
  */
 public class TenantObjectTest {
 
+    private static final String TRUST_STORE_PATH = "target/certs/trustStore.jks";
+    private static final String TRUST_STORE_PASSWORD = "honotrust";
     private static ObjectMapper mapper;
 
     /**
@@ -90,7 +101,7 @@ public class TenantObjectTest {
     public void testIsAdapterEnabledForDisabledTenant() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.FALSE);
-        obj.addAdapterConfiguration(getConfiguration("type-one", true));
+        obj.addAdapterConfiguration(TenantObject.newAdapterConfig("type-one", true));
         assertFalse(obj.isAdapterEnabled("type-one"));
         assertFalse(obj.isAdapterEnabled("any-other-type"));
     }
@@ -103,14 +114,51 @@ public class TenantObjectTest {
     public void testIsAdapterEnabledForNonEmptyConfiguration() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
-        obj.addAdapterConfiguration(getConfiguration("type-one", true));
+        obj.addAdapterConfiguration(TenantObject.newAdapterConfig("type-one", true));
         assertTrue(obj.isAdapterEnabled("type-one"));
         assertFalse(obj.isAdapterEnabled("any-other-type"));
     }
 
-    private static JsonObject getConfiguration(final String typeName, final boolean enabled) {
-        return new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, typeName)
-                .put(TenantConstants.FIELD_ENABLED, enabled);
+    /**
+     * Verifies that the trust anchor uses the configured trusted CA certificate.
+     * 
+     * @throws CertificateEncodingException if the certificate cannot be DER encoded.
+     */
+    @Test
+    public void testGetTrustAnchorUsesCertificate() throws CertificateEncodingException {
+
+        final X509Certificate trustedCaCert = getCaCertificate();
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .setTrustAnchor(trustedCaCert);
+
+        final TrustAnchor trustAnchor = obj.getTrustAnchor();
+        assertThat(trustAnchor.getTrustedCert(), is(trustedCaCert));
+    }
+
+    /**
+     * Verifies that the trust anchor uses the configured trusted CA's public key and subject DN.
+     */
+    @Test
+    public void testGetTrustAnchorUsesPublicKey() {
+
+        final X509Certificate trustedCaCert = getCaCertificate();
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal());
+
+        final TrustAnchor trustAnchor = obj.getTrustAnchor();
+        assertThat(trustAnchor.getCA(), is(trustedCaCert.getSubjectX500Principal()));
+        assertThat(trustAnchor.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
+    }
+
+    private X509Certificate getCaCertificate() {
+
+        try (InputStream is = new FileInputStream(TRUST_STORE_PATH)) {
+            final KeyStore store = KeyStore.getInstance("JKS");
+            store.load(is, TRUST_STORE_PASSWORD.toCharArray());
+            return (X509Certificate) store.getCertificate("ca");
+        } catch (GeneralSecurityException | IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
