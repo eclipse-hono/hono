@@ -14,7 +14,7 @@ title = "Release Notes"
   * the AMQP 1.0 based implementation of the mandatory **get** operation of the API
   * an HTTP endpoint to support CRUD operations for tenants (GET, POST, PUT, DELETE) for convenience
 * `org.eclipse.hono.client.impl.AbstractRequestResponseClient` now supports generic caching of responses to service invocations based on *cache directives*. See [Hono Client Configuration]({{< relref "admin-guide/hono-client-configuration.md" >}}) for details.
-* The protocol adapters now can be enabled/disabled *per tenant* using the [Tenant API]({{< relref "api/Tenant-API" >}}). A protocol adapter that has been disabled for a tenant will reject telemetry messages and events published by any device that belongs to the particular tenant.
+* The protocol adapters now can be enabled/disabled *per tenant* using the [Tenant API]({{< relref "api/Tenant-API.md" >}}). A protocol adapter that has been disabled for a tenant will reject telemetry messages and events published by any device that belongs to the particular tenant.
 
 ### Fixes & Enhancements
 

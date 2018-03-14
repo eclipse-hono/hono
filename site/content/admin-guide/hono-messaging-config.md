@@ -98,7 +98,7 @@ The service may be configured to open both a secure and a non-secure port at the
 
 The Hono Messaging component requires a connection to an implementation of Hono's Authentication API in order to authenticate and authorize client requests.
 
-The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration" >}})
+The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_AUTH`. Since Hono's Authentication Service does not allow caching of the responses, the cache properties
 can be ignored.
 
