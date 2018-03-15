@@ -204,11 +204,11 @@ public class HonoSenderBase {
 
         final Future<Void> result = Future.future();
 
-        CompositeFuture.all(registrationClientTracker, messageSenderTracker).setHandler(s -> {
-            if (result.failed()) {
+        CompositeFuture.all(registrationClientTracker, messageSenderTracker).setHandler(compositeResult -> {
+            if (compositeResult.failed()) {
                 System.err.println(
-                        "hono clients could not be created : " + s.cause().getMessage());
-                result.fail(s.cause());
+                        "hono clients could not be created : " + compositeResult.cause().getMessage());
+                result.fail(compositeResult.cause());
             } else {
                 registrationClient = registrationClientTracker.result();
                 messageSender = messageSenderTracker.result();
