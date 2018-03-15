@@ -47,12 +47,6 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String ACTION_UPDATE     = "update";
 
     /**
-     * The name of the AMQP 1.0 message application property containing the id of the gateway
-     * that wants to report data on behalf of another device.
-     */
-    public static final String APP_PROPERTY_GATEWAY_ID = "gateway_id";
-
-    /**
      * The name of the field in a response to the <em>assert device registration</em> operation
      * that contains the registration status assertion.
      */
@@ -118,12 +112,12 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
         final String tenantId = target.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(message);
         final String gatewayId = MessageHelper.getApplicationProperty(message.getApplicationProperties(),
-                APP_PROPERTY_GATEWAY_ID, String.class);
+                MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class);
         final JsonObject payload = MessageHelper.getJsonPayload(message);
 
         final JsonObject result = getServiceRequestAsJson(subject, tenantId, deviceId, payload);
         if (gatewayId != null) {
-            result.put(APP_PROPERTY_GATEWAY_ID, gatewayId);
+            result.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
         }
         return result;
     }

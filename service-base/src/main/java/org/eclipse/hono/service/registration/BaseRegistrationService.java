@@ -146,7 +146,7 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
             final JsonObject body = regMsg.body();
             final String tenantId = body.getString(RegistrationConstants.FIELD_TENANT_ID);
             final String deviceId = body.getString(RegistrationConstants.FIELD_DEVICE_ID);
-            final String gatewayId = body.getString(RegistrationConstants.APP_PROPERTY_GATEWAY_ID);
+            final String gatewayId = body.getString(MessageHelper.APP_PROPERTY_GATEWAY_ID);
             final String operation = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
 
 

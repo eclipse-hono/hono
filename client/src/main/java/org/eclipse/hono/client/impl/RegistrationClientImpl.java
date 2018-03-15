@@ -294,7 +294,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             final Future<RegistrationResult> regResult = Future.future();
             final Map<String, Object> properties = createDeviceIdProperties(deviceId);
             if (gatewayId != null) {
-                properties.put(RegistrationConstants.APP_PROPERTY_GATEWAY_ID, gatewayId);
+                properties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
             }
             createAndSendRequest(RegistrationConstants.ACTION_ASSERT, properties, null, regResult.completer(), key);
             return regResult;

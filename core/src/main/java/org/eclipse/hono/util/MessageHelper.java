@@ -54,6 +54,11 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_DEVICE_ID              = "device_id";
     /**
+     * The name of the AMQP 1.0 message application property containing the id of the gateway
+     * that wants to report data on behalf of another device.
+     */
+    public static final String APP_PROPERTY_GATEWAY_ID             = "gateway_id";
+    /**
      * The name of the AMQP 1.0 application property that is used to convey the
      * address that a message has been originally published to by a device.
      */

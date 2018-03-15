@@ -200,7 +200,7 @@ public class RegistrationClientImplTest {
         assertThat(
                 MessageHelper.getApplicationProperty(
                         sentMessage.getApplicationProperties(),
-                        RegistrationConstants.APP_PROPERTY_GATEWAY_ID,
+                        MessageHelper.APP_PROPERTY_GATEWAY_ID,
                         String.class),
                 is("gateway"));
     }
