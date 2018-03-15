@@ -31,7 +31,7 @@ import io.vertx.core.json.JsonObject;
  */
 public final class TenantObject {
 
-    @JsonProperty(TenantConstants.FIELD_TENANT_ID)
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID)
     private String tenantId;
     @JsonProperty(TenantConstants.FIELD_ENABLED)
     private boolean enabled = true;

@@ -13,12 +13,6 @@
 
 package org.eclipse.hono.util;
 
-import java.util.Objects;
-import io.vertx.core.json.DecodeException;
-import org.apache.qpid.proton.message.Message;
-
-import io.vertx.core.json.JsonObject;
-
 /**
  * Constants &amp; utility methods used throughout the Tenant API.
  */
@@ -34,7 +28,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_ADAPTERS                    = "adapters";
     public static final String FIELD_ADAPTERS_TYPE               = "type";
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
-
+    /**
+     * The name of the property that contains the <em>subject DN</em> of the CA certificate
+     * that has been configured for a tenant.
+     */
+    public static final String FIELD_SUBJECT_DN = "subject-dn";
     /**
      * The name of the Tenant API endpoint.
      */
@@ -76,43 +74,5 @@ public final class TenantConstants extends RequestResponseApiConstants {
         public static boolean isValid(final String subject) {
             return TenantAction.from(subject) != TenantAction.unknown;
         }
-    }
-
-    /**
-     * Creates a JSON object from a Tenant API request message.
-     *
-     * @param message The AMQP 1.0 tenant request message.
-     * @return The tenant message created from the AMQP message.
-     * @throws NullPointerException if message is {@code null}.
-     * @throws DecodeException if the message contains a body that cannot be parsed into a JSON object.
-     */
-    public static JsonObject getTenantMsg(final Message message) {
-        Objects.requireNonNull(message);
-        final String subject = message.getSubject();
-        final String tenantId = MessageHelper.getTenantId(message);
-        final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getServiceRequestAsJson(subject, tenantId, payload);
-    }
-
-    /**
-     * Gets a JSON object representing the reply to a Tenant API request via the vert.x event bus.
-     *
-     * @param tenantId The tenant for which the message was processed. If null, the value for the key
-     *                 {@link RequestResponseApiConstants#FIELD_TENANT_ID} in the reply will be null, too.
-     * @param tenantResult The result to return to the sender of the request.
-     * @return JsonObject The JSON reply object.
-     * @throws NullPointerException If tenantResult is null.
-     */
-    public static JsonObject getServiceReplyAsJson(final String tenantId, final TenantResult<JsonObject> tenantResult) {
-        Objects.requireNonNull(tenantResult);
-        final JsonObject jsonObject = new JsonObject();
-        jsonObject.put(TenantConstants.FIELD_TENANT_ID, tenantId);
-
-        jsonObject.put(MessageHelper.APP_PROPERTY_STATUS, tenantResult.getStatus());
-        if (tenantResult.getPayload() != null) {
-            jsonObject.put(TenantConstants.FIELD_PAYLOAD, tenantResult.getPayload());
-        }
-
-        return jsonObject;
     }
 }

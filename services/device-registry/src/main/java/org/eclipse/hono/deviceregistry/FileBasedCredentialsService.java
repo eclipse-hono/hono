@@ -291,7 +291,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         for (Object obj : credentials) {
             if (obj instanceof JsonObject) {
                 final JsonObject currentCredentials = (JsonObject) obj;
-                if (deviceId.equals(getTypesafeValueForField(currentCredentials, CredentialsConstants.FIELD_DEVICE_ID, String.class))) {
+                if (deviceId.equals(getTypesafeValueForField(currentCredentials, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, String.class))) {
                     // device ID matches, add a copy of credentials to result
                     result.add(currentCredentials.copy());
                 }
@@ -499,7 +499,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
                 final JsonObject element = (JsonObject) credentialsIterator.next();
                 final String credType = element.getString(CredentialsConstants.FIELD_TYPE);
-                final String credDevice = element.getString(CredentialsConstants.FIELD_DEVICE_ID);
+                final String credDevice = element.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
 
                 if (!CredentialsConstants.SPECIFIER_WILDCARD.equals(type) && credType.equals(type)) {
                     // delete a single credentials instance

@@ -23,6 +23,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -92,7 +93,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
     /**
      * Check if the payload (that was put to the RoutingContext ctx with the
-     * key {@link #KEY_REQUEST_BODY}) contains a value for the key {@link TenantConstants#FIELD_TENANT_ID} that is not null.
+     * key {@link #KEY_REQUEST_BODY}) contains a value for the key {@link TenantConstants#FIELD_PAYLOAD_TENANT_ID} that is not null.
      *
      * @param ctx The routing context to retrieve the JSON request body from.
      */
@@ -100,13 +101,13 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
 
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
 
-        final Object tenantId = payload.getValue(TenantConstants.FIELD_TENANT_ID);
+        final Object tenantId = payload.getValue(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
 
         if (tenantId == null) {
-            ctx.response().setStatusMessage(String.format("'%s' param is required", TenantConstants.FIELD_TENANT_ID));
+            ctx.response().setStatusMessage(String.format("'%s' param is required", TenantConstants.FIELD_PAYLOAD_TENANT_ID));
             ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
         } else if (!(tenantId instanceof String)) {
-            ctx.response().setStatusMessage(String.format("'%s' must be a string", TenantConstants.FIELD_TENANT_ID));
+            ctx.response().setStatusMessage(String.format("'%s' must be a string", TenantConstants.FIELD_PAYLOAD_TENANT_ID));
             ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
         }
         ctx.next();
@@ -163,12 +164,15 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
         logger.debug("http request [{}] for tenant [tenant: {}]", action, tenantId);
 
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
-        final JsonObject requestMsg = TenantConstants.getServiceRequestAsJson(action.toString(), tenantId, payload);
+        final JsonObject requestMsg = EventBusMessage.forOperation(action.toString())
+                .setTenant(tenantId)
+                .setJsonPayload(payload)
+                .toJson();
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx, successfulOutcomeFilter, httpServerResponseHandler));
     }
 
     private static String getTenantParamFromPayload(final JsonObject payload) {
-        return (payload != null ? (String) payload.remove(TenantConstants.FIELD_TENANT_ID) : null);
+        return (payload != null ? (String) payload.remove(TenantConstants.FIELD_PAYLOAD_TENANT_ID) : null);
     }
 }

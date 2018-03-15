@@ -16,6 +16,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -144,8 +145,8 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
 
         try {
             final JsonObject body = regMsg.body();
-            final String tenantId = body.getString(RegistrationConstants.FIELD_TENANT_ID);
-            final String deviceId = body.getString(RegistrationConstants.FIELD_DEVICE_ID);
+            final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+            final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
             final String gatewayId = body.getString(MessageHelper.APP_PROPERTY_GATEWAY_ID);
             final String operation = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
 
@@ -346,7 +347,7 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     protected final JsonObject getAssertionPayload(final String tenantId, final String deviceId, final JsonObject registrationInfo) {
 
         final JsonObject result = new JsonObject()
-                .put(RegistrationConstants.FIELD_DEVICE_ID, deviceId)
+                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
                 .put(RegistrationConstants.FIELD_ASSERTION, assertionFactory.getAssertion(tenantId, deviceId));
         final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
         if (defaults != null) {
@@ -379,10 +380,15 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     protected final void reply(final Message<JsonObject> request, final RegistrationResult result) {
 
         final JsonObject body = request.body();
-        final String tenantId = body.getString(RegistrationConstants.FIELD_TENANT_ID);
-        final String deviceId = body.getString(RegistrationConstants.FIELD_DEVICE_ID);
-
-        request.reply(RegistrationConstants.getServiceReplyAsJson(tenantId, deviceId, result));
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+        final JsonObject response = EventBusMessage.forStatusCode(result.getStatus())
+                .setTenant(tenantId)
+                .setDeviceId(deviceId)
+                .setJsonPayload(result.getPayload())
+                .setCacheDirective(result.getCacheDirective())
+                .toJson();
+        request.reply(response);
     }
 
     private JsonObject getRequestPayload(final JsonObject request) {
@@ -407,7 +413,7 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     protected static final JsonObject getResultPayload(final String deviceId, final JsonObject data) {
 
         return new JsonObject()
-                .put(RegistrationConstants.FIELD_DEVICE_ID, deviceId)
+                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
                 .put(RegistrationConstants.FIELD_DATA, data);
     }
 }

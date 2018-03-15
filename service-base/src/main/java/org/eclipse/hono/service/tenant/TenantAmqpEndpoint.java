@@ -13,20 +13,20 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import io.vertx.core.Future;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
@@ -83,20 +83,22 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
     public final void processRequest(final Message msg, final ResourceIdentifier targetAddress,
                                final HonoUser clientPrincipal) {
 
-        final JsonObject tenantMsg = TenantConstants.getTenantMsg(msg);
-        vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, tenantMsg,
+        final EventBusMessage request = EventBusMessage.forOperation(msg)
+                .setTenant(msg)
+                .setJsonPayload(msg);
+        vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, request.toJson(),
                 result -> {
-                    JsonObject response = null;
+                    EventBusMessage response = null;
                     if (result.succeeded()) {
-                        response = (JsonObject) result.result().body();
+                        response = EventBusMessage.fromJson((JsonObject) result.result().body());
                     } else {
                         logger.debug("failed to process tenant management request [msg ID: {}] due to {}",
                                 msg.getMessageId(), result.cause());
-                        response = TenantConstants.getServiceReplyAsJson(HTTP_INTERNAL_ERROR,
-                                MessageHelper.getTenantIdAnnotation(msg), null, null);
+                        response = EventBusMessage.forStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR)
+                                .setTenant(msg);
                     }
                     addHeadersToResponse(msg, response);
-                    vertx.eventBus().send(msg.getReplyTo(), response);
+                    vertx.eventBus().send(msg.getReplyTo(), response.toJson());
                 });
     }
 

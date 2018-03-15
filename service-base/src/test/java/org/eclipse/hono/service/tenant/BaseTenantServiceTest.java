@@ -115,7 +115,7 @@ public class BaseTenantServiceTest {
     private static Message<JsonObject> createMessageMockForPayload(final TenantConstants.TenantAction action, final JsonObject payload) {
 
         final JsonObject requestBody = new JsonObject();
-        requestBody.put(TenantConstants.FIELD_TENANT_ID, TEST_TENANT);
+        requestBody.put(MessageHelper.APP_PROPERTY_TENANT_ID, TEST_TENANT);
         requestBody.put(MessageHelper.SYS_PROPERTY_SUBJECT, action);
         if (payload != null) {
             requestBody.put(TenantConstants.FIELD_PAYLOAD, payload);
@@ -144,9 +144,13 @@ public class BaseTenantServiceTest {
     }
 
     private static JsonObject resultWithStatusCode(final int statusCode, final String tenantId) {
-        return new JsonObject()
-                .put(MessageHelper.APP_PROPERTY_STATUS, statusCode)
-                .put(RequestResponseApiConstants.FIELD_TENANT_ID, tenantId);
+
+        final JsonObject result = new JsonObject()
+                .put(MessageHelper.APP_PROPERTY_STATUS, statusCode);
+        if (tenantId != null) {
+                result.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        }
+        return result;
     }
 
     private static BaseTenantService<ServiceConfigProperties> createBaseTenantService() {

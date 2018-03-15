@@ -19,6 +19,7 @@ import io.vertx.core.http.HttpHeaders;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.EventBusMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
@@ -106,13 +107,17 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
     private void addCredentials(final RoutingContext ctx) {
 
         final JsonObject payload = (JsonObject) ctx.get(KEY_REQUEST_BODY);
-        final String deviceId = payload.getString(CredentialsConstants.FIELD_DEVICE_ID);
+        final String deviceId = payload.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
         final String authId = payload.getString(CredentialsConstants.FIELD_AUTH_ID);
         final String type = payload.getString(CredentialsConstants.FIELD_TYPE);
         final String tenantId = getTenantParam(ctx);
         logger.debug("adding credentials [tenant: {}, device-id: {}, auth-id: {}, type: {}]", tenantId, deviceId, authId, type);
 
-        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.CredentialsAction.add.toString(), tenantId, deviceId, payload);
+        final JsonObject requestMsg = EventBusMessage.forOperation(CredentialsConstants.CredentialsAction.add.toString())
+                .setTenant(tenantId)
+                .setDeviceId(deviceId)
+                .setJsonPayload(payload)
+                .toJson();
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_CREATED,
@@ -125,7 +130,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
     private void updateCredentials(final RoutingContext ctx) {
 
         final JsonObject payload = (JsonObject) ctx.get(KEY_REQUEST_BODY);
-        final String deviceId = payload.getString(CredentialsConstants.FIELD_DEVICE_ID);
+        final String deviceId = payload.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
         final String authId = payload.getString(CredentialsConstants.FIELD_AUTH_ID);
         final String type = payload.getString(CredentialsConstants.FIELD_TYPE);
         final String tenantId = getTenantParam(ctx);
@@ -142,7 +147,11 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         } else {
             logger.debug("updating credentials [tenant: {}, device-id: {}, auth-id: {}, type: {}]", tenantId, deviceId, authId, type);
 
-            final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.CredentialsAction.update.toString(), tenantId, deviceId, payload);
+            final JsonObject requestMsg = EventBusMessage.forOperation(CredentialsConstants.CredentialsAction.update.toString())
+                    .setTenant(tenantId)
+                    .setDeviceId(deviceId)
+                    .setJsonPayload(payload)
+                    .toJson();
 
             sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
         }
@@ -160,8 +169,10 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         payload.put(CredentialsConstants.FIELD_TYPE, type);
         payload.put(CredentialsConstants.FIELD_AUTH_ID, authId);
 
-        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.CredentialsAction.remove.toString(),
-                tenantId, null, payload);
+        final JsonObject requestMsg = EventBusMessage.forOperation(CredentialsConstants.CredentialsAction.remove.toString())
+                .setTenant(tenantId)
+                .setJsonPayload(payload)
+                .toJson();
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_NO_CONTENT,
@@ -176,11 +187,14 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         logger.debug("removeCredentialsForDevice: [tenant: {}, device-id: {}]", tenantId, deviceId);
 
         final JsonObject payload = new JsonObject();
-        payload.put(CredentialsConstants.FIELD_DEVICE_ID, deviceId);
+        payload.put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         payload.put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SPECIFIER_WILDCARD);
 
-        final JsonObject requestMsg = CredentialsConstants.getServiceRequestAsJson(CredentialsConstants.CredentialsAction.remove.toString(),
-                tenantId, deviceId, payload);
+        final JsonObject requestMsg = EventBusMessage.forOperation(CredentialsConstants.CredentialsAction.remove.toString())
+                .setTenant(tenantId)
+                .setDeviceId(deviceId)
+                .setJsonPayload(payload)
+                .toJson();
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_NO_CONTENT,

@@ -11,6 +11,25 @@
  */
 package org.eclipse.hono.deviceregistry;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -23,26 +42,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistrationResult;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-
-import static java.net.HttpURLConnection.*;
-import static org.eclipse.hono.util.RegistrationConstants.*;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * Tests {@link FileBasedRegistrationService}.
@@ -274,8 +273,8 @@ public class FileBasedRegistrationServiceTest {
         RegistrationResult result = registrationService.addDevice(TENANT, "newDevice", null);
 
         // THEN the result contains a FORBIDDEN status code and the device has not been added to the registry
-        assertThat(result.getStatus(), is(HTTP_FORBIDDEN));
-        assertThat(registrationService.getDevice(TENANT, "newDevice").getStatus(), is(HTTP_NOT_FOUND));
+        assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
+        assertThat(registrationService.getDevice(TENANT, "newDevice").getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
     }
 
     /**
@@ -293,7 +292,7 @@ public class FileBasedRegistrationServiceTest {
         RegistrationResult result = registrationService.updateDevice(TENANT, DEVICE, new JsonObject().put("updated", true));
 
         // THEN the result contains a FORBIDDEN status code and the device has not been updated
-        assertThat(result.getStatus(), is(HTTP_FORBIDDEN));
+        assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
         assertFalse(registrationService.getDevice(TENANT, DEVICE).getPayload().containsKey("updated"));
     }
 
@@ -312,8 +311,8 @@ public class FileBasedRegistrationServiceTest {
         RegistrationResult result = registrationService.removeDevice(TENANT, DEVICE);
 
         // THEN the result contains a FORBIDDEN status code and the device has not been removed
-        assertThat(result.getStatus(), is(HTTP_FORBIDDEN));
-        assertThat(registrationService.getDevice(TENANT, DEVICE).getStatus(), is(HTTP_OK));
+        assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
+        assertThat(registrationService.getDevice(TENANT, DEVICE).getStatus(), is(HttpURLConnection.HTTP_OK));
     }
 
     /**
@@ -321,7 +320,12 @@ public class FileBasedRegistrationServiceTest {
      */
     @Test
     public void testGetUnknownDeviceReturnsNotFound() {
-        processMessageAndExpectResponse(mockMsg(ACTION_GET), getServiceReplyAsJson(HTTP_NOT_FOUND, TENANT, DEVICE));
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_GET),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_NOT_FOUND)
+                    .setTenant(TENANT)
+                    .setDeviceId(DEVICE)
+                    .toJson());
     }
 
     /**
@@ -329,7 +333,12 @@ public class FileBasedRegistrationServiceTest {
      */
     @Test
     public void testDeregisterUnknownDeviceReturnsNotFound() {
-        processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getServiceReplyAsJson(HTTP_NOT_FOUND, TENANT, DEVICE));
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_DEREGISTER),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_NOT_FOUND)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .toJson());
     }
 
     /**
@@ -337,7 +346,12 @@ public class FileBasedRegistrationServiceTest {
      */
     @Test
     public void testProcessRegisterMessageFailsWithUnsupportedAction() {
-        processMessageAndExpectResponse(mockMsg("unknown-action"), getServiceReplyAsJson(HTTP_BAD_REQUEST, TENANT, DEVICE));
+        processMessageAndExpectResponse(
+                mockMsg("unknown-action"),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_BAD_REQUEST)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .toJson());
     }
 
     /**
@@ -345,8 +359,18 @@ public class FileBasedRegistrationServiceTest {
      */
     @Test
     public void testDuplicateRegistrationFails() {
-        processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CREATED, TENANT, DEVICE));
-        processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CONFLICT, TENANT, DEVICE));
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_REGISTER),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_CREATED)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .toJson());
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_REGISTER),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_CONFLICT)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .toJson());
     }
 
     /**
@@ -354,8 +378,19 @@ public class FileBasedRegistrationServiceTest {
      */
     @Test
     public void testGetSucceedsForRegisteredDevice() {
-        processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CREATED, TENANT, DEVICE));
-        processMessageAndExpectResponse(mockMsg(ACTION_GET), getServiceReplyAsJson(HTTP_OK, TENANT, DEVICE, expectedPayload(DEVICE)));
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_REGISTER),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_CREATED)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .toJson());
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_GET),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_OK)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .setJsonPayload(expectedPayload(DEVICE))
+                .toJson());
     }
 
     /**
@@ -363,9 +398,24 @@ public class FileBasedRegistrationServiceTest {
      */
     @Test
     public void testGetFailsForDeregisteredDevice() {
-        processMessageAndExpectResponse(mockMsg(ACTION_REGISTER), getServiceReplyAsJson(HTTP_CREATED, TENANT, DEVICE));
-        processMessageAndExpectResponse(mockMsg(ACTION_DEREGISTER), getServiceReplyAsJson(HTTP_NO_CONTENT, TENANT, DEVICE));
-        processMessageAndExpectResponse(mockMsg(ACTION_GET), getServiceReplyAsJson(HTTP_NOT_FOUND, TENANT, DEVICE));
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_REGISTER),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_CREATED)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .toJson());
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_DEREGISTER),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_NO_CONTENT)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .toJson());
+        processMessageAndExpectResponse(
+                mockMsg(RegistrationConstants.ACTION_GET),
+                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_NOT_FOUND)
+                .setTenant(TENANT)
+                .setDeviceId(DEVICE)
+                .toJson());
     }
 
     /**
@@ -440,8 +490,9 @@ public class FileBasedRegistrationServiceTest {
 
     private static JsonObject expectedPayload(final String id) {
         return new JsonObject()
-                .put(FIELD_DEVICE_ID, id)
-                .put(FIELD_DATA, new JsonObject().put(FIELD_ENABLED, Boolean.TRUE));
+                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, id)
+                .put(RegistrationConstants.FIELD_DATA, new JsonObject()
+                        .put(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE));
     }
 
     private static Message<JsonObject> mockMsg(final String action) {
@@ -450,7 +501,11 @@ public class FileBasedRegistrationServiceTest {
 
     @SuppressWarnings("unchecked")
     private static Message<JsonObject> mockMsg(final String action, final String tenant) {
-        final JsonObject registrationJson = getServiceRequestAsJson(action, tenant, DEVICE);
+
+        final JsonObject registrationJson = EventBusMessage.forOperation(action)
+                .setTenant(tenant)
+                .setDeviceId(DEVICE)
+                .toJson();
         final Message<JsonObject> message = mock(Message.class);
         when(message.body()).thenReturn(registrationJson);
         return message;
@@ -460,5 +515,4 @@ public class FileBasedRegistrationServiceTest {
         registrationService.processRegistrationMessage(request);
         verify(request).reply(expectedResponse);
     }
-
 }

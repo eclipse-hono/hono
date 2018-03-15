@@ -19,6 +19,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -54,25 +55,25 @@ public class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConf
     @Override
     public final void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
-        final JsonObject credentialsMsg = CredentialsConstants.getCredentialsMsg(msg, targetAddress);
+        final JsonObject credentialsMsg = EventBusMessage.forOperation(msg)
+                .setTenant(targetAddress.getTenantId())
+                .setJsonPayload(msg)
+                .toJson();
 
         vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg,
                 result -> {
-                    JsonObject response = null;
+                    EventBusMessage response = null;
                     if (result.succeeded()) {
                         // TODO check for correct session here...?
-                        response = (JsonObject) result.result().body();
+                        response = EventBusMessage.fromJson((JsonObject) result.result().body());
                     } else {
                         logger.debug("failed to process credentials request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
                         // we need to inform client about failure
-                        response = CredentialsConstants.getServiceReplyAsJson(
-                                HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                targetAddress.getTenantId(),
-                                null,
-                                null);
+                        response = EventBusMessage.forStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR)
+                                .setTenant(targetAddress.getTenantId());
                     }
                     addHeadersToResponse(msg, response);
-                    vertx.eventBus().send(msg.getReplyTo(), response);
+                    vertx.eventBus().send(msg.getReplyTo(), response.toJson());
                 });
     }
 

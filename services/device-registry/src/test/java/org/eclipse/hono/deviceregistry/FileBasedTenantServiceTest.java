@@ -328,7 +328,7 @@ public class FileBasedTenantServiceTest {
 
         svc.get("tenant", ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
-                    assertThat(s.getPayload().getString(TenantConstants.FIELD_TENANT_ID), is("tenant"));
+                    assertThat(s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
                     assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
                 }));
     }
@@ -474,7 +474,7 @@ public class FileBasedTenantServiceTest {
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
         final JsonObject tenantPayload = new JsonObject()
-                .put(TenantConstants.FIELD_TENANT_ID, tenantId)
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
                 .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
         return tenantPayload;

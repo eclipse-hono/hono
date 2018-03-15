@@ -12,14 +12,13 @@
 
 package org.eclipse.hono.service.registration;
 
-import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
-
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -92,7 +91,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         final String deviceId = getDeviceIdParam(ctx);
         final String tenantId = getTenantParam(ctx);
         final HttpServerResponse response = ctx.response();
-        final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_GET, tenantId, deviceId);
+        final JsonObject requestMsg = EventBusMessage.forOperation(RegistrationConstants.ACTION_GET)
+                .setTenant(tenantId)
+                .setDeviceId(deviceId)
+                .toJson();
 
         sendAction(ctx, requestMsg, (status, registrationResult) -> {
             response.setStatusCode(status);
@@ -122,16 +124,21 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         if (payload == null) {
             HttpUtils.badRequest(ctx, "missing body");
         } else {
-            final Object deviceId = payload.remove(FIELD_DEVICE_ID);
+            final Object deviceId = payload.remove(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID);
             if (deviceId == null) {
-                HttpUtils.badRequest(ctx, String.format("'%s' param is required", FIELD_DEVICE_ID));
+                HttpUtils.badRequest(ctx, String.format("'%s' param is required",
+                        RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
             } else if (!(deviceId instanceof String)) {
-                HttpUtils.badRequest(ctx, String.format("'%s' must be a string", FIELD_DEVICE_ID));
+                HttpUtils.badRequest(ctx, String.format("'%s' must be a string",
+                        RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
             } else {
                 final String tenantId = getTenantParam(ctx);
                 logger.debug("registering data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
-                final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_REGISTER,
-                        tenantId, (String) deviceId, payload);
+                final JsonObject requestMsg = EventBusMessage.forOperation(RegistrationConstants.ACTION_REGISTER)
+                        .setTenant(tenantId)
+                        .setDeviceId((String) deviceId)
+                        .setJsonPayload(payload)
+                        .toJson();
                 sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                         status -> status == HttpURLConnection.HTTP_CREATED,
                         response -> response.putHeader(
@@ -157,11 +164,15 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     private void updateRegistration(final String deviceId, final JsonObject payload, final RoutingContext ctx) {
 
         if (payload != null) {
-            payload.remove(FIELD_DEVICE_ID);
+            payload.remove(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID);
         }
         final String tenantId = getTenantParam(ctx);
         logger.debug("updating registration data for device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId, payload);
-        final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_UPDATE, tenantId, deviceId, payload);
+        final JsonObject requestMsg = EventBusMessage.forOperation(RegistrationConstants.ACTION_UPDATE)
+                .setTenant(tenantId)
+                .setDeviceId(deviceId)
+                .setJsonPayload(payload)
+                .toJson();
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
     }
 
@@ -170,7 +181,10 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
         final String deviceId = getDeviceIdParam(ctx);
         final String tenantId = getTenantParam(ctx);
         logger.debug("removing registration information for device [tenant: {}, device: {}]", tenantId, deviceId);
-        final JsonObject requestMsg = RegistrationConstants.getServiceRequestAsJson(RegistrationConstants.ACTION_DEREGISTER, tenantId, deviceId);
+        final JsonObject requestMsg = EventBusMessage.forOperation(RegistrationConstants.ACTION_DEREGISTER)
+                .setTenant(tenantId)
+                .setDeviceId(deviceId)
+                .toJson();
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx));
     }
 

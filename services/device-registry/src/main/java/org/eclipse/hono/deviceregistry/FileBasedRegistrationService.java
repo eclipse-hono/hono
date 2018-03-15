@@ -15,7 +15,7 @@ package org.eclipse.hono.deviceregistry;
 
 import static java.net.HttpURLConnection.*;
 import static org.eclipse.hono.util.RegistrationConstants.FIELD_DATA;
-import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_DEVICE_ID;
+import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID;
 import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_ENABLED;
 
 import java.util.HashMap;
@@ -162,7 +162,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
             for (Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
                 if (JsonObject.class.isInstance(deviceObj)) {
                     JsonObject device = (JsonObject) deviceObj;
-                    String deviceId = device.getString(FIELD_DEVICE_ID);
+                    String deviceId = device.getString(FIELD_PAYLOAD_DEVICE_ID);
                     if (deviceId != null) {
                         log.trace("loading device [{}]", deviceId);
                         final JsonObject data = device.getJsonObject(FIELD_DATA,
@@ -204,7 +204,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
                     for (Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
                         devices.add(
                                 new JsonObject()
-                                        .put(FIELD_DEVICE_ID, deviceEntry.getKey())
+                                        .put(FIELD_PAYLOAD_DEVICE_ID, deviceEntry.getKey())
                                         .put(FIELD_DATA, deviceEntry.getValue()));
                         idCount.incrementAndGet();
                     }

@@ -54,7 +54,7 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_ENABLED, true)
                 .put("customConfig", new JsonObject().put("customProperty", 15));
         final JsonObject config = new JsonObject()
-                .put(TenantConstants.FIELD_TENANT_ID, "my-tenant")
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
                 .put(TenantConstants.FIELD_ENABLED, true)
                 .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterConfig));
         final String jsonString = config.encode();

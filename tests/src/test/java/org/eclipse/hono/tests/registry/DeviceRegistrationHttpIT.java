@@ -259,7 +259,7 @@ public class DeviceRegistrationHttpIT {
         registry.registerDevice(TENANT, deviceId, new JsonObject())
             .compose(ok -> {
                 // now try to update the device with missing content type
-                final JsonObject requestBody = new JsonObject().put(RegistrationConstants.FIELD_DEVICE_ID, deviceId).put("newKey1", "newValue1");
+                final JsonObject requestBody = new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId).put("newKey1", "newValue1");
                 return registry.updateDevice(TENANT, deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
             }).setHandler(context.asyncAssertSuccess());
     }
@@ -304,7 +304,7 @@ public class DeviceRegistrationHttpIT {
             final String expectedDeviceId,
             final JsonObject expectedData) {
 
-        ctx.assertEquals(expectedDeviceId, response.getString(RegistrationConstants.FIELD_DEVICE_ID));
+        ctx.assertEquals(expectedDeviceId, response.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
         JsonObject registeredData = response.getJsonObject(RegistrationConstants.FIELD_DATA);
         registeredData.forEach(entry -> {
             ctx.assertEquals(expectedData.getValue(entry.getKey()), entry.getValue());

@@ -166,7 +166,7 @@ public class CredentialsHttpIT {
     }
 
     /**
-     * Verify that a json payload to add credentials that does not contain a {@link CredentialsConstants#FIELD_DEVICE_ID}
+     * Verify that a json payload to add credentials that does not contain a {@link CredentialsConstants#FIELD_PAYLOAD_DEVICE_ID}
      * is not accepted and responded with {@link HttpURLConnection#HTTP_BAD_REQUEST}
      * and a non empty error response message.
      * 
@@ -174,7 +174,7 @@ public class CredentialsHttpIT {
      */
     @Test
     public void testAddCredentialsFailsForMissingDeviceId(final TestContext context) {
-        testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_DEVICE_ID);
+        testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
     }
 
     /**
@@ -220,13 +220,13 @@ public class CredentialsHttpIT {
     public void testUpdateCredentialsSucceeds(final TestContext context) {
 
         final JsonObject altered = hashedPasswordCredentials.copy();
-        altered.put(CredentialsConstants.FIELD_DEVICE_ID, "other-device");
+        altered.put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, "other-device");
 
         registry.addCredentials(TENANT, hashedPasswordCredentials)
             .compose(ar -> registry.updateCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, altered))
             .compose(ur -> registry.getCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
             .setHandler(context.asyncAssertSuccess(gr -> {
-                context.assertEquals("other-device", gr.toJsonObject().getString(CredentialsConstants.FIELD_DEVICE_ID));
+                context.assertEquals("other-device", gr.toJsonObject().getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID));
             }));
     }
 

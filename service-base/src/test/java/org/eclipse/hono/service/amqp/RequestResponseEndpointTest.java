@@ -13,17 +13,16 @@
 
 package org.eclipse.hono.service.amqp;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.mockito.hamcrest.MockitoHamcrest.booleanThat;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.instanceOf;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
-import org.apache.qpid.proton.amqp.messaging.Source;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
@@ -31,7 +30,6 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -202,19 +200,6 @@ public class RequestResponseEndpointTest {
         verify(receiver, never()).close();
         verify(authService).isAuthorized(Constants.PRINCIPAL_ANONYMOUS, resource, "get");
         assertTrue(processingTracker.isComplete());
-    }
-
-    /**
-     * Verifies that the JsonObject that is constructed for delegating a request to a service listening on the vertx
-     * event bus contains only fields that do not have a "_" in their name.
-     */
-    @Test
-    public void testJsonKeyNamingConvention() {
-
-        final JsonObject serviceRequestJson = RequestResponseApiConstants.getServiceRequestAsJson("test", Constants.DEFAULT_TENANT, "4711", null);
-        serviceRequestJson.fieldNames().stream().forEach(field -> {
-            assertFalse(field.contains("_"));
-        });
     }
 
     private RequestResponseEndpoint<ServiceConfigProperties> getEndpoint(final boolean passesFormalVerification) {

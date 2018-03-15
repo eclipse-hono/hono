@@ -291,7 +291,7 @@ public class FileBasedCredentialsServiceTest {
         register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
 
         final JsonObject payload2 = new JsonObject()
-                .put(CredentialsConstants.FIELD_DEVICE_ID, "other-device")
+                .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, "other-device")
                 .put(CredentialsConstants.FIELD_AUTH_ID, "myId")
                 .put(CredentialsConstants.FIELD_TYPE, "myType")
                 .put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
@@ -458,7 +458,7 @@ public class FileBasedCredentialsServiceTest {
             final TestContext ctx) {
 
         JsonObject data = new JsonObject()
-                .put(CredentialsConstants.FIELD_DEVICE_ID, deviceId)
+                .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
                 .put(CredentialsConstants.FIELD_AUTH_ID, authId)
                 .put(CredentialsConstants.FIELD_TYPE, type)
                 .put(CredentialsConstants.FIELD_SECRETS, secrets);

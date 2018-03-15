@@ -21,8 +21,8 @@ import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -283,29 +283,12 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * @param request The request to correlate to.
      * @param response The response message.
      */
-    protected final void addHeadersToResponse(final Message request, final JsonObject response) {
+    protected final void addHeadersToResponse(final Message request, final EventBusMessage response) {
 
-        final boolean isApplicationCorrelationId = MessageHelper.getXOptAppCorrelationId(request);
-        logger.trace("request message [{}] uses application specific correlation ID: {}", request.getMessageId(), isApplicationCorrelationId);
-        if (isApplicationCorrelationId) {
-            response.put(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, isApplicationCorrelationId);
-        }
-        final JsonObject correlationIdJson = RequestResponseApiConstants.encodeIdToJson(getCorrelationId(request));
-        response.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationIdJson);
-    }
-
-    /**
-     * @param request the request message from which to extract the correlationId
-     * @return The ID used to correlate the given request message. This can either be the provided correlationId
-     * (Correlation ID Pattern) or the messageId of the request (Message ID Pattern, if no correlationId is provided).
-     */
-    private Object getCorrelationId(final Message request) {
-        /* if a correlationId is provided, we use it to correlate the response -> Correlation ID Pattern */
-        if (request.getCorrelationId() != null) {
-            return request.getCorrelationId();
-        } else {
-           /* otherwise we use the message id -> Message ID Pattern */
-            return request.getMessageId();
+        response.setAppCorrelationId(request);
+        response.setCorrelationId(request);
+        if (logger.isTraceEnabled()) {
+            logger.trace("request message [{}] uses application specific correlation ID: {}", request.getMessageId(), response.isAppCorrelationId());
         }
     }
 }

@@ -19,6 +19,7 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
@@ -155,10 +156,10 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
     private void processGetRequest(final Message<JsonObject> request) {
 
         final JsonObject body = request.body();
-        final String tenantId = body.getString(TenantConstants.FIELD_TENANT_ID);
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
-                    TenantConstants.FIELD_TENANT_ID);
+                    MessageHelper.APP_PROPERTY_TENANT_ID);
             reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
             return;
         } else {
@@ -170,12 +171,12 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
     private void processAddRequest(final Message<JsonObject> request) {
 
         final JsonObject body = request.body();
-        final String tenantId = body.getString(TenantConstants.FIELD_TENANT_ID);
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final JsonObject payload = body.getJsonObject(TenantConstants.FIELD_PAYLOAD, new JsonObject());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
-                    TenantConstants.FIELD_TENANT_ID);
+                    MessageHelper.APP_PROPERTY_TENANT_ID);
             reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
             return;
         } else if (isValidRequestPayload(payload)) {
@@ -191,12 +192,12 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
     private void processUpdateRequest(final Message<JsonObject> request) {
 
         final JsonObject body = request.body();
-        final String tenantId = body.getString(TenantConstants.FIELD_TENANT_ID);
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final JsonObject payload = body.getJsonObject(TenantConstants.FIELD_PAYLOAD, new JsonObject());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
-                    TenantConstants.FIELD_TENANT_ID);
+                    MessageHelper.APP_PROPERTY_TENANT_ID);
             reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
             return;
         } else if (isValidRequestPayload(payload)) {
@@ -212,11 +213,11 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
     private void processRemoveRequest(final Message<JsonObject> request) {
 
         final JsonObject body = request.body();
-        final String tenantId = body.getString(TenantConstants.FIELD_TENANT_ID);
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
-                    TenantConstants.FIELD_TENANT_ID);
+                    MessageHelper.APP_PROPERTY_TENANT_ID);
             reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
             return;
         } else {
@@ -276,12 +277,20 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * Sends a response to a tenant request over the vert.x event bus.
      *
      * @param request The message to respond to.
-     * @param tenantResult The tenant result that should be conveyed in the response.
-     * @throws NullPointerException If request or tenantResult is null.
+     * @param result The tenant result that should be conveyed in the response.
+     * @throws NullPointerException If request or result is null.
      */
-    protected final void reply(final Message<JsonObject> request, final TenantResult<JsonObject> tenantResult) {
+    protected final void reply(final Message<JsonObject> request, final TenantResult<JsonObject> result) {
+
         final JsonObject body = request.body();
-        request.reply(TenantConstants.getServiceReplyAsJson(body.getString(TenantConstants.FIELD_TENANT_ID), tenantResult));
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final JsonObject response =  EventBusMessage.forStatusCode(result.getStatus())
+                .setTenant(tenantId)
+                .setJsonPayload(result.getPayload())
+                .setCacheDirective(result.getCacheDirective())
+                .toJson();
+
+        request.reply(response);
     }
 
     /**
@@ -362,7 +371,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
     protected static final JsonObject getResultPayload(final String tenantId, final JsonObject data,
                                                        final JsonArray adapterConfigurations) {
         final JsonObject result = new JsonObject()
-                .put(TenantConstants.FIELD_TENANT_ID, tenantId)
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
                 .mergeIn(data);
         if (adapterConfigurations != null) {
             result.put(TenantConstants.FIELD_ADAPTERS, adapterConfigurations);

@@ -13,9 +13,6 @@ package org.eclipse.hono.util;
 
 import java.util.Objects;
 
-import org.apache.qpid.proton.message.Message;
-
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -91,38 +88,6 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     }
 
     /**
-     * Creates a JSON message for an AMQP message representing a request to
-     * a Credentials API operation.
-     * 
-     * @param message The request message.
-     * @param target The target address that the request has been sent to.
-     * @return The JSON object to be sent over the vert.x event bus in order to process the request.
-     * @throws DecodeException if the message's payload is not valid JSON.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    public static JsonObject getCredentialsMsg(final Message message, final ResourceIdentifier target) {
-
-        Objects.requireNonNull(message);
-        Objects.requireNonNull(target);
-        final String subject = message.getSubject();
-        final String tenantId = target.getTenantId();
-        final JsonObject payload = MessageHelper.getJsonPayload(message);
-        return getServiceRequestAsJson(subject, tenantId, null, payload);
-    }
-
-    /**
-     * Gets a JSON object representing the reply to a credentials request via the vert.x event bus.
-     *
-     * @param tenantId The tenant for which the message was processed.
-     * @param deviceId The device that the message relates to.
-     * @param result The result to return to the sender of the request.
-     * @return JsonObject The JSON reply object.
-     */
-    public static JsonObject getServiceReplyAsJson(final String tenantId, final String deviceId, final CredentialsResult<JsonObject> result) {
-        return RequestResponseApiConstants.getServiceReplyAsJson(result.getStatus(), tenantId, deviceId, result.getPayload());
-    }
-
-    /**
      * Build a Json object as a request for internal communication via the vert.x event bus.
      * Clients use this object to build their request that is sent to the processing service.
      *
@@ -133,13 +98,17 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * @return JsonObject The JSON object for the request that is to be sent via the vert.x event bus.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public static JsonObject getServiceGetRequestAsJson(final String tenantId, final String deviceId, final String authId,
-                                                        final String type) {
+    public static JsonObject getServiceGetRequestAsJson(
+            final String tenantId,
+            final String deviceId,
+            final String authId,
+            final String type) {
+
         Objects.requireNonNull(tenantId);
 
         final JsonObject payload = new JsonObject();
         if (deviceId != null) {
-            payload.put(FIELD_DEVICE_ID, deviceId);
+            payload.put(FIELD_PAYLOAD_DEVICE_ID, deviceId);
         }
         if (authId != null) {
             payload.put(FIELD_AUTH_ID, authId);
@@ -148,7 +117,10 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
             payload.put(FIELD_TYPE, type);
         }
 
-        return getServiceRequestAsJson(CredentialsAction.get.toString(), tenantId, null, payload);
+        return EventBusMessage.forOperation(CredentialsAction.get.toString())
+                .setTenant(tenantId)
+                .setJsonPayload(payload)
+                .toJson();
     }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -19,8 +19,8 @@ import java.util.Objects;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -124,12 +124,12 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
 
         log.trace("credentials request message: {}", body.encodePrettily());
 
-        final String tenantId = body.getString(CredentialsConstants.FIELD_TENANT_ID);
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
         final String subject = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
         final JsonObject payload = getRequestPayload(body);
 
         if (tenantId == null) {
-            log.debug("credentials request does not contain mandatory property [{}]", CredentialsConstants.FIELD_TENANT_ID);
+            log.debug("credentials request does not contain mandatory property [{}]", MessageHelper.APP_PROPERTY_TENANT_ID);
             reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
             return;
         } else if (subject == null) {
@@ -171,7 +171,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         }
 
         final String authId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID, String.class);
-        final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_DEVICE_ID, String.class);
+        final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, String.class);
 
 
         if (authId != null && deviceId == null) {
@@ -206,7 +206,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
 
     private void processCredentialsMessageRemoveOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
 
-        final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_DEVICE_ID, String.class);
+        final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, String.class);
         final String type = getTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE, String.class);
         final String authId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID, String.class);
 
@@ -329,7 +329,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     }
 
     private boolean isValidCredentialsObject(final JsonObject credentials) {
-        return containsStringValueForField(credentials, CredentialsConstants.FIELD_DEVICE_ID)
+        return containsStringValueForField(credentials, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID)
                 && containsStringValueForField(credentials, CredentialsConstants.FIELD_TYPE)
                 && containsStringValueForField(credentials, CredentialsConstants.FIELD_AUTH_ID)
                 && containsValidSecretValue(credentials);
@@ -435,8 +435,12 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
      * 
      * @param request The message to respond to.
      * @param result The credentials result that should be conveyed in the response.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected final void reply(final Message<JsonObject> request, final AsyncResult<CredentialsResult<JsonObject>> result) {
+
+        Objects.requireNonNull(request);
+        Objects.requireNonNull(result);
 
         if (result.succeeded()) {
             reply(request, result.result());
@@ -450,14 +454,23 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
      * 
      * @param request The message to respond to.
      * @param result The credentials result that should be conveyed in the response.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected final void reply(final Message<JsonObject> request, final CredentialsResult<JsonObject> result) {
 
-        final JsonObject body = request.body();
-        final String tenantId = body.getString(RequestResponseApiConstants.FIELD_TENANT_ID);
-        final String deviceId = body.getString(RequestResponseApiConstants.FIELD_DEVICE_ID);
+        Objects.requireNonNull(request);
+        Objects.requireNonNull(result);
 
-        request.reply(CredentialsConstants.getServiceReplyAsJson(tenantId, deviceId, result));
+        final JsonObject body = request.body();
+        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
+
+        request.reply(
+                EventBusMessage.forStatusCode(result.getStatus())
+                .setTenant(tenantId)
+                .setDeviceId(deviceId)
+                .setJsonPayload(result.getPayload())
+                .toJson());
     }
 
     /**
@@ -497,7 +510,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
      */
     protected static final JsonObject getResultPayload(final String deviceId, final  String type, final String authId, final boolean enabled, final JsonArray secrets) {
         return new JsonObject().
-                put(CredentialsConstants.FIELD_DEVICE_ID, deviceId).
+                put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId).
                 put(CredentialsConstants.FIELD_TYPE, type).
                 put(CredentialsConstants.FIELD_AUTH_ID, authId).
                 put(CredentialsConstants.FIELD_ENABLED, enabled).

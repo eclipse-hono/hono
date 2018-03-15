@@ -13,9 +13,13 @@
 
 package org.eclipse.hono.util;
 
+import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.json.JsonObject;
@@ -26,6 +30,9 @@ import io.vertx.core.json.JsonObject;
  *
  */
 public class EventBusMessage {
+
+    private static final String FIELD_CORRELATION_ID = "correlation-id";
+    private static final String FIELD_CORRELATION_ID_TYPE = "correlation-id-type";
 
     private final JsonObject json;
 
@@ -316,7 +323,7 @@ public class EventBusMessage {
      *                 nor an {@code UnsignedLong} nor a {@code UUID} nor a {@code Binary}.
      */
     public EventBusMessage setCorrelationId(final Object id) {
-        setProperty(MessageHelper.SYS_PROPERTY_CORRELATION_ID, RequestResponseApiConstants.encodeIdToJson(id));
+        setProperty(MessageHelper.SYS_PROPERTY_CORRELATION_ID, encodeIdToJson(id));
         return this;
     }
 
@@ -330,7 +337,7 @@ public class EventBusMessage {
         if (encodedId == null) {
             return null;
         } else {
-            return RequestResponseApiConstants.decodeIdFromJson(encodedId);
+            return decodeIdFromJson(encodedId);
         }
     }
 
@@ -438,5 +445,70 @@ public class EventBusMessage {
      */
     public JsonObject toJson() {
         return json.copy();
+    }
+
+    /**
+     * Serializes a correlation identifier to JSON.
+     * <p>
+     * Supported types for AMQP 1.0 correlation IDs are
+     * {@code String}, {@code UnsignedLong}, {@code UUID} and {@code Binary}.
+     * 
+     * @param id The identifier to encode.
+     * @return The JSON representation of the identifier.
+     * @throws NullPointerException if the correlation id is {@code null}.
+     * @throws IllegalArgumentException if the type is not supported.
+     */
+    private static JsonObject encodeIdToJson(final Object id) {
+
+        Objects.requireNonNull(id);
+
+        final JsonObject json = new JsonObject();
+        if (id instanceof String) {
+            json.put(FIELD_CORRELATION_ID_TYPE, "string");
+            json.put(FIELD_CORRELATION_ID, id);
+        } else if (id instanceof UnsignedLong) {
+            json.put(FIELD_CORRELATION_ID_TYPE, "ulong");
+            json.put(FIELD_CORRELATION_ID, id.toString());
+        } else if (id instanceof UUID) {
+            json.put(FIELD_CORRELATION_ID_TYPE, "uuid");
+            json.put(FIELD_CORRELATION_ID, id.toString());
+        } else if (id instanceof Binary) {
+            json.put(FIELD_CORRELATION_ID_TYPE, "binary");
+            final Binary binary = (Binary) id;
+            json.put(FIELD_CORRELATION_ID, Base64.getEncoder().encodeToString(binary.getArray()));
+        } else {
+            throw new IllegalArgumentException("type " + id.getClass().getName() + " is not supported");
+        }
+        return json;
+    }
+
+    /**
+     * Deserializes a correlation identifier from JSON.
+     * <p>
+     * Supported types for AMQP 1.0 correlation IDs are
+     * {@code String}, {@code UnsignedLong}, {@code UUID} and {@code Binary}.
+     * 
+     * @param json The JSON representation of the identifier.
+     * @return The correlation identifier.
+     * @throws NullPointerException if the JSON is {@code null}.
+     */
+    private static Object decodeIdFromJson(final JsonObject json)
+    {
+        Objects.requireNonNull(json);
+
+        final String type = json.getString(FIELD_CORRELATION_ID_TYPE);
+        final String id = json.getString(FIELD_CORRELATION_ID);
+        switch (type) {
+            case "string":
+                return id;
+            case "ulong":
+                return UnsignedLong.valueOf(id);
+            case "uuid":
+                return UUID.fromString(id);
+            case "binary":
+                return new Binary(Base64.getDecoder().decode(id));
+            default:
+                throw new IllegalArgumentException("type " + type + " is not supported");
+        }
     }
 }

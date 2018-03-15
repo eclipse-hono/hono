@@ -276,7 +276,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final JsonObject requestJson = Optional.ofNullable(data).map(json -> json.copy()).orElse(null);
         if (deviceId != null && requestJson != null) {
-            requestJson.put(RegistrationConstants.FIELD_DEVICE_ID, deviceId);
+            requestJson.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         }
         final String uri = String.format("/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId);
         return httpClient.create(uri, requestJson, contentType, response -> response.statusCode() == expectedStatus);
@@ -324,7 +324,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final String requestUri = String.format(TEMPLATE_URI_REGISTRATION_INSTANCE, tenantId, deviceId);
         final JsonObject requestJson = data.copy();
-        requestJson.put(RegistrationConstants.FIELD_DEVICE_ID, deviceId);
+        requestJson.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         return httpClient.update(requestUri, requestJson, contentType, status -> status == expectedStatus);
     }
 

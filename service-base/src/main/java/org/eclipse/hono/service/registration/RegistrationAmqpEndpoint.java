@@ -18,7 +18,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,25 +53,28 @@ public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
     @Override
     public final void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
-        final JsonObject registrationMsg = RegistrationConstants.getRegistrationMsg(msg, targetAddress);
+        final JsonObject registrationMsg = EventBusMessage.forOperation(msg)
+                .setTenant(targetAddress.getTenantId())
+                .setDeviceId(msg)
+                .setGatewayId(msg)
+                .setJsonPayload(msg)
+                .toJson();
 
         vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
                 result -> {
-                    JsonObject response = null;
+                    EventBusMessage response = null;
                     if (result.succeeded()) {
                         // TODO check for correct session here...?
-                        response = (JsonObject) result.result().body();
+                        response = EventBusMessage.fromJson((JsonObject) result.result().body());
                     } else {
                         logger.debug("failed to process request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
                         // we need to inform client about failure
-                        response = RegistrationConstants.getServiceReplyAsJson(
-                                HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                targetAddress.getTenantId(),
-                                MessageHelper.getDeviceId(msg),
-                                null);
+                        response = EventBusMessage.forStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR)
+                                .setTenant(targetAddress.getTenantId())
+                                .setDeviceId(msg);
                     }
                     addHeadersToResponse(msg, response);
-                    vertx.eventBus().send(msg.getReplyTo(), response);
+                    vertx.eventBus().send(msg.getReplyTo(), response.toJson());
                 });
     }
 

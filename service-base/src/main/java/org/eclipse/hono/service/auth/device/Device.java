@@ -74,8 +74,8 @@ public class Device implements User {
 
     private JsonObject getPrincipal(final String tenantId, final String deviceId) {
         return new JsonObject()
-                .put(CredentialsConstants.FIELD_TENANT_ID, Objects.requireNonNull(tenantId))
-                .put(CredentialsConstants.FIELD_DEVICE_ID, Objects.requireNonNull(deviceId));
+                .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, Objects.requireNonNull(tenantId))
+                .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, Objects.requireNonNull(deviceId));
     }
 
     /**
@@ -126,7 +126,7 @@ public class Device implements User {
      * @return The identifier.
      */
     public String getTenantId() {
-        return principal.getString(CredentialsConstants.FIELD_TENANT_ID);
+        return principal.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
     }
 
     /**
@@ -135,6 +135,6 @@ public class Device implements User {
      * @return The identifier.
      */
     public String getDeviceId() {
-        return principal.getString(CredentialsConstants.FIELD_DEVICE_ID);
+        return principal.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,17 +11,17 @@
  */
 package org.eclipse.hono.service.credentials;
 
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
-import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.eclipse.hono.util.EventBusMessage;
+//import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -58,10 +58,10 @@ public class BaseCredentialsServiceTest {
     public void testAddSucceedsForMinimalData() {
         final JsonObject testData = createValidCredentialsObject();
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
         service.processCredentialsMessage(msg);
 
-        verify(msg).reply(resultWithStatusCode(HTTP_CREATED));
+        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_CREATED));
     }
 
     /**
@@ -77,10 +77,10 @@ public class BaseCredentialsServiceTest {
         final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
         firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, iso8601TimeStamp);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
         service.processCredentialsMessage(msg);
 
-        verify(msg).reply(resultWithStatusCode(HTTP_CREATED));
+        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_CREATED));
     }
 
     /**
@@ -96,10 +96,10 @@ public class BaseCredentialsServiceTest {
         final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
         firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, iso8601TimeStamp);
         
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
         service.processCredentialsMessage(msg);
 
-        verify(msg).reply(resultWithStatusCode(HTTP_CREATED));
+        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_CREATED));
     }
 
     /**
@@ -114,10 +114,10 @@ public class BaseCredentialsServiceTest {
         final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
         firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, malformedTimestamp);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
         service.processCredentialsMessage(msg);
 
-        verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST));
+        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
     /**
@@ -130,10 +130,10 @@ public class BaseCredentialsServiceTest {
 
         testData.remove(CredentialsConstants.FIELD_SECRETS);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
         service.processCredentialsMessage(msg);
 
-        verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST));
+        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
     /**
@@ -145,10 +145,10 @@ public class BaseCredentialsServiceTest {
         final JsonObject testData = createValidCredentialsObject();
         testData.put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
         service.processCredentialsMessage(msg);
 
-        verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST));
+        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
     /**
@@ -157,17 +157,16 @@ public class BaseCredentialsServiceTest {
      */
     @Test
     public void testCredentialsAddWithEmptySecret() {
+
         final JsonObject testData = createValidCredentialsObject();
 
-        JsonArray secrets = new JsonArray();
-        secrets.add(new JsonObject());
-
+        final JsonArray secrets = new JsonArray().add(new JsonObject());
         testData.put(CredentialsConstants.FIELD_SECRETS, secrets);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
         service.processCredentialsMessage(msg);
 
-        verify(msg).reply(resultWithStatusCode(HTTP_CREATED));
+        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_CREATED));
     }
 
     /**
@@ -178,18 +177,14 @@ public class BaseCredentialsServiceTest {
     public void testGetFailsForMissingType() {
 
         // GIVEN a request for getting credentials that does not specify a type
-        JsonObject malformedPayload = CredentialsConstants.getServiceRequestAsJson(
-                CredentialsConstants.CredentialsAction.get.toString(),
-                TEST_TENANT,
-                null, // no device ID required for get operation
-                new JsonObject().put(CredentialsConstants.FIELD_AUTH_ID, "bumlux"));
-        Message<JsonObject> request = createMessageMockForPayload(CredentialsConstants.CredentialsAction.get, malformedPayload);
+        final JsonObject malformedPayload = new JsonObject().put(CredentialsConstants.FIELD_AUTH_ID, "bumlux");
+        final Message<JsonObject> request = createRequestForPayload(CredentialsConstants.CredentialsAction.get, malformedPayload);
 
         // WHEN processing the request
         service.processCredentialsMessage(request);
 
         // THEN the response contains a 400 error code
-        verify(request).reply(resultWithStatusCode(HTTP_BAD_REQUEST));
+        verify(request).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
     /**
@@ -200,49 +195,40 @@ public class BaseCredentialsServiceTest {
     public void testGetFailsForMissingAuthId() {
 
         // GIVEN a request for getting credentials that does not specify an auth ID
-        JsonObject malformedPayload = CredentialsConstants.getServiceRequestAsJson(
-                CredentialsConstants.CredentialsAction.get.toString(),
-                TEST_TENANT,
-                null, // no device ID required for get operation
-                new JsonObject().put(CredentialsConstants.FIELD_TYPE, "myType"));
-        Message<JsonObject> request = createMessageMockForPayload(CredentialsConstants.CredentialsAction.get, malformedPayload);
+        final JsonObject malformedPayload = new JsonObject().put(CredentialsConstants.FIELD_TYPE, "myType");
+        final Message<JsonObject> request = createRequestForPayload(CredentialsConstants.CredentialsAction.get, malformedPayload);
 
         // WHEN processing the request
         service.processCredentialsMessage(request);
 
         // THEN the response contains a 400 error code
-        verify(request).reply(resultWithStatusCode(HTTP_BAD_REQUEST));
+        verify(request).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
     private static JsonObject resultWithStatusCode(int statusCode) {
 
-        return new JsonObject()
-                .put(RequestResponseApiConstants.FIELD_TENANT_ID, TEST_TENANT)
-                .put(MessageHelper.APP_PROPERTY_STATUS, statusCode);
+        return EventBusMessage.forStatusCode(statusCode).setTenant(TEST_TENANT).toJson();
     }
 
     @SuppressWarnings("unchecked")
-    private static Message<JsonObject> createMessageMockForPayload(final CredentialsConstants.CredentialsAction operation, final JsonObject payload) {
+    private static Message<JsonObject> createRequestForPayload(final CredentialsConstants.CredentialsAction operation, final JsonObject payload) {
 
-        JsonObject requestBody = new JsonObject();
-        requestBody.put(RequestResponseApiConstants.FIELD_TENANT_ID, TEST_TENANT);
-        requestBody.put(MessageHelper.SYS_PROPERTY_SUBJECT, operation.toString());
-        requestBody.put(CredentialsConstants.FIELD_PAYLOAD, payload);
-
-        Message<JsonObject> msg = mock(Message.class);
-        when(msg.body()).thenReturn(requestBody);
+        final JsonObject request = EventBusMessage.forOperation(operation.name())
+                .setTenant(TEST_TENANT)
+                .setJsonPayload(payload)
+                .toJson();
+        final Message<JsonObject> msg = mock(Message.class);
+        when(msg.body()).thenReturn(request);
         return msg;
     }
 
     private static JsonObject createValidCredentialsObject() {
 
-        final JsonArray secrets = new JsonArray();
-        final JsonObject secret = new JsonObject();
-        secret.put(TEST_FIELD, "dummy");
-        secrets.add(secret);
+        final JsonObject secret = new JsonObject().put(TEST_FIELD, "dummy");
+        final JsonArray secrets = new JsonArray().add(secret);
 
         return new JsonObject()
-                .put(RequestResponseApiConstants.FIELD_DEVICE_ID, "dummy")
+                .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, "dummy")
                 .put(CredentialsConstants.FIELD_TYPE, "dummy")
                 .put(CredentialsConstants.FIELD_AUTH_ID, "dummy")
                 .put(CredentialsConstants.FIELD_SECRETS, secrets);
@@ -255,7 +241,7 @@ public class BaseCredentialsServiceTest {
             @Override
             public void add(String tenantId, JsonObject credentialsObject,
                     Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HTTP_CREATED)));
+                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_CREATED)));
             }
 
             @Override

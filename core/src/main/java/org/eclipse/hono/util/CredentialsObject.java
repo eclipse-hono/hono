@@ -32,7 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public final class CredentialsObject {
 
-    @JsonProperty(CredentialsConstants.FIELD_DEVICE_ID)
+    @JsonProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID)
     private String deviceId;
     @JsonProperty(CredentialsConstants.FIELD_TYPE)
     private String type;

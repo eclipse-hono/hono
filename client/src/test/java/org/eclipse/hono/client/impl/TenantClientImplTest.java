@@ -194,7 +194,7 @@ public class TenantClientImplTest {
     private JsonObject newTenantResult(final String tenantId) {
 
         final JsonObject returnObject = new JsonObject().
-                put(TenantConstants.FIELD_TENANT_ID, tenantId).
+                put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId).
                 put(TenantConstants.FIELD_ENABLED, true);
         return returnObject;
     }

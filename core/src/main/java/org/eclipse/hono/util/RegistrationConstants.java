@@ -13,12 +13,6 @@ package org.eclipse.hono.util;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-
-import org.apache.qpid.proton.message.Message;
-
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
 
 /**
  * Constants &amp; utility methods used throughout the Registration API.
@@ -93,67 +87,5 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
         } else {
             return ACTIONS.contains(action);
         }
-    }
-
-    /**
-     * Creates a JSON object from a Registration API request message.
-     *
-     * @param message The AMQP 1.0 registration request message.
-     * @param target The target address that the request has been sent to.
-     * @return The registration message created from the AMQP message.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     * @throws DecodeException if the message contains a body that cannot be parsed into a JSON object.
-     */
-    public static JsonObject getRegistrationMsg(final Message message, final ResourceIdentifier target) {
-
-        Objects.requireNonNull(message);
-        Objects.requireNonNull(target);
-        final String subject = message.getSubject();
-        final String tenantId = target.getTenantId();
-        final String deviceId = MessageHelper.getDeviceId(message);
-        final String gatewayId = MessageHelper.getApplicationProperty(message.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class);
-        final JsonObject payload = MessageHelper.getJsonPayload(message);
-
-        final JsonObject result = getServiceRequestAsJson(subject, tenantId, deviceId, payload);
-        if (gatewayId != null) {
-            result.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
-        }
-        return result;
-    }
-
-    /**
-     * Creates a JSON object as a reply to a registration request via the vert.x event bus.
-     *
-     * @param tenantId The tenant for which the message was processed.
-     * @param deviceId The device that the message relates to.
-     * @param result The {@link RegistrationResult} object with the payload for the reply object.
-     * @return JsonObject The JSON reply object that is to be sent back via the vert.x event bus.
-     */
-    public static JsonObject getServiceReplyAsJson(
-            final String tenantId,
-            final String deviceId,
-            final RegistrationResult result) {
-
-        return getServiceReplyAsJson(
-                result.getStatus(),
-                tenantId,
-                deviceId,
-                result.getPayload(),
-                result.getCacheDirective());
-    }
-
-    /**
-     * Checks if a JSON message contains a given status code.
-     *  
-     * @param msg The message to check.
-     * @param expectedStatus The expected status code.
-     * @return {@code true} if the given message has a string typed <em>status</em> property and the property's value
-     *                      is the string representation of the expected status.
-     * @throws NullPointerException if message is {@code null}.
-     */
-    public static boolean hasStatus(final JsonObject msg, final int expectedStatus) {
-
-        return Objects.requireNonNull(msg).getInteger(MessageHelper.APP_PROPERTY_STATUS).equals(expectedStatus);
     }
 }
