@@ -75,4 +75,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
             return TenantAction.from(subject) != TenantAction.unknown;
         }
     }
+
+    private TenantConstants () {
+    }
 }
