@@ -15,21 +15,28 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Encapsulates the credentials information for a device that was found by the get operation of the
  * <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class CredentialsObject {
 
     @JsonProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID)
@@ -40,13 +47,7 @@ public final class CredentialsObject {
     private String authId;
     @JsonProperty(CredentialsConstants.FIELD_ENABLED)
     private boolean enabled = true;
-    /*
-     * Since the format of the secrets field is not determined by the Credentials API, they are best represented as
-     * key-value maps with key and value both of type String.
-     * The further processing of secrets is part of the validator for the specific type.
-     */
-    @JsonProperty(CredentialsConstants.FIELD_SECRETS)
-    private List<Map<String, String>> secrets;
+    private JsonArray secrets = new JsonArray();
 
     /**
      * Empty default constructor.
@@ -55,7 +56,17 @@ public final class CredentialsObject {
         super();
     }
 
-    private CredentialsObject(
+    /**
+     * Creates new credentials for an authentication identifier.
+     * <p>
+     * Note that an instance created using this constructor does
+     * not contain any secrets.
+     * 
+     * @param deviceId The device to which the credentials belong.
+     * @param authId The authentication identifier of the credentials.
+     * @param type The type of credentials.
+     */
+    public CredentialsObject(
             final String deviceId,
             final String authId,
             final String type) {
@@ -69,51 +80,303 @@ public final class CredentialsObject {
         setAuthId(authId);
     }
 
+    /**
+     * Gets the identifier of the device that these credentials belong to.
+     * 
+     * @return The identifier or {@code null} if not set.
+     */
     public String getDeviceId() {
         return deviceId;
     }
 
-    public void setDeviceId(final String deviceId) {
+    /**
+     * Sets the identifier of the device that these credentials belong to.
+     * 
+     * @param deviceId The identifier.
+     * @return This credentials object for method chaining.
+     */
+    public CredentialsObject setDeviceId(final String deviceId) {
         this.deviceId = deviceId;
+        return this;
     }
 
+    /**
+     * Gets the type of these credentials.
+     * 
+     * @return The type or {@code null} if not set.
+     */
     public String getType() {
         return type;
     }
 
-    public void setType(final String type) {
+    /**
+     * Sets the type of these credentials.
+     * 
+     * @param type The credentials type.
+     * @return This credentials object for method chaining.
+     */
+    public CredentialsObject setType(final String type) {
         this.type = type;
+        return this;
     }
 
+    /**
+     * Gets the authentication identifier used with these credentials.
+     * 
+     * @return The identifier or {@code null} if not set.
+     */
     public String getAuthId() {
         return authId;
     }
 
-    public void setAuthId(final String authId) {
+    /**
+     * Sets the authentication identifier used with these credentials.
+     * 
+     * @param authId The identifier.
+     * @return This credentials object for method chaining.
+     */
+    public CredentialsObject setAuthId(final String authId) {
         this.authId = authId;
+        return this;
     }
 
+    /**
+     * Checks whether these credentials are enabled.
+     * <p>
+     * The default value is {@code true}.
+     * 
+     * @return {@code true} if these credentials can be used for authenticating devices.
+     */
     public boolean isEnabled() {
         return enabled;
     }
 
-    public void setEnabled(final boolean enabled) {
+    /**
+     * Sets whether these credentials are enabled.
+     * <p>
+     * The default value is {@code true}.
+     * 
+     * @param enabled {@code true} if these credentials can be used for authenticating devices.
+     * @return This credentials object for method chaining.
+     */
+    public CredentialsObject setEnabled(final boolean enabled) {
         this.enabled = enabled;
+        return this;
     }
 
-    public List<Map<String, String>> getSecrets() {
-        return Collections.unmodifiableList(secrets);
+    /**
+     * Gets this credentials' secret(s) as {@code Map} instances.
+     * 
+     * @return The (potentially empty) list of secrets.
+     */
+    @JsonProperty(CredentialsConstants.FIELD_SECRETS)
+    public List<Map<String, Object>> getSecretsAsMaps() {
+        final List<Map<String, Object>> result = new LinkedList<>();
+        secrets.forEach(secret -> result.add(((JsonObject) secret).getMap()));
+        return result;
     }
 
-    public void setSecrets(final List<Map<String, String>> secrets) {
-        this.secrets = new LinkedList<>(secrets);
+    /**
+     * Gets this credentials' secret(s).
+     * <p>
+     * The elements of the returned list are of type {@code JsonObject}.
+     * 
+     * @return The (potentially empty) list of secrets.
+     */
+    @JsonIgnore
+    public JsonArray getSecrets() {
+        return secrets;
     }
 
-    public void addSecret(final Map<String, String> secret) {
-        if (secrets == null) {
-            secrets = new LinkedList<>();
+    /**
+     * Sets this credentials' secret(s).
+     * <p>
+     * The new secret(s) will replace the existing ones.
+     * 
+     * @param newSecrets The secrets to set.
+     * @return This credentials object for method chaining.
+     * @throws NullPointerException if secrets is {@code null}.
+     */
+    @JsonProperty(CredentialsConstants.FIELD_SECRETS)
+    public CredentialsObject setSecrets(final List<Map<String, Object>> newSecrets) {
+        this.secrets.clear();
+        newSecrets.forEach(secret -> addSecret(secret));
+        return this;
+    }
+
+    /**
+     * Adds a secret.
+     * 
+     * @param secret The secret to set.
+     * @return This credentials object for method chaining.
+     */
+    public CredentialsObject addSecret(final JsonObject secret) {
+        if (secret != null) {
+            secrets.add(secret);
         }
-        secrets.add(secret);
+        return this;
+    }
+
+    /**
+     * Adds a secret.
+     * 
+     * @param secret The secret to set.
+     * @return This credentials object for method chaining.
+     */
+    public CredentialsObject addSecret(final Map<String, Object> secret) {
+        addSecret(new JsonObject(secret));
+        return this;
+    }
+
+    /**
+     * Checks if this credentials object has all mandatory properties set.
+     * 
+     * @return {@code true} if all mandatory properties are set.
+     */
+    @JsonIgnore
+    public boolean isValid() {
+        return deviceId != null && authId != null && type != null && hasValidSecrets();
+    }
+
+    /**
+     * Checks if this credentials object contains secrets that comply with the Credentials
+     * API specification.
+     * 
+     * @return {@code true} if at least one secret is set and the secrets' not-before
+     *         and not-after properties are well formed.
+     */
+    public boolean hasValidSecrets() {
+
+        if (secrets == null || secrets.isEmpty()) {
+
+            return false;
+
+        } else {
+
+            return !secrets.stream().filter(obj -> obj instanceof JsonObject).anyMatch(obj -> {
+                final JsonObject secret = (JsonObject) obj;
+                return !containsValidTimestampIfPresentForField(secret, CredentialsConstants.FIELD_SECRETS_NOT_BEFORE)
+                        || !containsValidTimestampIfPresentForField(secret, CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
+            });
+        }
+    }
+
+    private boolean containsValidTimestampIfPresentForField(final JsonObject secret, final String field) {
+
+        final Object value = secret.getValue(field);
+        if (value == null) {
+            return true;
+        } else if (String.class.isInstance(value)) {
+            return getInstant((String) value) != null;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Gets the <em>not before</em> instant of a secret.
+     * 
+     * @param secret The secret.
+     * @return The instant or {@code null} if not-before is not set or
+     *         uses an invalid time stamp format.
+     */
+    public static Instant getNotBefore(final JsonObject secret) {
+        if (secret == null) {
+            return null;
+        } else {
+            return getInstant(secret, CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
+        }
+    }
+
+    /**
+     * Gets the <em>not after</em> instant of a secret.
+     * 
+     * @param secret The secret.
+     * @return The instant or {@code null} if not-after is not set or
+     *         uses an invalid time stamp format.
+     */
+    public static Instant getNotAfter(final JsonObject secret) {
+        if (secret == null) {
+            return null;
+        } else {
+            return getInstant(secret, CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
+        }
+    }
+
+    private static Instant getInstant(final JsonObject secret, final String field) {
+
+        final Object value = secret.getValue(field);
+        if (String.class.isInstance(value)) {
+            return getInstant((String) value);
+        } else {
+            return null;
+        }
+    }
+
+    private static Instant getInstant(final String timestamp) {
+
+        if (timestamp == null) {
+            return null;
+        } else {
+            try {
+                return DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(timestamp, OffsetDateTime::from).toInstant();
+            } catch (DateTimeParseException e) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Creates an otherwise empty secret for a <em>not-before</em> and
+     * a <em>not-after</em> instant.
+     * 
+     * @param notBefore The point in time from which on the credentials are valid
+     *            or {@code null} if there is no such constraint.
+     * @param notAfter The point in time until the credentials are valid
+     *            or {@code null} if there is no such constraint.
+     * @return The secret.
+     * @throws IllegalArgumentException if not-before is not before not-after.
+     */
+    public static JsonObject emptySecret(final Instant notBefore, final Instant notAfter) {
+        if (notBefore != null && notAfter != null && !notBefore.isBefore(notAfter)) {
+            throw new IllegalArgumentException("not before must be before not after");
+        } else {
+            final JsonObject secret = new JsonObject();
+            if (notBefore != null) {
+                secret.put(
+                        CredentialsConstants.FIELD_SECRETS_NOT_BEFORE,
+                        DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(notBefore.atOffset(ZoneOffset.UTC)));
+            }
+            if (notAfter != null) {
+                secret.put(
+                        CredentialsConstants.FIELD_SECRETS_NOT_AFTER,
+                        DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(notAfter.atOffset(ZoneOffset.UTC)));
+            }
+            return secret;
+        }
+    }
+
+    /**
+     * Creates a salted hash for a password.
+     * <p>
+     * Gets the password's UTF-8 bytes, prepends them with the salt (if not {@code null}
+     * and returns the output of the hash function applied to the byte array.
+     * 
+     * @param hashFunction The hash function to use.
+     * @param salt The salt to prepend the password bytes with.
+     * @param password The password to hash.
+     * @return The hashed password.
+     * @throws NoSuchAlgorithmException if the given hash function is not supported on
+     *           the JVM.
+     */
+    public static byte[] getHashedPassword(final String hashFunction, final byte[] salt, final String password) throws NoSuchAlgorithmException {
+
+        final MessageDigest digest = MessageDigest.getInstance(hashFunction);
+        if (salt != null) {
+            digest.update(salt);
+        }
+        digest.update(password.getBytes(StandardCharsets.UTF_8));
+        return digest.digest();
     }
 
     /**
@@ -146,22 +409,51 @@ public final class CredentialsObject {
 
         Objects.requireNonNull(password);
 
+        final CredentialsObject result = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+        result.addSecret(hashedPasswordSecret(password, hashAlgorithm, notBefore, notAfter, salt));
+        return result;
+    }
+
+    /**
+     * Creates a hashed-password secret.
+     * 
+     * @param password The password.
+     * @param hashAlgorithm The algorithm to use for creating the password hash.
+     * @param notBefore The point in time from which on the secret is valid.
+     * @param notAfter The point in time until the secret is valid.
+     * @param salt The salt to use for creating the password hash.
+     * @return The secret.
+     * @throws NullPointerException if any of password or hash algorithm is {@code null}.
+     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
+     *                                  before the <em>not after</em> instant or if the
+     *                                  algorithm is not supported.
+     */
+    public static JsonObject hashedPasswordSecret(
+            final String password,
+            final String hashAlgorithm,
+            final Instant notBefore,
+            final Instant notAfter,
+            final byte[] salt) {
+
+        Objects.requireNonNull(password);
+        Objects.requireNonNull(hashAlgorithm);
+
         try {
-            final MessageDigest digest = MessageDigest.getInstance(hashAlgorithm);
-            final CredentialsObject result = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
-            final Map<String, String> secret = newSecret(notBefore, notAfter);
+            final JsonObject secret = emptySecret(notBefore, notAfter);
             secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, hashAlgorithm);
             if (salt != null) {
-                digest.update(salt);
-                secret.put(CredentialsConstants.FIELD_SECRETS_SALT, Base64.getEncoder().encodeToString(salt));
+                secret.put(
+                        CredentialsConstants.FIELD_SECRETS_SALT,
+                        Base64.getEncoder().encodeToString(salt));
             }
-            digest.update(password.getBytes(StandardCharsets.UTF_8));
-            secret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, Base64.getEncoder().encodeToString(digest.digest()));
-            result.addSecret(secret);
-            return result;
+            secret.put(
+                    CredentialsConstants.FIELD_SECRETS_PWD_HASH,
+                    Base64.getEncoder().encodeToString(getHashedPassword(hashAlgorithm, salt, password)));
+            return secret;
         } catch (final NoSuchAlgorithmException e) {
             throw new IllegalArgumentException("unsupported hash algorithm");
         }
+
     }
 
     /**
@@ -191,24 +483,9 @@ public final class CredentialsObject {
 
         Objects.requireNonNull(key);
         final CredentialsObject result = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
-        final Map<String, String> secret = newSecret(notBefore, notAfter);
+        final JsonObject secret = emptySecret(notBefore, notAfter);
         secret.put(CredentialsConstants.FIELD_SECRETS_KEY, Base64.getEncoder().encodeToString(key));
         result.addSecret(secret);
         return result;
-    }
-
-    private static Map<String, String> newSecret(final Instant notBefore, final Instant notAfter) {
-        if (notBefore != null && notAfter != null && !notBefore.isBefore(notAfter)) {
-            throw new IllegalArgumentException("not before must be before not after");
-        } else {
-            final Map<String, String> secret = new HashMap<>();
-            if (notBefore != null) {
-                secret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(notBefore));
-            }
-            if (notAfter != null) {
-                secret.put(CredentialsConstants.FIELD_SECRETS_NOT_AFTER, DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(notAfter));
-            }
-            return secret;
-        }
     }
 }

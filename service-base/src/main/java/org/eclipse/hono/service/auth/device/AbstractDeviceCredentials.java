@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,23 +13,18 @@
 package org.eclipse.hono.service.auth.device;
 
 import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A base class providing utility methods for verifying credentials.
  *
  */
 public abstract class AbstractDeviceCredentials implements DeviceCredentials {
-
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
     @Override
     public final boolean validate(final CredentialsObject credentialsOnRecord) {
@@ -43,49 +38,29 @@ public abstract class AbstractDeviceCredentials implements DeviceCredentials {
             return false;
         } else {
 
-            final List<Map<String, String>> secrets = credentialsOnRecord.getSecrets();
+            final JsonArray secrets = credentialsOnRecord.getSecrets();
 
             if (secrets == null) {
-                throw new IllegalArgumentException(String.format("credentials not validated - mandatory field %s is null", CredentialsConstants.FIELD_SECRETS));
+                throw new IllegalArgumentException("credentials do not contain any secret");
             } else {
                 return validate(secrets);
             }
         }
     }
 
-    private boolean validate(final List<Map<String, String>> secretsOnRecord) {
+    private boolean validate(final JsonArray secretsOnRecord) {
 
-        for (Map<String, String> candidateSecret : secretsOnRecord) {
-            if (isInValidityPeriod(candidateSecret, Instant.now()) && matchesCredentials(candidateSecret)) {
-                return true;
-            }
-        }
-        return false;
+        return secretsOnRecord.stream().filter(obj -> obj instanceof JsonObject).anyMatch(obj -> {
+            final JsonObject candidateSecret = (JsonObject) obj;
+            return isInValidityPeriod(candidateSecret, Instant.now()) && matchesCredentials(candidateSecret);
+        });
     }
 
-    private boolean isInValidityPeriod(final Map<String, String> secret, final Instant instant) {
+    private boolean isInValidityPeriod(final JsonObject secret, final Instant instant) {
 
-        try {
-            Instant notBefore = getInstant(secret, CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
-            Instant notAfter = getInstant(secret, CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
-            return (notBefore == null || instant.isAfter(notBefore)) && (notAfter == null || instant.isBefore(notAfter));
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    private Instant getInstant(final Map<String, String> secret, final String propertyName) {
-        String timestamp = Objects.requireNonNull(secret).get(Objects.requireNonNull(propertyName));
-        if (timestamp == null) {
-            return null;
-        } else {
-            try {
-                OffsetDateTime dateTime = DATE_TIME_FORMATTER.parse(timestamp, OffsetDateTime::from);
-                return dateTime == null ? null : dateTime.toInstant();
-            } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException("illegal timestamp format");
-            }
-        }
+        final Instant notBefore = CredentialsObject.getNotBefore(secret);
+        final Instant notAfter = CredentialsObject.getNotAfter(secret);
+        return (notBefore == null || instant.isAfter(notBefore)) && (notAfter == null || instant.isBefore(notAfter));
     }
 
     /**
@@ -94,5 +69,5 @@ public abstract class AbstractDeviceCredentials implements DeviceCredentials {
      * @param candidateSecret The secret to match against.
      * @return {@code true} if the credentials match.
      */
-    public abstract boolean matchesCredentials(final Map<String, String> candidateSecret);
+    public abstract boolean matchesCredentials(final JsonObject candidateSecret);
 }

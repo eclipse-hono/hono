@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  * <p>
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -16,12 +16,13 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Map;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.vertx.core.json.JsonObject;
 
 /**
  * Helper class to parse username/password credentials provided by devices during authentication into
@@ -140,9 +141,9 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
      * @return {@code true} if the credentials match the secret.
      */
     @Override
-    public boolean matchesCredentials(final Map<String, String> candidateSecret) {
+    public boolean matchesCredentials(final JsonObject candidateSecret) {
 
-        String pwdHash = candidateSecret.get(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        String pwdHash = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
         if (pwdHash == null) {
             return false;
         }
@@ -150,13 +151,13 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
         byte[] hashedPasswordOnRecord = Base64.getDecoder().decode(pwdHash);
 
         byte[] salt = null;
-        final String encodedSalt = candidateSecret.get(CredentialsConstants.FIELD_SECRETS_SALT);
+        final String encodedSalt = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
         // the salt is optional so decodedSalt may stay null if salt was not found
         if (encodedSalt != null) {
             salt = Base64.getDecoder().decode(encodedSalt);
         }
 
-        String hashFunction = candidateSecret.getOrDefault(
+        String hashFunction = candidateSecret.getString(
                 CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION,
                 CredentialsConstants.DEFAULT_HASH_FUNCTION);
 

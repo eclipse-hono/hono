@@ -16,13 +16,10 @@ import static org.junit.Assert.*;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.CredentialsClient;
@@ -39,6 +36,8 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
@@ -113,8 +112,7 @@ public class CredentialsAmqpIT {
     }
 
     /**
-     * Verify that setting authId and type to existing credentials is responded with HTTP_OK.
-     * Check that the payload contains exactly the given type and authId afterwards.
+     * Verifies that the service returns credentials for a given type and authentication ID.
      * 
      * @param ctx The vert.x test context.
      */
@@ -124,7 +122,8 @@ public class CredentialsAmqpIT {
         credentialsClient
             .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1)
             .setHandler(ctx.asyncAssertSuccess(result -> {
-                checkPayloadGetCredentialsContainsAuthIdAndType(result);
+                ctx.assertEquals(CREDENTIALS_AUTHID1, result.getAuthId());
+                ctx.assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, result.getType());
             }));
     }
 
@@ -208,15 +207,15 @@ public class CredentialsAmqpIT {
             }));
     }
 
-    private Map<String, String> pickFirstSecretFromPayload(final CredentialsObject payload) {
+    private JsonObject pickFirstSecretFromPayload(final CredentialsObject payload) {
         // secrets: first entry is expected to be valid,
         // second entry may have time stamps not yet active (not checked),
         // more entries may be avail
-        final List<Map<String, String>> secrets = payload.getSecrets();
+        final JsonArray secrets = payload.getSecrets();
         assertNotNull(secrets);
         assertTrue(secrets.size() > 0);
 
-        final Map<String, String> firstSecret = secrets.get(0);
+        final JsonObject firstSecret = secrets.getJsonObject(0);
         assertNotNull(firstSecret);
         return firstSecret;
     }
@@ -224,40 +223,45 @@ public class CredentialsAmqpIT {
     private void checkPayloadGetCredentialsReturnsFirstSecretWithCorrectPassword(final CredentialsObject payload) {
 
         assertNotNull(payload);
-        final Map<String, String> firstSecret = pickFirstSecretFromPayload(payload);
+        final JsonObject firstSecret = pickFirstSecretFromPayload(payload);
         assertNotNull(firstSecret);
 
-        final String hashFunction = firstSecret.get(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+        final String hashFunction = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
         assertThat(hashFunction, is("sha-512"));
 
-        final String salt = firstSecret.get(CredentialsConstants.FIELD_SECRETS_SALT);
+        final String salt = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
         assertNotNull(salt);
         final byte[] decodedSalt = Base64.getDecoder().decode(salt);
         assertThat(decodedSalt, is(CREDENTIALS_PASSWORD_SALT)); // see file, this should be the salt
 
-        final String pwdHash = firstSecret.get(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        final String pwdHash = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
         assertNotNull(pwdHash);
         final byte[] decodedPassword = Base64.getDecoder().decode(pwdHash);
 
-        final byte[] hashedPassword = hashPassword("sha-512", CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD);
-        // check if the password is the hashed version of "hono-secret"
-        assertThat(hashedPassword, is(decodedPassword));
+        try {
+            final byte[] hashedPassword = CredentialsObject.getHashedPassword("sha-512", CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD);
+            // check if the password is the hashed version of "hono-secret"
+            assertThat(hashedPassword, is(decodedPassword));
+        } catch (NoSuchAlgorithmException e) {
+            fail(e.getMessage());
+        }
     }
 
     private void checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(final CredentialsObject payload) {
+
         assertNotNull(payload);
-        Map<String, String> firstSecret = pickFirstSecretFromPayload(payload);
+        final JsonObject firstSecret = pickFirstSecretFromPayload(payload);
         assertNotNull(firstSecret);
 
         LocalDateTime now = LocalDateTime.now();
 
         assertTrue(firstSecret.containsKey(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE));
-        String notBefore = firstSecret.get(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
+        String notBefore = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
         LocalDateTime notBeforeLocalDate = LocalDateTime.parse(notBefore, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         assertTrue(now.compareTo(notBeforeLocalDate) >= 0);
 
         assertTrue(firstSecret.containsKey(CredentialsConstants.FIELD_SECRETS_NOT_AFTER));
-        String notAfter = firstSecret.get(CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
+        String notAfter = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
         LocalDateTime notAfterLocalDate = LocalDateTime.parse(notAfter, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         assertTrue(now.compareTo(notAfterLocalDate) <= 0);
     }
@@ -268,19 +272,9 @@ public class CredentialsAmqpIT {
         // secrets: first entry is expected to be valid,
         // second entry may have time stamps not yet active (not checked),
         // more entries may be avail
-        final List<Map<String, String>> secrets = payload.getSecrets();
+        final JsonArray secrets = payload.getSecrets();
         assertNotNull(secrets);
         assertTrue(secrets.size() > 1); // at least 2 entries to test multiple entries
-    }
-
-    private void checkPayloadGetCredentialsContainsAuthIdAndType(final CredentialsObject payload) {
-        assertNotNull(payload);
-
-        assertNotNull(payload.getAuthId());
-        assertEquals(payload.getAuthId(), CREDENTIALS_AUTHID1);
-
-        assertNotNull(payload.getType());
-        assertEquals(payload.getType(), CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
     }
 
     private boolean checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(final CredentialsObject payload) {
@@ -290,15 +284,5 @@ public class CredentialsAmqpIT {
         assertEquals(payload.getDeviceId(), DEFAULT_DEVICE_ID);
 
         return (payload.isEnabled());
-    }
-
-    private byte[] hashPassword(final String hashFunction, final byte[] hashSalt, final String passwordToHash) {
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance(hashFunction);
-            messageDigest.update(hashSalt);
-            return messageDigest.digest(passwordToHash.getBytes(StandardCharsets.UTF_8));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("VM does not support hash function: " + hashFunction);
-        }
     }
 }

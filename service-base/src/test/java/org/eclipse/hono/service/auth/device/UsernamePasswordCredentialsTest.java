@@ -11,19 +11,18 @@
  */
 package org.eclipse.hono.service.auth.device;
 
-import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
-import org.junit.Test;
-
 import static org.junit.Assert.*;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
+
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
+import org.junit.Test;
+
+import io.vertx.core.json.JsonObject;
 
 /**
   * Tests verifying behavior of {@link UsernamePasswordCredentials}.
@@ -103,12 +102,11 @@ public class UsernamePasswordCredentialsTest {
     public void testMatchesCredentialsUsesDefaultHashFunction() throws NoSuchAlgorithmException {
 
         // GIVEN a secret on record that does not explicitly define a hash function
-        String hashedPassword = getHashedPassword(CredentialsConstants.DEFAULT_HASH_FUNCTION, null, TEST_PASSWORD);
-        Map<String, String> candidateSecret = new HashMap<>();
-        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, hashedPassword);
+        final String hashedPassword = getHashedPassword(CredentialsConstants.DEFAULT_HASH_FUNCTION, null, TEST_PASSWORD);
+        final JsonObject candidateSecret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, hashedPassword);
 
         // WHEN a device provides matching credentials
-        UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
+        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
 
         // THEN verification of the credentials succeeds
         assertTrue(credentials.matchesCredentials(candidateSecret));
@@ -125,12 +123,7 @@ public class UsernamePasswordCredentialsTest {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
         final byte[] salt = "TheSalt".getBytes(StandardCharsets.UTF_8);
-        final String encodedSalt = Base64.getEncoder().encodeToString(salt);
-        final String hashedPassword = getHashedPassword("sha-512", salt, TEST_PASSWORD);
-        final Map<String, String> candidateSecret = new HashMap<>();
-        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_SALT, encodedSalt);
-        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, hashedPassword);
-        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, "sha-512");
+        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD, "sha-512", null, null, salt);
 
         // WHEN a device provides matching credentials
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
@@ -148,24 +141,17 @@ public class UsernamePasswordCredentialsTest {
     public void testMatchesCredentialsFailsForNonMatchingPassword() throws NoSuchAlgorithmException {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
-        String hashedPassword = getHashedPassword("sha-512", null, TEST_PASSWORD);
-        Map<String, String> candidateSecret = new HashMap<>();
-        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, hashedPassword);
-        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, "sha-512");
+        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD, "sha-512", null, null, null);
 
         // WHEN a device provides non-matching credentials
-        UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "wrongpassword", false);
+        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "wrongpassword", false);
 
         // THEN verification of the credentials fails
         assertFalse(credentials.matchesCredentials(candidateSecret));
     }
 
     private String getHashedPassword(final String hashFunction, final byte[] salt, final String password) throws NoSuchAlgorithmException {
-        MessageDigest digest = MessageDigest.getInstance(hashFunction);
-        if (salt != null) {
-            digest.update(salt);
-        }
-        digest.update(password.getBytes(StandardCharsets.UTF_8));
-        return Base64.getEncoder().encodeToString(digest.digest());
+        return Base64.getEncoder().encodeToString(
+                CredentialsObject.getHashedPassword(hashFunction, salt, password));
     }
 }
