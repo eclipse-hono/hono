@@ -44,6 +44,9 @@ public final class AuthorizationConstants {
      */
     public static final String DENIED = "denied";
 
+    private AuthorizationConstants () {
+    }
+
     /**
      * Creates a message for checking a subject's authority on a given resource.
      * 

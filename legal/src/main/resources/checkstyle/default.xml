@@ -35,6 +35,7 @@
 
     <!-- possible issues -->
 
+    <module name="HideUtilityClassConstructor"/>
     <module name="OneStatementPerLine" />
     <module name="StringLiteralEquality" />
 

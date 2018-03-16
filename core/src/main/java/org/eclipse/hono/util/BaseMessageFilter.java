@@ -23,6 +23,9 @@ public class BaseMessageFilter {
 
     private static final Logger LOG = LoggerFactory.getLogger(BaseMessageFilter.class);
 
+    protected BaseMessageFilter () {
+    }
+
     /**
      * Checks whether an AMQP message contains required standard properties.
      * <p>

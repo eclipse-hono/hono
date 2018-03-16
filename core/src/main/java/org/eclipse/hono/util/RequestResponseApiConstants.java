@@ -43,6 +43,9 @@ public class RequestResponseApiConstants {
     public static final String FIELD_ERROR     = "error";
     public static final String FIELD_PAYLOAD   = "payload";
 
+    protected RequestResponseApiConstants () {
+    }
+
     /**
      * Creates an AMQP message from a JSON message containing the response to an
      * invocation of a service operation.
