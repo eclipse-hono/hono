@@ -13,15 +13,13 @@ package org.eclipse.hono.service.registration;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
+import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.EventBusMessage;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -29,20 +27,18 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing {@code RegistrationService}s.
+ * Base class for implementing {@link RegistrationService}s.
  * <p>
- * In particular, this base class provides support for parsing registration request messages
- * received via the event bus and route them to specific methods corresponding to the <em>action</em>
- * indicated in the message.
+ * In particular, this base class provides support for receiving service invocation request messages
+ * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
+ * in the message.
  * 
  * @param <T> The type of configuration properties this service requires.
  */
-public abstract class BaseRegistrationService<T> extends ConfigurationSupportingVerticle<T> implements RegistrationService {
+public abstract class BaseRegistrationService<T> extends EventBusService<T> implements RegistrationService {
 
     /**
      * The name of the field in a device's registration information that contains
@@ -50,11 +46,6 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
      */
     public static final String PROPERTY_VIA = "via";
 
-    /**
-     * A logger to be shared by subclasses.
-     */
-    protected final Logger log = LoggerFactory.getLogger(getClass());
-    private MessageConsumer<JsonObject> registrationConsumer;
     private RegistrationAssertionHelper assertionFactory;
 
     /**
@@ -70,155 +61,224 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     }
 
     /**
-     * Starts up this service.
-     * <ol>
-     * <li>Checks if <em>registrationAssertionFactory</em>is set. If not, startup fails.</li>
-     * <li>Registers an event bus consumer for address {@link RegistrationConstants#EVENT_BUS_ADDRESS_REGISTRATION_IN}
-     * listening for registration requests.</li>
-     * <li>Invokes {@link #doStart(Future)}.</li>
-     * </ol>
-     *
-     * @param startFuture The future to complete on successful startup.
-     */
-    @Override
-    public final void start(final Future<Void> startFuture) {
-
-        if (assertionFactory == null) {
-            startFuture.fail("registration assertion factory must be set");
-        } else {
-            registerConsumer();
-            doStart(startFuture);
-        }
-    }
-
-    /**
-     * Subclasses should override this method to perform any work required on start-up of this verticle.
+     * Asserts that the <em>assertionFactory</em> property is set.
      * <p>
-     * This method is invoked by {@link #start()} as part of the verticle deployment process.
-     * </p>
-     *
+     * The given future is succeeded if the property is not {@code null},
+     * otherwise it is failed.
+     * 
      * @param startFuture future to invoke once start up is complete.
      */
-    protected void doStart(final Future<Void> startFuture) {
-        // should be overridden by subclasses
-        startFuture.complete();
-    }
-
-    private void registerConsumer() {
-        registrationConsumer = vertx.eventBus().consumer(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN);
-        registrationConsumer.handler(this::processRegistrationMessage);
-        log.info("listening on event bus [address: {}] for incoming registration messages",
-                RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN);
-    }
-
-    /**
-     * Unregisters the registration message consumer from the Vert.x event bus and then invokes {@link #doStop(Future)}.
-     *
-     * @param stopFuture the future to invoke once shutdown is complete.
-     */
     @Override
-    public final void stop(final Future<Void> stopFuture) {
-        log.info("unregistering event bus listener [address: {}]", RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN);
-        registrationConsumer.unregister();
-        doStop(stopFuture);
-    }
+    protected void doStart(final Future<Void> startFuture) {
 
-    /**
-     * Subclasses should override this method to perform any work required before shutting down this verticle.
-     * <p>
-     * This method is invoked by {@link #stop()} as part of the verticle deployment process.
-     * </p>
-     *
-     * @param stopFuture the future to invoke once shutdown is complete.
-     */
-    protected void doStop(final Future<Void> stopFuture) {
-        // to be overridden by subclasses
-        stopFuture.complete();
-    }
-
-    /**
-     * Processes a registration request message received via the Vertx event bus.
-     * 
-     * @param regMsg The message.
-     */
-    public final void processRegistrationMessage(final Message<JsonObject> regMsg) {
-
-        try {
-            final JsonObject body = regMsg.body();
-            final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-            final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-            final String gatewayId = body.getString(MessageHelper.APP_PROPERTY_GATEWAY_ID);
-            final String operation = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
-
-
-            switch (operation) {
-            case RegistrationConstants.ACTION_ASSERT:
-                if (gatewayId == null) {
-                    log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
-                    assertRegistration(tenantId, deviceId, result -> reply(regMsg, result));
-                } else {
-                    log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
-                            deviceId, tenantId, gatewayId);
-                    assertRegistration(tenantId, deviceId, gatewayId, result -> reply(regMsg, result));
-                }
-                break;
-            case RegistrationConstants.ACTION_GET:
-                log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-                getDevice(tenantId, deviceId, result -> reply(regMsg, result));
-                break;
-            case RegistrationConstants.ACTION_REGISTER:
-                JsonObject payload = getRequestPayload(body);
-                log.debug("registering device [{}] of tenant [{}] with data {}", deviceId, tenantId,
-                        payload != null ? payload.encode() : null);
-                addDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
-                break;
-            case RegistrationConstants.ACTION_UPDATE:
-                payload = getRequestPayload(body);
-                log.debug("updating registration for device [{}] of tenant [{}] with data {}", deviceId, tenantId,
-                        payload != null ? payload.encode() : null);
-                updateDevice(tenantId, deviceId, payload, result -> reply(regMsg, result));
-                break;
-            case RegistrationConstants.ACTION_DEREGISTER:
-                log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
-                removeDevice(tenantId, deviceId, result -> reply(regMsg, result));
-                break;
-            default:
-                processCustomRegistrationMessage(regMsg, operation);
-                break;
-            }
-        } catch (ClassCastException e) {
-            log.debug("malformed request message");
-            reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        if (assertionFactory == null) {
+            startFuture.fail(new IllegalStateException("registration assertion factory must be set"));
+        } else {
+            startFuture.complete();
         }
     }
 
+    @Override
+    protected String getEventBusAddress() {
+        return RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN;
+    }
+
     /**
-      * Override the following method to extend RegistrationService with implementation
-      * specific operations. Consequently, once the operation is completed, a {@link RegistrationResult} must be
-      * set as reply to this regMsg. Use the {@link #reply(Message, AsyncResult)} for sending
-      * the response for the Message. For example, if some concrete action looks like
-      * <pre>{@code
-      *     void doSomeSpecificAction(final Message<JsonObject> regMsg, final Handler<AsyncResult<RegistrationResult>> resultHandler);
-      * }</pre>
-      * then the overriding method would look like
-      *  <pre>{@code
-      *     processCustomRegistrationMessage(final Message<JsonObject> regMsg, String action) {
-     *          if(action.equals("expected-action")) {
-      *            doSomeSpecificAction(regMsg, result -> reply(regMsg, result));
-     *          } else {
-     *             reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-      *         }
-     *       }
-      * }</pre>
-      *
-      *
-      * @param regMsg registration message to be processed
-      * @param action implementation specific operation to be executed.
-      */
-    public void processCustomRegistrationMessage(final Message<JsonObject> regMsg, String action) {
-        log.debug("invalid action in request message [{}]", action);
-        reply(regMsg, RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+     * Processes a device registration API request received via the vert.x event bus.
+     * <p>
+     * This method validates the request parameters against the Device Registration API
+     * specification before invoking the corresponding {@code RegistrationService} methods.
+     * 
+     * @param requestMessage The request message.
+     * @return A future indicating the outcome of the service invocation.
+     * @throws NullPointerException If the request message is {@code null}.
+     */
+    @Override
+    public final Future<EventBusMessage> processRequest(final EventBusMessage requestMessage) {
+
+        Objects.requireNonNull(requestMessage);
+
+        return processDeviceRegistrationRequest(requestMessage).map(result -> {
+            return EventBusMessage.forStatusCode(result.getStatus())
+                    .setTenant(requestMessage.getTenant())
+                    .setDeviceId(requestMessage.getDeviceId())
+                    .setJsonPayload(result.getPayload())
+                    .setCacheDirective(result.getCacheDirective());
+        }).recover(t -> {
+            return Future.failedFuture(t);
+        });
+    }
+
+    private Future<RegistrationResult> processDeviceRegistrationRequest(final EventBusMessage regMsg) {
+
+        final String tenantId = regMsg.getTenant();
+        final String deviceId = regMsg.getDeviceId();
+
+        if (tenantId == null || deviceId == null) {
+            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            final String operation = regMsg.getOperation();
+            switch (operation) {
+            case RegistrationConstants.ACTION_REGISTER:
+                return processRegisterRequest(regMsg);
+            case RegistrationConstants.ACTION_ASSERT:
+                return processAssertRequest(regMsg);
+            case RegistrationConstants.ACTION_GET:
+                return processGetRequest(regMsg);
+            case RegistrationConstants.ACTION_UPDATE:
+                return processUpdateRequest(regMsg);
+            case RegistrationConstants.ACTION_DEREGISTER:
+                return processDeregisterRequest(regMsg);
+            default:
+                return processCustomRegistrationMessage(regMsg);
+            }
+        }
+    }
+
+    private Future<RegistrationResult> processRegisterRequest(final EventBusMessage request) {
+
+        final Future<RegistrationResult> result = Future.future();
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+        final JsonObject payload = getRequestPayload(request.getJsonPayload());
+
+        if (tenantId == null || deviceId == null) {
+            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            log.debug("registering device [{}] for tenant [{}]", deviceId, tenantId);
+            addDevice(tenantId, deviceId, payload, result.completer());
+        }
+        return result;
+    }
+
+    private Future<RegistrationResult> processGetRequest(final EventBusMessage request) {
+
+        final Future<RegistrationResult> result = Future.future();
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+
+        if (tenantId == null || deviceId == null) {
+            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
+            getDevice(tenantId, deviceId, result.completer());
+        }
+        return result;
+    }
+
+    private Future<RegistrationResult> processUpdateRequest(final EventBusMessage request) {
+
+        final Future<RegistrationResult> result = Future.future();
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+        final JsonObject payload = getRequestPayload(request.getJsonPayload());
+
+        if (tenantId == null || deviceId == null) {
+            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            log.debug("updating registration information for device [{}] of tenant [{}]", deviceId, tenantId);
+            updateDevice(tenantId, deviceId, payload, result.completer());
+        }
+        return result;
+    }
+
+    private Future<RegistrationResult> processDeregisterRequest(final EventBusMessage request) {
+
+        final Future<RegistrationResult> result = Future.future();
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+
+        if (tenantId == null || deviceId == null) {
+            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
+            removeDevice(tenantId, deviceId, result.completer());
+        }
+        return result;
+    }
+
+    private Future<RegistrationResult> processAssertRequest(final EventBusMessage request) {
+
+        final Future<RegistrationResult> result = Future.future();
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+        final String gatewayId = request.getGatewayId();
+
+        if (tenantId == null || deviceId == null) {
+            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else if (gatewayId == null) {
+            log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
+            assertRegistration(tenantId, deviceId, result.completer());
+        } else {
+            log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
+                    deviceId, tenantId, gatewayId);
+            assertRegistration(tenantId, deviceId, gatewayId, result.completer());
+        }
+        return result;
+    }
+
+    /**
+     * Processes a request for a non-standard operation.
+     * <p>
+     * Subclasses should override this method in order to support additional, custom
+     * operations that are not defined by Hono's Device Registration API.
+     * <p>
+     * This default implementation simply returns a succeeded future containing a
+     * result with status code <em>400 Bad Request</em>.
+     *
+     * @param request The request to process.
+     * @return A future indicating the outcome of the service invocation.
+     */
+    protected Future<RegistrationResult> processCustomRegistrationMessage(final EventBusMessage request) {
+        log.debug("invalid operation in request message [{}]", request.getOperation());
+        return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
     };
+
+    /**
+     * {@inheritDoc}
+     *
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void addDevice(String tenantId, String deviceId, JsonObject otherKeys,
+            Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void updateDevice(String tenantId, String deviceId, JsonObject otherKeys,
+            Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void removeDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
 
     /**
      * {@inheritDoc}
@@ -302,13 +362,23 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
     }
 
     /**
+     * Handles an unimplemented operation by succeeding the given handler
+     * with a result having a <em>501 Not Implemented</em> status code.
+     * 
+     * @param resultHandler The handler.
+     */
+    protected void handleUnimplementedOperation(final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
+    }
+
+    /**
      * Checks if a gateway is authorized to act <em>on behalf of</em> a device.
      * <p>
      * This default implementation checks if the value of the
      * {@link #PROPERTY_VIA} property in the device's registration information
      * matches the gateway's identifier.
      * <p>
-     * Subclasses should override this method in order to implement a more
+     * Subclasses may override this method in order to implement a more
      * sophisticated check.
      * 
      * @param gatewayId The identifier of the gateway.
@@ -356,50 +426,15 @@ public abstract class BaseRegistrationService<T> extends ConfigurationSupporting
         return result;
     }
 
-    /**
-     * Sends a response to a registration request over the vert.x event bus.
-     * 
-     * @param request The message to respond to.
-     * @param result The registration result that should be conveyed in the response.
-     */
-    protected final void reply(final Message<JsonObject> request, final AsyncResult<RegistrationResult> result) {
+    private JsonObject getRequestPayload(final JsonObject payload) {
 
-        if (result.succeeded()) {
-            reply(request, result.result());
-        } else {
-            request.fail(HttpURLConnection.HTTP_INTERNAL_ERROR, "cannot process registration request");
-        }
-    }
-
-    /**
-     * Sends a response to a registration request over the vert.x event bus.
-     * 
-     * @param request The message to respond to.
-     * @param result The registration result that should be conveyed in the response.
-     */
-    protected final void reply(final Message<JsonObject> request, final RegistrationResult result) {
-
-        final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-        final JsonObject response = EventBusMessage.forStatusCode(result.getStatus())
-                .setTenant(tenantId)
-                .setDeviceId(deviceId)
-                .setJsonPayload(result.getPayload())
-                .setCacheDirective(result.getCacheDirective())
-                .toJson();
-        request.reply(response);
-    }
-
-    private JsonObject getRequestPayload(final JsonObject request) {
-
-        final JsonObject payload = request.getJsonObject(RegistrationConstants.FIELD_PAYLOAD, new JsonObject());
-        Boolean enabled = payload.getBoolean(RegistrationConstants.FIELD_ENABLED);
+        final JsonObject result = Optional.ofNullable(payload).orElse(new JsonObject());
+        final Boolean enabled = result.getBoolean(RegistrationConstants.FIELD_ENABLED);
         if (enabled == null) {
             log.debug("adding 'enabled=true' property to request payload");
-            payload.put(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
+            result.put(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
         }
-        return payload;
+        return result;
     }
 
     /**

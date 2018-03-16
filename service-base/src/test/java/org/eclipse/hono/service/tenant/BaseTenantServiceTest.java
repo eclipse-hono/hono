@@ -13,22 +13,23 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static org.mockito.Mockito.*;
+import java.net.HttpURLConnection;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.*;
+import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantResult;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 
@@ -38,8 +39,15 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  */
 @RunWith(VertxUnitRunner.class)
 public class BaseTenantServiceTest {
+
     private static final String TEST_TENANT = "dummy";
+
     private static BaseTenantService<ServiceConfigProperties> tenantService;
+
+    /**
+     * Time out each test after five seconds.
+     */
+    public final Timeout timeout = Timeout.seconds(5);
 
     /**
      * Sets up the fixture.
@@ -52,52 +60,61 @@ public class BaseTenantServiceTest {
     /**
      * Verifies that the base service accepts a request for adding
      * a tenant that contains the minimum required properties.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddSucceedsForMinimalData() {
+    public void testAddSucceedsForMinimalData(final TestContext ctx) {
 
         final JsonObject testPayload = createValidTenantPayload();
 
-        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.TenantAction.add, testPayload);
-        tenantService.processTenantMessage(msg);
-
-        verify(msg).reply(resultWithStatusCode(HTTP_CREATED, TEST_TENANT));
+        final EventBusMessage request = createRequest(TenantConstants.TenantAction.add, testPayload);
+        tenantService.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            ctx.assertEquals(TEST_TENANT, response.getTenant());
+        }));
     }
 
     /**
      * Verifies that the base service fails for an incomplete message that does not contain mandatory fields.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForIncompleteMessage() {
+    public void testAddFailsForIncompleteMessage(final TestContext ctx) {
 
-        final Message<JsonObject> msg = createIncompleteMessageMockForPayload();
-        tenantService.processTenantMessage(msg);
-
-        verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST, null));
+        final EventBusMessage msg = EventBusMessage.forOperation(TenantConstants.TenantAction.add.toString());
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service fails for a payload that defines an empty adapter array (must be null or has to
      * contain at least one element).
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForEmptyAdapterArray() {
+    public void testAddFailsForEmptyAdapterArray(final TestContext ctx) {
 
         final JsonObject testPayload = createValidTenantPayload();
         testPayload.put(TenantConstants.FIELD_ADAPTERS, new JsonArray());
 
-        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.TenantAction.add, testPayload);
-        tenantService.processTenantMessage(msg);
-
-        verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST, TEST_TENANT));
+        final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service fails for a payload that defines an adapter entry, but does not provide the
      * mandatory field {@link TenantConstants#FIELD_ADAPTERS_TYPE}.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForAdapterConfigWithoutType() {
+    public void testAddFailsForAdapterConfigWithoutType(final TestContext ctx) {
 
         final JsonObject testPayload = createValidTenantPayload();
         final JsonArray adapterArray = new JsonArray();
@@ -105,34 +122,17 @@ public class BaseTenantServiceTest {
         adapterArray.add(new JsonObject());
         testPayload.put(TenantConstants.FIELD_ADAPTERS, adapterArray);
 
-        final Message<JsonObject> msg = createMessageMockForPayload(TenantConstants.TenantAction.add, testPayload);
-        tenantService.processTenantMessage(msg);
-
-        verify(msg).reply(resultWithStatusCode(HTTP_BAD_REQUEST, TEST_TENANT));
+        final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
-    @SuppressWarnings("unchecked")
-    private static Message<JsonObject> createMessageMockForPayload(final TenantConstants.TenantAction action, final JsonObject payload) {
+    private static EventBusMessage createRequest(final TenantConstants.TenantAction action, final JsonObject payload) {
 
-        final JsonObject requestBody = new JsonObject();
-        requestBody.put(MessageHelper.APP_PROPERTY_TENANT_ID, TEST_TENANT);
-        requestBody.put(MessageHelper.SYS_PROPERTY_SUBJECT, action);
-        if (payload != null) {
-            requestBody.put(TenantConstants.FIELD_PAYLOAD, payload);
-        }
-
-        final Message<JsonObject> msg = mock(Message.class);
-        when(msg.body()).thenReturn(requestBody);
-        return msg;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Message<JsonObject> createIncompleteMessageMockForPayload() {
-
-        final JsonObject requestBody = new JsonObject();
-        final Message<JsonObject> msg = mock(Message.class);
-        when(msg.body()).thenReturn(requestBody);
-        return msg;
+        return EventBusMessage.forOperation(action.toString())
+                .setTenant(TEST_TENANT)
+                .setJsonPayload(payload);
     }
 
     private static JsonObject createValidTenantPayload() {
@@ -143,22 +143,12 @@ public class BaseTenantServiceTest {
         return payload;
     }
 
-    private static JsonObject resultWithStatusCode(final int statusCode, final String tenantId) {
-
-        final JsonObject result = new JsonObject()
-                .put(MessageHelper.APP_PROPERTY_STATUS, statusCode);
-        if (tenantId != null) {
-                result.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        return result;
-    }
-
     private static BaseTenantService<ServiceConfigProperties> createBaseTenantService() {
 
         return new BaseTenantService<ServiceConfigProperties>() {
             @Override
             public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-                resultHandler.handle(Future.succeededFuture(TenantResult.from(HTTP_CREATED)));
+                resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_CREATED)));
             }
 
             @Override

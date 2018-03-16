@@ -11,36 +11,40 @@
  */
 package org.eclipse.hono.service.credentials;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
-//import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
  * Tests verifying behavior of {@link BaseCredentialsService}.
  */
+@RunWith(VertxUnitRunner.class)
 public class BaseCredentialsServiceTest {
 
     private static BaseCredentialsService<ServiceConfigProperties> service;
 
     private static final String TEST_FIELD = "test";
     private static final String TEST_TENANT = "dummy";
+
+    /**
+     * Time out each test after 5 seconds.
+     */
+    public Timeout timeout = Timeout.seconds(5);
 
     /**
      * Sets up the fixture.
@@ -53,185 +57,200 @@ public class BaseCredentialsServiceTest {
     /**
      * Verifies that the base service accepts a request for adding
      * credentials that contains the minimum required properties.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddSucceedsForMinimalData() {
+    public void testAddSucceedsForMinimalData(final TestContext ctx) {
         final JsonObject testData = createValidCredentialsObject();
 
-        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processCredentialsMessage(msg);
-
-        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_CREATED));
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service accepts a request for adding
      * credentials that contains a secret with a time stamp including
-     * a time zone.
+     * an offset.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddSucceedsForLongTimestamp() {
-        final String iso8601TimeStamp = "2007-04-05T12:30-02:00";
+    public void testAddSucceedsForLongTimestamp(final TestContext ctx) {
 
-        final JsonObject testData = createValidCredentialsObject();
-        final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
-        firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, iso8601TimeStamp);
+        final JsonObject secret = new JsonObject()
+                .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2007-04-05T12:30-02:00");
 
-        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processCredentialsMessage(msg);
+        final JsonObject testData = createValidCredentialsObject(secret);
 
-        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_CREATED));
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+        }));
     }
 
     /**
-     * Verifies that the base service accepts a request for adding
+     * Verifies that the base service rejects a request for adding
      * credentials that contains a secret with a time stamp that does
-     * not include a time zone.
+     * not include an offset.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddSucceedsForShortTimestamp() {
-        final String iso8601TimeStamp = "2007-04-05T14:30";
+    public void testAddFailsForShortTimestamp(final TestContext ctx) {
 
-        final JsonObject testData = createValidCredentialsObject();
-        final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
-        firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, iso8601TimeStamp);
-        
-        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processCredentialsMessage(msg);
+        final JsonObject secret = new JsonObject()
+                .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2007-04-05T14:30");
 
-        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_CREATED));
+        final JsonObject testData = createValidCredentialsObject(secret);
+
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service rejects a request for adding
      * credentials that contain a secret with a malformed time stamp.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForMalformedTimestamp() {
-        final String malformedTimestamp = "yakshaver";
+    public void testAddFailsForMalformedTimestamp(final TestContext ctx) {
 
-        final JsonObject testData = createValidCredentialsObject();
-        final JsonObject firstSecret = testData.getJsonArray(CredentialsConstants.FIELD_SECRETS).getJsonObject(0);
-        firstSecret.put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, malformedTimestamp);
+        final JsonObject secret = new JsonObject()
+                .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "no-timestamp");
 
-        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processCredentialsMessage(msg);
+        final JsonObject testData = createValidCredentialsObject(secret);
 
-        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service rejects a request for adding
      * credentials that do not contain a <em>secrets</em> array at all.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForMissingSecrets() {
+    public void testAddFailsForMissingSecrets(final TestContext ctx) {
+
         final JsonObject testData = createValidCredentialsObject();
 
         testData.remove(CredentialsConstants.FIELD_SECRETS);
 
-        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processCredentialsMessage(msg);
-
-        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service rejects a request for adding
      * credentials containing an empty <em>secrets</em> array.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForEmptySecrets() {
-        final JsonObject testData = createValidCredentialsObject();
-        testData.put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
+    public void testAddFailsForEmptySecrets(final TestContext ctx) {
 
-        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processCredentialsMessage(msg);
+        final JsonObject testData = createValidCredentialsObject(null);
 
-        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service accepts a request for adding
      * credentials that contain an empty secret.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testCredentialsAddWithEmptySecret() {
+    public void testCredentialsAddWithEmptySecret(final TestContext ctx) {
 
-        final JsonObject testData = createValidCredentialsObject();
+        final JsonObject testData = createValidCredentialsObject(new JsonObject());
 
-        final JsonArray secrets = new JsonArray().add(new JsonObject());
-        testData.put(CredentialsConstants.FIELD_SECRETS, secrets);
-
-        final Message<JsonObject> msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processCredentialsMessage(msg);
-
-        verify(msg).reply(resultWithStatusCode(HttpURLConnection.HTTP_CREATED));
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service fails a request for getting credentials
      * with a 400 error code if the type is missing.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetFailsForMissingType() {
+    public void testGetFailsForMissingType(final TestContext ctx) {
 
         // GIVEN a request for getting credentials that does not specify a type
-        final JsonObject malformedPayload = new JsonObject().put(CredentialsConstants.FIELD_AUTH_ID, "bumlux");
-        final Message<JsonObject> request = createRequestForPayload(CredentialsConstants.CredentialsAction.get, malformedPayload);
+        final CredentialsObject malformedPayload = new CredentialsObject()
+                .setAuthId("bumlux")
+                .addSecret(CredentialsObject.emptySecret(null, null));
+        final EventBusMessage request = createRequestForPayload(
+                CredentialsConstants.CredentialsAction.get,
+                JsonObject.mapFrom(malformedPayload));
 
         // WHEN processing the request
-        service.processCredentialsMessage(request);
-
-        // THEN the response contains a 400 error code
-        verify(request).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
+        service.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
+            // THEN the response contains a 400 error code
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the base service fails a request for getting credentials
      * with a 400 error code if the authentication identifier is missing.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetFailsForMissingAuthId() {
+    public void testGetFailsForMissingAuthId(final TestContext ctx) {
 
         // GIVEN a request for getting credentials that does not specify an auth ID
-        final JsonObject malformedPayload = new JsonObject().put(CredentialsConstants.FIELD_TYPE, "myType");
-        final Message<JsonObject> request = createRequestForPayload(CredentialsConstants.CredentialsAction.get, malformedPayload);
+        final CredentialsObject malformedPayload = new CredentialsObject()
+                .setType("my-type")
+                .addSecret(CredentialsObject.emptySecret(null, null));
+        final EventBusMessage request = createRequestForPayload(
+                CredentialsConstants.CredentialsAction.get,
+                JsonObject.mapFrom(malformedPayload));
 
         // WHEN processing the request
-        service.processCredentialsMessage(request);
-
-        // THEN the response contains a 400 error code
-        verify(request).reply(resultWithStatusCode(HttpURLConnection.HTTP_BAD_REQUEST));
+        service.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
+            // THEN the response contains a 400 error code
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        }));
     }
 
-    private static JsonObject resultWithStatusCode(int statusCode) {
+    private static EventBusMessage createRequestForPayload(final CredentialsConstants.CredentialsAction operation, final JsonObject payload) {
 
-        return EventBusMessage.forStatusCode(statusCode).setTenant(TEST_TENANT).toJson();
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Message<JsonObject> createRequestForPayload(final CredentialsConstants.CredentialsAction operation, final JsonObject payload) {
-
-        final JsonObject request = EventBusMessage.forOperation(operation.name())
+        return EventBusMessage.forOperation(operation.name())
                 .setTenant(TEST_TENANT)
-                .setJsonPayload(payload)
-                .toJson();
-        final Message<JsonObject> msg = mock(Message.class);
-        when(msg.body()).thenReturn(request);
-        return msg;
+                .setJsonPayload(payload);
     }
 
     private static JsonObject createValidCredentialsObject() {
+        return createValidCredentialsObject(new JsonObject().put(TEST_FIELD, "dummyValue"));
+    }
 
-        final JsonObject secret = new JsonObject().put(TEST_FIELD, "dummy");
-        final JsonArray secrets = new JsonArray().add(secret);
+    private static JsonObject createValidCredentialsObject(final JsonObject secret) {
 
-        return new JsonObject()
-                .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, "dummy")
-                .put(CredentialsConstants.FIELD_TYPE, "dummy")
-                .put(CredentialsConstants.FIELD_AUTH_ID, "dummy")
-                .put(CredentialsConstants.FIELD_SECRETS, secrets);
+        return JsonObject.mapFrom(new CredentialsObject()
+                .setDeviceId("someDeviceId")
+                .setAuthId("someAuthId")
+                .setType("someType")
+                .addSecret(secret));
     }
 
     private static BaseCredentialsService<ServiceConfigProperties> createBaseCredentialsService() {

@@ -76,16 +76,16 @@ public class BaseRegistrationServiceTest {
     public void testStartupFailsIfNoRegistrationAssertionFactoryIsSet(final TestContext ctx) {
 
         // GIVEN a registry without an assertion factory being set
-        BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
 
         // WHEN starting the service
         Async startupFailure = ctx.async();
         Future<Void> startFuture = Future.future();
         startFuture.setHandler(ctx.asyncAssertFailure(t -> startupFailure.complete()));
-        registrationService.start(startFuture);
+        registrationService.doStart(startFuture);
 
         // THEN startup fails
-        startupFailure.await(1000);
+        startupFailure.await();
     }
 
     /**
@@ -256,25 +256,18 @@ public class BaseRegistrationServiceTest {
         return new BaseRegistrationService<ServiceConfigProperties>() {
 
             @Override
+            protected String getEventBusAddress() {
+                return "requests.in";
+            }
+
+            @Override
             public void setConfig(final ServiceConfigProperties configuration) {
                 setSpecificConfig(configuration);
             }
 
             @Override
-            public void updateDevice(final String tenantId, final String deviceId, final JsonObject otherKeys, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-            }
-
-            @Override
-            public void removeDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-            }
-
-            @Override
             public void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
                 devices.apply(deviceId).setHandler(resultHandler);
-            }
-
-            @Override
-            public void addDevice(final String tenantId, final String deviceId, JsonObject otherKeys, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
             }
         };
         

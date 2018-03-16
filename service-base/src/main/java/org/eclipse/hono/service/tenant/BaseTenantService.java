@@ -13,107 +13,35 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-
 import java.net.HttpURLConnection;
+import java.util.Objects;
 
-import org.eclipse.hono.util.ConfigurationSupportingVerticle;
+import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing {@code TenantService}s.
+ * Base class for implementing {@link TenantService}s.
  * <p>
- * In particular, this base class provides support for parsing tenant CRUD request messages received via the event bus
- * and route them to specific methods corresponding to the <em>action</em> indicated in the message.
+ * In particular, this base class provides support for receiving service invocation request messages
+ * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
+ * in the message.
  *
  * @param <T> The type of configuration properties this service requires.
  */
-public abstract class BaseTenantService<T> extends ConfigurationSupportingVerticle<T> implements TenantService {
+public abstract class BaseTenantService<T> extends EventBusService<T> implements TenantService {
 
-    /**
-     * A logger to be shared by subclasses.
-     */
-    protected final Logger log = LoggerFactory.getLogger(getClass());
-    private MessageConsumer<JsonObject> tenantConsumer;
-
-
-    /**
-     * Starts up this service.
-     * <ol>
-     * <li>Registers an event bus consumer for address {@link TenantConstants#EVENT_BUS_ADDRESS_TENANT_IN} listening for
-     * tenant CRUD requests.</li>
-     * <li>Invokes {@link #doStart(Future)}.</li>
-     * </ol>
-     *
-     * @param startFuture The future to complete on successful startup.
-     */
-    public final void start(final Future<Void> startFuture) {
-        registerConsumer();
-        doStart(startFuture);
-    }
-
-    /**
-     * Subclasses should override this method to perform any work required on start-up of this verticle.
-     * <p>
-     * This default implementation performs nothing except for completing the Future.
-     * </p>
-     * <p>
-     * This method is invoked by {@link #start()} as part of the verticle deployment process.
-     * </p>
-     *
-     * @param startFuture future to invoke once start up is complete.
-     */
-    protected void doStart(final Future<Void> startFuture) {
-        // should be overridden by subclasses
-        startFuture.complete();
-    }
-
-    private void registerConsumer() {
-        tenantConsumer = vertx.eventBus().consumer(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN);
-        tenantConsumer.handler(this::processTenantMessage);
-        log.info("listening on event bus [address: {}] for Tenant API requests",
-                TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN);
-    }
-
-    /**
-     * Unregisters the registration message consumer from the Vert.x event bus and then invokes {@link #doStop(Future)}.
-     *
-     * @param stopFuture the future to invoke once shutdown is complete.
-     */
-    public final void stop(final Future<Void> stopFuture) {
-        tenantConsumer.unregister();
-        log.info("unregistered Tenant API request consumer from event bus");
-        doStop(stopFuture);
-    }
-
-    /**
-     * Subclasses should override this method to perform any work required before shutting down this verticle.
-     * <p>
-     * This default implementation performs nothing except for completing the Future.
-     * </p>
-     * <p>
-     * This method is invoked by {@link #stop()} as part of the verticle deployment process.
-     * </p>
-     *
-     * @param stopFuture the future to invoke once shutdown is complete.
-     */
-    protected void doStop(final Future<Void> stopFuture) {
-        // to be overridden by subclasses
-        stopFuture.complete();
+    @Override
+    protected final String getEventBusAddress() {
+        return TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN;
     }
 
     /**
@@ -122,175 +50,129 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This method validates the request payload against the Tenant API specification
      * before invoking the corresponding {@code TenantService} methods.
      * 
-     * @param tenantMsg The request message.
+     * @param requestMessage The request message.
+     * @return A future indicating the outcome of the service invocation.
      * @throws NullPointerException If the request message is {@code null}.
      */
-    public final void processTenantMessage(final Message<JsonObject> tenantMsg) {
-        try {
-            final JsonObject body = tenantMsg.body();
-            final String subject = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
+    @Override
+    public final Future<EventBusMessage> processRequest(final EventBusMessage requestMessage) {
 
-            switch (TenantConstants.TenantAction.from(subject)) {
-            case get:
-                processGetRequest(tenantMsg);
-                break;
-            case add:
-                processAddRequest(tenantMsg);
-                break;
-            case update:
-                processUpdateRequest(tenantMsg);
-                break;
-            case remove:
-                processRemoveRequest(tenantMsg);
-                break;
-            default:
-                processCustomTenantMessage(tenantMsg, subject);
-                break;
-            }
-        } catch (final ClassCastException e) {
-            log.debug("malformed request message [{}]", e.getMessage());
-            reply(tenantMsg, TenantResult.from(HTTP_BAD_REQUEST));
+        Objects.requireNonNull(requestMessage);
+
+        return processTenantRequest(requestMessage).map(result -> {
+            return EventBusMessage.forStatusCode(result.getStatus())
+                    .setTenant(requestMessage.getTenant())
+                    .setJsonPayload(result.getPayload())
+                    .setCacheDirective(result.getCacheDirective());
+        }).recover(t -> {
+            return Future.failedFuture(t);
+        });
+    }
+
+    private Future<TenantResult<JsonObject>> processTenantRequest(final EventBusMessage request) {
+
+        switch (TenantConstants.TenantAction.from(request.getOperation())) {
+        case get:
+            return processGetRequest(request);
+        case add:
+            return processAddRequest(request);
+        case update:
+            return processUpdateRequest(request);
+        case remove:
+            return processRemoveRequest(request);
+        default:
+            return processCustomTenantMessage(request);
         }
     }
 
-    private void processGetRequest(final Message<JsonObject> request) {
+    private Future<TenantResult<JsonObject>> processGetRequest(final EventBusMessage request) {
 
-        final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final Future<TenantResult<JsonObject>> result = Future.future();
+        final String tenantId = request.getTenant();
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
                     MessageHelper.APP_PROPERTY_TENANT_ID);
-            reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
+            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("retrieving tenant [{}]", tenantId);
-            get(tenantId, response -> reply(request, response));
+            get(tenantId, result.completer());
         }
+        return result;
     }
 
-    private void processAddRequest(final Message<JsonObject> request) {
+    private Future<TenantResult<JsonObject>> processAddRequest(final EventBusMessage request) {
 
-        final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final JsonObject payload = body.getJsonObject(TenantConstants.FIELD_PAYLOAD, new JsonObject());
+        final Future<TenantResult<JsonObject>> result = Future.future();
+        final String tenantId = request.getTenant();
+        final JsonObject payload = request.getJsonPayload(new JsonObject());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
                     MessageHelper.APP_PROPERTY_TENANT_ID);
-            reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
+            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (isValidRequestPayload(payload)) {
             log.debug("creating tenant [{}]", tenantId);
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
-            add(tenantId, payload, response -> reply(request, response));
+            add(tenantId, payload, result.completer());
         } else {
             log.debug("request contains malformed payload");
-            reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+        return result;
     }
 
-    private void processUpdateRequest(final Message<JsonObject> request) {
+    private Future<TenantResult<JsonObject>> processUpdateRequest(final EventBusMessage request) {
 
-        final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final JsonObject payload = body.getJsonObject(TenantConstants.FIELD_PAYLOAD, new JsonObject());
+        final Future<TenantResult<JsonObject>> result = Future.future();
+        final String tenantId = request.getTenant();
+        final JsonObject payload = request.getJsonPayload(new JsonObject());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
                     MessageHelper.APP_PROPERTY_TENANT_ID);
-            reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
+            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (isValidRequestPayload(payload)) {
             log.debug("updating tenant [{}]", tenantId);
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
-            update(tenantId, payload, response -> reply(request, response));
+            update(tenantId, payload, result.completer());
         } else {
             log.debug("request contains malformed payload");
-            reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+        return result;
     }
 
-    private void processRemoveRequest(final Message<JsonObject> request) {
+    private Future<TenantResult<JsonObject>> processRemoveRequest(final EventBusMessage request) {
 
-        final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
+        final Future<TenantResult<JsonObject>> result = Future.future();
+        final String tenantId = request.getTenant();
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
                     MessageHelper.APP_PROPERTY_TENANT_ID);
-            reply(request, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
+            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("deleting tenant [{}]", tenantId);
-            remove(tenantId, response -> reply(request, response));
+            remove(tenantId, result.completer());
         }
+        return result;
     }
 
     /**
-     * Override the following method to extend TenantService with implementation
-     * specific operations. Consequently, once the operation is completed, a {@link TenantResult} must be
-     * set as reply to this tenantMsg. Use the {@link #reply(Message, AsyncResult)} for sending
-     * the response for the Message. For example, if some concrete action looks like
-     * <pre>{@code
-     *     void doSomeSpecificAction(final Message<JsonObject> tenantMsg, final Handler<AsyncResult<TenantResult>> resultHandler);
-     * }</pre>
-     * then the overriding method would look like
-     *  <pre>{@code
-     *     processCustomTenantMessage(final Message<JsonObject> tenantMsg, String action) {
-     *          if(action.equals("expected-action")) {
-     *            doSomeSpecificAction(tenantMsg, result -> reply(tenantMsg, result));
-     *          } else {
-     *             reply(tenantMsg, TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-     *         }
-     *       }
-     * }</pre>
+     * Processes a request for a non-standard operation.
+     * <p>
+     * Subclasses should override this method in order to support additional, custom
+     * operations that are not defined by Hono's Tenant API.
+     * <p>
+     * This default implementation simply returns a succeeded future containing a
+     * result with status code <em>400 Bad Request</em>.
      *
-     * @param tenantMsg target tenant message to be processed.
-     * @param action implementation specific action to be executed.
+     * @param request The request to process.
+     * @return A future indicating the outcome of the service invocation.
      */
-    protected void processCustomTenantMessage(final Message<JsonObject> tenantMsg, String action) {
-        log.debug("invalid action in request message [{}]", action);
-        reply(tenantMsg, TenantResult.from(HTTP_BAD_REQUEST));
-    }
-
-    /**
-     * Sends a response to a tenant request over the vert.x event bus.
-     *
-     * @param request The message to respond to.
-     * @param asyncActionResult The outcome of the processed request.
-     * @throws NullPointerException If request or tenantResult is null.
-     */
-    protected final void reply(final Message<JsonObject> request, final AsyncResult<TenantResult<JsonObject>> asyncActionResult) {
-        if (asyncActionResult.succeeded()) {
-            if (asyncActionResult.result() != null) {
-                reply(request, asyncActionResult.result());
-            } else {
-                log.debug("result is null in reply to tenant request");
-                reply(request, TenantResult.from(HTTP_INTERNAL_ERROR));
-            }
-        } else {
-            request.fail(HTTP_INTERNAL_ERROR, "cannot process tenant management request");
-        }
-    }
-
-    /**
-     * Sends a response to a tenant request over the vert.x event bus.
-     *
-     * @param request The message to respond to.
-     * @param result The tenant result that should be conveyed in the response.
-     * @throws NullPointerException If request or result is null.
-     */
-    protected final void reply(final Message<JsonObject> request, final TenantResult<JsonObject> result) {
-
-        final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final JsonObject response =  EventBusMessage.forStatusCode(result.getStatus())
-                .setTenant(tenantId)
-                .setJsonPayload(result.getPayload())
-                .setCacheDirective(result.getCacheDirective())
-                .toJson();
-
-        request.reply(response);
+    protected Future<TenantResult<JsonObject>> processCustomTenantMessage(final EventBusMessage request) {
+        log.debug("invalid operation in request message [{}]", request.getOperation());
+        return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
     /**
@@ -385,6 +267,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
+    @Override
     public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
@@ -395,6 +278,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
+    @Override
     public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
@@ -405,6 +289,7 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
+    @Override
     public void update(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
@@ -415,12 +300,18 @@ public abstract class BaseTenantService<T> extends ConfigurationSupportingVertic
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
+    @Override
     public void remove(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
-    private void handleUnimplementedOperation(final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    /**
+     * Handles an unimplemented operation by succeeding the given handler
+     * with a result having a <em>501 Not Implemented</em> status code.
+     * 
+     * @param resultHandler The handler.
+     */
+    protected void handleUnimplementedOperation(final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
     }
-
 }

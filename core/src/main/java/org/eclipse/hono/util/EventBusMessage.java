@@ -227,6 +227,18 @@ public class EventBusMessage {
     }
 
     /**
+     * Gets the value of the payload property.
+     * 
+     * @param defaultValue The default value.
+     * @return The value of the payload property or the given default
+     *         value if not set.
+     */
+    public JsonObject getJsonPayload(final JsonObject defaultValue) {
+        final JsonObject payload = getProperty(RequestResponseApiConstants.FIELD_PAYLOAD);
+        return Optional.ofNullable(payload).orElse(defaultValue);
+    }
+
+    /**
      * Adds a property for the gateway identifier.
      * <p>
      * The property will only be added if the value is not {@code null}.

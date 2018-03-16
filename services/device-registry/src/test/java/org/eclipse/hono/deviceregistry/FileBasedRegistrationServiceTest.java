@@ -36,7 +36,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -55,7 +54,7 @@ public class FileBasedRegistrationServiceTest {
     private static final String FILE_NAME = "/device-identities.json";
 
     /**
-     * Time out all tests after 5 secs.
+     * Time out each test after 5 seconds.
      */
     @Rule
     public Timeout timeout = Timeout.seconds(5);
@@ -317,105 +316,108 @@ public class FileBasedRegistrationServiceTest {
 
     /**
      * Verifies that the registry returns 404 when getting an unknown device.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetUnknownDeviceReturnsNotFound() {
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_GET),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                    .setTenant(TENANT)
-                    .setDeviceId(DEVICE)
-                    .toJson());
+    public void testGetUnknownDeviceReturnsNotFound(final TestContext ctx) {
+
+        registrationService
+            .processRequest(newRequest(RegistrationConstants.ACTION_GET, TENANT))
+            .setHandler(ctx.asyncAssertSuccess(response -> {
+                ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
+            }));
     }
 
     /**
      * Verifies that the registry returns 404 when unregistering an unknown device.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeregisterUnknownDeviceReturnsNotFound() {
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_DEREGISTER),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .toJson());
+    public void testDeregisterUnknownDeviceReturnsNotFound(final TestContext ctx) {
+
+        registrationService
+            .processRequest(newRequest(RegistrationConstants.ACTION_DEREGISTER, TENANT))
+            .setHandler(ctx.asyncAssertSuccess(response -> {
+                ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
+            }));
     }
 
     /**
      * Verifies that the registry returns 400 when issuing a request with an unsupported action.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testProcessRegisterMessageFailsWithUnsupportedAction() {
-        processMessageAndExpectResponse(
-                mockMsg("unknown-action"),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_BAD_REQUEST)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .toJson());
+    public void testProcessRegisterMessageFailsWithUnsupportedAction(final TestContext ctx) {
+
+        registrationService
+            .processRequest(EventBusMessage.forOperation("unknown-action"))
+            .setHandler(ctx.asyncAssertSuccess(response -> {
+                ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+            }));
     }
 
     /**
      * Verifies that the registry returns 409 when trying to register a device twice.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testDuplicateRegistrationFails() {
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_REGISTER),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_CREATED)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .toJson());
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_REGISTER),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_CONFLICT)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .toJson());
+    public void testDuplicateRegistrationFails(final TestContext ctx) {
+
+        final EventBusMessage createRequest = newRequest(RegistrationConstants.ACTION_REGISTER, TENANT);
+
+        registrationService.processRequest(createRequest).map(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            return response;
+        }).compose(ok -> registrationService.processRequest(createRequest)).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, response.getStatus());
+        }));
     }
 
     /**
      * Verifies that the registry returns 200 when getting an existing device.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetSucceedsForRegisteredDevice() {
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_REGISTER),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_CREATED)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .toJson());
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_GET),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_OK)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .setJsonPayload(expectedPayload(DEVICE))
-                .toJson());
+    public void testGetSucceedsForRegisteredDevice(final TestContext ctx) {
+
+        final EventBusMessage createRequest = newRequest(RegistrationConstants.ACTION_REGISTER, TENANT);
+        final EventBusMessage getRequest = newRequest(RegistrationConstants.ACTION_GET, TENANT);
+
+        registrationService.processRequest(createRequest).compose(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            return registrationService.processRequest(getRequest);
+        }).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
+            ctx.assertNotNull(response.getJsonPayload());
+        }));
     }
 
     /**
      * Verifies that the registry returns 404 when getting an unregistered device.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetFailsForDeregisteredDevice() {
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_REGISTER),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_CREATED)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .toJson());
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_DEREGISTER),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_NO_CONTENT)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .toJson());
-        processMessageAndExpectResponse(
-                mockMsg(RegistrationConstants.ACTION_GET),
-                EventBusMessage.forStatusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                .setTenant(TENANT)
-                .setDeviceId(DEVICE)
-                .toJson());
+    public void testGetFailsForDeregisteredDevice(final TestContext ctx) {
+
+        final EventBusMessage createRequest = newRequest(RegistrationConstants.ACTION_REGISTER, TENANT);
+        final EventBusMessage deregisterRequest = newRequest(RegistrationConstants.ACTION_DEREGISTER, TENANT);
+        final EventBusMessage getRequest = newRequest(RegistrationConstants.ACTION_GET, TENANT);
+
+        registrationService.processRequest(createRequest).compose(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            return registrationService.processRequest(deregisterRequest);
+        }).compose(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
+            return registrationService.processRequest(getRequest);
+        }).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
+        }));
     }
 
     /**
@@ -488,31 +490,7 @@ public class FileBasedRegistrationServiceTest {
         verify(fileSystem, never()).createFile(eq(props.getFilename()), any(Handler.class));
     }
 
-    private static JsonObject expectedPayload(final String id) {
-        return new JsonObject()
-                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, id)
-                .put(RegistrationConstants.FIELD_DATA, new JsonObject()
-                        .put(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE));
-    }
-
-    private static Message<JsonObject> mockMsg(final String action) {
-        return mockMsg(action, TENANT);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Message<JsonObject> mockMsg(final String action, final String tenant) {
-
-        final JsonObject registrationJson = EventBusMessage.forOperation(action)
-                .setTenant(tenant)
-                .setDeviceId(DEVICE)
-                .toJson();
-        final Message<JsonObject> message = mock(Message.class);
-        when(message.body()).thenReturn(registrationJson);
-        return message;
-    }
-
-    private void processMessageAndExpectResponse(final Message<JsonObject> request, final JsonObject expectedResponse) {
-        registrationService.processRegistrationMessage(request);
-        verify(request).reply(expectedResponse);
+    private static EventBusMessage newRequest(final String operation, final String tenant) {
+        return EventBusMessage.forOperation(operation).setTenant(tenant).setDeviceId(DEVICE);
     }
 }

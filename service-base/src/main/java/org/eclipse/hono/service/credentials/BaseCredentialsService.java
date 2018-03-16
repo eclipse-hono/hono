@@ -12,251 +12,199 @@
 package org.eclipse.hono.service.credentials;
 
 import java.net.HttpURLConnection;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Objects;
+import java.util.Optional;
 
-import org.eclipse.hono.util.ConfigurationSupportingVerticle;
+import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
-import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.Strings;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing {@code CredentialsService}s.
+ * Base class for implementing {@link CredentialsService}s.
  * <p>
- * In particular, this base class provides support for parsing credentials request messages
- * received via the event bus and route them to specific methods corresponding to the <em>subject</em>
- * indicated in the message.
+ * In particular, this base class provides support for receiving service invocation request messages
+ * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
+ * in the message.
  * 
  * @param <T> The type of configuration class this service supports.
  */
-public abstract class BaseCredentialsService<T> extends ConfigurationSupportingVerticle<T> implements CredentialsService {
+public abstract class BaseCredentialsService<T> extends EventBusService<T> implements CredentialsService {
 
-    /**
-     * A logger to be shared by subclasses.
-     */
-    protected final Logger log = LoggerFactory.getLogger(getClass());
-    private MessageConsumer<JsonObject> credentialsConsumer;
-
-    /**
-     * Registers a Vert.x event consumer for address {@link CredentialsConstants#EVENT_BUS_ADDRESS_CREDENTIALS_IN}
-     * and then invokes {@link #doStart(Future)}.
-     *
-     * @param startFuture future to invoke once start up is complete.
-     */
     @Override
-    public final void start(final Future<Void> startFuture) throws Exception {
-        credentialsConsumer();
-        doStart(startFuture);
+    protected String getEventBusAddress() {
+        return CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN;
     }
 
     /**
-     * Subclasses should override this method to perform any work required on start-up of this verticle.
+     * Processes a Credentials API request received via the vert.x event bus.
      * <p>
-     * This method is invoked by {@link #start()} as part of the verticle deployment process.
-     * </p>
-     *
-     * @param startFuture future to invoke once start up is complete.
-     * @throws Exception if start-up fails
-     */
-    protected void doStart(final Future<Void> startFuture) throws Exception {
-        // should be overridden by subclasses
-        startFuture.complete();
-    }
-
-    private void credentialsConsumer() {
-        credentialsConsumer = vertx.eventBus().consumer(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN);
-        credentialsConsumer.handler(this::processCredentialsMessage);
-        log.info("listening on event bus [address: {}] for incoming credentials messages",
-                CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN);
-    }
-
-    /**
-     * Unregisters the credentials message consumer from the Vert.x event bus and then invokes {@link #doStop(Future)}.
-     *
-     * @param stopFuture the future to invoke once shutdown is complete.
-     */
-    @Override
-    public final void stop(final Future<Void> stopFuture) {
-        log.info("unregistering event bus listener [address: {}]", CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN);
-        credentialsConsumer.unregister();
-        doStop(stopFuture);
-    }
-
-    /**
-     * Subclasses should override this method to perform any work required before shutting down this verticle.
-     * <p>
-     * This method is invoked by {@link #stop()} as part of the verticle deployment process.
-     * </p>
-     *
-     * @param stopFuture the future to invoke once shutdown is complete.
-     */
-    protected void doStop(final Future<Void> stopFuture) {
-        // to be overridden by subclasses
-        stopFuture.complete();
-    }
-
-    /**
-     * Processes a credentials request message received via the Vertx event bus.
+     * This method validates the request parameters against the Credentials API
+     * specification before invoking the corresponding {@code CredentialsService} methods.
      * 
-     * @param regMsg The message.
+     * @param requestMessage The request message.
+     * @return A future indicating the outcome of the service invocation.
+     * @throws NullPointerException If the request message is {@code null}.
      */
-    public final void processCredentialsMessage(final Message<JsonObject> regMsg) {
+    @Override
+    public final Future<EventBusMessage> processRequest(final EventBusMessage requestMessage) {
 
-        final JsonObject body = regMsg.body();
-        if (body == null) {
-            log.debug("credentials request does not contain body");
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
+        Objects.requireNonNull(requestMessage);
+
+        if (log.isTraceEnabled()) {
+            log.trace("received request: {}", requestMessage.toJson());
         }
 
-        log.trace("credentials request message: {}", body.encodePrettily());
+        return processCredentialsRequest(requestMessage).map(result -> {
+            return EventBusMessage.forStatusCode(result.getStatus())
+                    .setTenant(requestMessage.getTenant())
+                    .setDeviceId(requestMessage.getDeviceId())
+                    .setJsonPayload(result.getPayload())
+                    .setCacheDirective(result.getCacheDirective());
+        }).recover(t -> {
+            return Future.failedFuture(t);
+        });
+    }
 
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String subject = body.getString(MessageHelper.SYS_PROPERTY_SUBJECT);
-        final JsonObject payload = getRequestPayload(body);
+    private Future<CredentialsResult<JsonObject>> processCredentialsRequest(final EventBusMessage request) {
 
-        if (tenantId == null) {
-            log.debug("credentials request does not contain mandatory property [{}]", MessageHelper.APP_PROPERTY_TENANT_ID);
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
-        } else if (subject == null) {
-            log.debug("credentials request does not contain mandatory property [{}]", MessageHelper.SYS_PROPERTY_SUBJECT);
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
-        } else if (payload == null) {
-            log.debug("credentials request contains invalid or no payload at all (expected JSON)");
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
-        }
+        final String operation = request.getOperation();
 
-        switch (CredentialsConstants.CredentialsAction.from(subject)) {
+        switch (CredentialsConstants.CredentialsAction.from(operation)) {
             case get:
-                processCredentialsMessageGetOperation(regMsg, tenantId, payload);
-                break;
+                return processGetRequest(request);
             case add:
-                processCredentialsMessageAddOperation(regMsg, tenantId, payload);
-                break;
+                return processAddRequest(request);
             case update:
-                processCredentialsMessageUpdateOperation(regMsg, tenantId, payload);
-                break;
+                return processUpdateRequest(request);
             case remove:
-                processCredentialsMessageRemoveOperation(regMsg, tenantId, payload);
-                break;
+                return processRemoveRequest(request);
             default:
-                processCustomCredentialMessage(regMsg, subject);
-                break;
+                return processCustomCredentialsMessage(request);
         }
     }
 
-    private void processCredentialsMessageGetOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
+    private Future<CredentialsResult<JsonObject>> processGetRequest(final EventBusMessage request) {
 
-        final String type = getTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE, String.class);
-        if (type == null) {
-            log.debug("get credentials request does not contain required parameter [{}]", CredentialsConstants.FIELD_TYPE);
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
-        }
+        final Future<CredentialsResult<JsonObject>> result = Future.future();
+        final String tenantId = request.getTenant();
+        final JsonObject payload = request.getJsonPayload();
 
-        final String authId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID, String.class);
-        final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, String.class);
-
-
-        if (authId != null && deviceId == null) {
-            log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
-            get(tenantId, type, authId, result -> reply(regMsg, result));
-        } else if (deviceId != null && authId == null) {
-            log.debug("getting credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
-            getAll(tenantId, deviceId, result -> reply(regMsg, result));
+        if (tenantId == null || payload == null) {
+            result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            log.debug("get credentials request contains invalid search criteria [type: {}, device-id: {}, auth-id: {}]",
-                    type, deviceId, authId);
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            final String type = getTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE);
+            final String authId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID);
+            final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+
+            if (type == null) {
+                result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            } else if (authId != null && deviceId == null) {
+                log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
+                get(tenantId, type, authId, result.completer());
+            } else if (deviceId != null && authId == null) {
+                log.debug("getting credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
+                getAll(tenantId, deviceId, result.completer());
+            } else {
+                log.debug("get credentials request contains invalid search criteria [type: {}, device-id: {}, auth-id: {}]",
+                        type, deviceId, authId);
+                result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            }
         }
+        return result;
     }
 
-    private void processCredentialsMessageAddOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
-        if (!isValidCredentialsObject(payload)) {
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
-        }
-        add(tenantId, payload, result -> reply(regMsg, result));
-    }
+    private Future<CredentialsResult<JsonObject>> processAddRequest(final EventBusMessage request) {
 
-    private void processCredentialsMessageUpdateOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
+        final Future<CredentialsResult<JsonObject>> result = Future.future();
+        final String tenantId = request.getTenant();
+        final CredentialsObject payload = Optional.ofNullable(request.getJsonPayload())
+                .map(json -> json.mapTo(CredentialsObject.class)).orElse(null);
 
-        if (!isValidCredentialsObject(payload)) {
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-            return;
-        }
-        update(tenantId, payload, result -> reply(regMsg, result)); 
-    }
-
-    private void processCredentialsMessageRemoveOperation(final Message<JsonObject> regMsg, final String tenantId, final JsonObject payload) {
-
-        final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, String.class);
-        final String type = getTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE, String.class);
-        final String authId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID, String.class);
-
-        // there exist several valid combinations of parameters
-
-        if (type == null) {
-            log.debug("remove credentials request does not contain mandatory type parameter");
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else if (!type.equals(CredentialsConstants.SPECIFIER_WILDCARD) && authId != null) {
-            // delete a single credentials instance
-            log.debug("removing specific credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
-            remove(tenantId, type, authId, result -> reply(regMsg, result));
-        } else if (deviceId != null && type.equals(CredentialsConstants.SPECIFIER_WILDCARD)) {
-            // delete all credentials for device
-            log.debug("removing all credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
-            removeAll(tenantId, deviceId, result -> reply(regMsg, result));
+        if (tenantId == null || payload == null) {
+            result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else if (payload.isValid()) {
+            add(tenantId, JsonObject.mapFrom(payload), result.completer());
         } else {
-            log.debug("remove credentials request contains invalid search criteria [type: {}, device-id: {}, auth-id: {}]",
-                    type, deviceId, authId);
-            reply(regMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+        return result;
+    }
+
+    private Future<CredentialsResult<JsonObject>> processUpdateRequest(final EventBusMessage request) {
+
+        final Future<CredentialsResult<JsonObject>> result = Future.future();
+        final String tenantId = request.getTenant();
+        final CredentialsObject payload = Optional.ofNullable(request.getJsonPayload())
+                .map(json -> json.mapTo(CredentialsObject.class)).orElse(null);
+
+        if (tenantId == null || payload == null) {
+            result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else if (payload.isValid()) {
+            update(tenantId, JsonObject.mapFrom(payload), result.completer()); 
+        } else {
+            result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        }
+        return result;
+    }
+
+    private Future<CredentialsResult<JsonObject>> processRemoveRequest(final EventBusMessage request) {
+
+        final Future<CredentialsResult<JsonObject>> result = Future.future();
+        final String tenantId = request.getTenant();
+        final JsonObject payload = request.getJsonPayload();
+
+        if (tenantId == null || payload == null) {
+            result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            final String type = getTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE);
+            final String authId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID);
+            final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+
+            // there exist several valid combinations of parameters
+
+            if (type == null) {
+                log.debug("remove credentials request does not contain mandatory type parameter");
+                result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            } else if (!type.equals(CredentialsConstants.SPECIFIER_WILDCARD) && authId != null) {
+                // delete a single credentials instance
+                log.debug("removing specific credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
+                remove(tenantId, type, authId, result.completer());
+            } else if (deviceId != null && type.equals(CredentialsConstants.SPECIFIER_WILDCARD)) {
+                // delete all credentials for device
+                log.debug("removing all credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
+                removeAll(tenantId, deviceId, result.completer());
+            } else {
+                log.debug("remove credentials request contains invalid search criteria [type: {}, device-id: {}, auth-id: {}]",
+                        type, deviceId, authId);
+                result.complete(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            }
+        }
+        return result;
     }
 
     /**
-     * Override the following method to extend CredentialService with implementation
-     * specific operations. Consequently, once the operation is completed, a {@link CredentialsResult} must be
-     * set as reply to this credMsg. Use the {@link #reply(Message, AsyncResult)} for sending
-     * the response for the Message. For example, if some concrete action looks like
-     * <pre>{@code
-     *     void doSomeSpecificAction(final Message<JsonObject> regMsg, final Handler<AsyncResult<CredentialsResult>> resultHandler);
-     * }</pre>
-     * then the overriding method would look like
-     *  <pre>{@code
-     *     processCustomCredentialMessage(final Message<JsonObject> credMsg, String action) {
-     *          if(action.equals("expected-action")) {
-     *            doSomeSpecificAction(credMsg, result -> reply(credMsg, result));
-     *          } else {
-     *             reply(credMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-     *         }
-     *       }
-     * }</pre>
+     * Processes a request for a non-standard operation.
+     * <p>
+     * Subclasses should override this method in order to support additional, custom
+     * operations that are not defined by Hono's Credentials API.
+     * <p>
+     * This default implementation simply returns a succeeded future containing a
+     * result with status code <em>400 Bad Request</em>.
      *
-     *
-     * @param credMsg credential message to be processed
-     * @param action implementation specific operation to be executed.
+     * @param request The request to process.
+     * @return A future indicating the outcome of the service invocation.
      */
-    public void processCustomCredentialMessage(final Message<JsonObject> credMsg, String action) {
-        log.debug("invalid action in request message [{}]", action);
-        reply(credMsg, CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-    }
+    protected Future<CredentialsResult<JsonObject>> processCustomCredentialsMessage(final EventBusMessage request) {
+        log.debug("invalid operation in request message [{}]", request.getOperation());
+        return Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+    };
 
     /**
      * {@inheritDoc}
@@ -324,196 +272,13 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
         handleUnimplementedOperation(resultHandler);
     }
 
-    private void handleUnimplementedOperation(final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    /**
+     * Handles an unimplemented operation by succeeding the given handler
+     * with a result having a <em>501 Not Implemented</em> status code.
+     * 
+     * @param resultHandler The handler.
+     */
+    protected void handleUnimplementedOperation(final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
         resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
-    }
-
-    private boolean isValidCredentialsObject(final JsonObject credentials) {
-        return containsStringValueForField(credentials, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID)
-                && containsStringValueForField(credentials, CredentialsConstants.FIELD_TYPE)
-                && containsStringValueForField(credentials, CredentialsConstants.FIELD_AUTH_ID)
-                && containsValidSecretValue(credentials);
-    }
-
-    private boolean containsValidSecretValue(final JsonObject credentials) {
-
-        final Object obj = credentials.getValue(CredentialsConstants.FIELD_SECRETS);
-
-        if (JsonArray.class.isInstance(obj)) {
-
-            JsonArray secrets = (JsonArray) obj;
-            if (secrets.isEmpty()) {
-
-                log.debug("credentials request payload contains no secrets");
-                return false;
-
-            } else {
-
-                for (int i = 0; i < secrets.size(); i++) {
-                    JsonObject currentSecret = secrets.getJsonObject(i);
-                    if (!containsValidTimestampIfPresentForField(currentSecret, CredentialsConstants.FIELD_SECRETS_NOT_BEFORE)
-                            || !containsValidTimestampIfPresentForField(currentSecret, CredentialsConstants.FIELD_SECRETS_NOT_AFTER)) {
-                        log.debug("credentials request contains invalid timestamp values in payload");
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-        } else {
-
-            log.debug("credentials request does not contain a {} array in payload - not supported", CredentialsConstants.FIELD_SECRETS);
-            return false;
-
-        }
-    }
-
-    private boolean containsStringValueForField(final JsonObject payload, final String field) {
-
-        final Object value = payload.getValue(field);
-        if (Strings.isNullOrEmpty(value)) {
-            log.debug("credentials request payload does not contain required string typed field [{}]", field);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Gets a property value of a given type from a JSON object.
-     * 
-     * @param payload The object to get the property from.
-     * @param field The name of the property.
-     * @param type The expected type of the property.
-     * @param <T> The type of the field.
-     * @return The property value or {@code null} if no such property exists or is not of the expected type.
-     * @throws NullPointerException if any of the params is {@code null}.
-     */
-    @SuppressWarnings({ "unchecked", "hiding" })
-    protected final <T> T getTypesafeValueForField(final JsonObject payload, final String field, final Class<T> type) {
-
-        Objects.requireNonNull(payload);
-        Objects.requireNonNull(field);
-        Objects.requireNonNull(type);
-
-        final Object value = payload.getValue(field);
-        if (type.isInstance(value)) {
-            return (T) value;
-        } else {
-            return null;
-        }
-    }
-
-    private boolean containsValidTimestampIfPresentForField(final JsonObject payload, final String field) {
-
-        final Object value = payload.getValue(field);
-        if (value == null) {
-            return true;
-        } else if (String.class.isInstance(value)) {
-            return isValidTimestamp((String) value);
-        } else {
-            return false;
-        }
-    }
-
-    private boolean isValidTimestamp(final String dateTime) {
-
-        try {
-            final DateTimeFormatter timeFormatter = DateTimeFormatter.ISO_DATE_TIME;
-            timeFormatter.parse(dateTime);
-
-            return true;
-        } catch (DateTimeParseException e) {
-            log.debug("credentials request did contain invalid timestamp in payload");
-            return false;
-        }
-    }
-
-    /**
-     * Sends a response to a credentials request over the vert.x event bus.
-     * 
-     * @param request The message to respond to.
-     * @param result The credentials result that should be conveyed in the response.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final void reply(final Message<JsonObject> request, final AsyncResult<CredentialsResult<JsonObject>> result) {
-
-        Objects.requireNonNull(request);
-        Objects.requireNonNull(result);
-
-        if (result.succeeded()) {
-            reply(request, result.result());
-        } else {
-            request.fail(HttpURLConnection.HTTP_INTERNAL_ERROR, "cannot process credentials request");
-        }
-    }
-
-    /**
-     * Sends a response to a credentials request over the vert.x event bus.
-     * 
-     * @param request The message to respond to.
-     * @param result The credentials result that should be conveyed in the response.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final void reply(final Message<JsonObject> request, final CredentialsResult<JsonObject> result) {
-
-        Objects.requireNonNull(request);
-        Objects.requireNonNull(result);
-
-        final JsonObject body = request.body();
-        final String tenantId = body.getString(MessageHelper.APP_PROPERTY_TENANT_ID);
-        final String deviceId = body.getString(MessageHelper.APP_PROPERTY_DEVICE_ID);
-
-        request.reply(
-                EventBusMessage.forStatusCode(result.getStatus())
-                .setTenant(tenantId)
-                .setDeviceId(deviceId)
-                .setJsonPayload(result.getPayload())
-                .toJson());
-    }
-
-    /**
-     * Gets the payload from the request and ensures that the enabled flag is contained.
-     *
-     * @param request The request from which the payload is tried to be extracted. Must not be null.
-     * @return The payload as JsonObject (if found). Null otherwise.
-     */
-    private JsonObject getRequestPayload(final JsonObject request) {
-
-        if (request == null) {
-            return null;
-        } else {
-            JsonObject payload = null;
-            Object payloadObject = request.getValue(CredentialsConstants.FIELD_PAYLOAD);
-            if (JsonObject.class.isInstance(payloadObject)) {
-                payload = (JsonObject) payloadObject;
-                if (!payload.containsKey(CredentialsConstants.FIELD_ENABLED)) {
-                    log.debug("adding 'enabled=true' property to request payload");
-                    payload.put(CredentialsConstants.FIELD_ENABLED, Boolean.TRUE);
-                }
-            }
-            return payload;
-        }
-    }
-
-    /**
-     * Wraps a given device ID and credentials data into a JSON structure suitable
-     * to be returned to clients as the result of a credentials operation.
-     * 
-     * @param deviceId The identifier of the device.
-     * @param type The type of credentials returned.
-     * @param authId The authentication identifier the device uses.
-     * @param enabled {@code true} if the returned credentials may be used to authenticate.
-     * @param secrets The secrets that need to be used in conjunction with the authentication identifier.
-     * @return The JSON structure.
-     */
-    protected static final JsonObject getResultPayload(final String deviceId, final  String type, final String authId, final boolean enabled, final JsonArray secrets) {
-        return new JsonObject().
-                put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId).
-                put(CredentialsConstants.FIELD_TYPE, type).
-                put(CredentialsConstants.FIELD_AUTH_ID, authId).
-                put(CredentialsConstants.FIELD_ENABLED, enabled).
-                put(CredentialsConstants.FIELD_SECRETS, secrets);
     }
 }
