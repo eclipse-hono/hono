@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.util;
 
@@ -25,7 +26,6 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -452,10 +452,10 @@ public final class MessageHelper {
      * @param msg the message to add the vendor properties to.
      */
     public static void addJmsVendorProperties(final Message msg) {
-        if (!StringUtils.isEmpty(msg.getContentType())) {
+        if (!Strings.isNullOrEmpty(msg.getContentType())) {
             MessageHelper.addProperty(msg, JMS_VENDOR_PROPERTY_CONTENT_TYPE, msg.getContentType());
         }
-        if (!StringUtils.isEmpty(msg.getContentEncoding())) {
+        if (!Strings.isNullOrEmpty(msg.getContentEncoding())) {
             MessageHelper.addProperty(msg, JMS_VENDOR_PROPERTY_CONTENT_ENCODING, msg.getContentEncoding());
         }
     }

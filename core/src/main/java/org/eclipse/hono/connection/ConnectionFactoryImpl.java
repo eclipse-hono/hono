@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.connection;
@@ -17,9 +18,9 @@ import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -182,7 +183,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
     private void addOptions(final ProtonClientOptions clientOptions, final String username, final String password) {
 
         addTlsTrustOptions(clientOptions);
-        if (!StringUtils.isEmpty(username) && !StringUtils.isEmpty(password)) {
+        if (!Strings.isNullOrEmpty(username) && !Strings.isNullOrEmpty(password)) {
             clientOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
         } else {
             addTlsKeyCertOptions(clientOptions);

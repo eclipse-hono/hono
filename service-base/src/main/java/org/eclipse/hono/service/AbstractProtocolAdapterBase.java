@@ -32,11 +32,11 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.util.StringUtils;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -191,7 +191,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     protected final Future<Void> startInternal() {
         final Future<Void> result = Future.future();
-        if (StringUtils.isEmpty(getTypeName())) {
+        if (Strings.isNullOrEmpty(getTypeName())) {
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClient == null) {
             result.fail(new IllegalStateException("Hono Tenant client must be set"));
@@ -504,7 +504,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 addDefaults(message, defaults);
             }
         }
-        if (StringUtils.isEmpty(message.getContentType())) {
+        if (Strings.isNullOrEmpty(message.getContentType())) {
             // set default content type if none has been specified when creating the
             // message nor a default content type is available
             message.setContentType(CONTENT_TYPE_OCTET_STREAM);
@@ -520,13 +520,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
             switch(prop.getKey()) {
             case MessageHelper.SYS_PROPERTY_CONTENT_TYPE:
-                if (StringUtils.isEmpty(message.getContentType()) && String.class.isInstance(prop.getValue())) {
+                if (Strings.isNullOrEmpty(message.getContentType()) && String.class.isInstance(prop.getValue())) {
                     // set to default type registered for device or fall back to default content type
                     message.setContentType((String) prop.getValue());
                 }
                 break;
             case MessageHelper.SYS_PROPERTY_CONTENT_ENCODING:
-                if (StringUtils.isEmpty(message.getContentEncoding()) && String.class.isInstance(prop.getValue())) {
+                if (Strings.isNullOrEmpty(message.getContentEncoding()) && String.class.isInstance(prop.getValue())) {
                     message.setContentEncoding((String) prop.getValue());
                 }
                 break;

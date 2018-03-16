@@ -21,9 +21,9 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -372,7 +372,7 @@ public abstract class BaseCredentialsService<T> extends ConfigurationSupportingV
     private boolean containsStringValueForField(final JsonObject payload, final String field) {
 
         final Object value = payload.getValue(field);
-        if (StringUtils.isEmpty(value)) {
+        if (Strings.isNullOrEmpty(value)) {
             log.debug("credentials request payload does not contain required string typed field [{}]", field);
             return false;
         }
