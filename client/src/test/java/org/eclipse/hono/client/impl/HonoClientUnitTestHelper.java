@@ -38,6 +38,7 @@ public final class HonoClientUnitTestHelper {
      * @param vertx The vert.x instance that the mock of the context is created for.
      * @return The mocked context.
      */
+    @SuppressWarnings("unchecked")
     public static final Context mockContext(final Vertx vertx) {
 
         final Context context = mock(Context.class);

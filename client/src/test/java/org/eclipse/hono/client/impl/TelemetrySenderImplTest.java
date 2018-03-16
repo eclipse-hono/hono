@@ -52,7 +52,6 @@ public class TelemetrySenderImplTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
 

@@ -18,15 +18,11 @@ import io.vertx.core.Handler;
 import io.vertx.proton.ProtonReceiver;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Abstract client for consuming messages from a Hono server.
  */
 abstract class AbstractConsumer extends AbstractHonoClient implements MessageConsumer {
-
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractConsumer.class);
 
     AbstractConsumer(final Context context, final ClientConfigProperties config, final ProtonReceiver receiver) {
         super(context, config);

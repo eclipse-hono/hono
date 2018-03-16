@@ -53,7 +53,6 @@ public class EventSenderImplTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
 
