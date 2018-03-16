@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.vertx.core.json.JsonArray;
@@ -29,6 +30,7 @@ import io.vertx.core.json.JsonObject;
  * Encapsulates the tenant information that was found by the get operation of the
  * <a href="https://www.eclipse.org/hono/api/tenant-api/">Tenant API</a>.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class TenantObject {
 
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID)
@@ -37,20 +39,40 @@ public final class TenantObject {
     private boolean enabled = true;
     private Map<String, JsonObject> adapterConfigurations;
 
+    /**
+     * Gets this tenant's identifier.
+     * 
+     * @return The identifier or {@code null} if not set.
+     */
     public String getTenantId() {
         return tenantId;
     }
 
+    /**
+     * Sets this tenant's identifier.
+     * 
+     * @param tenantId The identifier.
+     */
     public void setTenantId(final String tenantId) {
         this.tenantId = tenantId;
     }
 
+    /**
+     * Checks if this tenant is enabled.
+     * 
+     * @return {@code true} if this tenant is enabled.
+     */
     public boolean isEnabled() {
         return enabled;
     }
 
-    public void setEnabled(final boolean enabled) {
-        this.enabled = enabled;
+    /**
+     * Sets whether this tenant is enabled.
+     * 
+     * @param flag {@code true} if this tenant is enabled.
+     */
+    public void setEnabled(final boolean flag) {
+        this.enabled = flag;
     }
 
     /**
@@ -134,14 +156,20 @@ public final class TenantObject {
      * Adds configuration information for a protocol adapter.
      * 
      * @param config The configuration properties to add.
+     * @throws NullPointerException if config is {@code null}.
+     * @throws IllegalArgumentException if the given configuration does not contain
+     *                a <em>type</em> name.
      */
     public void addAdapterConfiguration(final JsonObject config) {
-        final String type = config.getString(TenantConstants.FIELD_ADAPTERS_TYPE);
-        if (type != null) {
+
+        final Object type = config.getValue(TenantConstants.FIELD_ADAPTERS_TYPE);
+        if (String.class.isInstance(type)) {
             if (adapterConfigurations == null) {
                 adapterConfigurations= new HashMap<>();
             }
-            adapterConfigurations.put(type, config);
+            adapterConfigurations.put((String) type, config);
+        } else {
+            throw new IllegalArgumentException("adapter configuration must contain type field");
         }
     }
 
