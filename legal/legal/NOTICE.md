@@ -13,8 +13,8 @@ of the Eclipse Public License 1.0 which is available at https://www.eclipse.org/
 
 # Copyright Holders
 
-* Copyright 2016-2017 Bosch Software Innovations GmbH
-* Copyright 2016-2017 Red Hat
+* Copyright 2016-2018 Bosch Software Innovations GmbH
+* Copyright 2016-2018 Red Hat, Inc.
 
 # Third-party Content
 
