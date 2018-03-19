@@ -1,0 +1,36 @@
+participant Device
+participant MQTT Adapter
+participant Hono Messaging
+participant AMQP 1.0 Messaging Network
+
+Device->MQTT Adapter: CONNECT
+activate MQTT Adapter
+note over MQTT Adapter
+validate device (credentials, tenant, registration assertion)
+end note
+
+MQTT Adapter->Hono Messaging: 1.0 transfer("notification/TENANT", "4711", "connected", registration assertion, data)
+activate Hono Messaging
+note over Hono Messaging
+validate registration
+assertion
+end note
+Hono Messaging->AMQP 1.0 Messaging Network: 1.1 transfer("notification/TENANT", "4711", "connected", data)
+deactivate Hono Messaging
+AMQP 1.0 Messaging Network->Hono Messaging: 2.0 disposition("accepted")
+activate Hono Messaging
+Hono Messaging->MQTT Adapter: 2.1 disposition("accepted")participant MQTT Adapter
+participant Hono Messaging
+participant AMQP 1.0 Messaging Network
+
+MQTT Adapter->Hono Messaging: 1.0 transfer("notification/TENANT", "4711", "connected", registration assertion, data)
+activate Hono Messaging
+note over Hono Messaging
+validate registration
+assertion
+end note
+Hono Messaging->AMQP 1.0 Messaging Network: 1.1 transfer("notification/TENANT", "4711", "connected", data)
+deactivate Hono Messaging
+AMQP 1.0 Messaging Network->Hono Messaging: 2.0 disposition("accepted")
+activate Hono Messaging
+Hono Messaging->MQTT Adapter: 2.1 disposition("accepted")
