@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -9,6 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  *    Bosch Software Innovations GmbH - add caching of results
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.client.impl;
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -26,12 +28,9 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.eclipse.hono.util.SpringBasedExpiringValueCache;
 import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -121,7 +120,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      * 
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
-     * @param cacheManager A factory for cache instances for registration results. If {@code null}
+     * @param cacheProvider A factory for cache instances for registration results. If {@code null}
      *                     the client will not cache any results from the Device Registration service.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant to consumer events for.
@@ -133,7 +132,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
     public static final void create(
             final Context context,
             final ClientConfigProperties clientConfig,
-            final CacheManager cacheManager,
+            final CacheProvider cacheProvider,
             final ProtonConnection con,
             final String tenantId,
             final Handler<String> senderCloseHook,
@@ -142,9 +141,8 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
         LOG.debug("creating new registration client for [{}]", tenantId);
         final RegistrationClientImpl client = new RegistrationClientImpl(context, clientConfig, tenantId);
-        if (cacheManager != null) {
-            final Cache cache = cacheManager.getCache(RegistrationClientImpl.getTargetAddress(tenantId));
-            client.setResponseCache(new SpringBasedExpiringValueCache<>(cache));
+        if (cacheProvider != null) {
+            client.setResponseCache(cacheProvider.getCache(RegistrationClientImpl.getTargetAddress(tenantId)));
         }
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {

@@ -11,13 +11,15 @@
  * SPDX-License-Identifier: EPL-1.0
  */
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.service.cache;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
+import org.eclipse.hono.cache.ExpiringValue;
+import org.eclipse.hono.service.cache.SpringBasedExpiringValueCache;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.cache.Cache;

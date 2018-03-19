@@ -19,12 +19,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.SpringBasedExpiringValueCache;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantConstants.TenantAction;
 import org.eclipse.hono.util.TenantObject;
@@ -32,8 +32,6 @@ import org.eclipse.hono.util.TenantResult;
 import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -123,7 +121,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      *
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
-     * @param cacheManager A factory for cache instances for tenant configuration results. If {@code null}
+     * @param cacheProvider A factory for cache instances for tenant configuration results. If {@code null}
      *                     the client will not cache any results from the Tenant service.
      * @param con The AMQP connection to the server.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
@@ -134,7 +132,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     public final static void create(
             final Context context,
             final ClientConfigProperties clientConfig,
-            final CacheManager cacheManager,
+            final CacheProvider cacheProvider,
             final ProtonConnection con,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
@@ -142,9 +140,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
         LOG.debug("creating new tenant API client.");
         final TenantClientImpl client = new TenantClientImpl(context, clientConfig);
-        if (cacheManager != null) {
-            final Cache cache = cacheManager.getCache(TenantClientImpl.getTargetAddress());
-            client.setResponseCache(new SpringBasedExpiringValueCache<>(cache));
+        if (cacheProvider != null) {
+            client.setResponseCache(cacheProvider.getCache(TenantClientImpl.getTargetAddress()));
         }
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {

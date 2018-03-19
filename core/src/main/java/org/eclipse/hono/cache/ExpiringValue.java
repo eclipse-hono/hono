@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-1.0
  */
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.cache;
 
 import java.time.Instant;
 
