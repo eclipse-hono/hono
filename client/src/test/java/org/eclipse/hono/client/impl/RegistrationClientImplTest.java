@@ -25,9 +25,9 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.ExpiringValueCache;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;

@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
@@ -43,7 +44,6 @@ import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilde
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.CacheManager;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -75,7 +75,7 @@ public class HonoClientImpl implements HonoClient {
 
     private ProtonClientOptions clientOptions;
     private ProtonConnection connection;
-    private CacheManager cacheManager;
+    private CacheProvider cacheProvider;
     private AtomicInteger reconnectAttempts = new AtomicInteger(0);
 
     /**
@@ -121,13 +121,13 @@ public class HonoClientImpl implements HonoClient {
     }
 
     /**
-     * Sets a manager for creating cache instances to be used in Hono clients.
+     * Sets a provider for creating cache instances to be used in Hono clients.
      * 
-     * @param manager The cache manager.
+     * @param cacheProvider The cache provider.
      * @throws NullPointerException if manager is {@code null}.
      */
-    public final void setCacheManager(final CacheManager manager) {
-        this.cacheManager = Objects.requireNonNull(manager);
+    public final void setCacheProvider(final CacheProvider cacheProvider) {
+        this.cacheProvider = Objects.requireNonNull(cacheProvider);
     }
 
     /**
@@ -707,7 +707,7 @@ public class HonoClientImpl implements HonoClient {
             RegistrationClientImpl.create(
                     context,
                     clientConfigProperties,
-                    cacheManager,
+                    cacheProvider,
                     connection,
                     tenantId,
                     this::removeRegistrationClient,
@@ -761,7 +761,7 @@ public class HonoClientImpl implements HonoClient {
             TenantClientImpl.create(
                     context,
                     clientConfigProperties,
-                    cacheManager,
+                    cacheProvider,
                     connection,
                     this::removeTenantClient,
                     this::removeTenantClient,

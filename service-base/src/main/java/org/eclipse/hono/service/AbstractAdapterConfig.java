@@ -13,10 +13,12 @@
 
 package org.eclipse.hono.service;
 
+import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.service.cache.SpringCacheProvider;
 import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -25,7 +27,6 @@ import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.guava.GuavaCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
@@ -158,12 +159,25 @@ public abstract class AbstractAdapterConfig {
     public HonoClient registrationServiceClient() {
         final HonoClientImpl result = 
                 new HonoClientImpl(vertx(), registrationServiceClientConfig());
-        final int minCacheSize = registrationServiceClientConfig().getResponseCacheMinSize();
-        final long maxCacheSize = registrationServiceClientConfig().getResponseCacheMaxSize();
-        if (maxCacheSize > 0) {
-            result.setCacheManager(newCacheManager(minCacheSize, Math.max(minCacheSize, maxCacheSize)));
+
+        final CacheProvider cacheProvider = registrationCacheProvider();
+        if (cacheProvider != null) {
+            result.setCacheProvider(cacheProvider);
         }
+
         return result;
+    }
+
+    /**
+     * Exposes the provider for caches as a Spring bean.
+     * 
+     * @return The provider instance.
+     */
+    @Bean
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
+    @Scope("prototype")
+    public CacheProvider registrationCacheProvider() {
+        return newGuavaCache(registrationServiceClientConfig());
     }
 
     /**
@@ -243,24 +257,50 @@ public abstract class AbstractAdapterConfig {
     public HonoClient tenantServiceClient() {
 
         final HonoClientImpl result = new HonoClientImpl(vertx(), tenantServiceClientConfig());
-        final int minCacheSize = tenantServiceClientConfig().getResponseCacheMinSize();
-        final long maxCacheSize = tenantServiceClientConfig().getResponseCacheMaxSize();
-        if (maxCacheSize > 0) {
-            result.setCacheManager(newCacheManager(minCacheSize, Math.max(minCacheSize, maxCacheSize)));
+
+        final CacheProvider cacheProvider = tenantCacheProvider();
+        if (cacheProvider != null) {
+            result.setCacheProvider(cacheProvider);
         }
+
         return result;
     }
 
-    private static CacheManager newCacheManager(final int initialCapacity, final long maxCapacity) {
+    /**
+     * Exposes the provider for caches as a Spring bean.
+     * 
+     * @return The provider instance.
+     */
+    @Bean
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @Scope("prototype")
+    public CacheProvider tenantCacheProvider() {
+        return newGuavaCache(tenantServiceClientConfig());
+    }
+
+    /**
+     * Create a new cache provider based on Guava and Spring Cache.
+     * 
+     * @param config The configuration to use as base for this cache.
+     * @return A new cache provider or {@code null} if no cache should be used.
+     */
+    private static final CacheProvider newGuavaCache(final RequestResponseClientConfigProperties config) {
+        final int minCacheSize = config.getResponseCacheMinSize();
+        final long maxCacheSize = config.getResponseCacheMaxSize();
+
+        if (maxCacheSize <= 0) {
+            return null;
+        }
 
         final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
                 .concurrencyLevel(1)
-                .initialCapacity(initialCapacity)
-                .maximumSize(maxCapacity);
+                .initialCapacity(minCacheSize)
+                .maximumSize(Math.max(minCacheSize, maxCacheSize));
 
         final GuavaCacheManager manager = new GuavaCacheManager();
         manager.setAllowNullValues(false);
         manager.setCacheBuilder(builder);
-        return manager;
+
+        return new SpringCacheProvider(manager);
     }
 }

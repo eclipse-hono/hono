@@ -11,12 +11,15 @@
  * SPDX-License-Identifier: EPL-1.0
  */
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.service.cache;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
+import org.eclipse.hono.cache.BasicExpiringValue;
+import org.eclipse.hono.cache.ExpiringValue;
+import org.eclipse.hono.cache.ExpiringValueCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
