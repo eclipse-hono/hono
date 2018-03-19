@@ -20,6 +20,7 @@ import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -249,19 +250,17 @@ public class TenantHttpIT {
      * @return The tenant object.
      */
     private static JsonObject buildTenantPayload(final String tenantId) {
-        final JsonObject adapterDetailsHttp = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject adapterDetailsMqtt = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject tenantPayload = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
-        return tenantPayload;
+        final JsonArray adapterConfigs = new JsonArray();
+        adapterConfigs.add(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, true)
+                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
+        adapterConfigs.add(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, true)
+                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
+        adapterConfigs.add(TenantObject.newAdapterConfig("custom", false)
+                .put("options", new JsonObject().put("maxInstances", 4)));
+        final TenantObject tenantPayload = TenantObject.from(tenantId, true)
+                .setProperty("plan", "unlimited")
+                .setAdapterConfigurations(adapterConfigs);
+        return JsonObject.mapFrom(tenantPayload);
     }
 
 }

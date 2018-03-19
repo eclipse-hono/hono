@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.util;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 import org.junit.BeforeClass;
@@ -41,26 +42,33 @@ public class TenantObjectTest {
     }
 
     /**
-     * Verifies that a JSON string containing custom non-scalar configuration
+     * Verifies that a JSON string containing custom configuration
      * properties can be deserialized into a {@code TenantObject}.
      * 
      * @throws Exception if the JSON cannot be deserialized.
      */
     @Test
-    public void testDeserializationOfComplexCustomConfigProperties() throws Exception {
+    public void testDeserializationOfCustomConfigProperties() throws Exception {
 
+        final JsonObject deploymentValue = new JsonObject().put("maxInstances", 4);
         final JsonObject adapterConfig = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, "custom")
                 .put(TenantConstants.FIELD_ENABLED, true)
-                .put("customConfig", new JsonObject().put("customProperty", 15));
+                .put("deployment", deploymentValue);
         final JsonObject config = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
                 .put(TenantConstants.FIELD_ENABLED, true)
+                .put("plan", "gold")
                 .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterConfig));
         final String jsonString = config.encode();
 
         final TenantObject obj = mapper.readValue(jsonString, TenantObject.class);
         assertNotNull(obj);
+        assertThat(obj.getProperty("plan"), is("gold"));
+
+        final JsonObject customAdapterConfig = obj.getAdapterConfiguration("custom");
+        assertNotNull(customAdapterConfig);
+        assertThat(customAdapterConfig.getJsonObject("deployment"), is(deploymentValue));
     }
 
     /**

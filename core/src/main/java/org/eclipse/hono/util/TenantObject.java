@@ -19,8 +19,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -30,31 +34,75 @@ import io.vertx.core.json.JsonObject;
  * Encapsulates the tenant information that was found by the get operation of the
  * <a href="https://www.eclipse.org/hono/api/tenant-api/">Tenant API</a>.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(value = Include.NON_NULL)
 public final class TenantObject {
 
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID)
-    private String tenantId;
-    @JsonProperty(TenantConstants.FIELD_ENABLED)
-    private boolean enabled = true;
+    @JsonIgnore
     private Map<String, JsonObject> adapterConfigurations;
+
+    @JsonIgnore
+    private final JsonObject json = new JsonObject();
+
+    /**
+     * Gets a map of this tenant's properties that should be included
+     * in serialization to JSON in addition to the explicitly annotated
+     * properties.
+     * 
+     * @return The properties.
+     */
+    @JsonAnyGetter
+    private Map<String, Object> getPropertiesAsMap() {
+        return json.getMap();
+    }
+
+    /**
+     * Gets a property value.
+     * 
+     * @param name The property name.
+     * @return The property value or {@code null} if not set.
+     * @param <T> The type of the property.
+     * @throws NullPointerException if name is {@code null}.
+     * @throws ClassCastException if the property value is not of the expected type.
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T getProperty(final String name) {
+        return (T) json.getValue(Objects.requireNonNull(name));
+    }
+
+    /**
+     * Adds a property to this tenant.
+     * 
+     * @param name The property name.
+     * @param value The property value.
+     * @return This tenant for command chaining.
+     * @throws NullPointerException if name is {@code null}.
+     */
+    @JsonAnySetter
+    public TenantObject setProperty(final String name, final Object value) {
+        json.put(Objects.requireNonNull(name), value);
+        return this;
+    }
 
     /**
      * Gets this tenant's identifier.
      * 
      * @return The identifier or {@code null} if not set.
      */
+    @JsonIgnore
     public String getTenantId() {
-        return tenantId;
+        return json.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
     }
 
     /**
      * Sets this tenant's identifier.
      * 
      * @param tenantId The identifier.
+     * @return This tenant for command chaining.
      */
-    public void setTenantId(final String tenantId) {
-        this.tenantId = tenantId;
+    @JsonIgnore
+    public TenantObject setTenantId(final String tenantId) {
+        json.put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+        return this;
     }
 
     /**
@@ -62,17 +110,21 @@ public final class TenantObject {
      * 
      * @return {@code true} if this tenant is enabled.
      */
+    @JsonIgnore
     public boolean isEnabled() {
-        return enabled;
+        return json.getBoolean(TenantConstants.FIELD_ENABLED, true);
     }
 
     /**
      * Sets whether this tenant is enabled.
      * 
      * @param flag {@code true} if this tenant is enabled.
+     * @return This tenant for command chaining.
      */
-    public void setEnabled(final boolean flag) {
-        this.enabled = flag;
+    @JsonIgnore
+    public TenantObject setEnabled(final boolean flag) {
+        json.put(TenantConstants.FIELD_ENABLED, flag);
+        return this;
     }
 
     /**
@@ -102,6 +154,7 @@ public final class TenantObject {
      *         configured adapters or {@code null} if no specific
      *         configuration has been set for any protocol adapter.
      */
+    @JsonIgnore
     public JsonArray getAdapterConfigurations() {
         if (adapterConfigurations == null) {
             return null;
@@ -109,6 +162,21 @@ public final class TenantObject {
             final JsonArray result = new JsonArray();
             adapterConfigurations.values().forEach(config -> result.add((JsonObject) config));
             return result;
+        }
+    }
+
+    /**
+     * Gets the configuration properties for a protocol adapter.
+     * 
+     * @param type The adapter's type.
+     * @return The configuration properties or {@code null} if no specific
+     *         properties have been set.
+     */
+    public JsonObject getAdapterConfiguration(final String type) {
+        if (adapterConfigurations == null) {
+            return null;
+        } else {
+            return adapterConfigurations.get(type);
         }
     }
 
@@ -121,16 +189,19 @@ public final class TenantObject {
      *                              copied into a new list in order to prevent modification
      *                              of the list after this method has been invoked.
      * @throws NullPointerException if the list is {@code null}.
+     * @return This tenant for command chaining.
      */
     @JsonProperty(TenantConstants.FIELD_ADAPTERS)
-    public void setAdapterConfigurations(final List<Map<String, Object>> configurations) {
+    public TenantObject setAdapterConfigurations(final List<Map<String, Object>> configurations) {
         if (configurations == null) {
             this.adapterConfigurations = null;
         } else {
-            configurations.stream().forEach(config -> {
-                addAdapterConfiguration(new JsonObject(config));
+            configurations.stream().forEach(map -> {
+                final JsonObject config = new JsonObject(map);
+                addAdapterConfiguration(config);
             });
         }
+        return this;
     }
 
     /**
@@ -140,8 +211,10 @@ public final class TenantObject {
      * @param configurations The configuration properties for this tenant's
      *                       configured adapters or {@code null} in order to
      *                       remove any existing configuration.
+     * @return This tenant for command chaining.
      */
-    public void setAdapterConfigurations(final JsonArray configurations) {
+    @JsonIgnore
+    public TenantObject setAdapterConfigurations(final JsonArray configurations) {
         if (configurations == null) {
             this.adapterConfigurations = null;
         } else {
@@ -150,6 +223,7 @@ public final class TenantObject {
                 addAdapterConfiguration((JsonObject) config);
             });
         }
+        return this;
     }
 
     /**
@@ -159,8 +233,9 @@ public final class TenantObject {
      * @throws NullPointerException if config is {@code null}.
      * @throws IllegalArgumentException if the given configuration does not contain
      *                a <em>type</em> name.
+     * @return This tenant for command chaining.
      */
-    public void addAdapterConfiguration(final JsonObject config) {
+    public TenantObject addAdapterConfiguration(final JsonObject config) {
 
         final Object type = config.getValue(TenantConstants.FIELD_ADAPTERS_TYPE);
         if (String.class.isInstance(type)) {
@@ -171,6 +246,7 @@ public final class TenantObject {
         } else {
             throw new IllegalArgumentException("adapter configuration must contain type field");
         }
+        return this;
     }
 
     /**
@@ -179,15 +255,16 @@ public final class TenantObject {
      * @param typeName The type name of the adapter.
      * @return {@code true} if this tenant and the given adapter are enabled.
      */
+    @JsonIgnore
     public boolean isAdapterEnabled(final String typeName) {
 
-        if (!enabled) {
+        if (!isEnabled()) {
             return false;
         } else if (adapterConfigurations == null) {
             // all adapters are enabled
             return true;
         } else {
-            final JsonObject config = adapterConfigurations.get(typeName);
+            final JsonObject config = getAdapterConfiguration(typeName);
             if (config == null) {
                 // if not explicitly configured, the adapter is disabled by default
                 return false;
@@ -214,5 +291,20 @@ public final class TenantObject {
         result.setTenantId(tenantId);
         result.setEnabled(enabled);
         return result;
+    }
+
+    /**
+     * Creates new protocol adapter configuration properties.
+     * 
+     * @param type The adapter type.
+     * @param enabled {@code true} if the adapter should be enabled.
+     * @return The configuration properties.
+     */
+    public static JsonObject newAdapterConfig(final String type, final boolean enabled) {
+
+        Objects.requireNonNull(type);
+        return new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, type)
+                .put(TenantConstants.FIELD_ENABLED, enabled);
     }
 }
