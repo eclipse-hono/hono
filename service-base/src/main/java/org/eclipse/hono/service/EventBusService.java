@@ -137,7 +137,6 @@ public abstract class EventBusService<T> extends ConfigurationSupportingVerticle
                 msg.fail(
                         ((ServiceInvocationException) t).getErrorCode(),
                         String.format("cannot process request [operation: %s]", request.getOperation()));
-                
             }
             return null;
         });
