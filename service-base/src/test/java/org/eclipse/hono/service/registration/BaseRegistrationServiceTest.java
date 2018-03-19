@@ -270,7 +270,6 @@ public class BaseRegistrationServiceTest {
                 devices.apply(deviceId).setHandler(resultHandler);
             }
         };
-        
     }
 
     private Future<RegistrationResult> getDevice(final String deviceId) {
