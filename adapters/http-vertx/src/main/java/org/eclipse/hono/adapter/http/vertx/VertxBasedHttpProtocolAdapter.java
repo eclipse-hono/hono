@@ -14,6 +14,8 @@ package org.eclipse.hono.adapter.http.vertx;
 
 import java.net.HttpURLConnection;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.ext.web.handler.CorsHandler;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoAuthHandlerImpl;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
@@ -57,10 +59,20 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         }
         addTelemetryApiRoutes(router);
         addEventApiRoutes(router);
+        setupCorsHandler(router);
+
+        router.options().handler(request -> request.response().setStatusCode(HttpResponseStatus.OK.code()).end());
+    }
+
+    private void setupCorsHandler(final Router router) {
+        router.route()
+                .handler(CorsHandler.create("*").allowedMethod(HttpMethod.PUT)
+                        .allowedMethod(HttpMethod.POST).allowedMethod(HttpMethod.OPTIONS)
+                        .allowedHeader("Authorization").allowedHeader("Content-Type"));
     }
 
     private void setupBasicAuth(final Router router) {
-        router.route().handler(new HonoAuthHandlerImpl(getCredentialsAuthProvider(), getConfig().getRealm()) {
+        router.route().method(HttpMethod.GET).method(HttpMethod.POST).method(HttpMethod.PUT).handler(new HonoAuthHandlerImpl(getCredentialsAuthProvider(), getConfig().getRealm()) {
             @Override
             protected void processException(RoutingContext ctx, Throwable exception) {
                 if (exception instanceof ServiceInvocationException) {
