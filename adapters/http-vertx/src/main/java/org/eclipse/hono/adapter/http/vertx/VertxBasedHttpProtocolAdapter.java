@@ -66,7 +66,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     private void setupCorsHandler(final Router router) {
         router.route()
-                .handler(CorsHandler.create("*").allowedMethod(HttpMethod.PUT)
+                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin()).allowedMethod(HttpMethod.PUT)
                         .allowedMethod(HttpMethod.POST).allowedMethod(HttpMethod.OPTIONS)
                         .allowedHeader("Authorization").allowedHeader("Content-Type"));
     }
