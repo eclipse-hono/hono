@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -59,14 +59,18 @@ public final class TenantObject {
      * Gets a property value.
      * 
      * @param name The property name.
-     * @return The property value or {@code null} if not set.
      * @param <T> The type of the property.
+     * @return The property value or {@code null} if not set.
      * @throws NullPointerException if name is {@code null}.
-     * @throws ClassCastException if the property value is not of the expected type.
      */
     @SuppressWarnings("unchecked")
     public <T> T getProperty(final String name) {
-        return (T) json.getValue(Objects.requireNonNull(name));
+        final Object value = json.getValue(Objects.requireNonNull(name));
+        try {
+            return (T) value;
+        } catch (ClassCastException e) {
+            return null;
+        }
     }
 
     /**
