@@ -14,6 +14,8 @@ package org.eclipse.hono.adapter.http.vertx;
 
 import java.net.HttpURLConnection;
 
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.ext.web.handler.CorsHandler;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoAuthHandlerImpl;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
@@ -49,14 +51,25 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     @Override
     protected final void addRoutes(final Router router) {
+        setupCorsHandler(router);
+
         if (!getConfig().isAuthenticationRequired()) {
             LOG.warn("device authentication has been disabled");
             LOG.warn("any device may publish data on behalf of all other devices");
         } else {
             setupBasicAuth(router);
         }
+
         addTelemetryApiRoutes(router);
         addEventApiRoutes(router);
+    }
+
+    private void setupCorsHandler(final Router router) {
+        router.route()
+                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                        .allowedMethod(HttpMethod.PUT)
+                        .allowedMethod(HttpMethod.POST)
+                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString()).allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
     }
 
     private void setupBasicAuth(final Router router) {

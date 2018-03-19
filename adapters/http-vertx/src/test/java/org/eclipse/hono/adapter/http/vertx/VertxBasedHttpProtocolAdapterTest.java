@@ -19,6 +19,7 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import io.vertx.core.http.HttpHeaders;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
@@ -56,7 +57,6 @@ public class VertxBasedHttpProtocolAdapterTest {
     public Timeout timeout = Timeout.seconds(5);
 
     private static final String HOST = "localhost";
-    private static final String AUTHORIZATION_HEADER = "Authorization";
 
     private static HonoClient tenantClient;
     private static HonoClient messagingClient;
@@ -119,7 +119,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         final Async async = context.async();
 
         vertx.createHttpClient().get(httpAdapter.getInsecurePort(), HOST, "/some-non-existing-route")
-                .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON).handler(response -> {
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
             response.bodyHandler(totalBuffer -> {
                 async.complete();
@@ -141,8 +141,8 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
         vertx.createHttpClient().put(httpAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
-                .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON)
-                .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, "Basic " + encodedUserPass).handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
             response.bodyHandler(totalBuffer -> {
                 async.complete();
@@ -164,9 +164,30 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
         vertx.createHttpClient().get(httpAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
-                .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON)
-                .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, "Basic " + encodedUserPass)
+                .putHeader(HttpHeaders.ORIGIN, "hono.org")
+                .handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
+            context.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+            response.bodyHandler(totalBuffer -> {
+                async.complete();
+            });
+        }).exceptionHandler(context::fail).end();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public final void testCors(final TestContext context) throws Exception {
+        final Async async = context.async();
+
+        vertx.createHttpClient().options(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+                .putHeader(HttpHeaders.ORIGIN, "hono.org")
+                .putHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                .handler(response -> {
+            context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.statusCode());
+            context.assertTrue(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS).contains("POST"));
+            context.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
             response.bodyHandler(totalBuffer -> {
                 async.complete();
             });
