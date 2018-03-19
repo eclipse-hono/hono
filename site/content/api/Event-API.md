@@ -9,8 +9,13 @@ The *Event* API is used by *Devices* to send event messages downstream.
 
 The Event API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use *AMQP* when referring to AMQP 1.0.
 
-The *Event* API is identical to the [*Telemetry* API]({{< relref "Telemetry-API.md" >}}) regarding the provided operations, the message format and the message flow. 
-However it provides a different quality of service for messages sent to the *Event* endpoint by routing them via a persistent message broker to guarantee *AT LEAST ONCE* delivery.
+The *Event* API is identical to the [*Telemetry* API]({{< relref "Telemetry-API.md" >}}) regarding the provided operations and the message flow.
+
+Events provide a different quality of service for messages sent to the *Event* endpoint by 
+setting the <em>durable</em> property of the message header to `true`.
+
+There are well-known events that are distinguished by their *content-type* which are defined [here]({{< relref "#well-known-event-message-types" >}}).   
+
 
 # Southbound Operations
 
@@ -76,4 +81,82 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 
 **Message Format**
 
+**Arbitrary events from the device**
+
 See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of message format. 
+
+## Well-known event message types
+
+Hono defines *well-known* events that are of a specific *content-type*.
+
+NB: currently there is only one such *well-known* event.
+
+### Lifecycle Notifications
+
+A specific event can signal that a device is `connected` (e.g. to signal that it is ready to receive a command for a specific time interval) 
+or that a device is `disconnected` (e.g to signal that it is not ready to receive a command anymore).
+ 
+*Business Applications* may want to react to such an event by sending a command upstream to the device.
+For that purpose, the protocol adapter instance that received such an event opens a receiver link for the device (scoped to its tenant) that
+is used to send the command to the appropriate protocol adapter instance.
+
+Such an event may be issued by the device itself or by a protocol adapter detecting that a device is connected or disconnected.
+ For further details on which part of a setup issues such an event see (... concept page).
+
+
+*Lifecycle notifications* may be decided to not being durable, but this is left to the setup of the *AMQP network* and is not further specified in the following.
+
+
+***Lifecycle Notification Payload***
+
+The following table provides an overview of the properties a client needs to set for a *lifecycle notification* event.
+
+| Name           | Mandatory | Location                 | Type      | Description |
+| :------------- | :-------: | :----------------------- | :-------- | :---------- |
+| *content-type* | yes       | *properties*             | *symbol*  | Must be set to *application/vnd.eclipse-hono-notification+json* |
+
+The body of the event request MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following members:
+
+| Name                | Mandatory | Type       | Default Value | Description |
+| :-----------------  | :-------: | :--------- | :----------   | :---------- |
+| *tenant-id*         | *yes*     | *string*   |               | The tenant identifier to send the notification for. |
+| *device-id*         | *yes*     | *string*   |               | The device identifier to send the notification for. |
+| *cause*             | *yes*     | *string*   |               | Value must be either `connected` or `disconnected` . |
+| *source*            | *yes*      | *string*   |               | Value can be either the name of a protocol adapter (`hono-mqtt`, `hono-http`, `hono-kura`), if the device connected/disconnected to the appropriate protocol adapter,  or `device`, if the device sent the notfication itself.
+| *creation-timestamp*  | *no*      | *string*   |   null        | The point in time when the event was created (set by the issuer). If not null, the value MUST be an ISO 8601 compliant combined date and time representation in extended format. **NB:** due to network latencies this timestamp will typically be some time in the past already when the event is received by the application. |
+| *ttl*               | *no*      | *long*   |   0        | The `time to live` for the event in milliseconds. In context with the `creation-timestamp`  it defines the time interval until the event shall be considered invalid again. If the value is `0`, the validity period of the event shall be considered as not being limited. |
+| *data*              | *no*      | *string*   |               | Optional data the issuer of the event can set (e.g.  a a last known revision of a value when integrating with [Eclipse Ditto] (https://projects.eclipse.org/proposals/eclipse-ditto)).
+
+
+Examples:
+
+The following notification payload may be sent if a device connects to an *MQTT adapter* :
+
+~~~json
+{
+  "tenant-id": "my-tenant",
+  "device-id": "4711",
+  "cause": "connect",
+  "source": "hono-mqtt"
+}
+~~~
+
+The MQTT protocol adapter may typically not set the `creation-timestamp`  and `ttl` fields (since it is connection oriented and issue a `disconnected` event as soon as a device disconnects again).
+
+
+The following notification payload may be sent if a device itself sends a lifecycle notification, e.g. to signal that it
+now is able to receive a command for one minute:
+
+~~~json
+{
+  "tenant-id": "my-tenant",
+  "device-id": "sensor1",
+  "cause": "connect",
+  "source": "device",
+  "creation-timestamp": "2018-04-06T10:00:00+0100",
+  "ttl": "60000",
+  "data": "last-state: on"
+}
+~~~
+NB: note that a device does not necessarily know its *device-id*, but only its *auth-id* (please refer to the 
+[Credentials API]({{< relref "Credentials-API.md" >}}) for details). 
