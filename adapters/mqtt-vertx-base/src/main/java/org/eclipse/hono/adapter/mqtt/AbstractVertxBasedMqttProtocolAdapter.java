@@ -27,6 +27,7 @@ import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -366,20 +367,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         Objects.requireNonNull(resource);
         Objects.requireNonNull(payload);
 
-        if (resource.getEndpoint().equals(TelemetryConstants.TELEMETRY_ENDPOINT)) {
-            return uploadTelemetryMessage(
-                    ctx,
-                    resource.getTenantId(),
-                    resource.getResourceId(),
-                    payload);
-        } else if (resource.getEndpoint().equals(EventConstants.EVENT_ENDPOINT)){
-            return uploadEventMessage(
-                    ctx,
-                    resource.getTenantId(),
-                    resource.getResourceId(),
-                    payload);
-        } else {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
+        switch (EndpointType.fromString(resource.getEndpoint())) {
+            case TELEMETRY:
+                return uploadTelemetryMessage(
+                        ctx,
+                        resource.getTenantId(),
+                        resource.getResourceId(),
+                        payload);
+            case EVENT:
+                return uploadEventMessage(
+                        ctx,
+                        resource.getTenantId(),
+                        resource.getResourceId(),
+                        payload);
+            default:
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
         }
 
     }

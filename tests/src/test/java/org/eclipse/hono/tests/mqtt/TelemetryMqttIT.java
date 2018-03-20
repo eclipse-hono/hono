@@ -46,11 +46,16 @@ import io.vertx.mqtt.messages.MqttConnAckMessage;
 public class TelemetryMqttIT extends MqttTestBase {
 
     private static final String TOPIC_TEMPLATE = TelemetryConstants.TELEMETRY_ENDPOINT + "/%s/%s";
+    private static final String TOPIC_TEMPLATE_SHORT = TelemetryConstants.TELEMETRY_ENDPOINT_SHORT + "/%s/%s";
 
     @Override
-    protected void send(String tenantId, String deviceId, Buffer payload, final Handler<AsyncResult<Integer>> publishSentHandler) {
-
-        final String topic = String.format(TOPIC_TEMPLATE, tenantId, deviceId);
+    protected void send(String tenantId, String deviceId, Buffer payload, boolean useShortTopicName, final Handler<AsyncResult<Integer>> publishSentHandler) {
+        String topic;
+        if (useShortTopicName) {
+            topic = String.format(TOPIC_TEMPLATE_SHORT, tenantId, deviceId);
+        } else {
+            topic = String.format(TOPIC_TEMPLATE, tenantId, deviceId);
+        }
         mqttClient.publish(topic, payload, MqttQoS.AT_LEAST_ONCE, false, false, publishSentHandler);
     }
 

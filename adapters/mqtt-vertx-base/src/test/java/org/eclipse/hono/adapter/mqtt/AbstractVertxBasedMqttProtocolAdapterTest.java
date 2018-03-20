@@ -490,6 +490,50 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(endpoint, never()).publishAcknowledge(anyInt());
     }
 
+    /**
+     *
+     * Verifies that the adapter will accept uploading messages to valid endpoint names.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadMessageSupportsShortAndLongEndpointNames(final TestContext ctx) {
+
+        // GIVEN an adapter with a downstream event consumer
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+        givenATelemetrySenderForOutcome(Future.succeededFuture(mock(ProtonDelivery.class)));
+        givenAnEventSenderForOutcome(Future.succeededFuture(mock(ProtonDelivery.class)));
+
+
+        // WHEN a device publishes an event
+        final MqttEndpoint endpoint = mock(MqttEndpoint.class);
+        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        final Buffer payload = Buffer.buffer("some payload");
+        final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
+        when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        when(messageFromDevice.messageId()).thenReturn(5555555);
+        when(messageFromDevice.payload()).thenReturn(payload);
+        final MqttContext context = new MqttContext(messageFromDevice, endpoint);
+
+        ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "my-tenant", "4712");
+        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());
+
+        resourceId = ResourceIdentifier.from("event", "my-tenant", "4712");
+        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());
+
+        resourceId = ResourceIdentifier.from("t", "my-tenant", "4712");
+        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());
+
+        resourceId = ResourceIdentifier.from("e", "my-tenant", "4712");
+        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());
+
+        resourceId = ResourceIdentifier.from("unknown", "my-tenant", "4712");
+        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertFailure());
+
+
+    }
+
     private void forceClientMocksToConnected() {
         when(tenantServiceClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));

@@ -21,6 +21,11 @@ public final class TelemetryConstants {
      */
     public static final String TELEMETRY_ENDPOINT = "telemetry";
 
+    /**
+     * The short name of the Telemetry API endpoint.
+     */
+    public static final String TELEMETRY_ENDPOINT_SHORT = "t";
+
     private TelemetryConstants() {
     }
 
