@@ -36,11 +36,18 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class EventMqttIT extends MqttTestBase {
 
     private static final String TOPIC_TEMPLATE = EventConstants.EVENT_ENDPOINT + "/%s/%s";
+    private static final String TOPIC_TEMPLATE_SHORT = EventConstants.EVENT_ENDPOINT_SHORT + "/%s/%s";
 
     @Override
-    protected void send(String tenantId, String deviceId, Buffer payload, final Handler<AsyncResult<Integer>> publishSentHandler) {
+    protected void send(String tenantId, String deviceId, Buffer payload, boolean useShortTopicName, final Handler<AsyncResult<Integer>> publishSentHandler) {
 
-        final String topic = String.format(TOPIC_TEMPLATE, tenantId, deviceId);
+        String topic;
+        if (useShortTopicName) {
+            topic = String.format(TOPIC_TEMPLATE_SHORT, tenantId, deviceId);
+        } else {
+            topic = String.format(TOPIC_TEMPLATE, tenantId, deviceId);
+        }
+
         mqttClient.publish(topic, payload, MqttQoS.AT_LEAST_ONCE, false, false, publishSentHandler);
     }
 

@@ -20,9 +20,8 @@ import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TelemetryConstants;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
@@ -62,24 +61,26 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
 
         try {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(message.topicName());
-            if (TelemetryConstants.TELEMETRY_ENDPOINT.equals(topic.getEndpoint())) {
-                if (MqttQoS.EXACTLY_ONCE.equals(message.qosLevel())) {
-                    // client tries to send telemetry message using QoS 2
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "QoS 2 not supported for telemetry messages"));
-                } else {
-                    return Future.succeededFuture(topic);
-                }
-            } else if (EventConstants.EVENT_ENDPOINT.equals(topic.getEndpoint())) {
-                if (!MqttQoS.AT_LEAST_ONCE.equals(message.qosLevel())) {
-                    // client tries to send event message using QoS 0 or 2
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Only QoS 1 supported for event messages"));
-                } else {
-                    return Future.succeededFuture(topic);
-                }
-            } else {
-                // MQTT client is trying to publish on a not supported endpoint
-                LOG.debug("no such endpoint [{}]", topic.getEndpoint());
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "no such endpoint"));
+
+            switch (EndpointType.fromString(topic.getEndpoint())) {
+                case TELEMETRY:
+                    if (MqttQoS.EXACTLY_ONCE.equals(message.qosLevel())) {
+                        // client tries to send telemetry message using QoS 2
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "QoS 2 not supported for telemetry messages"));
+                    } else {
+                        return Future.succeededFuture(topic);
+                    }
+                case EVENT:
+                    if (!MqttQoS.AT_LEAST_ONCE.equals(message.qosLevel())) {
+                        // client tries to send event message using QoS 0 or 2
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Only QoS 1 supported for event messages"));
+                    } else {
+                        return Future.succeededFuture(topic);
+                    }
+                default:
+                    // MQTT client is trying to publish on a not supported endpoint
+                    LOG.debug("no such endpoint [{}]", topic.getEndpoint());
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "no such endpoint"));
             }
         } catch (final IllegalArgumentException e) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));

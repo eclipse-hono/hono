@@ -22,6 +22,11 @@ public final class EventConstants {
      */
     public static final String EVENT_ENDPOINT = "event";
 
+    /**
+     * The short name of the event endpoint.
+     */
+    public static final String EVENT_ENDPOINT_SHORT = "e";
+
     private EventConstants() {
     }
 }

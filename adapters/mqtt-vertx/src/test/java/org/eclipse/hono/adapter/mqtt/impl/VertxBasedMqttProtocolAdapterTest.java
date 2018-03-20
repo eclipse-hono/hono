@@ -13,6 +13,7 @@
 package org.eclipse.hono.adapter.mqtt.impl;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -20,6 +21,7 @@ import static org.mockito.Mockito.when;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -202,6 +204,44 @@ public class VertxBasedMqttProtocolAdapterTest {
         final ResourceIdentifier downstreamAddress = checkedAddress.result();
         assertThat(downstreamAddress.getEndpoint(), is(TelemetryConstants.TELEMETRY_ENDPOINT));
         assertThat(downstreamAddress.getTenantId(), is("my-tenant"));
+    }
+
+    /**
+     * Verifies that the adapter supports all required topic names.
+     *
+     * @param ctx The helper to use for running tests on vert.x.
+     */
+    @Test
+    public void testMapTopicSupportsShortAndLongTopicNames(final TestContext ctx) {
+
+        givenAnAdapter();
+
+        MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT);
+        adapter.mapTopic(message).setHandler(ctx.asyncAssertSuccess());
+
+        message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT);
+        adapter.mapTopic(message).setHandler(
+            address -> assertEquals(EndpointType.EVENT, EndpointType.fromString(address.result().getEndpoint()))
+        );
+
+        message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
+        adapter.mapTopic(message).setHandler(
+            address -> assertEquals(EndpointType.TELEMETRY, EndpointType.fromString(address.result().getEndpoint()))
+        );
+
+        message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT_SHORT);
+        adapter.mapTopic(message).setHandler(
+            address -> assertEquals(EndpointType.EVENT, EndpointType.fromString(address.result().getEndpoint()))
+        );
+
+        message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT_SHORT);
+        adapter.mapTopic(message).setHandler(
+            address -> assertEquals(EndpointType.TELEMETRY, EndpointType.fromString(address.result().getEndpoint()))
+        );
+
+        message = newMessage(MqttQoS.AT_LEAST_ONCE, "unknown");
+        adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure());
+
     }
 
     private void givenAnAdapter() {

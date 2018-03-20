@@ -128,6 +128,7 @@ public abstract class MqttTestBase {
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param payload The message to send.
+     * @param useShortTopicName Whether to use short or standard topic names
      * @param publishSentHandler The handler to invoke with the packet ID of the
      *                           PUBLISH packet that has been sent to the MQTT
      *                           adapter.
@@ -136,6 +137,7 @@ public abstract class MqttTestBase {
             final String tenantId,
             final String deviceId,
             final Buffer payload,
+            final boolean useShortTopicName,
             final Handler<AsyncResult<Integer>> publishSentHandler);
 
     /**
@@ -147,15 +149,25 @@ public abstract class MqttTestBase {
      */
     protected abstract Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer);
 
+    @Test
+    public void testUploadMessages(final TestContext ctx) throws InterruptedException {
+        doTestUploadMessages(ctx, false);
+    }
+
+    @Test
+    public void testUploadMessagesUsingShortTopicNames(final TestContext ctx) throws InterruptedException {
+        doTestUploadMessages(ctx, true);
+    }
+
     /**
      * Verifies that a number of messages uploaded to Hono's HTTP adapter can be successfully
      * consumed via the AMQP Messaging Network.
      * 
      * @param ctx The test context.
+     * @param useShortTopicName Whether to use standard or short topic names
      * @throws InterruptedException if the test fails.
      */
-    @Test
-    public void testUploadMessages(final TestContext ctx) throws InterruptedException {
+    public void doTestUploadMessages(final TestContext ctx, boolean useShortTopicName) throws InterruptedException {
 
         final int messagesToSend = 200;
         final CountDownLatch received = new CountDownLatch(messagesToSend);
@@ -201,7 +213,7 @@ public abstract class MqttTestBase {
         while (messageCount.get() < messagesToSend) {
 
             sendResult.set(ctx.async());
-            send(tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()), sendAttempt -> {
+            send(tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()), useShortTopicName, sendAttempt -> {
                 if (sendAttempt.failed()) {
                     LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
                 } else {
