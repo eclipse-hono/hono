@@ -54,6 +54,10 @@ public final class TestSupport {
     public static final String DEFAULT_ADDRESS = "type/tenant";
     public static final int DEFAULT_CREDITS = 20;
 
+    private TestSupport() {
+        // prevent instantiation
+    }
+
     public static ProtonConnection openConnection(final TestContext ctx, final Vertx vertx, final String host, final int port) {
         final Async connected = ctx.async();
         final AtomicReference<ProtonConnection> protonConnection = new AtomicReference<>();
