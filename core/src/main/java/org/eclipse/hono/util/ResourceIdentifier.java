@@ -140,17 +140,16 @@ public final class ResourceIdentifier {
     }
 
     /**
-     * Creates a resource identifier from endpoint, tenantId and optionally resourceId.
+     * Creates a resource identifier for an endpoint, a tenantId and a resourceId.
      *
      * @param endpoint the endpoint of the resource.
-     * @param tenantId the tenant identifier.
-     * @param resourceId the resource identifier, may be {@code null}.
+     * @param tenantId the tenant identifier (may be {@code null}).
+     * @param resourceId the resource identifier (may be {@code null}).
      * @return the resource identifier.
-     * @throws NullPointerException if endpoint or tenantId is {@code null}.
+     * @throws NullPointerException if endpoint is {@code null}.
      */
     public static ResourceIdentifier from(final String endpoint, final String tenantId, final String resourceId) {
         Objects.requireNonNull(endpoint);
-        Objects.requireNonNull(tenantId);
         return new ResourceIdentifier(endpoint, tenantId, resourceId);
     }
 

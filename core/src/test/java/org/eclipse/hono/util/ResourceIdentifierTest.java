@@ -77,6 +77,17 @@ public class ResourceIdentifierTest {
         assertNull(resourceId.getResourceId());
     }
 
+    /**
+     * Verifies that a resource identifier may consist of a single segment only.
+     */
+    @Test
+    public void testFromSupportsSingleSegment() {
+        ResourceIdentifier resourceId = ResourceIdentifier.from("cbs", null, null);
+        assertThat(resourceId.getEndpoint(), is("cbs"));
+        assertNull(resourceId.getTenantId());
+        assertNull(resourceId.getResourceId());
+    }
+
     @Test
     public void testFromIndividualParameters() {
         ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", "myDevice");
