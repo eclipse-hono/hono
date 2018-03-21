@@ -96,6 +96,14 @@ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.u
 Replace *localhost* with the name or IP address of the host that Docker is running on.
 {{% /warning %}}
 
+If the command line client is behind a proxy, you can use the proxy options to connect. The default proxy type is SOCKS5. Run the client from the `example` folder as follows:
+                                                                                                                
+~~~sh
+mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--hono.client.proxyHost=proxy.company.com,--hono.client.proxyPort=15671,--hono.client.proxyUsername=my-company-id,--hono.client.proxyPassword=verysecret,--hono.client.proxyType=SOCKS5
+~~~
+
+If either *hono.client.proxyHost* or *hono.client.proxyPort* is not set, then no proxy options will be configured for the client.
+
 ## Publishing Data
 
 Now that the Hono instance is up and running you can use Hono's protocol adapters to upload some telemetry data and watch it being forwarded to the downstream consumer.
