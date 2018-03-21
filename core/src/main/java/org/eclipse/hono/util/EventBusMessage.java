@@ -36,10 +36,10 @@ public class EventBusMessage {
 
     private final JsonObject json;
 
-    private EventBusMessage(final String subject) {
-        Objects.requireNonNull(subject);
+    private EventBusMessage(final String operation) {
+        Objects.requireNonNull(operation);
         this.json = new JsonObject();
-        json.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);
+        json.put(MessageHelper.SYS_PROPERTY_SUBJECT, operation);
     }
 
     private EventBusMessage(final JsonObject request) {
@@ -49,11 +49,12 @@ public class EventBusMessage {
     /**
      * Creates a new (request) message for an operation.
      * 
-     * @param subject The name of the operation.
+     * @param operation The name of the operation.
      * @return The request message.
+     * @throws NullPointerException if operation is {@code null}.
      */
-    public static EventBusMessage forOperation(final String subject) {
-        return new EventBusMessage(subject);
+    public static EventBusMessage forOperation(final String operation) {
+        return new EventBusMessage(operation);
     }
 
     /**
@@ -64,6 +65,7 @@ public class EventBusMessage {
      * 
      * @param message The AMQP message.
      * @return The request message.
+     * @throws NullPointerException if message is {@code null}.
      * @throws IllegalArgumentException if the message has no subject set.
      */
     public static EventBusMessage forOperation(final Message message) {
@@ -87,6 +89,40 @@ public class EventBusMessage {
     }
 
     /**
+     * Creates a new response message in reply to this (request) message.
+     * <p>
+     * This method copies the following properties from the request to
+     * the response (if not {@code null}):
+     * <ul>
+     * <li><em>status</em></li>
+     * <li><em>operation</em></li>
+     * <li><em>appCorrelationId</em></li>
+     * <li><em>correlationId</em></li>
+     * <li><em>replyToAddress</em></li>
+     * <li><em>tenant</em></li>
+     * 
+     * @param status The status code indicating the outcome of the operation.
+     * @return The response message.
+     * @throws NullPointerException if request is {@code null}.
+     */
+    public EventBusMessage getResponse(final int status) {
+
+        final EventBusMessage reply = forStatusCode(status);
+        reply.setProperty(
+                MessageHelper.SYS_PROPERTY_SUBJECT,
+                getProperty(MessageHelper.SYS_PROPERTY_SUBJECT));
+        reply.setProperty(
+                MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID,
+                getProperty(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID));
+        reply.setProperty(
+                MessageHelper.SYS_PROPERTY_CORRELATION_ID,
+                getProperty(MessageHelper.SYS_PROPERTY_CORRELATION_ID));
+        reply.setReplyToAddress(getReplyToAddress());
+        reply.setTenant(getTenant());
+        return reply;
+    }
+
+    /**
      * Creates a new message from a JSON object.
      * <p>
      * Whether the created message represents a request or a response
@@ -97,6 +133,19 @@ public class EventBusMessage {
      */
     public static EventBusMessage fromJson(final JsonObject json) {
         return new EventBusMessage(Objects.requireNonNull(json));
+    }
+
+    /**
+     * Checks if this (response) message has all properties required
+     * for successful delivery to the client.
+     * 
+     * @return {@code true} if this message has {@code non-null} values for
+     *         properties <em>operation</em>, <em>replyToAddress</em> and
+     *         <em>correlationId</em>.
+     */
+    public boolean hasResponseProperties() {
+        return getOperation() != null && getReplyToAddress() != null
+                && getProperty(MessageHelper.SYS_PROPERTY_CORRELATION_ID) != null;
     }
 
     /**
@@ -116,6 +165,44 @@ public class EventBusMessage {
      */
     public Integer getStatus() {
         return getProperty(MessageHelper.APP_PROPERTY_STATUS);
+    }
+
+    /**
+     * Adds a property for the address that responses to
+     * this (request) message should be sent.
+     * <p>
+     * The property will only be added if the value is not {@code null}.
+     * 
+     * @param address The address.
+     * @return This message for chaining.
+     */
+    public EventBusMessage setReplyToAddress(final String address) {
+        setProperty(MessageHelper.SYS_PROPERTY_REPLY_TO, address);
+        return this;
+    }
+
+    /**
+     * Adds a property for the address that responses to
+     * this (request) message should be sent.
+     * <p>
+     * The property will only be added if the AMQP message contains
+     * a non-{@code null} <em>reply-to</em> property.
+     * 
+     * @param msg The AMQP message to retrieve the value from.
+     * @return This message for chaining.
+     */
+    public EventBusMessage setReplyToAddress(final Message msg) {
+        setReplyToAddress(msg.getReplyTo());
+        return this;
+    }
+
+    /**
+     * Gets the value of the reply-to address property.
+     * 
+     * @return The value or {@code null} if not set.
+     */
+    public String getReplyToAddress() {
+        return getProperty(MessageHelper.SYS_PROPERTY_REPLY_TO);
     }
 
     /**

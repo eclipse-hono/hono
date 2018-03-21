@@ -15,6 +15,7 @@ package org.eclipse.hono.util;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -91,4 +92,18 @@ public class EventBusMessageTest {
         assertThat(id, is(MSG_ID_UUID));
     }
 
+    /**
+     * Verifies that all required properties are copied to a response
+     * created for a request.
+     */
+    @Test
+    public void testReplyToCopiesRequiredProperties() {
+
+        message = EventBusMessage.forOperation("get").setCorrelationId("4711").setReplyToAddress("reply");
+        final EventBusMessage response = message.getResponse(200);
+        assertTrue(response.hasResponseProperties());
+        assertThat(response.getOperation(), is("get"));
+        assertThat(response.getCorrelationId(), is("4711"));
+        assertThat(response.getReplyToAddress(), is("reply"));
+    }
 }
