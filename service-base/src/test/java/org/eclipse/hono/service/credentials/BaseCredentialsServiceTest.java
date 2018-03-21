@@ -13,6 +13,7 @@ package org.eclipse.hono.service.credentials;
 
 import java.net.HttpURLConnection;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -107,8 +108,8 @@ public class BaseCredentialsServiceTest {
         final JsonObject testData = createValidCredentialsObject(secret);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -127,8 +128,8 @@ public class BaseCredentialsServiceTest {
         final JsonObject testData = createValidCredentialsObject(secret);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -146,8 +147,8 @@ public class BaseCredentialsServiceTest {
         testData.remove(CredentialsConstants.FIELD_SECRETS);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -163,8 +164,8 @@ public class BaseCredentialsServiceTest {
         final JsonObject testData = createValidCredentialsObject(null);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -203,9 +204,9 @@ public class BaseCredentialsServiceTest {
                 JsonObject.mapFrom(malformedPayload));
 
         // WHEN processing the request
-        service.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
+        service.processRequest(request).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the response contains a 400 error code
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -227,9 +228,9 @@ public class BaseCredentialsServiceTest {
                 JsonObject.mapFrom(malformedPayload));
 
         // WHEN processing the request
-        service.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
+        service.processRequest(request).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the response contains a 400 error code
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 

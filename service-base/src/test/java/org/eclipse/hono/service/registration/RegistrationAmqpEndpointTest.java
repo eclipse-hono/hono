@@ -30,7 +30,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
@@ -63,16 +62,16 @@ public class RegistrationAmqpEndpointTest {
     /**
      * Verifies that the endpoint forwards a request message via the event bus.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testProcessMessageSendsRequestViaEventBus() {
 
         final Message msg = ProtonHelper.message();
+        msg.setMessageId("4711");
         msg.setSubject(RegistrationConstants.ACTION_ASSERT);
         msg.setBody(new AmqpValue(new JsonObject().put("temp", 15).encode()));
         MessageHelper.annotate(msg, resource);
         endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
-        verify(eventBus).send(eq(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN), any(JsonObject.class), any(Handler.class));
+        verify(eventBus).send(eq(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN), any(JsonObject.class));
     }
 }

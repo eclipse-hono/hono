@@ -29,6 +29,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +40,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -221,7 +221,7 @@ public class RequestResponseEndpointTest {
             }
 
             @Override
-            protected Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
+            protected Message getAmqpReply(final EventBusMessage message) {
                 return null;
             }
 

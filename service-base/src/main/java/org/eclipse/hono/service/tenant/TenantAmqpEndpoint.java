@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.tenant;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -28,7 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 /**
  * An {@code AmqpEndpoint} for managing tenant information.
@@ -84,22 +82,13 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
                                final HonoUser clientPrincipal) {
 
         final EventBusMessage request = EventBusMessage.forOperation(msg)
+                .setReplyToAddress(msg)
+                .setAppCorrelationId(msg)
+                .setCorrelationId(msg)
                 .setTenant(msg)
                 .setJsonPayload(msg);
-        vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, request.toJson(),
-                result -> {
-                    EventBusMessage response = null;
-                    if (result.succeeded()) {
-                        response = EventBusMessage.fromJson((JsonObject) result.result().body());
-                    } else {
-                        logger.debug("failed to process tenant management request [msg ID: {}] due to {}",
-                                msg.getMessageId(), result.cause());
-                        response = EventBusMessage.forStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR)
-                                .setTenant(msg);
-                    }
-                    addHeadersToResponse(msg, response);
-                    vertx.eventBus().send(msg.getReplyTo(), response.toJson());
-                });
+
+        vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, request.toJson());
     }
 
     @Override
@@ -108,7 +97,7 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
     }
 
     @Override
-    protected final Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
-        return TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, message.body());
+    protected final Message getAmqpReply(final EventBusMessage message) {
+        return TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, message);
     }
 }

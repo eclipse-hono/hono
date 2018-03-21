@@ -15,6 +15,7 @@ package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
@@ -33,9 +34,9 @@ import io.vertx.core.json.JsonObject;
  * In particular, this base class provides support for receiving request messages via vert.x' event bus
  * and route them to specific methods corresponding to the operation indicated in the message.
  *
- * @param <T> The type of configuration this service supports.
+ * @param <C> The type of configuration this service supports.
  */
-public abstract class EventBusService<T> extends ConfigurationSupportingVerticle<T> {
+public abstract class EventBusService<C> extends ConfigurationSupportingVerticle<C> {
 
     /**
      * A logger to be shared by subclasses.
@@ -124,19 +125,26 @@ public abstract class EventBusService<T> extends ConfigurationSupportingVerticle
         }
 
         final EventBusMessage request = EventBusMessage.fromJson(msg.body());
-        processRequest(request).map(response -> {
-            msg.reply(response.toJson());
-            return null;
-        }).otherwise(t -> {
-            log.debug("cannot process request [operation: {}]", request.getOperation(), t);
-            if (t instanceof ServiceInvocationException) {
-                msg.fail(
-                        HttpURLConnection.HTTP_INTERNAL_ERROR,
-                        String.format("cannot process request [operation: %s]", request.getOperation()));
+        processRequest(request).recover(t -> {
+            log.debug("cannot process request [operation: {}]: {}", request.getOperation(), t.getMessage());
+            final int status = Optional.of(t).map(cause -> {
+                if (cause instanceof ServiceInvocationException) {
+                    return ((ServiceInvocationException) cause).getErrorCode();
+                } else {
+                    return null;
+                }
+            }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            return Future.succeededFuture(request.getResponse(status));
+        }).map(response -> {
+            if (response.getReplyToAddress() == null) {
+                log.debug("sending response as direct reply to request [operation: {}]", request.getOperation());
+                msg.reply(response.toJson());
+            } else if (response.hasResponseProperties()) {
+                log.debug("sending response [operation: {}, reply-to: {}]",
+                        request.getOperation(), request.getReplyToAddress());
+                vertx.eventBus().send(request.getReplyToAddress(), response.toJson());
             } else {
-                msg.fail(
-                        ((ServiceInvocationException) t).getErrorCode(),
-                        String.format("cannot process request [operation: %s]", request.getOperation()));
+                log.warn("discarding response lacking correlation ID or operation");
             }
             return null;
         });
@@ -144,12 +152,24 @@ public abstract class EventBusService<T> extends ConfigurationSupportingVerticle
 
     /**
      * Processes a service invocation request.
+     * <p>
+     * The response message returned in the future will be sent over the vert.x
+     * event bus to the address given in the response's <em>replyToAddress</em>
+     * property.
+     * <p>
+     * Implementations should therefore use {@link EventBusMessage#getResponse(int)}
+     * for creating the response message based on the request (which contains the
+     * reply-to address).
      * 
      * @param request The request message.
      * @return A future indicating the outcome of the service invocation.
+     *         The future will succeed with the response to be sent to the
+     *         client if the invocation of the operation was successful.
+     *         Otherwise the future will fail with a {@link ServiceInvocationException}
+     *         indicating the cause of the problem in its error code.
      * @throws NullPointerException If the request message is {@code null}.
      */
-    protected abstract Future<? extends EventBusMessage> processRequest(final EventBusMessage request);
+    protected abstract Future<EventBusMessage> processRequest(final EventBusMessage request);
 
     /**
      * Gets a property value of a given type from a JSON object.
@@ -160,7 +180,7 @@ public abstract class EventBusService<T> extends ConfigurationSupportingVerticle
      * @return The property value or {@code null} if no such property exists or is not of the expected type.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    @SuppressWarnings({ "unchecked", "hiding" })
+    @SuppressWarnings({ "unchecked" })
     protected final <T> T getTypesafeValueForField(final JsonObject payload, final String field) {
 
         Objects.requireNonNull(payload);

@@ -20,6 +20,7 @@ import static org.mockito.Mockito.*;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -354,8 +355,8 @@ public class FileBasedRegistrationServiceTest {
 
         registrationService
             .processRequest(EventBusMessage.forOperation("unknown-action"))
-            .setHandler(ctx.asyncAssertSuccess(response -> {
-                ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+            .setHandler(ctx.asyncAssertFailure(t -> {
+                ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
             }));
     }
 

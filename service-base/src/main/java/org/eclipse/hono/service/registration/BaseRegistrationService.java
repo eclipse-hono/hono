@@ -15,6 +15,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.EventBusMessage;
@@ -98,123 +99,131 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
 
         Objects.requireNonNull(requestMessage);
 
-        return processDeviceRegistrationRequest(requestMessage).map(result -> {
-            return EventBusMessage.forStatusCode(result.getStatus())
-                    .setTenant(requestMessage.getTenant())
-                    .setDeviceId(requestMessage.getDeviceId())
-                    .setJsonPayload(result.getPayload())
-                    .setCacheDirective(result.getCacheDirective());
-        }).recover(t -> {
-            return Future.failedFuture(t);
-        });
-    }
-
-    private Future<RegistrationResult> processDeviceRegistrationRequest(final EventBusMessage regMsg) {
-
-        final String tenantId = regMsg.getTenant();
-        final String deviceId = regMsg.getDeviceId();
-
-        if (tenantId == null || deviceId == null) {
-            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else {
-            final String operation = regMsg.getOperation();
-            switch (operation) {
-            case RegistrationConstants.ACTION_REGISTER:
-                return processRegisterRequest(regMsg);
-            case RegistrationConstants.ACTION_ASSERT:
-                return processAssertRequest(regMsg);
-            case RegistrationConstants.ACTION_GET:
-                return processGetRequest(regMsg);
-            case RegistrationConstants.ACTION_UPDATE:
-                return processUpdateRequest(regMsg);
-            case RegistrationConstants.ACTION_DEREGISTER:
-                return processDeregisterRequest(regMsg);
-            default:
-                return processCustomRegistrationMessage(regMsg);
-            }
+        switch (requestMessage.getOperation()) {
+        case RegistrationConstants.ACTION_REGISTER:
+            return processRegisterRequest(requestMessage);
+        case RegistrationConstants.ACTION_ASSERT:
+            return processAssertRequest(requestMessage);
+        case RegistrationConstants.ACTION_GET:
+            return processGetRequest(requestMessage);
+        case RegistrationConstants.ACTION_UPDATE:
+            return processUpdateRequest(requestMessage);
+        case RegistrationConstants.ACTION_DEREGISTER:
+            return processDeregisterRequest(requestMessage);
+        default:
+            return processCustomRegistrationMessage(requestMessage);
         }
     }
 
-    private Future<RegistrationResult> processRegisterRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processRegisterRequest(final EventBusMessage request) {
 
-        final Future<RegistrationResult> result = Future.future();
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
         final JsonObject payload = getRequestPayload(request.getJsonPayload());
 
         if (tenantId == null || deviceId == null) {
-            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("registering device [{}] for tenant [{}]", deviceId, tenantId);
+            final Future<RegistrationResult> result = Future.future();
             addDevice(tenantId, deviceId, payload, result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(deviceId)
+                        .setCacheDirective(res.getCacheDirective());
+            });
         }
-        return result;
     }
 
-    private Future<RegistrationResult> processGetRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
 
-        final Future<RegistrationResult> result = Future.future();
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
 
         if (tenantId == null || deviceId == null) {
-            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
+            final Future<RegistrationResult> result = Future.future();
             getDevice(tenantId, deviceId, result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(deviceId)
+                        .setJsonPayload(res.getPayload())
+                        .setCacheDirective(res.getCacheDirective());
+            });
         }
-        return result;
     }
 
-    private Future<RegistrationResult> processUpdateRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processUpdateRequest(final EventBusMessage request) {
 
-        final Future<RegistrationResult> result = Future.future();
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
         final JsonObject payload = getRequestPayload(request.getJsonPayload());
 
         if (tenantId == null || deviceId == null) {
-            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("updating registration information for device [{}] of tenant [{}]", deviceId, tenantId);
+            final Future<RegistrationResult> result = Future.future();
             updateDevice(tenantId, deviceId, payload, result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(deviceId)
+                        .setCacheDirective(res.getCacheDirective());
+            });
         }
-        return result;
     }
 
-    private Future<RegistrationResult> processDeregisterRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processDeregisterRequest(final EventBusMessage request) {
 
-        final Future<RegistrationResult> result = Future.future();
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
 
         if (tenantId == null || deviceId == null) {
-            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
+            final Future<RegistrationResult> result = Future.future();
             removeDevice(tenantId, deviceId, result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(deviceId)
+                        .setCacheDirective(res.getCacheDirective());
+            });
         }
-        return result;
     }
 
-    private Future<RegistrationResult> processAssertRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processAssertRequest(final EventBusMessage request) {
 
-        final Future<RegistrationResult> result = Future.future();
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
         final String gatewayId = request.getGatewayId();
 
         if (tenantId == null || deviceId == null) {
-            result.complete(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (gatewayId == null) {
             log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
+            final Future<RegistrationResult> result = Future.future();
             assertRegistration(tenantId, deviceId, result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(deviceId)
+                        .setJsonPayload(res.getPayload())
+                        .setCacheDirective(res.getCacheDirective());
+            });
         } else {
             log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
                     deviceId, tenantId, gatewayId);
+            final Future<RegistrationResult> result = Future.future();
             assertRegistration(tenantId, deviceId, gatewayId, result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(deviceId)
+                        .setJsonPayload(res.getPayload())
+                        .setCacheDirective(res.getCacheDirective());
+            });
         }
-        return result;
     }
 
     /**
@@ -223,15 +232,15 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * Subclasses should override this method in order to support additional, custom
      * operations that are not defined by Hono's Device Registration API.
      * <p>
-     * This default implementation simply returns a succeeded future containing a
-     * result with status code <em>400 Bad Request</em>.
+     * This default implementation simply returns a future that is failed with a
+     * {@link ClientErrorException} with an error code <em>400 Bad Request</em>.
      *
      * @param request The request to process.
      * @return A future indicating the outcome of the service invocation.
      */
-    protected Future<RegistrationResult> processCustomRegistrationMessage(final EventBusMessage request) {
+    protected Future<EventBusMessage> processCustomRegistrationMessage(final EventBusMessage request) {
         log.debug("invalid operation in request message [{}]", request.getOperation());
-        return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     };
 
     /**
@@ -362,8 +371,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     }
 
     /**
-     * Handles an unimplemented operation by succeeding the given handler
-     * with a result having a <em>501 Not Implemented</em> status code.
+     * Handles an unimplemented operation by failing the given handler
+     * with a {@link ClientErrorException} having a <em>501 Not Implemented</em> status code.
      * 
      * @param resultHandler The handler.
      */

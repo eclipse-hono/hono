@@ -30,7 +30,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
@@ -63,11 +62,11 @@ public class CredentialsAmqpEndpointTest {
     /**
      * Verifies that the endpoint forwards a request message via the event bus.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testProcessMessageSendsRequestViaEventBus() {
 
         final Message msg = ProtonHelper.message();
+        msg.setMessageId("random-id");
         msg.setSubject(CredentialsConstants.CredentialsAction.add.toString());
         MessageHelper.addDeviceId(msg, "4711");
         MessageHelper.addTenantId(msg, Constants.DEFAULT_TENANT);
@@ -77,6 +76,6 @@ public class CredentialsAmqpEndpointTest {
 
         endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
-        verify(eventBus).send(eq(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN), any(JsonObject.class), any(Handler.class));
+        verify(eventBus).send(eq(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN), any(JsonObject.class));
     }
 }

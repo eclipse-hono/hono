@@ -15,6 +15,7 @@ package org.eclipse.hono.service.tenant;
 
 import java.net.HttpURLConnection;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.TenantConstants;
@@ -84,8 +85,8 @@ public class BaseTenantServiceTest {
     public void testAddFailsForIncompleteMessage(final TestContext ctx) {
 
         final EventBusMessage msg = EventBusMessage.forOperation(TenantConstants.TenantAction.add.toString());
-        tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -102,8 +103,8 @@ public class BaseTenantServiceTest {
         testPayload.put(TenantConstants.FIELD_ADAPTERS, new JsonArray());
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
-        tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -123,8 +124,8 @@ public class BaseTenantServiceTest {
         testPayload.put(TenantConstants.FIELD_ADAPTERS, adapterArray);
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
-        tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.getStatus());
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 

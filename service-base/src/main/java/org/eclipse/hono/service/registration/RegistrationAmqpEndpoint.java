@@ -11,7 +11,6 @@
  */
 package org.eclipse.hono.service.registration;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -24,7 +23,6 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 /**
  * An {@code AmqpEndpoint} for managing device registration information.
@@ -53,29 +51,16 @@ public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
     @Override
     public final void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
-        final JsonObject registrationMsg = EventBusMessage.forOperation(msg)
+        final EventBusMessage registrationMsg = EventBusMessage.forOperation(msg)
+                .setReplyToAddress(msg)
+                .setAppCorrelationId(msg)
+                .setCorrelationId(msg)
                 .setTenant(targetAddress.getTenantId())
                 .setDeviceId(msg)
                 .setGatewayId(msg)
-                .setJsonPayload(msg)
-                .toJson();
+                .setJsonPayload(msg);
 
-        vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg,
-                result -> {
-                    EventBusMessage response = null;
-                    if (result.succeeded()) {
-                        // TODO check for correct session here...?
-                        response = EventBusMessage.fromJson((JsonObject) result.result().body());
-                    } else {
-                        logger.debug("failed to process request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
-                        // we need to inform client about failure
-                        response = EventBusMessage.forStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR)
-                                .setTenant(targetAddress.getTenantId())
-                                .setDeviceId(msg);
-                    }
-                    addHeadersToResponse(msg, response);
-                    vertx.eventBus().send(msg.getReplyTo(), response.toJson());
-                });
+        vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg.toJson());
     }
 
     @Override
@@ -84,7 +69,7 @@ public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
     }
 
     @Override
-    protected final Message getAmqpReply(io.vertx.core.eventbus.Message<JsonObject> message) {
-        return RegistrationConstants.getAmqpReply(RegistrationConstants.REGISTRATION_ENDPOINT, message.body());
+    protected final Message getAmqpReply(final EventBusMessage message) {
+        return RegistrationConstants.getAmqpReply(RegistrationConstants.REGISTRATION_ENDPOINT, message);
     }
 }

@@ -398,4 +398,24 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         return String.format("%s[filename=%s]", FileBasedTenantService.class.getSimpleName(),
                 getConfig().getFilename());
     }
+
+    /**
+     * Wraps a given tenant ID, its properties data and its adapter configuration data into a JSON structure suitable
+     * to be returned to clients as the result of a tenant API operation.
+     *
+     * @param tenantId The tenant ID.
+     * @param data The tenant properties data.
+     * @param adapterConfigurations The adapter configurations data for the tenant as JsonArray.
+     * @return The JSON structure.
+     */
+    private static final JsonObject getResultPayload(final String tenantId, final JsonObject data,
+                                                       final JsonArray adapterConfigurations) {
+        final JsonObject result = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
+                .mergeIn(data);
+        if (adapterConfigurations != null) {
+            result.put(TenantConstants.FIELD_ADAPTERS, adapterConfigurations);
+        }
+        return result;
+    }
 }

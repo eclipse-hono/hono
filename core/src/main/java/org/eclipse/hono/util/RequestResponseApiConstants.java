@@ -28,7 +28,7 @@ import io.vertx.proton.ProtonHelper;
 /**
  * Constants &amp; utility methods that are common to APIs that follow the request response pattern.
  */
-public class RequestResponseApiConstants {
+public abstract class RequestResponseApiConstants {
 
     /**
      * The MIME type representing the String representation of a JSON Object.
@@ -43,35 +43,36 @@ public class RequestResponseApiConstants {
     public static final String FIELD_ERROR     = "error";
     public static final String FIELD_PAYLOAD   = "payload";
 
+    /**
+     * Empty default constructor.
+     */
     protected RequestResponseApiConstants () {
     }
 
     /**
-     * Creates an AMQP message from a JSON message containing the response to an
-     * invocation of a service operation.
+     * Creates an AMQP message from a response to a service invocation.
      *
      * @param endpoint The service endpoint that the operation has been invoked on.
-     * @param response The JSON message containing the response.
+     * @param response The response message.
      * @return The AMQP message.
      * @throws NullPointerException if endpoint is {@code null}.
      */
-    public static final Message getAmqpReply(final String endpoint, final JsonObject response) {
+    public static final Message getAmqpReply(final String endpoint, final EventBusMessage response) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(response);
 
-        final EventBusMessage resp = EventBusMessage.fromJson(response);
-        final Object correlationId = resp.getCorrelationId();
+        final Object correlationId = response.getCorrelationId();
 
         if (correlationId == null) {
             throw new IllegalArgumentException("response must contain correlation ID");
         } else {
-            final String tenantId = resp.getTenant();
-            final String deviceId = resp.getDeviceId();
-            final Integer status = resp.getStatus();
-            final boolean isApplCorrelationId = resp.isAppCorrelationId();
-            final String cacheDirective = resp.getCacheDirective();
-            final JsonObject payload = resp.getJsonPayload();
+            final String tenantId = response.getTenant();
+            final String deviceId = response.getDeviceId();
+            final Integer status = response.getStatus();
+            final boolean isApplCorrelationId = response.isAppCorrelationId();
+            final String cacheDirective = response.getCacheDirective();
+            final JsonObject payload = response.getJsonPayload();
             final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
 
             final Message message = ProtonHelper.message();

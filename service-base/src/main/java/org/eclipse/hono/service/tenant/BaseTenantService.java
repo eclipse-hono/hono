@@ -16,6 +16,8 @@ package org.eclipse.hono.service.tenant;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
@@ -45,37 +47,25 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     }
 
     /**
-     * Processes a tenant request message received via the vert.x event bus.
+     * Processes a Tenant API request message received via the vert.x event bus.
      * <p>
      * This method validates the request payload against the Tenant API specification
      * before invoking the corresponding {@code TenantService} methods.
      * 
-     * @param requestMessage The request message.
+     * @param request The request message.
      * @return A future indicating the outcome of the service invocation.
      * @throws NullPointerException If the request message is {@code null}.
      */
     @Override
-    public final Future<EventBusMessage> processRequest(final EventBusMessage requestMessage) {
+    public final Future<EventBusMessage> processRequest(final EventBusMessage request) {
 
-        Objects.requireNonNull(requestMessage);
-
-        return processTenantRequest(requestMessage).map(result -> {
-            return EventBusMessage.forStatusCode(result.getStatus())
-                    .setTenant(requestMessage.getTenant())
-                    .setJsonPayload(result.getPayload())
-                    .setCacheDirective(result.getCacheDirective());
-        }).recover(t -> {
-            return Future.failedFuture(t);
-        });
-    }
-
-    private Future<TenantResult<JsonObject>> processTenantRequest(final EventBusMessage request) {
+        Objects.requireNonNull(request);
 
         switch (TenantConstants.TenantAction.from(request.getOperation())) {
-        case get:
-            return processGetRequest(request);
         case add:
             return processAddRequest(request);
+        case get:
+            return processGetRequest(request);
         case update:
             return processUpdateRequest(request);
         case remove:
@@ -85,77 +75,113 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
         }
     }
 
-    private Future<TenantResult<JsonObject>> processGetRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
 
-        final Future<TenantResult<JsonObject>> result = Future.future();
         final String tenantId = request.getTenant();
-        if (tenantId == null) {
-            log.debug("request does not contain mandatory property [{}]",
-                    MessageHelper.APP_PROPERTY_TENANT_ID);
-            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        final JsonObject payload = request.getJsonPayload();
+
+        if (tenantId == null && payload == null) {
+            log.debug("request does not contain any query parameters");
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else if (payload != null) {
+            final String tenantIdFromPayload = getTypesafeValueForField(payload, TenantConstants.FIELD_PAYLOAD_TENANT_ID);
+            if (tenantIdFromPayload == null) {
+                log.debug("payload does not contain any query parameters");
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            } else {
+                log.debug("retrieving tenant [id: {}]", tenantIdFromPayload);
+                final Future<TenantResult<JsonObject>> getResult = Future.future();
+                get(tenantIdFromPayload, getResult.completer());
+                return getResult.map(tr -> {
+                    return request.getResponse(tr.getStatus())
+                            .setJsonPayload(tr.getPayload())
+                            .setTenant(tenantIdFromPayload)
+                            .setCacheDirective(tr.getCacheDirective());
+                });
+            }
         } else {
-            log.debug("retrieving tenant [{}]", tenantId);
-            get(tenantId, result.completer());
+            // deprecated API
+            log.debug("retrieving tenant [{}] using deprecated variant of get tenant request", tenantId);
+            final Future<TenantResult<JsonObject>> getResult = Future.future();
+            get(tenantId, getResult.completer());
+            return getResult.map(tr -> {
+                return request.getResponse(tr.getStatus())
+                        .setJsonPayload(tr.getPayload())
+                        .setTenant(tenantId)
+                        .setCacheDirective(tr.getCacheDirective());
+            });
         }
-        return result;
     }
 
-    private Future<TenantResult<JsonObject>> processAddRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processAddRequest(final EventBusMessage request) {
 
-        final Future<TenantResult<JsonObject>> result = Future.future();
         final String tenantId = request.getTenant();
         final JsonObject payload = request.getJsonPayload(new JsonObject());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
                     MessageHelper.APP_PROPERTY_TENANT_ID);
-            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (isValidRequestPayload(payload)) {
             log.debug("creating tenant [{}]", tenantId);
+            final Future<TenantResult<JsonObject>> addResult = Future.future();
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
-            add(tenantId, payload, result.completer());
+            add(tenantId, payload, addResult.completer());
+            return addResult.map(tr -> {
+                return request.getResponse(tr.getStatus())
+                        .setJsonPayload(tr.getPayload())
+                        .setCacheDirective(tr.getCacheDirective());
+            });
         } else {
             log.debug("request contains malformed payload");
-            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
-        return result;
     }
 
-    private Future<TenantResult<JsonObject>> processUpdateRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processUpdateRequest(final EventBusMessage request) {
 
-        final Future<TenantResult<JsonObject>> result = Future.future();
         final String tenantId = request.getTenant();
         final JsonObject payload = request.getJsonPayload(new JsonObject());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
                     MessageHelper.APP_PROPERTY_TENANT_ID);
-            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (isValidRequestPayload(payload)) {
             log.debug("updating tenant [{}]", tenantId);
+            final Future<TenantResult<JsonObject>> updateResult = Future.future();
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
-            update(tenantId, payload, result.completer());
+            update(tenantId, payload, updateResult.completer());
+            return updateResult.map(tr -> {
+                return request.getResponse(tr.getStatus())
+                        .setJsonPayload(tr.getPayload())
+                        .setCacheDirective(tr.getCacheDirective());
+            });
         } else {
             log.debug("request contains malformed payload");
-            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
-        return result;
     }
 
-    private Future<TenantResult<JsonObject>> processRemoveRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processRemoveRequest(final EventBusMessage request) {
 
-        final Future<TenantResult<JsonObject>> result = Future.future();
         final String tenantId = request.getTenant();
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
                     MessageHelper.APP_PROPERTY_TENANT_ID);
-            result.complete(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("deleting tenant [{}]", tenantId);
-            remove(tenantId, result.completer());
+            final Future<TenantResult<JsonObject>> removeResult = Future.future();
+            remove(tenantId, removeResult.completer());
+            return removeResult.map(tr -> {
+                return EventBusMessage.forStatusCode(tr.getStatus())
+                        .setJsonPayload(tr.getPayload())
+                        .setTenant(tenantId)
+                        .setCacheDirective(tr.getCacheDirective());
+            });
         }
-        return result;
     }
 
     /**
@@ -164,15 +190,15 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
      * Subclasses should override this method in order to support additional, custom
      * operations that are not defined by Hono's Tenant API.
      * <p>
-     * This default implementation simply returns a succeeded future containing a
-     * result with status code <em>400 Bad Request</em>.
+     * This default implementation simply returns a future that is failed with a
+     * {@link ClientErrorException} with an error code <em>400 Bad Request</em>.
      *
      * @param request The request to process.
      * @return A future indicating the outcome of the service invocation.
      */
-    protected Future<TenantResult<JsonObject>> processCustomTenantMessage(final EventBusMessage request) {
+    protected Future<EventBusMessage> processCustomTenantMessage(final EventBusMessage request) {
         log.debug("invalid operation in request message [{}]", request.getOperation());
-        return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
+        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
     /**
@@ -242,26 +268,6 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     }
 
     /**
-     * Wraps a given tenant ID, its properties data and its adapter configuration data into a JSON structure suitable
-     * to be returned to clients as the result of a tenant API operation.
-     *
-     * @param tenantId The tenant ID.
-     * @param data The tenant properties data.
-     * @param adapterConfigurations The adapter configurations data for the tenant as JsonArray.
-     * @return The JSON structure.
-     */
-    protected static final JsonObject getResultPayload(final String tenantId, final JsonObject data,
-                                                       final JsonArray adapterConfigurations) {
-        final JsonObject result = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
-                .mergeIn(data);
-        if (adapterConfigurations != null) {
-            result.put(TenantConstants.FIELD_ADAPTERS, adapterConfigurations);
-        }
-        return result;
-    }
-
-    /**
      * {@inheritDoc}
      *
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
@@ -306,12 +312,12 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     }
 
     /**
-     * Handles an unimplemented operation by succeeding the given handler
-     * with a result having a <em>501 Not Implemented</em> status code.
+     * Handles an unimplemented operation by failing the given handler
+     * with a {@link ClientErrorException} having a <em>501 Not Implemented</em> status code.
      * 
      * @param resultHandler The handler.
      */
     protected void handleUnimplementedOperation(final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
+        resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
     }
 }

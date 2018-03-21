@@ -11,11 +11,14 @@
  */
 package org.eclipse.hono.service.amqp;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
@@ -74,13 +77,13 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     public abstract void processRequest(final Message request, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal);
 
     /**
-     * Construct an AMQP reply message that is send back to the caller.
+     * Creates an AMQP message for a service response.
      *
-     * @param message The Message as JsonObject from which a reply message is constructed. Must not be null.
-     * @return Message The reply message that shall be sent to the client.
-     * @throws NullPointerException If message is null.
+     * @param response The response to create the AMQP message for.
+     * @return The AMQP message.
+     * @throws NullPointerException If response is {@code null}.
      */
-    protected abstract Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message);
+    protected abstract Message getAmqpReply(final EventBusMessage response);
 
     /**
      * Gets the number of message credits this endpoint grants as a receiver.
@@ -237,11 +240,32 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     }
 
     /**
+     * Applies arbitrary filters on the response before it is sent to the client.
+     * <p>
+     * Subclasses may override this method in order to e.g. filter the payload based on
+     * the client's authorities.
+     * <p>
+     * This default implementation simply returns a succeeded future containing the
+     * original response.
+     * 
+     * @param clientPrincipal The client's identity and authorities.
+     * @param response The response to send to the client.
+     * @return A future indicating the outcome.
+     *         If the future succeeds it will contain the (filtered) response to be sent to the client.
+     *         Otherwise the future will fail with a {@link ServiceInvocationException} indicating the
+     *         problem.
+     */
+    protected Future<EventBusMessage> filterResponse(final HonoUser clientPrincipal, final EventBusMessage response) {
+
+        return Future.succeededFuture(Objects.requireNonNull(response));
+    }
+
+    /**
      * Configure and check the sender link of the endpoint.
      * The sender link is used for the response to a received request and is driven by the vertx event bus.
      * It listens to the provided resource identifier of the endpoint as vertx event address and then sends the
      * constructed response.
-     * Since the response is endpoint specific, it is an abstract method {@link #getAmqpReply(io.vertx.core.eventbus.Message)} and needs to be implemented
+     * Since the response is endpoint specific, it is an abstract method {@link #getAmqpReply(EventBusMessage)} and needs to be implemented
      * by the subclass.
      *
      * @param con The AMQP connection that the link is part of.
@@ -260,9 +284,25 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             logger.debug("establishing sender link with client [{}]", sender.getName());
             final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(replyToAddress.toString(), message -> {
                 // TODO check for correct session here...?
-                logger.trace("forwarding reply to client [{}]: {}", sender.getName(), message.body());
-                final Message amqpReply = getAmqpReply(message);
-                sender.send(amqpReply);
+                if (logger.isTraceEnabled()) {
+                    logger.trace("forwarding reply to client [{}]: {}", sender.getName(), message.body().encodePrettily());
+                }
+                final EventBusMessage response = EventBusMessage.fromJson(message.body());
+                filterResponse(Constants.getClientPrincipal(con), response)
+                    .recover(t -> {
+                        final int status = Optional.of(t).map(cause -> {
+                            if (cause instanceof ServiceInvocationException) {
+                                return ((ServiceInvocationException) cause).getErrorCode();
+                            } else {
+                                return null;
+                            }
+                        }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                        return Future.succeededFuture(response.getResponse(status));
+                    }).map(filteredResponse -> {
+                        final Message amqpReply = getAmqpReply(filteredResponse);
+                        sender.send(amqpReply);
+                        return null;
+                    });
             });
 
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
@@ -274,21 +314,6 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                 }
             });
             sender.open();
-        }
-    }
-
-    /**
-     * Adds correlation id related properties on a response to be sent in reply to a request.
-     * 
-     * @param request The request to correlate to.
-     * @param response The response message.
-     */
-    protected final void addHeadersToResponse(final Message request, final EventBusMessage response) {
-
-        response.setAppCorrelationId(request);
-        response.setCorrelationId(request);
-        if (logger.isTraceEnabled()) {
-            logger.trace("request message [{}] uses application specific correlation ID: {}", request.getMessageId(), response.isAppCorrelationId());
         }
     }
 }

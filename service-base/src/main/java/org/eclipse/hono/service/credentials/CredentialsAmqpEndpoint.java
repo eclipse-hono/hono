@@ -11,7 +11,6 @@
  */
 package org.eclipse.hono.service.credentials;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -24,7 +23,6 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 /**
  * An {@code AmqpEndpoint} for managing device credential information.
@@ -55,26 +53,14 @@ public class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConf
     @Override
     public final void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
 
-        final JsonObject credentialsMsg = EventBusMessage.forOperation(msg)
+        final EventBusMessage credentialsMsg = EventBusMessage.forOperation(msg)
+                .setReplyToAddress(msg)
+                .setAppCorrelationId(msg)
+                .setCorrelationId(msg)
                 .setTenant(targetAddress.getTenantId())
-                .setJsonPayload(msg)
-                .toJson();
+                .setJsonPayload(msg);
 
-        vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg,
-                result -> {
-                    EventBusMessage response = null;
-                    if (result.succeeded()) {
-                        // TODO check for correct session here...?
-                        response = EventBusMessage.fromJson((JsonObject) result.result().body());
-                    } else {
-                        logger.debug("failed to process credentials request [msg ID: {}] due to {}", msg.getMessageId(), result.cause());
-                        // we need to inform client about failure
-                        response = EventBusMessage.forStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR)
-                                .setTenant(targetAddress.getTenantId());
-                    }
-                    addHeadersToResponse(msg, response);
-                    vertx.eventBus().send(msg.getReplyTo(), response.toJson());
-                });
+        vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg.toJson());
     }
 
     @Override
@@ -83,7 +69,7 @@ public class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConf
     }
 
     @Override
-    protected final Message getAmqpReply(final io.vertx.core.eventbus.Message<JsonObject> message) {
-        return CredentialsConstants.getAmqpReply(CredentialsConstants.CREDENTIALS_ENDPOINT, message.body());
+    protected final Message getAmqpReply(final EventBusMessage message) {
+        return CredentialsConstants.getAmqpReply(CredentialsConstants.CREDENTIALS_ENDPOINT, message);
     }
 }

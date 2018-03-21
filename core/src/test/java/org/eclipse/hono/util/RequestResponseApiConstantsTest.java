@@ -19,8 +19,6 @@ import static org.junit.Assert.assertThat;
 import org.apache.qpid.proton.message.Message;
 import org.junit.Test;
 
-import io.vertx.core.json.JsonObject;
-
 
 /**
  * Tests verifying behavior of {@link RequestResponseApiConstants}.
@@ -38,12 +36,11 @@ public class RequestResponseApiConstantsTest {
         // GIVEN a response that is not supposed to be cached by a client
         final CacheDirective directive = CacheDirective.noCacheDirective();
         final String correlationId = "message-id";
-        final JsonObject response = EventBusMessage.forStatusCode(200)
+        final EventBusMessage response = EventBusMessage.forStatusCode(200)
                 .setTenant("my-tenant")
                 .setDeviceId("my-device")
                 .setCacheDirective(directive)
-                .setCorrelationId(correlationId)
-                .toJson();
+                .setCorrelationId(correlationId);
 
         // WHEN creating the AMQP message for the response
         final Message reply = RequestResponseApiConstants.getAmqpReply("endpoint", response);
