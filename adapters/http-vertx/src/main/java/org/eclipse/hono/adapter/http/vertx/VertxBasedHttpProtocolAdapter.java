@@ -51,17 +51,17 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     @Override
     protected final void addRoutes(final Router router) {
+        setupCorsHandler(router);
+
         if (!getConfig().isAuthenticationRequired()) {
             LOG.warn("device authentication has been disabled");
             LOG.warn("any device may publish data on behalf of all other devices");
         } else {
             setupBasicAuth(router);
         }
+
         addTelemetryApiRoutes(router);
         addEventApiRoutes(router);
-        setupCorsHandler(router);
-
-        router.options().handler(request -> request.response().setStatusCode(HttpResponseStatus.OK.code()).end());
     }
 
     private void setupCorsHandler(final Router router) {
@@ -72,7 +72,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     }
 
     private void setupBasicAuth(final Router router) {
-        router.route().method(HttpMethod.GET).method(HttpMethod.POST).method(HttpMethod.PUT).handler(new HonoAuthHandlerImpl(getCredentialsAuthProvider(), getConfig().getRealm()) {
+        router.route().handler(new HonoAuthHandlerImpl(getCredentialsAuthProvider(), getConfig().getRealm()) {
             @Override
             protected void processException(RoutingContext ctx, Throwable exception) {
                 if (exception instanceof ServiceInvocationException) {

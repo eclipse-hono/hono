@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.adapter.http.vertx;
 
+import static io.vertx.core.http.HttpHeaders.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
@@ -165,8 +166,29 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         vertx.createHttpClient().get(httpAdapter.getInsecurePort(), HOST, "/somenonexistingroute")
                 .putHeader("content-type", HttpUtils.CONTENT_TYPE_JSON)
-                .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass).handler(response -> {
+                .putHeader(AUTHORIZATION_HEADER, "Basic " + encodedUserPass)
+                .putHeader(ORIGIN, "hono.org")
+                .handler(response -> {
             context.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
+            context.assertEquals("*", response.getHeader(ACCESS_CONTROL_ALLOW_ORIGIN));
+            response.bodyHandler(totalBuffer -> {
+                async.complete();
+            });
+        }).exceptionHandler(context::fail).end();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public final void testCors(final TestContext context) throws Exception {
+        final Async async = context.async();
+
+        vertx.createHttpClient().options(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+                .putHeader(ORIGIN, "hono.org")
+                .putHeader(ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                .handler(response -> {
+            context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.statusCode());
+            context.assertTrue(response.getHeader(ACCESS_CONTROL_ALLOW_METHODS).contains("POST"));
+            context.assertEquals("*", response.getHeader(ACCESS_CONTROL_ALLOW_ORIGIN));
             response.bodyHandler(totalBuffer -> {
                 async.complete();
             });
