@@ -15,10 +15,13 @@ package org.eclipse.hono.service.tenant;
 
 import java.net.HttpURLConnection;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -129,6 +132,57 @@ public class BaseTenantServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the base service routes a deprecated request for retrieving
+     * a tenant by its identifier to the corresponding <em>get</em> method.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeprecatedGetByIdSucceeds(final TestContext ctx) {
+
+        final EventBusMessage request = EventBusMessage.forOperation(TenantConstants.TenantAction.get.toString())
+                .setJsonPayload(new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant"));
+        tenantService.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
+            ctx.assertEquals("getById", response.getJsonPayload().getString("operation"));
+        }));
+    }
+
+    /**
+     * Verifies that the base service routes a request for retrieving
+     * a tenant by its identifier to the corresponding <em>get</em> method.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetByIdSucceeds(final TestContext ctx) {
+
+        final EventBusMessage request = createRequest(TenantConstants.TenantAction.get, null);
+        tenantService.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
+            ctx.assertEquals(TEST_TENANT, response.getJsonPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
+        }));
+    }
+
+    /**
+     * Verifies that the base service routes a request for retrieving
+     * a tenant by its trusted certificate authority to the corresponding
+     * <em>get</em> method.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetByCaSucceeds(final TestContext ctx) {
+
+        final EventBusMessage request = EventBusMessage.forOperation(TenantConstants.TenantAction.get.toString())
+                .setJsonPayload(new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test"));
+        tenantService.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
+            ctx.assertEquals("getByCa", response.getJsonPayload().getString("operation"));
+        }));
+    }
+
     private static EventBusMessage createRequest(final TenantConstants.TenantAction action, final JsonObject payload) {
 
         return EventBusMessage.forOperation(action.toString())
@@ -147,9 +201,26 @@ public class BaseTenantServiceTest {
     private static BaseTenantService<ServiceConfigProperties> createBaseTenantService() {
 
         return new BaseTenantService<ServiceConfigProperties>() {
+
             @Override
             public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
                 resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_CREATED)));
+            }
+
+            @Override
+            public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+
+                TenantObject tenant = TenantObject.from(tenantId, true);
+                tenant.setProperty("operation", "getById");
+                resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant))));
+            }
+
+            @Override
+            public void get(final X500Principal subjectDn, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+
+                TenantObject tenant = TenantObject.from(subjectDn.getName(X500Principal.RFC2253), true);
+                tenant.setProperty("operation", "getByCa");
+                resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant))));
             }
 
             @Override

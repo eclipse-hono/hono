@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.service.tenant.BaseTenantService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.TenantObject;
@@ -223,6 +225,31 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
     }
 
     @Override
+    public void get(final X500Principal subjectDn,
+            final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+
+        Objects.requireNonNull(subjectDn);
+        Objects.requireNonNull(resultHandler);
+
+        resultHandler.handle(Future.succeededFuture(getForCertificateAuthority(subjectDn)));
+    }
+
+    private TenantResult<JsonObject> getForCertificateAuthority(final X500Principal subjectDn) {
+
+        if (subjectDn == null) {
+            return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
+        } else {
+            final TenantObject tenant = getByCa(subjectDn);
+
+            if (tenant == null) {
+                return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+            } else {
+                return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant), CacheDirective.maxAgeDirective(MAX_AGE_GET_TENANT));
+            }
+        }
+    }
+
+    @Override
     public void remove(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
@@ -275,9 +302,15 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             try {
                 final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
                 tenant.setTenantId(tenantId);
-                tenants.put(tenantId, tenant);
-                dirty = true;
-                return TenantResult.from(HttpURLConnection.HTTP_CREATED);
+                final TenantObject conflictingTenant = getByCa(tenant.getTrustedCaSubjectDn());
+                if (conflictingTenant != null) {
+                    // we are trying to use the same CA as an already existing tenant
+                    return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
+                } else {
+                    tenants.put(tenantId, tenant);
+                    dirty = true;
+                    return TenantResult.from(HttpURLConnection.HTTP_CREATED);
+                }
             } catch (IllegalArgumentException e) {
                 return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
             }
@@ -320,9 +353,15 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                 try {
                     final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
                     tenant.setTenantId(tenantId);
-                    tenants.put(tenantId, tenant);
-                    dirty = true;
-                    return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
+                    final TenantObject conflictingTenant = getByCa(tenant.getTrustedCaSubjectDn());
+                    if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getTenantId())) {
+                        // we are trying to use the same CA as another tenant
+                        return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
+                    } else {
+                        tenants.put(tenantId, tenant);
+                        dirty = true;
+                        return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
+                    }
                 } catch (IllegalArgumentException e) {
                     return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
                 }
@@ -331,6 +370,17 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             }
         } else {
             return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
+        }
+    }
+
+    private TenantObject getByCa(final X500Principal subjectDn) {
+
+        if (subjectDn == null) {
+            return null;
+        } else {
+            return tenants.values().stream()
+                    .filter(t -> subjectDn.equals(t.getTrustedCaSubjectDn()))
+                    .findFirst().orElse(null);
         }
     }
 

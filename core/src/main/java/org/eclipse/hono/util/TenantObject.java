@@ -18,6 +18,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+
+import javax.security.auth.x500.X500Principal;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -63,9 +66,13 @@ public final class TenantObject {
      * @return The property value or {@code null} if not set.
      * @throws NullPointerException if name is {@code null}.
      */
-    @SuppressWarnings("unchecked")
     public <T> T getProperty(final String name) {
-        final Object value = json.getValue(Objects.requireNonNull(name));
+        return getProperty(json, name);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T getProperty(final JsonObject parent, final String name) {
+        final Object value = parent.getValue(Objects.requireNonNull(name));
         try {
             return (T) value;
         } catch (ClassCastException e) {
@@ -129,6 +136,24 @@ public final class TenantObject {
     public TenantObject setEnabled(final boolean flag) {
         json.put(TenantConstants.FIELD_ENABLED, flag);
         return this;
+    }
+
+    /**
+     * Gets the subject DN of this tenant's configured trusted
+     * certificate authority.
+     * 
+     * @return The DN or {@code null} if no CA has been set.
+     */
+    @JsonIgnore
+    public X500Principal getTrustedCaSubjectDn() {
+
+        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+        if (trustedCa == null) {
+            return null;
+        } else {
+            return Optional.ofNullable((String) getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN))
+                    .map(dn -> new X500Principal(dn)).orElse(null);
+        }
     }
 
     /**

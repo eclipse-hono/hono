@@ -29,10 +29,24 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_ADAPTERS_TYPE               = "type";
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
-     * The name of the property that contains the <em>subject DN</em> of the CA certificate
+     * The name of the property that contains the Base64 encoded (binary) DER encoding of
+     * the trusted certificate configured for a tenant.
+     */
+    public static final String FIELD_PAYLOAD_CERT = "cert";
+    /**
+     * The name of the property that contains the Base64 encoded DER encoding of the public key of the
+     * trusted certificate authority configured for a tenant.
+     */
+    public static final String FIELD_PAYLOAD_PUBLIC_KEY = "public-key";
+    /**
+     * The name of the property that contains the RFC 2253 formatted <em>subject DN</em> of the CA certificate
      * that has been configured for a tenant.
      */
-    public static final String FIELD_SUBJECT_DN = "subject-dn";
+    public static final String FIELD_PAYLOAD_SUBJECT_DN = "subject-dn";
+    /**
+     * The name of the property that contains the trusted certificate authority configured for a tenant.
+     */
+    public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
     /**
      * The name of the Tenant API endpoint.
      */
@@ -47,13 +61,32 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * Request actions that belong to the Tenant API.
      */
     public enum TenantAction {
-        get, add, update, remove, unknown;
+        /**
+         * The <em>add Tenant</em> operation.
+         */
+        add,
+        /**
+         * The <em>get Tenant</em> operation.
+         */
+        get,
+        /**
+         * The <em>update Tenant</em> operation.
+         */
+        update,
+        /**
+         * The <em>remove Tenant</em> operation.
+         */
+        remove,
+        /**
+         * The <em>custom</em> operation.
+         */
+        custom;
 
         /**
          * Construct a TenantAction from a subject.
          *
          * @param subject The subject from which the TenantAction needs to be constructed.
-         * @return TenantAction The TenantAction as enum, or {@link TenantAction#unknown} otherwise.
+         * @return TenantAction The TenantAction as enum, or {@link TenantAction#custom} otherwise.
          */
         public static TenantAction from(final String subject) {
             if (subject != null) {
@@ -62,17 +95,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
                 } catch (final IllegalArgumentException e) {
                 }
             }
-            return unknown;
-        }
-
-        /**
-         * Helper method to check if a subject is a valid Tenant API action.
-         *
-         * @param subject The subject to validate.
-         * @return boolean {@link Boolean#TRUE} if the subject denotes a valid action, {@link Boolean#FALSE} otherwise.
-         */
-        public static boolean isValid(final String subject) {
-            return TenantAction.from(subject) != TenantAction.unknown;
+            return custom;
         }
     }
 

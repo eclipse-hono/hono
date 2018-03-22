@@ -16,6 +16,8 @@ package org.eclipse.hono.service.tenant;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.EventBusService;
@@ -81,35 +83,65 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
         final JsonObject payload = request.getJsonPayload();
 
         if (tenantId == null && payload == null) {
+
             log.debug("request does not contain any query parameters");
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else if (payload != null) {
-            final String tenantIdFromPayload = getTypesafeValueForField(payload, TenantConstants.FIELD_PAYLOAD_TENANT_ID);
-            if (tenantIdFromPayload == null) {
-                log.debug("payload does not contain any query parameters");
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-            } else {
-                log.debug("retrieving tenant [id: {}]", tenantIdFromPayload);
-                final Future<TenantResult<JsonObject>> getResult = Future.future();
-                get(tenantIdFromPayload, getResult.completer());
-                return getResult.map(tr -> {
-                    return request.getResponse(tr.getStatus())
-                            .setJsonPayload(tr.getPayload())
-                            .setTenant(tenantIdFromPayload)
-                            .setCacheDirective(tr.getCacheDirective());
-                });
-            }
-        } else {
+
+        } else if (tenantId != null) {
+
             // deprecated API
             log.debug("retrieving tenant [{}] using deprecated variant of get tenant request", tenantId);
+            return processGetByIdRequest(request, tenantId);
+
+        } else {
+
+            final String tenantIdFromPayload = getTypesafeValueForField(payload, TenantConstants.FIELD_PAYLOAD_TENANT_ID);
+            final String subjectDn = getTypesafeValueForField(payload, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+
+            if (tenantIdFromPayload == null && subjectDn == null) {
+                log.debug("payload does not contain any query parameters");
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            } else if (tenantIdFromPayload != null) {
+                log.debug("retrieving tenant [id: {}]", tenantIdFromPayload);
+                return processGetByIdRequest(request, tenantIdFromPayload);
+            } else {
+                return processGetByCaRequest(request, subjectDn);
+            }
+        }
+    }
+
+    private Future<EventBusMessage> processGetByIdRequest(final EventBusMessage request, final String tenantId) {
+
+        final Future<TenantResult<JsonObject>> getResult = Future.future();
+        get(tenantId, getResult.completer());
+        return getResult.map(tr -> {
+            return request.getResponse(tr.getStatus())
+                    .setJsonPayload(tr.getPayload())
+                    .setTenant(tenantId)
+                    .setCacheDirective(tr.getCacheDirective());
+        });
+    }
+
+    private Future<EventBusMessage> processGetByCaRequest(final EventBusMessage request, final String subjectDn) {
+
+        try {
+            final X500Principal dn = new X500Principal(subjectDn);
+            log.debug("retrieving tenant [subject DN: {}]", subjectDn);
             final Future<TenantResult<JsonObject>> getResult = Future.future();
-            get(tenantId, getResult.completer());
+            get(dn, getResult.completer());
             return getResult.map(tr -> {
-                return request.getResponse(tr.getStatus())
+                final EventBusMessage response = request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())
-                        .setTenant(tenantId)
                         .setCacheDirective(tr.getCacheDirective());
+                if (tr.isOk() && tr.getPayload() != null) {
+                    response.setTenant((String) getTypesafeValueForField(tr.getPayload(), TenantConstants.FIELD_PAYLOAD_TENANT_ID));
+                }
+                return response;
             });
+        } catch (final IllegalArgumentException e) {
+            // the given subject DN is invalid
+            log.debug("cannot parse subject DN [{}] provided by client", subjectDn);
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
     }
 
@@ -268,6 +300,8 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     }
 
     /**
+<<<<<<< Upstream, based on dummy
+=======
      * {@inheritDoc}
      *
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
@@ -275,6 +309,19 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
      */
     @Override
     public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+>>>>>>> 784db0b remaining changes
+     * {@inheritDoc}
+     *
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void get(final X500Principal subjectDn,
+            final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
