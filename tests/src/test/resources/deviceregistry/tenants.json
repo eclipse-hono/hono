@@ -1,32 +1,28 @@
 [
   {
-    "tenant": "DEFAULT_TENANT",
-    "data": {
-      "enabled": true
-    }
+    "tenant-id": "DEFAULT_TENANT",
+    "enabled": true
   },
   {
-    "tenant": "HTTP_ONLY",
-    "data": {
-      "enabled": true
-    },
-    "adapters": {
-      "hono-http": {
+    "tenant-id": "HTTP_ONLY",
+    "enabled": true,
+    "adapters": [
+      {
+        "type": "hono-http",
         "enabled": true,
         "device-authentication-required": true
       }
-    }
+    ]
   },
   {
-    "tenant": "MQTT_ONLY",
-    "data": {
-      "enabled": "true"
-    },
-    "adapters": {
-      "hono-mqtt": {
+    "tenant-id": "MQTT_ONLY",
+    "enabled": "true",
+    "adapters": [
+      {
+        "type": "hono-mqtt",
         "enabled": true,
         "device-authentication-required": true
       }
-    }
+    ]
   }
 ]

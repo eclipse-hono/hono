@@ -20,6 +20,7 @@ import java.util.Optional;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,5 +192,26 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
         } catch (ClassCastException e) {
             return null;
         }
+    }
+
+    /**
+     * Gets the payload from a request message.
+     * <p>
+     * The returned JSON object contains the given payload (if not {@code null}).
+     * If the given payload does not contain an <em>enabled</em> property, then
+     * it is added with value {@code true} to the returned object.
+     * 
+     * @param payload The payload from the request message.
+     * @return The payload (never {@code null}).
+     */
+    protected final JsonObject getRequestPayload(final JsonObject payload) {
+
+        final JsonObject result = Optional.ofNullable(payload).orElse(new JsonObject());
+        final Boolean enabled = getTypesafeValueForField(result, RequestResponseApiConstants.FIELD_ENABLED);
+        if (enabled == null) {
+            log.debug("adding 'enabled=true' property to request payload");
+            result.put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE);
+        }
+        return result;
     }
 }

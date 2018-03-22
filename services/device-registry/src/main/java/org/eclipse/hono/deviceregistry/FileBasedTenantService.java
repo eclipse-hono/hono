@@ -16,12 +16,11 @@ package org.eclipse.hono.deviceregistry;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 
 import org.eclipse.hono.service.tenant.BaseTenantService;
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -43,21 +42,10 @@ import io.vertx.core.json.JsonObject;
 @Repository
 public final class FileBasedTenantService extends BaseTenantService<FileBasedTenantsConfigProperties> {
 
-    /**
-     * The name of the JSON property containing the tenant ID.
-     */
-    public static final String FIELD_TENANT = "tenant";
-    /**
-     * The name of the JSON property containing the tenant data.
-     */
-    public static final String FIELD_DATA = "data";
-
     private static final long MAX_AGE_GET_TENANT = 180L; // seconds
 
-    // <tenantId, tenantPropertyValueObject>
-    private final Map<String, JsonObject> tenants = new HashMap<>();
-    // <tenantId, <adapterType, adapterDataObject>>
-    private final Map<String, Map<String, JsonObject>> tenantsAdapterConfigurations = new HashMap<>();
+    // <ID, tenant>
+    private final Map<String, TenantObject> tenants = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
 
@@ -79,7 +67,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             }
 
             if (getConfig().getFilename() == null) {
-                log.debug("tenant manager filename is not set, no tenant information will be loaded");
+                log.debug("tenant file name is not set, tenant information will not be loaded");
                 running = true;
                 startFuture.complete();
             } else {
@@ -137,15 +125,17 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
 
         final Future<Void> result = Future.future();
         try {
-            int tenantCount = 0;
-            final JsonArray allObjects = tenantsBuffer.toJsonArray();
-            for (final Object obj : allObjects) {
-                if (JsonObject.class.isInstance(obj)) {
-                    tenantCount++;
-                    addTenants((JsonObject) obj);
+            if (tenantsBuffer.length() > 0) {
+                int tenantCount = 0;
+                final JsonArray allObjects = tenantsBuffer.toJsonArray();
+                for (final Object obj : allObjects) {
+                    if (JsonObject.class.isInstance(obj)) {
+                        tenantCount++;
+                        addTenant((JsonObject) obj);
+                    }
                 }
+                log.info("successfully loaded {} tenants from file [{}]", tenantCount, getConfig().getFilename());
             }
-            log.info("successfully loaded {} tenants from file [{}]", tenantCount, getConfig().getFilename());
             result.complete();
         } catch (final DecodeException e) {
             log.warn("cannot read malformed JSON from tenants file [{}]", getConfig().getFilename());
@@ -154,30 +144,14 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         return result;
     }
 
-    private void addTenants(final JsonObject tenant) {
-        final String tenantId = tenant.getString(FIELD_TENANT);
-        if (tenantId != null) {
+    private void addTenant(final JsonObject tenant) {
 
-            log.debug("loading tenant [{}]", tenantId);
-            final JsonObject tenantData = (JsonObject) tenant.getJsonObject(FIELD_DATA);
-
-            tenants.put(tenantId, tenantData);
-            final JsonObject adaptersData = (JsonObject) tenant.getJsonObject(TenantConstants.FIELD_ADAPTERS);
-
-            if (adaptersData != null) {
-                final Map<String, JsonObject> adapterPropertiesMap = new HashMap<>();
-
-                for (final String adapterType : adaptersData.fieldNames()) {
-                    if (adapterType != null) {
-                        final JsonObject adapterConfigObject = adaptersData.getJsonObject(adapterType);
-                        if (JsonObject.class.isInstance(adapterConfigObject)) {
-                            log.debug("loading adapter properties for type [{}]", adapterType);
-                            adapterPropertiesMap.put(adapterType, adapterConfigObject);
-                        }
-                    }
-                }
-                tenantsAdapterConfigurations.put(tenantId, adapterPropertiesMap);
-            }
+        try {
+            final TenantObject tenantObject = tenant.mapTo(TenantObject.class);
+            log.debug("loading tenant [{}]", tenantObject.getTenantId());
+            tenants.put(tenantObject.getTenantId(), tenantObject);
+        } catch (IllegalArgumentException e) {
+            log.warn("cannot deserialize tenant", e);
         }
     }
 
@@ -200,27 +174,11 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             return Future.succeededFuture();
         } else if (dirty) {
             return checkFileExists(true).compose(s -> {
+
                 final JsonArray tenantsJson = new JsonArray();
-
-                for (final Entry<String, JsonObject> entry : tenants.entrySet()) {
-                    final String tenantId = entry.getKey();
-                    final JsonObject tenantJson = new JsonObject();
-                    tenantJson.put(FIELD_TENANT, entry.getKey());
-                    tenantJson.put(FIELD_DATA, entry.getValue());
-
-                    // now the adapters (if any)
-                    final Map<String, JsonObject> adapters = tenantsAdapterConfigurations.get(tenantId);
-                    if (adapters != null) {
-                        final JsonObject adaptersJson = new JsonObject();
-                        for (final Entry<String, JsonObject> adapterEntry : adapters.entrySet()) {
-                            final String adapterType = adapterEntry.getKey();
-                            adaptersJson.put(adapterType, adapterEntry.getValue());
-                        }
-                        tenantJson.put(TenantConstants.FIELD_ADAPTERS, adaptersJson);
-                    }
-
-                    tenantsJson.add(tenantJson);
-                }
+                tenants.values().stream().forEach(tenant -> {
+                    tenantsJson.add(JsonObject.mapFrom(tenant));
+                });
 
                 final Future<Void> writeHandler = Future.future();
                 vertx.fileSystem().writeFile(getConfig().getFilename(),
@@ -243,41 +201,30 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
 
     @Override
     public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
+
         resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId)));
     }
 
     TenantResult<JsonObject> getTenantResult(final String tenantId) {
-        final JsonObject data = tenants.get(tenantId);
 
-        if (data != null) {
-            final JsonArray adapterConfigurationsJson = getAdapterConfigurationsData(tenantId);
+        final TenantObject tenant = tenants.get(tenantId);
+
+        if (tenant == null) {
+            return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+        } else {
             return TenantResult.from(
                     HttpURLConnection.HTTP_OK,
-                    getResultPayload(tenantId, data, adapterConfigurationsJson),
+                    JsonObject.mapFrom(tenant),
                     CacheDirective.maxAgeDirective(MAX_AGE_GET_TENANT));
-        } else {
-            return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
         }
-    }
-
-    private JsonArray getAdapterConfigurationsData(final String tenantId) {
-        final Map<String, JsonObject> adapterConfigurations = tenantsAdapterConfigurations.get(tenantId);
-        if (adapterConfigurations == null) {
-            return null;
-        }
-        final JsonArray adapterDataArray = new JsonArray();
-        for (final Entry<String, JsonObject> configEntry : adapterConfigurations.entrySet()) {
-            final JsonObject data = new JsonObject();
-            data.put(TenantConstants.FIELD_ADAPTERS_TYPE, configEntry.getKey()).mergeIn(configEntry.getValue());
-            adapterDataArray.add(data);
-        }
-        return adapterDataArray;
     }
 
     @Override
     public void remove(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
         resultHandler.handle(Future.succeededFuture(removeTenant(tenantId)));
@@ -290,7 +237,6 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         if (getConfig().isModificationEnabled()) {
             if (tenants.remove(tenantId) != null) {
                 dirty = true;
-                tenantsAdapterConfigurations.remove(tenantId);
                 return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
             } else {
                 return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
@@ -301,121 +247,100 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
     }
 
     @Override
-    public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public void add(final String tenantId, final JsonObject tenantSpec, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(tenantObj);
+        Objects.requireNonNull(tenantSpec);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(addOrUpdateTenant(tenantId, tenantObj, false)));
+        resultHandler.handle(Future.succeededFuture(add(tenantId, tenantSpec)));
     }
 
     /**
-     * Adds or updates a tenant to this tenant registry.
+     * Adds a tenant.
      *
-     * @param tenantId The tenant to add.
-     * @param data Additional data to register with the tenant (may be {@code null}).
-     * @param update If true, an existing tenant shall be overwritten (otherwise the outcome of this method will result
-     *               in {@link java.net.HttpURLConnection#HTTP_CONFLICT};
+     * @param tenantId The identifier of the tenant.
+     * @param tenantSpec The information to register for the tenant.
      * @return The outcome of the operation indicating success or failure.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public TenantResult<JsonObject> addOrUpdateTenant(final String tenantId, final JsonObject data, final boolean update) {
+    public TenantResult<JsonObject> add(final String tenantId, final JsonObject tenantSpec) {
 
-        if (!getConfig().isModificationEnabled()) {
-            return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(tenantSpec);
+
+        if (getConfig().isModificationEnabled()) {
+            if (tenants.containsKey(tenantId)) {
+                return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
+            } else {
+                try {
+                    final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
+                    tenant.setTenantId(tenantId);
+                    tenants.put(tenantId, tenant);
+                    dirty = true;
+                    return TenantResult.from(HttpURLConnection.HTTP_CREATED);
+                } catch (IllegalArgumentException e) {
+                    return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
+                }
+            }
         } else {
-            Objects.requireNonNull(tenantId);
-            if (update) {
-                if (!tenants.containsKey(tenantId)) {
-                    return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
-                }
-            } else {
-                if (tenants.containsKey(tenantId)) {
-                    return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
-                }
-            }
-
-            final JsonObject obj = data != null ? data : new JsonObject().put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-
-            try {
-                final JsonArray adaptersConfigurationArray = obj.getJsonArray(TenantConstants.FIELD_ADAPTERS);
-                if (adaptersConfigurationArray != null) {
-                    final Map<String, JsonObject> adapterConfigurationsMap = new HashMap<>();
-                    for (int i = 0; i < adaptersConfigurationArray.size(); i++) {
-                        final JsonObject adapterConfiguration = adaptersConfigurationArray.getJsonObject(i);
-                        final String adapterType = (String) adapterConfiguration.remove(TenantConstants.FIELD_ADAPTERS_TYPE);
-
-                        if (adapterType != null) {
-                            adapterConfiguration.remove(TenantConstants.FIELD_ADAPTERS_TYPE);
-                            adapterConfigurationsMap.put(adapterType, adapterConfiguration);
-                        } else {
-                            return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
-                        }
-                    }
-                    // all is checked and prepared, now store it internally
-                    tenantsAdapterConfigurations.put(tenantId, adapterConfigurationsMap);
-                } else {
-                    // in case of update: remove a possibly existing previous entry
-                    tenantsAdapterConfigurations.remove(tenantId);
-                }
-            } catch (final ClassCastException cce) {
-                log.debug("addTenant invoked with wrong type for {}: not a JsonArray!", TenantConstants.FIELD_ADAPTERS);
-                return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
-            }
-
-            dirty = true;
-
-            obj.remove(FIELD_TENANT);
-            obj.remove(TenantConstants.FIELD_ADAPTERS);
-            tenants.put(tenantId, obj);
-
-            if (update) {
-                return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
-            } else {
-                return TenantResult.from(HttpURLConnection.HTTP_CREATED);
-            }
+            return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
     }
 
-    public void update(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    @Override
+    public void update(final String tenantId, final JsonObject tenantSpec, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(tenantObj);
+        Objects.requireNonNull(tenantSpec);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(addOrUpdateTenant(tenantId, tenantObj, true)));
+        resultHandler.handle(Future.succeededFuture(update(tenantId, tenantSpec)));
+    }
+
+    /**
+     * Updates a tenant.
+     *
+     * @param tenantId The identifier of the tenant.
+     * @param tenantSpec The information to update the tenant with.
+     * @return The outcome of the operation indicating success or failure.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public TenantResult<JsonObject> update(final String tenantId, final JsonObject tenantSpec) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(tenantSpec);
+
+        if (getConfig().isModificationEnabled()) {
+            if (tenants.containsKey(tenantId)) {
+                try {
+                    final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
+                    tenant.setTenantId(tenantId);
+                    tenants.put(tenantId, tenant);
+                    dirty = true;
+                    return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
+                } catch (IllegalArgumentException e) {
+                    return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
+                }
+            } else {
+                return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+            }
+        } else {
+            return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
+        }
     }
 
     /**
      * Removes all devices from the tenant registry.
      */
     public void clear() {
-        dirty = true;
         tenants.clear();
-        tenantsAdapterConfigurations.clear();
+        dirty = true;
     }
 
     @Override
     public String toString() {
         return String.format("%s[filename=%s]", FileBasedTenantService.class.getSimpleName(),
                 getConfig().getFilename());
-    }
-
-    /**
-     * Wraps a given tenant ID, its properties data and its adapter configuration data into a JSON structure suitable
-     * to be returned to clients as the result of a tenant API operation.
-     *
-     * @param tenantId The tenant ID.
-     * @param data The tenant properties data.
-     * @param adapterConfigurations The adapter configurations data for the tenant as JsonArray.
-     * @return The JSON structure.
-     */
-    private static final JsonObject getResultPayload(final String tenantId, final JsonObject data,
-                                                       final JsonArray adapterConfigurations) {
-        final JsonObject result = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
-                .mergeIn(data);
-        if (adapterConfigurations != null) {
-            result.put(TenantConstants.FIELD_ADAPTERS, adapterConfigurations);
-        }
-        return result;
     }
 }

@@ -13,7 +13,6 @@ package org.eclipse.hono.service.registration;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
@@ -431,17 +430,6 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
         if (defaults != null) {
             result.put(RegistrationConstants.FIELD_DEFAULTS, defaults);
-        }
-        return result;
-    }
-
-    private JsonObject getRequestPayload(final JsonObject payload) {
-
-        final JsonObject result = Optional.ofNullable(payload).orElse(new JsonObject());
-        final Boolean enabled = result.getBoolean(RegistrationConstants.FIELD_ENABLED);
-        if (enabled == null) {
-            log.debug("adding 'enabled=true' property to request payload");
-            result.put(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
         }
         return result;
     }

@@ -116,7 +116,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     private Future<EventBusMessage> processAddRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
-        final JsonObject payload = request.getJsonPayload(new JsonObject());
+        final JsonObject payload = getRequestPayload(request.getJsonPayload());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
@@ -141,7 +141,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     private Future<EventBusMessage> processUpdateRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
-        final JsonObject payload = request.getJsonPayload(new JsonObject());
+        final JsonObject payload = getRequestPayload(request.getJsonPayload());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
