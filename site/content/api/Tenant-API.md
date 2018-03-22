@@ -59,10 +59,10 @@ The following table provides an overview of the properties a client needs to set
 | Name        | Mandatory | Location                 | Type     | Description |
 | :---------- | :-------: | :----------------------- | :------- | :---------- |
 | *subject*   | yes       | *properties*             | *string* | MUST be set to `add`. |
+| *tenant_id* | yes       | *application-properties* | *string* | MUST contain the ID of the tenant to add. |
 
 The request message MUST contain a tenant payload as defined in the [Request Payload]({{< relref "#request-payload" >}}) section below.
 
- 
 **Response Message Format**
 
 A response to an *add tenant* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
@@ -73,7 +73,7 @@ The response message's *status* property may contain the following codes:
 | :---- | :---------- |
 | *201* | Created, the tenant has been successfully created. |
 | *400* | Bad Request, the tenant has NOT been created due to invalid data in the request. |
-| *409* | Conflict, there already exists a tenant for the given *tenant_id*. |
+| *409* | Conflict, there already exists a tenant with the same *tenant_id* or using a trusted certificate authority with the same subject DN. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -96,6 +96,7 @@ The following table provides an overview of the properties a client needs to set
 | Name        | Mandatory | Location                 | Type     | Description |
 | :---------- | :-------: | :----------------------- | :------- | :---------- |
 | *subject*   | yes       | *properties*             | *string* | MUST be set to `get`. |
+| *tenant_id* | yes       | *application-properties* | *string* | MUST contain the ID of the tenant to get. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
@@ -111,6 +112,55 @@ The response message's *status* property may contain the following codes:
 | :--- | :---------- |
 | *200* | OK, the payload contains the tenant information for the requested tenant. |
 | *404* | Not Found, there is no tenant identified with the given *tenant_id*. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
+## Get Tenant Information by Trusted Certificate Authority
+
+Clients use this command to *retrieve* information about a tenant by the *subject DN* of the trusted certificate authority configured for the tenant.
+
+This operation is *mandatory* to implement.
+
+**Message Flow**
+
+The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving tenant information.
+
+![Get Tenant Information by CA message flow](../tenant_GetTenantByCaSuccess.png)
+
+**Request Message Format**
+
+The following table provides an overview of the properties a client needs to set on a message to get tenant information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name        | Mandatory | Location                 | Type     | Description |
+| :---------- | :-------: | :----------------------- | :------- | :---------- |
+| *subject*   | yes       | *properties*             | *string* | MUST be set to `getByCa`. |
+
+The body of the request MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following members:
+
+| Name             | Mandatory | Type       | Description |
+| :--------------- | :-------: | :--------- | :---------- |
+| *subject-dn*     | *yes*     | *string*   | The subject DN of the trusted certificate authority's public key in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
+
+The following request payload may be used to look up the tenant for which a trusted certificate authority with subject DN `O=ACME Corporation, CN=devices` has been configured:
+
+~~~json
+{
+  "subject-dn": "CN=devices,O=ACME Corporation"
+}
+~~~
+
+**Response Message Format**
+
+A response to a *get tenant information by CA* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The response message includes payload as defined in the [Response Payload]({{< relref "#response-payload" >}}) section below.
+
+The response message's *status* property may contain the following codes:
+
+| Code | Description |
+| :--- | :---------- |
+| *200* | OK, the payload contains the tenant information for the tenant configured with a trusted certificate authority that matches the given subject DN. |
+| *404* | Not Found, there is no tenant identified with the given subject DN. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -143,6 +193,7 @@ The following table provides an overview of the properties a client needs to set
 | Name        | Mandatory | Location                 | Type     | Description |
 | :---------- | :-------: | :----------------------- | :------- | :---------- |
 | *subject*   | yes       | *properties*             | *string* | MUST be set to `update`. |
+| *tenant_id* | yes       | *application-properties* | *string* | MUST contain the ID of the tenant to update. |
 
 The request message MUST include payload as defined in the [Request Payload]({{< relref "#request-payload" >}}) section below.
  
@@ -157,6 +208,7 @@ The response message's *status* property may contain the following codes:
 | *204* | No Content, the tenant has been updated successfully. |
 | *400* | Bad Request, the tenant has NOT been updated due to invalid data in the request. |
 | *404* | Not Found, there is no tenant identified with the given *tenant_id*. |
+| *409* | Conflict, there already exists another tenant that uses a trusted certificate authority with the same subject DN. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -190,6 +242,7 @@ The following table provides an overview of the properties a client needs to set
 | Name        | Mandatory | Location                 | Type     | Description |
 | :---------- | :-------: | :----------------------- | :------- | :---------- |
 | *subject*   | yes       | *properties*             | *string* | MUST be set to `remove`. |
+| *tenant_id* | yes       | *application-properties* | *string* | MUST contain the ID of the tenant to remove. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
@@ -221,7 +274,6 @@ The following table provides an overview of the properties shared by all request
 | *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
 | *message-id*     | yes       | *properties*             | *string*     | MUST contain an identifier that uniquely identifies the message at the sender side. |
 | *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
-| *tenant_id*      | yes       | *application-properties* | *string*     | MUST contain the ID of the tenant that is subject to the operation. |
 
 ## Standard Response Properties
 
@@ -252,19 +304,22 @@ messages as part of a single *AMQP Value* section.
 The tenant data is carried in the payload as a UTF-8 encoded string representation of a single JSON object. It is an error to include payload that is not of this type.
 
 ## Request Payload
+
 The table below provides an overview of the standard members defined for the JSON request object:
 
-| Name                     | Mandatory | Type       | Default Value | Description |
-| :------------------------| :-------: | :--------- | :------------ | :---------- |
-| *enabled*                | *no*      | *boolean*  | `true`        | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices.
-| *adapters*               | *no*      | *array*    |               | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration.
+| Name                     | Mandatory | Type          | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
+| *trusted-ca*             | *no*      | *JSON object* |               | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *adapters*               | *no*      | *array*       |               | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 
-If any of the mandatory members is either missing or present with invalid data in the payload object operations MUST return status code *`400` - Bad Request*.
+If any of the mandatory members is either missing or contains invalid data, implementations MUST NOT accept the payload and return *400 Bad Request* status code.
 
-Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
+The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
 This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
 
 ### Examples
+
 Below is an example for a request payload defining an *enabled* tenant.
 Devices belonging to the tenant can connect to Hono via the rest-adapter only and are required to authenticate with the adapter on connection.
 
@@ -277,31 +332,61 @@ Devices belonging to the tenant can connect to Hono via the rest-adapter only an
     {
       "type": "hono-http",
       "enabled": true,
-      "device-authentication-required": true
+      "device-authentication-required": true,
+      "deployment": {
+        "maxInstances": 4
+      }
     }
   ]
 }
 ~~~
 
-In the following example the tenant is allowed to use **all** adapters, as the `adapters` property is omitted in the tenant configuration:
+In the following example the tenant is allowed to use **all** adapters, as the `adapters` property is omitted in the tenant configuration (note that the payload also contains a custom property *plan* which might be used to indicate the customer's service level):
 
 ~~~json
 {
   "enabled": true
+  "plan": "gold",
+}
+~~~
+
+The following example contains information for a tenant including the public key of the trusted root certificate authority (note that the example does not contain the complete Base64 encoding of the public key for reasons of brevity):
+
+~~~json
+{
+  "enabled": true,
+  "trusted-ca": {
+    "subject-dn": "CN=devices,O=ACME Corporation",
+    "public-key": "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEApK5L6yUknQnj4FREQqs/ ..."
+  }
 }
 ~~~
 
 ## Response Payload
+
 The table below provides an overview of the standard members defined for the JSON response object:
 
 | Name                     | Mandatory | Type       | Description |
 | :------------------------| :-------: | :--------- | :---------- |
 | *tenant-id*              | *yes*     | *string*   | The ID of the tenant. |
-| *enabled*                | *yes*     | *boolean*  | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices.
-| *adapters*               | *no*      | *array*    | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration.
+| *enabled*                | *yes*     | *boolean*  | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
+| *trusted-ca*             | *no*      | *JSON object* |               | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *adapters*               | *no*      | *array*    | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 
 Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
 This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
+
+## Trusted CA Format
+
+The table below provides an overview of the members defined for the *trusted-ca* JSON object:
+
+| Name                     | Mandatory | Type          | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
+| *public-key*             | *yes*      | *string*      |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
+
+The *subject-dn* MUST be unique among all registered tenants. Implementations MUST reject requests to add or update a tenant with payload that contains a subject DN that is already configured for another tenant and return a status code of *409 Conflict*.
+
 
 ## Adapter Configuration Format
 
@@ -315,16 +400,17 @@ The table below contains the properties which are used to configure a *Hono prot
 
 Protocol Adapters SHOULD use the configuration properties set for a tenant when interacting with devices of that tenant, e.g. in order to make authorization decisions or to limit message rates per tenant etc.
 
-Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
+The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
 
 ### Examples
 
-Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`.
+Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. Note that the payload contains some *custom* properties at both the tenant as well as the adapter configuration level.
 
 ~~~json
 {
   "tenant-id" : "TEST_TENANT",
   "enabled" : true,
+  "plan": "gold",
   "adapters" : [ {
     "type" : "hono-mqtt",
     "enabled" : true,
@@ -332,7 +418,10 @@ Below is an example for a payload of the response to a *get* request for tenant 
   }, {
     "type" : "hono-http",
     "enabled" : true,
-    "device-authentication-required" : true
+    "device-authentication-required" : true,
+    "deployment": {
+      "maxInstances": 4
+    }
   } ]
 }
 ~~~

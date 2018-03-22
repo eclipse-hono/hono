@@ -13,10 +13,12 @@
 
 package org.eclipse.hono.service.tenant;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.EventBusMessage;
@@ -53,28 +55,76 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
     }
 
     /**
-     * Checks if the client of the tenant API is authorized to execute a given operation.
+     * Checks if the client is authorized to invoke an operation.
      * <p>
-     * This check makes use of the provided tenantId by enriching the resource with it.
-     * So permission checks can be done on a per tenant level, although the endpoint the client
-     * connects to does not include the tenantId (like for several other of Hono's APIs).
+     * If the request does not include a <em>tenant_id</em> application property
+     * then the request is authorized by default. This behavior allows clients to
+     * invoke operations that do not require a tenant ID as a parameter. In such
+     * cases the {@link #filterResponse(HonoUser, EventBusMessage)} method is used
+     * to verify that the response only contains data that the client is authorized
+     * to retrieve.
+     * <p>
+     * If the request does contain a tenant ID parameter in its application properties
+     * then this tenant ID is used for the authorization check together with the
+     * endpoint and operation name.
      *
      * @param clientPrincipal The client.
      * @param resource The resource the operation belongs to.
-     * @param message The message for which the authorization shall be checked.
+     * @param request The message for which the authorization shall be checked.
      * @return The outcome of the check.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Override
-    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final Message message) {
+    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final Message request) {
 
-        Objects.requireNonNull(message);
+        Objects.requireNonNull(request);
 
-        final String tenantId = MessageHelper.getTenantId(message);
-        final ResourceIdentifier specificTenantAddress =
-                ResourceIdentifier.from(resource.getEndpoint(), tenantId, null);
+        final String tenantId = MessageHelper.getTenantId(request);
+        if (tenantId == null) {
+            // delegate authorization check to filterResource operation
+            return Future.succeededFuture(Boolean.TRUE);
+        } else {
+            final ResourceIdentifier specificTenantAddress =
+                    ResourceIdentifier.fromPath(new String[] { resource.getEndpoint(), tenantId });
 
-        return getAuthorizationService().isAuthorized(clientPrincipal, specificTenantAddress, message.getSubject());
+            return getAuthorizationService().isAuthorized(clientPrincipal, specificTenantAddress, request.getSubject());
+        }
+    }
+
+    /**
+     * Verifies that a response only contains tenant information that the
+     * client is authorized to retrieve.
+     * <p>
+     * If the response does not contain a tenant ID nor a payload, then the
+     * response is returned as-is.
+     * Otherwise the tenant ID is used together with the endpoint and operation
+     * name to check the client's authority to retrieve the data. If the check
+     * succeeds, the response will be returned as-is, otherwise the returned
+     * future will be failed with a {@link ClientErrorException} containing a
+     * <em>403 Forbidden</em> status.
+     */
+    @Override
+    protected Future<EventBusMessage> filterResponse(
+            final HonoUser clientPrincipal,
+            final EventBusMessage response) {
+
+        Objects.requireNonNull(clientPrincipal);
+        Objects.requireNonNull(response);
+
+        if (response.getTenant() == null || response.getJsonPayload() == null) {
+            return Future.succeededFuture(response);
+        } else {
+            // verify that payload contains tenant that the client is authorized for
+            final ResourceIdentifier resourceId = ResourceIdentifier.from(TenantConstants.TENANT_ENDPOINT, response.getTenant(), null);
+            return getAuthorizationService().isAuthorized(clientPrincipal, resourceId, response.getOperation())
+                    .map(isAuthorized -> {
+                        if (isAuthorized) {
+                            return response;
+                        } else {
+                            throw new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN);
+                        }
+                    });
+        }
     }
 
     @Override

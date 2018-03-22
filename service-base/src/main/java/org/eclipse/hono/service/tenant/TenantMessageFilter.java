@@ -16,14 +16,12 @@ package org.eclipse.hono.service.tenant;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.BaseMessageFilter;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A filter for verifying the format of <em>Tenant</em> messages.
+ * A filter for verifying the format of <em>Tenant API</em> request messages.
  */
 public final class TenantMessageFilter extends BaseMessageFilter {
 
@@ -42,14 +40,11 @@ public final class TenantMessageFilter extends BaseMessageFilter {
      */
     public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
 
-        if (MessageHelper.getTenantId(msg) == null) {
-            LOG.trace("message [{}] does not contain a tenant-id", msg.getMessageId());
-            return false;
-        } else if (msg.getMessageId() == null && msg.getCorrelationId() == null) {
+        if (msg.getMessageId() == null && msg.getCorrelationId() == null) {
             LOG.trace("message has neither a message-id nor correlation-id");
             return false;
-        } else if (!TenantConstants.TenantAction.isValid(msg.getSubject())) {
-            LOG.trace("message [{}] does not contain valid action property", msg.getMessageId());
+        } else if (msg.getSubject() == null) {
+            LOG.trace("message [{}] does not contain subject", msg.getMessageId());
             return false;
         } else if (msg.getReplyTo() == null) {
             LOG.trace("message [{}] contains no reply-to address", msg.getMessageId());
