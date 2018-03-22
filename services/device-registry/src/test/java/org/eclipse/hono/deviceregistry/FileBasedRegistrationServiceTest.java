@@ -351,7 +351,7 @@ public class FileBasedRegistrationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testProcessRegisterMessageFailsWithUnsupportedAction(final TestContext ctx) {
+    public void testProcessRequestFailsWithUnsupportedAction(final TestContext ctx) {
 
         registrationService
             .processRequest(EventBusMessage.forOperation("unknown-action"))
