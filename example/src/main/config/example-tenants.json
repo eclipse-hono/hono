@@ -2,13 +2,13 @@
   {
     "tenant": "DEFAULT_TENANT",
     "data": {
-      "enabled": "true"
+      "enabled": true
     }
   },
   {
     "tenant": "HTTP_TENANT",
     "data": {
-      "enabled": "true"
+      "enabled": true
     },
     "adapters": {
       "hono-http": {
