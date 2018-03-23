@@ -11,11 +11,11 @@ The Event API is defined by means of AMQP 1.0 message exchanges, i.e. a client n
 
 The *Event* API is identical to the [*Telemetry* API]({{< relref "Telemetry-API.md" >}}) regarding the provided operations and the message flow.
 
-The message format for arbitrary events is identical to the [*Telemetry* API]({{< relref "Telemetry-API.md" >}}) as well, but there is a special message format for *lifecycle notifications* which is defined [here]({{< relref "#lifecycle-notifications" >}}).
+Events provide a different quality of service for messages sent to the *Event* endpoint by 
+setting the <em>durable</em> property of the message header to {@code true}.
 
-Events provide a different quality of service for messages sent to the *Event* endpoint by routing them via a persistent message broker 
-to guarantee *AT LEAST ONCE* delivery. 
-*Lifecycle notifications* may be decided to not being persisted, but this is left to the setup of the *AMQP network* and is not further specified in the following.
+There are well-known events that are distinguished by their *content-type* which are defined [here]({{< relref "#well-known-event-message-types" >}}).   
+
 
 # Southbound Operations
 
@@ -85,10 +85,20 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 
 See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of message format. 
 
+## Well-known event message types
+
+Hono defines *well-known* events that are of a specific *content-type*.
+
+NB: currently there is only one such *well-known* event.
+
 ### Lifecycle Notifications
 
-To enable *Business Applications* to react to the online status of devices belonging to a specific tenant, a special type of event - named *lifecycle notification* - is predefined.
-Such a notification may be sent by protocol adapters as soon as a device connects, disconnects or even by the device itself. The purpose of the following is to *specify* the format of these notifications.
+To enable *Business Applications* to execute any functionality as soon as a device belonging to a specific tenant connects or disconnects to a protocol adapter, a special type of event - named *lifecycle notification* - is predefined.
+Such a notification may be sent by protocol adapters or even by the device itself. The purpose of the following is to specify the *format* of these notifications,
+without stating which part of the system publishes such events.
+
+*Lifecycle notifications* may be decided to not being durable, but this is left to the setup of the *AMQP network* and is not further specified in the following.
+
 
 ***Lifecycle Notification Payload***
 
@@ -104,8 +114,8 @@ The body of the event request MUST consist of a single *AMQP Value* section cont
 | :----------------- | :-------: | :--------- | :---------- |
 | *tenant-id*        | *yes*     | *string*   | The tenant identifier to send the notification for. |
 | *device-id*        | *yes*     | *string*   | The device identifier to send the notification for. |
-| *cause*            | *yes*     | *string*   | Value must be either "connected" or "disconnected" . |
-| *source*           | *no*      | *string*   | Value can be either the name of a protocol adapter ("hono-mqtt","hono-http","hono-kura"), if the device connected/disconnected to the appropriate protocol adapter,  or "device", if the device sent the notfication itself.
+| *cause*            | *yes*     | *string*   | Value must be either `connected` or `disconnected` . |
+| *source*           | *no*      | *string*   | Value can be either the name of a protocol adapter (`hono-mqtt`, `hono-http`, `hono-kura`), if the device connected/disconnected to the appropriate protocol adapter,  or `device`, if the device sent the notfication itself.
 
 
 Examples:
