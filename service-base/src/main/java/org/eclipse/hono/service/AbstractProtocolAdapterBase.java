@@ -352,18 +352,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, the future will fail.
      */
     protected final Future<Void> isConnected() {
-        final Future<Boolean> tenantCheck = Optional.ofNullable(tenantClient)
-                .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
-        final Future<Boolean> messagingCheck = Optional.ofNullable(messagingClient)
-                .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
-        final Future<Boolean> registrationCheck = Optional.ofNullable(registrationClient)
-                .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
+
+        final Future<Void> tenantCheck = Optional.ofNullable(tenantClient)
+                .map(client -> client.isConnected())
+                .orElse(Future.failedFuture(new IllegalStateException("Tenant service client is not set")));
+        final Future<Void> messagingCheck = Optional.ofNullable(messagingClient)
+                .map(client -> client.isConnected())
+                .orElse(Future.failedFuture(new IllegalStateException("Messaging client is not set")));
+        final Future<Void> registrationCheck = Optional.ofNullable(registrationClient)
+                .map(client -> client.isConnected())
+                .orElse(Future.failedFuture(new IllegalStateException("Device Registration service client is not set")));
         return CompositeFuture.all(tenantCheck, messagingCheck, registrationCheck).compose(ok -> {
-            if (tenantCheck.result() && messagingCheck.result() && registrationCheck.result()) {
-                return Future.succeededFuture();
-            } else {
-                return Future.failedFuture(new IllegalStateException("not connected"));
-            }
+            return Future.succeededFuture();
         });
     }
 

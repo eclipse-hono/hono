@@ -45,10 +45,10 @@ public interface HonoClient {
     /**
      * Checks whether this client is connected to the service.
      * 
-     * @return A succeeded future containing {@code true} if this client is connected,
-     *         {@code false} otherwise.
+     * @return A succeeded future if this client is connected.
+     *         Otherwise, the future will fail with a {@link ServerErrorException}.
      */
-    Future<Boolean> isConnected();
+    Future<Void> isConnected();
 
     /**
      * Connects to the Hono server using default options.

@@ -535,9 +535,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     private void forceClientMocksToConnected() {
-        when(tenantServiceClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
-        when(messagingClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
-        when(deviceRegistrationServiceClient.isConnected()).thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(tenantServiceClient.isConnected()).thenReturn(Future.succeededFuture());
+        when(messagingClient.isConnected()).thenReturn(Future.succeededFuture());
+        when(deviceRegistrationServiceClient.isConnected()).thenReturn(Future.succeededFuture());
     }
 
     private MqttEndpoint getMqttEndpointAuthenticated() {

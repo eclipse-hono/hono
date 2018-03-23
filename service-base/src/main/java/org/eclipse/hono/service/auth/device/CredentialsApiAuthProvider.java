@@ -85,14 +85,14 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         readinessHandler.register("connected-to-credentials-service", status -> {
-            Future<Boolean> checkResult = Optional.ofNullable(credentialsClient)
-                    .map(client -> client.isConnected()).orElse(Future.succeededFuture(Boolean.FALSE));
+            final Future<Void> checkResult = Optional.ofNullable(credentialsClient)
+                    .map(client -> client.isConnected())
+                    .orElse(Future.failedFuture(new IllegalStateException("Credentials service client is not set")));
             checkResult.map(connected -> {
-                if (connected) {
-                    status.tryComplete(Status.OK());
-                } else {
-                    status.tryComplete(Status.KO());
-                }
+                status.tryComplete(Status.OK());
+                return null;
+            }).otherwise(t -> {
+                status.tryComplete(Status.KO());
                 return null;
             });
         });

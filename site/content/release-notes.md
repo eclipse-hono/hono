@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 0.6-M2 (not yet released)
+
+### API Changes
+
+* The `HonoClient.isConnected()` method has been changed to return a `Future<Void>` instead of `Future<Boolean>`. The future will succeed if the client is connected and will fail otherwise. This change makes it easier to compose the check with other futures.
+
 ## 0.6-M1
 
 ### New Features

@@ -134,11 +134,15 @@ public class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public final Future<Boolean> isConnected() {
+    public final Future<Void> isConnected() {
 
-        final Future<Boolean> result = Future.future();
+        final Future<Void> result = Future.future();
         context.runOnContext(check -> {
-            result.complete(isConnectedInternal());
+            if (isConnectedInternal()) {
+                result.complete();
+            } else {
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+            }
         });
         return result;
     }
