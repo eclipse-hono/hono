@@ -100,6 +100,7 @@ public class EventBusMessage {
      * <li><em>correlationId</em></li>
      * <li><em>replyToAddress</em></li>
      * <li><em>tenant</em></li>
+     * </ul>
      * 
      * @param status The status code indicating the outcome of the operation.
      * @return The response message.
