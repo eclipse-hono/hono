@@ -25,6 +25,12 @@ Hono supports deployment to the following container orchestration platforms:
 * [OpenShift]({{< relref "deployment/openshift.md" >}})
 * [Docker Swarm]({{< relref "deployment/docker-swarm.md" >}})
 
+### Latest Milestone
+
+The newest features and bugfixes are available in *milestones* that are published every 4 -6 weeks. Please note that these milestones represent the latest *state of development* which also means that APIs or features may change from one milestone to the other. Installation works in the same way as for the latest stable release.
+
+* [Eclipse Hono 0.6-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.6-M1.tar.gz)
+
 ### Older Versions
 
 These artifacts are available for reference only. Please always use the latest version since this is the one we can provide the best support for.
