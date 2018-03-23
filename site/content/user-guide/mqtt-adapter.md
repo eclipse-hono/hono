@@ -22,7 +22,7 @@ Using QoS 1 will result in the adapter sending an MQTT *PUBACK* packet to the cl
 This requires that
 
 * the AMQP 1.0 Messaging Network has capacity to process telemetry messages for the client's tenant and
-* the messages published by the client comply with the format defined by the Tenant API.
+* the messages published by the client comply with the format defined by the Telemetry API.
 
 ## Publish Telemetry Data (authenticated Device)
 
