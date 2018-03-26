@@ -17,7 +17,7 @@ import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
 import org.springframework.stereotype.Component;
 
 /**
- * Metrics for the Kura adapter
+ * Metrics for the Kura adapter.
  */
 @Component
 public class KuraAdapterMetrics extends MqttAdapterMetrics {

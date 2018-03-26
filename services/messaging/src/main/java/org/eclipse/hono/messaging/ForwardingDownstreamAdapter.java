@@ -113,7 +113,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     /**
-     * Sets the metrics for this service
+     * Sets the metrics for this service.
      *
      * @param metrics The metrics
      */

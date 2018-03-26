@@ -89,7 +89,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
-     * Sets the metrics for this service
+     * Sets the metrics for this service.
      *
      * @param metrics The metrics
      */

@@ -23,7 +23,7 @@ import java.util.Objects;
 abstract public class Metrics {
 
     /**
-     * special prefixes used by spring boot actuator together with dropwizard metrics
+     * Special prefixes used by spring boot actuator together with dropwizard metrics.
      * @see <a href="https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-metrics.html#production-ready-dropwizard-metrics">Spring Boot</a>
      */
     protected static final String METER_PREFIX     = "meter.";
@@ -41,7 +41,7 @@ abstract public class Metrics {
     protected CounterService counterService = NullCounterService.getInstance();
 
     /**
-     * It is needed to set the specific service prefix; if no config is given it is not needed and will never be used
+     * It is needed to set the specific service prefix; if no config is given it is not needed and will never be used.
      *
      * @param metricConfig The metrics config
      */
@@ -51,7 +51,7 @@ abstract public class Metrics {
     }
 
     /**
-     * Deriving classes need to provide a prefix to scope the metrics of the service
+     * Deriving classes need to provide a prefix to scope the metrics of the service.
      *
      * @return The Prefix
      */
@@ -93,7 +93,7 @@ abstract public class Metrics {
     }
 
     /**
-     * Merge the given address parts as a full string, seperated by '.'
+     * Merge the given address parts as a full string, separated by '.'.
      * @param parts The address parts
      * @return The full address, separated by points
      */

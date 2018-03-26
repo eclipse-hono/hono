@@ -46,7 +46,7 @@ public abstract class AbstractAdapterConfig {
     private MetricsOptions metricsOptions;
 
     /**
-     * Vert.x metrics options, if configured
+     * Vert.x metrics options, if configured.
      *
      * @param metricsOptions Vert.x metrics options
      * @see MetricConfig

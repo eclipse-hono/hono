@@ -16,7 +16,7 @@ import org.eclipse.hono.service.metric.Metrics;
 import org.springframework.stereotype.Component;
 
 /**
- * Metrics for the MQTT adapter
+ * Metrics for the MQTT adapter.
  */
 @Component
 public class MqttAdapterMetrics extends Metrics {

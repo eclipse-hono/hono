@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Combination of the original classes
+ * Combination of the original classes.
  * <ul>
  * <li>io.vertx.ext.web.handler.impl.AuthHandlerImpl</li>
  * <li>io.vertx.ext.web.handler.impl.AuthorizationAuthHandler</li>
@@ -85,7 +85,8 @@ public class HonoAuthHandlerImpl implements AuthHandler {
     protected final Set<String> authorities = new HashSet<>();
 
     /**
-     * Create a new auth handler instance
+     * Create a new auth handler instance.
+     * 
      * @param authProvider The authentication provider to use
      * @param realm the realm to use
      */

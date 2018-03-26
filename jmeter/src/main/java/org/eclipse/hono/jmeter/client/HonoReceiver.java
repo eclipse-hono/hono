@@ -35,7 +35,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * Receiver, which connects to the AMQP network; asynchronous API needs to be used synchronous for JMeters threading
- * model
+ * model.
  */
 public class HonoReceiver extends AbstractClient {
 
