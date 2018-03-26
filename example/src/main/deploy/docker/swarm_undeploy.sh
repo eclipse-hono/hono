@@ -43,6 +43,7 @@ docker secret rm \
 
 docker service rm init-device-registry-data
 docker secret rm example-credentials.json
+docker secret rm example-tenants.json
 
 docker service rm hono-service-device-registry
 docker secret rm \
