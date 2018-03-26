@@ -261,26 +261,22 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     }
 
     /**
-     * Configure and check the sender link of the endpoint.
-     * The sender link is used for the response to a received request and is driven by the vertx event bus.
-     * It listens to the provided resource identifier of the endpoint as vertx event address and then sends the
-     * constructed response.
-     * Since the response is endpoint specific, it is an abstract method {@link #getAmqpReply(EventBusMessage)} and needs to be implemented
-     * by the subclass.
+     * Handles a client's request to establish a link for receiving responses
+     * to service invocations.
+     * <p>
+     * This method registers a consumer on the vert.x event bus for the given reply-to address.
+     * Response messages received over the event bus are transformed into AMQP messages using
+     * the {@link #getAmqpReply(EventBusMessage)} method and sent to the client over the established
+     * link.
      *
      * @param con The AMQP connection that the link is part of.
-     * @param sender The ProtonSender that has already been created for this endpoint.
-     * @param replyToAddress The resource identifier for the responses of this endpoint (see {@link ResourceIdentifier} for details).
-     *                      Note that the reply address is different for each client and is passed in during link creation.
+     * @param sender The link to establish.
+     * @param replyToAddress The reply-to address to create a consumer on the event bus for.
      */
     @Override
     public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier replyToAddress) {
-        if (replyToAddress.getResourceId() == null) {
-            logger.debug("client [{}] provided invalid reply-to address", sender.getName());
-            sender.setCondition(ProtonHelper.condition(AmqpError.INVALID_FIELD,
-                    String.format("reply-to address must have the following format %s/<tenant>/<reply-address>", getName())));
-            sender.close();
-        } else {
+
+        if (isValidReplyToAddress(replyToAddress)) {
             logger.debug("establishing sender link with client [{}]", sender.getName());
             final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(replyToAddress.toString(), message -> {
                 // TODO check for correct session here...?
@@ -314,6 +310,37 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                 }
             });
             sender.open();
+        } else {
+            logger.debug("client [{}] provided invalid reply-to address", sender.getName());
+            sender.setCondition(ProtonHelper.condition(AmqpError.INVALID_FIELD,
+                    String.format("reply-to address must have the following format %s/<tenant>/<reply-address>", getName())));
+            sender.close();
+        }
+    }
+
+    /**
+     * Checks if a resource identifier constitutes a valid reply-to address
+     * for this service endpoint.
+     * <p>
+     * This method is invoked during establishment of the reply-to link between
+     * the client and this endpoint. The link will only be established if this method
+     * returns {@code true}.
+     * <p>
+     * This default implementation verifies that the address consists of three
+     * segments: an endpoint identifier, a tenant identifier and a resource identifier.
+     * <p>
+     * Subclasses should override this method if the service they provide an endpoint for
+     * use a different reply-to address format.
+     * 
+     * @param replyToAddress The address to check.
+     * @return {@code true} if the address is valid.
+     */
+    protected boolean isValidReplyToAddress(final ResourceIdentifier replyToAddress) {
+
+        if (replyToAddress == null) {
+            return false;
+        } else {
+            return replyToAddress.getResourcePath().length >= 3;
         }
     }
 }

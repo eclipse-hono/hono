@@ -15,11 +15,11 @@ package org.eclipse.hono.client.impl;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -74,7 +74,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                             HttpURLConnection.HTTP_GONE
     };
 
-    private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Object>> replyMap = new ConcurrentHashMap<>();
+    private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Object>> replyMap = new HashMap<>();
     private final String replyToAddress;
     private final String targetAddress;
     private final String tenantId;
@@ -95,13 +95,18 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
      * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
-     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
+     * @throws NullPointerException if any of context or configuration are {@code null}.
      */
     AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
         super(context, config);
         this.requestTimeoutMillis = config.getRequestTimeout();
-        this.targetAddress = String.format("%s/%s", getName(), tenantId);
-        this.replyToAddress = String.format("%s/%s/%s", getName(), tenantId, UUID.randomUUID());
+        if (tenantId == null) {
+            this.targetAddress = getName();
+            this.replyToAddress = String.format("%s/%s", getName(), UUID.randomUUID());
+        } else {
+            this.targetAddress = String.format("%s/%s", getName(), tenantId);
+            this.replyToAddress = String.format("%s/%s/%s", getName(), tenantId, UUID.randomUUID());
+        }
         this.tenantId = tenantId;
     }
 
@@ -113,7 +118,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
-     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
+     * @throws NullPointerException if any of the parameters except tenant ID is {@code null}.
      */
     AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId,
             final ProtonSender sender, final ProtonReceiver receiver) {
@@ -271,18 +276,28 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     protected final void handleResponse(final ProtonDelivery delivery, final Message message) {
 
+        // the tuple from the reply map contains
+        // 1. the handler for processing the response and
+        // 2. the key to use for caching the response
         final TriTuple<Handler<AsyncResult<R>>, Object, Object> handler = replyMap.remove(message.getCorrelationId());
-        if (handler != null) {
-            final R response = getRequestResponseResult(message);
-            LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
-                    replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
-            addToCache(handler.two(), response);
-            handler.one().handle(Future.succeededFuture(response));
-            ProtonHelper.accepted(delivery, true);
-        } else {
+
+        if (handler == null) {
             LOG.debug("discarding unexpected response [reply-to: {}, correlation ID: {}]",
                     replyToAddress, message.getCorrelationId());
             ProtonHelper.released(delivery, true);
+        } else {
+            final R response = getRequestResponseResult(message);
+            if (response == null) {
+                LOG.debug("discarding malformed response lacking status code [reply-to: {}, correlation ID: {}]",
+                        replyToAddress, message.getCorrelationId());
+                ProtonHelper.released(delivery, true);
+            } else {
+                LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
+                        replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
+                addToCache(handler.two(), response);
+                handler.one().handle(Future.succeededFuture(response));
+                ProtonHelper.accepted(delivery, true);
+            }
         }
     }
 
@@ -312,14 +327,19 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     private R getRequestResponseResult(final Message message) {
+
         final Integer status = MessageHelper.getApplicationProperty(
                 message.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_STATUS,
                 Integer.class);
-        final String payload = MessageHelper.getPayload(message);
-        final CacheDirective cacheDirective = CacheDirective.from(MessageHelper.getCacheDirective(message));
+        if (status == null) {
+            return null;
+        } else {
+            final String payload = MessageHelper.getPayload(message);
+            final CacheDirective cacheDirective = CacheDirective.from(MessageHelper.getCacheDirective(message));
 
-        return getResult(status, payload, cacheDirective);
+            return getResult(status, payload, cacheDirective);
+        }
     }
 
     /**

@@ -100,4 +100,21 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
     protected final Message getAmqpReply(final EventBusMessage message) {
         return TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, message);
     }
+
+    /**
+     * Checks if a resource identifier constitutes a valid reply-to address
+     * for the Tenant service.
+     * 
+     * @param replyToAddress The address to check.
+     * @return {@code true} if the address contains two segments.
+     */
+    @Override
+    protected boolean isValidReplyToAddress(ResourceIdentifier replyToAddress) {
+
+        if (replyToAddress == null) {
+            return false;
+        } else {
+            return replyToAddress.getResourcePath().length >= 2;
+        }
+    }
 }

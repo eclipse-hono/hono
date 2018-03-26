@@ -26,7 +26,7 @@
         "activities": [ "EXECUTE" ]
       },
       {
-        "resource": "tenant/*",
+        "resource": "tenant",
         "activities": [ "READ", "WRITE" ]
       },
       {

@@ -40,7 +40,7 @@
         ]
       },
       {
-        "resource": "tenant/*",
+        "resource": "tenant",
         "activities": [
           "READ",
           "WRITE"
@@ -93,7 +93,7 @@
         ]
       },
       {
-        "resource": "tenant/*",
+        "resource": "tenant",
         "activities": [
           "READ",
           "WRITE"

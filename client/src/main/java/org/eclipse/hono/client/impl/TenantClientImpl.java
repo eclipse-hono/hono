@@ -97,7 +97,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     protected final TenantResult<TenantObject> getResult(final int status, final String payload, final CacheDirective cacheDirective) {
 
         if (payload == null) {
-            return TenantResult.from(status);
+            return TenantResult.from(status, (TenantObject) null, cacheDirective);
         } else {
             try {
                 return TenantResult.from(status, OBJECT_MAPPER.readValue(payload, TenantObject.class), cacheDirective);
