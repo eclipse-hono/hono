@@ -32,6 +32,9 @@ public abstract class HonoSampler extends AbstractSampler {
     private static final long serialVersionUID = 1L;
     private static final Object semaphoreLock = new Object();
 
+    /**
+     * Endpoint type.
+     */
     public enum Endpoint {
         telemetry, event
     }

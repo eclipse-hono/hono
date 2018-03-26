@@ -49,6 +49,11 @@ public final class KeyLoader {
 
     private static final Logger LOG = LoggerFactory.getLogger(KeyLoader.class);
 
+    /**
+     * A processor for PEM file content.
+     *  
+     * @param <R> The type of the result.
+     */
     @FunctionalInterface
     private interface PemProcessor<R> {
 

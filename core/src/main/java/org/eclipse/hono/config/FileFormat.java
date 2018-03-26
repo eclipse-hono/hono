@@ -16,6 +16,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * File formats for using key materials.
+ */
 public enum FileFormat {
     /**
      * PEM encoded PKCS#1 or PKCS#8.

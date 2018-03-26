@@ -53,6 +53,7 @@
       <property name="allowMissingPropertyJavadoc" value="true"/>
     </module>
     <module name="JavadocStyle"/>
+    <module name="JavadocType"/>
 
   </module>
 

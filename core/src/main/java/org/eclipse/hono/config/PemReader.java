@@ -34,6 +34,9 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
+/**
+ * A reader for PEM files.
+ */
 public final class PemReader {
 
     private static final Pattern BEGIN_PATTERN = Pattern.compile("-+BEGIN (.*?)-+");
@@ -42,6 +45,9 @@ public final class PemReader {
     private PemReader() {
     }
 
+    /**
+     * An entry in a PEM file.
+     */
     public static class Entry {
 
         private String type;

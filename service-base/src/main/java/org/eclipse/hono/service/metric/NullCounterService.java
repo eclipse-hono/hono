@@ -9,6 +9,9 @@ public final class NullCounterService implements CounterService {
 
     private NullCounterService() {}
 
+    /**
+     * A no-op metrics counter service.
+     */
     private static class NullCounterServiceSingleton {
         private static final NullCounterService INSTANCE = new NullCounterService();
     }

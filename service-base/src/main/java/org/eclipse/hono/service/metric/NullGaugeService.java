@@ -9,6 +9,9 @@ public final class NullGaugeService implements GaugeService {
 
     private NullGaugeService() {}
 
+    /**
+     * A no-op gauge metrics service.
+     */
     private static class NullGaugeServiceSingleton {
         private static final NullGaugeService INSTANCE = new NullGaugeService();
     }

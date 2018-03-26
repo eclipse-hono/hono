@@ -49,6 +49,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class HonoAuthHandlerImpl implements AuthHandler {
 
     // this should match the IANA registry: https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml
+    /**
+     * Authentication type.
+     */
     enum Type {
         BASIC("Basic"),
         DIGEST("Digest"),

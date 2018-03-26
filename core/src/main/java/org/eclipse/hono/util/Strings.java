@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.util;
 
+/**
+ * A helper class for working with {@link String}s.
+ */
 public final class Strings {
 
     private Strings() {
