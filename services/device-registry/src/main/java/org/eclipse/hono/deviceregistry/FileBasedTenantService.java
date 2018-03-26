@@ -288,9 +288,17 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         }
     }
 
+    /**
+     * Updates the tenant information.
+     * 
+     * @param tenantId The tenant to update
+     * @param tenantSpec The new tenant information
+     * @param resultHandler The handler receiving the result of the operation.
+     * 
+     * @throws NullPointerException if either of the input parameters is {@code null}.
+     */
     @Override
     public void update(final String tenantId, final JsonObject tenantSpec, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
         Objects.requireNonNull(resultHandler);

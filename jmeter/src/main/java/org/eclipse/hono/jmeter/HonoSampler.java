@@ -50,6 +50,11 @@ public abstract class HonoSampler extends AbstractSampler {
     private static final String TENANT                   = "tenant";
     private static final String ENDPOINT                 = "endpoint";
 
+    /**
+     * Applies the options to the local UI.
+     * 
+     * @param serverOptions The options to apply.
+     */
     public void modifyServerOptions(final ServerOptionsPanel serverOptions) {
         setHost(serverOptions.getHost());
         setPort(serverOptions.getPort());
@@ -58,6 +63,11 @@ public abstract class HonoSampler extends AbstractSampler {
         setTrustStorePath(serverOptions.getTrustStorePath());
     }
 
+    /**
+     * Apply the local UI options to the provided object.
+     * 
+     * @param serverOptions The options to change.
+     */
     public void configureServerOptions(final ServerOptionsPanel serverOptions) {
         serverOptions.setHost(getHost());
         serverOptions.setPort(getPort());
@@ -70,6 +80,11 @@ public abstract class HonoSampler extends AbstractSampler {
         return getPropertyAsString(TRUSTSTORE_PATH);
     }
 
+    /**
+     * Sets the path of the trust store.
+     * 
+     * @param trustStorePath The path to the trust store.
+     */
     public void setTrustStorePath(final String trustStorePath) {
         setProperty(TRUSTSTORE_PATH, trustStorePath);
     }
@@ -78,6 +93,11 @@ public abstract class HonoSampler extends AbstractSampler {
         return getPropertyAsString(HOST);
     }
 
+    /**
+     * Sets the host to use.
+     * 
+     * @param host The hostname to use.
+     */
     public void setHost(final String host) {
         setProperty(HOST, host);
     }
@@ -86,6 +106,11 @@ public abstract class HonoSampler extends AbstractSampler {
         return getPropertyAsString(USER);
     }
 
+    /**
+     * Sets the user to use.
+     * 
+     * @param user The user name to use.
+     */
     public void setUser(final String user) {
         setProperty(USER, user);
     }
@@ -94,10 +119,20 @@ public abstract class HonoSampler extends AbstractSampler {
         return getPropertyAsString(PWD);
     }
 
+    /**
+     * Sets the password to use.
+     * 
+     * @param pwd The password to use.
+     */
     public void setPwd(final String pwd) {
         setProperty(PWD, pwd);
     }
 
+    /**
+     * Returns the port number as int.
+     * 
+     * @return The port number as int.
+     */
     public int getPortAsInt() {
         final String portString = getPort();
         try {
@@ -111,6 +146,11 @@ public abstract class HonoSampler extends AbstractSampler {
         return getPropertyAsString(PORT);
     }
 
+    /**
+     * Sets the port to use.
+     * 
+     * @param port The port to use.
+     */
     public void setPort(final String port) {
         setProperty(PORT, port);
     }
@@ -119,6 +159,11 @@ public abstract class HonoSampler extends AbstractSampler {
         return getPropertyAsString(CONTAINER);
     }
 
+    /**
+     * Sets the AMQP container name to use.
+     * 
+     * @param container The container name to use.
+     */
     public void setContainer(final String container) {
         setProperty(CONTAINER, container);
     }
@@ -127,6 +172,11 @@ public abstract class HonoSampler extends AbstractSampler {
         return getPropertyAsString(TENANT);
     }
 
+    /**
+     * Sets the tenant name to use.
+     * 
+     * @param tenant The tenant name to use.
+     */
     public void setTenant(final String tenant) {
         setProperty(TENANT, tenant);
     }
@@ -135,6 +185,11 @@ public abstract class HonoSampler extends AbstractSampler {
         return getPropertyAsString(ENDPOINT);
     }
 
+    /**
+     * Sets the endpoint type to use.
+     * 
+     * @param endpoint The endpoint type to use.
+     */
     public void setEndpoint(final Endpoint endpoint) {
         setProperty(ENDPOINT, endpoint.toString());
     }

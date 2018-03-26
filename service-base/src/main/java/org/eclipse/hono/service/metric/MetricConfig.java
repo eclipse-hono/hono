@@ -51,6 +51,11 @@ public class MetricConfig {
 
     private final MetricRegistry metricRegistry;
 
+    /**
+     * Create a new metric configuration.
+     * 
+     * @param metricRegistry The metric registry to use.
+     */
     public MetricConfig(final MetricRegistry metricRegistry) {
         this.metricRegistry = metricRegistry;
     }
@@ -64,6 +69,11 @@ public class MetricConfig {
         this.prefix = prefix;
     }
 
+    /**
+     * Gets a gauge instance for the JVM memory.
+     * 
+     * @return A gauge instance for the JVM memory.
+     */
     @Bean
     @ConditionalOnProperty(prefix = "hono.metric.jvm", name = "memory", havingValue = "true")
     public MemoryUsageGaugeSet jvmMetricsMemory() {
@@ -71,6 +81,11 @@ public class MetricConfig {
         return metricRegistry.register(prefix + ".jvm.memory", new MemoryUsageGaugeSet());
     }
 
+    /**
+     * Gets a gauge instance for the JVM thread states.
+     * 
+     * @return A gauge instance for the JVM thread states.
+     */
     @Bean
     @ConditionalOnProperty(prefix = "hono.metric.jvm", name = "thread", havingValue = "true")
     public ThreadStatesGaugeSet jvmMetricsThreads() {
@@ -78,6 +93,11 @@ public class MetricConfig {
         return metricRegistry.register(prefix + ".jvm.thread", new ThreadStatesGaugeSet());
     }
 
+    /**
+     * Gets the vertx metrics options bean.
+     * 
+     * @return A new metrics options instance for vertx.
+     */
     @Bean
     @ConditionalOnProperty(prefix = "hono.metric", name = "vertx", havingValue = "true")
     public MetricsOptions vertxMetricsOptions() {
@@ -88,6 +108,12 @@ public class MetricConfig {
                 .setBaseName(prefix + ".vertx").setJmxEnabled(true);
     }
 
+    /**
+     * Gets a new instance for a console reporter.
+     * 
+     * @param period The period to update the state on console in milliseconds.
+     * @return The new console reporter instance.
+     */
     @Bean
     @ConditionalOnProperty(prefix = "hono.metric.reporter.console", name = "active", havingValue = "true")
     public ConsoleReporter consoleMetricReporter(
@@ -102,6 +128,16 @@ public class MetricConfig {
         return consoleReporter;
     }
 
+    /**
+     * Gets a new instance for a graphite reporter.
+     * 
+     * @param period The period to publish the state in milliseconds.
+     * @param host The host to report to.
+     * @param port The port to report to.
+     * @param prefix The prefix used when reporting.
+     * 
+     * @return The new graphite reporter instance.
+     */
     @Bean
     @ConditionalOnProperty(prefix = "hono.metric.reporter.graphite", name = "active", havingValue = "true")
     public GraphiteReporter graphiteReporter(

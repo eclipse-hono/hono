@@ -37,23 +37,28 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSenderSampler.class);
 
-    private static final String REGISTRY_HOST              = "registryHost";
-    private static final String REGISTRY_USER              = "registryUser";
-    private static final String REGISTRY_PWD               = "registryPwd";
-    private static final String REGISTRY_PORT              = "registryPort";
-    private static final String REGISTRY_TRUSTSTORE_PATH   = "registryTrustStorePath";
+    private static final String REGISTRY_HOST = "registryHost";
+    private static final String REGISTRY_USER = "registryUser";
+    private static final String REGISTRY_PWD = "registryPwd";
+    private static final String REGISTRY_PORT = "registryPort";
+    private static final String REGISTRY_TRUSTSTORE_PATH = "registryTrustStorePath";
 
-    private static final String DEVICE_ID                  = "deviceId";
-    private static final String SET_SENDER_TIME            = "setSenderTime";
-    private static final String CONTENT_TYPE               = "contentType";
-    private static final String DATA                       = "data";
-    private static final String WAIT_FOR_CREDITS           = "waitForCredits";
-    private static final String WAIT_FOR_RECEIVERS         = "waitForReceivers";
+    private static final String DEVICE_ID = "deviceId";
+    private static final String SET_SENDER_TIME = "setSenderTime";
+    private static final String CONTENT_TYPE = "contentType";
+    private static final String DATA = "data";
+    private static final String WAIT_FOR_CREDITS = "waitForCredits";
+    private static final String WAIT_FOR_RECEIVERS = "waitForReceivers";
     private static final String WAIT_FOR_RECEIVERS_TIMEOUT = "waitForReceiversTimeout";
     private static final String PROPERTY_REGISTRATION_ASSERTION = "PROPERTY_REGISTRATION_ASSERTION";
 
     private HonoSender honoSender;
 
+    /**
+     * Applies the options to the local UI.
+     * 
+     * @param serverOptions The options to apply.
+     */
     public void modifyRegistrationServiceOptions(final ServerOptionsPanel serverOptions) {
         setRegistryHost(serverOptions.getHost());
         setRegistryPort(serverOptions.getPort());
@@ -62,6 +67,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         setRegistryTrustStorePath(serverOptions.getTrustStorePath());
     }
 
+    /**
+     * Apply the local UI options to the provided object.
+     * 
+     * @param serverOptions The options to change.
+     */
     public void configureRegistrationServiceOptions(final ServerOptionsPanel serverOptions) {
         serverOptions.setHost(getRegistryHost());
         serverOptions.setPort(getRegistryPort());
@@ -74,6 +84,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(REGISTRY_TRUSTSTORE_PATH);
     }
 
+    /**
+     * Sets the path to the trust store of the registry.
+     * 
+     * @param trustStorePath The path to the registry trust store.
+     */
     public void setRegistryTrustStorePath(final String trustStorePath) {
         setProperty(REGISTRY_TRUSTSTORE_PATH, trustStorePath);
     }
@@ -82,6 +97,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(REGISTRY_HOST);
     }
 
+    /**
+     * Sets the host of the registry.
+     * 
+     * @param host The hostname of the registry.
+     */
     public void setRegistryHost(final String host) {
         setProperty(REGISTRY_HOST, host);
     }
@@ -90,6 +110,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(REGISTRY_USER);
     }
 
+    /**
+     * Get the user to use for the registry.
+     * 
+     * @param user The username to use.
+     */
     public void setRegistryUser(final String user) {
         setProperty(REGISTRY_USER, user);
     }
@@ -98,10 +123,20 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(REGISTRY_PWD);
     }
 
+    /**
+     * Get the password to use for the registry.
+     * 
+     * @param pwd The password to use.
+     */
     public void setRegistryPwd(final String pwd) {
         setProperty(REGISTRY_PWD, pwd);
     }
 
+    /**
+     * Gets the port of the registry as integer.
+     * 
+     * @return The registry port as integer, {@code 0} if the value cannot be parsed as an integer.
+     */
     public int getRegistryPortAsInt() {
         final String portString = getRegistryPort();
         try {
@@ -115,10 +150,21 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(REGISTRY_PORT);
     }
 
+    /**
+     * Sets the port of the registry.
+     * 
+     * @param port The port of the registry.
+     */
     public void setRegistryPort(final String port) {
         setProperty(REGISTRY_PORT, port);
     }
 
+    /**
+     * Gets the number of receivers as integer.
+     * 
+     * @return The number of receivers to wait for as integer or {@code 0}
+     * if the value cannot be parsed as integer.
+     */
     public int getWaitForReceiversAsInt() {
         final String value = getPropertyAsString(WAIT_FOR_RECEIVERS);
         try {
@@ -132,10 +178,21 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(WAIT_FOR_RECEIVERS);
     }
 
+    /**
+     * Sets the number of receivers to wait for.
+     * 
+     * @param waitForReceivers Number of receivers to wait for (e.g. from other threads).
+     */
     public void setWaitForReceivers(final String waitForReceivers) {
         setProperty(WAIT_FOR_RECEIVERS, waitForReceivers);
     }
 
+    /**
+     * Gets the timeout to wait for receivers as integer.
+     * 
+     * @return The timeout to wait for receivers in milliseconds or {@code 0}
+     * if the value cannot be parsed as integer.
+     */
     public int getWaitForReceiversTimeoutAsInt() {
         final String value = getPropertyAsString(WAIT_FOR_RECEIVERS_TIMEOUT);
         try {
@@ -149,6 +206,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(WAIT_FOR_RECEIVERS_TIMEOUT);
     }
 
+    /**
+     * Sets the timeout to wait for receivers in milliseconds.
+     * 
+     * @param waitForReceiversTimeout The timeout in milliseconds encoded as string.
+     */
     public void setWaitForReceiversTimeout(final String waitForReceiversTimeout) {
         setProperty(WAIT_FOR_RECEIVERS_TIMEOUT, waitForReceiversTimeout);
     }
@@ -157,6 +219,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(DEVICE_ID);
     }
 
+    /**
+     * Sets the device id.
+     * 
+     * @param deviceId The device ID to use.
+     */
     public void setDeviceId(final String deviceId) {
         setProperty(DEVICE_ID, deviceId);
     }
@@ -165,6 +232,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsBoolean(SET_SENDER_TIME);
     }
 
+    /**
+     * Sets whether or not to add the current timestamp in the payload.
+     * 
+     * @param isSetSenderTime {@code true} to add the current timestamp at the point of sending.
+     */
     public void setSetSenderTime(final boolean isSetSenderTime) {
         setProperty(SET_SENDER_TIME, isSetSenderTime);
     }
@@ -173,6 +245,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsBoolean(WAIT_FOR_CREDITS);
     }
 
+    /**
+     * Sets whether to wait for credits.
+     * 
+     * @param isWaitForCredits {@code true} in order to wait for credits.
+     */
     public void setWaitForCredits(final boolean isWaitForCredits) {
         setProperty(WAIT_FOR_CREDITS, isWaitForCredits);
     }
@@ -181,6 +258,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(CONTENT_TYPE);
     }
 
+    /**
+     * Sets the content type.
+     * 
+     * @param contentType The MIME type of the payload.
+     */
     public void setContentType(final String contentType) {
         setProperty(CONTENT_TYPE, contentType);
     }
@@ -189,6 +271,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(DATA);
     }
 
+    /**
+     * Sets the payload data to send.
+     * 
+     * @param data The payload data.
+     */
     public void setData(final String data) {
         setProperty(DATA, data);
     }
@@ -197,6 +284,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         return getPropertyAsString(PROPERTY_REGISTRATION_ASSERTION);
     }
 
+    /**
+     * Sets the registration assertion to use.
+     * 
+     * @param assertion The registration assertion.
+     */
     public void setRegistrationAssertion(final String assertion) {
         setProperty(PROPERTY_REGISTRATION_ASSERTION, assertion);
     }
