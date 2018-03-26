@@ -182,40 +182,40 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     protected final void handleMessage(final ProtonConnection con, final ProtonReceiver receiver,
             final ResourceIdentifier targetAddress, ProtonDelivery delivery, Message message) {
 
-        Future<Void> requestTracker = Future.future();
-        requestTracker.setHandler(s -> {
-            if (s.succeeded()) {
-                ProtonHelper.accepted(delivery, true);
-            } else if (s.cause() instanceof AmqpErrorException) {
-                AmqpErrorException cause = (AmqpErrorException) s.cause();
+        final Future<Void> formalCheck = Future.future();
+        if (passesFormalVerification(targetAddress, message)) {
+            formalCheck.complete();
+        } else {
+            formalCheck.fail(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
+        }
+        final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
+        formalCheck.compose(ok -> isAuthorized(clientPrincipal, targetAddress, message)).compose(authorized -> {
+
+            logger.debug("client [{}] is {}authorized to {}:{}", clientPrincipal.getName(), authorized ? "" : "not ",
+                    targetAddress, message.getSubject());
+            if (authorized) {
+                try {
+                    processRequest(message, targetAddress, clientPrincipal);
+                    ProtonHelper.accepted(delivery, true);
+                    return Future.succeededFuture();
+                } catch (DecodeException e) {
+                    return Future.failedFuture(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
+                }
+            } else {
+                return Future.failedFuture(new AmqpErrorException(AmqpError.UNAUTHORIZED_ACCESS, "unauthorized"));
+            }
+
+        }).otherwise(t -> {
+
+            if (t instanceof AmqpErrorException) {
+                AmqpErrorException cause = (AmqpErrorException) t;
                 MessageHelper.rejected(delivery, cause.asErrorCondition());
             } else {
-                logger.debug("error processing request [resource: {}, op: {}]: {}", targetAddress, message.getSubject(), s.cause().getMessage());
+                logger.debug("error processing request [resource: {}, op: {}]: {}", targetAddress, message.getSubject(), t.getMessage());
                 MessageHelper.rejected(delivery, ProtonHelper.condition(AmqpError.INTERNAL_ERROR, "internal error"));
             }
+            return null;
         });
-
-        if (passesFormalVerification(targetAddress, message)) {
-
-            final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
-
-            isAuthorized(clientPrincipal, targetAddress, message).compose(authorized -> {
-                logger.debug("client [{}] is {}authorized to {}:{}", clientPrincipal.getName(), authorized ? "" : "not ",
-                        targetAddress, message.getSubject());
-                if (authorized) {
-                    try {
-                        processRequest(message, targetAddress, Constants.getClientPrincipal(con));
-                        requestTracker.complete();
-                    } catch (DecodeException e) {
-                        requestTracker.fail(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
-                    }
-                } else {
-                    requestTracker.fail(new AmqpErrorException(AmqpError.UNAUTHORIZED_ACCESS, "unauthorized"));
-                }
-            }, requestTracker);
-        } else {
-            requestTracker.fail(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
-        }
     }
 
     /**
@@ -230,7 +230,9 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * @param clientPrincipal The client.
      * @param resource The resource the message belongs to.
      * @param message The message for which the authorization shall be checked.
-     * @return The outcome of the check.
+     * @return A future indicating the outcome of the check.
+     *         The future will be succeeded if the client is authorized to execute the operation.
+     *         Otherwise the future will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final Message message) {

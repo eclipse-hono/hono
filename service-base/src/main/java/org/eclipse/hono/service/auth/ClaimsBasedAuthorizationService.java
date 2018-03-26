@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,10 +12,12 @@
 
 package org.eclipse.hono.service.auth;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Future;
@@ -35,7 +37,7 @@ public final class ClaimsBasedAuthorizationService implements AuthorizationServi
         Objects.requireNonNull(intent);
 
         if (user.isExpired()) {
-            return Future.failedFuture("user information expired");
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "user information expired"));
         } else {
             return Future.succeededFuture(user.getAuthorities().isAuthorized(resource, intent));
         }
@@ -49,7 +51,7 @@ public final class ClaimsBasedAuthorizationService implements AuthorizationServi
         Objects.requireNonNull(operation);
 
         if (user.isExpired()) {
-            return Future.failedFuture("user information expired");
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "user information expired"));
         } else {
             return Future.succeededFuture(user.getAuthorities().isAuthorized(resource, operation));
         }

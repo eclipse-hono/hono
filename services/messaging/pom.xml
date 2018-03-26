@@ -28,11 +28,6 @@
      <artifactId>assertj-core</artifactId>
     </dependency>
     <dependency>
-     <groupId>org.eclipse.hono</groupId>
-     <artifactId>hono-client</artifactId>
-     <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-base</artifactId>
     </dependency>
