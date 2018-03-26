@@ -19,6 +19,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 
+/**
+ * Base metrics collector.
+ */
 @Component
 abstract public class Metrics {
 

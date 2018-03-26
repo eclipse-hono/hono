@@ -143,6 +143,9 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
         status.onMsgReceived();
     }
 
+    /**
+     * Information about the link status.
+     */
     private class LinkStatus {
 
         private long msgCount;
