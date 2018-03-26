@@ -46,6 +46,13 @@
       <property name="message" value="Empty lines must not contain whitespaces" />
     </module>
 
+    <!-- javadoc validation -->
+    <module name="JavadocMethod">
+      <property name="scope" value="public"/>
+      <property name="ignoreMethodNamesRegex" value="^main$"/>
+      <property name="allowMissingPropertyJavadoc" value="true"/>
+    </module>
+
   </module>
 
   <!-- only spaces, no tabs -->

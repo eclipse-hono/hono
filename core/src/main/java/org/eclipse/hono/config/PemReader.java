@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Red Hat Inc and others.
+ * Copyright (c) 2017, 2018 Red Hat Inc and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -15,6 +15,7 @@ package org.eclipse.hono.config;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.nio.file.Files.newBufferedReader;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.LineNumberReader;
@@ -51,23 +52,55 @@ public final class PemReader {
             this.payload = payload;
         }
 
+        /**
+         * Gets the PEM entry payload.
+         * 
+         * @return the payload
+         */
         public byte[] getPayload() {
             return payload;
         }
 
+        /**
+         * Gets the PEM entry type.
+         * 
+         * @return the type
+         */
         public String getType() {
             return type;
         }
 
     }
 
+    /**
+     * Reads a PEM file and return its entries.
+     * 
+     * @param path The file to read.
+     * @return The PEM entries.
+     * 
+     * @throws IOException I case of any error.
+     */
     public static List<Entry> readAll(final Path path) throws IOException {
+        requireNonNull(path);
+
         try (final Reader reader = newBufferedReader(path, StandardCharsets.US_ASCII)) {
             return readAll(reader);
         }
     }
 
+    /**
+     * Reads a PEM file using vertx in blocking mode and return its entries.
+     * 
+     * @param vertx The vertx instance to use.
+     * @param path The file to read.
+     * @return The PEM entries.
+     * 
+     * @throws IOException I case of any error.
+     */
     public static List<Entry> readAllBlocking(final Vertx vertx, final Path path) throws IOException {
+        requireNonNull(vertx);
+        requireNonNull(path);
+
         return readAllFromBuffer(
                 vertx
                         .fileSystem()
@@ -85,7 +118,17 @@ public final class PemReader {
         return readAll(new StringReader(string));
     }
 
+    /**
+     * Asynchronously reads a PEM file using vertx and report its entries.
+     * @param vertx The vertx instance to use.
+     * @param path The file to read.
+     * @param handler The handler to receive the result
+     */
     public static void readAll(final Vertx vertx, final Path path, final Handler<AsyncResult<List<Entry>>> handler) {
+
+        requireNonNull(vertx);
+        requireNonNull(path);
+        requireNonNull(handler);
 
         vertx.fileSystem().readFile(path.toString(), reader -> {
 
@@ -113,6 +156,13 @@ public final class PemReader {
         });
     }
 
+    /**
+     * Reads a PEM file and return its entries.
+     * 
+     * @param reader The source to read from.
+     * @return The list of entries.
+     * @throws IOException In case of any error.
+     */
     public static List<Entry> readAll(final Reader reader) throws IOException {
 
         final LineNumberReader lnr = new LineNumberReader(reader);

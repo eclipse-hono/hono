@@ -48,6 +48,11 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         return getPropertyAsBoolean(USE_SENDER_TIME);
     }
 
+    /**
+     * Sets whether or not to use the sender time.
+     * 
+     * @param useSenderTime {@code true} in order to use the sender time. 
+     */
     public void setUseSenderTime(final boolean useSenderTime) {
         setProperty(USE_SENDER_TIME, useSenderTime);
     }
@@ -56,6 +61,11 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         return getPropertyAsString(PREFETCH);
     }
 
+    /**
+     * Sets the number of messages to prefetch.
+     * 
+     * @param prefetch The number of messages to prefetch, encoded as String.
+     */
     public void setPrefetch(final String prefetch) {
         setProperty(PREFETCH, prefetch);
     }
@@ -64,6 +74,11 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         return getPropertyAsString(SENDER_TIME_VARIABLE_NAME, DEFAULT_SENDER_TIME_VARIABLE_NAME);
     }
 
+    /**
+     * Sets the name of the sender time in the payload.
+     * 
+     * @param variableName The name of the variable the sender time uses in the payload.
+     */
     public void setSenderTimeVariableName(final String variableName) {
         setProperty(SENDER_TIME_VARIABLE_NAME, variableName);
     }
@@ -72,6 +87,11 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         return getPropertyAsBoolean(SENDER_TIME_IN_PAYLOAD);
     }
 
+    /**
+     * Sets if the payload contains the sender time.
+     * 
+     * @param senderTimeInPayload {@code true} if the payload contains the sender time.
+     */
     public void setSenderTimeInPayload(final boolean senderTimeInPayload) {
         setProperty(SENDER_TIME_IN_PAYLOAD, senderTimeInPayload);
     }
@@ -80,6 +100,11 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         return getPropertyAsString(RECONNECT_ATTEMPTS, "1");
     }
 
+    /**
+     * Sets the number of re-connect attempts.
+     * 
+     * @param reconnectAttempts The number of attempts as string. 
+     */
     public void setReconnectAttempts(final String reconnectAttempts) {
         setProperty(RECONNECT_ATTEMPTS, reconnectAttempts);
     }

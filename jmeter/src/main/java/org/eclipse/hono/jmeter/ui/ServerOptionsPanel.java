@@ -49,6 +49,11 @@ public class ServerOptionsPanel extends VerticalPanel {
         return host.getText();
     }
 
+    /**
+     * Sets the host to use.
+     * 
+     * @param hostname The hostname to use.
+     */
     public void setHost(final String hostname) {
         this.host.setText(hostname);
     }
@@ -57,6 +62,11 @@ public class ServerOptionsPanel extends VerticalPanel {
         return port.getText();
     }
 
+    /**
+     * Sets the port to use.
+     * 
+     * @param port The port to use.
+     */
     public void setPort(final String port) {
         this.port.setText(port);
     }
@@ -65,6 +75,11 @@ public class ServerOptionsPanel extends VerticalPanel {
         return user.getText();
     }
 
+    /**
+     * Sets the user to use.
+     * 
+     * @param username The user name to use.
+     */
     public void setUser(final String username) {
         this.user.setText(username);
     }
@@ -73,6 +88,11 @@ public class ServerOptionsPanel extends VerticalPanel {
         return pwd.getText();
     }
 
+    /**
+     * Sets the password to use.
+     * 
+     * @param pwd The password to use.
+     */
     public void setPwd(final String pwd) {
         this.pwd.setText(pwd);
     }
@@ -81,10 +101,18 @@ public class ServerOptionsPanel extends VerticalPanel {
         return trustStorePath.getText();
     }
 
+    /**
+     * Sets the path of the trust store.
+     * 
+     * @param path The path to the trust store.
+     */
     public void setTrustStorePath(final String path) {
         this.trustStorePath.setText(path);
     }
 
+    /**
+     * Clears all UI fields.
+     */
     public void clearGui() {
         host.setText("");
         port.setText("");

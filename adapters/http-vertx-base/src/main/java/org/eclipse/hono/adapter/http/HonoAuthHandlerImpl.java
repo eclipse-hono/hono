@@ -84,6 +84,11 @@ public class HonoAuthHandlerImpl implements AuthHandler {
     protected final AuthProvider authProvider;
     protected final Set<String> authorities = new HashSet<>();
 
+    /**
+     * Create a new auth handler instance
+     * @param authProvider The authentication provider to use
+     * @param realm the realm to use
+     */
     public HonoAuthHandlerImpl(AuthProvider authProvider, String realm) {
         this.authProvider = authProvider;
         this.realm = realm;
