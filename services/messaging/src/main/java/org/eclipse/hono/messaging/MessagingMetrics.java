@@ -16,7 +16,7 @@ import org.eclipse.hono.service.metric.Metrics;
 import org.springframework.stereotype.Component;
 
 /**
- * Metrics for Hono Messaging
+ * Metrics for Hono Messaging.
  */
 @Component
 public class MessagingMetrics extends Metrics {

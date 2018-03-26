@@ -50,7 +50,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtocolAdapterProperties> extends AbstractProtocolAdapterBase<T> {
 
     /**
-     * Default file uploads directory used by Vert.x Web
+     * Default file uploads directory used by Vert.x Web.
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
@@ -61,7 +61,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private HttpAdapterMetrics metrics;
 
     /**
-     * Sets the metrics for this service
+     * Sets the metrics for this service.
      *
      * @param metrics The metrics
      */

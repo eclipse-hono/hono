@@ -18,15 +18,15 @@ import java.util.Optional;
 
 public enum FileFormat {
     /**
-     * PEM encoded PKCS#1 or PKCS#8
+     * PEM encoded PKCS#1 or PKCS#8.
      */
     PEM,
     /**
-     * Java Key Store
+     * Java Key Store.
      */
     JKS,
     /**
-     * PKCS#12 key store
+     * PKCS#12 key store.
      */
     PKCS12;
 

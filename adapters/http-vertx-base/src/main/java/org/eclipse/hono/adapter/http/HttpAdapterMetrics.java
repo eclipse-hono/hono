@@ -16,7 +16,7 @@ import org.eclipse.hono.service.metric.Metrics;
 import org.springframework.stereotype.Component;
 
 /**
- * Metrics for the HTTP based adapters
+ * Metrics for the HTTP based adapters.
  */
 @Component
 public class HttpAdapterMetrics extends Metrics {

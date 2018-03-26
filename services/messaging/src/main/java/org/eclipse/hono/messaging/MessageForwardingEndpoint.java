@@ -77,7 +77,7 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
     }
 
     /**
-     * Sets the metric for this service
+     * Sets the metric for this service.
      *
      * @param metrics The metric
      */

@@ -61,7 +61,7 @@ public class MetricConfig {
     }
 
     /**
-     * Set the prefix to scope values of each service
+     * Set the prefix to scope values of each service.
      *
      * @param prefix The prefix
      */
