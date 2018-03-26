@@ -47,6 +47,7 @@
     </module>
 
     <!-- javadoc validation -->
+
     <module name="JavadocMethod">
       <property name="scope" value="public"/>
       <property name="ignoreMethodNamesRegex" value="^main$"/>
@@ -54,6 +55,7 @@
     </module>
     <module name="JavadocStyle"/>
     <module name="JavadocType"/>
+    <module name="NonEmptyAtclauseDescription"/>
 
   </module>
 
