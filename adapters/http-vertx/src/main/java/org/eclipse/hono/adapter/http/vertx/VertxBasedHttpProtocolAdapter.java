@@ -14,7 +14,7 @@ package org.eclipse.hono.adapter.http.vertx;
 
 import java.net.HttpURLConnection;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.handler.CorsHandler;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoAuthHandlerImpl;
@@ -66,9 +66,10 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     private void setupCorsHandler(final Router router) {
         router.route()
-                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin()).allowedMethod(HttpMethod.PUT)
-                        .allowedMethod(HttpMethod.POST).allowedMethod(HttpMethod.OPTIONS)
-                        .allowedHeader("Authorization").allowedHeader("Content-Type"));
+                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                        .allowedMethod(HttpMethod.PUT)
+                        .allowedMethod(HttpMethod.POST)
+                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString()).allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
     }
 
     private void setupBasicAuth(final Router router) {
