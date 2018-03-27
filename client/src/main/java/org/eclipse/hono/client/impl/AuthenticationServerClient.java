@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.service.auth.delegating;
+package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
 
@@ -19,12 +19,10 @@ import org.apache.qpid.proton.amqp.messaging.Section;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.service.auth.AuthenticationConstants;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -52,10 +50,9 @@ public final class AuthenticationServerClient {
      * @param connectionFactory The factory.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    @Autowired
     public AuthenticationServerClient(
             final Vertx vertx,
-            @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final ConnectionFactory connectionFactory) {
+            final ConnectionFactory connectionFactory) {
 
         this.vertx = Objects.requireNonNull(vertx);
         this.factory = Objects.requireNonNull(connectionFactory);

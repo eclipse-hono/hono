@@ -19,6 +19,7 @@ import java.util.Objects;
 import javax.security.auth.login.CredentialException;
 
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

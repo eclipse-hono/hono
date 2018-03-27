@@ -11,9 +11,10 @@
  */
 package org.eclipse.hono.service.auth;
 
-import static org.eclipse.hono.service.auth.AuthenticationConstants.ERROR_CODE_AUTHENTICATION_FAILED;
-import static org.eclipse.hono.service.auth.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
+import static org.eclipse.hono.util.AuthenticationConstants.ERROR_CODE_AUTHENTICATION_FAILED;
+import static org.eclipse.hono.util.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
 
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

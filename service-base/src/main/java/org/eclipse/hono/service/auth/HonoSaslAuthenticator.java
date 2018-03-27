@@ -11,8 +11,8 @@
  */
 package org.eclipse.hono.service.auth;
 
-import static org.eclipse.hono.service.auth.AuthenticationConstants.MECHANISM_EXTERNAL;
-import static org.eclipse.hono.service.auth.AuthenticationConstants.MECHANISM_PLAIN;
+import static org.eclipse.hono.util.AuthenticationConstants.MECHANISM_EXTERNAL;
+import static org.eclipse.hono.util.AuthenticationConstants.MECHANISM_PLAIN;
 
 import java.util.Objects;
 
@@ -23,6 +23,7 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.service.auth;
+package org.eclipse.hono.util;
 
 import java.util.Objects;
 import java.util.regex.Matcher;

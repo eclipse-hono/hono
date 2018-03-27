@@ -12,13 +12,13 @@
 
 package org.eclipse.hono.service.auth.impl;
 
+import org.eclipse.hono.client.impl.AuthenticationServerClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
-import org.eclipse.hono.service.auth.delegating.AuthenticationServerClient;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
 import org.junit.BeforeClass;
 import org.junit.Test;

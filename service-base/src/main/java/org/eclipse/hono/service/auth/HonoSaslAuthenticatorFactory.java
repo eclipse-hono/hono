@@ -18,6 +18,7 @@ import java.util.Objects;
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

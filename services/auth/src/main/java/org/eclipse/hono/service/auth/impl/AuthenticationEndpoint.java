@@ -16,7 +16,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
-import org.eclipse.hono.service.auth.AuthenticationConstants;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;

@@ -16,7 +16,7 @@ import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectionFactoryImpl;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
-import org.eclipse.hono.service.auth.AuthenticationConstants;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;

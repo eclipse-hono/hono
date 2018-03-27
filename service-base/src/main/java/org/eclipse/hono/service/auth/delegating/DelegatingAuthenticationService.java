@@ -15,10 +15,11 @@ package org.eclipse.hono.service.auth.delegating;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.impl.AuthenticationServerClient;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
-import org.eclipse.hono.service.auth.AuthenticationConstants;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
