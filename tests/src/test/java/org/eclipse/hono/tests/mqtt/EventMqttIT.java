@@ -35,24 +35,27 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class EventMqttIT extends MqttTestBase {
 
-    private static final String TOPIC_TEMPLATE = EventConstants.EVENT_ENDPOINT + "/%s/%s";
-    private static final String TOPIC_TEMPLATE_SHORT = EventConstants.EVENT_ENDPOINT_SHORT + "/%s/%s";
+    private static final String TOPIC_TEMPLATE = "%s/%s/%s";
 
     @Override
-    protected void send(String tenantId, String deviceId, Buffer payload, boolean useShortTopicName, final Handler<AsyncResult<Integer>> publishSentHandler) {
+    protected void send(
+            final String tenantId,
+            final String deviceId,
+            final Buffer payload,
+            final boolean useShortTopicName,
+            final Handler<AsyncResult<Integer>> publishSentHandler) {
 
-        String topic;
-        if (useShortTopicName) {
-            topic = String.format(TOPIC_TEMPLATE_SHORT, tenantId, deviceId);
-        } else {
-            topic = String.format(TOPIC_TEMPLATE, tenantId, deviceId);
-        }
+        final String topic = String.format(
+                TOPIC_TEMPLATE,
+                useShortTopicName ? EventConstants.EVENT_ENDPOINT_SHORT : EventConstants.EVENT_ENDPOINT,
+                tenantId,
+                deviceId);
 
         mqttClient.publish(topic, payload, MqttQoS.AT_LEAST_ONCE, false, false, publishSentHandler);
     }
 
     @Override
-    protected Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer) {
+    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
         return helper.downstreamClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }

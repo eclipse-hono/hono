@@ -149,25 +149,31 @@ public abstract class MqttTestBase {
      */
     protected abstract Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer);
 
+    /**
+     * Verifies that a number of messages published to Hono's MQTT adapter
+     * using the standard topic names can be successfully consumed via the AMQP Messaging Network.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
     @Test
     public void testUploadMessages(final TestContext ctx) throws InterruptedException {
         doTestUploadMessages(ctx, false);
     }
 
+    /**
+     * Verifies that a number of messages published to Hono's MQTT adapter
+     * using the short topic names can be successfully consumed via the AMQP Messaging Network.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
     @Test
     public void testUploadMessagesUsingShortTopicNames(final TestContext ctx) throws InterruptedException {
         doTestUploadMessages(ctx, true);
     }
 
-    /**
-     * Verifies that a number of messages uploaded to Hono's HTTP adapter can be successfully
-     * consumed via the AMQP Messaging Network.
-     * 
-     * @param ctx The test context.
-     * @param useShortTopicName Whether to use standard or short topic names
-     * @throws InterruptedException if the test fails.
-     */
-    public void doTestUploadMessages(final TestContext ctx, boolean useShortTopicName) throws InterruptedException {
+    private void doTestUploadMessages(final TestContext ctx, boolean useShortTopicName) throws InterruptedException {
 
         final int messagesToSend = 200;
         final CountDownLatch received = new CountDownLatch(messagesToSend);
@@ -203,23 +209,27 @@ public abstract class MqttTestBase {
         final AtomicInteger messageCount = new AtomicInteger(0);
         final AtomicReference<Async> sendResult = new AtomicReference<>();
         mqttClient.publishCompletionHandler(packetId -> {
-            if (pendingMessages.remove(packetId)) {
-                sendResult.get().complete();
-            } else {
-                LOGGER.info("received PUBACK for unexpected message [id: {}]", packetId);
+            synchronized (pendingMessages) {
+                if (pendingMessages.remove(packetId)) {
+                    sendResult.get().complete();
+                } else {
+                    LOGGER.info("received PUBACK for unexpected message [id: {}]", packetId);
+                }
             }
         });
 
         while (messageCount.get() < messagesToSend) {
 
             sendResult.set(ctx.async());
-            send(tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()), useShortTopicName, sendAttempt -> {
-                if (sendAttempt.failed()) {
-                    LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
-                } else {
-                    pendingMessages.add(sendAttempt.result());
-                }
-            });
+            synchronized (pendingMessages) {
+                send(tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()), useShortTopicName, sendAttempt -> {
+                    if (sendAttempt.failed()) {
+                        LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
+                    } else {
+                        pendingMessages.add(sendAttempt.result());
+                    }
+                });
+            }
 
             if (messageCount.get() % 40 == 0) {
                 LOGGER.info("messages sent: " + messageCount.get());
