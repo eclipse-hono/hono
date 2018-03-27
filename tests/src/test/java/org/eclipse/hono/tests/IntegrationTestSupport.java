@@ -48,6 +48,8 @@ public final class IntegrationTestSupport {
     public static final int    DEFAULT_HTTP_PORT = 8080;
     public static final int    DEFAULT_MQTT_PORT = 1883;
 
+    public static final String PROPERTY_AUTH_HOST = "auth.host";
+    public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
     public static final String PROPERTY_HONO_HOST = "hono.host";
     public static final String PROPERTY_HONO_PORT = "hono.amqp.port";
     public static final String PROPERTY_HONO_USERNAME = "hono.username";
@@ -64,6 +66,9 @@ public final class IntegrationTestSupport {
     public static final String PROPERTY_MQTT_HOST = "mqtt.host";
     public static final String PROPERTY_MQTT_PORT = "mqtt.port";
     public static final String PROPERTY_TENANT = "tenant";
+
+    public static final String AUTH_HOST = System.getProperty(PROPERTY_AUTH_HOST, DEFAULT_HOST);
+    public static final int    AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
 
     public static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, DEFAULT_HOST);
     public static final int    HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, Constants.PORT_AMQP);
