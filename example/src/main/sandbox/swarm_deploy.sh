@@ -106,11 +106,13 @@ then
 
   # initialize Device Registry volume with default credentials
   docker secret create -l project=$NS sandbox-credentials.json $SCRIPTPATH/sandbox-credentials.json
+  docker secret create -l project=$NS sandbox-tenants.json $SCRIPTPATH/sandbox-tenants.json
   docker service create --detach=true --name init-device-registry-data \
     --secret sandbox-credentials.json \
+    --secret sandbox-tenants.json \
     --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
     --restart-condition=none \
-    busybox sh -c 'cp -u /run/secrets/sandbox-credentials.json /var/lib/hono/device-registry/credentials.json'
+    busybox sh -c 'cp -u /run/secrets/sandbox-credentials.json /var/lib/hono/device-registry/credentials.json; cp -u /run/secrets/sandbox-tenants.json /var/lib/hono/device-registry/tenants.json'
 fi
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem

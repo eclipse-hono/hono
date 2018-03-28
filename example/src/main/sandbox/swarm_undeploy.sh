@@ -51,6 +51,7 @@ docker secret rm \
 
 docker service rm init-device-registry-data
 docker secret rm sandbox-credentials.json
+docker secret rm sandbox-tenants.json
 
 docker service rm hono-service-auth
 docker secret rm \
