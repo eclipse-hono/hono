@@ -22,7 +22,9 @@ import org.eclipse.hono.util.EventConstants;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 
@@ -34,13 +36,19 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class EventHttpIT extends HttpTestBase {
 
     @Override
-    protected Future<Void> send(String tenantId, String deviceId, Buffer payload) {
+    protected Future<MultiMap> send(
+            final String origin,
+            final String tenantId,
+            final String deviceId,
+            final Buffer payload) {
 
         return httpClient.update(
                 String.format("/%s/%s/%s", EventConstants.EVENT_ENDPOINT, tenantId, deviceId),
                 payload,
-                "binary/octet-stream",
-                status -> status == HttpURLConnection.HTTP_ACCEPTED);
+                MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                    .add(HttpHeaders.ORIGIN, origin),
+                statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
     }
 
     @Override

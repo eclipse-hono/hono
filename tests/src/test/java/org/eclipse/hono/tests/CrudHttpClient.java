@@ -20,6 +20,7 @@ import java.util.function.Predicate;
 import org.eclipse.hono.client.ServiceInvocationException;
 
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientRequest;
@@ -51,6 +52,39 @@ public final class CrudHttpClient {
         this.vertx = Objects.requireNonNull(vertx);
         this.host = Objects.requireNonNull(host);
         this.port = port;
+    }
+
+    /**
+     * Gets options for a resource using an HTTP OPTIONS.
+     * 
+     * @param uri The resource URI.
+     * @param requestHeaders The headers to include in the request.
+     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @return A future that will succeed if the predicate evaluates to {@code true}. In that case the
+     *         future will contain the response headers.
+     */
+    public Future<MultiMap> options(
+            final String uri,
+            final MultiMap requestHeaders,
+            final Predicate<Integer> successPredicate) {
+
+        final Future<MultiMap> result = Future.future();
+
+        final HttpClientRequest req = vertx.createHttpClient()
+            .options(port, host, uri)
+            .handler(response -> {
+                if (successPredicate.test(response.statusCode())) {
+                    result.complete(response.headers());
+                } else {
+                    result.fail(new ServiceInvocationException(response.statusCode()));
+                }
+            }).exceptionHandler(result::fail);
+
+        if (requestHeaders != null) {
+            req.headers().addAll(requestHeaders);
+        }
+        req.end();
+        return result;
     }
 
     /**
@@ -156,20 +190,38 @@ public final class CrudHttpClient {
      */
     public Future<Void> update(final String uri, final Buffer body, final String contentType, final Predicate<Integer> successPredicate) {
 
-        final Future<Void> result = Future.future();
+        final MultiMap headers = Optional.ofNullable(contentType)
+                .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, ct))
+                .orElse(null);
+
+        return update(uri, body, headers, successPredicate).compose(ok -> Future.succeededFuture());
+    }
+
+    /**
+     * Updates a resource using HTTP PUT.
+     * 
+     * @param uri The resource to update.
+     * @param body The content to update the resource with.
+     * @param requestHeaders The headers to include in the request.
+     * @param successPredicate A predicate on the response for determining success.
+     * @return A future that will succeed if the predicate evaluates to {@code true}.
+     */
+    public Future<MultiMap> update(final String uri, final Buffer body, final MultiMap requestHeaders, final Predicate<Integer> successPredicate) {
+
+        final Future<MultiMap> result = Future.future();
 
         final HttpClientRequest req = vertx.createHttpClient()
             .put(port, host, uri)
             .handler(response -> {
                 if (successPredicate.test(response.statusCode())) {
-                    result.complete();
+                    result.complete(response.headers());
                 } else {
                     result.fail(new ServiceInvocationException(response.statusCode()));
                 }
             }).exceptionHandler(result::fail);
 
-        if (contentType != null) {
-            req.putHeader(HttpHeaders.CONTENT_TYPE, contentType);
+        if (requestHeaders != null) {
+            req.headers().addAll(requestHeaders);
         }
         if (body == null) {
             req.end();

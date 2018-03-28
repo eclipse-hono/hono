@@ -38,8 +38,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -49,6 +51,12 @@ import io.vertx.ext.unit.TestContext;
  *
  */
 public abstract class HttpTestBase {
+
+    /**
+     * The CORS <em>origin</em> address to use for sending messages.
+     */
+    protected static final String ORIGIN_URI = "http://hono.eclipse.org";
+    private static final String ORIGIN_WILDCARD = "*";
 
     private static final Vertx VERTX = Vertx.vertx();
     private static final long  TEST_TIMEOUT = 15000; // ms
@@ -117,15 +125,16 @@ public abstract class HttpTestBase {
     /**
      * Sends a message on behalf of a device to the HTTP adapter.
      * 
+     * @param origin The value of the <em>Origin</em> header to include in the request.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param payload The message to send.
      * @return A future indicating the outcome of the operation.
-     *         The future will succeed if the message has been accepted
-     *         by the HTTP adapter.
+     *         The future will succeed with the response headers if the message has been
+     *         accepted by the HTTP adapter.
      *         Otherwise the future will fail with a {@link ServiceInvocationException}.
      */
-    protected abstract Future<Void> send(final String tenantId, final String deviceId, final Buffer payload);
+    protected abstract Future<MultiMap> send(final String origin, final String tenantId, final String deviceId, final Buffer payload);
 
     /**
      * Creates a test specific message consumer.
@@ -173,12 +182,12 @@ public abstract class HttpTestBase {
         while (messageCount.get() < messagesToSend) {
 
             final Async sending = ctx.async();
-            send(tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement())).setHandler(attempt -> {
+            send(ORIGIN_URI, tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()))
+            .compose(this::assertHttpResponse).setHandler(attempt -> {
                 if (attempt.succeeded()) {
-                    LOGGER.debug("sent message {} [status code: 202]", messageCount.get());
+                    LOGGER.debug("sent message {}", messageCount.get());
                 } else {
-                    LOGGER.debug("sent message {} [status code: {}]", messageCount.get(),
-                            ((ServiceInvocationException) attempt.cause()).getErrorCode());
+                    LOGGER.debug("failed to send message {}: {}", messageCount.get(), attempt.cause().getMessage());
                 }
                 sending.complete();
             });
@@ -225,7 +234,7 @@ public abstract class HttpTestBase {
         setup.await();
 
         // WHEN a device that belongs to the tenant uploads a message
-        send(tenantId, deviceId, Buffer.buffer("hello")).setHandler(ctx.asyncAssertFailure(t -> {
+        send(ORIGIN_URI, tenantId, deviceId, Buffer.buffer("hello")).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the message gets rejected by the HTTP adapter
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
         }));
@@ -249,5 +258,27 @@ public abstract class HttpTestBase {
      */
     protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
         // empty
+    }
+
+    private Future<Void> assertHttpResponse(final MultiMap responseHeaders) {
+
+        final Future<Void> result = Future.future();
+        final String allowedOrigin = responseHeaders.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN);
+        final boolean hasValidOrigin = allowedOrigin != null
+                && (allowedOrigin.equals(ORIGIN_WILDCARD) || allowedOrigin.equals(ORIGIN_URI));
+
+        final String allowedHeaders = responseHeaders.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS);
+        final boolean containsAllowedHeaders = allowedHeaders != null
+                && allowedHeaders.contains(HttpHeaders.AUTHORIZATION)
+                && allowedHeaders.contains(HttpHeaders.CONTENT_TYPE);
+
+        if (!hasValidOrigin) {
+            result.fail(new IllegalArgumentException("response contains invalid allowed origin: " + allowedOrigin));
+        } else if (!containsAllowedHeaders) {
+            result.fail(new IllegalArgumentException("response contains invalid allowed headers: " + allowedHeaders));
+        } else {
+            result.complete();;
+        }
+        return result;
     }
 }

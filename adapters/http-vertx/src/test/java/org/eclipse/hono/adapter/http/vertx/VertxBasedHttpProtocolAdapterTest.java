@@ -175,23 +175,5 @@ public class VertxBasedHttpProtocolAdapterTest {
             });
         }).exceptionHandler(context::fail).end();
     }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    public final void testCors(final TestContext context) throws Exception {
-        final Async async = context.async();
-
-        vertx.createHttpClient().options(httpAdapter.getInsecurePort(), HOST, "/telemetry")
-                .putHeader(HttpHeaders.ORIGIN, "hono.org")
-                .putHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
-                .handler(response -> {
-            context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.statusCode());
-            context.assertTrue(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS).contains("POST"));
-            context.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
-            response.bodyHandler(totalBuffer -> {
-                async.complete();
-            });
-        }).exceptionHandler(context::fail).end();
-    }
 }
 

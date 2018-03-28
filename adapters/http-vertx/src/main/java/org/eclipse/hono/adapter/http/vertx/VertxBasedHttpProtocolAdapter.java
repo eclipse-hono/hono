@@ -51,13 +51,14 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     @Override
     protected final void addRoutes(final Router router) {
+
         setupCorsHandler(router);
 
-        if (!getConfig().isAuthenticationRequired()) {
+        if (getConfig().isAuthenticationRequired()) {
+            setupBasicAuth(router);
+        } else {
             LOG.warn("device authentication has been disabled");
             LOG.warn("any device may publish data on behalf of all other devices");
-        } else {
-            setupBasicAuth(router);
         }
 
         addTelemetryApiRoutes(router);
@@ -65,11 +66,11 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     }
 
     private void setupCorsHandler(final Router router) {
-        router.route()
-                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+        router.route().handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
                         .allowedMethod(HttpMethod.PUT)
                         .allowedMethod(HttpMethod.POST)
-                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString()).allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
     }
 
     private void setupBasicAuth(final Router router) {
