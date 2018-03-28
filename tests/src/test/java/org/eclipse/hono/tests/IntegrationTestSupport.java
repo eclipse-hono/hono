@@ -312,6 +312,16 @@ public final class IntegrationTestSupport {
         return true;
     }
 
+    /**
+     * Creates an authentication identifier from a device and tenant ID.
+     * <p>
+     * The returned identifier can be used as the <em>username</em> with
+     * Hono's protocol adapters that support username/password authentication.
+     * 
+     * @param deviceId The device identifier.
+     * @param tenant The tenant that the device belongs to.
+     * @return The authentication identifier.
+     */
     public static String getUsername(final String deviceId, final String tenant) {
         return String.format("%s@%s", deviceId, tenant);
     }
