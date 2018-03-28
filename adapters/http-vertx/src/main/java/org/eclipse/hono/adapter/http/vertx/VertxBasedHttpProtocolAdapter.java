@@ -14,6 +14,7 @@ package org.eclipse.hono.adapter.http.vertx;
 
 import java.net.HttpURLConnection;
 
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.handler.CorsHandler;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
@@ -52,47 +53,57 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     @Override
     protected final void addRoutes(final Router router) {
 
-        setupCorsHandler(router);
-
         if (getConfig().isAuthenticationRequired()) {
-            setupBasicAuth(router);
+
+            final Handler<RoutingContext> basicAuthHandler = 
+                    new HonoAuthHandlerImpl(getCredentialsAuthProvider(), getConfig().getRealm()) {
+                        @Override
+                        protected void processException(RoutingContext ctx, Throwable exception) {
+                            if (exception instanceof ServiceInvocationException) {
+                                ctx.fail(((ServiceInvocationException) exception).getErrorCode());
+                            } else {
+                                super.processException(ctx, exception);
+                            }
+                        }
+                    };
+            addTelemetryApiRoutes(router, basicAuthHandler);
+            addEventApiRoutes(router, basicAuthHandler);
+
         } else {
+
             LOG.warn("device authentication has been disabled");
             LOG.warn("any device may publish data on behalf of all other devices");
+            addTelemetryApiRoutes(router, null);
+            addEventApiRoutes(router, null);
         }
-
-        addTelemetryApiRoutes(router);
-        addEventApiRoutes(router);
     }
 
-    private void setupCorsHandler(final Router router) {
-        router.route().handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
-                        .allowedMethod(HttpMethod.PUT)
-                        .allowedMethod(HttpMethod.POST)
-                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
-    }
+    private void addTelemetryApiRoutes(final Router router, Handler<RoutingContext> basicAuthHandler) {
 
-    private void setupBasicAuth(final Router router) {
-        router.route().handler(new HonoAuthHandlerImpl(getCredentialsAuthProvider(), getConfig().getRealm()) {
-            @Override
-            protected void processException(RoutingContext ctx, Throwable exception) {
-                if (exception instanceof ServiceInvocationException) {
-                    ctx.fail(((ServiceInvocationException) exception).getErrorCode());
-                } else {
-                    super.processException(ctx, exception);
-                }
-            }
-        });
-    }
-
-    private void addTelemetryApiRoutes(final Router router) {
+        // support CORS headers for PUTing telemetry
+        router.routeWithRegex("\\/telemetry\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                .allowedMethod(HttpMethod.PUT)
+                .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
         if (getConfig().isAuthenticationRequired()) {
+
+            // support CORS headers for POSTing telemetry
+            router.route("/telemetry").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                    .allowedMethod(HttpMethod.POST)
+                    .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+
+            // require Basic auth for POSTing telemetry
+            router.route(HttpMethod.POST, "/telemetry").handler(basicAuthHandler);
+
             // route for posting telemetry data using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/telemetry").handler(this::handlePostTelemetry);
-            // route for asserting that authenticated device's tenant matches tenant from path variables
+
+            // require Basic auth for PUTing telemetry
+            router.route(HttpMethod.PUT, "/telemetry/*").handler(basicAuthHandler);
+            // assert that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(this::assertTenant);
         }
@@ -102,9 +113,25 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 .handler(ctx -> uploadTelemetryMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
-    private void addEventApiRoutes(final Router router) {
+    private void addEventApiRoutes(final Router router, Handler<RoutingContext> basicAuthHandler) {
+
+        // support CORS headers for PUTing events
+        router.routeWithRegex("\\/event\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                .allowedMethod(HttpMethod.PUT)
+                .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
         if (getConfig().isAuthenticationRequired()) {
+
+            // support CORS headers for POSTing events
+            router.route("/event").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                    .allowedMethod(HttpMethod.POST)
+                    .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+
+            // require Basic auth for POSTing telemetry
+            router.route(HttpMethod.POST, "/event").handler(basicAuthHandler);
+
             // route for posting events using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/event").handler(this::handlePostEvent);
