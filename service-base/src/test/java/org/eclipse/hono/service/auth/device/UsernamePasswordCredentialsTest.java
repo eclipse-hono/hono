@@ -79,7 +79,7 @@ public class UsernamePasswordCredentialsTest {
     }
 
     /**
-     * Verifies that for single tenant mode, the tenant is automatically set to {@link Constants#DEFAULT_TENANT};
+     * Verifies that for single tenant mode, the tenant is automatically set to {@link Constants#DEFAULT_TENANT}.
      */
     @Test
     public void testTenantFromUserSingleTenant() {

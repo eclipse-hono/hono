@@ -36,7 +36,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
 
 /**
- * Tests
+ * Tests verifying behavior of {@link RegistrationAmqpEndpoint}.
  */
 @RunWith(MockitoJUnitRunner.class)
 public class RegistrationAmqpEndpointTest {
