@@ -21,7 +21,7 @@ public enum EndpointType {
      * 
      * @param name The name of the endpoint type.
      * 
-     * @return The enum literal of the endpoint type. Returns {@value #UNKNOWN} if it cannot find the endpoint type.
+     * @return The enum literal of the endpoint type. Returns {@link #UNKNOWN} if it cannot find the endpoint type.
      *         Never returns {@code null}.
      */
     public static EndpointType fromString(String name) {
