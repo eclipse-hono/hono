@@ -283,21 +283,22 @@ public class FileBasedTenantServiceTest {
     }
 
     /**
-     * Verifies that the <em>modificationEnabled</em> property prevents adding a tenant.
+     * Verifies that a tenant can be added with <em>modificationEnabled</em>
+     * set to {@code false}.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantsFailsIfModificationIsDisabled(final TestContext ctx) {
+    public void testAddTenantSucceedsIfModificationIsDisabled(final TestContext ctx) {
 
         // GIVEN a service containing a set of tenants
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
 
-        // WHEN trying to update the tenant
-        svc.add("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
-            // THEN the update fails
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+        // WHEN trying to add a new tenant
+        svc.add("fancy-new-tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
+            // THEN the request succeeds
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
         }));
     }
 

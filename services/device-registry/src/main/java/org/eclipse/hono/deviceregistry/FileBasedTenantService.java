@@ -269,22 +269,18 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
 
-        if (getConfig().isModificationEnabled()) {
-            if (tenants.containsKey(tenantId)) {
-                return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
-            } else {
-                try {
-                    final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
-                    tenant.setTenantId(tenantId);
-                    tenants.put(tenantId, tenant);
-                    dirty = true;
-                    return TenantResult.from(HttpURLConnection.HTTP_CREATED);
-                } catch (IllegalArgumentException e) {
-                    return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
-                }
-            }
+        if (tenants.containsKey(tenantId)) {
+            return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
         } else {
-            return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
+            try {
+                final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
+                tenant.setTenantId(tenantId);
+                tenants.put(tenantId, tenant);
+                dirty = true;
+                return TenantResult.from(HttpURLConnection.HTTP_CREATED);
+            } catch (IllegalArgumentException e) {
+                return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
+            }
         }
     }
 
