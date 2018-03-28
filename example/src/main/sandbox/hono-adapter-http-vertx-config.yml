@@ -12,21 +12,28 @@ hono:
     jmsVendorPropsEnabled: true
     maxPayloadSize: 8096
   messaging:
-    name: 'Hono REST Adapter'
+    name: 'Hono HTTP Adapter'
     host: ${hono.messaging.host}
     port: 5671
     username: ${hono.adapter.http.username}
     password: ${hono.adapter.http.password}
     trustStorePath: ${hono.trustStore.path}
   registration:
-    name: 'Hono REST Adapter'
+    name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
     port: 5671
     username: ${hono.adapter.http.username}
     password: ${hono.adapter.http.password}
     trustStorePath: ${hono.trustStore.path}
   credentials:
-    name: 'Hono REST Adapter'
+    name: 'Hono HTTP Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.http.username}
+    password: ${hono.adapter.http.password}
+    trustStorePath: ${hono.trustStore.path}
+  tenant:
+    name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
     port: 5671
     username: ${hono.adapter.http.username}

@@ -31,6 +31,13 @@ hono:
     username: ${hono.adapter.kura.username}
     password: ${hono.adapter.kura.password}
     trustStorePath: ${hono.trustStore.path}
+  tenant:
+    name: 'Hono Kura Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.kura.username}
+    password: ${hono.adapter.kura.password}
+    trustStorePath: ${hono.trustStore.path}
   metric:
     reporter:
       graphite:
