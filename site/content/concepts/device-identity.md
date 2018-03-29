@@ -31,7 +31,7 @@ Devices connect to protocol adapters in order to publish telemetry data or event
 Hono relies on protocol adapters to establish a device's identity before it is allowed to publish telemetry data or send events. Conceptually, Hono distinguishes between two identities
 
 1. an identity associated with the authentication credentials (termed the *authentication identity* or *auth-id*), and
-1. an identity to act as (the *device identity*).
+1. an identity to act as (the *device identity* or *device-id*).
 
 A device therefore presents an *auth-id* as part of its credentials during the authentication process which is then resolved to a *device identity* by the protocol adapter on successful verification of the credentials.
 
