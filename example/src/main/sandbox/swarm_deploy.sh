@@ -202,10 +202,10 @@ echo ... done
 
 echo
 echo "Deploying NGINX for redirecting to Hono web site"
+docker config create -l project=$NS site.conf $SCRIPTPATH/nginx.conf
 docker service create --detach=false --name hono-nginx -p 80:80 \
-  --env SERVER_REDIRECT=www.eclipse.org \
-  --env SERVER_REDIRECT_PATH=/hono/sandbox/ \
-  schmunk42/nginx-redirect
+   --config source=site.conf,target=/etc/nginx/conf.d/site.conf,mode=0440 \
+  nginx:1.13
 echo ... done
 
 echo ECLIPSE HONO SANDBOX DEPLOYED TO DOCKER SWARM

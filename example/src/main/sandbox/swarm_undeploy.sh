@@ -18,6 +18,7 @@ NS=hono
 echo UNDEPLOYING ECLIPSE HONO SANDBOX FROM DOCKER SWARM
 
 docker service rm hono-nginx
+docker config rm site.conf
 
 docker service rm hono-adapter-kura
 docker secret rm \
