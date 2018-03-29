@@ -98,9 +98,9 @@
           "users": "Eclipse IoT;Hono;hono-messaging",
           "remoteHosts": "*",
           "maxSessions": 2,
-          "maxFrameSize": 10000,
-          "maxSessionWindow": 2000000,
-          "maxMessageSize": 8096,
+          "maxFrameSize": 4096,
+          "maxSessionWindow": 819200,
+          "maxMessageSize": 8092,
           "allowUserIdProxy": true,
           "targets": "telemetry/*, event/*"
         }
