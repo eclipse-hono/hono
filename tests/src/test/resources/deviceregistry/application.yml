@@ -1,7 +1,7 @@
 hono:
   app:
     maxInstances: 1
-    startupTimeout: 65
+    startupTimeout: 90
   auth:
     host: hono-service-auth.hono
     port: 5672

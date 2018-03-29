@@ -1,7 +1,7 @@
 hono:
   app:
     maxInstances: 1
-    startupTimeout: 65
+    startupTimeout: 120
   mqtt:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
