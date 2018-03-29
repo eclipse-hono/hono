@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -22,6 +22,10 @@ import org.junit.Test;
  */
 public class ResourceIdentifierTest {
 
+    /**
+     * Verifies that a resource identifier created from a string
+     * parses the segments correctly.
+     */
     @Test
     public void testFromStringAllowsMissingDeviceId() {
         ResourceIdentifier resourceId = ResourceIdentifier.fromString("telemetry/myTenant");
@@ -32,6 +36,10 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.toString(), is("telemetry/myTenant"));
     }
 
+    /**
+     * Verifies that a resource identifier created from a string containing
+     * a single segment only contains the segment as endpoint and the default tenant.
+     */
     @Test
     public void testFromStringAssumingDefaultTenantAllowsMissingDeviceId() {
         ResourceIdentifier resourceId = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
@@ -42,6 +50,10 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.toString(), is("telemetry/" + Constants.DEFAULT_TENANT));
     }
 
+    /**
+     * Verifies that a resource identifier created from a string that contains
+     * more than three segments correctly parses the individual path segments.
+     */
     @Test
     public void testFromStringWithExtendedPath() {
         ResourceIdentifier resourceId = ResourceIdentifier.fromString("telemetry/myTenant/deviceId/what/ever");
@@ -88,6 +100,9 @@ public class ResourceIdentifierTest {
         assertNull(resourceId.getResourceId());
     }
 
+    /**
+     * Verifies that a resource identifier can be created from string segments.
+     */
     @Test
     public void testFromIndividualParameters() {
         ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", "myDevice");
@@ -98,6 +113,10 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.toString(), is("telemetry/myTenant/myDevice"));
     }
 
+    /**
+     * Verifies that a resource identifier can be created from string containing
+     * a trailing {@code null} segment.
+     */
     @Test
     public void testFromAllowsMissingDeviceId() {
         ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", null);
@@ -108,6 +127,10 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.toString(), is("telemetry/myTenant"));
     }
 
+    /**
+     * Verifies that resource identifiers with the same endpoint and tenant
+     * are considered equal.
+     */
     @Test
     public void testEqualsReturnsTrueForSameEndpointAndTenant() {
         ResourceIdentifier one = ResourceIdentifier.from("ep", "tenant", null);
@@ -119,6 +142,10 @@ public class ResourceIdentifierTest {
         assertTrue(one.equals(two));
     }
 
+    /**
+     * Verifies that resource identifiers with the same endpoint and tenant
+     * produce the same hash code.
+     */
     @Test
     public void testHashCodeReturnsSameValueForSameEndpointAndTenant() {
         ResourceIdentifier one = ResourceIdentifier.from("ep", "tenant", null);
@@ -130,21 +157,33 @@ public class ResourceIdentifierTest {
         assertThat(one.hashCode(), is(two.hashCode()));
     }
 
+    /**
+     * Verifies that a resource identifier can be created from
+     * a path that contains trailing {@code null} segments.
+     */
     @Test
-    public void testToPathStripsTrailingNulls() {
+    public void testFromPathIgnoresTrailingNulls() {
         ResourceIdentifier id = ResourceIdentifier.fromPath(new String[]{"first", "second", null, null});
         assertThat(id.toPath().length, is(2));
         assertThat(id.toPath()[0], is("first"));
         assertThat(id.toPath()[1], is("second"));
     }
 
+    /**
+     * Verifies that a resource identifier cannot be created from
+     * a path that contains non-trailing {@code null} segments.
+     */
     @Test(expected = IllegalArgumentException.class)
-    public void testToPathFailsForNonTrailingNulls() {
+    public void testFromPathFailsForNonTrailingNulls() {
         ResourceIdentifier.fromPath(new String[]{"first", "second", null, "last"});
     }
 
+    /**
+     * Verifies that a resource identifier cannot be created from
+     * a path that starts with a {@code null} segment.
+     */
     @Test(expected = IllegalArgumentException.class)
-    public void testToPathFailsForPathStartingWithNullSegment() {
+    public void testFromPathFailsForPathStartingWithNullSegment() {
         ResourceIdentifier.fromPath(new String[]{null, "second", "last"});
     }
 }
