@@ -40,13 +40,15 @@ public class EventHttpIT extends HttpTestBase {
             final String origin,
             final String tenantId,
             final String deviceId,
+            final String password,
             final Buffer payload) {
 
-        return httpClient.update(
-                String.format("/%s/%s/%s", EventConstants.EVENT_ENDPOINT, tenantId, deviceId),
+        return httpClient.create(
+                String.format("/%s", EventConstants.EVENT_ENDPOINT),
                 payload,
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                    .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
                     .add(HttpHeaders.ORIGIN, origin),
                 statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
     }

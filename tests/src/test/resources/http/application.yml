@@ -8,7 +8,6 @@ hono:
     insecurePortEnabled: true
     keyPath: /etc/hono/certs/http-adapter-key.pem
     certPath: /etc/hono/certs/http-adapter-cert.pem
-    authenticationRequired: false
   messaging:
     name: 'Hono REST Adapter'
     host: hono-service-messaging.hono

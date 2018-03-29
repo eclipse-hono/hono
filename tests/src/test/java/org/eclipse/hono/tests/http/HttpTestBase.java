@@ -14,6 +14,8 @@
 package org.eclipse.hono.tests.http;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -128,13 +130,19 @@ public abstract class HttpTestBase {
      * @param origin The value of the <em>Origin</em> header to include in the request.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
+     * @param password The password to use for authenticating to the HTTP adapter.
      * @param payload The message to send.
      * @return A future indicating the outcome of the operation.
      *         The future will succeed with the response headers if the message has been
      *         accepted by the HTTP adapter.
      *         Otherwise the future will fail with a {@link ServiceInvocationException}.
      */
-    protected abstract Future<MultiMap> send(final String origin, final String tenantId, final String deviceId, final Buffer payload);
+    protected abstract Future<MultiMap> send(
+            final String origin,
+            final String tenantId,
+            final String deviceId,
+            final String password,
+            final Buffer payload);
 
     /**
      * Creates a test specific message consumer.
@@ -160,10 +168,12 @@ public abstract class HttpTestBase {
         final Async setup = ctx.async();
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
 
-        helper.registry.addTenant(JsonObject.mapFrom(tenant))
-            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
+        helper.registry.addDeviceForTenant(tenant, deviceId, password)
+//        helper.registry.addTenant(JsonObject.mapFrom(tenant))
+//            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
             .compose(ok -> createConsumer(tenantId, msg -> {
                 LOGGER.trace("received {}", msg);
                 assertMessageProperties(ctx, msg);
@@ -182,7 +192,7 @@ public abstract class HttpTestBase {
         while (messageCount.get() < messagesToSend) {
 
             final Async sending = ctx.async();
-            send(ORIGIN_URI, tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()))
+            send(ORIGIN_URI, tenantId, deviceId, password, Buffer.buffer("hello " + messageCount.getAndIncrement()))
             .compose(this::assertHttpResponse).setHandler(attempt -> {
                 if (attempt.succeeded()) {
                     LOGGER.debug("sent message {}", messageCount.get());
@@ -221,6 +231,7 @@ public abstract class HttpTestBase {
         // GIVEN a tenant for which the HTTP adapter is disabled
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
         final JsonObject adapterDetailsHttp = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
@@ -228,13 +239,14 @@ public abstract class HttpTestBase {
         tenant.addAdapterConfiguration(adapterDetailsHttp);
 
         final Async setup = ctx.async();
-        helper.registry.addTenant(JsonObject.mapFrom(tenant))
-            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
+        helper.registry.addDeviceForTenant(tenant, deviceId, password)
+//        helper.registry.addTenant(JsonObject.mapFrom(tenant))
+//            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
             .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         // WHEN a device that belongs to the tenant uploads a message
-        send(ORIGIN_URI, tenantId, deviceId, Buffer.buffer("hello")).setHandler(ctx.asyncAssertFailure(t -> {
+        send(ORIGIN_URI, tenantId, deviceId, password, Buffer.buffer("hello")).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the message gets rejected by the HTTP adapter
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
         }));
@@ -281,4 +293,22 @@ public abstract class HttpTestBase {
         }
         return result;
     }
+
+    /**
+     * Creates an HTTP Basic auth header value for a device.
+     * 
+     * @param tenant The tenant that the device belongs to.
+     * @param deviceId The device identifier.
+     * @param password The device's password.
+     * @return The header value.
+     */
+    public static String getBasicAuth(final String tenant, final String deviceId, final String password) {
+
+        final StringBuilder result = new StringBuilder("Basic ");
+        final String username = IntegrationTestSupport.getUsername(deviceId, tenant);
+        result.append(Base64.getEncoder().encodeToString(new StringBuilder(username).append(":").append(password)
+                .toString().getBytes(StandardCharsets.UTF_8)));
+        return result.toString();
+    }
+
 }

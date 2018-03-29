@@ -8,7 +8,6 @@ hono:
     insecurePortEnabled: true
     keyPath: /etc/hono/certs/mqtt-adapter-key.pem
     certPath: /etc/hono/certs/mqtt-adapter-cert.pem
-    authenticationRequired: true
   messaging:
     name: 'Hono MQTT Adapter'
     host: hono-service-messaging.hono
