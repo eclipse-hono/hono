@@ -37,6 +37,12 @@ public abstract class RequestResponseApiConstants {
 
     /* message payload fields */
     public static final String FIELD_PAYLOAD_DEVICE_ID = Constants.JSON_FIELD_DEVICE_ID;
+    /**
+     * The name of the property that contains the <em>subject DN</em> of the CA certificate
+     * that has been configured for a tenant. The subject DN is serialized as defined by
+     * <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
+     */
+    public static final String FIELD_PAYLOAD_SUBJECT_DN = "subject-dn";
     public static final String FIELD_PAYLOAD_TENANT_ID = Constants.JSON_FIELD_TENANT_ID;
 
     public static final String FIELD_ENABLED   = "enabled";

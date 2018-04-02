@@ -19,8 +19,11 @@ import java.util.Optional;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.auth.device.HonoChainAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
@@ -32,6 +35,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.ChainAuthHandler;
 import io.vertx.ext.web.handler.CorsHandler;
 
 /**
@@ -44,6 +48,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     private static final String PARAM_DEVICE_ID = "device_id";
 
     private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
+    private HonoClientBasedAuthProvider clientCertAuthProvider;
 
     /**
      * Sets the provider to use for authenticating devices based on
@@ -57,6 +62,20 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      */
     public void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider provider) {
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
+    }
+
+    /**
+     * Sets the provider to use for authenticating devices based on
+     * a client certificate.
+     * <p>
+     * If not set explicitly using this method, a {@code SubjectDnAuthProvider}
+     * will be created during startup.
+     * 
+     * @param provider The provider to use.
+     * @throws NullPointerException if provider is {@code null}.
+     */
+    public void setClientCertAuthProvider(final HonoClientBasedAuthProvider provider) {
+        this.clientCertAuthProvider = Objects.requireNonNull(provider);
     }
 
     /**
@@ -74,12 +93,17 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (getConfig().isAuthenticationRequired()) {
 
-            final HonoClientBasedAuthProvider authProvider = Optional.ofNullable(usernamePasswordAuthProvider)
-                .orElse(new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig()));
-
-            final Handler<RoutingContext> basicAuthHandler = new HonoBasicAuthHandler(authProvider, getConfig().getRealm());
-            addTelemetryApiRoutes(router, basicAuthHandler);
-            addEventApiRoutes(router, basicAuthHandler);
+            final ChainAuthHandler authHandler = new HonoChainAuthHandler();
+            authHandler.append(new X509AuthHandler(
+                    Optional.ofNullable(clientCertAuthProvider).orElse(
+                            new X509AuthProvider(getCredentialsServiceClient(), getConfig())),
+                    getTenantServiceClient()));
+            authHandler.append(new HonoBasicAuthHandler(
+                    Optional.ofNullable(usernamePasswordAuthProvider).orElse(
+                            new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig())),
+                    getConfig().getRealm()));
+            addTelemetryApiRoutes(router, authHandler);
+            addEventApiRoutes(router, authHandler);
 
         } else {
 
@@ -90,7 +114,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         }
     }
 
-    private void addTelemetryApiRoutes(final Router router, final Handler<RoutingContext> basicAuthHandler) {
+    private void addTelemetryApiRoutes(final Router router, final Handler<RoutingContext> authHandler) {
 
         // support CORS headers for PUTing telemetry
         router.routeWithRegex("\\/telemetry\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
@@ -107,14 +131,14 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
             // require Basic auth for POSTing telemetry
-            router.route(HttpMethod.POST, "/telemetry").handler(basicAuthHandler);
+            router.route(HttpMethod.POST, "/telemetry").handler(authHandler);
 
             // route for posting telemetry data using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/telemetry").handler(this::handlePostTelemetry);
 
             // require Basic auth for PUTing telemetry
-            router.route(HttpMethod.PUT, "/telemetry/*").handler(basicAuthHandler);
+            router.route(HttpMethod.PUT, "/telemetry/*").handler(authHandler);
             // assert that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(this::assertTenant);
@@ -125,7 +149,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 .handler(ctx -> uploadTelemetryMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
-    private void addEventApiRoutes(final Router router, final Handler<RoutingContext> basicAuthHandler) {
+    private void addEventApiRoutes(final Router router, final Handler<RoutingContext> authHandler) {
 
         // support CORS headers for PUTing events
         router.routeWithRegex("\\/event\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
@@ -142,14 +166,14 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
             // require Basic auth for POSTing telemetry
-            router.route(HttpMethod.POST, "/event").handler(basicAuthHandler);
+            router.route(HttpMethod.POST, "/event").handler(authHandler);
 
             // route for posting events using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/event").handler(this::handlePostEvent);
 
             // require Basic auth for PUTing event
-            router.route(HttpMethod.PUT, "/event/*").handler(basicAuthHandler);
+            router.route(HttpMethod.PUT, "/event/*").handler(authHandler);
             // route for asserting that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(this::assertTenant);

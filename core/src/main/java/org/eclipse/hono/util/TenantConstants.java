@@ -39,11 +39,6 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_PAYLOAD_PUBLIC_KEY = "public-key";
     /**
-     * The name of the property that contains the RFC 2253 formatted <em>subject DN</em> of the CA certificate
-     * that has been configured for a tenant.
-     */
-    public static final String FIELD_PAYLOAD_SUBJECT_DN = "subject-dn";
-    /**
      * The name of the property that contains the trusted certificate authority configured for a tenant.
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
