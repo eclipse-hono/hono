@@ -11,10 +11,10 @@
  * SPDX-License-Identifier: EPL-1.0
  */
 
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.service.auth.device;
 
-import static org.junit.Assert.*;
-import static org.hamcrest.CoreMatchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.nio.charset.StandardCharsets;
@@ -24,8 +24,8 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -39,13 +39,13 @@ import io.vertx.ext.web.RoutingContext;
 
 
 /**
- * Tests verifying behavior of {@link HonoAuthHandlerImpl}.
+ * Tests verifying behavior of {@link HonoAuthHandler}.
  *
  */
 @RunWith(VertxUnitRunner.class)
 public class HonoAuthHandlerImplTest {
 
-    private HonoAuthHandlerImpl authHandler;
+    private HonoAuthHandler authHandler;
     private AuthProvider authProvider;
 
     /**
@@ -54,7 +54,13 @@ public class HonoAuthHandlerImplTest {
     @Before
     public void setUp() {
         authProvider = mock(AuthProvider.class);
-        authHandler = new HonoAuthHandlerImpl(authProvider, "hono");
+        authHandler = new HonoAuthHandler(authProvider) {
+
+            @Override
+            public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
+                handler.handle(Future.succeededFuture(new JsonObject()));
+            }
+        };
     }
 
     /**
@@ -79,21 +85,18 @@ public class HonoAuthHandlerImplTest {
                 .append("BASIC ")
                 .append(Base64.getEncoder().encodeToString("user:password".getBytes(StandardCharsets.UTF_8)))
                 .toString();
-        MultiMap headers = mock(MultiMap.class);
+        final MultiMap headers = mock(MultiMap.class);
         when(headers.get(eq(HttpHeaders.AUTHORIZATION))).thenReturn(authorization);
-        HttpServerRequest req = mock(HttpServerRequest.class);
+        final HttpServerRequest req = mock(HttpServerRequest.class);
         when(req.headers()).thenReturn(headers);
-        HttpServerResponse resp = mock(HttpServerResponse.class);
-        RoutingContext ctx = mock(RoutingContext.class);
+        final HttpServerResponse resp = mock(HttpServerResponse.class);
+        final RoutingContext ctx = mock(RoutingContext.class);
         when(ctx.request()).thenReturn(req);
         when(ctx.response()).thenReturn(resp);
         authHandler.handle(ctx);
 
         // THEN the request context is failed with the 503 error code
-        ArgumentCaptor<Throwable> failureCaptor = ArgumentCaptor.forClass(Throwable.class);
-        verify(ctx).fail(failureCaptor.capture());
-        ServerErrorException ex = (ServerErrorException) failureCaptor.getValue();
-        assertThat(ex.getErrorCode(), is(EXPECTED_ERROR_CODE));
+        verify(ctx).fail(EXPECTED_ERROR_CODE);
     }
 
 }

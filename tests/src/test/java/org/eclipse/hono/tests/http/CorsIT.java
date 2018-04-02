@@ -82,7 +82,7 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
-                status -> status == HttpURLConnection.HTTP_NO_CONTENT)
+                status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
         }));
@@ -102,7 +102,7 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
-                status -> status == HttpURLConnection.HTTP_NO_CONTENT)
+                status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
         }));
@@ -122,7 +122,7 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
-                status -> status == HttpURLConnection.HTTP_NO_CONTENT)
+                status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
         }));
@@ -142,7 +142,7 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
-                status -> status == HttpURLConnection.HTTP_NO_CONTENT)
+                status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
         }));

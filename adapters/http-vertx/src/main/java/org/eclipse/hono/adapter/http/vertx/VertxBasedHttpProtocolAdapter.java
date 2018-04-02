@@ -14,22 +14,21 @@ package org.eclipse.hono.adapter.http.vertx;
 
 import java.net.HttpURLConnection;
 
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.ext.web.handler.CorsHandler;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.adapter.http.HonoAuthHandlerImpl;
+import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.CorsHandler;
 
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using HTTP.
@@ -55,17 +54,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (getConfig().isAuthenticationRequired()) {
 
-            final Handler<RoutingContext> basicAuthHandler = 
-                    new HonoAuthHandlerImpl(getCredentialsAuthProvider(), getConfig().getRealm()) {
-                        @Override
-                        protected void processException(RoutingContext ctx, Throwable exception) {
-                            if (exception instanceof ServiceInvocationException) {
-                                ctx.fail(((ServiceInvocationException) exception).getErrorCode());
-                            } else {
-                                super.processException(ctx, exception);
-                            }
-                        }
-                    };
+            final Handler<RoutingContext> basicAuthHandler = new HonoBasicAuthHandler(getCredentialsAuthProvider(), getConfig().getRealm());
             addTelemetryApiRoutes(router, basicAuthHandler);
             addEventApiRoutes(router, basicAuthHandler);
 

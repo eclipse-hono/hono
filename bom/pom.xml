@@ -52,7 +52,7 @@
     <spring.version>4.3.12.RELEASE</spring.version>
     <spring-boot.version>1.5.8.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
-    <vertx.version>3.5.0</vertx.version>
+    <vertx.version>3.5.1</vertx.version>
   </properties>
 
   <dependencyManagement>
