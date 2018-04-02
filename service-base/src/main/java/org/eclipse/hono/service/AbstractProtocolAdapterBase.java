@@ -28,8 +28,8 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.Strings;
@@ -64,7 +64,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private HonoClient messagingClient;
     private HonoClient registrationClient;
     private HonoClient tenantClient;
-    private HonoClientBasedAuthProvider credentialsAuthProvider;
+    private HonoClient credentialsServiceClient;
 
     /**
      * Sets the configuration by means of Spring dependency injection.
@@ -152,14 +152,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the authentication provider to use for verifying device credentials.
-     *
-     * @param credentialsAuthProvider The provider.
-     * @throws NullPointerException if the provider is {@code null}.
+     * Sets the client to use for connecting to the Credentials service.
+     * 
+     * @param credentialsServiceClient The client.
+     * @throws NullPointerException if the client is {@code null}.
      */
-    @Autowired(required = false)
-    public final void setCredentialsAuthProvider(final HonoClientBasedAuthProvider credentialsAuthProvider) {
-        this.credentialsAuthProvider = Objects.requireNonNull(credentialsAuthProvider);
+    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
+    @Autowired
+    public final void setCredentialsServiceClient(final HonoClient credentialsServiceClient) {
+        this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient);
+    }
+
+    /**
+     * Gets the client used for connecting to the Credentials service.
+     * 
+     * @return The client.
+     */
+    public final HonoClient getCredentialsServiceClient() {
+        return credentialsServiceClient;
     }
 
     /**
@@ -179,35 +189,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected abstract String getTypeName();
 
-    /**
-     * Gets the authentication provider used for verifying device credentials.
-     *
-     * @return The provider.
-     */
-    public final HonoClientBasedAuthProvider getCredentialsAuthProvider() {
-        return credentialsAuthProvider;
-    }
-
     @Override
     protected final Future<Void> startInternal() {
+
         final Future<Void> result = Future.future();
+
         if (Strings.isNullOrEmpty(getTypeName())) {
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClient == null) {
-            result.fail(new IllegalStateException("Hono Tenant client must be set"));
+            result.fail(new IllegalStateException("Tenant service client must be set"));
         } else if (messagingClient == null) {
             result.fail(new IllegalStateException("Hono Messaging client must be set"));
         } else if (registrationClient == null) {
-            result.fail(new IllegalStateException("Device Registration client must be set"));
-        } else if (credentialsAuthProvider == null) {
-            result.fail(new IllegalStateException("Credentials Authentication Provider must be set"));
+            result.fail(new IllegalStateException("Device Registration service client must be set"));
+        } else if (credentialsServiceClient == null) {
+            result.fail(new IllegalStateException("Credentials service client must be set"));
         } else {
             connectToService(tenantClient, "Tenant service");
             connectToService(messagingClient, "Messaging");
             connectToService(registrationClient, "Device Registration service");
-            credentialsAuthProvider.start().compose(s -> {
-                doStart(result);
-            }, result);
+            connectToService(credentialsServiceClient, "Credentials service");
+            doStart(result);
         }
         return result;
     }
@@ -215,12 +217,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Invoked after the adapter has started up.
      * <p>
-     * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
+     * This default implementation simply completes the future.
+     * <p>
+     * Subclasses should override this method to perform any work required
+     * on start-up of this protocol adapter.
      *
      * @param startFuture The future to complete once start up is complete.
      */
     protected void doStart(final Future<Void> startFuture) {
-        // should be overridden by subclasses
         startFuture.complete();
     }
 
@@ -245,17 +249,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     private CompositeFuture closeServiceClients() {
 
-        final Future<Void> tenantShutdownTracker = closeServiceClient(tenantClient);
-        final Future<Void> messagingShutdownTracker = closeServiceClient(messagingClient);
-        final Future<Void> registrationShutdownTracker = closeServiceClient(registrationClient);
-
-        Future<Void> credentialsTracker = Future.future();
-        if (credentialsAuthProvider == null) {
-            credentialsTracker.complete();
-        } else {
-            credentialsTracker = credentialsAuthProvider.stop();
-        }
-        return CompositeFuture.all(tenantShutdownTracker, messagingShutdownTracker, registrationShutdownTracker, credentialsTracker);
+        return CompositeFuture.all(
+                closeServiceClient(tenantClient),
+                closeServiceClient(messagingClient),
+                closeServiceClient(registrationClient),
+                closeServiceClient(credentialsServiceClient));
     }
 
     private Future<Void> closeServiceClient(final HonoClient client) {
@@ -346,7 +344,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return A future indicating the outcome of the check.
      *         The future will succeed if this adapter is currently connected to
      *         <ul>
-     *         <li>the Device Registration service</li>
+     *         <li>a Tenant service</li>
+     *         <li>a Device Registration service</li>
+     *         <li>a Credentials service</li>
      *         <li>a service implementing the Telemetry &amp; Event APIs</li>
      *         </ul>
      *         Otherwise, the future will fail.
@@ -362,7 +362,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         final Future<Void> registrationCheck = Optional.ofNullable(registrationClient)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new IllegalStateException("Device Registration service client is not set")));
-        return CompositeFuture.all(tenantCheck, messagingCheck, registrationCheck).compose(ok -> {
+        final Future<Void> credentialsCheck = Optional.ofNullable(credentialsServiceClient)
+                .map(client -> client.isConnected())
+                .orElse(Future.failedFuture(new IllegalStateException("Credentials service client is not set")));
+        return CompositeFuture.all(tenantCheck, messagingCheck, registrationCheck, credentialsCheck).compose(ok -> {
             return Future.succeededFuture();
         });
     }
@@ -566,19 +569,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 return null;
             });
         });
-        if (credentialsAuthProvider != null) {
-            credentialsAuthProvider.registerReadinessChecks(handler);
-        }
     }
 
     /**
-     * Registers a check that always succeeds.
+     * Does not register any checks.
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
-        if (credentialsAuthProvider != null) {
-            credentialsAuthProvider.registerLivenessChecks(handler);
-        }
     }
 
     /**

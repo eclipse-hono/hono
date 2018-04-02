@@ -23,7 +23,6 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -63,12 +62,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @Rule
     public Timeout globalTimeout = Timeout.seconds(5);
 
+    private HonoClient                    credentialsServiceClient;
     private HonoClient                    tenantServiceClient;
     private HonoClient                    messagingClient;
     private HonoClient                    registrationServiceClient;
     private RegistrationClient            regClient;
     private TenantClient                  tenantClient;
-    private HonoClientBasedAuthProvider   credentialsAuthProvider;
     private HttpProtocolAdapterProperties config;
 
     /**
@@ -94,15 +93,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
         when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
+        credentialsServiceClient = mock(HonoClient.class);
+        when(credentialsServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsServiceClient));
+
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
 
         registrationServiceClient = mock(HonoClient.class);
         when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
         when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
-
-        credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
-        when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
     }
 
     /**
@@ -117,7 +116,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // GIVEN an adapter with a client provided HTTP server
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
@@ -147,8 +145,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         Async onStartupSuccess = ctx.async();
 
         AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, s -> onStartupSuccess.complete());
-        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
-        adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         // WHEN starting the adapter
         Async startup = ctx.async();
@@ -163,35 +159,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         onStartupSuccess.await();
     }
 
-
     /**
-     * Verifies that the <em>onStartupSuccess</em> method is not invoked
-     * if no credentials authentication provider is set.
-     *
-     * @param ctx The helper to use for running async tests on vertx.
-     */
-    @Test
-    public void testStartUpFailsIfCredentialsAuthProviderIsNotSet(final TestContext ctx) {
-
-        // GIVEN an adapter with a client provided http server
-        HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, s -> ctx.fail("should not have invoked onStartupSuccess"));
-
-        // WHEN starting the adapter
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertFailure(s -> {
-            startup.complete();
-        }));
-        adapter.start(startupTracker);
-
-        // THEN the onStartupSuccess method has been invoked
-        startup.await();
-    }
-
-    /**
-     * Verifies that the <em>onStartupSuccess</em> method is not invoked
-     * if a client provided HTTP server fails to start.
+     * Verifies that the <em>onStartupSuccess</em> method is not invoked if a
+     * client provided HTTP server fails to start.
      * 
      * @param ctx The helper to use for running async tests on vertx.
      */
@@ -391,6 +361,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setTenantServiceClient(tenantServiceClient);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationServiceClient);
+        adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         return adapter;

@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.service.auth.device;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +32,6 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -45,7 +47,6 @@ public class CredentialsApiAuthProviderTest {
     private CredentialsApiAuthProvider provider;
     private HonoClient honoClient;
     private CredentialsClient credentialsClient;
-    private Vertx vertx;
 
     /**
      * Time out all test after 2 secs.
@@ -58,19 +59,18 @@ public class CredentialsApiAuthProviderTest {
      */
     @Before
     public void setUp() {
-        vertx = mock(Vertx.class);
+
         credentialsClient = mock(CredentialsClient.class);
         honoClient = mock(HonoClient.class);
         when(honoClient.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
 
-        provider = new CredentialsApiAuthProvider(vertx) {
+        provider = new CredentialsApiAuthProvider(honoClient) {
 
             @Override
             protected DeviceCredentials getCredentials(final JsonObject authInfo) {
                 return null;
             }
         };
-        provider.setCredentialsServiceClient(honoClient);
     }
 
     /**

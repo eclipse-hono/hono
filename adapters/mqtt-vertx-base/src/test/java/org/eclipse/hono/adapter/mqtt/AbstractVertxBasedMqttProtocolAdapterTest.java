@@ -82,11 +82,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
 
     private HonoClient tenantServiceClient;
+    private HonoClient credentialsServiceClient;
     private HonoClient messagingClient;
     private HonoClient deviceRegistrationServiceClient;
     private RegistrationClient regClient;
     private TenantClient tenantClient;
-    private HonoClientBasedAuthProvider credentialsAuthProvider;
+    private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
     private ProtocolAdapterProperties config;
 
     /**
@@ -112,6 +113,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
         when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
+        credentialsServiceClient = mock(HonoClient.class);
+        when(credentialsServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsServiceClient));
+
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
 
@@ -119,8 +123,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(deviceRegistrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(deviceRegistrationServiceClient));
         when(deviceRegistrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
-        credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
-        when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
+        usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
     }
 
     /**
@@ -264,7 +267,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);
 
-        verify(credentialsAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
+        verify(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
     }
 
     /**
@@ -283,7 +286,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "4711")));
             return null;
-        }).when(credentialsAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
 
         // WHEN a device tries to connect with valid credentials
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
@@ -292,7 +295,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // THEN the device's logical ID is successfully established and corresponding handlers
         // are registered
         final ArgumentCaptor<DeviceCredentials> credentialsCaptor = ArgumentCaptor.forClass(DeviceCredentials.class);
-        verify(credentialsAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
+        verify(usernamePasswordAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
         assertThat(credentialsCaptor.getValue().getAuthId(), is("sensor1"));
         verify(endpoint).accept(false);
         verify(endpoint).publishHandler(any(Handler.class));
@@ -319,7 +322,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is established and handlers are registered
-        verify(credentialsAuthProvider, never()).authenticate(any(DeviceCredentials.class), any(Handler.class));
+        verify(usernamePasswordAuthProvider, never()).authenticate(any(DeviceCredentials.class), any(Handler.class));
         verify(endpoint).publishHandler(any(Handler.class));
         verify(endpoint).closeHandler(any(Handler.class));
         verify(endpoint).accept(false);
@@ -538,6 +541,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(tenantServiceClient.isConnected()).thenReturn(Future.succeededFuture());
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture());
         when(deviceRegistrationServiceClient.isConnected()).thenReturn(Future.succeededFuture());
+        when(credentialsServiceClient.isConnected()).thenReturn(Future.succeededFuture());
     }
 
     private MqttEndpoint getMqttEndpointAuthenticated() {
@@ -585,7 +589,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setTenantServiceClient(tenantServiceClient);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(deviceRegistrationServiceClient);
-        adapter.setCredentialsAuthProvider(credentialsAuthProvider);
+        adapter.setCredentialsServiceClient(credentialsServiceClient);
+        adapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
 
         if (server != null) {
             adapter.setMqttInsecureServer(server);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,9 +12,6 @@
 
 package org.eclipse.hono.service.auth.device;
 
-import org.eclipse.hono.service.HealthCheckProvider;
-import org.eclipse.hono.service.Lifecycle;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.AuthProvider;
@@ -25,7 +22,7 @@ import io.vertx.ext.auth.AuthProvider;
  * means of health checks.
  *
  */
-public interface HonoClientBasedAuthProvider extends AuthProvider, HealthCheckProvider, Lifecycle {
+public interface HonoClientBasedAuthProvider extends AuthProvider {
 
     /**
      * Validates credentials provided by a device against the credentials on record

@@ -13,11 +13,15 @@
 package org.eclipse.hono.adapter.http.vertx;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
@@ -39,6 +43,22 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
 
+    private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
+
+    /**
+     * Sets the provider to use for authenticating devices based on
+     * a username and password.
+     * <p>
+     * If not set explicitly using this method, a {@code UsernamePasswordAuthProvider}
+     * will be created during startup.
+     * 
+     * @param provider The provider to use.
+     * @throws NullPointerException if provider is {@code null}.
+     */
+    public final void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider provider) {
+        this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
+    }
+
     /**
      * {@inheritDoc}
      * 
@@ -54,7 +74,10 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (getConfig().isAuthenticationRequired()) {
 
-            final Handler<RoutingContext> basicAuthHandler = new HonoBasicAuthHandler(getCredentialsAuthProvider(), getConfig().getRealm());
+            final HonoClientBasedAuthProvider authProvider = Optional.ofNullable(usernamePasswordAuthProvider)
+                .orElse(new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig()));
+
+            final Handler<RoutingContext> basicAuthHandler = new HonoBasicAuthHandler(authProvider, getConfig().getRealm());
             addTelemetryApiRoutes(router, basicAuthHandler);
             addEventApiRoutes(router, basicAuthHandler);
 

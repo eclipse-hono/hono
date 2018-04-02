@@ -15,30 +15,20 @@ package org.eclipse.hono.service.auth.device;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
-import io.vertx.ext.healthchecks.HealthCheckHandler;
-import io.vertx.ext.healthchecks.Status;
-import io.vertx.proton.ProtonConnection;
 
 
 /**
@@ -52,118 +42,16 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    private final Vertx vertx;
-    private HonoClient credentialsClient;
-    private AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
+    private HonoClient credentialsServiceClient;
 
     /**
-     * Creates a new authentication provider for a vert.x instance.
+     * Creates a new authentication provider for a credentials service client.
      * 
-     * @param vertx The vert.x instance to use for scheduling re-connection attempts.
-     * @throws NullPointerException if vertx is {@code null}
-     */
-    protected CredentialsApiAuthProvider(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
-    }
-
-    /**
-     * Sets the client to use for connecting to the Credentials service.
-     *
      * @param credentialsServiceClient The client.
-     * @throws NullPointerException if the client is {@code null}.
+     * @throws NullPointerException if the client is {@code null}
      */
-    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
-    @Autowired
-    public final void setCredentialsServiceClient(final HonoClient credentialsServiceClient) {
-        this.credentialsClient = Objects.requireNonNull(credentialsServiceClient);
-    }
-
-    /**
-     * Registers a check that verifies connection to Hono's <em>Credentials</em>
-     * service.
-     */
-    @Override
-    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        readinessHandler.register("connected-to-credentials-service", status -> {
-            final Future<Void> checkResult = Optional.ofNullable(credentialsClient)
-                    .map(client -> client.isConnected())
-                    .orElse(Future.failedFuture(new IllegalStateException("Credentials service client is not set")));
-            checkResult.map(connected -> {
-                status.tryComplete(Status.OK());
-                return null;
-            }).otherwise(t -> {
-                status.tryComplete(Status.KO());
-                return null;
-            });
-        });
-    }
-
-    /**
-     * Does not do anything.
-     */
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // nothing to do
-    }
-
-    /**
-     * Connects to the Credentials service using the configured client.
-     */
-    @Override
-    public final Future<Void> start() {
-
-        if (credentialsClient == null) {
-            return Future.failedFuture(new IllegalStateException("Credentials service client is not set"));
-        } else {
-            return credentialsClient
-                    .connect(this::onDisconnectCredentialsService)
-                    .map(connectedClient -> {
-                        log.info("connected to Credentials service");
-                        return (Void) null;
-                    }).recover(t -> {
-                        log.warn("connection to Credentials service failed", t);
-                        return Future.failedFuture(t);
-                    });
-        }
-    }
-
-    /**
-     * Attempts a reconnect for the Hono Credentials client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
-     *
-     * @param con The connection that was disconnected.
-     */
-    private void onDisconnectCredentialsService(final ProtonConnection con) {
-
-        if (shutdownInProgress.get()) {
-            log.debug("shut down in progress, not trying to re-connect to Credentials service");
-        } else {
-            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-                log.info("attempting to reconnect to Credentials service");
-                credentialsClient.connect(this::onDisconnectCredentialsService).setHandler(connectAttempt -> {
-                    if (connectAttempt.succeeded()) {
-                        log.info("reconnected to Credentials service");
-                    } else {
-                        log.debug("cannot reconnect to Credentials service");
-                    }
-                });
-            });
-        }
-    }
-
-    /**
-     * Closes the connection to the Credentials service.
-     */
-    @Override
-    public final Future<Void> stop() {
-
-        shutdownInProgress.set(true);
-        Future<Void> result = Future.future();
-        if (credentialsClient == null) {
-            result.complete();
-        } else {
-            credentialsClient.shutdown(result.completer());
-        }
-        return result;
+    public CredentialsApiAuthProvider(final HonoClient credentialsServiceClient) {
+        this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient);
     }
 
     /**
@@ -172,11 +60,11 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
      * @param tenantId The tenant to get the client for.
      * @return A future containing the client.
      */
-    protected final Future<CredentialsClient> getCredentialsServiceClient(final String tenantId) {
-        if (credentialsClient == null) {
+    protected final Future<CredentialsClient> getCredentialsClient(final String tenantId) {
+        if (credentialsServiceClient == null) {
             return Future.failedFuture(new IllegalStateException("no credentials client set"));
         } else {
-            return credentialsClient.getOrCreateCredentialsClient(tenantId);
+            return credentialsServiceClient.getOrCreateCredentialsClient(tenantId);
         }
     }
 
@@ -191,10 +79,10 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     protected final Future<CredentialsObject> getCredentialsForDevice(final DeviceCredentials deviceCredentials) {
 
         Objects.requireNonNull(deviceCredentials);
-        if (credentialsClient == null) {
+        if (credentialsServiceClient == null) {
             return Future.failedFuture(new IllegalStateException("Credentials API client is not set"));
         } else {
-            return getCredentialsServiceClient(deviceCredentials.getTenantId()).compose(client ->
+            return getCredentialsClient(deviceCredentials.getTenantId()).compose(client ->
                 client.get(deviceCredentials.getType(), deviceCredentials.getAuthId()));
         }
     }

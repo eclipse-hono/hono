@@ -62,9 +62,10 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static final String HOST = "localhost";
 
     private static HonoClient tenantServiceClient;
+    private static HonoClient credentialsServiceClient;
     private static HonoClient messagingClient;
     private static HonoClient registrationServiceClient;
-    private static HonoClientBasedAuthProvider credentialsAuthProvider;
+    private static HonoClientBasedAuthProvider usernamePasswordAuthProvider;
     private static HttpProtocolAdapterProperties config;
     private static VertxBasedHttpProtocolAdapter httpAdapter;
 
@@ -88,6 +89,9 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
         when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
+        credentialsServiceClient = mock(HonoClient.class);
+        when(credentialsServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsServiceClient));
+
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.future());
@@ -95,9 +99,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         registrationServiceClient = mock(HonoClient.class);
         when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
 
-        credentialsAuthProvider = mock(HonoClientBasedAuthProvider.class);
-        when(credentialsAuthProvider.start()).thenReturn(Future.succeededFuture());
-        when(credentialsAuthProvider.stop()).thenReturn(Future.succeededFuture());
+        usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
 
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePort(0);
@@ -108,7 +110,8 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setTenantServiceClient(tenantServiceClient);
         httpAdapter.setHonoMessagingClient(messagingClient);
         httpAdapter.setRegistrationServiceClient(registrationServiceClient);
-        httpAdapter.setCredentialsAuthProvider(credentialsAuthProvider);
+        httpAdapter.setCredentialsServiceClient(credentialsServiceClient);
+        httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
 
         vertx.deployVerticle(httpAdapter, ctx.asyncAssertSuccess());
     }
@@ -157,7 +160,7 @@ public class VertxBasedHttpProtocolAdapterTest {
             Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials")));
             return null;
-        }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
         vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
@@ -185,7 +188,7 @@ public class VertxBasedHttpProtocolAdapterTest {
             Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "device_1")));
             return null;
-        }).when(credentialsAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
         final RegistrationClient regClient = mock(RegistrationClient.class);
         when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));

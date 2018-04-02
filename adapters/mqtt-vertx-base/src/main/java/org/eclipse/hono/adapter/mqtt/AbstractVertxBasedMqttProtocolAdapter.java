@@ -25,6 +25,8 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
+import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
@@ -67,6 +69,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private MqttServer server;
     private MqttServer insecureServer;
+    private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
+
+    /**
+     * Sets the provider to use for authenticating devices based on
+     * a username and password.
+     * 
+     * @param provider The provider to use.
+     * @throws NullPointerException if provider is {@code null}.
+     */
+    public final void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider provider) {
+        this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
+    }
 
     @Override
     public int getPortDefaultValue() {
@@ -202,6 +216,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         .compose(v -> bindSecureMqttServer())
         .compose(s -> bindInsecureMqttServer())
         .compose(t -> {
+            if (usernamePasswordAuthProvider == null) {
+                usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig());
+            }
             startFuture.complete();
         }, startFuture);
     }
@@ -308,7 +325,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     }
                 }).compose(tenantConfig -> {
                     final Future<Device> result = Future.future();
-                    getCredentialsAuthProvider().authenticate(credentials, result.completer());
+                    usernamePasswordAuthProvider.authenticate(credentials, result.completer());
                     return result;
                 }).map(authenticatedDevice -> {
                     LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",

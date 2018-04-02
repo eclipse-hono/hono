@@ -18,7 +18,6 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
-import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -64,19 +63,6 @@ public class Config extends AbstractAdapterConfig {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
         }
-    }
-
-    /**
-     * Exposes an authentication provider for verifying device credentials as a Spring bean.
-     * 
-     * @return The authentication provider.
-     */
-    @Bean
-    @Scope("prototype")
-    public UsernamePasswordAuthProvider usernamePasswordAuthProvider() {
-        UsernamePasswordAuthProvider provider = new UsernamePasswordAuthProvider(vertx(), adapterProperties());
-        provider.setCredentialsServiceClient(credentialsServiceClient());
-        return provider;
     }
 
     /**

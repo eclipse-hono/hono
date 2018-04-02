@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -14,10 +14,10 @@ package org.eclipse.hono.service.auth.device;
 
 import java.util.Objects;
 
+import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 
@@ -33,13 +33,13 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
     /**
      * Creates a new provider for a given configuration.
      * 
-     * @param vertx The vertx instance to use.
+     * @param credentialsServiceClient The client.
      * @param config The configuration.
      * @throws NullPointerException if any of the params is {@code null}.
      */
     @Autowired
-    public UsernamePasswordAuthProvider(final Vertx vertx, final ServiceConfigProperties config) {
-        super(vertx);
+    public UsernamePasswordAuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config) {
+        super(credentialsServiceClient);
         this.config = Objects.requireNonNull(config);
     }
 
