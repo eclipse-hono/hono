@@ -6,20 +6,32 @@ weight = 210
 The HTTP protocol adapter exposes an HTTP based API for Eclipse Hono&trade;'s Telemetry and Event endpoints.
 <!--more-->
 
-The HTTP adapter by default requires clients (devices or gateway components) to authenticate during connection establishment. The adapter supports the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617) for that purpose. The *username* provided in the header must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the client against the credentials that the [configured Credentials service]({{< relref "#credentials-service-configuration" >}}) has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
+## Device Authentication
+
+The HTTP adapter by default requires clients (devices or gateway components) to authenticate during connection establishment. The adapter supports both the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617) as well as client certificate based authentication as part of a TLS handshake for that purpose.
+
+The adapter tries to authenticate the device using these mechanisms in the following order
+
+### Client Certificate
+
+When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to, based on the *issuer DN* contained in the certificate. In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of [registering the trusted certificate authority]({{< relref "api/Tenant-API.md#request-payload" >}}). The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to. In a second step, the adapter then uses the Credentials API's *get* operation with the client certificate's *subject DN* and `x509-cert` as the *type* of secret as query parameters.
+
+NB: The HTTP adapter needs to be [configured for TLS]({{< relref "admin-guide/secure_communication.md#http-adapter" >}}) in order to support this mechanism.
+
+### HTTP Basic Auth
+
+The *username* provided in the header must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the client against the credentials that the [configured Credentials service]({{< relref "admin-guide/http-adapter-config.md#credentials-service-configuration" >}}) has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
 
 When running the Hono example installation as described in the [Getting Started guide]({{< relref "getting-started.md" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` having *auth-ids* `sensor1` and `gw1` and (hashed) *passwords* `hono-secret` and `gw-secret` respectively. These credentials are used in the following examples illustrating the usage of the adapter. Please refer to the [Credentials API]({{< relref "api/Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
 
-{{% note %}}
-There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for a discussion of the concepts.
-{{% /note %}}
+NB: There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for a discussion of the concepts.
 
 ## Publish Telemetry Data (authenticated Device)
 
 * URI: `/telemetry`
 * Method: `POST`
 * Request Headers:
-  * (required) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
+  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) `Content-Type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
@@ -75,7 +87,8 @@ Publish some JSON data for device `4711`:
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (required) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
+  * (optional) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
+* Request Headers:
   * (required) `Content-Type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
@@ -107,7 +120,7 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 * URI: `/event`
 * Method: `POST`
 * Request Headers:
-  * (required) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
+  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) `Content-Type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
@@ -163,7 +176,7 @@ Publish some JSON data for device `4711`:
 * URI: `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (required) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
+  * (optional) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) `Content-Type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:

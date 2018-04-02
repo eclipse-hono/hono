@@ -266,7 +266,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *device-id*      | *yes*     | *string*   |               | The ID of the device to which the credentials belong. |
 | *type*           | *yes*     | *string*   |               | The credential type name. The value may be arbitrarily chosen by clients but SHOULD reflect the particular type of authentication mechanism the credentials are to be used with. Possible values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   |               | The identity that the device should be authenticated as. |
-| *enabled*        | *no*      | *boolean*  | *true*        | If set to *false* the credentials are not supposed to be used to authenticate devices any longer. This may e.g. be used to disable a particular mechanism for authenticating the device. **NB** It is up to the discretion of the protocol adapter to make use of this information. |
+| *enabled*        | *no*      | *boolean*  | *true*        | If set to *false* the credentials are not supposed to be used to authenticate devices any longer. This may e.g. be used to disable a particular mechanism for authenticating the device. **NB** It is the responsibility of the protocol adapter to make use of this information. |
 | *secrets*        | *yes*     | *array*    |               | A list of secrets scoped to a particular time period. See [Secrets Format]({{< relref "#secrets-format" >}}) for details. **NB** This array must contain at least one element - an empty array is considered an error. |
 
 For each set of credentials the combination of *auth-id* and *type* MUST be unique within a tenant.
@@ -403,3 +403,27 @@ Example:
 | *key*            | *yes*     | *string*   | The Base64 encoded bytes representing the shared (secret) key. |
 
 **NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
+
+### X.509 Certificate
+
+A credential type for storing the [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt) formatted *subject DN* of a client certificate that is used to authenticate the device as part of a TLS handshake.
+
+Example:
+
+~~~json
+{
+  "device-id": "4711",
+  "type": "x509-cert",
+  "auth-id": "CN=device-1,O=ACME Corporation",
+  "secrets": [{}]
+}
+~~~
+
+| Name             | Mandatory | Type       | Description |
+| :--------------- | :-------: | :--------- | :---------- |
+| *type*           | *yes*     | *string*   | The credential type name, always `x509-cert`. |
+| *auth-id*        | *yes*     | *string*   | The subject DN of the client certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
+| *subject-dn*     | *yes*     | *string*   | MUST be the same as the *auth-id* value. |
+
+**NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties. The `not-before` and `not-after` properties should be omitted if the validity period is the same as the period indicated by the client certificate's corresponding properties.
+

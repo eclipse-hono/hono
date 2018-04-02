@@ -39,7 +39,6 @@ public class BaseCredentialsServiceTest {
 
     private static BaseCredentialsService<ServiceConfigProperties> service;
 
-    private static final String TEST_FIELD = "test";
     private static final String TEST_TENANT = "dummy";
 
     /**
@@ -242,7 +241,8 @@ public class BaseCredentialsServiceTest {
     }
 
     private static JsonObject createValidCredentialsObject() {
-        return createValidCredentialsObject(new JsonObject().put(TEST_FIELD, "dummyValue"));
+
+        return createValidCredentialsObject(new JsonObject());
     }
 
     private static JsonObject createValidCredentialsObject(final JsonObject secret) {
