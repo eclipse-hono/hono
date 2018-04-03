@@ -2,11 +2,19 @@
 title = "Release Notes"
 +++
 
-## 0.6-M2 (not yet released)
+## 0.6-M2
 
 ### API Changes
 
 * The `HonoClient.isConnected()` method has been changed to return a `Future<Void>` instead of `Future<Boolean>`. The future will succeed if the client is connected and will fail otherwise. This change makes it easier to compose the check with other futures.
+* The signatures of the (base) methods for processing requests of `org.eclipse.hono.service.credentials.BaseCredentialsService`, `org.eclipse.hono.service.registration.BaseRegistrationService` and `org.eclipse.hono.service.tenant.BaseTenantService` have changed to both accept and return an `org.eclipse.hono.util.EventBusMessage`. Subclasses overriding the corresponding methods will need to be adapted accordingly.
+
+### Fixes & Enhancements
+
+* The *hono-client* and *hono-core* artifacts no longer depend on classes from the *Spring* framework which can help reducing the footprint of applications that want to use the Hono client but otherwise do not employ any Spring libraries.
+* The Qpid Dispatch Router used in the example configuration has been updated to version 1.0.1.
+* vert.x has been updated to version 3.5.1.
+* The MQTT adapter now also supports shortened versions of the telemetry and event topic names. Devices may use just `t` instead of `telemetry` and `e` instead of `event`.
 
 ## 0.6-M1
 
