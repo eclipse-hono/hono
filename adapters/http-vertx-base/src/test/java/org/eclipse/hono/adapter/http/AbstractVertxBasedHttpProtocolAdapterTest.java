@@ -134,7 +134,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the <me>onStartupSuccess</em> method is invoked if the http server has been started successfully.
+     * Verifies that the <em>onStartupSuccess</em> method is invoked if the
+     * HTTP server has been started successfully.
      * 
      * @param ctx The helper to use for running async tests on vertx.
      */
@@ -164,7 +165,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
 
     /**
-     * Verifies that the <me>onStartupSuccess</em> method is not invoked if no credentials authentication provider is set.
+     * Verifies that the <em>onStartupSuccess</em> method is not invoked
+     * if no credentials authentication provider is set.
      *
      * @param ctx The helper to use for running async tests on vertx.
      */
@@ -188,7 +190,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the <me>onStartupSuccess</em> method is not invoked if a client provided http server fails to start.
+     * Verifies that the <em>onStartupSuccess</em> method is not invoked
+     * if a client provided HTTP server fails to start.
      * 
      * @param ctx The helper to use for running async tests on vertx.
      */
