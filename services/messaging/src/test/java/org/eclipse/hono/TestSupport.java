@@ -11,9 +11,10 @@
  */
 package org.eclipse.hono;
 
-import static org.mockito.Mockito.*;
-
-import java.util.concurrent.atomic.AtomicReference;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
@@ -32,52 +33,29 @@ import org.mockito.ArgumentCaptor;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
 
 /**
- *
+ * Utility methods for running unit tests.
  */
 public final class TestSupport {
 
-    public static final String CLIENT_CONTAINER = "hono-client";
-    public static final String CLIENT_ID = "protocol_adapter";
-    public static final String CON_ID = "connection-1";
-    public static final String DEFAULT_ADDRESS = "type/tenant";
+    /**
+     * The default number of credits to replenish a sender with.
+     */
     public static final int DEFAULT_CREDITS = 20;
+
+    private static final String CLIENT_ID = "protocol_adapter";
+    private static final String CON_ID = "connection-1";
+    private static final String DEFAULT_ADDRESS = "type/tenant";
 
     private TestSupport() {
         // prevent instantiation
-    }
-
-    public static ProtonConnection openConnection(final TestContext ctx, final Vertx vertx, final String host, final int port) {
-        final Async connected = ctx.async();
-        final AtomicReference<ProtonConnection> protonConnection = new AtomicReference<>();
-
-        final ProtonClient client = ProtonClient.create(vertx);
-
-        client.connect(host, port, ar -> {
-            if (ar.succeeded()) {
-                protonConnection.set(ar.result());
-                protonConnection.get().setContainer(CLIENT_CONTAINER).open();
-                connected.complete();
-            }
-            else
-            {
-                ctx.fail(ar.cause());
-            }
-        });
-
-        connected.awaitSuccess(2000);
-        return protonConnection.get();
     }
 
     /**
@@ -120,6 +98,13 @@ public final class TestSupport {
         return message;
     }
 
+    /**
+     * Creates a sender factory for a static sender.
+     *
+     * @param senderToCreate The sender to be created by the factory's
+     *                 <em>createSender</em> method.
+     * @return The factory.
+     */
     public static SenderFactory newMockSenderFactory(final ProtonSender senderToCreate) {
 
         return (connection, address, qos, drainHandler, closeHook) -> {
@@ -149,8 +134,8 @@ public final class TestSupport {
     }
 
     /**
-     * Creates a new mock upstream client for the {@linkplain #CLIENT_ID default link ID}
-     * and {@linkplain #CON_ID default connection ID}.
+     * Creates a new mock upstream client for the default link ID
+     * and default connection ID.
      * 
      * @return The new client.
      */
@@ -159,7 +144,7 @@ public final class TestSupport {
     }
 
     /**
-     * Creates a new mock upstream client for a link ID and the {@linkplain #CON_ID default connection ID}.
+     * Creates a new mock upstream client for a link ID and the default connection ID.
      * 
      * @param linkId The client's link ID.
      * @return The new client.
@@ -185,6 +170,24 @@ public final class TestSupport {
         return client;
     }
 
+    /**
+     * Creates a new sender.
+     * <p>
+     * The created sender will
+     * <ul>
+     * <li>have mocked attachments</li>
+     * <li>be open</li>
+     * <li>have the default number of credits available</li>
+     * <li>have 0 messages queued</li>
+     * <li>have the given value for its <em>drain</em> flag</li>
+     * <li>invoke the <em>sendQueueDrainHandler</em> when the sender's <em>open</em>
+     * method is invoked</li>
+     * <li>have a default target address</li>
+     * </ul>
+     * 
+     * @param drainFlag The value of the sender's <em>drain</em> flag.
+     * @return The sender.
+     */
     @SuppressWarnings("unchecked")
     public static ProtonSender newMockSender(final boolean drainFlag) {
         @SuppressWarnings("rawtypes")
@@ -209,11 +212,28 @@ public final class TestSupport {
         return sender;
     }
 
+    /**
+     * Creates a new connection factory.
+     * 
+     * @param failToCreate A flag indicating whether attempts to
+     *           <em>connect</em> should fail.
+     * @return The factory.
+     */
     public static ConnectionFactory newMockConnectionFactory(final boolean failToCreate) {
         return newMockConnectionFactory(mock(ProtonConnection.class), failToCreate);
     }
 
+    /**
+     * Creates a new connection factory for a static connection.
+     * 
+     * @param connectionToReturn The connection to be returned when the factory's
+     *           <em>connect</em> method is invoked.
+     * @param failToCreate A flag indicating whether attempts to
+     *           <em>connect</em> should fail.
+     * @return The factory.
+     */
     public static ConnectionFactory newMockConnectionFactory(final ProtonConnection connectionToReturn, final boolean failToCreate) {
+
         return new ConnectionFactory() {
 
             @Override

@@ -463,6 +463,11 @@ public class HonoClientImplTest {
         connectionHandlerInvocation.await();
     }
 
+    /**
+     * A connection factory that provides access to the disconnect handler registered with
+     * a connection created by the factory.
+     *
+     */
     private static class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
 
         private Handler<ProtonConnection> disconnectHandler;
