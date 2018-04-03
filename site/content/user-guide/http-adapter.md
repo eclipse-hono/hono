@@ -38,9 +38,7 @@ Publish some JSON data for device `4711`:
 
     $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
     $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
-
-Response:
-
+    
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
@@ -66,9 +64,7 @@ Publish some JSON data for device `4711`:
 
     $ curl -i -X PUT -H 'Content-Type: application/json' \
     $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
-
-Response:
-
+    
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
@@ -97,9 +93,7 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 
     $ curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' \
     $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
-
-Response:
-
+    
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
@@ -129,9 +123,7 @@ Publish some JSON data for device `4711`:
 
     $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
     $ --data-binary '{"alarm": true}' http://127.0.0.1:8080/event
-
-Response:
-
+    
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
@@ -157,9 +149,7 @@ Publish some JSON data for device `4711`:
 
     $ curl -i -X PUT -H 'Content-Type: application/json' \
     $ --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
-
-Response:
-
+    
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
@@ -188,9 +178,7 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 
     $ curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' \
     $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4712
-
-Response:
-
+    
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
@@ -202,9 +190,18 @@ The adapter includes the following meta data in the application properties of me
 
 | Name               | Type      | Description                                                     |
 | :----------------- | :-------- | :-------------------------------------------------------------- |
-| `orig_adapter`   | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The HTTP adapter's type name is `hono-http`. |
-| `orig_address`   | *string*  | Contains the (relative) URI that the device has originally posted the data to. |
+| *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The HTTP adapter's type name is `hono-http`. |
+| *orig_address*     | *string*  | Contains the (relative) URI that the device has originally posted the data to. |
 
 The adapter also considers [*defaults* registered for the device]({{< relref "api/Device-Registration-API.md#payload-format" >}}). For each default value the adapter checks if a corresponding property is already set on the message and if not, sets the message's property to the registered default value or adds a corresponding application property.
 
-Note that of the standard AMQP 1.0 message properties only the `content-type` can be set this way to a registered default value.
+Note that of the standard AMQP 1.0 message properties only the *content-type* can be set this way to a registered default value.
+
+## Tenant specific Configuration
+
+The adapter uses the [Tenant API]({{< relref "api/Tenant-API.md#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-http`.
+The following properties are (currently) supported:
+
+| Name               | Type       | Default Value | Description                                                     |
+| :----------------- | :--------- | :------------ | :-------------------------------------------------------------- |
+| *enabled*          | *boolean*  | `true`       | If set to `false` the adapter will reject all data from devices belonging to the tenant. |

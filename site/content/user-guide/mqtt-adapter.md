@@ -141,9 +141,18 @@ The adapter includes the following meta data in messages being sent downstream:
 
 | Name               | Location        | Type      | Description                                                     |
 | :----------------- | :-------------- | :-------- | :-------------------------------------------------------------- |
-| `orig_adapter`   | *application*   | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The MQTT adapter's type name is `hono-mqtt`. |
-| `orig_address`   | *application*   | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
+| *orig_adapter*     | *application*   | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The MQTT adapter's type name is `hono-mqtt`. |
+| *orig_address*     | *application*   | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
 
 The adapter also considers [*defaults* registered for the device]({{< relref "api/Device-Registration-API.md#payload-format" >}}). For each default value the adapter checks if a corresponding property is already set on the message and if not, sets the message's property to the registered default value or adds a corresponding application property.
 
-Note that of the standard AMQP 1.0 message properties only the `content-type` can be set this way to a registered default value.
+Note that of the standard AMQP 1.0 message properties only the *content-type* can be set this way to a registered default value.
+
+## Tenant specific Configuration
+
+The adapter uses the [Tenant API]({{< relref "api/Tenant-API.md#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-mqtt`.
+The following properties are (currently) supported:
+
+| Name               | Type       | Default Value | Description                                                     |
+| :----------------- | :--------- | :------------ | :-------------------------------------------------------------- |
+| *enabled*          | *boolean*  | `true`       | If set to `false` the adapter will reject all data from devices belonging to the tenant. |
