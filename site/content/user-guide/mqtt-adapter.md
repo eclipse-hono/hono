@@ -26,7 +26,7 @@ This requires that
 
 ## Publish Telemetry Data (authenticated Device)
 
-* Topic: `telemetry`
+* Topic: `telemetry` or `t`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
@@ -41,7 +41,7 @@ Publish some JSON data for device `4711`:
 
 ## Publish Telemetry Data (unauthenticated Device)
 
-* Topic: `telemetry/${tenant-id}/${device-id}`
+* Topic: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}`
 * Authentication: none
 * Payload:
   * (required) Arbitrary payload
@@ -58,7 +58,7 @@ Publish some JSON data for device `4711`:
 
 ## Publish Telemetry Data (authenticated Gateway)
 
-* Topic: `telemetry/${tenant-id}/${device-id}`
+* Topic: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
@@ -87,7 +87,7 @@ This requires that
 
 ## Publish an Event (authenticated Device)
 
-* Topic: `event`
+* Topic: `event` or `e`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
@@ -102,7 +102,7 @@ Upload a JSON string for device `4711`:
 
 ## Publish an Event (unauthenticated Device)
 
-* Topic: `event/${tenant-id}/${device-id}`
+* Topic: `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}`
 * Authentication: none
 * Payload:
   * (required) Arbitrary payload
@@ -118,7 +118,7 @@ Publish some JSON data for device `4711`:
 
 ## Publish an Event (authenticated Gateway)
 
-* Topic: `event/${tenant-id}/${device-id}`
+* Topic: `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
