@@ -16,6 +16,9 @@ import java.util.Objects;
 
 import org.eclipse.hono.util.Constants;
 
+import io.vertx.core.net.ProxyOptions;
+import io.vertx.core.net.ProxyType;
+
 /**
  * Common configuration properties required for accessing an AMQP 1.0 container.
  */
@@ -34,8 +37,21 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public static final long DEFAULT_REQUEST_TIMEOUT = 200L; // ms
 
+    /**
+     * The default proxy server type
+     */
+    public static final ProxyType DEFAULT_PROXY_TYPE = ProxyType.SOCKS5;
+
+    private static final int MIN_PORT_NO = 1024;
+    private static final int MAX_PORT_NO = 65535;
+
     private String name;
     private String host = "localhost";
+    private String proxyHost;
+    private int proxyPort;
+    private String proxyUsername;
+    private String proxyPassword;
+    private ProxyType proxyType = DEFAULT_PROXY_TYPE;
     private int port = Constants.PORT_AMQPS;
     private String username;
     private char[] password;
@@ -84,7 +100,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * The default value of this property is {@link Constants#PORT_AMQPS}.
      * 
      * @param port The port number.
-     * @throws IllegalArgumentException if port &lt; 1000 or port &gt; 65535.
+     * @throws IllegalArgumentException if port &lt; 0 or port &gt; 65535.
      */
     public final void setPort(final int port) {
         if (isValidPort(port)) {
@@ -95,8 +111,122 @@ public class ClientConfigProperties extends AbstractConfig {
     }
 
     /**
-     * Gets the user name that is used when authenticating to the Hono server.
+     * Gets the name or literal IP address of the proxy host that the client is configured with.
+     *
+     * @return The host name.
+     */
+    public final String getProxyHost() {
+        return proxyHost;
+    }
+
+    /**
+     * Sets the name or literal IP address of the proxy host that the client should use to connect to the an AMQP host
+     *
+     * @param proxyHost The host name or IP address of the proxy
+     * @throws NullPointerException if proxyHost is {@code null}.
+     */
+    public final void setProxyHost(final String proxyHost) {
+        this.proxyHost = Objects.requireNonNull(proxyHost);
+    }
+
+    /**
+     * Gets the TCP port of the proxy server that this client is configured to use.
+     *
+     * @return The port number.
+     */
+    public final int getProxyPort() {
+        return proxyPort;
+    }
+
+    /**
+     * Sets the TCP port of the proxy server that this client should use.
+     *
+     * @param proxyPort The port number of the proxy
+     * @throws IllegalArgumentException if port &lt; 1024 or port &gt; 65535.
+     */
+    public final void setProxyPort(final int proxyPort) {
+        if (isInValidPortRange(proxyPort)) {
+            this.proxyPort = proxyPort;
+        } else {
+            throw new IllegalArgumentException("invalid proxy port number");
+        }
+    }
+
+    /**
+     * Gets the username of the proxy server the client is configured with.
+     *
+     * @return the username
+     */
+    public String getProxyUsername() {
+        return proxyUsername;
+    }
+
+    /**
+     * Sets the username to be used for authentication with the proxy server.
+     *
+     * @param proxyUsername username to be used for authentication with the proxy server
+     * @throws NullPointerException if proxyUsername is {@code null}.
+     */
+    public void setProxyUsername(String proxyUsername) {
+        this.proxyUsername = Objects.requireNonNull(proxyUsername);
+    }
+
+    /**
+     * Gets the password of the proxy user to be used in authentication.
+     *
+     * @return password in clear text.
+     */
+    public String getProxyPassword() {
+        return proxyPassword;
+    }
+
+    /**
+     * Sets the password of the proxy user to be used in authentication.
+     *
+     * @param proxyPassword password in clear text
+     * @throws NullPointerException if proxyPassword is {@code null}.
+     */
+    public void setProxyPassword(String proxyPassword) {
+        this.proxyPassword = Objects.requireNonNull(proxyPassword);
+    }
+
+    /**
+     * Gets the proxy type to be used.
      * 
+     * <p>
+     * Default is {@link ProxyType#SOCKS5}.
+     * </p>
+     *
+     * @return the proxy type if set by the user or the default value.
+     */
+    public ProxyType getProxyType() {
+        return proxyType;
+    }
+
+    /**
+     * Sets the proxy type to be used.
+     *
+     * <p>
+     * Valid values are
+     * <ul>
+     *  <li>SOCKS4</li>
+     *  <li>SOCKS5</li>
+     *  <li>HTTP</li>
+     * </ul>
+     * Default value is set to SOCKS5
+     * </p>
+     * 
+     * @param proxyType the type of proxy to be set.
+     * @throws IllegalArgumentException if the given proxyType is not a valid type.
+     * @throws NullPointerException if proxyType is {@code null}.
+     */
+    public void setProxyType(String proxyType) {
+        this.proxyType = ProxyType.valueOf(Objects.requireNonNull(proxyType));
+    }
+
+    /**
+     * Gets the user name that is used when authenticating to the Hono server.
+     *
      * @return The user name or {@code null} if not set.
      */
     public final String getUsername() {
@@ -107,7 +237,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * Sets the user name to use when authenticating to the Hono server.
      * <p>
      * If not set then this client will not try to authenticate to the server.
-     * 
+     *
      * @param username The user name.
      */
     public final void setUsername(final String username) {
@@ -334,5 +464,40 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public final void setTlsEnabled(boolean enabled) {
         this.tlsEnabled = enabled;
+    }
+
+    /**
+     * Returns an instance of ProxyOptions configured with the proxyHost, proxyPort, proxyUsername and
+     * proxyPassword.
+     * <p>
+     * If proxyHost and proxyPort are not set, then {@code null} is returned
+     * </p>
+     * 
+     * @return an instance ofProxyOptions if proxy details are provided, {@code null} otherwise.
+     */
+    public ProxyOptions getProxyOptions() {
+        if (!isEmpty(proxyHost) &&
+                isInValidPortRange(proxyPort)) {
+            ProxyOptions proxyOptions = new ProxyOptions().setHost(proxyHost)
+                    .setPort(proxyPort)
+                    .setType(getProxyType());
+
+
+            if (!isEmpty(proxyUsername) &&
+                    !isEmpty(proxyPassword)) {
+                proxyOptions.setUsername(proxyUsername);
+                proxyOptions.setPassword(proxyPassword);
+            }
+            return proxyOptions;
+        }
+        return null;
+    }
+
+    private boolean isInValidPortRange(final int proxyPort) {
+        return proxyPort >= MIN_PORT_NO && proxyPort <= MAX_PORT_NO;
+    }
+
+    private boolean isEmpty(String str) {
+        return str == null || "".equals(str);
     }
 }

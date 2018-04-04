@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,7 @@ abstract class AbstractExampleClient {
     protected String tenantId;
     protected Vertx vertx;
     protected HonoClient client;
+    protected ClientConfigProperties clientConfigProperties;
     protected List<String> activeProfiles;
 
     /**
@@ -57,7 +59,7 @@ abstract class AbstractExampleClient {
     @Autowired
     public final void setVertx(final Vertx vertx) {
         this.vertx = vertx;
-        this.ctx = vertx.getOrCreateContext();
+        ctx = vertx.getOrCreateContext();
     }
 
     @Autowired
@@ -65,7 +67,14 @@ abstract class AbstractExampleClient {
         this.client = Objects.requireNonNull(client);
     }
 
+    @Autowired
+    public final void setClientConfigProperties(final ClientConfigProperties config) {
+        this.clientConfigProperties = Objects.requireNonNull(config);
+    }
+
     protected final ProtonClientOptions getClientOptions() {
-        return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS).setReconnectAttempts(2);
+        return new ProtonClientOptions()
+                .setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS).setReconnectAttempts(2)
+                .setProxyOptions(clientConfigProperties.getProxyOptions());
     }
 }
