@@ -1,0 +1,88 @@
+{
+  "roles": {
+    "protocol-adapter": [
+      {
+        "resource": "telemetry/*",
+        "activities": [ "WRITE" ]
+      },
+      {
+        "resource": "event/*",
+        "activities": [ "WRITE" ]
+      },
+      {
+        "resource": "registration/*",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "registration/*:assert",
+        "activities": [ "EXECUTE" ]
+      },
+      {
+        "resource": "credentials/*",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "credentials/*:get",
+        "activities": [ "EXECUTE" ]
+      },
+      {
+        "resource": "tenant",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "tenant/*:*",
+        "activities": [ "EXECUTE" ]
+      }
+    ],
+    "device-manager": [
+      {
+        "resource": "registration/*",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "registration/*:*",
+        "activities": [ "EXECUTE" ]
+      }
+    ],
+    "consumer": [
+      {
+        "resource": "telemetry/*",
+        "activities": [ "READ" ]
+      },
+      {
+        "resource": "event/*",
+        "activities": [ "READ" ]
+      }
+    ]
+  },
+  "users": {
+    "http-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "http-secret",
+      "authorities": [ "hono-component", "protocol-adapter" ]
+    },
+    "mqtt-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "mqtt-secret",
+      "authorities": [ "hono-component", "protocol-adapter" ]
+    },
+    "kura-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "kura-secret",
+      "authorities": [ "hono-component", "protocol-adapter" ]
+    },
+    "hono-client@HONO": {
+      "mechanism": "PLAIN",
+      "password": "secret",
+      "authorities": [ "protocol-adapter", "device-manager" ]
+    },
+    "hono-messaging": {
+      "mechanism": "EXTERNAL",
+      "authorities": []
+    },
+    "device-registry": {
+      "mechanism": "EXTERNAL",
+      "authorities": []
+    }
+  }
+}

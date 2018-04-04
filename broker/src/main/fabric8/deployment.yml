@@ -10,13 +10,14 @@ spec:
         command:
         - /opt/artemis/bin/artemis
         - run
-        - xml:/run/secrets/artemis-bootstrap.xml
+        - xml:/etc/hono/artemis-bootstrap.xml
         env:
         - name: ARTEMIS_CONFIGURATION
-          value: /run/secrets
+          value: /etc/hono
         volumeMounts:
         - name: config
-          mountPath: /run/secrets
+          mountPath: /etc/hono
+          readOnly: true
         readinessProbe:
           initialDelaySeconds: 5
           periodSeconds: 5

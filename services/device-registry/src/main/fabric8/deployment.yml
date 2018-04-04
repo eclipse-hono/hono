@@ -10,42 +10,28 @@ spec:
           secretName: ${project.artifactId}-conf
       initContainers:
       # we use an init container to populate the registry
-      # with some default credentials
-      - name: copy-example-credentials
+      # with some default tenants and credentials
+      - name: copy-example-data
         image: busybox
         volumeMounts:
         - name: conf
-          mountPath: /tmp/hono/example-credentials.json
-          subPath: example-credentials.json
+          mountPath: /tmp/hono
         - name: registry
           mountPath: /var/lib/hono/device-registry
         command:
         - sh
         - -c
-        - 'cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json'
-      # we use another init container to populate the registry
-      # with some default tenants
-      - name: copy-example-tenants
-        image: busybox
-        volumeMounts:
-        - name: conf
-          mountPath: /tmp/hono/example-tenants.json
-          subPath: example-tenants.json
-        - name: registry
-          mountPath: /var/lib/hono/device-registry
-        command:
-        - sh
-        - -c
-        - 'cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json'
+        - 'cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json; cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json'
       containers:
       - volumeMounts:
         - name: registry
           mountPath: /var/lib/hono/device-registry
         - name: conf
-          mountPath: /run/secrets
+          mountPath: /etc/hono
+          readOnly: true
         env:
         - name: SPRING_CONFIG_LOCATION
-          value: file:///run/secrets/
+          value: file:///etc/hono/
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: LOGGING_CONFIG

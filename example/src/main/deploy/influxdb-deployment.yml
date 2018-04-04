@@ -24,7 +24,7 @@ spec:
       containers:
       - args:
         - -config
-        - /run/secrets/influxdb.conf
+        - /etc/hono/influxdb.conf
         env:
         - name: KUBERNETES_NAMESPACE
           valueFrom:
@@ -60,8 +60,9 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/influxdb
           name: influxdb-storage
-        - mountPath: /run/secrets
+        - mountPath: /etc/hono
           name: conf
+          readOnly: true
       volumes:
       - emptyDir: {}
         name: influxdb-storage

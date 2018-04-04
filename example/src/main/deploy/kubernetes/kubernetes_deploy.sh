@@ -29,24 +29,24 @@ echo "Deploying influxDB & Grafana ..."
 kubectl create serviceaccount useroot --namespace $NS
 
 kubectl create secret generic influxdb-conf \
-  --from-file=$CONFIG/influxdb.conf \
+  --from-file=$SCRIPTPATH/influxdb.conf \
   --namespace $NS
-kubectl create -f $SCRIPTPATH/influxdb-deployment.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/influxdb-svc.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/grafana-deployment.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/grafana-svc.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../influxdb-deployment.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../influxdb-svc.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../grafana-deployment.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../grafana-svc.yml --namespace $NS
 echo ... done
 
 echo
 echo "Deploying Artemis broker ..."
 kubectl create secret generic hono-artemis-conf \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-broker.xml \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-users.properties \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis-roles.properties \
-  --from-file=$CONFIG/hono-artemis-jar/etc/login.config \
-  --from-file=$CONFIG/hono-artemis-jar/etc/logging.properties \
-  --from-file=$CONFIG/hono-artemis-jar/etc/artemis.profile \
+  --from-file=$SCRIPTPATH/artemis/artemis-broker.xml \
+  --from-file=$SCRIPTPATH/artemis/artemis-bootstrap.xml \
+  --from-file=$SCRIPTPATH/artemis/artemis-users.properties \
+  --from-file=$SCRIPTPATH/artemis/artemis-roles.properties \
+  --from-file=$SCRIPTPATH/artemis/login.config \
+  --from-file=$SCRIPTPATH/artemis/logging.properties \
+  --from-file=$SCRIPTPATH/artemis/artemis.profile \
   --from-file=$CERTS/artemisKeyStore.p12 \
   --from-file=$CERTS/trustStore.jks \
   --namespace $NS
@@ -59,9 +59,9 @@ kubectl create secret generic hono-dispatch-router-conf \
   --from-file=$CERTS/qdrouter-key.pem \
   --from-file=$CERTS/qdrouter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=$CONFIG/hono-dispatch-router-jar/qpid/qdrouterd-with-broker.json \
-  --from-file=$CONFIG/hono-dispatch-router-jar/sasl/qdrouter-sasl.conf \
-  --from-file=$CONFIG/hono-dispatch-router-jar/sasl/qdrouterd.sasldb \
+  --from-file=$SCRIPTPATH/qpid/qdrouterd-with-broker.json \
+  --from-file=$SCRIPTPATH/qpid/qdrouter-sasl.conf \
+  --from-file=$SCRIPTPATH/qpid/qdrouterd.sasldb \
   --namespace $NS
 kubectl create -f $CONFIG/hono-dispatch-router-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
@@ -72,7 +72,8 @@ kubectl create secret generic hono-service-auth-conf \
   --from-file=$CERTS/auth-server-key.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$CONFIG/hono-service-auth-config.yml \
+  --from-file=permissions.json=$SCRIPTPATH/example-permissions.json \
+  --from-file=application.yml=$SCRIPTPATH/hono-service-auth-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
@@ -84,9 +85,9 @@ kubectl create secret generic hono-service-device-registry-conf \
   --from-file=$CERTS/device-registry-cert.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=$CONFIG/example-credentials.json \
-  --from-file=$CONFIG/example-tenants.json \
-  --from-file=application.yml=$CONFIG/hono-service-device-registry-config.yml \
+  --from-file=$SCRIPTPATH/example-credentials.json \
+  --from-file=$SCRIPTPATH/example-tenants.json \
+  --from-file=application.yml=$SCRIPTPATH/hono-service-device-registry-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
@@ -98,7 +99,7 @@ kubectl create secret generic hono-service-messaging-conf \
   --from-file=$CERTS/hono-messaging-cert.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$CONFIG/hono-service-messaging-config.yml \
+  --from-file=application.yml=$SCRIPTPATH/hono-service-messaging-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
@@ -109,7 +110,8 @@ kubectl create secret generic hono-adapter-http-vertx-conf \
   --from-file=$CERTS/http-adapter-key.pem \
   --from-file=$CERTS/http-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$CONFIG/hono-adapter-http-vertx-config.yml \
+  --from-file=http-adapter.credentials=$SCRIPTPATH/http-adapter.credentials \
+  --from-file=application.yml=$SCRIPTPATH/hono-adapter-http-vertx-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
@@ -120,7 +122,8 @@ kubectl create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/mqtt-adapter-key.pem \
   --from-file=$CERTS/mqtt-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$CONFIG/hono-adapter-mqtt-vertx-config.yml \
+  --from-file=mqtt-adapter.credentials=$SCRIPTPATH/mqtt-adapter.credentials \
+  --from-file=application.yml=$SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done
@@ -131,7 +134,8 @@ kubectl create secret generic hono-adapter-kura-conf \
   --from-file=$CERTS/kura-adapter-key.pem \
   --from-file=$CERTS/kura-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$CONFIG/hono-adapter-kura-config.yml \
+  --from-file=kura-adapter.credentials=$SCRIPTPATH/kura-adapter.credentials \
+  --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
 echo ... done

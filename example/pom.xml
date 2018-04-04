@@ -39,14 +39,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
       The shared secret to use for creating/validating registration assertions.
      -->
     <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
-    <hono.auth.validation.certPath>/run/secrets/auth-server-cert.pem</hono.auth.validation.certPath>
-    <hono.adapter.mqtt.username>mqtt-adapter@HONO</hono.adapter.mqtt.username>
-    <hono.adapter.mqtt.password>mqtt-secret</hono.adapter.mqtt.password>
-    <hono.adapter.http.username>http-adapter@HONO</hono.adapter.http.username>
-    <hono.adapter.http.password>http-secret</hono.adapter.http.password>
-    <hono.adapter.kura.username>kura-adapter@HONO</hono.adapter.kura.username>
-    <hono.adapter.kura.password>kura-secret</hono.adapter.kura.password>
-    <hono.trustStore.path>/run/secrets/trusted-certs.pem</hono.trustStore.path>
   </properties>
 
   <dependencies>
@@ -134,11 +126,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
         <filtering>true</filtering>
       </resource>
       <resource>
-        <directory>${project.basedir}/src/main/config</directory>
-        <targetPath>${project.build.directory}/config</targetPath>
-        <filtering>true</filtering>
-      </resource>
-      <resource>
         <directory>${project.basedir}/src/main/sandbox</directory>
         <targetPath>${project.build.directory}/sandbox</targetPath>
         <filtering>true</filtering>
@@ -185,15 +172,92 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                 *.pem,
                 *.jks,
                 *.p12,
-                qpid/*,
-                sasl/*,
-                META-INF/fabric8/**/*.yml,
-                etc/*
+                META-INF/fabric8/**/*.yml
               </includes>
               <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
               <stripClassifier>true</stripClassifier>
               <stripVersion>true</stripVersion>
               <excludeTransitive>true</excludeTransitive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create_docker_config_files</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/main/config</directory>
+                  <targetPath>deploy/docker</targetPath>
+                  <filtering>true</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.basedir}/src/main/sasldb</directory>
+                  <targetPath>deploy/docker/qpid</targetPath>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+              <filters>
+                <filter>${project.basedir}/src/main/docker-config.properties</filter>
+              </filters>
+            </configuration>
+          </execution>
+          <execution>
+            <id>create_kubernetes_config_files</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/main/config</directory>
+                  <targetPath>deploy/kubernetes</targetPath>
+                  <filtering>true</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.basedir}/src/main/sasldb</directory>
+                  <targetPath>deploy/kubernetes/qpid</targetPath>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+              <filters>
+                <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>
+              </filters>
+            </configuration>
+          </execution>
+          <execution>
+            <id>create_openshift_config_files</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/main/config</directory>
+                  <targetPath>deploy/openshift</targetPath>
+                  <filtering>true</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.basedir}/src/main/sasldb</directory>
+                  <targetPath>deploy/openshift/qpid</targetPath>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+              <filters>
+                <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>
+              </filters>
             </configuration>
           </execution>
         </executions>

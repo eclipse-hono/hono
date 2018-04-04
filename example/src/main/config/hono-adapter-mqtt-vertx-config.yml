@@ -7,36 +7,32 @@ hono:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
-    keyPath: /run/secrets/mqtt-adapter-key.pem
-    certPath: /run/secrets/mqtt-adapter-cert.pem
+    keyPath: ${secret.path}/mqtt-adapter-key.pem
+    certPath: ${secret.path}/mqtt-adapter-cert.pem
   messaging:
     name: 'Hono MQTT Adapter'
     host: ${hono.messaging.host}
     port: 5671
-    username: ${hono.adapter.mqtt.username}
-    password: ${hono.adapter.mqtt.password}
-    trustStorePath: ${hono.trustStore.path}
+    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
   registration:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}
     port: 5671
-    username: ${hono.adapter.mqtt.username}
-    password: ${hono.adapter.mqtt.password}
-    trustStorePath: ${hono.trustStore.path}
+    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
   credentials:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}
     port: 5671
-    username: ${hono.adapter.mqtt.username}
-    password: ${hono.adapter.mqtt.password}
-    trustStorePath: ${hono.trustStore.path}
+    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
   tenant:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}
     port: 5671
-    username: ${hono.adapter.mqtt.username}
-    password: ${hono.adapter.mqtt.password}
-    trustStorePath: ${hono.trustStore.path}
+    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
   metric:
     reporter:
       graphite:

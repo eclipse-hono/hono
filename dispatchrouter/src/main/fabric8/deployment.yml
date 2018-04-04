@@ -10,10 +10,11 @@ spec:
         command:
         - /sbin/qdrouterd
         - -c
-        - /run/secrets/qdrouterd-with-broker.json
+        - /etc/hono/qdrouterd-with-broker.json
         volumeMounts:
         - name: config
-          mountPath: /run/secrets
+          mountPath: /etc/hono
+          readOnly: true
         livenessProbe:
           initialDelaySeconds: 180
           periodSeconds: 9

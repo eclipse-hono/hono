@@ -20,10 +20,11 @@ spec:
             port: 5672
         volumeMounts:
         - name: conf
-          mountPath: /run/secrets
+          mountPath: /etc/hono
+          readOnly: true
         env:
         - name: SPRING_CONFIG_LOCATION
-          value: file:///run/secrets/
+          value: file:///etc/hono/
         - name: SPRING_PROFILES_ACTIVE
           value: authentication-impl,dev
         - name: LOGGING_CONFIG

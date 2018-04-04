@@ -9,3 +9,6 @@ hono:
       certPath: /etc/hono/certs/auth-server-cert.pem
     svc:
       permissionsPath: file:///etc/hono/permissions.json
+spring:
+  jmx:
+    enabled: false

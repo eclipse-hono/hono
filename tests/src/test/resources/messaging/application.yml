@@ -16,6 +16,9 @@ hono:
     waitForDownstreamConnectionEnabled: true
     validation:
       sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
+spring:
+  jmx:
+    enabled: false
 
 ---
 

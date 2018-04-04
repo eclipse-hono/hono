@@ -4,8 +4,10 @@ hono:
   auth:
     amqp:
       bindAddress: 0.0.0.0
-      keyPath: /run/secrets/auth-server-key.pem
-      certPath: /run/secrets/auth-server-cert.pem
-      trustStorePath: /run/secrets/trusted-certs.pem
-      insecurePortEnabled: true
+      keyPath: ${secret.path}/auth-server-key.pem
+      certPath: ${secret.path}/auth-server-cert.pem
+      trustStorePath: ${secret.path}/trusted-certs.pem
       insecurePortBindAddress: 0.0.0.0
+      insecurePortEnabled: true
+    svc:
+      permissionsPath: file://${secret.path}/permissions.json

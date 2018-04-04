@@ -41,3 +41,7 @@ endpoints:
   enabled: false
   metrics:
     enabled: false
+spring:
+  jmx:
+    enabled: false
+    

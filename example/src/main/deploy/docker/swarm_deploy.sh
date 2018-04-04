@@ -28,7 +28,7 @@ docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 
 echo
 echo Deploying Influx DB and Grafana ...
-docker secret create -l project=$NS influxdb.conf $CONFIG/influxdb.conf
+docker secret create -l project=$NS influxdb.conf $SCRIPTPATH/influxdb.conf
 docker service create $CREATE_OPTIONS --name influxdb -p 8086:8086 \
   --secret influxdb.conf \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
@@ -37,13 +37,13 @@ echo ... done
 
 echo
 echo Deploying Artemis broker ...
-docker secret create -l $NS artemis-broker.xml $CONFIG/hono-artemis-jar/etc/artemis-broker.xml
-docker secret create -l $NS artemis-bootstrap.xml $CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml
-docker secret create -l $NS artemis-users.properties $CONFIG/hono-artemis-jar/etc/artemis-users.properties
-docker secret create -l $NS artemis-roles.properties $CONFIG/hono-artemis-jar/etc/artemis-roles.properties
-docker secret create -l $NS login.config $CONFIG/hono-artemis-jar/etc/login.config
-docker secret create -l $NS logging.properties $CONFIG/hono-artemis-jar/etc/logging.properties
-docker secret create -l $NS artemis.profile $CONFIG/hono-artemis-jar/etc/artemis.profile
+docker secret create -l $NS artemis-broker.xml $SCRIPTPATH/artemis/artemis-broker.xml
+docker secret create -l $NS artemis-bootstrap.xml $SCRIPTPATH/artemis/artemis-bootstrap.xml
+docker secret create -l $NS artemis-users.properties $SCRIPTPATH/artemis/artemis-users.properties
+docker secret create -l $NS artemis-roles.properties $SCRIPTPATH/artemis/artemis-roles.properties
+docker secret create -l $NS login.config $SCRIPTPATH/artemis/login.config
+docker secret create -l $NS logging.properties $SCRIPTPATH/artemis/logging.properties
+docker secret create -l $NS artemis.profile $SCRIPTPATH/artemis/artemis.profile
 docker secret create -l $NS artemisKeyStore.p12 $CERTS/artemisKeyStore.p12
 docker secret create -l $NS trustStore.jks $CERTS/trustStore.jks
 docker service create $CREATE_OPTIONS --name hono-artemis \
@@ -65,9 +65,9 @@ echo
 echo Deploying Qpid Dispatch Router ...
 docker secret create -l project=$NS qdrouter-key.pem $CERTS/qdrouter-key.pem
 docker secret create -l project=$NS qdrouter-cert.pem $CERTS/qdrouter-cert.pem
-docker secret create -l project=$NS qdrouterd.json $CONFIG/hono-dispatch-router-jar/qpid/qdrouterd-with-broker.json
-docker secret create -l project=$NS qdrouter-sasl.conf $CONFIG/hono-dispatch-router-jar/sasl/qdrouter-sasl.conf
-docker secret create -l project=$NS qdrouterd.sasldb $CONFIG/hono-dispatch-router-jar/sasl/qdrouterd.sasldb
+docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/qdrouterd-with-broker.json
+docker secret create -l project=$NS qdrouter-sasl.conf $SCRIPTPATH/qpid/qdrouter-sasl.conf
+docker secret create -l project=$NS qdrouterd.sasldb $SCRIPTPATH/qpid/qdrouterd.sasldb
 docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
   --secret qdrouter-key.pem \
   --secret qdrouter-cert.pem \
@@ -82,11 +82,13 @@ echo
 echo Deploying Authentication Server ...
 docker secret create -l project=$NS auth-server-key.pem $CERTS/auth-server-key.pem
 docker secret create -l project=$NS auth-server-cert.pem $CERTS/auth-server-cert.pem
-docker secret create -l project=$NS hono-service-auth-config.yml $CONFIG/hono-service-auth-config.yml
+docker secret create -l project=$NS permissions.json $SCRIPTPATH/example-permissions.json
+docker secret create -l project=$NS hono-service-auth-config.yml $SCRIPTPATH/hono-service-auth-config.yml
 docker service create $CREATE_OPTIONS --name hono-service-auth \
   --secret auth-server-key.pem \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
+  --secret permissions.json \
   --secret hono-service-auth-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
@@ -102,8 +104,8 @@ if [ $? -eq 1 ]
 then
   echo "Creating and initializing Docker Volume for Device Registry..."
   docker volume create --label project=$NS device-registry
-  docker secret create -l project=$NS example-credentials.json $CONFIG/example-credentials.json
-  docker secret create -l project=$NS example-tenants.json $CONFIG/example-tenants.json
+  docker secret create -l project=$NS example-credentials.json $SCRIPTPATH/example-credentials.json
+  docker secret create -l project=$NS example-tenants.json $SCRIPTPATH/example-tenants.json
   docker service create --detach=true --name init-device-registry-data \
     --secret example-credentials.json \
     --secret example-tenants.json \
@@ -113,7 +115,7 @@ then
 fi
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
-docker secret create -l project=$NS hono-service-device-registry-config.yml $CONFIG/hono-service-device-registry-config.yml
+docker secret create -l project=$NS hono-service-device-registry-config.yml $SCRIPTPATH/hono-service-device-registry-config.yml
 docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 25671:5671 -p 28080:8080 -p 28443:8443 \
   --secret device-registry-key.pem \
   --secret device-registry-cert.pem \
@@ -131,7 +133,7 @@ echo
 echo Deploying Hono Messaging ...
 docker secret create -l project=$NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
 docker secret create -l project=$NS hono-messaging-cert.pem $CERTS/hono-messaging-cert.pem
-docker secret create -l project=$NS hono-service-messaging-config.yml $CONFIG/hono-service-messaging-config.yml
+docker secret create -l project=$NS hono-service-messaging-config.yml $SCRIPTPATH/hono-service-messaging-config.yml
 docker service create $CREATE_OPTIONS --name hono-service-messaging -p 5671:5671 \
   --secret hono-messaging-key.pem \
   --secret hono-messaging-cert.pem \
@@ -149,11 +151,13 @@ echo
 echo Deploying HTTP adapter ...
 docker secret create -l project=$NS http-adapter-key.pem $CERTS/http-adapter-key.pem
 docker secret create -l project=$NS http-adapter-cert.pem $CERTS/http-adapter-cert.pem
-docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $CONFIG/hono-adapter-http-vertx-config.yml
+docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/http-adapter.credentials
+docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPATH/hono-adapter-http-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
   --secret http-adapter-key.pem \
   --secret http-adapter-cert.pem \
   --secret trusted-certs.pem \
+  --secret http-adapter.credentials \
   --secret hono-adapter-http-vertx-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
@@ -166,11 +170,13 @@ echo
 echo Deploying MQTT adapter ...
 docker secret create -l project=$NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key.pem
 docker secret create -l project=$NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
-docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $CONFIG/hono-adapter-mqtt-vertx-config.yml
+docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/mqtt-adapter.credentials
+docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
   --secret mqtt-adapter-key.pem \
   --secret mqtt-adapter-cert.pem \
   --secret trusted-certs.pem \
+  --secret mqtt-adapter.credentials \
   --secret hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
@@ -183,11 +189,13 @@ echo
 echo Deploying Kura adapter ...
 docker secret create -l project=$NS kura-adapter-key.pem $CERTS/kura-adapter-key.pem
 docker secret create -l project=$NS kura-adapter-cert.pem $CERTS/kura-adapter-cert.pem
-docker secret create -l project=$NS hono-adapter-kura-config.yml $CONFIG/hono-adapter-kura-config.yml
+docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/kura-adapter.credentials
+docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
   --secret kura-adapter-key.pem \
   --secret kura-adapter-cert.pem \
   --secret trusted-certs.pem \
+  --secret kura-adapter.credentials \
   --secret hono-adapter-kura-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \

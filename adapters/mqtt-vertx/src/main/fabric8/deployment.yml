@@ -8,10 +8,11 @@ spec:
       containers:
       - volumeMounts:
         - name: conf
-          mountPath: /run/secrets
+          mountPath: /etc/hono
+          readOnly: true
         env:
         - name: SPRING_CONFIG_LOCATION
-          value: file:///run/secrets/
+          value: file:///etc/hono/
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: LOGGING_CONFIG

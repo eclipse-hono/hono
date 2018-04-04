@@ -26,3 +26,7 @@ hono:
     svc:
       filename: /etc/hono/tenants.json
       saveToFile: false
+spring:
+  jmx:
+    enabled: false
+      
