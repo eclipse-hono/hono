@@ -1,4 +1,6 @@
 spring:
+  jmx:
+    enabled: false
   profiles:
     active: receiver,ssl
 
