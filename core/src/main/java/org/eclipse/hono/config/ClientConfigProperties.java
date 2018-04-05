@@ -12,7 +12,11 @@
 
 package org.eclipse.hono.config;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Properties;
 
 import org.eclipse.hono.util.Constants;
 
@@ -39,6 +43,7 @@ public class ClientConfigProperties extends AbstractConfig {
     private int port = Constants.PORT_AMQPS;
     private String username;
     private char[] password;
+    private String credentialsPath;
     private String amqpHostname;
     private long flowLatency = DEFAULT_FLOW_LATENCY;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
@@ -96,10 +101,18 @@ public class ClientConfigProperties extends AbstractConfig {
 
     /**
      * Gets the user name that is used when authenticating to the Hono server.
+     * <p>
+     * This method returns the value set using the <em>setUsername</em> method
+     * if the value is not {@code null}. Otherwise, the user name is read from the
+     * properties file indicated by the <em>credentialsPath</em> property (if not
+     * {@code null}).
      * 
      * @return The user name or {@code null} if not set.
      */
     public final String getUsername() {
+        if (username == null) {
+            loadCredentials();
+        }
         return username;
     }
 
@@ -116,19 +129,24 @@ public class ClientConfigProperties extends AbstractConfig {
 
     /**
      * Gets the password that is used when authenticating to the Hono server.
+     * <p>
+     * This method returns the value set using the <em>setPassword</em> method
+     * if the value is not {@code null}. Otherwise, the password is read from the
+     * properties file indicated by the <em>credentialsPath</em> property (if not
+     * {@code null}).
      * 
      * @return The password or {@code null} if not set.
      */
     public final String getPassword() {
         if (password == null) {
-            return null;
-        } else {
-            return String.valueOf(password);
+            loadCredentials();
         }
+        return password == null ? null : String.valueOf(password);
     }
 
     /**
-     * Sets the password to use in conjunction with the user name when authenticating to the Hono server.
+     * Sets the password to use in conjunction with the user name when authenticating
+     * to the Hono server.
      * <p>
      * If not set then this client will not try to authenticate to the server.
      * 
@@ -142,6 +160,56 @@ public class ClientConfigProperties extends AbstractConfig {
         }
     }
 
+    /**
+     * Gets the file system path to a properties file containing the
+     * credentials for authenticating to the server.
+     * <p>
+     * The file is expected to contain a <em>username</em> and a
+     * <em>password</em> property, e.g.
+     * <pre>
+     * username=foo
+     * password=bar
+     * </pre>
+     * 
+     * @return The path or {@code null} if not set.
+     */
+    public final String getCredentialsPath() {
+        return credentialsPath;
+    }
+
+    /**
+     * Sets the file system path to a properties file containing the
+     * credentials for authenticating to the server.
+     * <p>
+     * The file is expected to contain a <em>username</em> and a
+     * <em>password</em> property, e.g.
+     * <pre>
+     * username=foo
+     * password=bar
+     * </pre>
+     * 
+     * @param path The path to the properties file.
+     */
+    public final void setCredentialsPath(final String path) {
+        this.credentialsPath = path;
+    }
+
+    private void loadCredentials() {
+
+        if (username == null && password == null && credentialsPath != null) {
+            try (FileInputStream fis = new FileInputStream(credentialsPath)) {
+                LOG.info("loading credentials for [{}] from [{}]", host, credentialsPath);
+                final Properties props = new Properties();
+                props.load(fis);
+                this.username = props.getProperty("username");
+                this.password = Optional.ofNullable(props.getProperty("password"))
+                        .map(pwd -> pwd.toCharArray()).orElse(null);
+            } catch (IOException e) {
+                LOG.warn("could not load client credentials for [{}] from file [{}]",
+                        host, credentialsPath, e);
+            }
+        }
+    }
     /**
      * Gets the name being indicated as the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
      * 

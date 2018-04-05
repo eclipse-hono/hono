@@ -33,7 +33,10 @@ import io.vertx.core.net.TrustOptions;
  */
 public abstract class AbstractConfig {
 
-    private final Logger LOG = LoggerFactory.getLogger(getClass());
+    /**
+     *  A logger to be shared with subclasses.
+     */
+    protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
     private String trustStorePath;
     private char[] trustStorePassword;
