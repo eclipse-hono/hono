@@ -90,7 +90,8 @@
           "users": "consumer@HONO",
           "remoteHosts": "*",
           "maxSessions": 10,
-          "sources": "telemetry/*, event/*"
+          "sources": "telemetry/*, event/*, control/*",
+          "targets": "control/*"
         },
         "DEFAULT_TENANT": {
           "users": "user1@HONO",
@@ -113,7 +114,8 @@
           "maxSessionWindow": 6553600,
           "maxMessageSize": 131072,
           "allowUserIdProxy": true,
-          "targets": "telemetry/*, event/*"
+          "sources": "control/*",
+          "targets": "telemetry/*, event/*, control/*"
         }
       }
   }],

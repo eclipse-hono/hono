@@ -19,6 +19,7 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.util.MessageHelper;
@@ -64,6 +65,19 @@ public class ExampleReceiver extends AbstractExampleClient {
                 createConsumer(connectedClient);
             });
         };
+
+        // TODO: just try to send a command and get back a response
+        LOG.info("*** Create a command client");
+        client.getOrCreateCommandClient(tenantId,"4711" ).setHandler(h -> {
+            LOG.info("*** CommandLink client created.. try to send a command..");
+            CommandClient commandClient = h.result();
+            vertx.setPeriodic(2000, reconnect -> {
+                commandClient.command("4711", "{ \"temp\": 11 }".getBytes()).setHandler(r -> {
+                    LOG.info("*** Result: '"+r.result()+"' .. '"+new String(r.result())+"'");
+                });
+            });
+        });
+
         if (activeProfiles.contains(PROFILE_EVENT)) {
             return connectedClient.createEventConsumer(tenantId, msg -> handleMessage(PROFILE_EVENT, msg), closeHandler);
         } else {

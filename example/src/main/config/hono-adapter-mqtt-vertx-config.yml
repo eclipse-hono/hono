@@ -33,6 +33,13 @@ hono:
     port: 5671
     credentialsPath: ${secret.path}/mqtt-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
+  command:
+    name: 'Hono MQTT Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    keyPath: /run/secrets/hono-messaging-key.pem
+    certPath: /run/secrets/hono-messaging-cert.pem
+    trustStorePath: /run/secrets/trusted-certs.pem
   metric:
     reporter:
       graphite:

@@ -297,6 +297,18 @@ public final class MessageHelper {
     }
 
     /**
+     * Includes the given JSON in an AmqpValue object
+     *
+     * @param jsonObject The JSON object
+     * @return The AmqpValue, that could be used as message data
+     */
+    public static AmqpValue getAmqpValue(JsonObject jsonObject) {
+
+        Objects.requireNonNull(jsonObject);
+        return new AmqpValue(jsonObject.encode());
+    }
+
+    /**
      * Gets a message's body as String object that can be used for constructing a JsonObject or bind a POJO using
      * jackson-databind e.g.
      *
@@ -320,6 +332,29 @@ public final class MessageHelper {
             AmqpValue body = (AmqpValue) msg.getBody();
             if (body.getValue() instanceof String) {
                 return (String) body.getValue();
+            }
+        }
+
+        LOG.debug("unsupported body type [{}]", msg.getBody().getClass().getName());
+        return null;
+    }
+
+    // TODO optimize, javadoc
+    public static byte[] getPayloadAsBytes(final Message msg) {
+
+        Objects.requireNonNull(msg);
+        if (msg.getBody() == null) {
+            LOG.trace("message has no body");
+            return null;
+        }
+
+        if (msg.getBody() instanceof Data) {
+            Data body = (Data) msg.getBody();
+            return body.getValue().getArray();
+        } else if (msg.getBody() instanceof AmqpValue) {
+            AmqpValue body = (AmqpValue) msg.getBody();
+            if (body.getValue() instanceof byte[]) {
+                return (byte[]) body.getValue();
             }
         }
 

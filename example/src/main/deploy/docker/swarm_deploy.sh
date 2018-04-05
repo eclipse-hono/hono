@@ -172,6 +172,8 @@ docker secret create -l project=$NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key
 docker secret create -l project=$NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
 docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/../mqtt-adapter.credentials
 docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
+docker secret create -l project=$NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
+docker secret create -l project=$NS hono-messaging-cert.pem $CERTS/hono-messaging-cert.pem
 docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
   --secret mqtt-adapter-key.pem \
   --secret mqtt-adapter-cert.pem \
