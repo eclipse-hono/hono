@@ -18,8 +18,10 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
 import org.eclipse.hono.service.metric.MetricConfig;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -170,7 +172,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes the provider for caches as a Spring bean.
-     * 
+     *
      * @return The provider instance.
      */
     @Bean
@@ -266,9 +268,23 @@ public abstract class AbstractAdapterConfig {
         return result;
     }
 
+    @Qualifier(CommandConstants.COMMAND_ENDPOINT)
+    @ConfigurationProperties(prefix = "hono.command")
+    @Bean
+    public ClientConfigProperties commandConnectionClientConfig() {
+        return new ClientConfigProperties();
+    }
+
+    @Bean
+    @Scope("prototype")
+    public CommandConnection commandConnection() {
+        return new CommandConnection(vertx(), commandConnectionClientConfig());
+    }
+
+    private static CacheManager newCacheManager(final int initialCapacity, final long maxCapacity) {
     /**
      * Exposes the provider for caches as a Spring bean.
-     * 
+     *
      * @return The provider instance.
      */
     @Bean
@@ -280,7 +296,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Create a new cache provider based on Guava and Spring Cache.
-     * 
+     *
      * @param config The configuration to use as base for this cache.
      * @return A new cache provider or {@code null} if no cache should be used.
      */
