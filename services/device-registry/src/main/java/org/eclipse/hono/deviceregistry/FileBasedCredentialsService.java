@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.service.credentials.BaseCredentialsService;
@@ -233,10 +234,21 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
      * The result object will include a <em>no-cache</em> directive.
      */
     @Override
+    public void get(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, null, resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The result object will include a <em>no-cache</em> directive.
+     */
+    @Override
     public void get(
             final String tenantId,
             final String type,
             final String authId,
+            final JsonObject clientContext,
             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
@@ -244,7 +256,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         Objects.requireNonNull(authId);
         Objects.requireNonNull(resultHandler);
 
-        final JsonObject data = getSingleCredentials(tenantId, authId, type);
+        final JsonObject data = getSingleCredentials(tenantId, authId, type, clientContext);
         if (data == null) {
             resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
         } else {
@@ -308,7 +320,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
      * @param type The type of credentials to look up.
      * @return The credentials object of the given type or {@code null} if no matching credentials exist.
      */
-    private JsonObject getSingleCredentials(final String tenantId, final String authId, final String type) {
+    private JsonObject getSingleCredentials(final String tenantId, final String authId, final String type, final JsonObject clientContext) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(authId);
@@ -322,6 +334,21 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
                     final JsonObject authIdCredential = (JsonObject) authIdCredentialEntry;
                     // return the first matching type entry for this authId
                     if (type.equals(authIdCredential.getString(CredentialsConstants.FIELD_TYPE))) {
+                        if (clientContext != null) {
+                            AtomicBoolean match = new AtomicBoolean(true);
+                            clientContext.forEach(field -> {
+                                if (authIdCredential.containsKey(field.getKey())) {
+                                    if (!authIdCredential.getString(field.getKey()).equals(field.getValue())) {
+                                        match.set(false);
+                                    }
+                                } else {
+                                    match.set(false);
+                                }
+                            });
+                            if (!match.get()) {
+                                continue;
+                            }
+                        }
                         return authIdCredential;
                     }
                 }

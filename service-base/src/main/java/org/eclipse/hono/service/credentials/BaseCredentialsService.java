@@ -83,16 +83,16 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
         if (tenantId == null || payload == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final String type = getTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE);
-            final String authId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID);
-            final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+            final String type = removeTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE);
+            final String authId = removeTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID);
+            final String deviceId = removeTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
 
             if (type == null) {
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             } else if (authId != null && deviceId == null) {
                 log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
                 final Future<CredentialsResult<JsonObject>> result = Future.future();
-                get(tenantId, type, authId, result.completer());
+                get(tenantId, type, authId, payload, result.completer());
                 return result.map(res -> {
                     final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
                             .map(p -> (String) getTypesafeValueForField(p, TenantConstants.FIELD_PAYLOAD_DEVICE_ID))
@@ -236,12 +236,23 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
     public void get(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 

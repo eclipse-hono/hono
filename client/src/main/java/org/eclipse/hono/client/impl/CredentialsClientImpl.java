@@ -134,7 +134,17 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public final Future<CredentialsObject> get(final String type, final String authId) {
+    public Future<CredentialsObject> get(String type, String authId) {
+        return get(type, authId, new JsonObject());
+    }
+
+    /**
+     * Invokes the <em>Get Credentials</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Credentials-API">Credentials API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
+    @Override
+    public final Future<CredentialsObject> get(final String type, final String authId, final JsonObject clientContext) {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(authId);
@@ -142,7 +152,9 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
         final Future<CredentialsResult<CredentialsObject>> responseTracker = Future.future();
         final JsonObject specification = new JsonObject()
                 .put(CredentialsConstants.FIELD_TYPE, type)
-                .put(CredentialsConstants.FIELD_AUTH_ID, authId);
+                .put(CredentialsConstants.FIELD_AUTH_ID, authId)
+                .mergeIn(clientContext);
+
         createAndSendRequest(CredentialsConstants.CredentialsAction.get.toString(), specification, responseTracker.completer());
         return responseTracker.map(response -> {
             switch(response.getStatus()) {

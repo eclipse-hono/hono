@@ -68,8 +68,28 @@ public interface CredentialsService extends Verticle {
     void get(String tenantId, String type, String authId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
     /**
+     * Gets credentials for a device, providing additional client connection context.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param type The type of credentials to get.
+     * @param authId The authentication identifier of the device to get credentials for (may be {@code null}.
+     * @param clientContext Optional bag of properties that can be used to identify the device
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *         The <em>status</em> will be
+     *         <ul>
+     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
+     *         <em>payload</em> will contain the credentials.</li>
+     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
+     *         </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     *      Credentials API - Get Credentials</a>
+     */
+    void get(String tenantId, String type, String authId, JsonObject clientContext, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+
+    /**
      * Gets all credentials registered for a device.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to get credentials for.
      * @param resultHandler The handler to invoke with the result of the operation.
