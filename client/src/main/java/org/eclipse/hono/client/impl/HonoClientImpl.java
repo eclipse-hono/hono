@@ -813,14 +813,14 @@ public class HonoClientImpl implements HonoClient {
                 };
                 creationRequests.add(connectionFailureHandler);
                 creationLocks.put(key, Boolean.TRUE);
-                LOG.debug("creating new client for {}", key);
+                LOG.debug("creating new client [target: {}]", key);
 
                 clientSupplier.get().setHandler(creationAttempt -> {
                     if (creationAttempt.succeeded()) {
-                        LOG.debug("successfully created new client for {}", key);
+                        LOG.debug("successfully created new client [target: {}]", key);
                         activeRequestResponseClients.put(key, creationAttempt.result());
                     } else {
-                        LOG.debug("failed to create new client for {}", key, creationAttempt.cause());
+                        LOG.debug("failed to create new client [target: {}]", key, creationAttempt.cause());
                         activeRequestResponseClients.remove(key);
                     }
                     creationLocks.remove(key);
@@ -829,7 +829,7 @@ public class HonoClientImpl implements HonoClient {
                 });
 
             } else {
-                LOG.debug("already trying to create a client for {}", key);
+                LOG.debug("already trying to create a client [target: {}]", key);
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
             }

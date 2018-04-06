@@ -117,7 +117,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     }
 
     /**
-     * Creates a new tenant API client.
+     * Creates a new tenant client.
      *
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
@@ -138,17 +138,17 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<TenantClient>> creationHandler) {
 
-        LOG.debug("creating new tenant API client.");
+        LOG.debug("creating new tenant client");
         final TenantClientImpl client = new TenantClientImpl(context, clientConfig);
         if (cacheProvider != null) {
             client.setResponseCache(cacheProvider.getCache(TenantClientImpl.getTargetAddress()));
         }
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
-                LOG.debug("successfully created tenant API client");
+                LOG.debug("successfully created tenant client");
                 creationHandler.handle(Future.succeededFuture(client));
             } else {
-                LOG.debug("failed to create tenant API client", s.cause());
+                LOG.debug("failed to create tenant client", s.cause());
                 creationHandler.handle(Future.failedFuture(s.cause()));
             }
         });
