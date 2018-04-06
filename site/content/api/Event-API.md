@@ -123,8 +123,8 @@ The body of the event request MUST consist of a single *AMQP Value* section cont
 | *device-id*         | *yes*     | *string*   |               | The device identifier to send the notification for. |
 | *cause*             | *yes*     | *string*   |               | Value must be either `connected` or `disconnected` . |
 | *source*            | *yes*      | *string*   |               | Value can be either the name of a protocol adapter (`hono-mqtt`, `hono-http`, `hono-kura`), if the device connected/disconnected to the appropriate protocol adapter,  or `device`, if the device sent the notfication itself.
-| *creation-timestamp*  | *no*      | *string*   |   null        | The point in time when the event was created (set by the issuer). If not null, the value MUST be an ISO 8601 compliant combined date and time representation in extended format. **NB:** due to network latencies this timestamp will typically be some time in the past already when the event is received by the application. |
-| *ttl*               | *no*      | *long*   |   0        | The `time to live` for the event in milliseconds. In context with the `creation-timestamp`  it defines the time interval until the event shall be considered invalid again. If the value is `0`, the validity period of the event shall be considered as not being limited. |
+| *connection-timestamp*  | *no*      | *string*   |   null        | The point in time when the event was created (set by the issuer). If not null, the value MUST be an ISO 8601 compliant combined date and time representation in extended format. **NB:** due to network latencies this timestamp will typically be some time in the past already when the event is received by the application. |
+| *stay-connected*               | *no*      | *long*   |   0        | The time in milliseconds the device shall be available for receiving upstream data. In context with the `connection-timestamp`  it defines the time interval until the event shall be considered invalid again. If the value is `0`, the validity period of the event shall be considered as not being limited. |
 | *data*              | *no*      | *string*   |               | Optional data the issuer of the event can set (e.g.  a a last known revision of a value when integrating with [Eclipse Ditto] (https://projects.eclipse.org/proposals/eclipse-ditto)).
 
 
@@ -153,8 +153,8 @@ now is able to receive a command for one minute:
   "device-id": "sensor1",
   "cause": "connect",
   "source": "device",
-  "creation-timestamp": "2018-04-06T10:00:00+0100",
-  "ttl": "60000",
+  "connection-timestamp": "2018-04-06T10:00:00+0100",
+  "stay-connected": "60000",
   "data": "last-state: on"
 }
 ~~~
