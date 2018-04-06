@@ -1,7 +1,0 @@
-metadata:
-  name: ${project.artifactId}
-spec:
-  ports:
-  - port: 5673
-    protocol: TCP
-    targetPort: 5673

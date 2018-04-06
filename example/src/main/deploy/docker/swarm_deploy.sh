@@ -28,7 +28,7 @@ docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 
 echo
 echo Deploying Influx DB and Grafana ...
-docker secret create -l project=$NS influxdb.conf $SCRIPTPATH/influxdb.conf
+docker secret create -l project=$NS influxdb.conf $SCRIPTPATH/../influxdb.conf
 docker service create $CREATE_OPTIONS --name influxdb -p 8086:8086 \
   --secret influxdb.conf \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
@@ -82,7 +82,7 @@ echo
 echo Deploying Authentication Server ...
 docker secret create -l project=$NS auth-server-key.pem $CERTS/auth-server-key.pem
 docker secret create -l project=$NS auth-server-cert.pem $CERTS/auth-server-cert.pem
-docker secret create -l project=$NS permissions.json $SCRIPTPATH/example-permissions.json
+docker secret create -l project=$NS permissions.json $SCRIPTPATH/../example-permissions.json
 docker secret create -l project=$NS hono-service-auth-config.yml $SCRIPTPATH/hono-service-auth-config.yml
 docker service create $CREATE_OPTIONS --name hono-service-auth \
   --secret auth-server-key.pem \
@@ -104,8 +104,8 @@ if [ $? -eq 1 ]
 then
   echo "Creating and initializing Docker Volume for Device Registry..."
   docker volume create --label project=$NS device-registry
-  docker secret create -l project=$NS example-credentials.json $SCRIPTPATH/example-credentials.json
-  docker secret create -l project=$NS example-tenants.json $SCRIPTPATH/example-tenants.json
+  docker secret create -l project=$NS example-credentials.json $SCRIPTPATH/../example-credentials.json
+  docker secret create -l project=$NS example-tenants.json $SCRIPTPATH/../example-tenants.json
   docker service create --detach=true --name init-device-registry-data \
     --secret example-credentials.json \
     --secret example-tenants.json \
@@ -151,7 +151,7 @@ echo
 echo Deploying HTTP adapter ...
 docker secret create -l project=$NS http-adapter-key.pem $CERTS/http-adapter-key.pem
 docker secret create -l project=$NS http-adapter-cert.pem $CERTS/http-adapter-cert.pem
-docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/http-adapter.credentials
+docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/../http-adapter.credentials
 docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPATH/hono-adapter-http-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
   --secret http-adapter-key.pem \
@@ -170,7 +170,7 @@ echo
 echo Deploying MQTT adapter ...
 docker secret create -l project=$NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key.pem
 docker secret create -l project=$NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
-docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/mqtt-adapter.credentials
+docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/../mqtt-adapter.credentials
 docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
   --secret mqtt-adapter-key.pem \
@@ -189,7 +189,7 @@ echo
 echo Deploying Kura adapter ...
 docker secret create -l project=$NS kura-adapter-key.pem $CERTS/kura-adapter-key.pem
 docker secret create -l project=$NS kura-adapter-cert.pem $CERTS/kura-adapter-cert.pem
-docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/kura-adapter.credentials
+docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/../kura-adapter.credentials
 docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
   --secret kura-adapter-key.pem \

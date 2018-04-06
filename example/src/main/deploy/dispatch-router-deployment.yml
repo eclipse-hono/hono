@@ -3,60 +3,57 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: hono-metrics
+    app: AMQP_Messaging_Network
     version: "${project.version}"
     group: ${project.groupId}
-  name: grafana
+  name: hono-dispatch-router
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hono-metrics
-      role: grafana
+      app: AMQP_Messaging_Network
+      role: router
       group: ${project.groupId}
   template:
     metadata:
       labels:
-        app: hono-metrics
-        role: grafana
+        app: AMQP_Messaging_Network
+        role: router
         version: "${project.version}"
         group: ${project.groupId}
     spec:
-      serviceAccountName: useroot
       containers:
-      - env:
-        - name: GF_PATHS_DATA
-          value: /var/lib/grafana
-        - name: GF_PATHS_LOGS
-          value: /var/log/grafana
+      - command:
+        - /sbin/qdrouterd
+        - -c
+        - /etc/hono/qdrouterd-with-broker.json
+        env:
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: grafana/grafana:${grafana.version}
+        image: ${dispatch-router.image.name}
         imagePullPolicy: IfNotPresent
         livenessProbe:
-          httpGet:
-            port: 3000
-          initialDelaySeconds: 20
+          initialDelaySeconds: 180
           periodSeconds: 9
+          tcpSocket:
+            port: 5672
           timeoutSeconds: 1
-        name: grafana
+        name: eclipse-hono-dispatch-router
         readinessProbe:
-          httpGet:
-            port: 3000
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
+          tcpSocket:
+            port: 5672
           timeoutSeconds: 1
         securityContext:
           privileged: false
         volumeMounts:
-        - mountPath: /var/log/grafana
-          name: grafana-logs
-        - mountPath: /var/lib/grafana
-          name: grafana-data
+        - mountPath: /etc/hono
+          name: config
+          readOnly: true
       volumes:
-      - emptyDir: {}
-        name: grafana-logs
-      - emptyDir: {}
-        name: grafana-data
+      - name: config
+        secret:
+          secretName: hono-dispatch-router-conf

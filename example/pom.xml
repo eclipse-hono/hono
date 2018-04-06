@@ -72,15 +72,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-artemis</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-dispatch-router</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-auth</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -157,15 +148,12 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
             <configuration>
               <includeArtifactIds>
                 hono-demo-certs,
-                hono-dispatch-router,
-                hono-artemis,
                 hono-service-auth,
                 hono-service-messaging,
                 hono-service-device-registry,
                 hono-adapter-http-vertx,
                 hono-adapter-mqtt-vertx,
-                hono-adapter-kura,
-                hono-artemis
+                hono-adapter-kura
               </includeArtifactIds>
               <outputDirectory>${project.build.directory}/config</outputDirectory>
               <includes>

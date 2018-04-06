@@ -29,7 +29,7 @@ echo "Deploying influxDB & Grafana ..."
 kubectl create serviceaccount useroot --namespace $NS
 
 kubectl create secret generic influxdb-conf \
-  --from-file=$SCRIPTPATH/influxdb.conf \
+  --from-file=$SCRIPTPATH/../influxdb.conf \
   --namespace $NS
 kubectl create -f $SCRIPTPATH/../influxdb-deployment.yml --namespace $NS
 kubectl create -f $SCRIPTPATH/../influxdb-svc.yml --namespace $NS
@@ -50,7 +50,8 @@ kubectl create secret generic hono-artemis-conf \
   --from-file=$CERTS/artemisKeyStore.p12 \
   --from-file=$CERTS/trustStore.jks \
   --namespace $NS
-kubectl create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../artemis-deployment.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../artemis-svc.yml --namespace $NS
 echo ... done
 
 echo
@@ -63,7 +64,9 @@ kubectl create secret generic hono-dispatch-router-conf \
   --from-file=$SCRIPTPATH/qpid/qdrouter-sasl.conf \
   --from-file=$SCRIPTPATH/qpid/qdrouterd.sasldb \
   --namespace $NS
-kubectl create -f $CONFIG/hono-dispatch-router-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../dispatch-router-deployment.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../dispatch-router-svc.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../dispatch-router-ext-svc.yml --namespace $NS
 echo ... done
 
 echo
@@ -72,7 +75,7 @@ kubectl create secret generic hono-service-auth-conf \
   --from-file=$CERTS/auth-server-key.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=permissions.json=$SCRIPTPATH/example-permissions.json \
+  --from-file=permissions.json=$SCRIPTPATH/../example-permissions.json \
   --from-file=application.yml=$SCRIPTPATH/hono-service-auth-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
@@ -85,8 +88,8 @@ kubectl create secret generic hono-service-device-registry-conf \
   --from-file=$CERTS/device-registry-cert.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=$SCRIPTPATH/example-credentials.json \
-  --from-file=$SCRIPTPATH/example-tenants.json \
+  --from-file=$SCRIPTPATH/../example-credentials.json \
+  --from-file=$SCRIPTPATH/../example-tenants.json \
   --from-file=application.yml=$SCRIPTPATH/hono-service-device-registry-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
@@ -110,7 +113,7 @@ kubectl create secret generic hono-adapter-http-vertx-conf \
   --from-file=$CERTS/http-adapter-key.pem \
   --from-file=$CERTS/http-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=http-adapter.credentials=$SCRIPTPATH/http-adapter.credentials \
+  --from-file=$SCRIPTPATH/../http-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-http-vertx-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
@@ -122,7 +125,7 @@ kubectl create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/mqtt-adapter-key.pem \
   --from-file=$CERTS/mqtt-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=mqtt-adapter.credentials=$SCRIPTPATH/mqtt-adapter.credentials \
+  --from-file=$SCRIPTPATH/../mqtt-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
@@ -134,7 +137,7 @@ kubectl create secret generic hono-adapter-kura-conf \
   --from-file=$CERTS/kura-adapter-key.pem \
   --from-file=$CERTS/kura-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=kura-adapter.credentials=$SCRIPTPATH/kura-adapter.credentials \
+  --from-file=$SCRIPTPATH/../kura-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config.yml \
   --namespace $NS
 kubectl create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/kubernetes.yml --namespace $NS

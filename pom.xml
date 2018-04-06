@@ -162,11 +162,11 @@
   <modules>
     <module>adapters</module>
     <module>bom</module>
-    <module>broker</module>
+    
     <module>core</module>
     <module>client</module>
     <module>demo-certs</module>
-    <module>dispatchrouter</module>
+    
     <module>example</module>
     <module>jmeter</module>
     <module>legal</module>
@@ -191,7 +191,7 @@
           <version>3.5.34</version>
           <configuration>
             <mode>kubernetes</mode>
-            <profile>minimal</profile>
+            <profile>raw</profile>
             <verbose>true</verbose>
             <images>
               <image>
@@ -204,20 +204,12 @@
                 </build>
               </image>
             </images>
-            <generator>
-              <excludes>
-                <exclude>java-exec</exclude>
-                <exclude>spring-boot</exclude>
-                <exclude>wildfly-swarm</exclude>
-                <exclude>vertx</exclude>
-                <exclude>karaf</exclude>
-                <exclude>webapp</exclude>
-              </excludes>
-            </generator>
             <enricher>
               <includes>
                 <include>fmp-controller</include>
-                <include>fmp-ianaservice</include>
+                <include>fmp-image</include>
+                <include>fmp-service</include>
+                <include>fmp-project</include>
                 <include>vertx-health-check</include>
               </includes>
             </enricher>

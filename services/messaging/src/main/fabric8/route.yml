@@ -3,6 +3,6 @@ spec:
     kind: Service
     name: ${project.artifactId}
   port:
-    targetPort: amqps
+    targetPort: 5671
   tls:
     termination: passthrough

@@ -12,8 +12,6 @@
 
 # Absolute path this script is in
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
-HONO_HOME=$SCRIPTPATH/../../..
-CONFIG=$SCRIPTPATH/../config
 HOST=${1:-localhost}
 PORT=${2:-3000}
 
@@ -24,11 +22,11 @@ done;
 echo .. Grafana is up, set its datasource and dashboard
 
 # add the data source to grafana
-curl -X POST -i -H 'Content-Type: application/json' --data-binary @$CONFIG/grafana_datasource.json \
+curl -X POST -i -H 'Content-Type: application/json' --data-binary @$SCRIPTPATH/grafana_datasource.json \
   http://admin:admin@${HOST}:${PORT}/api/datasources
 
 # add the dashboard to grafana
 # to use a changed dashboard (grafana_dashboard.json) from Grafana make a HTTP call to
 # http://<host>:<port>/api/dashboards/db/hono and change the dashboard id in the resulting JSON to null
-curl -X POST -i -H 'Content-Type: application/json' --data-binary @$CONFIG/grafana_dashboard.json \
+curl -X POST -i -H 'Content-Type: application/json' --data-binary @$SCRIPTPATH/grafana_dashboard.json \
   http://admin:admin@${HOST}:${PORT}/api/dashboards/db

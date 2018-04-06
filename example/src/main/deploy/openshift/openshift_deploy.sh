@@ -36,7 +36,7 @@ echo "Deploying influxDB & Grafana ..."
 oc create serviceaccount useroot --as='system:admin'
 oc adm policy add-scc-to-user anyuid -z useroot --as='system:admin'
 
-oc create secret generic influxdb-conf --from-file=$SCRIPTPATH/influxdb.conf
+oc create secret generic influxdb-conf --from-file=$SCRIPTPATH/../influxdb.conf
 oc create -f $SCRIPTPATH/../influxdb-deployment.yml
 oc create -f $SCRIPTPATH/../influxdb-svc.yml
 oc create -f $SCRIPTPATH/../grafana-deployment.yml
@@ -55,7 +55,8 @@ oc create secret generic hono-artemis-conf \
   --from-file=$SCRIPTPATH/artemis/artemis.profile \
   --from-file=$CERTS/artemisKeyStore.p12 \
   --from-file=$CERTS/trustStore.jks
-oc create -f $CONFIG/hono-artemis-jar/META-INF/fabric8/openshift.yml
+oc create -f $SCRIPTPATH/../artemis-deployment.yml
+oc create -f $SCRIPTPATH/../artemis-svc.yml
 echo ... done
 
 echo "Deploying Qpid Dispatch Router ..."
@@ -66,7 +67,10 @@ oc create secret generic hono-dispatch-router-conf \
   --from-file=$SCRIPTPATH/qpid/qdrouterd-with-broker.json \
   --from-file=$SCRIPTPATH/qpid/qdrouter-sasl.conf \
   --from-file=$SCRIPTPATH/qpid/qdrouterd.sasldb
-oc create -f $CONFIG/hono-dispatch-router-jar/META-INF/fabric8/openshift.yml
+oc create -f $SCRIPTPATH/../dispatch-router-deployment.yml
+oc create -f $SCRIPTPATH/../dispatch-router-svc.yml
+oc create -f $SCRIPTPATH/../dispatch-router-ext-svc.yml
+oc create -f $SCRIPTPATH/../dispatch-router-route.yml
 echo ... done
 
 echo "Deploying Authentication Server ..."
@@ -74,7 +78,7 @@ oc create secret generic hono-service-auth-conf \
   --from-file=$CERTS/auth-server-key.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=permissions.json=$SCRIPTPATH/example-permissions.json \
+  --from-file=permissions.json=$SCRIPTPATH/../example-permissions.json \
   --from-file=application.yml=$SCRIPTPATH/hono-service-auth-config.yml
 oc create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/openshift.yml
 echo ... done
@@ -85,8 +89,8 @@ oc create secret generic hono-service-device-registry-conf \
   --from-file=$CERTS/device-registry-cert.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=$SCRIPTPATH/example-credentials.json \
-  --from-file=$SCRIPTPATH/example-tenants.json \
+  --from-file=$SCRIPTPATH/../example-credentials.json \
+  --from-file=$SCRIPTPATH/../example-tenants.json \
   --from-file=application.yml=$SCRIPTPATH/hono-service-device-registry-config.yml
 oc create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/openshift.yml
 echo ... done
@@ -106,7 +110,7 @@ oc create secret generic hono-adapter-http-vertx-conf \
   --from-file=$CERTS/http-adapter-key.pem \
   --from-file=$CERTS/http-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=http-adapter.credentials=$SCRIPTPATH/http-adapter.credentials \
+  --from-file=$SCRIPTPATH/../http-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-http-vertx-config.yml
 oc create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/openshift.yml
 echo ... done
@@ -116,7 +120,7 @@ oc create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/mqtt-adapter-key.pem \
   --from-file=$CERTS/mqtt-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=mqtt-adapter.credentials=$SCRIPTPATH/mqtt-adapter.credentials \
+  --from-file=$SCRIPTPATH/../mqtt-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
 oc create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/openshift.yml
 echo ... done
@@ -126,7 +130,7 @@ oc create secret generic hono-adapter-kura-conf \
   --from-file=$CERTS/kura-adapter-key.pem \
   --from-file=$CERTS/kura-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=kura-adapter.credentials=$SCRIPTPATH/kura-adapter.credentials \
+  --from-file=$SCRIPTPATH/../kura-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config.yml
 oc create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/openshift.yml
 echo ... done
