@@ -162,7 +162,7 @@ The source code is available from [Maven Central](http://search.maven.org/#searc
 
 ### Spring Boot ${spring-boot.version}
 
-This product includes software developed by the [Spring projects](http://spring.io).
+This product includes software developed by the [Spring project](http://spring.io).
 
 Your use of *Spring Boot* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
@@ -179,6 +179,16 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-auth-common/${vertx.version}/vertx-auth-common-${vertx.version}-sources.jar).
+
+### vert.x Bridge Common ${vertx.version}
+
+This product includes software developed by the [vert.x project](http://vertx.io).
+
+Your use of *vert.x Bridge Common* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-bridge-common/${vertx.version}/vertx-bridge-common-${vertx.version}-sources.jar).
 
 ### vert.x Dropwizard Metrics ${vertx.version}
 
@@ -200,15 +210,15 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-health-check/${vertx.version}/vertx-health-check-${vertx.version}-sources.jar).
 
-### vert.x MQTT Server ${vertx.version}
+### vert.x MQTT ${vertx.version}
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
-Your use of *vert.x MQTT Server* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *vert.x MQTT* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-mqtt-server/${vertx.version}/vertx-mqtt-server-${vertx.version}-sources.jar).
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-mqtt/${vertx.version}/vertx-mqtt-${vertx.version}-sources.jar).
 
 ### vert.x Proton ${vertx.version}
 
