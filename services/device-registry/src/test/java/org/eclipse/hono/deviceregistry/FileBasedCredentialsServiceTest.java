@@ -288,7 +288,7 @@ public class FileBasedCredentialsServiceTest {
     @Test
     public void testAddCredentialsRefusesDuplicateRegistration(final TestContext ctx) {
 
-        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+        register(svc, "tenant", "device", "myId", "myType", ctx);
 
         final JsonObject payload2 = new JsonObject()
                 .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, "other-device")
@@ -327,7 +327,7 @@ public class FileBasedCredentialsServiceTest {
     @Test
     public void testGetCredentialsSucceedsForExistingCredentials(final TestContext ctx) {
 
-        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+        register(svc, "tenant", "device", "myId", "myType", ctx);
 
         final Async get = ctx.async();
         svc.get("tenant", "myType", "myId", ctx.asyncAssertSuccess(s -> {
@@ -340,6 +340,52 @@ public class FileBasedCredentialsServiceTest {
     }
 
     /**
+     * Verifies that service returns existing credentials for proper client context.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsSucceedsForProperClientContext(final TestContext ctx) {
+        JsonObject clientContext = new JsonObject()
+            .put("client-id", "gateway-one");
+
+        register(svc, "tenant", "device", "myId", "myType", clientContext, new JsonArray(), ctx);
+
+
+        final Async get = ctx.async();
+        svc.get("tenant", "myType", "myId", clientContext, ctx.asyncAssertSuccess(s -> {
+            assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
+            assertThat(s.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID), is("myId"));
+            assertThat(s.getPayload().getString(CredentialsConstants.FIELD_TYPE), is("myType"));
+            get.complete();
+        }));
+        get.await(2000);
+    }
+
+    /**
+     * Verifies that service returns 404 if a client provides wrong client context.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsFailsForWrongClientContext(final TestContext ctx) {
+        JsonObject clientContext = new JsonObject()
+            .put("client-id", "gateway-one");
+
+        register(svc, "tenant", "device", "myId", "myType", clientContext, new JsonArray(), ctx);
+
+        JsonObject testContext = new JsonObject()
+            .put("client-id", "gateway-two");
+
+        final Async get = ctx.async();
+        svc.get("tenant", "myType", "myId", testContext, ctx.asyncAssertSuccess(s -> {
+            assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
+            get.complete();
+        }));
+        get.await(2000);
+    }
+
+    /**
      * Verifies that the service removes credentials for a given auth-id and type.
      * 
      * @param ctx The vert.x test context.
@@ -347,7 +393,7 @@ public class FileBasedCredentialsServiceTest {
     @Test
     public void testRemoveCredentialsByAuthIdAndTypeSucceeds(final TestContext ctx) {
 
-        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+        register(svc, "tenant", "device", "myId", "myType", ctx);
 
         final Async remove = ctx.async();
         svc.remove("tenant", "myType", "myId", ctx.asyncAssertSuccess(s -> {
@@ -367,9 +413,9 @@ public class FileBasedCredentialsServiceTest {
     @Test
     public void testRemoveCredentialsByDeviceSucceeds(final TestContext ctx) {
 
-        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
-        register(svc, "tenant", "device", "myOtherId", "myOtherType", new JsonArray(), ctx);
-        register(svc, "tenant", "other-device", "thirdId", "myType", new JsonArray(), ctx);
+        register(svc, "tenant", "device", "myId", "myType", ctx);
+        register(svc, "tenant", "device", "myOtherId", "myOtherType", ctx);
+        register(svc, "tenant", "other-device", "thirdId", "myType", ctx);
 
         final Async remove = ctx.async();
         svc.removeAll("tenant", "device", ctx.asyncAssertSuccess(s -> {
@@ -393,7 +439,7 @@ public class FileBasedCredentialsServiceTest {
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
-        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+        register(svc, "tenant", "device", "myId", "myType", ctx);
 
         // WHEN trying to update the credentials
         Async updateFailure = ctx.async();
@@ -417,7 +463,7 @@ public class FileBasedCredentialsServiceTest {
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
-        register(svc, "tenant", "device", "myId", "myType", new JsonArray(), ctx);
+        register(svc, "tenant", "device", "myId", "myType", ctx);
 
         // WHEN trying to remove the credentials
         Async removeFailure = ctx.async();
@@ -454,6 +500,17 @@ public class FileBasedCredentialsServiceTest {
             final String deviceId,
             final String authId,
             final String type,
+            final TestContext ctx) {
+        register(svc, tenant, deviceId, authId, type, null, new JsonArray(), ctx);
+    }
+
+    private static void register(
+            final CredentialsService svc,
+            final String tenant,
+            final String deviceId,
+            final String authId,
+            final String type,
+            final JsonObject clientContext,
             final JsonArray secrets,
             final TestContext ctx) {
 
@@ -463,8 +520,13 @@ public class FileBasedCredentialsServiceTest {
                 .put(CredentialsConstants.FIELD_TYPE, type)
                 .put(CredentialsConstants.FIELD_SECRETS, secrets);
 
+        if (clientContext != null) {
+            data.mergeIn(clientContext);
+        }
+
+
         Async registration = ctx.async();
-        svc.add("tenant", data, ctx.asyncAssertSuccess(s -> {
+        svc.add(tenant, data, ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_CREATED));
             registration.complete();
         }));

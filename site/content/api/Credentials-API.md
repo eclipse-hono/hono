@@ -99,6 +99,8 @@ The body of the request MUST consist of a single *AMQP Value* section containing
 | *type*           | *yes*     | *string*   | The type of credentials to look up. Potential values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   | The authentication identifier to look up credentials for. |
 
+Additionally, the body can contain arbitrary array of properties that service implementations can use to determine device identity.
+
 The following request payload may be used to look up the hashed password for a device with the authentication identifier `sensor1`:
 
 ~~~json

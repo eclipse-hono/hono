@@ -128,6 +128,65 @@ public class CredentialsAmqpIT {
     }
 
     /**
+     * Verifies that the service returns credentials for a given type, authentication ID and matching client context.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsExistingClientContext(final TestContext ctx) {
+
+        JsonObject clientContext = new JsonObject()
+                .put("client-id", "gateway-one");
+
+        credentialsClient
+                .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "gw", clientContext)
+                .setHandler(ctx.asyncAssertSuccess(result -> {
+                    ctx.assertEquals("gw", result.getAuthId());
+                    ctx.assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, result.getType());
+                }));
+    }
+
+    /**
+     * Verify that a non-matching client context is responded with HTTP_NOT_FOUND.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsNotMatchingClientContext(final TestContext ctx) {
+
+        JsonObject clientContext = new JsonObject()
+                .put("client-id", "gateway-two");
+
+        credentialsClient
+                .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "gw", clientContext)
+                .setHandler(ctx.asyncAssertFailure(t -> {
+                    ctx.assertEquals(
+                            HttpURLConnection.HTTP_NOT_FOUND,
+                            ((ServiceInvocationException) t).getErrorCode());
+                }));
+    }
+
+    /**
+     * Verify that a not existing client context is responded with HTTP_NOT_FOUND.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsNotExistingClientContext(final TestContext ctx) {
+
+        JsonObject clientContext = new JsonObject()
+                .put("client-id", "gateway-one");
+
+        credentialsClient
+                .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, clientContext)
+                .setHandler(ctx.asyncAssertFailure(t -> {
+                    ctx.assertEquals(
+                            HttpURLConnection.HTTP_NOT_FOUND,
+                            ((ServiceInvocationException) t).getErrorCode());
+                }));
+    }
+
+    /**
      * Verify that setting authId and type to existing credentials is responded with HTTP_OK.
      * Check that the payload contains the default deviceId and is enabled.
      * 

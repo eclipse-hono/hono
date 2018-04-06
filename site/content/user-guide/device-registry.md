@@ -3,16 +3,24 @@ title = "Device Registry"
 weight = 205
 +++
 
-In addition to the AMQP 1.0 based API endpoints, the Device Registry also exposes HTTP resources for managing the contents of the registry.
+The Device Registry component is an example implementation of the following Hono APIs:
+
+* [Tenant API]({{< relref "api/Tenant-API.md" >}})
+* [Device Registration API]({{< relref "api/Device-Registration-API.md" >}})
+* [Credentials API]({{< relref "api/Credentials-API.md" >}})
 
 <!--more-->
-Please note that the HTTP resources exposed by the Device Registry are **not** part of the *official* definition of the Device Registration, Credentials and Tenant APIs.
- 
+It implements AMQP 1.0 API endpoints and provides JSON based file persistence for data. 
+
+In addition to the AMQP 1.0 based API endpoints, the Device Registry also exposes HTTP resources for managing the contents of the registry.
+
 {{% warning %}}
 The Device Registry is not intended to be used in production environments. In particular, access to the HTTP resources described below is not restricted to authorized clients only.
 
 The resources have been designed to provide convenient access to the registry's content using command line tools like *curl* or *HTTPie*.
 {{% /warning %}}
+
+Please note that the HTTP resources exposed by the Device Registry are **not** part of the *official* definition of the Device Registration, Credentials and Tenant APIs.
 
 ## Managing Tenants
 
@@ -298,6 +306,10 @@ The following commands add `psk` credentials for the same device `4720` using au
 * Status Codes:
   * 200 (OK): Credentials for the given parameters have been found. The response body will contain credentials as specified by [Credentials Format]({{< relref "api/Credentials-API.md#credentials-format" >}}) of the Credentials API.
   * 404 (Not Found): No credentials for the given parameters are registered for the given tenant.
+
+The [Get Credentials]({{< relref "api/Credentials-API.md#get-credentials" >}}) operation of Credentials API defines that arbitrary array of properties can be passed to help identify the device.
+It's not specified if and how these properties can be used by the implementation. The Device Registry will try to match the
+properties against the properties defined in the credentials record. It will return the credentials only if all the properties in the request are successfully matched.
 
 **Example**
 
