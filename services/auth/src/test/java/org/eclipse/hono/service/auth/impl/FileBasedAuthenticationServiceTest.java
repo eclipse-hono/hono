@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -65,18 +65,36 @@ public class FileBasedAuthenticationServiceTest {
         authService.loadPermissions();
     }
 
+    /**
+     * Verifies that the service fails verification of plain credentials if no
+     * username is given.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyPlainFailsForMissingUsername(final TestContext ctx) {
 
         authService.verifyPlain(null, null, "pwd", ctx.asyncAssertFailure());
     }
 
+    /**
+     * Verifies that the service fails verification of plain credentials if no
+     * password is given.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyPlainFailsForMissingPassword(final TestContext ctx) {
 
         authService.verifyPlain(null, "user", null, ctx.asyncAssertFailure());
     }
 
+    /**
+     * Verifies that the service successfully issues a token on successful verification
+     * of credentials.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyPlainSucceedsForMatchingPassword(final TestContext ctx) {
 
@@ -86,6 +104,12 @@ public class FileBasedAuthenticationServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the service grants the requested <em>authorization identity</em> 
+     * on successful verification of credentials.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyPlainGrantsAuthorizationId(final TestContext ctx) {
 
@@ -95,6 +119,13 @@ public class FileBasedAuthenticationServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the service refuses to grant the requested <em>authorization identity</em>
+     * on successful verification of credentials if the user is not authorized to assume another
+     * identity than the authentication identity.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyPlainRefusesAuthorizationId(final TestContext ctx) {
 
@@ -104,6 +135,12 @@ public class FileBasedAuthenticationServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the service refuses to grant an non-existing <em>authorization identity</em>
+     * on successful verification of credentials.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyPlainRefusesNonExistingAuthorizationId(final TestContext ctx) {
 
@@ -113,12 +150,24 @@ public class FileBasedAuthenticationServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the service fails verification of external credentials if no
+     * subject DN is given.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyExternalFailsForMissingSubjectDn(final TestContext ctx) {
 
         authService.verifyExternal(null, null, ctx.asyncAssertFailure());
     }
 
+    /**
+     * Verifies that the service successfully issues a token on successful verification
+     * of external credentials.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyExternalGrantsCommonName(final TestContext ctx) {
 
@@ -128,6 +177,12 @@ public class FileBasedAuthenticationServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the service grants the requested <em>authorization identity</em> 
+     * on successful verification of external credentials.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyExternalGrantsAuthorizationId(final TestContext ctx) {
 
@@ -137,6 +192,12 @@ public class FileBasedAuthenticationServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the service refuses to grant an non-existing <em>authorization identity</em>
+     * on successful verification of external credentials.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyExternalRefusesNonExistingAuthorizationId(final TestContext ctx) {
 
@@ -146,6 +207,13 @@ public class FileBasedAuthenticationServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the service refuses to grant the requested <em>authorization identity</em>
+     * on successful verification of external credentials if the user is not authorized to assume another
+     * identity than the authentication identity.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyExternalRefusesAuthorizationId(final TestContext ctx) {
 
@@ -155,6 +223,12 @@ public class FileBasedAuthenticationServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the token issued by the service on successful verification
+     * of credentials contains the user's authorities for executing operations.
+     * 
+     * @param ctx The vert.x test context.
+     */
     @Test
     public void testVerifyPlainAddsAuthoritiesForOperations(final TestContext ctx) {
 

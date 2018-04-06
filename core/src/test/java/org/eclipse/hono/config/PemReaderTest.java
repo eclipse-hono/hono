@@ -102,7 +102,7 @@ public class PemReaderTest {
     }
 
     /**
-     * Bogus payload in the middle
+     * Bogus payload in the middle.
      * 
      * @throws IOException if the test fails.
      */
@@ -112,7 +112,7 @@ public class PemReaderTest {
     }
 
     /**
-     * Missing END statement
+     * Missing END statement.
      * 
      * @throws IOException if the test fails.
      */
@@ -122,7 +122,7 @@ public class PemReaderTest {
     }
 
     /**
-     * Only end END statement
+     * Only end END statement.
      * 
      * @throws IOException if the test fails.
      */
@@ -132,7 +132,7 @@ public class PemReaderTest {
     }
 
     /**
-     * Duplicate BEGIN
+     * Duplicate BEGIN.
      * 
      * @throws IOException if the test fails.
      */
@@ -142,7 +142,7 @@ public class PemReaderTest {
     }
 
     /**
-     * Missing BEGIN
+     * Missing BEGIN.
      * 
      * @throws IOException if the test fails.
      */

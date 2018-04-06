@@ -23,6 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * A helper for keeping track of response handlers.
+ * 
  * @param <T> the type of response this helper keeps consumers for
  * @param <R> the type of result the consumers held by this helper provide
  */
@@ -32,6 +34,13 @@ public class CorrelationHelper<T, R> {
 
     private final Map<String, Consumer<T>>  handlers = new ConcurrentHashMap<>();
 
+    /**
+     * Adds a response handler for a correlation ID.
+     * 
+     * @param correlationId The correlation ID.
+     * @param consumer The handler.
+     * @return A future that will complete with the result from the response.
+     */
     public CompletableFuture<R> add(final String correlationId, final Function<T, R> consumer) {
 
         final CompletableFuture<R> future = new CompletableFuture<>();
@@ -49,6 +58,12 @@ public class CorrelationHelper<T, R> {
         return future;
     }
 
+    /**
+     * Processes a response message.
+     * 
+     * @param correlationId The correlation ID contained in the message.
+     * @param message The message.
+     */
     public void handle(final String correlationId, final T message) {
         final Consumer<T> consumer = handlers.remove(correlationId);
         if (consumer != null ){
@@ -58,6 +73,11 @@ public class CorrelationHelper<T, R> {
         }
     }
 
+    /**
+     * Gets the number of consumers currently registered.
+     * 
+     * @return The number of registered consumers.
+     */
     public int size() {
         return handlers.size();
     }

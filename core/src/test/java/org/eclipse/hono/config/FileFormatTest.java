@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Red Hat Inc and others.
+ * Copyright (c) 2017, 2018 Red Hat Inc and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,13 +11,19 @@
  */
 package org.eclipse.hono.config;
 
-import static org.eclipse.hono.config.FileFormat.detect;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
+/**
+ * Tests verifying behavior of {@link FileFormat}.
+ *
+ */
 public class FileFormatTest {
 
+    /**
+     * Verifies that the PEM format is detected in all its variants.
+     */
     @Test
     public void testPem() {
         assertName(FileFormat.PEM, "/foo/bar/baz.pem");
@@ -28,6 +34,9 @@ public class FileFormatTest {
         assertName(FileFormat.PEM, "foo.pem");
     }
 
+    /**
+     * Verifies that the PFX format is detected in all its variants.
+     */
     @Test
     public void testPfx() {
         assertName(FileFormat.PKCS12, "/foo/bar/baz.pfx");
@@ -38,6 +47,9 @@ public class FileFormatTest {
         assertName(FileFormat.PKCS12, "foo.pfx");
     }
 
+    /**
+     * Verifies that the P12 format is detected in all its variants.
+     */
     @Test
     public void testP12() {
         assertName(FileFormat.PKCS12, "/foo/bar/baz.p12");
@@ -45,6 +57,9 @@ public class FileFormatTest {
         assertName(FileFormat.PKCS12, "foo.p12");
     }
 
+    /**
+     * Verifies that the JKS format is detected in all its variants.
+     */
     @Test
     public void testJks() {
         assertName(FileFormat.JKS, "/foo/bar/baz.jks");
@@ -56,7 +71,7 @@ public class FileFormatTest {
     }
 
     private void assertName(final FileFormat format, final String name) {
-        FileFormat result = detect(name);
+        final FileFormat result = FileFormat.detect(name);
         assertEquals(format, result);
     }
 }

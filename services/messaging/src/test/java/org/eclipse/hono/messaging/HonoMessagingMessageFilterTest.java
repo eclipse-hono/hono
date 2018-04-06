@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -38,6 +38,11 @@ public class HonoMessagingMessageFilterTest {
     private static final String MY_TENANT = "myTenant";
     private static final String MY_DEVICE = "myDevice";
 
+    /**
+     * Verifies that the filter rejects messages for which the device ID contained
+     * in the link's target address does not match the device ID contained in the message's
+     * application properties.
+     */
     @Test
     public void testVerifyDetectsDeviceIdMismatch() {
         // GIVEN a valid telemetry message with device id not matching the link target
@@ -50,6 +55,9 @@ public class HonoMessagingMessageFilterTest {
         assertFalse(HonoMessagingMessageFilter.verify(linkTarget, msg));
     }
 
+    /**
+     * Verifies that the filter rejects messages lacking a device ID.
+     */
     @Test
     public void testVerifyDetectsMissingDeviceId() {
         // GIVEN a valid telemetry message without device id
@@ -78,6 +86,9 @@ public class HonoMessagingMessageFilterTest {
         assertFalse(HonoMessagingMessageFilter.verify(linkTarget, msg));
     }
 
+    /**
+     * Verifies that the filter rejects messages lacking a content type.
+     */
     @Test
     public void testVerifyDetectsMissingContentType() {
         // GIVEN a valid telemetry message without content type
@@ -90,6 +101,9 @@ public class HonoMessagingMessageFilterTest {
         assertFalse(HonoMessagingMessageFilter.verify(linkTarget, msg));
     }
 
+    /**
+     * Verifies that the filter rejects messages lacking a message body.
+     */
     @Test
     public void testVerifyDetectsMissingBody() {
         // GIVEN a valid telemetry message without body
@@ -102,6 +116,10 @@ public class HonoMessagingMessageFilterTest {
         assertFalse(HonoMessagingMessageFilter.verify(linkTarget, msg));
     }
 
+    /**
+     * Verifies that the filter accepts messages containing an arbitrary device ID
+     * if the link's target address does not contain a device ID.
+     */
     @Test
     public void testVerifySucceedsForTenantOnlyLinkTarget() {
         // GIVEN a telemetry message for myDevice
@@ -115,6 +133,11 @@ public class HonoMessagingMessageFilterTest {
         assertMessageAnnotationsContainProperties(msg, MY_TENANT, MY_DEVICE);
     }
 
+    /**
+     * Verifies that the filter accepts messages for which the device ID contained
+     * in the link's target address matches the device ID contained in the message's
+     * application properties.
+     */
     @Test
     public void testVerifySucceedsForMatchingDevice() {
         // GIVEN a telemetry message for myDevice

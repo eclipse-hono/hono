@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Red Hat Inc and others.
+ * Copyright (c) 2017, 2018 Red Hat Inc and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -14,17 +14,29 @@ package org.eclipse.hono.config;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.net.PfxOptions;
 
+/**
+ * Tests verifying behavior of {@link AbstractConfig}.
+ *
+ */
 public class AbstractConfigTest {
 
     private static final String PREFIX_KEY_PATH = "target/certs/";
+    private AbstractConfig cfg;
 
-    private static final class TestConfig extends AbstractConfig {
+    /**
+     * Sets up the fixture.
+     */
+    @Before
+    public void setup() {
+        cfg = new AbstractConfig() {
+        };
     }
 
     /**
@@ -32,7 +44,6 @@ public class AbstractConfigTest {
      */
     @Test
     public void testPfxConfig() {
-        final TestConfig cfg = new TestConfig();
         cfg.setKeyStorePath(PREFIX_KEY_PATH + "honoKeyStore.p12");
         cfg.setKeyStorePassword("honokeys");
 
@@ -47,7 +58,6 @@ public class AbstractConfigTest {
      */
     @Test
     public void testPemConfig() {
-        final TestConfig cfg = new TestConfig();
         cfg.setKeyPath(PREFIX_KEY_PATH + "hono-messaging-key.pem");
         cfg.setCertPath(PREFIX_KEY_PATH + "hono-messaging-cert.pem");
 
@@ -62,7 +72,6 @@ public class AbstractConfigTest {
      */
     @Test
     public void testInvalidConfig1() {
-        final TestConfig cfg = new TestConfig();
         cfg.setKeyPath(PREFIX_KEY_PATH + "hono-messaging-key.pem");
         cfg.setCertPath(PREFIX_KEY_PATH + "hono-messaging-cert.pem");
         cfg.setKeyFormat(FileFormat.PKCS12);
@@ -77,7 +86,6 @@ public class AbstractConfigTest {
      */
     @Test
     public void testInvalidConfig2() {
-        final TestConfig cfg = new TestConfig();
         cfg.setKeyStorePath(PREFIX_KEY_PATH + "honoKeyStore.p12");
         cfg.setKeyStorePassword("honokeys");
 

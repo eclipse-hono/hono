@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -194,7 +194,12 @@ public class JmsIntegrationTestSupport {
         return message;
     }
 
+    /**
+     * An exception listener that simply logs all exceptions.
+     *
+     */
     static class MyExceptionListener implements ExceptionListener {
+
         private static final Logger LOGGER = LoggerFactory.getLogger(MyExceptionListener.class);
         @Override
         public void onException(final JMSException exception) {

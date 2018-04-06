@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -32,21 +32,27 @@ public class AuthTokenHelperImplTest {
 
     private AuthTokenHelper helper;
 
+    /**
+     * Sets up the fixture.
+     */
     @Before
     public void init() {
         helper = AuthTokenHelperImpl.forSharedSecret("suzfgsuzdfgadsjfjfaksgfkadfgduzsafdsfsaf", 60);
     }
 
+    /**
+     * Verifies that the helper can create a token for a given set of
+     * authorities and can then parse the token again.
+     */
     @Test
     public void testCreateAndExpandToken() {
 
-        Authorities authorities = new AuthoritiesImpl()
+        final Authorities authorities = new AuthoritiesImpl()
                 .addResource("telemetry", "*", Activity.READ, Activity.WRITE)
                 .addOperation("registration", "*", "assert");
-        String token = helper.createToken("userA", authorities);
+        final String token = helper.createToken("userA", authorities);
 
-        Jws<Claims> parsedToken = helper.expand(token);
+        final Jws<Claims> parsedToken = helper.expand(token);
         assertNotNull(parsedToken.getBody());
     }
-
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -12,7 +12,6 @@
 
 package org.eclipse.hono.util;
 
-import static org.eclipse.hono.util.PortConfigurationHelper.isValidPort;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -25,14 +24,17 @@ import org.junit.Test;
  */
 public class PortConfigurationHelperTest {
 
+    /**
+     * Verifies that the helper rejects ports &lt; 0 or &gt; 65535.
+     */
     @Test
-    public void testIsValidPort() throws Exception {
+    public void testIsValidPort() {
 
-        assertTrue("Lower inclusive bound", isValidPort(0));
-        assertTrue("Upper inclusive bound", isValidPort(65535));
+        assertTrue("Lower inclusive bound", PortConfigurationHelper.isValidPort(0));
+        assertTrue("Upper inclusive bound", PortConfigurationHelper.isValidPort(65535));
 
-        assertFalse("Lower exclusive bound", isValidPort(-1));
-        assertFalse("Upper exclusive bound", isValidPort(65536));
+        assertFalse("Lower exclusive bound", PortConfigurationHelper.isValidPort(-1));
+        assertFalse("Upper exclusive bound", PortConfigurationHelper.isValidPort(65536));
     }
 
 }

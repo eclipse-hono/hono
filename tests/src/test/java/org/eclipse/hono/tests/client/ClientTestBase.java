@@ -78,14 +78,15 @@ public abstract class ClientTestBase {
     private MessageConsumer consumer;
 
     /**
-     * Sets up the environment:
+     * Sets up the environment.
+     * <p>
      * <ol>
      * <li>connect to the AMQP messaging network</li>
      * <li>connects to the Hono Server</li>
      * <li>connects to the Hono Device Registry</li>
      * <li>creates a RegistrationClient for TEST_TENANT_ID</li>
      * <li>creates a MessageSender for TEST_TENANT_ID</li>
-     * </ul>
+     * </ol>
      *
      * @param ctx The test context
      */

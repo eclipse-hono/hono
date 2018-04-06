@@ -13,17 +13,19 @@
 
 package org.eclipse.hono.util;
 
-import static org.eclipse.hono.util.Strings.isNullOrEmpty;
+import static org.junit.Assert.*;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * Unit tests for {@link Strings}
+ * Unit tests for {@link Strings}.
  *
  */
 public class StringsTest {
 
+    /**
+     * Helper class.
+     */
     private static class Mock {
 
         private String value;
@@ -39,43 +41,43 @@ public class StringsTest {
     }
 
     /**
-     * Test primary null value
+     * Test primary null value.
      */
     @Test
     public void testNull() {
-        Assert.assertTrue(isNullOrEmpty(null));
+        assertTrue(Strings.isNullOrEmpty(null));
     }
 
     /**
-     * Test empty string
+     * Test empty string.
      */
     @Test
     public void testEmpty() {
-        Assert.assertTrue(isNullOrEmpty(""));
+        assertTrue(Strings.isNullOrEmpty(""));
     }
 
     /**
-     * Test non-empty string
+     * Test non-empty string.
      */
     @Test
     public void testNonEmpty() {
-        Assert.assertFalse(isNullOrEmpty("foo"));
+        assertFalse(Strings.isNullOrEmpty("foo"));
     }
 
     /**
-     * Test object returning non-empty string in toString()
+     * Test object returning non-empty string in toString().
      */
     @Test
     public void testNonEmptyNonString() {
-        Assert.assertFalse(isNullOrEmpty(new Mock("foo")));
+        assertFalse(Strings.isNullOrEmpty(new Mock("foo")));
     }
 
     /**
-     * Test object returning empty string in toString()
+     * Test object returning empty string in toString().
      */
     @Test
     public void testEmptyNonString() {
-        Assert.assertTrue(isNullOrEmpty(new Mock("")));
+        assertTrue(Strings.isNullOrEmpty(new Mock("")));
     }
 
     /**
@@ -85,6 +87,6 @@ public class StringsTest {
      */
     @Test
     public void testNullNonString() {
-        Assert.assertTrue(isNullOrEmpty(new Mock(null)));
+        assertTrue(Strings.isNullOrEmpty(new Mock(null)));
     }
 }

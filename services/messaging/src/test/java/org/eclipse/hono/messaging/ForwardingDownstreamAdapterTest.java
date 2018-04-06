@@ -399,6 +399,11 @@ public class ForwardingDownstreamAdapterTest {
         adapter.setMetrics(mock(MessagingMetrics.class));
     }
 
+    /**
+     * A connection factory that provides access to the disconnect and close handlers
+     * registered on the connections created by the factory.
+     *
+     */
     private class HandlerCapturingConnectionFactory implements ConnectionFactory {
 
         private Handler<ProtonConnection> disconnectHandler;
