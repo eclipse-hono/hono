@@ -1,9 +1,9 @@
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
   labels:
-    app: AMQP_Messaging_Network
+    app: amqp-messaging-network
     version: "${project.version}"
     group: ${project.groupId}
   name: hono-dispatch-router
@@ -11,13 +11,13 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: AMQP_Messaging_Network
+      app: amqp-messaging-network
       role: router
       group: ${project.groupId}
   template:
     metadata:
       labels:
-        app: AMQP_Messaging_Network
+        app: amqp-messaging-network
         role: router
         version: "${project.version}"
         group: ${project.groupId}
@@ -40,7 +40,7 @@ spec:
           tcpSocket:
             port: 5672
           timeoutSeconds: 1
-        name: eclipse-hono-dispatch-router
+        name: apache-qpid-dispatch-router
         readinessProbe:
           initialDelaySeconds: 10
           periodSeconds: 5

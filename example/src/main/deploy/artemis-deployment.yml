@@ -1,9 +1,9 @@
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
   labels:
-    app: AMQP_Messaging_Network
+    app: amqp-messaging-network
     version: "${project.version}"
     group: ${project.groupId}
   name: hono-artemis
@@ -11,13 +11,13 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: AMQP_Messaging_Network
+      app: amqp-messaging-network
       role: broker
       group: ${project.groupId}
   template:
     metadata:
       labels:
-        app: AMQP_Messaging_Network
+        app: amqp-messaging-network
         role: broker
         version: "${project.version}"
         group: ${project.groupId}
@@ -42,7 +42,7 @@ spec:
           tcpSocket:
             port: 5671
           timeoutSeconds: 1
-        name: eclipse-hono-artemis
+        name: apache-activemq-artemis
         readinessProbe:
           initialDelaySeconds: 5
           periodSeconds: 5
