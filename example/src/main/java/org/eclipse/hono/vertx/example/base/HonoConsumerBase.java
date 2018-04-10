@@ -117,11 +117,13 @@ public class HonoConsumerBase {
         }
 
         final String content = ((Data) msg.getBody()).getValue().toString();
+        final String deviceId = MessageHelper.getDeviceIdAnnotation(msg);
+        final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
 
-        final String deviceId = MessageHelper.getDeviceId(msg);
-
-        final StringBuilder sb = new StringBuilder("received message [device: ").
-                append(deviceId).append(", content-type: ").append(msg.getContentType()).append(" ]: ").append(content);
+        final StringBuilder sb = new StringBuilder("received message [tenant: ").append(tenantId).
+                append(", device: ").append(deviceId).
+                append(", content-type: ").append(msg.getContentType()).
+                append(" ]: ").append(content);
 
         if (msg.getApplicationProperties() != null) {
             sb.append(" with application properties: ").append(msg.getApplicationProperties().getValue());
