@@ -13,6 +13,7 @@
 package org.eclipse.hono.util;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -501,4 +502,16 @@ public final class MessageHelper {
             }
         }
     }
+
+    /**
+     * Sets the <em>#SYS_PROPERTY_CREATION_TIME</em> of the AMQP 1.0 message to the current timestamp.
+     *
+     * @param msg the message for that the creation-time property is set.
+     */
+    public static void setCreationTime(final Message msg) {
+        if (msg.getCreationTime() == 0) {
+            msg.setCreationTime(Instant.now().toEpochMilli());
+        }
+    }
+
 }

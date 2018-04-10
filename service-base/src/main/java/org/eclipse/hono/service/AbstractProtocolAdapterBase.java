@@ -588,6 +588,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <li>application property <em>device_id</em> will be set to device ID</li>
      * <li>application property <em>orig_address</em> will be set to publish address</li>
      * <li><em>content-type</em> will be set to content type</li>
+     * <li><em>creation-time</em> will be set to the current number of milliseconds from the epoch of 1970-01-01T00:00:00Z.
      * <li>additional properties set by {@link #addProperties(Message, JsonObject)}</li>
      * </ul>
      * This method also sets the message's payload.
@@ -631,6 +632,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (payload != null) {
             msg.setBody(new Data(new Binary(payload.getBytes())));
         }
+
+        MessageHelper.setCreationTime(msg);
+
         addProperties(msg, registrationInfo);
         return msg;
     }
