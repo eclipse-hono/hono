@@ -133,6 +133,40 @@
           "WRITE"
         ]
       }
+    ],
+    "application": [
+      {
+        "resource": "telemetry/*",
+        "activities": [
+          "READ"
+        ]
+      }, {
+        "resource": "event/*",
+        "activities": [
+          "READ"
+        ]
+      },
+      {
+        "resource": "control/*",
+        "activities": [ "READ", "WRITE" ]
+      }
+    ],
+    "DEFAULT_TENANT-application": [
+      {
+        "resource": "telemetry/DEFAULT_TENANT",
+        "activities": [
+          "READ"
+        ]
+      }, {
+        "resource": "event/DEFAULT_TENANT",
+        "activities": [
+          "READ"
+        ]
+      },
+      {
+        "resource": "control/DEFAULT_TENANT",
+        "activities": [ "READ", "WRITE" ]
+      }
     ]
   },
   "users": {
@@ -178,6 +212,20 @@
       "password": "secret",
       "authorities": [
         "provisioner"
+      ]
+    },
+    "consumer@HONO": {
+      "mechanism": "PLAIN",
+      "password": "verysecret",
+      "authorities": [
+        "application"
+      ]
+    },
+    "user1@HONO": {
+      "mechanism": "PLAIN",
+      "password": "pw",
+      "authorities": [
+        "DEFAULT_TENANT-application"
       ]
     }
   }

@@ -33,6 +33,15 @@ import io.vertx.proton.ProtonLink;
 public final class Constants {
 
     /**
+     * Indicates that an AMQP request cannot be processed due to a perceived client error.
+     */
+    public static final Symbol AMQP_BAD_REQUEST= Symbol.valueOf("hono:bad-request");
+    /**
+     * Indicates that an AMQP connection is closed due to inactivity.
+     */
+    public static final Symbol AMQP_ERROR_INACTIVITY= Symbol.valueOf("hono:inactivity");
+
+    /**
      * The name of the default tenant.
      */
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
@@ -56,11 +65,6 @@ public final class Constants {
      * The type of the AMQP protocol adapter.
      */
     public static final String PROTOCOL_ADAPTER_TYPE_AMQP= "hono-amqp";
-
-    /**
-     * Indicates that an AMQP request cannot be processed due to a perceived client error.
-     */
-    public static final Symbol AMQP_BAD_REQUEST= Symbol.valueOf("hono:bad-request");
 
     /**
      * The "QoS-Level" request header indicating the quality of service level supported by the HTTP Adapter.

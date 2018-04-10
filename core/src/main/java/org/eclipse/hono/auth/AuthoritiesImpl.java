@@ -28,9 +28,18 @@ import io.jsonwebtoken.Claims;
  */
 public final class AuthoritiesImpl implements Authorities {
 
+    /**
+     * The prefix used to indicate an authority on a resource.
+     */
+    public static final String PREFIX_RESOURCE = "r:";
+    /**
+     * The prefix used to indicate an authority on an operation.
+     */
+    public static final String PREFIX_OPERATION = "o:";
+
     private static final Logger LOG = LoggerFactory.getLogger(AuthoritiesImpl.class);
-    private static final String opTemplate = "o:%s:%s";
-    private static final String resTemplate = "r:%s";
+    private static final String opTemplate = PREFIX_OPERATION + "%s:%s";
+    private static final String resTemplate = PREFIX_RESOURCE + "%s";
     // holds mapping resources -> activities
     private final Map<String, String> authorities = new HashMap<>();
 
@@ -51,7 +60,7 @@ public final class AuthoritiesImpl implements Authorities {
         Objects.requireNonNull(claims);
         final AuthoritiesImpl result = new AuthoritiesImpl();
         claims.forEach((key, value) -> {
-            if ((key.startsWith("o:") || key.startsWith("r:")) && value instanceof String) {
+            if ((key.startsWith(PREFIX_OPERATION) || key.startsWith(PREFIX_RESOURCE)) && value instanceof String) {
                 LOG.trace("adding claim [key: {}, value: {}]", key, value);
                 result.authorities.put(key, (String) value);
             } else {
