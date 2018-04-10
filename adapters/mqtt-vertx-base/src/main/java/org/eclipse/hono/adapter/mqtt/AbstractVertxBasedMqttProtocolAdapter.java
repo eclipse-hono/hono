@@ -40,11 +40,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttAuth;
+import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
@@ -94,12 +96,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     @Override
     protected final int getActualPort() {
-        return (server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED);
+        return server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     @Override
     protected final int getActualInsecurePort() {
-        return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
+        return insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     /**
@@ -187,7 +189,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<MqttServer> bindMqttServer(final MqttServerOptions options, final MqttServer mqttServer) {
 
         final Future<MqttServer> result = Future.future();
-        final MqttServer createdMqttServer = (mqttServer == null ? MqttServer.create(this.vertx, options) : mqttServer);
+        final MqttServer createdMqttServer = mqttServer == null ? MqttServer.create(this.vertx, options) : mqttServer;
 
         createdMqttServer
                 .endpointHandler(this::handleEndpointConnection)
@@ -246,6 +248,36 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
+     * Create a future indicating a rejected connection.
+     * 
+     * @param returnCode The error code to return.
+     * @return A future indicating a rejected connection.
+     */
+    protected static <T> Future<T> rejected(final MqttConnectReturnCode returnCode) {
+        return Future.failedFuture(new MqttConnectionException(
+                returnCode != null ? returnCode : MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
+    }
+
+    /**
+     * Create a future indicating an accepted connection with an authenticated device.
+     * 
+     * @param authenticatedDevice The device that was authenticated, may be {@code null}
+     * @return A future indicating an accepted connection.
+     */
+    protected static Future<Device> accepted(final Device authenticatedDevice) {
+        return Future.succeededFuture(authenticatedDevice);
+    }
+
+    /**
+     * Create a future indicating an accepted connection without an authenticated device.
+     * 
+     * @return A future indicating an accepted connection.
+     */
+    protected static Future<Device> accepted() {
+        return Future.succeededFuture(null);
+    }
+
+    /**
      * Invoked when a client sends its <em>CONNECT</em> packet.
      * <p>
      * Authenticates the client (if required) and registers handlers for processing messages published by the client.
@@ -256,19 +288,55 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         LOG.debug("connection request from client [clientId: {}]", endpoint.clientIdentifier());
 
-        isConnected().map(ok -> {
-            if (getConfig().isAuthenticationRequired()) {
-                handleEndpointConnectionWithAuthentication(endpoint);
+        isConnected()
+                .compose(v -> handleConnectionRequest(endpoint))
+                .setHandler(result -> handleConnectionRequestResult(endpoint, result));
+
+    }
+
+    private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint) {
+        if (getConfig().isAuthenticationRequired()) {
+            return handleEndpointConnectionWithAuthentication(endpoint);
+        } else {
+            return handleEndpointConnectionWithoutAuthentication(endpoint);
+        }
+    }
+
+    private void handleConnectionRequestResult(final MqttEndpoint endpoint,
+            final AsyncResult<Device> authenticationAttempt) {
+
+        if (authenticationAttempt.succeeded()) {
+
+            sendConnectedEvent(endpoint.clientIdentifier(), authenticationAttempt.result())
+                    .setHandler(sendAttempt -> {
+                        if (sendAttempt.succeeded()) {
+                            endpoint.accept(false);
+                        } else {
+                            LOG.warn(
+                                    "connection request from client [clientId: {}] rejected due to connection event "
+                                            + "failure: {}",
+                                    endpoint.clientIdentifier(),
+                                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
+                                    sendAttempt.cause());
+                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                        }
+                    });
+
+        } else {
+
+            final Throwable t = authenticationAttempt.cause();
+            if (t instanceof MqttConnectionException) {
+                final MqttConnectReturnCode code = ((MqttConnectionException) t).code();
+                LOG.debug("connection request from client [clientId: {}] rejected with code: {}",
+                        endpoint.clientIdentifier(), code);
+                endpoint.reject(code);
             } else {
-                handleEndpointConnectionWithoutAuthentication(endpoint);
+                LOG.debug("connection request from client [clientId: {}] rejected: {}",
+                        endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
             }
-            return null;
-        }).otherwise(t -> {
-            LOG.debug("connection request from client [clientId: {}] rejected: {}",
-                    endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-            return null;
-        });
+
+        }
     }
 
     /**
@@ -276,45 +344,48 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * the {@linkplain ProtocolAdapterProperties#isAuthenticationRequired() authentication required} configuration
      * property to {@code false}.
      * <p>
-     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint)}. Registers a publish handler
-     * on the endpoint which invokes {@link #onPublishedMessage(MqttContext)} for each message being published by the
-     * client. Accepts the connection request.
+     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint, Device)}. Registers a publish
+     * handler on the endpoint which invokes {@link #onPublishedMessage(MqttContext)} for each message being published
+     * by the client. Accepts the connection request.
      * 
      * @param endpoint The MQTT endpoint representing the client.
      */
-    private void handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
+    private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
 
         endpoint.closeHandler(v -> {
-            close(endpoint);
+            close(endpoint, null);
             LOG.debug("connection to unauthenticated device [clientId: {}] closed", endpoint.clientIdentifier());
             metrics.decrementUnauthenticatedMqttConnections();
         });
         endpoint.publishHandler(message -> onPublishedMessage(new MqttContext(message, endpoint)));
 
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
-        endpoint.accept(false);
         metrics.incrementUnauthenticatedMqttConnections();
+        return accepted();
     }
 
-    private void handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint) {
+    private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint) {
 
         if (endpoint.auth() == null) {
+
             LOG.debug("connection request from device [clientId: {}] rejected: {}",
                     endpoint.clientIdentifier(), "device did not provide credentials in CONNECT packet");
-            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+
+            return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
 
         } else {
 
             final DeviceCredentials credentials = getCredentials(endpoint.auth());
 
             if (credentials == null) {
+
                 LOG.debug("connection request from device [clientId: {}] rejected: {}",
                         endpoint.clientIdentifier(), "device provided malformed credentials in CONNECT packet");
-                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
 
             } else {
 
-                getTenantConfiguration(credentials.getTenantId()).compose(tenantConfig -> {
+                return getTenantConfiguration(credentials.getTenantId()).compose(tenantConfig -> {
                     if (tenantConfig.isAdapterEnabled(getTypeName())) {
                         LOG.debug("protocol adapter [{}] is enabled for tenant [{}]",
                                 getTypeName(), credentials.getTenantId());
@@ -329,24 +400,24 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     final Future<Device> result = Future.future();
                     usernamePasswordAuthProvider.authenticate(credentials, result.completer());
                     return result;
-                }).map(authenticatedDevice -> {
+                }).compose(authenticatedDevice -> {
                     LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
                             authenticatedDevice.getTenantId(), credentials.getAuthId(),
                             authenticatedDevice.getDeviceId());
                     onAuthenticationSuccess(endpoint, authenticatedDevice);
-                    return null;
-                }).otherwise(t -> {
+                    return accepted(authenticatedDevice);
+                }).recover(t -> {
                     LOG.debug("cannot authenticate device [tenant-id: {}, auth-id: {}]",
                             credentials.getTenantId(), credentials.getAuthId(), t);
-                    if (ServerErrorException.class.isInstance(t)) {
+                    if (t instanceof ServerErrorException) {
                         // one of the services we depend on might not be available (yet)
-                        endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                        return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
                     } else {
                         // validation of credentials has failed
-                        endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                        return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
                     }
-                    return null;
                 });
+
             }
         }
     }
@@ -354,14 +425,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private void onAuthenticationSuccess(final MqttEndpoint endpoint, final Device authenticatedDevice) {
 
         endpoint.closeHandler(v -> {
-            close(endpoint);
+            close(endpoint, authenticatedDevice);
             LOG.debug("connection to device [tenant-id: {}, device-id: {}] closed",
                     authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
             metrics.decrementMqttConnections(authenticatedDevice.getTenantId());
         });
 
         endpoint.publishHandler(message -> onPublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
-        endpoint.accept(false);
         metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
     }
 
@@ -535,9 +605,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * Closes a connection to a client.
      * 
      * @param endpoint The connection to close.
+     * @param authenticatedDevice Optional authenticated device information, may be {@code null}.
      */
-    protected final void close(final MqttEndpoint endpoint) {
+    protected final void close(final MqttEndpoint endpoint, final Device authenticatedDevice) {
         onClose(endpoint);
+        sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
         if (endpoint.isConnected()) {
             LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
             endpoint.close();

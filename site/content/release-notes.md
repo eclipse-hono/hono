@@ -13,6 +13,13 @@ newly added *source-to-image*" based approach doesn't require a local
 development setup but does created new images directly in the OpenShift
 instance. It also makes more use of ConfigMaps and service key/cert management.
 
+* Protocol adapters do have the ability to send out connection events. Those
+  events are best-effort events, indicating when a connection has been
+  established and when it has been lost. There is a pluggable way of
+  handling/creating those events, including two default implementations. A
+  logger implementation, which simply logs to the logging system. And one
+  implementation which sends out events to the *Hono Event API*.
+
 ### API Changes
 
 * The Tenant API's *get Tenant Information* operation has been changed to expect search criteria in the request message's payload instead of the application-properties. This change has been made in order to support other search criteria than just the tenant identifier. In particular, the *get Tenant Information* operation can now be used to find a tenant based on the subject DN of a trusted certificate authority that has been configured for the tenant. See [get Tenant Information]({{< relref "api/Tenant-API.md#get-tenant-information" >}}) for details.

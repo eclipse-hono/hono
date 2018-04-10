@@ -18,6 +18,8 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
+import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -40,7 +42,7 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedMqttProtocolAdapter vertxBasedMqttProtocolAdapter(){
+    public VertxBasedMqttProtocolAdapter vertxBasedMqttProtocolAdapter() {
         return new VertxBasedMqttProtocolAdapter();
     }
 
@@ -72,7 +74,7 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.app")
-    public ApplicationConfigProperties applicationConfigProperties(){
+    public ApplicationConfigProperties applicationConfigProperties() {
         return new ApplicationConfigProperties();
     }
 
@@ -97,5 +99,17 @@ public class Config extends AbstractAdapterConfig {
         ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER);
         return factory;
+    }
+
+    /**
+     * Exposes the connection event producer implementation.
+     * <p>
+     * This defaults to a {@link LoggingConnectionEventProducer} which logs to the default level.
+     * 
+     * @return The connection event producer.
+     */
+    @Bean
+    public ConnectionEventProducer connectionEventProducer() {
+        return new LoggingConnectionEventProducer();
     }
 }
