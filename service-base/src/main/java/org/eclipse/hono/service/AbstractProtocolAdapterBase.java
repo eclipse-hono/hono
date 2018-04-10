@@ -219,6 +219,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             connectToService(credentialsServiceClient, "Credentials service");
             doStart(result);
             // TODO: just a first test
+            LOG.info("COMMAND RECEIVER..");
             createCommandReceiver("DEFAULT_TENANT", "4711", command -> {
                 LOG.debug("Command received: {}", command.getRequestData());
                 LOG.debug("Send response: {} to reply-address: {}", "RESPONSE..", command.getReplyAddress());
