@@ -130,6 +130,17 @@
         <role>Committer</role>
       </roles>
     </developer>
+    <developer>
+      <id>ctron</id>
+      <name>Jens Reimann</name>
+      <email>ctron@dentrassi.de</email>
+      <url>https://dentrassi.de</url>
+      <organization>Red Hat Inc</organization>
+      <organizationUrl>https://redhat.com</organizationUrl>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
   </developers>
 
   <properties>
