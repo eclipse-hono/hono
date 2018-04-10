@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.adapter.mqtt;
@@ -29,11 +30,11 @@ public class MqttAdapterMetrics extends Metrics {
     }
 
     void incrementProcessedMqttMessages(final String resourceId, final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId,tenantId) + PROCESSED);
+        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + PROCESSED);
     }
 
     void incrementUndeliverableMqttMessages(final String resourceId, final String tenantId) {
-        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId,tenantId) + UNDELIVERABLE);
+        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + UNDELIVERABLE);
     }
 
     void incrementMqttConnections(final String tenantId) {
@@ -41,6 +42,14 @@ public class MqttAdapterMetrics extends Metrics {
     }
 
     void decrementMqttConnections(final String tenantId) {
-        counterService.increment(getPrefix() + CONNECTIONS + tenantId);
+        counterService.decrement(getPrefix() + CONNECTIONS + tenantId);
+    }
+
+    void incrementUnauthenticatedMqttConnections() {
+        counterService.increment(getPrefix() + UNAUTHENTICATED_CONNECTIONS);
+    }
+
+    void decrementUnauthenticatedMqttConnections() {
+        counterService.decrement(getPrefix() + UNAUTHENTICATED_CONNECTIONS);
     }
 }
