@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.adapter.mqtt;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -89,6 +91,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private TenantClient tenantClient;
     private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
     private ProtocolAdapterProperties config;
+    private MqttAdapterMetrics metrics;
 
     /**
      * Creates clients for the needed micro services and sets the configuration to enable the insecure port.
@@ -99,6 +102,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         config = new ProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
+
+        metrics = mock(MqttAdapterMetrics.class);
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
@@ -585,7 +590,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             }
         };
         adapter.setConfig(config);
-        adapter.setMetrics(new MqttAdapterMetrics());
+        adapter.setMetrics(metrics);
         adapter.setTenantServiceClient(tenantServiceClient);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(deviceRegistrationServiceClient);
@@ -616,5 +621,64 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(sender.send(any(Message.class))).thenReturn(outcome);
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionMetrics () {
+
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        forceClientMocksToConnected();
+        doAnswer(invocation -> {
+            Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "4711")));
+            return null;
+        }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
+
+        AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
+
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
+        doAnswer(invocation -> {
+            closeHandlerRef.set ( invocation.getArgument(0) );
+            return endpoint;
+        }).when(endpoint).closeHandler(any(Handler.class));
+
+        adapter.handleEndpointConnection(endpoint);
+
+        verify(metrics).incrementMqttConnections("DEFAULT_TENANT");
+
+        closeHandlerRef.get().handle(null);
+
+        verify(metrics).decrementMqttConnections("DEFAULT_TENANT");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUnauthenticatedConnectionMetrics () {
+
+        config.setAuthenticationRequired(false);
+
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        forceClientMocksToConnected();
+
+        AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
+
+        final MqttEndpoint endpoint = mock(MqttEndpoint.class);
+        doAnswer(invocation -> {
+            closeHandlerRef.set ( invocation.getArgument(0) );
+            return endpoint;
+        }).when(endpoint).closeHandler(any(Handler.class));
+
+        adapter.handleEndpointConnection(endpoint);
+
+        verify(metrics).incrementUnauthenticatedMqttConnections();
+
+        closeHandlerRef.get().handle(null);
+
+        verify(metrics).decrementUnauthenticatedMqttConnections();
     }
 }
