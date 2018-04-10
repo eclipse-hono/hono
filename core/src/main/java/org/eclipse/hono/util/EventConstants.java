@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  *
  */
 package org.eclipse.hono.util;
@@ -26,6 +27,11 @@ public final class EventConstants {
      * The short name of the event endpoint.
      */
     public static final String EVENT_ENDPOINT_SHORT = "e";
+
+    /**
+     * The content type of the <em>connection notification</em> event.
+     */
+    public static final String EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE = "application/vnd.eclipse-hono-dc-notification+json";
 
     private EventConstants() {
     }

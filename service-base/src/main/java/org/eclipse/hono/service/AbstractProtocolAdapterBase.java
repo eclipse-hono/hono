@@ -16,7 +16,6 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
-import io.vertx.core.Handler;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
@@ -30,18 +29,20 @@ import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.Strings;
-import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.TrustOptions;
@@ -68,6 +69,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private HonoClient registrationClient;
     private HonoClient tenantClient;
     private HonoClient credentialsServiceClient;
+
+    private ConnectionEventProducer connectionEventProducer;
 
     /**
      * Sets the configuration by means of Spring dependency injection.
@@ -172,6 +175,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     public final HonoClient getCredentialsServiceClient() {
         return credentialsServiceClient;
+    }
+
+    /**
+     * Sets the producer for connections events.
+     * 
+     * @param connectionEventProducer The instance which will handle the production of connection events. Depending on
+     *            the setup this could be a simple log message or an event using the Hono Event API.
+     */
+    @Autowired
+    public void setConnectionEventProducer(final ConnectionEventProducer connectionEventProducer) {
+        this.connectionEventProducer = connectionEventProducer;
+    }
+
+    /**
+     * Gets the producer of connection events.
+     * 
+     * @return The implementation for producing connection events. Maybe {@code null}.
+     */
+    public ConnectionEventProducer getConnectionEventProducer() {
+        return this.connectionEventProducer;
     }
 
     /**
@@ -656,5 +679,39 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         addProperties(msg, registrationInfo);
         return msg;
+    }
+
+    /**
+     * Trigger the creation of a "connected" event.
+     * 
+     * @param remoteId The remote ID.
+     * @param authenticatedDevice The (optional) authenticated device.
+     * 
+     * @see ConnectionEventProducer
+     * @see ConnectionEventProducer#connected(String, String, Device, JsonObject)
+     */
+    protected Future<?> sendConnectedEvent(final String remoteId, final Device authenticatedDevice) {
+        if (this.connectionEventProducer != null) {
+            return this.connectionEventProducer.connected(remoteId, getTypeName(), authenticatedDevice, null);
+        } else {
+            return Future.succeededFuture();
+        }
+    }
+
+    /**
+     * Trigger the creation of a "disconnected" event.
+     * 
+     * @param remoteId The remote ID.
+     * @param authenticatedDevice The (optional) authenticated device.
+     * 
+     * @see ConnectionEventProducer
+     * @see ConnectionEventProducer#disconnected(String, String, Device, JsonObject)
+     */
+    protected Future<?> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice) {
+        if (this.connectionEventProducer != null) {
+            return this.connectionEventProducer.disconnected(remoteId, getTypeName(), authenticatedDevice, null);
+        } else {
+            return Future.succeededFuture();
+        }
     }
 }
