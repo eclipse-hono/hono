@@ -96,11 +96,11 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
      * client is authorized to retrieve.
      * <p>
      * If the response does not contain a tenant ID nor a payload, then the
-     * response is returned as-is.
+     * returned future will succeed with the response <em>as-is</em>.
      * Otherwise the tenant ID is used together with the endpoint and operation
-     * name to check the client's authority to retrieve the data. If the check
-     * succeeds, the response will be returned as-is, otherwise the returned
-     * future will be failed with a {@link ClientErrorException} containing a
+     * name to check the client's authority to retrieve the data. If the client
+     * is authorized, the returned future will succeed with the response as-is,
+     * otherwise the future will fail with a {@link ClientErrorException} containing a
      * <em>403 Forbidden</em> status.
      */
     @Override
