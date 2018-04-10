@@ -36,8 +36,8 @@ public abstract class RequestResponseApiConstants {
     public static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
 
     /* message payload fields */
-    public static final String FIELD_PAYLOAD_DEVICE_ID = "device-id";
-    public static final String FIELD_PAYLOAD_TENANT_ID = "tenant-id";
+    public static final String FIELD_PAYLOAD_DEVICE_ID = Constants.JSON_FIELD_DEVICE_ID;
+    public static final String FIELD_PAYLOAD_TENANT_ID = Constants.JSON_FIELD_TENANT_ID;
 
     public static final String FIELD_ENABLED   = "enabled";
     public static final String FIELD_ERROR     = "error";

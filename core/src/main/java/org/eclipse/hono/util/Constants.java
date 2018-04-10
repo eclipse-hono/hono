@@ -122,6 +122,16 @@ public final class Constants {
     public static final String SUBJECT_ANONYMOUS = "ANONYMOUS";
 
     /**
+     * The field name of JSON payloads containing a tenant ID.
+     */
+    public static final String JSON_FIELD_TENANT_ID = "tenant-id";
+
+    /**
+     * The field name of JSON payloads containing a device ID.
+     */
+    public static final String JSON_FIELD_DEVICE_ID = "device-id";
+
+    /**
      * The principal to use for anonymous clients.
      */
     public static final HonoUser PRINCIPAL_ANONYMOUS = new HonoUserAdapter() {
