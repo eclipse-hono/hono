@@ -276,7 +276,7 @@ public interface HonoClient {
      * Gets a client for sending command with Hono's <em>Command and Control</em> API.
      *
      * @param tenantId The tenant to the all command receiving devices belong.
-     * @param deviceId
+     * @param deviceId The device id.
      * @return A future that will complete with the command and control client (if successful) or
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same

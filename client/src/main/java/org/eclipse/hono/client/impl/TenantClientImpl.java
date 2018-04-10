@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import io.vertx.core.buffer.Buffer;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
@@ -92,13 +93,13 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     }
 
     @Override
-    protected final TenantResult<TenantObject> getResult(final int status, final String payload, final CacheDirective cacheDirective) {
+    protected final TenantResult<TenantObject> getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
 
         if (payload == null) {
             return TenantResult.from(status, (TenantObject) null, cacheDirective);
         } else {
             try {
-                return TenantResult.from(status, OBJECT_MAPPER.readValue(payload, TenantObject.class), cacheDirective);
+                return TenantResult.from(status, OBJECT_MAPPER.readValue(payload.getBytes(), TenantObject.class), cacheDirective);
             } catch (final IOException e) {
                 LOG.warn("received malformed payload from Tenant service", e);
                 return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);

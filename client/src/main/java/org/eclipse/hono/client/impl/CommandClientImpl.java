@@ -4,16 +4,14 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonConnection;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandResult;
-import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +28,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<CommandResu
     private static final Logger LOG = LoggerFactory.getLogger(CommandClientImpl.class);
 
     CommandClientImpl(Context context, ClientConfigProperties config, String tenantId, String deviceId) {
-        super(context, config, tenantId+"/"+deviceId); // TODO
+        super(context, config, tenantId, deviceId);
     }
 
     @Override
@@ -44,17 +42,16 @@ public class CommandClientImpl extends AbstractRequestResponseClient<CommandResu
     }
 
     @Override
-    protected CommandResult getResult(int status, Message payload) {
-        return CommandResult.from(status, MessageHelper.getPayloadAsBytes(payload));
+    protected CommandResult getResult(int status, final Buffer payload, final CacheDirective cacheDirective) {
+        return CommandResult.from(status, payload);
     }
 
     @Override
-    public Future<byte[]> command(String deviceId, byte[] data) {
-        Objects.requireNonNull(deviceId);
+    public Future<byte[]> command(byte[] data) {
         Objects.requireNonNull(data);
 
         final Future<CommandResult> responseTracker = Future.future();
-        createAndSendRequest(CommandConstants.COMMAND_ENDPOINT, new AmqpValue(data),
+        createAndSendRequest(CommandConstants.COMMAND_ENDPOINT, Buffer.buffer(data),
                 responseTracker.completer());
 
         return responseTracker.map(response -> {
@@ -67,6 +64,19 @@ public class CommandClientImpl extends AbstractRequestResponseClient<CommandResu
         });
     }
 
+    /**
+     * Creates a new command client for a tenant and device.
+     *
+     * @param tenantId The vert.x context to run all interactions with the server on.
+     * @param deviceId The device id.
+     * @param context The vert.x context to run all interactions with the server on.
+     * @param clientConfig The configuration properties to use.
+     * @param con The AMQP connection to the server.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
     public static final void create(
             final String tenantId,
             final String deviceId,

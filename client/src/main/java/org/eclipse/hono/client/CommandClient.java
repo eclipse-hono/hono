@@ -1,8 +1,13 @@
 package org.eclipse.hono.client;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 
+/**
+ * A client for accessing Hono's Command and Control API.
+ * <p>
+ * An instance of this interface is always scoped to a specific tenant.
+ * </p>
+ */
 public interface CommandClient extends RequestResponseClient {
 
     /**
@@ -11,7 +16,6 @@ public interface CommandClient extends RequestResponseClient {
      * A device needs to be (successfully) registered before a client can upload
      * any data for it. The device also needs to be connected for a successful delivery.
      *
-     * @param deviceId The id of the device to send a command.
      * @param data The command data to send to the device.
      * @return A future indicating the result of the operation.
      *         <p>
@@ -22,6 +26,6 @@ public interface CommandClient extends RequestResponseClient {
      * @throws NullPointerException if device ID is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    Future<byte[]> command(String deviceId, byte[] data);
+    Future<byte[]> command(byte[] data);
 
 }
