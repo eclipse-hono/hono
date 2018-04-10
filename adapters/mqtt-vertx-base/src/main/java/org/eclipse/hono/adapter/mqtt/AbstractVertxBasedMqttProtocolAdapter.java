@@ -288,11 +288,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         endpoint.closeHandler(v -> {
             close(endpoint);
             LOG.debug("connection to unauthenticated device [clientId: {}] closed", endpoint.clientIdentifier());
+            metrics.decrementUnauthenticatedMqttConnections();
         });
         endpoint.publishHandler(message -> onPublishedMessage(new MqttContext(message, endpoint)));
 
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
         endpoint.accept(false);
+        metrics.incrementUnauthenticatedMqttConnections();
     }
 
     private void handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint) {

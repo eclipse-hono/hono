@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.service.metric;
@@ -39,6 +40,7 @@ abstract public class Metrics {
     protected static final String DISCARDED     = ".discarded";
     protected static final String UNDELIVERABLE = ".undeliverable";
     protected static final String CONNECTIONS   = ".connections.";
+    protected static final String UNAUTHENTICATED_CONNECTIONS   = ".unauthenticatedConnections.";
 
     protected GaugeService   gaugeService   = NullGaugeService.getInstance();
     protected CounterService counterService = NullCounterService.getInstance();
