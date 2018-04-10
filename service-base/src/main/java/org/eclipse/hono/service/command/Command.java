@@ -28,7 +28,7 @@ public class Command {
         this.responder = responder;
         this.correlationId = message.getMessageId();
         this.replyAddress = message.getReplyTo();
-        this.messageData = MessageHelper.getPayloadAsBytes(message);
+        this.messageData = MessageHelper.getPayload(message).getBytes();
         ApplicationProperties applicationProperties = message.getApplicationProperties();
         if (applicationProperties != null) {
             this.applicationProperties = applicationProperties.getValue();

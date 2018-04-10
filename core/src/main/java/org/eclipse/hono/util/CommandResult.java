@@ -12,14 +12,16 @@
 
 package org.eclipse.hono.util;
 
+import io.vertx.core.buffer.Buffer;
+
 /**
  * A container for the result returned by Hono's registration API.
  *
  */
 public final class CommandResult extends RequestResponseResult<byte[]> {
 
-    private CommandResult(final int status, final byte[] payload) {
-        super(status, payload);
+    private CommandResult(final int status, final Buffer payload) {
+        super(status, payload.getBytes(), CacheDirective.noCacheDirective());
     }
 
     /**
@@ -39,7 +41,7 @@ public final class CommandResult extends RequestResponseResult<byte[]> {
      * @param payload The payload to include in the result.
      * @return The result.
      */
-    public static CommandResult from(final int status, final byte[] payload) {
+    public static CommandResult from(final int status, Buffer payload) {
         return new CommandResult(status, payload);
     }
 }

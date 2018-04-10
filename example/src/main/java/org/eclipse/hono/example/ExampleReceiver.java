@@ -68,14 +68,19 @@ public class ExampleReceiver extends AbstractExampleClient {
 
         // TODO: just try to send a command and get back a response
         LOG.info("*** Create a command client");
-        client.getOrCreateCommandClient(tenantId,"4711" ).setHandler(h -> {
-            LOG.info("*** CommandLink client created.. try to send a command..");
-            CommandClient commandClient = h.result();
-            vertx.setPeriodic(2000, reconnect -> {
-                commandClient.command("4711", "{ \"temp\": 11 }".getBytes()).setHandler(r -> {
-                    LOG.info("*** Result: '"+r.result()+"' .. '"+new String(r.result())+"'");
+        client.getOrCreateCommandClient(tenantId, "4711").setHandler(h -> {
+            if(h.succeeded()) {
+                LOG.info("*** CommandLink client created.. try to send a command..");
+                CommandClient commandClient = h.result();
+                vertx.setPeriodic(2000, reconnect -> {
+                    commandClient.command("{ \"temp\": 11 }".getBytes()).setHandler(r -> {
+                        LOG.info("*** Result: '" + r.result() + "' .. '" + new String(r.result()) + "'");
+                    });
                 });
-            });
+            } else {
+                LOG.info("*** Create a command client erro: "+h.cause().getMessage());
+            }
+
         });
 
         if (activeProfiles.contains(PROFILE_EVENT)) {

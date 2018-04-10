@@ -3,6 +3,9 @@ package org.eclipse.hono.service.command;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
+/**
+ * TODO.
+ */
 class CommandResponder {
 
     private ProtonReceiver protonReceiver;

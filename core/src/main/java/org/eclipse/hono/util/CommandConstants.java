@@ -6,6 +6,12 @@ package org.eclipse.hono.util;
 public class CommandConstants {
 
     /**
+     * Empty default constructor.
+     */
+    protected CommandConstants () {
+    }
+
+    /**
      * The name of the Command & Control API. endpoint.
      */
     public static final String COMMAND_ENDPOINT = "control";

@@ -23,10 +23,23 @@ public class CommandConnection extends HonoClientImpl {
 
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
+    /**
+     * todo.
+     *
+     * @param vertx todo.
+     * @param clientConfigProperties todo.
+     */
     public CommandConnection(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
         super(vertx, clientConfigProperties);
     }
 
+    /**
+     * todo.
+     * @param tenantId todo.
+     * @param deviceId todo.
+     * @param commandHandler todo.
+     * @return todo.
+     */
     public Future<Void> createCommandResponder(final String tenantId, final String deviceId,
                                                            final Handler<Command> commandHandler) {
         LOG.debug("create a command receiver for [tenant: {}, device-id: {}]", tenantId, deviceId);
@@ -54,6 +67,15 @@ public class CommandConnection extends HonoClientImpl {
         return result;
     }
 
+    /**
+     * todo.
+     *
+     * @param command todo.
+     * @param data todo.
+     * @param properties todo.
+     * @param update todo.
+     * @return todo.
+     */
     public Future<Void> sendCommandRespond(final Command command, byte[] data, Map<String, Object> properties,
             Handler<ProtonDelivery> update) {
         LOG.debug("create a command responder (sender link) for [replyAddress: {}]", command.getReplyAddress());
