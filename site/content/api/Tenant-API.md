@@ -310,8 +310,8 @@ The table below provides an overview of the standard members defined for the JSO
 | Name                     | Mandatory | Type          | Default Value | Description |
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
 | *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *trusted-ca*             | *no*      | *JSON object* |               | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
-| *adapters*               | *no*      | *array*       |               | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
+| *trusted-ca*             | *no*      | *JSON object* | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *adapters*               | *no*      | *array*       | `-`          | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 
 If any of the mandatory members is either missing or contains invalid data, implementations MUST NOT accept the payload and return *400 Bad Request* status code.
 
@@ -323,7 +323,7 @@ This allows for future *well-known* additions and also allows *clients* to add f
 Below is an example for a request payload defining an *enabled* tenant.
 Devices belonging to the tenant can connect to Hono via the rest-adapter only and are required to authenticate with the adapter on connection.
 
-**NB** The id of the tenant is not part of the json as it is defined in the application properties of the amqp message.
+**NB** The id of the tenant is not part of the JSON as it is defined in the application properties of the AMQP 1.0 message.
 
 ~~~json
 {
@@ -341,7 +341,7 @@ Devices belonging to the tenant can connect to Hono via the rest-adapter only an
 }
 ~~~
 
-In the following example the tenant is allowed to use **all** adapters, as the `adapters` property is omitted in the tenant configuration (note that the payload also contains a custom property *plan* which might be used to indicate the customer's service level):
+In the following example the tenant is allowed to use **all** adapters, as the *adapters* property is omitted in the tenant configuration. Note that the payload also contains a custom property *plan* which might be used to indicate the customer's service level:
 
 ~~~json
 {
@@ -350,7 +350,7 @@ In the following example the tenant is allowed to use **all** adapters, as the `
 }
 ~~~
 
-The following example contains information for a tenant including the public key of the trusted root certificate authority (note that the example does not contain the complete Base64 encoding of the public key for reasons of brevity):
+The following example contains information for a tenant including the public key of the trusted root certificate authority. Note that the example does not contain the complete Base64 encoding of the public key for reasons of brevity:
 
 ~~~json
 {
@@ -366,12 +366,12 @@ The following example contains information for a tenant including the public key
 
 The table below provides an overview of the standard members defined for the JSON response object:
 
-| Name                     | Mandatory | Type       | Description |
-| :------------------------| :-------: | :--------- | :---------- |
-| *tenant-id*              | *yes*     | *string*   | The ID of the tenant. |
-| *enabled*                | *yes*     | *boolean*  | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *trusted-ca*             | *no*      | *JSON object* |               | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
-| *adapters*               | *no*      | *array*    | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
+| Name                     | Mandatory | Type          | Description |
+| :------------------------| :-------: | :------------ | :---------- |
+| *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
+| *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
+| *trusted-ca*             | *no*      | *JSON object* | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *adapters*               | *no*      | *JSON array*  | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 
 Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
 This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
@@ -394,17 +394,17 @@ The table below contains the properties which are used to configure a *Hono prot
 
 | Name                               | Mandatory | Type       | Default Value | Description |
 | :--------------------------------- | :-------: | :--------- | :------------ | :---------- |
-| *type*                       | *yes*     | *string*   |         | The type of the adapter which this configuration belongs to.|
-| *enabled*                          | *no*      | *boolean*   | `false`       | If set to false the tenant is not allowed to receive / send data utilizing the given adapter. |
-| *device-authentication-required*   | *no*      | *boolean*   | `true`        | If set to false, devices are not required to authenticate with the adapter before sending / receiving data. |
+| *type*                             | *yes*     | *string*   | `-`          | The type of the adapter which this configuration belongs to.|
+| *enabled*                          | *no*      | *boolean*  | `false`      | If set to false the tenant is not allowed to receive / send data utilizing the given adapter. |
+| *device-authentication-required*   | *no*      | *boolean*  | `true`       | If set to false, devices are not required to authenticate with the adapter before sending / receiving data. |
 
-Protocol Adapters SHOULD use the configuration properties set for a tenant when interacting with devices of that tenant, e.g. in order to make authorization decisions or to limit message rates per tenant etc.
+Protocol adapters SHOULD use the configuration properties set for a tenant when interacting with devices of that tenant, e.g. in order to make authorization decisions or to limit message rates per tenant etc.
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
 
 ### Examples
 
-Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. Note that the payload contains some *custom* properties at both the tenant as well as the adapter configuration level.
+Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. Note that the payload contains some custom properties at both the tenant (*plan*) as well as the adapter configuration level (*deployment*).
 
 ~~~json
 {
