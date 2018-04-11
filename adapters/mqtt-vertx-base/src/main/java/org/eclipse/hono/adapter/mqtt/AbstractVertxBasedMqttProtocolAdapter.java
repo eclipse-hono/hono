@@ -50,12 +50,13 @@ import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
 
 /**
- * A base class for implementing Vert.x based Hono protocol adapters
- * for publishing events &amp; telemetry data using MQTT.
+ * A base class for implementing Vert.x based Hono protocol adapters for publishing events &amp; telemetry data using
+ * MQTT.
  * 
  * @param <T> The type of configuration properties this adapter supports/requires.
  */
-public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAdapterProperties> extends AbstractProtocolAdapterBase<T> {
+public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAdapterProperties>
+        extends AbstractProtocolAdapterBase<T> {
 
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
@@ -72,8 +73,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
 
     /**
-     * Sets the provider to use for authenticating devices based on
-     * a username and password.
+     * Sets the provider to use for authenticating devices based on a username and password.
      * 
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
@@ -147,9 +147,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         if (isSecurePortEnabled()) {
             MqttServerOptions options = new MqttServerOptions();
             options
-                .setHost(getConfig().getBindAddress())
-                .setPort(determineSecurePort())
-                .setMaxMessageSize(getConfig().getMaxPayloadSize());
+                    .setHost(getConfig().getBindAddress())
+                    .setPort(determineSecurePort())
+                    .setMaxMessageSize(getConfig().getMaxPayloadSize());
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
 
@@ -169,9 +169,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         if (isInsecurePortEnabled()) {
             MqttServerOptions options = new MqttServerOptions();
             options
-                .setHost(getConfig().getInsecurePortBindAddress())
-                .setPort(determineInsecurePort())
-                .setMaxMessageSize(getConfig().getMaxPayloadSize());
+                    .setHost(getConfig().getInsecurePortBindAddress())
+                    .setPort(determineInsecurePort())
+                    .setMaxMessageSize(getConfig().getMaxPayloadSize());
 
             return bindMqttServer(options, insecureServer).map(server -> {
                 insecureServer = server;
@@ -187,21 +187,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<MqttServer> bindMqttServer(final MqttServerOptions options, final MqttServer mqttServer) {
 
         final Future<MqttServer> result = Future.future();
-        final MqttServer createdMqttServer =
-                (mqttServer == null ? MqttServer.create(this.vertx, options) : mqttServer);
+        final MqttServer createdMqttServer = (mqttServer == null ? MqttServer.create(this.vertx, options) : mqttServer);
 
         createdMqttServer
-            .endpointHandler(this::handleEndpointConnection)
-            .listen(done -> {
+                .endpointHandler(this::handleEndpointConnection)
+                .listen(done -> {
 
-                if (done.succeeded()) {
-                    LOG.info("MQTT server running on {}:{}", getConfig().getBindAddress(), createdMqttServer.actualPort());
-                    result.complete(createdMqttServer);
-                } else {
-                    LOG.error("error while starting up MQTT server", done.cause());
-                    result.fail(done.cause());
-                }
-            });
+                    if (done.succeeded()) {
+                        LOG.info("MQTT server running on {}:{}", getConfig().getBindAddress(),
+                                createdMqttServer.actualPort());
+                        result.complete(createdMqttServer);
+                    } else {
+                        LOG.error("error while starting up MQTT server", done.cause());
+                        result.fail(done.cause());
+                    }
+                });
         return result;
     }
 
@@ -213,14 +213,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             LOG.warn("authentication of devices turned off");
         }
         checkPortConfiguration()
-        .compose(v -> bindSecureMqttServer())
-        .compose(s -> bindInsecureMqttServer())
-        .compose(t -> {
-            if (usernamePasswordAuthProvider == null) {
-                usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig());
-            }
-            startFuture.complete();
-        }, startFuture);
+                .compose(v -> bindSecureMqttServer())
+                .compose(s -> bindInsecureMqttServer())
+                .compose(t -> {
+                    if (usernamePasswordAuthProvider == null) {
+                        usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(getCredentialsServiceClient(),
+                                getConfig());
+                    }
+                    startFuture.complete();
+                }, startFuture);
     }
 
     @Override
@@ -241,14 +242,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
 
         CompositeFuture.all(serverTracker, insecureServerTracker)
-            .compose(d -> stopFuture.complete(), stopFuture);
+                .compose(d -> stopFuture.complete(), stopFuture);
     }
 
     /**
      * Invoked when a client sends its <em>CONNECT</em> packet.
      * <p>
-     * Authenticates the client (if required) and registers handlers for processing
-     * messages published by the client.
+     * Authenticates the client (if required) and registers handlers for processing messages published by the client.
      * 
      * @param endpoint The MQTT endpoint representing the client.
      */
@@ -272,14 +272,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
-     * Invoked when a client sends its <em>CONNECT</em> packet and client authentication has
-     * been disabled by setting the {@linkplain ProtocolAdapterProperties#isAuthenticationRequired()
-     * authentication required} configuration property to {@code false}.
+     * Invoked when a client sends its <em>CONNECT</em> packet and client authentication has been disabled by setting
+     * the {@linkplain ProtocolAdapterProperties#isAuthenticationRequired() authentication required} configuration
+     * property to {@code false}.
      * <p>
-     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint)}.
-     * Registers a publish handler on the endpoint which invokes {@link #onPublishedMessage(MqttContext)}
-     * for each message being published by the client.
-     * Accepts the connection request.
+     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint)}. Registers a publish handler
+     * on the endpoint which invokes {@link #onPublishedMessage(MqttContext)} for each message being published by the
+     * client. Accepts the connection request.
      * 
      * @param endpoint The MQTT endpoint representing the client.
      */
@@ -323,7 +322,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     } else {
                         LOG.debug("protocol adapter [{}] is disabled for tenant [{}]",
                                 getTypeName(), credentials.getTenantId());
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "adapter disabled for tenant"));
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                                "adapter disabled for tenant"));
                     }
                 }).compose(tenantConfig -> {
                     final Future<Device> result = Future.future();
@@ -331,7 +331,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     return result;
                 }).map(authenticatedDevice -> {
                     LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
-                            authenticatedDevice.getTenantId(), credentials.getAuthId(), authenticatedDevice.getDeviceId());
+                            authenticatedDevice.getTenantId(), credentials.getAuthId(),
+                            authenticatedDevice.getDeviceId());
                     onAuthenticationSuccess(endpoint, authenticatedDevice);
                     return null;
                 }).otherwise(t -> {
@@ -372,8 +373,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param payload The message payload to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if the message has been uploaded successfully.
-     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
+     *         with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of context, resource or payload is {@code null}.
      * @throws IllegalArgumentException if the payload is empty.
      */
@@ -387,20 +388,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         Objects.requireNonNull(payload);
 
         switch (EndpointType.fromString(resource.getEndpoint())) {
-            case TELEMETRY:
-                return uploadTelemetryMessage(
-                        ctx,
-                        resource.getTenantId(),
-                        resource.getResourceId(),
-                        payload);
-            case EVENT:
-                return uploadEventMessage(
-                        ctx,
-                        resource.getTenantId(),
-                        resource.getResourceId(),
-                        payload);
-            default:
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
+        case TELEMETRY:
+            return uploadTelemetryMessage(
+                    ctx,
+                    resource.getTenantId(),
+                    resource.getResourceId(),
+                    payload);
+        case EVENT:
+            return uploadEventMessage(
+                    ctx,
+                    resource.getTenantId(),
+                    resource.getResourceId(),
+                    payload);
+        default:
+            return Future
+                    .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
         }
 
     }
@@ -414,8 +416,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param payload The message payload to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if the message has been uploaded successfully.
-     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
+     *         with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
      * @throws IllegalArgumentException if the payload is empty.
      */
@@ -443,8 +445,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param payload The message payload to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if the message has been uploaded successfully.
-     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
+     *         with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
      * @throws IllegalArgumentException if the payload is empty.
      */
@@ -467,10 +469,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             final Buffer payload, final Future<MessageSender> senderTracker, final String endpointName) {
 
         if (payload.length() == 0) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "payload must not be empty"));
+            return Future.failedFuture(
+                    new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "payload must not be empty"));
         } else {
 
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, ctx.authenticatedDevice());
+            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
+                    ctx.authenticatedDevice());
             final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
 
             return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
@@ -545,8 +549,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     /**
      * Invoked before the connection with a device is closed.
      * <p>
-     * Subclasses should override this method in order to release any device
-     * specific resources.
+     * Subclasses should override this method in order to release any device specific resources.
      * <p>
      * This default implementation does nothing.
      * 
@@ -558,15 +561,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     /**
      * Extracts credentials from a client's MQTT <em>CONNECT</em> packet.
      * <p>
-     * This default implementation returns {@link UsernamePasswordCredentials} created
-     * from the <em>username</em> and <em>password</em> fields of the <em>CONNECT</em> packet.
+     * This default implementation returns {@link UsernamePasswordCredentials} created from the <em>username</em> and
+     * <em>password</em> fields of the <em>CONNECT</em> packet.
      * <p>
-     * Subclasses should override this method if the device uses credentials that do not
-     * comply with the format expected by {@link UsernamePasswordCredentials}.
+     * Subclasses should override this method if the device uses credentials that do not comply with the format expected
+     * by {@link UsernamePasswordCredentials}.
      * 
      * @param authInfo The authentication info provided by the device.
-     * @return The credentials or {@code null} if the information provided by the device
-     *         can not be processed.
+     * @return The credentials or {@code null} if the information provided by the device can not be processed.
      */
     protected DeviceCredentials getCredentials(final MqttAuth authInfo) {
         if (authInfo.userName() == null || authInfo.password() == null) {
@@ -586,14 +588,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * <li>the payload to send downstream</li>
      * <li>the content type of the payload</li>
      * </ul>
-     * and then invoke one of the <em>upload*</em> methods to send the message
-     * downstream.
+     * and then invoke one of the <em>upload*</em> methods to send the message downstream.
      * 
      * @param ctx The context in which the MQTT message has been published.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if the message has been successfully uploaded.
-     *         Otherwise, the future will fail with a {@link ServiceInvocationException}.
+     *         The future will succeed if the message has been successfully uploaded. Otherwise, the future will fail
+     *         with a {@link ServiceInvocationException}.
      */
     protected abstract Future<Void> onPublishedMessage(MqttContext ctx);
 
@@ -602,8 +603,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * <p>
      * This default implementation does nothing.
      * <p>
-     * Subclasses may override this method in order to customize the message
-     * before it is sent, e.g. adding custom properties.
+     * Subclasses may override this method in order to customize the message before it is sent, e.g. adding custom
+     * properties.
      * 
      * @param downstreamMessage The message that will be sent downstream.
      * @param ctx The context in which the MQTT message has been published.
@@ -626,11 +627,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     /**
      * Invoked when a message could not be forwarded downstream.
      * <p>
-     * This method will only be invoked if the failure to forward the
-     * message has not been caused by the device that published the message.
-     * In particular, this method will not be invoked for messages that cannot
-     * be authorized or that are published to an unsupported/unrecognized topic.
-     * Such messages will be silently discarded.
+     * This method will only be invoked if the failure to forward the message has not been caused by the device that
+     * published the message. In particular, this method will not be invoked for messages that cannot be authorized or
+     * that are published to an unsupported/unrecognized topic. Such messages will be silently discarded.
      * <p>
      * This default implementation does nothing.
      * <p>
