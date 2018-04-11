@@ -72,9 +72,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Sets the configuration by means of Spring dependency injection.
      * <p>
-     * Most protocol adapters will support a single transport protocol to communicate with
-     * devices only. For those adapters there will only be a single bean instance available
-     * in the application context of type <em>T</em>.
+     * Most protocol adapters will support a single transport protocol to communicate with devices only. For those
+     * adapters there will only be a single bean instance available in the application context of type <em>T</em>.
      */
     @Autowired
     @Override
@@ -178,12 +177,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Gets this adapter's type name.
      * <p>
-     * The name should be unique among all protocol adapters that are part of a Hono installation.
-     * There is no specific scheme to follow but it is recommended to include the adapter's origin
-     * and the protocol that the adapter supports in the name and to use lower case letters only.
+     * The name should be unique among all protocol adapters that are part of a Hono installation. There is no specific
+     * scheme to follow but it is recommended to include the adapter's origin and the protocol that the adapter supports
+     * in the name and to use lower case letters only.
      * <p>
-     * Based on this recommendation, Hono's standard HTTP adapter for instance might report
-     * <em>hono-http</em> as its type name.
+     * Based on this recommendation, Hono's standard HTTP adapter for instance might report <em>hono-http</em> as its
+     * type name.
      * <p>
      * The name returned by this method is added to a downstream message by the
      * {@link #addProperties(Message, JsonObject)} method.
@@ -222,8 +221,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * This default implementation simply completes the future.
      * <p>
-     * Subclasses should override this method to perform any work required
-     * on start-up of this protocol adapter.
+     * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
      *
      * @param startFuture The future to complete once start up is complete.
      */
@@ -239,14 +237,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         final Future<Void> doStopResult = Future.future();
         doStop(doStopResult);
         doStopResult
-            .compose(s -> closeServiceClients())
-            .recover(t -> {
-                LOG.info("error while stopping protocol adapter", t);
-                return Future.failedFuture(t);
-            }).compose(s -> {
-                result.complete();
-                LOG.info("successfully stopped protocol adapter");
-            }, result);
+                .compose(s -> closeServiceClients())
+                .recover(t -> {
+                    LOG.info("error while stopping protocol adapter", t);
+                    return Future.failedFuture(t);
+                }).compose(s -> {
+                    result.complete();
+                    LOG.info("successfully stopped protocol adapter");
+                }, result);
         return result;
     }
 
@@ -274,11 +272,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Invoked directly before the adapter is shut down.
      * <p>
-     * Subclasses should override this method to perform any work required before
-     * shutting down this protocol adapter.
+     * Subclasses should override this method to perform any work required before shutting down this protocol adapter.
      *
-     * @param stopFuture The future to complete once all work is done and shut down
-     *                   should commence.
+     * @param stopFuture The future to complete once all work is done and shut down should commence.
      */
     protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
@@ -307,8 +303,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param client The Hono client for the service that is to be connected.
      * @param serviceName The name of the service that is to be connected (used for logging).
-     * @return A future that will succeed once the connection has been established.
-     *         The future will fail if the connection cannot be established.
+     * @return A future that will succeed once the connection has been established. The future will fail if the
+     *         connection cannot be established.
      * @throws NullPointerException if serviceName is {@code null}.
      * @throws IllegalArgumentException if client is {@code null}.
      */
@@ -332,14 +328,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets a handler that attempts a reconnect for a Hono service client after {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
+     * Gets a handler that attempts a reconnect for a Hono service client after
+     * {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
      *
      * @param client The Hono client for the service that is to be connected.
      * @param serviceName The name of the service that is to be connected (used for logging).
      * @return A handler that attempts the reconnect.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    private Handler<ProtonConnection> getHandlerForDisconnectHonoService(final HonoClient client, final String serviceName) {
+    private Handler<ProtonConnection> getHandlerForDisconnectHonoService(final HonoClient client,
+            final String serviceName) {
 
         return (connection) -> {
             vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
@@ -358,11 +356,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Checks if this adapter is connected to the services it depends on.
      * 
-     * <em>Hono Messaging</em>
-     * and the <em>Device Registration</em> service.
+     * <em>Hono Messaging</em> and the <em>Device Registration</em> service.
      * 
-     * @return A future indicating the outcome of the check.
-     *         The future will succeed if this adapter is currently connected to
+     * @return A future indicating the outcome of the check. The future will succeed if this adapter is currently
+     *         connected to
      *         <ul>
      *         <li>a Tenant service</li>
      *         <li>a Device Registration service</li>
@@ -381,7 +378,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .orElse(Future.failedFuture(new IllegalStateException("Messaging client is not set")));
         final Future<Void> registrationCheck = Optional.ofNullable(registrationClient)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new IllegalStateException("Device Registration service client is not set")));
+                .orElse(Future
+                        .failedFuture(new IllegalStateException("Device Registration service client is not set")));
         final Future<Void> credentialsCheck = Optional.ofNullable(credentialsServiceClient)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new IllegalStateException("Credentials service client is not set")));
@@ -423,30 +421,29 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Gets an assertion for a device's registration status.
      * <p>
-     * The returned JSON object contains the assertion for the device
-     * under property {@link RegistrationConstants#FIELD_ASSERTION}.
+     * The returned JSON object contains the assertion for the device under property
+     * {@link RegistrationConstants#FIELD_ASSERTION}.
      * <p>
-     * In addition to the assertion the returned object may include <em>default</em>
-     * values for properties to set on messages published by the device under
-     * property {@link RegistrationConstants#FIELD_DEFAULTS}.
+     * In addition to the assertion the returned object may include <em>default</em> values for properties to set on
+     * messages published by the device under property {@link RegistrationConstants#FIELD_DEFAULTS}.
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
      * @param authenticatedDevice The device that has authenticated to this protocol adapter.
-     *                  <p>
-     *                  If not {@code null} then the authenticated device is compared to the
-     *                  given tenant and device ID. If they differ in the device identifier,
-     *                  then the authenticated device is considered to be a gateway acting on
-     *                  behalf of the device.
+     *            <p>
+     *            If not {@code null} then the authenticated device is compared to the given tenant and device ID. If
+     *            they differ in the device identifier, then the authenticated device is considered to be a gateway
+     *            acting on behalf of the device.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will fail if the assertion cannot be retrieved. The cause will be
-     *         a {@link ServiceInvocationException} containing a corresponding error code.
+     *         The future will fail if the assertion cannot be retrieved. The cause will be a
+     *         {@link ServiceInvocationException} containing a corresponding error code.
      *         <p>
      *         Otherwise the future will contain the assertion.
      * @throws NullPointerException if tenant ID or device ID are {@code null}.
      */
-    protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId, final Device authenticatedDevice) {
+    protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId,
+            final Device authenticatedDevice) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -458,7 +455,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .compose(client -> client.assertRegistration(deviceId, gatewayId.result()));
     }
 
-    private Future<String> getGatewayId(final String tenantId, final String deviceId, final Device authenticatedDevice) {
+    private Future<String> getGatewayId(final String tenantId, final String deviceId,
+            final Device authenticatedDevice) {
 
         final Future<String> result = Future.future();
         if (authenticatedDevice == null) {
@@ -485,8 +483,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenantId The tenant to retrieve information for.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will fail if the information cannot be retrieved. The cause will be
-     *         a {@link ServiceInvocationException} containing a corresponding error code.
+     *         The future will fail if the information cannot be retrieved. The cause will be a
+     *         {@link ServiceInvocationException} containing a corresponding error code.
      *         <p>
      *         Otherwise the future will contain the configuration information.
      * @throws NullPointerException if tenant ID is {@code null}.
@@ -503,14 +501,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * Sets the following properties on the message:
      * <ul>
-     * <li>Adds the registration assertion found in the
-     * {@link RegistrationConstants#FIELD_ASSERTION} property of the given registration information.</li>
+     * <li>Adds the registration assertion found in the {@link RegistrationConstants#FIELD_ASSERTION} property of the
+     * given registration information.</li>
      * <li>Adds {@linkplain #getTypeName() the adapter's name} to the message in application property
      * {@link MessageHelper#APP_PROPERTY_ORIG_ADAPTER}</li>
      * <li>Augments the message with missing (application) properties corresponding to the
      * {@link RegistrationConstants#FIELD_DEFAULTS} contained in the registration information.</li>
-     * <li>Adds JMS vendor properties if configuration property <em>jmsVendorPropertiesEnabled</em> is set
-     * to {@code true}.</li>
+     * <li>Adds JMS vendor properties if configuration property <em>jmsVendorPropertiesEnabled</em> is set to
+     * {@code true}.</li>
      * </ul>
      * 
      * @param message The message to set the properties on.
@@ -542,7 +540,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         defaults.forEach(prop -> {
 
-            switch(prop.getKey()) {
+            switch (prop.getKey()) {
             case MessageHelper.SYS_PROPERTY_CONTENT_TYPE:
                 if (Strings.isNullOrEmpty(message.getContentType()) && String.class.isInstance(prop.getValue())) {
                     // set to default type registered for device or fall back to default content type
@@ -576,8 +574,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Registers a check that succeeds if this component is connected to Hono Messaging,
-     * the Tenant Service, the Device Registration and the Credentials service.
+     * Registers a check that succeeds if this component is connected to Hono Messaging, the Tenant Service, the Device
+     * Registration and the Credentials service.
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
@@ -602,30 +600,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Creates a new AMQP 1.0 message.
      * <p>
-     * Subclasses are encouraged to use this method for creating {@code Message} instances to
-     * be sent downstream in order to have the following properties set on the message automatically:
+     * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
+     * order to have the following properties set on the message automatically:
      * <ul>
      * <li><em>to</em> will be set to address</li>
      * <li>application property <em>device_id</em> will be set to device ID</li>
      * <li>application property <em>orig_address</em> will be set to publish address</li>
      * <li><em>content-type</em> will be set to content type</li>
-     * <li><em>creation-time</em> will be set to the current number of milliseconds from the epoch of 1970-01-01T00:00:00Z.
+     * <li><em>creation-time</em> will be set to the current number of milliseconds from the epoch of
+     * 1970-01-01T00:00:00Z.
      * <li>additional properties set by {@link #addProperties(Message, JsonObject)}</li>
      * </ul>
      * This method also sets the message's payload.
      * 
      * @param address The receiver of the message.
      * @param deviceId The identifier of the device that the message originates from.
-     * @param publishAddress The address that the message has been published to originally by the device.
-     *                       (may be {@code null}).
-     *                       <p>
-     *                       This address will be transport protocol specific, e.g. an HTTP based adapter
-     *                       will probably use URIs here whereas an MQTT based adapter might use the
-     *                       MQTT message's topic.
+     * @param publishAddress The address that the message has been published to originally by the device. (may be
+     *            {@code null}).
+     *            <p>
+     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
+     *            here whereas an MQTT based adapter might use the MQTT message's topic.
      * @param contentType The content type describing the message's payload (may be {@code null}).
      * @param payload The message payload.
-     * @param registrationInfo The device's registration information as retrieved by the <em>Device
-     * Registration</em> service's <em>assert Device Registration</em> operation.
+     * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
+     *            service's <em>assert Device Registration</em> operation.
      * @return The message.
      * @throws NullPointerException if address, device ID or registration info are {@code null}.
      */
