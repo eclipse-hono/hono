@@ -33,8 +33,7 @@ should get it running. For more information on how to run and configure EnMasse,
 Now we are ready to deploy Hono. From the `example/target/deploy/openshift` directory, run 
 
 ~~~sh
-~hono/example/target/deploy/openshift$ chmod +x *
-~hono/example/target/deploy/openshift$ ./enmasse_deploy.sh
+~hono/example/target/deploy/openshift$ bash ./enmasse_deploy.sh
 ~~~
 
 This should start all necessary Hono components, configured to connect to the EnMasse. See the [original OpenShift guide]({{< relref "openshift.md" >}}) to see how to check the status Hono components.

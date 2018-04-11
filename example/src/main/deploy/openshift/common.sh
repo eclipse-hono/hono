@@ -21,7 +21,7 @@ function prepare_openshift {
 
 function waiting_containers_ready {
     ADDR_SPACE=$1
-    pods_id=$(oc get pods -n ${ADDR_SPACE} | awk 'NR >1 {print $1}')
+    pods_id=$(oc get pods -n ${ADDR_SPACE} -l app=enmasse | awk 'NR >1 {print $1}')
     for pod_id in ${pods_id}
     do
         ready=$(oc get -o json pod -n ${ADDR_SPACE}  $pod_id -o jsonpath={.status.containerStatuses[0].ready})
