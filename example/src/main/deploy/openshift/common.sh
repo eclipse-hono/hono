@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2017 Red Hat and others.
+# Copyright (c) 2017, 2018 Red Hat and others.
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
@@ -49,7 +49,7 @@ function wait_for_enmasse {
             exit 1
         fi
         num_running=`oc get pods -n ${ADDRESS_SPACE} -l app=enmasse | grep -v deploy | grep -c Running`
-        if [ "$num_running" -eq "$EXPECTED_PODS" ]; then
+        if [ "$num_running" -ge "$EXPECTED_PODS" ]; then
             waiting_containers_ready ${ADDRESS_SPACE}
             if [ $? -gt 0 ]
             then
