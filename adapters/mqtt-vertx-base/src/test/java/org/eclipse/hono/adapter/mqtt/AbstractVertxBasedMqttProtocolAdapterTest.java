@@ -549,10 +549,14 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(credentialsServiceClient.isConnected()).thenReturn(Future.succeededFuture());
     }
 
-    private MqttEndpoint getMqttEndpointAuthenticated() {
+    private MqttEndpoint getMqttEndpointAuthenticated(String username, String password) {
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
-        when(endpoint.auth()).thenReturn(new MqttAuth("sensor1@DEFAULT_TENANT","test"));
+        when(endpoint.auth()).thenReturn(new MqttAuth(username, password));
         return endpoint;
+    }
+
+    private MqttEndpoint getMqttEndpointAuthenticated() {
+        return getMqttEndpointAuthenticated("sensor1@DEFAULT_TENANT", "test");
     }
 
     @SuppressWarnings("unchecked")
@@ -621,6 +625,36 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(sender.send(any(Message.class))).thenReturn(outcome);
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+    }
+
+    @Test
+    public void testMissingPassword () {
+
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        forceClientMocksToConnected();
+
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated("foo", null);
+
+        adapter.handleEndpointConnection(endpoint);
+
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+    }
+
+    @Test
+    public void testMissingUsername () {
+
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        forceClientMocksToConnected();
+
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated(null, "bar");
+
+        adapter.handleEndpointConnection(endpoint);
+
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
     }
 
     @SuppressWarnings("unchecked")
