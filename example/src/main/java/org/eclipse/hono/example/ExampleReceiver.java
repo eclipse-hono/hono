@@ -74,11 +74,16 @@ public class ExampleReceiver extends AbstractExampleClient {
                 CommandClient commandClient = h.result();
                 vertx.setPeriodic(2000, reconnect -> {
                     commandClient.command("{ \"temp\": 11 }".getBytes()).setHandler(r -> {
-                        LOG.info("*** Result: '" + r.result() + "' .. '" + new String(r.result()) + "'");
+                        if(r.succeeded()) {
+                            LOG.info("*** Result: '" + r.result() + "' .. '" + new String(r.result()) + "'");
+                        }
+                        else {
+                            LOG.info("*** Command unsuccessfull: "+r.cause().getMessage());
+                        }
                     });
                 });
             } else {
-                LOG.info("*** Create a command client erro: "+h.cause().getMessage());
+                LOG.info("*** Create a command client error: "+h.cause().getMessage());
             }
 
         });
