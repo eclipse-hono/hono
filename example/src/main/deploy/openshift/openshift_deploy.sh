@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2017 Red Hat and others.
+# Copyright (c) 2017, 2018 Red Hat and others.
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
@@ -22,8 +22,6 @@ OPENSHIFT_MASTER=${1:-"https://$(minishift ip):8443"}
 source $SCRIPTPATH/common.sh
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
-
-prepare_openshift
 
 # creating new project
 oc new-project hono --description="Open source IoT connectivity" --display-name="Eclipse Hono"

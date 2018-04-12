@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2017 Red Hat and others.
+# Copyright (c) 2017, 2018 Red Hat and others.
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
@@ -23,7 +23,6 @@ oc delete project hono
 oc login $OPENSHIFT_MASTER -u system:admin
 oc adm policy remove-scc-from-user anyuid useroot
 oc delete serviceaccount useroot
-oc delete pv hono
 
 oc login $OPENSHIFT_MASTER -u developer
 

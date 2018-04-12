@@ -22,8 +22,6 @@ source $SCRIPTPATH/common.sh
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
 
-prepare_openshift
-
 # use hono project
 oc project hono
 
