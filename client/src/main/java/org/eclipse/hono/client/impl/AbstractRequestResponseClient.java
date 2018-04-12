@@ -497,6 +497,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(request.getMessageId());
                 final TriTuple<Handler<AsyncResult<R>>, Object, Object> handler = TriTuple.of(resultHandler, cacheKey, null);
                 replyMap.put(correlationId, handler);
+                if(requestTimeoutMillis>0) {
+                    request.setTtl(requestTimeoutMillis);
+                }
                 sender.send(request, deliveryUpdated -> {
                     if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
                         final Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
