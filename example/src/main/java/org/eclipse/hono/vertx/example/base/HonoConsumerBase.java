@@ -14,14 +14,18 @@
 package org.eclipse.hono.vertx.example.base;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.amqp.messaging.Data;
-import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.EventDemultiplexer;
+import org.eclipse.hono.util.NotificationConstants;
+import org.eclipse.hono.util.NotificationDeviceCommandReadyConstants;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.vertx.core.Future;
@@ -88,8 +92,13 @@ public class HonoConsumerBase {
 
         honoClient.connect(new ProtonClientOptions()).compose(connectedClient -> {
             if (eventMode) {
+                // create the eventHandler by using the helper functionality of EventDemultiplexer - this diversifies
+                // the generic event types and notifications and invokes the appropriate handlers
+                final Consumer<Message> eventHandler = EventDemultiplexer.createEventHandler(
+                        this::handleMessage, this::handleNotification);
                 return connectedClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
-                        this::handleMessage, closeHook -> System.err.println("remotely detached consumer link"));
+                        eventHandler,
+                        closeHook -> System.err.println("remotely detached consumer link"));
             } else {
                 return connectedClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
                         this::handleMessage, closeHook -> System.err.println("remotely detached consumer link"));
@@ -104,32 +113,85 @@ public class HonoConsumerBase {
         vertx.close();
     }
 
-    /**
-     * Handler method for a Message from Hono that was received as telemetry or event data.
-     * <p>
-     * The payload, the content-type and the application properties will be printed to stdout.
-     * @param msg The message that was received.
-     */
-    private void handleMessage(final Message msg) {
-        final Section body = msg.getBody();
-        if (!(body instanceof Data)) {
-            return;
-        }
 
+
+    private void printMessage(final Message msg, final String messageType) {
         final String content = ((Data) msg.getBody()).getValue().toString();
         final String deviceId = MessageHelper.getDeviceIdAnnotation(msg);
         final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
 
-        final StringBuilder sb = new StringBuilder("received message [tenant: ").append(tenantId).
+        final StringBuilder sb = new StringBuilder("received ").
+                append(messageType).
+                append(" [tenant: ").append(tenantId).
                 append(", device: ").append(deviceId).
                 append(", content-type: ").append(msg.getContentType()).
                 append(" ]: ").append(content);
 
-        if (msg.getApplicationProperties() != null) {
-            sb.append(" with application properties: ").append(msg.getApplicationProperties().getValue());
-        }
-
         System.out.println(sb.toString());
+    }
+
+    /**
+     * Handler method for a notification from Hono that was received as event.
+     * <p>
+     * The tenant, the device, the payload, the content-type and the creation-time will be printed to stdout.
+     * <p>
+     *
+     * @param msg The message that was received.
+     */
+    private void handleNotification(final Message msg) {
+        printMessage(msg, "notification");
+
+        if (NotificationDeviceCommandReadyConstants.CONTENT_TYPE_DEVICE_COMMAND_READINESS_NOTIFICATION.equals(msg.getContentType())) {
+            System.out.println("Device command readiness event received.");
+
+            // either try directly to send a command
+            this.handleCommandReadinessNotification(msg);
+        } else if (NotificationConstants.CONTENT_TYPE_DEVICE_CONNECTION_NOTIFICATION.equals(msg.getContentType())) {
+            System.out.println("Device connection event received.");
+
+            this.handleDeviceConnectionNotification(msg);
+        }
+    }
+    /**
+     * Handler method for a <em>device ready for command</em> notification from Hono that was received as event.
+     *
+     * @param msg The message that was received.
+     */
+    private void handleCommandReadinessNotification(final Message msg) {
+        // or make further investigations of the event first:
+        final JsonObject notificationPayload = new JsonObject(((Data)msg.getBody()).getValue().toString());
+        if (NotificationDeviceCommandReadyConstants.isDeviceCurrentlyReadyForCommands(notificationPayload, msg.getCreationTime())) {
+            System.out.println("Device is ready to receive a command.");
+            // fill in specific code to e.g. try to send a command here
+        }
+    }
+
+    /**
+     * Handler method for a <em>device connection</em> notification from Hono that was received as event.
+     *
+     * @param msg The message that was received.
+     */
+    private void handleDeviceConnectionNotification(final Message msg) {
+        // or make further investigations of the event first:
+        final JsonObject notificationPayload = new JsonObject(((Data)msg.getBody()).getValue().toString());
+
+        if (NotificationDeviceCommandReadyConstants.isDeviceCurrentlyReadyForCommands(notificationPayload, msg.getCreationTime())) {
+            System.out.println("Device is ready to receive a command.");
+            // fill in specific code to bind any code to a connected/disconnected event
+        }
+    }
+
+    /**
+     * Handler method for a Message from Hono that was received as telemetry or event data.
+     * <p>
+     * The tenant, the device, the payload, the content-type, the creation-time and the application properties will be printed to stdout.
+     * <p>
+     * Notifications are handled by a separated method {@link #handleNotification(Message)}.
+     *
+     * @param msg The message that was received.
+     */
+    private void handleMessage(final Message msg) {
+        printMessage(msg, eventMode ? "event" : "message");
     }
 
     /**
