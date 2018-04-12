@@ -11,10 +11,10 @@ to communicate with each other.
 ## Prerequisites
 
 The main prerequisite for this kind of deployment is to have an available OpenShift cluster. For a local development, it's pretty simple having such cluster choosing
-between using :
+between using:
 
-* OpenShift Origin client tools
-* Minishift
+* OpenShift Origin client tools, 3.7.x+
+* Minishift, 1.13.x+
 
 ### OpenShift Origin client tools
 
@@ -28,12 +28,6 @@ the host Docker registry will be used for getting built images.
 Minishift is a tool that helps you run OpenShift locally by running a single-node OpenShift cluster inside a VM. Follow [this guide](https://docs.openshift.org/latest/minishift/getting-started/index.html) for installing and having Minishift up and running.
 
 After Minishift has been started up, the following steps need to be performed:
-
-1. Create a directory within the Minishift VM that can be used by Hono's services for persisting data that should prevail the restart of Minishift
-
-    ~~~sh
-    $ minishift ssh -- sudo mkdir -p -m 777 /mnt/sda1/var/lib/minishift/openshift.local.pv/hono
-    ~~~
 
 1. Set the `DOCKER_HOST` environment variable to point to the Docker daemon running inside the Minishift VM and set path to the OpenShift command line utilities
 

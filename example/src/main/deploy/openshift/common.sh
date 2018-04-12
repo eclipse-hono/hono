@@ -11,14 +11,6 @@
 #    Red Hat - initial creation
 #    Bosch Software Innovations GmbH
 
-function prepare_openshift {
-    # creating Hono persistent volume (admin needed)
-    oc login $OPENSHIFT_MASTER -u system:admin
-    oc create -f $SCRIPTPATH/hono-pv.yml
-
-    oc login $OPENSHIFT_MASTER -u developer
-}
-
 function waiting_containers_ready {
     ADDR_SPACE=$1
     pods_id=$(oc get pods -n ${ADDR_SPACE} -l app=enmasse | awk 'NR >1 {print $1}')
