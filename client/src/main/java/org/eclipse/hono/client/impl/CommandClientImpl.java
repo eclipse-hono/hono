@@ -1,11 +1,9 @@
 package org.eclipse.hono.client.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.proton.ProtonConnection;
+import java.net.HttpURLConnection;
+import java.util.Objects;
+import java.util.UUID;
+
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -15,9 +13,12 @@ import org.eclipse.hono.util.CommandResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.HttpURLConnection;
-import java.util.Objects;
-import java.util.UUID;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.proton.ProtonConnection;
 
 /**
  * A Vertx-Proton based client for Hono's Command and Control API.
@@ -27,7 +28,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<CommandResu
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandClientImpl.class);
 
-    CommandClientImpl(Context context, ClientConfigProperties config, String tenantId, String deviceId) {
+    CommandClientImpl(final Context context, final ClientConfigProperties config, final String tenantId, final String deviceId) {
         super(context, config, tenantId, deviceId);
     }
 
@@ -42,16 +43,18 @@ public class CommandClientImpl extends AbstractRequestResponseClient<CommandResu
     }
 
     @Override
-    protected CommandResult getResult(int status, final Buffer payload, final CacheDirective cacheDirective) {
+    protected CommandResult getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
         return CommandResult.from(status, payload);
     }
 
     @Override
-    public Future<byte[]> command(byte[] data) {
+    public Future<byte[]> commandWithResponse(final String command, final byte[] data) {
+
+        Objects.requireNonNull(command);
         Objects.requireNonNull(data);
 
         final Future<CommandResult> responseTracker = Future.future();
-        createAndSendRequest(CommandConstants.COMMAND_ENDPOINT, Buffer.buffer(data),
+        createAndSendRequest(command, Buffer.buffer(data),
                 responseTracker.completer());
 
         return responseTracker.map(response -> {
@@ -62,6 +65,14 @@ public class CommandClientImpl extends AbstractRequestResponseClient<CommandResu
                 throw StatusCodeMapper.from(response);
             }
         });
+    }
+
+    @Override
+    public Future<Void> command(final String command, final byte[] data) {
+
+        // TODO
+
+        return null;
     }
 
     /**
