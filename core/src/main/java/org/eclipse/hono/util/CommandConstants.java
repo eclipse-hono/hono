@@ -15,4 +15,9 @@ public class CommandConstants {
      * The name of the Command & Control API. endpoint.
      */
     public static final String COMMAND_ENDPOINT = "control";
+
+    /**
+     * The command to be executed by a device.
+     */
+    public static final String APP_PROPERTY_COMMAND = "command";
 }

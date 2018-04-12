@@ -45,24 +45,29 @@ public class CommandConnection extends HonoClientImpl {
         LOG.debug("create a command receiver for [tenant: {}, device-id: {}]", tenantId, deviceId);
         Future<Void> result = Future.future();
         connect().setHandler(h -> {
-            getConnection().createReceiver(ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString()) // TODO
-                    .openHandler(oh -> {
-                        if (oh.succeeded()) {
-                            LOG.debug("command receiver successfully opened for [tenant: {}, device-id: {}]", tenantId,
-                                    deviceId);
-                            ProtonReceiver protonReceiver = oh.result();
-                            CommandResponder responder = new CommandResponder(protonReceiver);
-                            protonReceiver.handler((delivery, message) -> {
-                                LOG.debug("command message received on [address: {}]", message.getAddress());
-                                commandHandler.handle(new Command(responder,message));
-                            });
-                            result.complete();
-                        } else {
-                            LOG.debug("command receiver failed opening for [tenant: {}, device-id: {}] : {}", tenantId,
-                                    deviceId, oh.cause().getMessage());
-                            result.fail(oh.cause());
-                        }
-                    }).open();
+            if(h.succeeded()) {
+                getConnection().createReceiver(ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString()) // TODO
+                        .openHandler(oh -> {
+                            if (oh.succeeded()) {
+                                LOG.debug("command receiver successfully opened for [tenant: {}, device-id: {}]", tenantId,
+                                        deviceId);
+                                ProtonReceiver protonReceiver = oh.result();
+                                CommandResponder responder = new CommandResponder(protonReceiver);
+                                protonReceiver.handler((delivery, message) -> {
+                                    LOG.debug("command message received on [address: {}]", message.getAddress());
+                                    commandHandler.handle(new Command(responder, message));
+                                });
+                                result.complete();
+                            } else {
+                                LOG.debug("command receiver failed opening for [tenant: {}, device-id: {}] : {}", tenantId,
+                                        deviceId, oh.cause().getMessage());
+                                result.fail(oh.cause());
+                            }
+                        }).open();
+            }
+            else {
+                result.fail(h.cause());
+            }
         });
         return result;
     }
