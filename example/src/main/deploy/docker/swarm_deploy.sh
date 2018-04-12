@@ -68,7 +68,7 @@ docker secret create -l project=$NS qdrouter-cert.pem $CERTS/qdrouter-cert.pem
 docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/qdrouterd-with-broker.json
 docker secret create -l project=$NS qdrouter-sasl.conf $SCRIPTPATH/qpid/qdrouter-sasl.conf
 docker secret create -l project=$NS qdrouterd.sasldb $SCRIPTPATH/qpid/qdrouterd.sasldb
-docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
+docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 -p 15673:5673 \
   --secret qdrouter-key.pem \
   --secret qdrouter-cert.pem \
   --secret trusted-certs.pem \

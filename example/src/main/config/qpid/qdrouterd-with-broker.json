@@ -114,10 +114,23 @@
           "maxSessionWindow": 6553600,
           "maxMessageSize": 131072,
           "allowUserIdProxy": true,
-          "sources": "control/*",
-          "targets": "telemetry/*, event/*, control-reply/*"
+          "targets": "telemetry/*, event/*"
         }
       }
+  }],
+
+  ["vhost", {
+    "id": "hono-adapters-internal",
+    "maxConnections": 30,
+    "groups": {
+      "Hono": {
+        "users": "Eclipse IoT;Hono;hono-messaging",
+        "remoteHosts": "*",
+        "allowUserIdProxy": true,
+        "sources": "control/*",
+        "targets": "control-reply/*"
+      }
+    }
   }],
 
   ["log", {
