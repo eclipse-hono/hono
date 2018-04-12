@@ -67,26 +67,36 @@ public class ExampleReceiver extends AbstractExampleClient {
         };
 
         // TODO: just try to send a command and get back a response
-        LOG.info("*** Create a command client");
-        client.getOrCreateCommandClient(tenantId, "4711").setHandler(h -> {
-            if(h.succeeded()) {
-                LOG.info("*** CommandLink client created.. try to send a command..");
-                CommandClient commandClient = h.result();
-                vertx.setPeriodic(2000, reconnect -> {
-                    commandClient.command("{ \"temp\": 11 }".getBytes()).setHandler(r -> {
-                        if(r.succeeded()) {
-                            LOG.info("*** Result: '" + r.result() + "' .. '" + new String(r.result()) + "'");
-                        }
-                        else {
-                            LOG.info("*** Command unsuccessfull: "+r.cause().getMessage());
-                        }
-                    });
-                });
-            } else {
-                LOG.info("*** Create a command client error: "+h.cause().getMessage());
-            }
+        final String devices = System.getenv("CCDEVICES");
+        if (devices != null) {
+            int devicesCount = Integer.parseInt(devices);
+            LOG.info("*********************************************************************** "+devicesCount);
+            for (int i = 0; i < devicesCount; i++) {
+                String deviceId = "d" + i;
+                LOG.info("Create a command client for: " + deviceId);
+                client.getOrCreateCommandClient(tenantId, deviceId).setHandler(h -> {
+                    if (h.succeeded()) {
+                        LOG.info("CommandLink client created for: {}", deviceId);
+                        CommandClient commandClient = h.result();
+                        commandClient.setRequestTimeout(10000);
+                        long time = System.currentTimeMillis();
+                        commandClient
+                                .commandWithResponse("setTemperature", ("{ \"value\": " + deviceId + " }").getBytes())
+                                .setHandler(r -> {
+                                    if (r.succeeded()) {
+                                        LOG.info("  {} succeeded result: '{}' bytes - as text: '{}' in millis: {}", deviceId,
+                                                r.result(), new String(r.result()), (System.currentTimeMillis()-time));
+                                    } else {
+                                        LOG.info("  {} unsuccessful result: {}", deviceId, r.cause().getMessage());
+                                    }
+                                });
+                    } else {
+                        LOG.info("Create a command client error {} - {}",deviceId, h.cause().getMessage());
+                    }
 
-        });
+                });
+            }
+        }
 
         if (activeProfiles.contains(PROFILE_EVENT)) {
             return connectedClient.createEventConsumer(tenantId, msg -> handleMessage(PROFILE_EVENT, msg), closeHandler);

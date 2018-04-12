@@ -219,14 +219,29 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             connectToService(credentialsServiceClient, "Credentials service");
             doStart(result);
             // TODO: just a first test
-            LOG.info("COMMAND RECEIVER..");
-            createCommandReceiver("DEFAULT_TENANT", "4711", command -> {
-                LOG.debug("Command received: {}", command.getRequestData());
-                LOG.debug("Send response: {} to reply-address: {}", "RESPONSE..", command.getReplyAddress());
-                commandConnection.sendCommandRespond(command, "RESPONSE..".getBytes(), null, update -> {
-                    LOG.debug("Command disposition received");
+            final String devices = System.getenv("CCDEVICES");
+            if (devices != null) {
+
+                createCommandReceiver("DEFAULT_TENANT", "XYZ", command -> {
+                    LOG.debug("Command received for {}: {}", "XYZ", command.getRequestData());
                 });
-            });
+
+                vertx.setTimer(3000, h -> {
+                    int devicesCount = Integer.parseInt(devices);
+                    for (int i = 0; i < devicesCount; i++) {
+                        String deviceId = "d" + i;
+                        String response = deviceId + "_response";
+                        createCommandReceiver("DEFAULT_TENANT", deviceId, command -> {
+                            LOG.debug("Command received for {}: {}", deviceId, command.getRequestData());
+                            LOG.debug("Send response: {} to reply-address: {}", response, command.getReplyAddress());
+                            commandConnection.sendCommandRespond(command, response.getBytes(), null, update -> {
+                                LOG.debug("Command disposition received for {}", deviceId);
+                            });
+                        });
+                    }
+                });
+
+            }
         }
         return result;
     }
