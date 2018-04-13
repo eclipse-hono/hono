@@ -119,14 +119,17 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         credentialsServiceClient = mock(HonoClient.class);
-        when(credentialsServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsServiceClient));
+        when(credentialsServiceClient.connect(any(Handler.class)))
+                .thenReturn(Future.succeededFuture(credentialsServiceClient));
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
 
         deviceRegistrationServiceClient = mock(HonoClient.class);
-        when(deviceRegistrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(deviceRegistrationServiceClient));
-        when(deviceRegistrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+        when(deviceRegistrationServiceClient.connect(any(Handler.class)))
+                .thenReturn(Future.succeededFuture(deviceRegistrationServiceClient));
+        when(deviceRegistrationServiceClient.getOrCreateRegistrationClient(anyString()))
+                .thenReturn(Future.succeededFuture(regClient));
 
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
     }
@@ -140,8 +143,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that an MQTT server is bound to the insecure port during startup and connections
-     * to required services have been established.
+     * Verifies that an MQTT server is bound to the insecure port during startup and connections to required services
+     * have been established.
      * 
      * @param ctx The helper to use for running async tests on vertx.
      */
@@ -169,8 +172,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     // TODO: startup fail test
 
     /**
-     * Verifies that a connection attempt from a device is refused if the adapter is not
-     * connected to all of the services it depends on.
+     * Verifies that a connection attempt from a device is refused if the adapter is not connected to all of the
+     * services it depends on.
      */
     @Test
     public void testEndpointHandlerFailsWithoutConnect() {
@@ -186,8 +189,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that an adapter that is configured to not require devices to authenticate,
-     * accepts connections from devices not providing any credentials.
+     * Verifies that an adapter that is configured to not require devices to authenticate, accepts connections from
+     * devices not providing any credentials.
      */
     @Test
     public void testEndpointHandlerAcceptsUnauthenticatedDevices() {
@@ -207,8 +210,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that an adapter rejects a connection attempt from a device that
-     * belongs to a tenant for which the adapter is disabled.
+     * Verifies that an adapter rejects a connection attempt from a device that belongs to a tenant for which the
+     * adapter is disabled.
      */
     @Test
     public void testEndpointHandlerRejectsDeviceOfDisabledTenant() {
@@ -235,8 +238,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that an adapter that is configured to require devices to authenticate,
-     * rejects connections from devices not providing any credentials.
+     * Verifies that an adapter that is configured to require devices to authenticate, rejects connections from devices
+     * not providing any credentials.
      */
     @Test
     public void testEndpointHandlerRejectsUnauthenticatedDevices() {
@@ -276,8 +279,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that on successful authentication the adapter sets appropriate message and close
-     * handlers on the client endpoint.
+     * Verifies that on successful authentication the adapter sets appropriate message and close handlers on the client
+     * endpoint.
      */
     @SuppressWarnings({ "unchecked" })
     @Test
@@ -308,8 +311,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter registers message handlers on client connections
-     * when device authentication is disabled.
+     * Verifies that the adapter registers message handlers on client connections when device authentication is
+     * disabled.
      */
     @SuppressWarnings("unchecked")
     @Test
@@ -334,8 +337,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter does not forward a message published by a device
-     * if the device's registration status cannot be asserted.
+     * Verifies that the adapter does not forward a message published by a device if the device's registration status
+     * cannot be asserted.
      * 
      * @param ctx The vert.x test context.
      */
@@ -367,8 +370,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter does not forward a message published by a device
-     * if the device belongs to a tenant for which the adapter has been disabled.
+     * Verifies that the adapter does not forward a message published by a device if the device belongs to a tenant for
+     * which the adapter has been disabled.
      * 
      * @param ctx The vert.x test context.
      */
@@ -403,8 +406,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter waits for an event being settled and accepted
-     * by a downstream peer before sending a PUBACK package to the device.
+     * Verifies that the adapter waits for an event being settled and accepted by a downstream peer before sending a
+     * PUBACK package to the device.
      * 
      * @param ctx The vert.x test context.
      */
@@ -416,13 +419,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         givenAnEventSenderForOutcome(outcome);
         testUploadQoS1MessageSendsPubAckOnSuccess(outcome, (adapter, mqttContext) -> {
             adapter.uploadEventMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
-                .setHandler(ctx.asyncAssertSuccess());
+                    .setHandler(ctx.asyncAssertSuccess());
         });
     }
 
     /**
-     * Verifies that the adapter waits for a QoS 1 telemetry message being settled
-     * and accepted by a downstream peer before sending a PUBACK package to the device.
+     * Verifies that the adapter waits for a QoS 1 telemetry message being settled and accepted by a downstream peer
+     * before sending a PUBACK package to the device.
      * 
      * @param ctx The vert.x test context.
      */
@@ -434,7 +437,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         givenATelemetrySenderForOutcome(outcome);
         testUploadQoS1MessageSendsPubAckOnSuccess(outcome, (adapter, mqttContext) -> {
             adapter.uploadTelemetryMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
-                .setHandler(ctx.asyncAssertSuccess());
+                    .setHandler(ctx.asyncAssertSuccess());
         });
     }
 
@@ -466,8 +469,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter does not send a PUBACK package to the device if
-     * an event message has not been accepted by the peer.
+     * Verifies that the adapter does not send a PUBACK package to the device if an event message has not been accepted
+     * by the peer.
      * 
      * @param ctx The vert.x test context.
      */
@@ -513,7 +516,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         givenATelemetrySenderForOutcome(Future.succeededFuture(mock(ProtonDelivery.class)));
         givenAnEventSenderForOutcome(Future.succeededFuture(mock(ProtonDelivery.class)));
 
-
         // WHEN a device publishes an event
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
@@ -538,7 +540,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         resourceId = ResourceIdentifier.from("unknown", "my-tenant", "4712");
         adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertFailure());
-
 
     }
 
@@ -627,8 +628,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
 
+    /**
+     * Verify that a missing password rejects the connection.
+     * <p>
+     * The connection must be rejected with the code {@link MqttConnectReturnCode#CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD}.
+     */
     @Test
-    public void testMissingPassword () {
+    public void testMissingPassword() {
 
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
@@ -642,8 +648,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
     }
 
+    /**
+     * Verify that a missing username rejects the connection.
+     * <p>
+     * The connection must be rejected with the code {@link MqttConnectReturnCode#CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD}.
+     */
     @Test
-    public void testMissingUsername () {
+    public void testMissingUsername() {
 
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
@@ -657,9 +668,15 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
     }
 
+    /**
+     * Verifies the connection metrics for authenticated connections.
+     * <p>
+     * This test should check if the metrics receive a call to increment and decrement when a connection is being
+     * established and then closed.
+     */
     @SuppressWarnings("unchecked")
     @Test
-    public void testConnectionMetrics () {
+    public void testConnectionMetrics() {
 
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
@@ -675,7 +692,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         doAnswer(invocation -> {
-            closeHandlerRef.set ( invocation.getArgument(0) );
+            closeHandlerRef.set(invocation.getArgument(0));
             return endpoint;
         }).when(endpoint).closeHandler(any(Handler.class));
 
@@ -688,9 +705,15 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics).decrementMqttConnections("DEFAULT_TENANT");
     }
 
+    /**
+     * Verifies the connection metrics for unauthenticated connections.
+     * <p>
+     * This test should check if the metrics receive a call to increment and decrement when a connection is being
+     * established and then closed.
+     */
     @SuppressWarnings("unchecked")
     @Test
-    public void testUnauthenticatedConnectionMetrics () {
+    public void testUnauthenticatedConnectionMetrics() {
 
         config.setAuthenticationRequired(false);
 
@@ -703,7 +726,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         doAnswer(invocation -> {
-            closeHandlerRef.set ( invocation.getArgument(0) );
+            closeHandlerRef.set(invocation.getArgument(0));
             return endpoint;
         }).when(endpoint).closeHandler(any(Handler.class));
 
