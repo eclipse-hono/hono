@@ -157,7 +157,7 @@ public class TenantClientImplTest {
         client.setResponseCache(cache);
 
         final JsonObject tenantJsonObject = newTenantResult("tenant");
-        final TenantResult<TenantObject> tenantResult = client.getResult(HttpURLConnection.HTTP_OK, tenantJsonObject.toString(), null);
+        final TenantResult<TenantObject> tenantResult = client.getResult(HttpURLConnection.HTTP_OK, tenantJsonObject.toBuffer(), null);
 
         when(cache.get(any(TriTuple.class))).thenReturn(tenantResult);
 

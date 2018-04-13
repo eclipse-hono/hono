@@ -19,6 +19,7 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.util.MessageHelper;
@@ -64,6 +65,39 @@ public class ExampleReceiver extends AbstractExampleClient {
                 createConsumer(connectedClient);
             });
         };
+
+        // TODO: just try to send a command and get back a response
+        final String devices = System.getenv("CCDEVICES");
+        if (devices != null) {
+            int devicesCount = Integer.parseInt(devices);
+            LOG.info("*********************************************************************** "+devicesCount);
+            for (int i = 0; i < devicesCount; i++) {
+                String deviceId = "d" + i;
+                LOG.info("Create a command client for: " + deviceId);
+                client.getOrCreateCommandClient(tenantId, deviceId).setHandler(h -> {
+                    if (h.succeeded()) {
+                        LOG.info("CommandLink client created for: {}", deviceId);
+                        CommandClient commandClient = h.result();
+                        commandClient.setRequestTimeout(10000);
+                        long time = System.currentTimeMillis();
+                        commandClient
+                                .commandWithResponse("setTemperature", ("{ \"value\": " + deviceId + " }").getBytes())
+                                .setHandler(r -> {
+                                    if (r.succeeded()) {
+                                        LOG.info("  {} succeeded result: '{}' bytes - as text: '{}' in millis: {}", deviceId,
+                                                r.result(), new String(r.result()), (System.currentTimeMillis()-time));
+                                    } else {
+                                        LOG.info("  {} unsuccessful result: {}", deviceId, r.cause().getMessage());
+                                    }
+                                });
+                    } else {
+                        LOG.info("Create a command client error {} - {}",deviceId, h.cause().getMessage());
+                    }
+
+                });
+            }
+        }
+
         if (activeProfiles.contains(PROFILE_EVENT)) {
             return connectedClient.createEventConsumer(tenantId, msg -> handleMessage(PROFILE_EVENT, msg), closeHandler);
         } else {

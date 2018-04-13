@@ -90,7 +90,8 @@
           "users": "consumer@HONO",
           "remoteHosts": "*",
           "maxSessions": 10,
-          "sources": "telemetry/*, event/*"
+          "sources": "telemetry/*, event/*, control-reply/*",
+          "targets": "control/*"
         },
         "DEFAULT_TENANT": {
           "users": "user1@HONO",
@@ -116,6 +117,20 @@
           "targets": "telemetry/*, event/*"
         }
       }
+  }],
+
+  ["vhost", {
+    "id": "hono-adapters-internal",
+    "maxConnections": 30,
+    "groups": {
+      "Hono": {
+        "users": "Eclipse IoT;Hono;hono-messaging",
+        "remoteHosts": "*",
+        "allowUserIdProxy": true,
+        "sources": "control/*",
+        "targets": "control-reply/*"
+      }
+    }
   }],
 
   ["log", {

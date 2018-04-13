@@ -12,6 +12,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import io.vertx.core.buffer.Buffer;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RequestResponseResult;
 
@@ -20,9 +21,9 @@ import org.eclipse.hono.util.RequestResponseResult;
  * A result that contains a status code and a string payload.
  *
  */
-public final class SimpleRequestResponseResult extends RequestResponseResult<String> {
+public final class SimpleRequestResponseResult extends RequestResponseResult<Buffer> {
 
-    private SimpleRequestResponseResult(final int status, final String payload, final CacheDirective directive) {
+    private SimpleRequestResponseResult(final int status, final Buffer payload, final CacheDirective directive) {
         super(status, payload, directive);
     }
 
@@ -33,7 +34,7 @@ public final class SimpleRequestResponseResult extends RequestResponseResult<Str
      * @param payload The payload.
      * @return The instance.
      */
-    public static SimpleRequestResponseResult from(final int status, final String payload) {
+    public static SimpleRequestResponseResult from(final int status, final Buffer payload) {
         return new SimpleRequestResponseResult(status, payload, null);
     }
 
@@ -46,7 +47,7 @@ public final class SimpleRequestResponseResult extends RequestResponseResult<Str
      *                       the receiver of the result (may be {@code null}).
      * @return The instance.
      */
-    public static SimpleRequestResponseResult from(final int status, final String payload, final CacheDirective cacheDirective) {
+    public static SimpleRequestResponseResult from(final int status, final Buffer payload, final CacheDirective cacheDirective) {
         return new SimpleRequestResponseResult(status, payload, cacheDirective);
     }
 }

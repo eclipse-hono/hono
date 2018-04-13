@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Objects;
 
+import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -156,7 +157,7 @@ public final class MessageHelper {
 
     /**
      * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_ID} application property.
-     * 
+     *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
      */
@@ -167,7 +168,7 @@ public final class MessageHelper {
 
     /**
      * Gets the value of a message's {@link #APP_PROPERTY_TENANT_ID} application property.
-     * 
+     *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
      */
@@ -181,7 +182,7 @@ public final class MessageHelper {
      * <p>
      * The assertion is expected to be contained in the messages's <em>application-properties</em>
      * under key {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
-     * 
+     *
      * @param msg The message.
      * @return The assertion or {@code null} if the message does not contain an assertion (at the
      *         expected location).
@@ -195,7 +196,7 @@ public final class MessageHelper {
      * <p>
      * The assertion is expected to be contained in the messages's <em>application-properties</em>
      * under key {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
-     * 
+     *
      * @param msg The message.
      * @return The assertion or {@code null} if the message does not contain an assertion (at the
      *         expected location).
@@ -224,7 +225,7 @@ public final class MessageHelper {
 
     /**
      * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_ID} annotation.
-     * 
+     *
      * @param msg The message.
      * @return The annotation value or {@code null} if not set.
      */
@@ -235,7 +236,7 @@ public final class MessageHelper {
 
     /**
      * Gets the value of a message's {@link #APP_PROPERTY_TENANT_ID} annotation.
-     * 
+     *
      * @param msg The message.
      * @return The annotation value or {@code null} if not set.
      */
@@ -246,7 +247,7 @@ public final class MessageHelper {
 
     /**
      * Gets the value of the {@code x-opt-appl-correlation-id} annotation from a message.
-     * 
+     *
      * @param msg the message to get the annotation from.
      * @return the value of the annotation (if present) or {@code false} if the message
      *         does not contain the annotation.
@@ -259,7 +260,7 @@ public final class MessageHelper {
 
     /**
      * Gets the value of a specific <em>application property</em>.
-     * 
+     *
      * @param <T> The expected type of the property to retrieve the value of.
      * @param props The application properties to retrieve the value from.
      * @param name The property name.
@@ -283,7 +284,7 @@ public final class MessageHelper {
 
     /**
      * Parses a message's body into a JSON object.
-     * 
+     *
      * @param msg The AMQP 1.0 message to parse the body of.
      * @return The message body parsed into a JSON object or {@code null} if the message does not have a
      *         <em>Data</em> nor an <em>AmqpValue</em> section.
@@ -292,20 +293,19 @@ public final class MessageHelper {
      */
     public static JsonObject getJsonPayload(final Message msg) {
 
-        final String payload = getPayload(msg);
-        return (payload != null ? new JsonObject(payload) : null);
+        final Buffer buffer = getPayload(msg);
+        return buffer!=null ? new JsonObject(buffer.toString(StandardCharsets.UTF_8)) : null;
     }
 
     /**
-     * Gets a message's body as String object that can be used for constructing a JsonObject or bind a POJO using
-     * jackson-databind e.g.
+     * Gets a message's body as Buffer object.
      *
      * @param msg The AMQP 1.0 message to parse the body of.
-     * @return The message body parsed into a JSON object or {@code null} if the message does not have a <em>Data</em>
+     * @return The message body as a Buffer or {@code null} if the message does not have a <em>Data</em>
      *         nor an <em>AmqpValue</em> section.
      * @throws NullPointerException if the message is {@code null}.
      */
-    public static String getPayload(final Message msg) {
+    public static Buffer getPayload(final Message msg) {
 
         Objects.requireNonNull(msg);
         if (msg.getBody() == null) {
@@ -315,11 +315,14 @@ public final class MessageHelper {
 
         if (msg.getBody() instanceof Data) {
             Data body = (Data) msg.getBody();
-            return new String(body.getValue().getArray(), StandardCharsets.UTF_8);
+            return Buffer.buffer(body.getValue().getArray());
         } else if (msg.getBody() instanceof AmqpValue) {
             AmqpValue body = (AmqpValue) msg.getBody();
-            if (body.getValue() instanceof String) {
-                return (String) body.getValue();
+            if (body.getValue() instanceof byte[]) {
+                return Buffer.buffer((byte[])body.getValue());
+            }
+            else if (body.getValue() instanceof String) {
+                return Buffer.buffer((String) body.getValue());
             }
         }
 
@@ -331,7 +334,7 @@ public final class MessageHelper {
      * Adds a tenant ID to a message's <em>application properties</em>.
      * <p>
      * The name of the application property is {@link #APP_PROPERTY_TENANT_ID}.
-     * 
+     *
      * @param msg The message.
      * @param tenantId The tenant identifier to add.
      */
@@ -343,7 +346,7 @@ public final class MessageHelper {
      * Adds a device ID to a message's <em>application properties</em>.
      * <p>
      * The name of the application property is {@link #APP_PROPERTY_DEVICE_ID}.
-     * 
+     *
      * @param msg The message.
      * @param deviceId The device identifier to add.
      */
@@ -356,7 +359,7 @@ public final class MessageHelper {
      * <p>
      * The assertion is put to the message's <em>application-properties</em> under key
      * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
-     * 
+     *
      * @param msg The message.
      * @param token The assertion to add.
      */
@@ -369,7 +372,7 @@ public final class MessageHelper {
      * <p>
      * The directive is put to the message's <em>application-properties</em> under key
      * {@link #APP_PROPERTY_CACHE_CONTROL}.
-     * 
+     *
      * @param msg The message to add the directive to.
      * @param cacheDirective The cache directive.
      */
@@ -379,7 +382,7 @@ public final class MessageHelper {
 
     /**
      * Gets the value of a message's {@link #APP_PROPERTY_CACHE_CONTROL} application property.
-     * 
+     *
      * @param msg The message to get the property from.
      * @return The property value or {@code null} if not set.
      */
@@ -391,7 +394,7 @@ public final class MessageHelper {
      * Adds a property to an AMQP 1.0 message.
      * <p>
      * The property is added to the message's <em>application-properties</em>.
-     * 
+     *
      * @param msg The message.
      * @param key The property key.
      * @param value The property value.
@@ -407,7 +410,7 @@ public final class MessageHelper {
 
     /**
      * Sets an AMQP 1.0 message's delivery state to <em>rejected</em>.
-     * 
+     *
      * @param delivery The message's delivery object.
      * @param error The error condition to set as the reason for rejecting the message.
      */
@@ -463,7 +466,7 @@ public final class MessageHelper {
 
     /**
      * Adds a value for a symbol to an AMQP 1.0 message's <em>annotations</em>.
-     * 
+     *
      * @param msg the message to add the symbol to.
      * @param key the name of the symbol to add a value for.
      * @param value the value to add.
