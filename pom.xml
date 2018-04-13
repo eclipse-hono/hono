@@ -363,6 +363,7 @@
           <configuration>
             <configLocation>checkstyle/default.xml</configLocation>
             <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
+            <includeTestSourceDirectory>true</includeTestSourceDirectory>
           </configuration>
         </plugin>
         <plugin>
