@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,17 +11,13 @@
  */
 package org.eclipse.hono.client.impl;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
@@ -30,11 +26,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonSender;
 
 /**
  * Tests verifying behavior of {@link TelemetrySenderImpl}.
@@ -94,26 +93,4 @@ public class TelemetrySenderImplTest {
         // and the message has been sent
         verify(sender).send(any(Message.class), eq(handlerRef.get()));
     }
-
-    /**
-     * Verifies that the sender fails if no credit is available.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testSendMessageFailsOnLackOfCredit(final TestContext ctx) {
-
-        // GIVEN a sender that has no credit
-        when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
-        MessageSender messageSender = new TelemetrySenderImpl(config, sender, "tenant", "telemetry/tenant", context);
-
-        // WHEN trying to send a message
-        final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text", "token");
-
-        // THEN the message is not sent
-        assertFalse(result.succeeded());
-        verify(sender, never()).send(any(Message.class), any(Handler.class));
-    }
-
 }

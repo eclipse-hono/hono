@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.Record;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
@@ -49,6 +50,12 @@ public final class Constants {
      * The type of the Eclipse Kura protocol adapter.
      */
     public static final String PROTOCOL_ADAPTER_TYPE_KURA= "hono-kura-mqtt";
+
+    /**
+     * The AMQP capability indicating support for validating registration assertions
+     * issued by a Device Registration service.
+     */
+    public static final Symbol CAP_REG_ASSERTION_VALIDATION = Symbol.valueOf("hono-reg-assertion");
 
     /**
      * The default number of milliseconds to wait before trying to reconnect to a service.

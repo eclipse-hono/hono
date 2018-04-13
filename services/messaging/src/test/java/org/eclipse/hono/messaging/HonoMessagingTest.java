@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -51,7 +51,7 @@ public class HonoMessagingTest {
 
     private HonoMessaging createServer(final AmqpEndpoint telemetryEndpoint) {
 
-        HonoMessaging server = new HonoMessaging();
+        final HonoMessaging server = new HonoMessaging();
         server.setConfig(new HonoMessagingConfigProperties());
         if (telemetryEndpoint != null) {
             server.addEndpoint(telemetryEndpoint);
@@ -68,7 +68,7 @@ public class HonoMessagingTest {
     public void testServerPublishesConnectionIdOnClientDisconnect() {
 
         // GIVEN a Hono server
-        HonoMessaging server = createServer(null);
+        final HonoMessaging server = createServer(null);
 
         // WHEN the server's publish close event method is called
         final ProtonConnection con = newConnection(Constants.PRINCIPAL_ANONYMOUS);
@@ -83,7 +83,8 @@ public class HonoMessagingTest {
      */
     @Test
     public void verifyHonoDefaultPortNumbers() {
-        HonoMessaging server = createServer(null);
+
+        final HonoMessaging server = createServer(null);
         assertThat(server.getPortDefaultValue(), is(Constants.PORT_AMQPS));
         assertThat(server.getInsecurePortDefaultValue(), is(Constants.PORT_AMQP));
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -16,8 +16,11 @@ package org.eclipse.hono.client.impl;
 import java.net.HttpURLConnection;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,6 +31,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,13 +60,25 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     protected final String targetAddress;
 
     private Handler<Void> drainHandler;
+    private boolean registrationAssertionRequired;
 
-    AbstractSender(final ClientConfigProperties config, final ProtonSender sender, final String tenantId, final String targetAddress,
+    AbstractSender(
+            final ClientConfigProperties config,
+            final ProtonSender sender,
+            final String tenantId,
+            final String targetAddress,
             final Context context) {
+
         super(context, config);
         this.sender = Objects.requireNonNull(sender);
         this.tenantId = Objects.requireNonNull(tenantId);
         this.targetAddress = targetAddress;
+        if (sender.isOpen()) {
+            this.offeredCapabilities = Optional.ofNullable(sender.getRemoteOfferedCapabilities())
+                    .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
+                    .orElse(Collections.emptyList());
+            this.registrationAssertionRequired = supportsCapability(Constants.CAP_REG_ASSERTION_VALIDATION);
+        }
     }
 
     @Override
@@ -142,6 +158,9 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
 
         Objects.requireNonNull(rawMessage);
 
+        if (!isRegistrationAssertionRequired()) {
+            MessageHelper.getAndRemoveRegistrationAssertion(rawMessage);
+        }
         final Future<ProtonDelivery> result = Future.future();
         context.runOnContext(send -> {
             if (sender.sendQueueFull()) {
@@ -258,7 +277,9 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     private void addProperties(final Message msg, final String deviceId, final String contentType, final String registrationAssertion) {
         msg.setContentType(contentType);
         MessageHelper.addDeviceId(msg, deviceId);
-        MessageHelper.addRegistrationAssertion(msg, registrationAssertion);
+        if (isRegistrationAssertionRequired()) {
+            MessageHelper.addRegistrationAssertion(msg, registrationAssertion);
+        }
     }
 
     /**
@@ -284,5 +305,10 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
         } else {
             return StandardCharsets.UTF_8;
         }
+    }
+
+    @Override
+    public final boolean isRegistrationAssertionRequired() {
+        return registrationAssertionRequired;
     }
 }

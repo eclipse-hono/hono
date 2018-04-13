@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -133,26 +133,4 @@ public class EventSenderImplTest {
 
         assertFalse(result.succeeded());
     }
-
-    /**
-     * Verifies that the sender fails if no credit is available.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testSendMessageFailsOnLackOfCredit(final TestContext ctx) {
-
-        // GIVEN a sender that has no credit
-        when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
-        MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
-
-        // WHEN trying to send a message
-        final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text", "token");
-
-        // THEN the message is not sent
-        assertFalse(result.succeeded());
-        verify(sender, never()).send(any(Message.class), any(Handler.class));
-    }
-
 }

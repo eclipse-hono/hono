@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.Activity;
@@ -416,7 +417,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Invoked when an AMQP <em>open</em> frame is received on the secure port.
      * <p>
-     * Configures the AMQP connection for the secure port and provides a basic connection handling.
+     * This method
+     * <ol>
+     * <li>sets the container name</li>
+     * <li>invokes {@link #setRemoteConnectionOpenHandler(ProtonConnection)}</li>
+     * </ol>
+     * <p>
      * Subclasses may override this method to set custom handlers.
      *
      * @param connection The AMQP connection that the frame is supposed to establish.
@@ -429,7 +435,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Invoked when an AMQP <em>open</em> frame is received on the insecure port.
      * <p>
-     * Configures the AMQP connection for the insecure port and provides a basic connection handling.
+     * This method
+     * <ol>
+     * <li>sets the container name</li>
+     * <li>invokes {@link #setRemoteConnectionOpenHandler(ProtonConnection)}</li>
+     * </ol>
+     * <p>
      * Subclasses may override this method to set custom handlers.
      *
      * @param connection The AMQP connection that the frame is supposed to establish.
@@ -555,26 +566,84 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         }
     }
 
-    private void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
+    /**
+     * Sets default handlers on a connection that has been opened
+     * by a peer.
+     * <p>
+     * This method registers the following handlers
+     * <ul>
+     * <li>sessionOpenHandler - {@link #handleSessionOpen(ProtonConnection, ProtonSession)}</li>
+     * <li>receiverOpenHandler - {@link #handleReceiverOpen(ProtonConnection, ProtonReceiver)}</li>
+     * <li>senderOpenHandler - {@link #handleSenderOpen(ProtonConnection, ProtonSender)}</li>
+     * <li>disconnectHandler - {@link #handleRemoteDisconnect(ProtonConnection)}</li>
+     * <li>closeHandler - {@link #handleRemoteConnectionClose(ProtonConnection, AsyncResult)}</li>
+     * <li>openHandler - {@link #processRemoteOpen(ProtonConnection)}</li>
+     * </ul>
+     * <p>
+     * Subclasses should override this method in order to register service
+     * specific handlers and/or to prevent registration of default handlers.
+     * 
+     * @param connection The connection.
+     */
+    protected void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
         connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
         connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
         connection.disconnectHandler(this::handleRemoteDisconnect);
         connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
         connection.openHandler(remoteOpen -> {
-            final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
-            LOG.debug("client [container: {}, user: {}] connected", connection.getRemoteContainer(), clientPrincipal.getName());
-            // attach an ID so that we can later inform downstream components when connection is closed
-            connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
-            final Duration delay = Duration.between(Instant.now(), clientPrincipal.getExpirationTime());
-            final WeakReference<ProtonConnection> conRef = new WeakReference<>(connection);
-            vertx.setTimer(delay.toMillis(), timerId -> {
-                if (conRef.get() != null) {
-                    closeExpiredConnection(conRef.get());
-                }
-            });
-            connection.open();
+            if (remoteOpen.failed()) {
+                LOG.debug("ignoring peer's open frame containing error", remoteOpen.cause());
+            } else {
+                processRemoteOpen(remoteOpen.result());
+            }
         });
+    }
+
+    /**
+     * Processes a peer's AMQP <em>open</em> frame.
+     * <p>
+     * This default implementation
+     * <ol>
+     * <li>adds a unique connection identifier to the connection's attachments
+     * under key {@link Constants#KEY_CONNECTION_ID}</li>
+     * <li>invokes {@link #processDesiredCapabilities(ProtonConnection, Symbol[])}</li>
+     * <li>sets a timer that closes the connection once the client's token
+     * has expired</li>
+     * <li>sends the AMQP <em>open</em> frame to the peer</li>
+     * </ol>
+     * 
+     * @param connection The connection to open.
+     */
+    protected void processRemoteOpen(final ProtonConnection connection) {
+
+        final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
+        LOG.debug("client [container: {}, user: {}] connected", connection.getRemoteContainer(), clientPrincipal.getName());
+        // attach an ID so that we can later inform downstream components when connection is closed
+        connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
+        processDesiredCapabilities(connection, connection.getRemoteDesiredCapabilities());
+        final Duration delay = Duration.between(Instant.now(), clientPrincipal.getExpirationTime());
+        final WeakReference<ProtonConnection> conRef = new WeakReference<>(connection);
+        vertx.setTimer(delay.toMillis(), timerId -> {
+            if (conRef.get() != null) {
+                closeExpiredConnection(conRef.get());
+            }
+        });
+        connection.open();
+    }
+
+    /**
+     * Processes the capabilities desired by a client in its
+     * AMQP <em>open</em> frame.
+     * <p>
+     * This default implementation does nothing.
+     * 
+     * @param connection The connection being opened by the client.
+     * @param desiredCapabilities The capabilities.
+     */
+    protected void processDesiredCapabilities(
+            final ProtonConnection connection,
+            final Symbol[] desiredCapabilities) {
     }
 
     /**
@@ -588,10 +657,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
         LOG.debug("opening new session with client [container: {}]", con.getRemoteContainer());
         session.closeHandler(sessionResult -> {
-            if (sessionResult.succeeded()) {
-                sessionResult.result().close();
-            }
-        }).open();
+            session.close();
+        });
+        session.open();
     }
 
     /**

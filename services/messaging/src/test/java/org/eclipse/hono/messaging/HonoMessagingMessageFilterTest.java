@@ -188,7 +188,9 @@ public class HonoMessagingMessageFilterTest {
 
         final Message msg = ProtonHelper.message("Hello");
         msg.setMessageId("test-msg");
-        MessageHelper.addDeviceId(msg, deviceId);
+        if (deviceId != null) {
+            MessageHelper.addDeviceId(msg, deviceId);
+        }
         if (tenantId != null) {
             MessageHelper.addTenantId(msg, tenantId);
         }

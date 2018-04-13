@@ -15,6 +15,7 @@ package org.eclipse.hono.client;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.AsyncResult;
@@ -290,4 +291,17 @@ public interface HonoClient {
      * @throws NullPointerException if the handler is {@code null}.
      */
     void shutdown(Handler<AsyncResult<Void>> completionHandler);
+
+    /**
+     * Checks if this client supports a certain capability.
+     * <p>
+     * The result of this method should only be considered reliable
+     * if this client is connected to the server.
+     * 
+     * @param capability The capability to check support for.
+     * @return {@code true} if the capability is included in the list of
+     *         capabilities that the server has offered in its AMQP <em>open</em>
+     *         frame, {@code false} otherwise.
+     */
+    boolean supportsCapability(final Symbol capability);
 }

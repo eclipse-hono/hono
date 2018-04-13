@@ -14,11 +14,13 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -71,6 +73,10 @@ public abstract class AbstractHonoClient {
      * The vertx-proton object used for receiving messages from the server.
      */
     protected ProtonReceiver receiver;
+    /**
+     * The capabilities offered by the peer.
+     */
+    protected List<Symbol> offeredCapabilities = Collections.emptyList();
 
     /**
      * Creates a client for a vert.x context.
@@ -82,6 +88,25 @@ public abstract class AbstractHonoClient {
     protected AbstractHonoClient(final Context context, final ClientConfigProperties config) {
         this.context = Objects.requireNonNull(context);
         this.config = Objects.requireNonNull(config);
+    }
+
+    /**
+     * Checks if this client supports a certain capability.
+     * <p>
+     * The result of this method should only be considered reliable
+     * if this client is open.
+     * 
+     * @param capability The capability to check support for.
+     * @return {@code true} if the capability is included in the list of
+     *         capabilities that the peer has offered during link
+     *         establishment, {@code false} otherwise.
+     */
+    public final boolean supportsCapability(final Symbol capability) {
+        if (capability == null) {
+            return false;
+        } else {
+            return offeredCapabilities.contains(capability);
+        }
     }
 
     /**

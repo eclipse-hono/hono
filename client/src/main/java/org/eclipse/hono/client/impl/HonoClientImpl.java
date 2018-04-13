@@ -14,11 +14,14 @@ package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,6 +30,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
@@ -77,6 +81,7 @@ public class HonoClientImpl implements HonoClient {
     private ProtonConnection connection;
     private CacheProvider cacheProvider;
     private AtomicInteger reconnectAttempts = new AtomicInteger(0);
+    private List<Symbol> offeredCapabilities = Collections.emptyList();
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -175,6 +180,13 @@ public class HonoClientImpl implements HonoClient {
     void setConnection(final ProtonConnection connection) {
         synchronized (connectionLock) {
             this.connection = connection;
+            if (connection == null) {
+                this.offeredCapabilities = Collections.emptyList();
+            } else {
+                this.offeredCapabilities = Optional.ofNullable(connection.getRemoteOfferedCapabilities())
+                        .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
+                        .orElse(Collections.emptyList());
+            }
         }
     }
 
@@ -187,6 +199,17 @@ public class HonoClientImpl implements HonoClient {
     protected final ProtonConnection getConnection() {
         synchronized (connectionLock) {
             return this.connection;
+        }
+    }
+
+    @Override
+    public final boolean supportsCapability(final Symbol capability) {
+        if (capability == null) {
+            return false;
+        } else {
+            synchronized (connectionLock) {
+                return offeredCapabilities.contains(capability);
+            }
         }
     }
 
@@ -324,6 +347,7 @@ public class HonoClientImpl implements HonoClient {
 
         final ProtonConnection failedConnection = this.connection;
         setConnection(null);
+        offeredCapabilities = Collections.emptyList();
 
         activeSenders.clear();
         activeRequestResponseClients.clear();

@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -48,6 +49,8 @@ import io.vertx.proton.ProtonReceiver;
  * @param <T> The type of configuration properties this endpoint understands.
  */
 public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigProperties> extends AbstractAmqpEndpoint<T> {
+
+    private static final Symbol[] OFFERED_CAPS = new Symbol[] { Constants.CAP_REG_ASSERTION_VALIDATION };
 
     private MessagingMetrics            metrics;
     private DownstreamAdapter           downstreamAdapter;
@@ -145,6 +148,9 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
         } else {
             receiver.setQoS(receiver.getRemoteQoS());
             receiver.setTarget(receiver.getRemoteTarget());
+            if (config.isAssertionValidationRequired()) {
+                receiver.setOfferedCapabilities(OFFERED_CAPS);
+            }
             final String linkId = UUID.randomUUID().toString();
             final UpstreamReceiver link = UpstreamReceiver.newUpstreamReceiver(linkId, receiver);
 

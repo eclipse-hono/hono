@@ -15,6 +15,7 @@ package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -50,7 +51,7 @@ import io.vertx.proton.ProtonHelper;
 public class AbstractProtocolAdapterBaseTest {
 
     /**
-     * Time out all test after 5 seconds.
+     * Time out each test after 5 seconds.
      */
     @Rule
     public Timeout timeout = Timeout.seconds(5);
@@ -60,21 +61,39 @@ public class AbstractProtocolAdapterBaseTest {
     private ProtocolAdapterProperties properties;
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
     private RegistrationClient registrationClient;
+    private HonoClient tenantService;
+    private HonoClient registrationService;
+    private HonoClient credentialsService;
+    private HonoClient messagingService;
 
     /**
      * Sets up the fixture.
      */
+    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
 
-        registrationClient = mock(RegistrationClient.class);
+        tenantService = mock(HonoClient.class);
+        when(tenantService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantService));
 
-        final HonoClient registrationService = mock(HonoClient.class);
+        registrationService = mock(HonoClient.class);
+        when(registrationService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationService));
+
+        registrationClient = mock(RegistrationClient.class);
         when(registrationService.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(registrationClient));
+
+        credentialsService = mock(HonoClient.class);
+        when(credentialsService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsService));
+
+        messagingService = mock(HonoClient.class);
+        when(messagingService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingService));
 
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
+        adapter.setTenantServiceClient(tenantService);
         adapter.setRegistrationServiceClient(registrationService);
+        adapter.setCredentialsServiceClient(credentialsService);
+        adapter.setHonoMessagingClient(messagingService);
     }
 
     /**
@@ -109,22 +128,10 @@ public class AbstractProtocolAdapterBaseTest {
         // that can connect to the corresponding services
         final Handler<Void> startupHandler = mock(Handler.class);
         adapter = newProtocolAdapter(properties, "test", startupHandler);
-
-        final HonoClient tenantService = mock(HonoClient.class);
-        when(tenantService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantService));
-        adapter.setTenantServiceClient(tenantService);
-
-        final HonoClient registrationService = mock(HonoClient.class);
-        when(registrationService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationService));
-        adapter.setRegistrationServiceClient(registrationService);
-
-        final HonoClient messagingService = mock(HonoClient.class);
-        when(messagingService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingService));
-        adapter.setHonoMessagingClient(messagingService);
-
-        final HonoClient credentialsService = mock(HonoClient.class);
-        when(credentialsService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsService));
         adapter.setCredentialsServiceClient(credentialsService);
+        adapter.setHonoMessagingClient(messagingService);
+        adapter.setRegistrationServiceClient(registrationService);
+        adapter.setTenantServiceClient(tenantService);
 
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {

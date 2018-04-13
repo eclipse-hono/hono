@@ -499,7 +499,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final void addProperties(final Message message, final JsonObject registrationInfo) {
 
-        MessageHelper.addRegistrationAssertion(message, registrationInfo.getString(RegistrationConstants.FIELD_ASSERTION));
+        final String registrationAssertion = registrationInfo.getString(RegistrationConstants.FIELD_ASSERTION);
+        MessageHelper.addRegistrationAssertion(message, registrationAssertion);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
         if (getConfig().isDefaultsEnabled()) {
             final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);

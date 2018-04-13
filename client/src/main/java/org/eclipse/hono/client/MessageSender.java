@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -102,6 +102,18 @@ public interface MessageSender {
      * @return {@code true} if this sender can be used to send messages to the peer.
      */
     boolean isOpen();
+
+    /**
+     * Checks if the peer that this sender is connected to
+     * requires messages to contain a registration assertion.
+     * <p>
+     * The result of this method should only be considered
+     * if this sender is open.
+     * 
+     * @return {@code true} if messages must contain an assertion,
+     *         {@code false} otherwise.
+     */
+    boolean isRegistrationAssertionRequired();
 
     /**
      * Sends an AMQP 1.0 message to the endpoint configured for this client.

@@ -21,6 +21,7 @@ import static org.mockito.Mockito.*;
 import java.util.EnumSet;
 import java.util.Set;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -103,6 +104,33 @@ public class MessageForwardingEndpointTest {
         verify(receiver, never()).close();
         // and the message is not forwarded to the downstream adapter
         verify(adapter, never()).processMessage(any(UpstreamReceiver.class), eq(upstreamDelivery), eq(message));
+    }
+
+    /**
+     * Verifies that the endpoint offers the capability to validate
+     * registration assertions if configuration property
+     * <em>assertionValidationRequired</em> is {@code true}.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testOnLinkAttachOffersAssertionValidationCapability() {
+
+        final ResourceIdentifier targetAddress = ResourceIdentifier.fromString("telemetry/tenant");
+        final ProtonConnection connection = mock(ProtonConnection.class);
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
+        final DownstreamAdapter adapter = mock(DownstreamAdapter.class);
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> handler = invocation.getArgument(1);
+            handler.handle(Future.succeededFuture());
+            return null;
+        }).when(adapter).onClientAttach(any(UpstreamReceiver.class), any(Handler.class));
+
+        final MessageForwardingEndpoint<HonoMessagingConfigProperties> endpoint = getEndpoint();
+        endpoint.setDownstreamAdapter(adapter);
+        endpoint.onLinkAttach(connection, receiver, targetAddress);
+
+        verify(receiver).setOfferedCapabilities(any(Symbol[].class));
     }
 
     /**

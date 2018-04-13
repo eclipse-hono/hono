@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -83,11 +83,8 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
         LOG.info("opening new session with client [name: {}, session window size: {}]", con.getRemoteContainer(), getConfig().getMaxSessionWindow());
         session.setIncomingCapacity(getConfig().getMaxSessionWindow());
         session.closeHandler(sessionResult -> {
-            if (sessionResult.succeeded()) {
-                sessionResult.result().close();
-            }
+            session.close();
         });
         session.open();
     }
-
 }

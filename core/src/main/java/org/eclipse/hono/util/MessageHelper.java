@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -334,6 +335,7 @@ public final class MessageHelper {
      * 
      * @param msg The message.
      * @param tenantId The tenant identifier to add.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static void addTenantId(final Message msg, final String tenantId) {
         addProperty(msg, APP_PROPERTY_TENANT_ID, tenantId);
@@ -346,6 +348,8 @@ public final class MessageHelper {
      * 
      * @param msg The message.
      * @param deviceId The device identifier to add.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * 
      */
     public static void addDeviceId(final Message msg, final String deviceId) {
         addProperty(msg, APP_PROPERTY_DEVICE_ID, deviceId);
@@ -359,6 +363,7 @@ public final class MessageHelper {
      * 
      * @param msg The message.
      * @param token The assertion to add.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static void addRegistrationAssertion(final Message msg, final String token) {
         addProperty(msg, APP_PROPERTY_REGISTRATION_ASSERTION, token);
@@ -372,6 +377,7 @@ public final class MessageHelper {
      * 
      * @param msg The message to add the directive to.
      * @param cacheDirective The cache directive.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static void addCacheDirective(final Message msg, final CacheDirective cacheDirective) {
         addProperty(msg, APP_PROPERTY_CACHE_CONTROL, cacheDirective.toString());
@@ -395,13 +401,20 @@ public final class MessageHelper {
      * @param msg The message.
      * @param key The property key.
      * @param value The property value.
+     * @throws NullPointerException if any of th parameters are {@code null}.
      */
     public static void addProperty(final Message msg, final String key, final Object value) {
-        ApplicationProperties props = msg.getApplicationProperties();
-        if (props == null) {
-            props = new ApplicationProperties(new HashMap<String, Object>());
-            msg.setApplicationProperties(props);
-        }
+
+        Objects.requireNonNull(msg);
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+
+        final ApplicationProperties props = Optional.ofNullable(msg.getApplicationProperties())
+                .orElseGet(() -> {
+                    final ApplicationProperties result = new ApplicationProperties(new HashMap<String, Object>());
+                    msg.setApplicationProperties(result);
+                    return result;
+                });
         props.getValue().put(key, value);
     }
 

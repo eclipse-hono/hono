@@ -124,7 +124,9 @@ public class RegistrationMessageFilterTest {
         msg.setMessageId("msg-id");
         msg.setReplyTo("reply");
         msg.setSubject(action);
-        MessageHelper.addDeviceId(msg, deviceId);
+        if (deviceId != null) {
+            MessageHelper.addDeviceId(msg, deviceId);
+        }
         return msg;
     }
 }
