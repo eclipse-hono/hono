@@ -89,42 +89,28 @@ See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of messa
 
 Hono defines *well-known* events that are of a specific *content-type*.
 
-NB: currently there is only one such *well-known* event.
+In the following these events are specified in detail.
 
-### Lifecycle Notifications
+### Device connection notification
 
-A specific event can signal that a device is `connected` (e.g. to signal that it is ready to receive a command for a specific time interval) 
-or that a device is `disconnected` (e.g to signal that it is not ready to receive a command anymore).
- 
-*Business Applications* may want to react to such an event by sending a command upstream to the device.
-For that purpose, the protocol adapter instance that received such an event opens a receiver link for the device (scoped to its tenant) that
-is used to send the command to the appropriate protocol adapter instance.
+By sending an event of this type the receiver is notified that a device is `connected` or `disconnected` to Hono.
 
-Such an event may be issued by the device itself or by a protocol adapter detecting that a device is connected or disconnected.
- For further details on which part of a setup issues such an event see (... concept page).
+Such an event is typically issued by a protocol adapter.
 
+***Device connection notification payload***
 
-*Lifecycle notifications* may be decided to not being durable, but this is left to the setup of the *AMQP network* and is not further specified in the following.
-
-
-***Lifecycle Notification Payload***
-
-The following table provides an overview of the properties a client needs to set for a *lifecycle notification* event.
+The following table provides an overview of the properties a client needs to set for a *device connection notification* event.
 
 | Name           | Mandatory | Location                 | Type      | Description |
 | :------------- | :-------: | :----------------------- | :-------- | :---------- |
-| *content-type* | yes       | *properties*             | *symbol*  | Must be set to *application/vnd.eclipse-hono-notification+json* |
+| *content-type* | yes       | *properties*             | *symbol*  | Must be set to *application/vnd.eclipse-hono-dc-notification+json* |
 
 The body of the event request MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following members:
 
 | Name                | Mandatory | Type       | Default Value | Description |
 | :-----------------  | :-------: | :--------- | :----------   | :---------- |
-| *tenant-id*         | *yes*     | *string*   |               | The tenant identifier to send the notification for. |
-| *device-id*         | *yes*     | *string*   |               | The device identifier to send the notification for. |
 | *cause*             | *yes*     | *string*   |               | Value must be either `connected` or `disconnected` . |
-| *source*            | *yes*      | *string*   |               | Value can be either the name of a protocol adapter (`hono-mqtt`, `hono-http`, `hono-kura`), if the device connected/disconnected to the appropriate protocol adapter,  or `device`, if the device sent the notfication itself.
-| *connection-timestamp*  | *no*      | *string*   |   null        | The point in time when the event was created (set by the issuer). If not null, the value MUST be an ISO 8601 compliant combined date and time representation in extended format. **NB:** due to network latencies this timestamp will typically be some time in the past already when the event is received by the application. |
-| *stay-connected*               | *no*      | *long*   |   0        | The time in milliseconds the device shall be available for receiving upstream data. In context with the `connection-timestamp`  it defines the time interval until the event shall be considered invalid again. If the value is `0`, the validity period of the event shall be considered as not being limited. |
+| *source*            | *yes*     | *string*   |               | Value is the name of the protocol adapter (`hono-mqtt`, `hono-http`, `hono-kura`) the device connected to/disconnected from.
 | *data*              | *no*      | *string*   |               | Optional data the issuer of the event can set (e.g.  a a last known revision of a value when integrating with [Eclipse Ditto] (https://projects.eclipse.org/proposals/eclipse-ditto)).
 
 
@@ -134,29 +120,65 @@ The following notification payload may be sent if a device connects to an *MQTT 
 
 ~~~json
 {
-  "tenant-id": "my-tenant",
-  "device-id": "4711",
-  "cause": "connect",
+  "cause": "connected",
   "source": "hono-mqtt"
 }
 ~~~
 
-The MQTT protocol adapter may typically not set the `creation-timestamp`  and `ttl` fields (since it is connection oriented and issue a `disconnected` event as soon as a device disconnects again).
-
-
-The following notification payload may be sent if a device itself sends a lifecycle notification, e.g. to signal that it
-now is able to receive a command for one minute:
+An arbitrary time later the device disconnects from the MQTT adapter and the following payload may be sent by the adapter:
 
 ~~~json
 {
-  "tenant-id": "my-tenant",
-  "device-id": "sensor1",
-  "cause": "connect",
+  "cause": "disconnected",
+  "source": "hono-mqtt"
+}
+~~~
+
+**NB**: the tenantId, the deviceId and the creation-time of the event are part of the AMQP 1.0 message,
+so these fields are not contained in the JSON payload. 
+The correlation of `connected` and `disconnected` events can be done on based on the `tenantId` and the `deviceId`.
+
+### Device command readiness notification
+
+By sending an event of this type the receiver is notified that a device is ready to receive a command.
+ 
+*Business Applications* may want to react to such an event by sending a command upstream to the device.
+For that purpose, the protocol adapter instance that received such an event opens a receiver link for the device (scoped to its tenant) that
+is used to send the command to the appropriate protocol adapter instance.
+
+Such an event is typically issued by the device itself. In future releases the protocol adapters may be able to send this
+event on behalf of devices (to support setups with devices that are not capable of sending such an event).
+ For further details on which part of a setup issues such an event see (... concept page).
+
+
+***Device command readiness notification Payload***
+
+The following table provides an overview of the properties a client needs to set for a *device command readiness notification* event.
+
+| Name           | Mandatory | Location                 | Type      | Description |
+| :------------- | :-------: | :----------------------- | :-------- | :---------- |
+| *content-type* | yes       | *properties*             | *symbol*  | Must be set to *application/vnd.eclipse-hono-dcr-notification+json* |
+
+The body of the event request MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following members:
+
+| Name                | Mandatory | Type       | Default Value | Description |
+| :-----------------  | :-------: | :--------- | :----------   | :---------- |
+| *source*            | *yes*     | *string*   |               | Value can be either the name of a protocol adapter (`hono-mqtt`, `hono-http`, `hono-kura`) or `device`.|
+| *avail*             | *no*      | *long*     |   0           | The time in milliseconds the device tries to be available for receiving a command. In context with the `creation-time` of the AMPQ 1.0 message it defines the time interval until the event shall be considered invalid again. If the value is `0` or is missing, the validity period of the event shall be considered as not being limited. |
+| *data*              | *no*      | *string*   |               | Optional data the issuer of the event can set (e.g. a last known revision of a value when integrating with [Eclipse Ditto] (https://projects.eclipse.org/proposals/eclipse-ditto)).
+
+
+Example:
+
+The following notification payload may be sent by a device that notifies it is ready to receive a command for 60 seconds:
+
+~~~json
+{
   "source": "device",
-  "connection-timestamp": "2018-04-06T10:00:00+0100",
-  "stay-connected": "60000",
+  "avail": 60000,
   "data": "last-state: on"
 }
 ~~~
-NB: note that a device does not necessarily know its *device-id*, but only its *auth-id* (please refer to the 
-[Credentials API]({{< relref "Credentials-API.md" >}}) for details). 
+
+**NB**: the tenantId, the deviceId and the creation-time of the event are part of the AMQP 1.0 message,
+so these fields are not contained in the JSON payload. 
