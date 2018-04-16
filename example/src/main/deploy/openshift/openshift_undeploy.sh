@@ -16,14 +16,6 @@ OPENSHIFT_MASTER=${1:-"https://$(minishift ip):8443"}
 echo UNDEPLOYING ECLIPSE HONO FROM OPENSHIFT
 
 # deleting entire project with related resources
-oc login $OPENSHIFT_MASTER -u developer
 oc delete project hono
-
-# deleting Hono Server persistent volume
-oc login $OPENSHIFT_MASTER -u system:admin
-oc adm policy remove-scc-from-user anyuid useroot
-oc delete serviceaccount useroot
-
-oc login $OPENSHIFT_MASTER -u developer
 
 echo ECLIPSE HONO UNDEPLOYED FROM OPENSHIFT

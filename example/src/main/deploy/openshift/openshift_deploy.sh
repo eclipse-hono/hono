@@ -18,21 +18,22 @@ CERTS=$CONFIG/hono-demo-certs-jar
 HONO_HOME=$SCRIPTPATH/../../../..
 OPENSHIFT_MASTER=${1:-"https://$(minishift ip):8443"}
 
-
 source $SCRIPTPATH/common.sh
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
 
-# creating new project
-oc new-project hono --description="Open source IoT connectivity" --display-name="Eclipse Hono"
+# use hono project
+oc project hono
+
+echo "Waiting for EnMasse..."
+wait_for_enmasse 7 hono
+
+# create addresses
+curl -X PUT -T addresses.json -H "content-type: application/json" http://$(oc get route restapi -o jsonpath='{.spec.host}')/v1/addresses/default
 
 # starting to deploy Eclipse Hono (developer user)
 echo
 echo "Deploying influxDB & Grafana ..."
-
-# add a service account allowing Grafana to run as root
-oc create serviceaccount useroot --as='system:admin'
-oc adm policy add-scc-to-user anyuid -z useroot --as='system:admin'
 
 oc create secret generic influxdb-conf --from-file=$SCRIPTPATH/../influxdb.conf
 oc create -f $SCRIPTPATH/../influxdb-deployment.yml
@@ -40,35 +41,6 @@ oc create -f $SCRIPTPATH/../influxdb-svc.yml
 oc create -f $SCRIPTPATH/../grafana-deployment.yml
 oc create -f $SCRIPTPATH/../grafana-svc.yml
 oc create -f $SCRIPTPATH/grafana-route.yml
-echo ... done
-
-echo "Deploying Apache ActiveMQ Artemis Broker ..."
-oc create secret generic hono-artemis-conf \
-  --from-file=$SCRIPTPATH/artemis/artemis-broker.xml \
-  --from-file=$SCRIPTPATH/artemis/artemis-bootstrap.xml \
-  --from-file=$SCRIPTPATH/artemis/artemis-users.properties \
-  --from-file=$SCRIPTPATH/artemis/artemis-roles.properties \
-  --from-file=$SCRIPTPATH/artemis/login.config \
-  --from-file=$SCRIPTPATH/artemis/logging.properties \
-  --from-file=$SCRIPTPATH/artemis/artemis.profile \
-  --from-file=$CERTS/artemisKeyStore.p12 \
-  --from-file=$CERTS/trustStore.jks
-oc create -f $SCRIPTPATH/../artemis-deployment.yml
-oc create -f $SCRIPTPATH/../artemis-svc.yml
-echo ... done
-
-echo "Deploying Qpid Dispatch Router ..."
-oc create secret generic hono-dispatch-router-conf \
-  --from-file=$CERTS/qdrouter-key.pem \
-  --from-file=$CERTS/qdrouter-cert.pem \
-  --from-file=$CERTS/trusted-certs.pem \
-  --from-file=$SCRIPTPATH/qpid/qdrouterd-with-broker.json \
-  --from-file=$SCRIPTPATH/qpid/qdrouter-sasl.conf \
-  --from-file=$SCRIPTPATH/qpid/qdrouterd.sasldb
-oc create -f $SCRIPTPATH/../dispatch-router-deployment.yml
-oc create -f $SCRIPTPATH/../dispatch-router-svc.yml
-oc create -f $SCRIPTPATH/../dispatch-router-ext-svc.yml
-oc create -f $SCRIPTPATH/../dispatch-router-route.yml
 echo ... done
 
 echo "Deploying Authentication Server ..."
@@ -99,7 +71,7 @@ oc create secret generic hono-service-messaging-conf \
   --from-file=$CERTS/hono-messaging-cert.pem \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$SCRIPTPATH/hono-service-messaging-config.yml
+  --from-file=application.yml=$SCRIPTPATH/hono-service-messaging-config-enmasse.yml
 oc create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
