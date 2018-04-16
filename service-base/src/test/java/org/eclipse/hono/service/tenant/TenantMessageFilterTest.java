@@ -33,13 +33,15 @@ public class TenantMessageFilterTest {
     private static final String DEFAULT_TENANT = "DEFAULT_TENANT";
 
     /**
-     * Verifies that {@link TenantMessageFilter#verify(ResourceIdentifier, Message)} detects if the mandatory tenantId
-     * property is missing.
+     * Verifies that the filter detects a missing subject.
      */
     @Test
-    public void testVerifyDetectsMissingTenantProperty() {
-        // GIVEN a valid tenant GET message without an AMQP value
-        final Message msg = givenAMessageHavingProperties(TenantConstants.TenantAction.get);
+    public void testVerifyDetectsMissingSubject() {
+
+        // GIVEN a request message without a subject
+        final Message msg = ProtonHelper.message();
+        msg.setMessageId("msg");
+        msg.setReplyTo("reply");
         // WHEN receiving the message via a link with any tenant
         final ResourceIdentifier linkTarget = getResourceIdentifier(DEFAULT_TENANT);
 

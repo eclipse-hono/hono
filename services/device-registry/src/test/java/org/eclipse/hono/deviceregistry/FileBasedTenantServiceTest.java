@@ -22,9 +22,14 @@ import static org.mockito.Mockito.*;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
+import javax.security.auth.x500.X500Principal;
+
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantResult;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -226,9 +231,9 @@ public class FileBasedTenantServiceTest {
         props.setFilename(FILE_NAME);
         props.setSaveToFile(true);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
-        final Async countDown = ctx.async(2);
-        addTenant(svc, ctx, countDown, Constants.DEFAULT_TENANT);
-        addTenant(svc, ctx, countDown, "OTHER_TENANT");
+        final Async countDown = ctx.async();
+        addTenant(Constants.DEFAULT_TENANT).compose(ok -> addTenant("OTHER_TENANT"))
+            .setHandler(ctx.asyncAssertSuccess(ok -> countDown.complete()));
         countDown.await();
 
         // WHEN saving the content to the file and clearing the tenant registry
@@ -261,25 +266,51 @@ public class FileBasedTenantServiceTest {
         assertTenantExists(svc, "OTHER_TENANT", ctx);
     }
 
-
     /**
-     * Verifies that tenants cannot be added several times.
+     * Verifies that a tenant cannot be added if it uses an already registered
+     * identifier.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantRefusesDuplicates(final TestContext ctx) {
+    public void testAddTenantFailsForDuplicateTenantId(final TestContext ctx) {
 
-        final Async countDown = ctx.async();
-        addTenant(svc, ctx, countDown, "tenant");
-        countDown.await();
-
-        svc.add(
+        addTenant("tenant").map(ok -> {
+            svc.add(
                 "tenant",
                 buildTenantPayload("tenant"),
                 ctx.asyncAssertSuccess(s -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
                 }));
+            return null;
+        });
+    }
+
+    /**
+     * Verifies that a tenant cannot be added if it uses a trusted certificate authority
+     * with the same subject DN as an already existing tenant.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsForDuplicateCa(final TestContext ctx) {
+
+        final JsonObject trustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+        addTenant("tenant", JsonObject.mapFrom(tenant)).map(ok -> {
+            final TenantObject newTenant = TenantObject.from("newTenant", true)
+                    .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+            svc.add(
+                "newTenant",
+                JsonObject.mapFrom(newTenant),
+                ctx.asyncAssertSuccess(s -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
+                }));
+            return null;
+        });
     }
 
     /**
@@ -323,17 +354,68 @@ public class FileBasedTenantServiceTest {
     @Test
     public void testGetTenantSucceedsForExistingTenants(final TestContext ctx) {
 
-        final Async add = ctx.async();
-        addTenant(svc, ctx, add, "tenant");
-        add.await();
-
-        svc.get("tenant", ctx.asyncAssertSuccess(s -> {
-                    assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
-                    assertThat(s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
-                    assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
-                }));
+        addTenant("tenant").map(ok -> {
+            svc.get("tenant", ctx.asyncAssertSuccess(s -> {
+                assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
+                assertThat(s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
+                assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
+            }));
+            return null;
+        });
     }
 
+    /**
+     * Verifies that the service finds an existing tenant by the subject DN of
+     * its configured trusted certificate authority.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetForCertificateAuthoritySucceeds(final TestContext ctx) {
+
+        final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
+        final JsonObject trustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY");
+        final JsonObject tenant = buildTenantPayload("tenant")
+            .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+
+        addTenant("tenant", tenant).map(ok -> {
+            svc.getByCertificateAuthority(subjectDn, ctx.asyncAssertSuccess(s -> {
+                assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
+                final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
+                assertThat(obj.getTenantId(), is("tenant"));
+                final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+                assertThat(ca, is(trustedCa));
+            }));
+            return null;
+        });
+    }
+
+    /**
+     * Verifies that the service does not find any tenant for an unknown subject DN.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetForCertificateAuthorityFailsForUnknownSubjectDn(final TestContext ctx) {
+
+        final X500Principal unknownSubjectDn = new X500Principal("O=Eclipse, OU=NotHono, CN=ca");
+        final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
+        final String publicKey = "NOTAPUBLICKEY";
+        final JsonObject trustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey);
+        final JsonObject tenant = buildTenantPayload("tenant")
+            .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+
+        addTenant("tenant", tenant).map(ok -> {
+            svc.getByCertificateAuthority(unknownSubjectDn, ctx.asyncAssertSuccess(s -> {
+                assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
+            }));
+            return null;
+        });
+    }
 
     /**
      * Verifies that the service removes tenants for a given tenantId.
@@ -343,14 +425,13 @@ public class FileBasedTenantServiceTest {
     @Test
     public void testRemoveTenantsSucceeds(final TestContext ctx) {
 
-        final Async add = ctx.async();
-        addTenant(svc, ctx, add, "tenant");
-        add.await();
-
-        svc.remove("tenant", ctx.asyncAssertSuccess(s -> {
-            assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
-            assertTenantDoesNotExist(svc, "tenant", ctx);
-        }));
+        addTenant("tenant").map(ok -> {
+            svc.remove("tenant", ctx.asyncAssertSuccess(s -> {
+                assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
+                assertTenantDoesNotExist(svc, "tenant", ctx);
+            }));
+            return null;
+        });
     }
 
     /**
@@ -380,38 +461,22 @@ public class FileBasedTenantServiceTest {
     @Test
     public void testUpdateTenantsSucceeds(final TestContext ctx) {
 
-        final Async add = ctx.async();
-        addTenant(svc, ctx, add, "tenant");
-        add.await();
+        final JsonObject updatedPayload = buildTenantPayload("tenant");
+        updatedPayload.put("custom-prop", "something");
 
-        final Async update = ctx.async();
-        JsonObject tenantPayload = buildTenantPayload("tenant");
-        tenantPayload.put(TenantConstants.FIELD_ENABLED, "false");
-
-        final Async get = ctx.async();
-        svc.get("tenant", ctx.asyncAssertSuccess(s -> {
-            assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
-            assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
-            get.complete();
+        addTenant("tenant").compose(ok -> {
+            final Future<TenantResult<JsonObject>> updateResult = Future.future();
+            svc.update("tenant", updatedPayload.copy(), updateResult.completer());
+            return updateResult;
+        }).compose(updateResult -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
+            final Future<TenantResult<JsonObject>> getResult = Future.future();
+            svc.get("tenant", getResult.completer());
+            return getResult;
+        }).setHandler(ctx.asyncAssertSuccess(getResult -> {
+            assertThat(getResult.getStatus(), is(HttpURLConnection.HTTP_OK));
+            assertThat(getResult.getPayload().getString("custom-prop"), is("something"));
         }));
-        get.await();
-
-        svc.update(
-                "tenant",
-                tenantPayload,
-                ctx.asyncAssertSuccess(s -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
-                    update.complete();
-                }));
-        update.await();
-
-        final Async getAgain = ctx.async();
-        svc.get("tenant", ctx.asyncAssertSuccess(s -> {
-            assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
-            assertThat(s.getPayload().getString(TenantConstants.FIELD_ENABLED), is("false"));
-            getAgain.complete();
-        }));
-        getAgain.await();
     }
 
     /**
@@ -433,6 +498,38 @@ public class FileBasedTenantServiceTest {
         }));
     }
 
+    /**
+     * Verifies that a tenant cannot be updated to use a trusted certificate authority
+     * with the same subject DN as another tenant.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantFailsForDuplicateCa(final TestContext ctx) {
+
+        // GIVEN two tenants, one with a CA configured, the other with no CA
+        final JsonObject trustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
+        final TenantObject tenantOne = TenantObject.from("tenantOne", true)
+                .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+        final TenantObject tenantTwo = TenantObject.from("tenantTwo", true);
+        addTenant("tenantOne", JsonObject.mapFrom(tenantOne))
+        .compose(ok -> addTenant("tenantTwo", JsonObject.mapFrom(tenantTwo)))
+        .map(ok -> {
+            // WHEN updating the second tenant to use the same CA as the first tenant
+            tenantTwo.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+            svc.update(
+                "tenantTwo",
+                JsonObject.mapFrom(tenantTwo),
+                ctx.asyncAssertSuccess(s -> {
+                    // THEN the update fails with a 409
+                    ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
+                }));
+            return null;
+        });
+    }
+
     private static void assertTenantExists(final TenantService svc, final String tenant, final TestContext ctx) {
 
         svc.get(tenant, ctx.asyncAssertSuccess(t -> {
@@ -447,14 +544,22 @@ public class FileBasedTenantServiceTest {
         }));
     }
 
-    private static void addTenant(final TenantService svc, final TestContext ctx, final Async countDown, final String tenantId) {
-        svc.add(
-                tenantId,
-                buildTenantPayload(tenantId),
-                ctx.asyncAssertSuccess(s -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
-                    countDown.countDown();
-                }));
+    private Future<Void> addTenant(final String tenantId) {
+
+        return addTenant(tenantId, buildTenantPayload(tenantId));
+    }
+
+    private Future<Void> addTenant(final String tenantId, final JsonObject payload) {
+
+        final Future<TenantResult<JsonObject>> result = Future.future();
+        svc.add(tenantId, payload, result.completer());
+        return result.map(response -> {
+            if (response.getStatus() == HttpURLConnection.HTTP_CREATED) {
+                return null;
+            } else {
+                throw StatusCodeMapper.from(response);
+            }
+        });
     }
 
     /**
@@ -466,6 +571,7 @@ public class FileBasedTenantServiceTest {
      * @return The tenant object.
      */
     private static JsonObject buildTenantPayload(final String tenantId) {
+
         final JsonObject adapterDetailsHttp = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
