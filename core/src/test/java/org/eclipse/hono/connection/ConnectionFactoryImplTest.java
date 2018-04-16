@@ -14,6 +14,9 @@ package org.eclipse.hono.connection;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.proton.ProtonConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,6 +30,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
+import org.mockito.Mockito;
 
 /**
  * Verifies behavior of {@code ConnectionFactoryImpl}.
@@ -71,6 +75,39 @@ public class ConnectionFactoryImplTest {
 
         // THEN the connection attempt fails and the given handler is invoked
         handlerInvocation.await(2000);
+    }
+
+    /**
+     * Verifies that the given result handler is invoked if a connection gets closed after SASL auth was successful and
+     * AMQP open frame was sent by client, but no AMQP open frame from server was received yet.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectInvokesHandlerOnDisconnectAfterSendingOpenFrame(final TestContext ctx) {
+        // GIVEN a factory configured to connect to a server (with mocked connection)
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
+        final ProtonClient protonClientMock = mock(ProtonClient.class);
+        final ProtonConnection protonConnectionMock = mock(ProtonConnection.class, Mockito.RETURNS_SELF);
+        doAnswer(invocation -> {
+            Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
+            resultHandler.handle(Future.succeededFuture(protonConnectionMock));
+            return null;
+        }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), any(Handler.class));
+        factory.setProtonClient(protonClientMock);
+
+        // WHEN trying to connect to the server
+        final Future<ProtonConnection> resultHandler = Future.future();
+
+        factory.connect(new ProtonClientOptions(), null, null, resultHandler);
+
+        // THEN the disconnect handler gets called which calls the given result handler with a failure
+        final ArgumentCaptor<Handler> disconnectHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(protonConnectionMock).disconnectHandler(disconnectHandlerCaptor.capture());
+        disconnectHandlerCaptor.getValue().handle(protonConnectionMock);
+        // as we call handler ourselves handling is synchronous here
+        assertTrue("Connection result handler was not failed", resultHandler.failed());
     }
 
     /**

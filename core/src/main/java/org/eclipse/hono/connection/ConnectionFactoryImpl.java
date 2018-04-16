@@ -176,6 +176,13 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                             }
                             connectionResultHandler.handle(Future.failedFuture(openCon.cause()));
                         }
+                    }).disconnectHandler(disconnectedCon -> {
+                        logger.warn("can't open connection to container [{}] at [{}://{}:{}]: {}",
+                                downstreamConnection.getRemoteContainer(),
+                                clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort(),
+                                "underlying connection was disconnected while opening AMQP connection");
+                        connectionResultHandler.handle(Future
+                                .failedFuture("underlying connection was disconnected while opening AMQP connection"));
                     }).open();
         }
     }
