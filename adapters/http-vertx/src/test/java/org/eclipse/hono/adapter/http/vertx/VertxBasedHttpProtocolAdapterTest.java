@@ -14,7 +14,9 @@ package org.eclipse.hono.adapter.http.vertx;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
@@ -203,6 +205,62 @@ public class VertxBasedHttpProtocolAdapterTest {
             ctx.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
             async.complete();
         }).exceptionHandler(ctx::fail).end(new JsonObject().encodePrettily());
+    }
+
+    /**
+     * Verifies that a request (with valid credentials) to upload telemetry data with 'QoS-Level: 2' using POST fails
+     * with a 400 (Bad Request) status code.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public final void testPostTelemetryFailsForNotSupportedQoSLevel(final TestContext ctx) {
+        final Async async = ctx.async();
+        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
+
+        doAnswer(invocation -> {
+            Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "device_1")));
+            return null;
+        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+
+        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .putHeader("QoS-Level", String.valueOf(2))
+                .handler(response -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.statusCode());
+                    async.complete();
+        }).exceptionHandler(ctx::fail).end(new JsonObject().encodePrettily());
+
+    }
+
+    /**
+     * Verifies that a request (with valid credentials) to upload telemetry data with
+     * 'QoS-Level: 1' using POST succeeds with a 404 (Not Found) status code.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public final void testPostTelemetrySucceedsForSupportedQoSLevel(final TestContext ctx) {
+        final Async async = ctx.async();
+        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
+
+        doAnswer(invocation -> {
+            Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "device_1")));
+            return null;
+        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+
+        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .putHeader("QoS-Level", String.valueOf(1))
+                .handler(response -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
+                    async.complete();
+        }).exceptionHandler(ctx::fail).end(new JsonObject().encodePrettily());
+
     }
 
     private static String getBasicAuth(final String user, final String password) {
