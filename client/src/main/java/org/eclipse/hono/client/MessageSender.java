@@ -122,10 +122,28 @@ public interface MessageSender {
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the message has been sent to the endpoint.
-     *         The delivery contained in the future represents the delivery state at the time
-     *         the future has been succeeded, i.e. for telemetry data it will be locally
-     *         <em>unsettled</em> without any outcome yet. For events it will be locally
-     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         The delivery will be locally settled only, if the implementing class
+     *         uses <em>at most once</em> delivery semantics. Otherwise, the the delivery
+     *         will be settled locally and remotely (<em>at least once</em> semantics).
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit. It will be failed with either a
+     *         {@code ServerErrorException} or a {@link ClientErrorException}
+     *         if the message could not be processed and the implementing class uses
+     *         <em>at least once</em> delivery semantics.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    Future<ProtonDelivery> send(Message message);
+
+    /**
+     * Sends an AMQP 1.0 message to the peer and waits for the disposition indicating
+     * the outcome of the transfer.
+     * 
+     * @param message The message to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been accepted (and settled)
+     *         by the peer.
      *         <p>
      *         The future will be failed with a {@link ServerErrorException} if the message
      *         could not be sent due to a lack of credit.
@@ -134,7 +152,7 @@ public interface MessageSender {
      *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if the message is {@code null}.
      */
-    Future<ProtonDelivery> send(Message message);
+    Future<ProtonDelivery> sendAndWaitForOutcome(Message message);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.

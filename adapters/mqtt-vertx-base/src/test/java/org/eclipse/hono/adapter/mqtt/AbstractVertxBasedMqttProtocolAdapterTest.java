@@ -348,7 +348,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // GIVEN an adapter
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
-        givenATelemetrySenderForOutcome(Future.succeededFuture(mock(ProtonDelivery.class)));
+        givenAQoS0TelemetrySender();
 
         // WHEN an unknown device publishes a telemetry message
         when(regClient.assertRegistration(eq("unknown"), any())).thenReturn(
@@ -424,8 +424,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter waits for a QoS 1 telemetry message being settled and accepted by a downstream peer
-     * before sending a PUBACK package to the device.
+     * Verifies that the adapter waits for a QoS 1 telemetry message being settled
+     * and accepted by a downstream peer before sending a PUBACK package to the device.
      * 
      * @param ctx The vert.x test context.
      */
@@ -434,8 +434,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // GIVEN an adapter with a downstream telemetry consumer
         final Future<ProtonDelivery> outcome = Future.future();
-        givenATelemetrySenderForOutcome(outcome);
+        givenAQoS1TelemetrySender(outcome);
+
         testUploadQoS1MessageSendsPubAckOnSuccess(outcome, (adapter, mqttContext) -> {
+            // WHEN forwarding a telemetry message that has been published with QoS 1
             adapter.uploadTelemetryMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
                     .setHandler(ctx.asyncAssertSuccess());
         });
@@ -445,11 +447,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             final Future<ProtonDelivery> outcome,
             final BiConsumer<AbstractVertxBasedMqttProtocolAdapter<?>, MqttContext> upload) {
 
-        // GIVEN an adapter with a downstream event consumer
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
 
-        // WHEN a device publishes an event
+        // WHEN a device publishes a message using QoS 1
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
         final Buffer payload = Buffer.buffer("some payload");
@@ -463,7 +464,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // THEN the device does not receive a PUBACK
         verify(endpoint, never()).publishAcknowledge(anyInt());
 
-        // until the event has been settled and accepted
+        // until the message has been settled and accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(endpoint).publishAcknowledge(5555555);
     }
@@ -503,20 +504,21 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     /**
      *
-     * Verifies that the adapter will accept uploading messages to valid endpoint names.
+     * Verifies that the adapter will accept uploading messages to standard as well
+     * as shortened topic names.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testUploadMessageSupportsShortAndLongEndpointNames(final TestContext ctx) {
 
-        // GIVEN an adapter with a downstream event consumer
+        // GIVEN an adapter with downstream telemetry & event consumers
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
-        givenATelemetrySenderForOutcome(Future.succeededFuture(mock(ProtonDelivery.class)));
+        givenAQoS1TelemetrySender(Future.succeededFuture(mock(ProtonDelivery.class)));
         givenAnEventSenderForOutcome(Future.succeededFuture(mock(ProtonDelivery.class)));
 
-        // WHEN a device publishes an event
+        // WHEN a device publishes events and telemetry messages
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
         final Buffer payload = Buffer.buffer("some payload");
@@ -615,15 +617,27 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(EventConstants.EVENT_ENDPOINT);
         when(sender.send(any(Message.class))).thenReturn(outcome);
+        when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
 
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
 
-    private void givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
+    private void givenAQoS0TelemetrySender() {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
-        when(sender.send(any(Message.class))).thenReturn(outcome);
+        when(sender.send(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(sender.sendAndWaitForOutcome(any(Message.class))).thenThrow(new UnsupportedOperationException());
+
+        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+    }
+
+    private void givenAQoS1TelemetrySender(final Future<ProtonDelivery> outcome) {
+
+        final MessageSender sender = mock(MessageSender.class);
+        when(sender.getEndpoint()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
+        when(sender.send(any(Message.class))).thenThrow(new UnsupportedOperationException());
+        when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }

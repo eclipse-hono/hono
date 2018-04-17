@@ -21,12 +21,16 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -48,6 +52,11 @@ import io.vertx.proton.ProtonSender;
  * A Vertx-Proton based client for publishing messages to a Hono server.
  */
 abstract class AbstractSender extends AbstractHonoClient implements MessageSender {
+
+    /**
+     * A counter to be used for creating message IDs.
+     */
+    protected static final AtomicLong MESSAGE_COUNTER = new AtomicLong();
 
     private static final Pattern CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
 
@@ -311,4 +320,55 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     public final boolean isRegistrationAssertionRequired() {
         return registrationAssertionRequired;
     }
+
+    /**
+     * Sends an AMQP 1.0 message to the peer this client is configured for
+     * and waits for the outcome of the transfer.
+     * 
+     * @param message The message to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been accepted (and settled)
+     *         by the peer.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         message could not be sent or has not been accepted by the peer.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    protected Future<ProtonDelivery> sendMessageAndWaitForOutcome(final Message message) {
+
+        Objects.requireNonNull(message);
+
+        final Future<ProtonDelivery> result = Future.future();
+        final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
+        message.setMessageId(messageId);
+        sender.send(message, deliveryUpdated -> {
+            if (deliveryUpdated.remotelySettled()) {
+                if (Accepted.class.isInstance(deliveryUpdated.getRemoteState())) {
+                    LOG.trace("message [ID: {}] accepted by peer", messageId);
+                    result.complete(deliveryUpdated);
+                } else if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
+                    Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
+                    if (rejected.getError() == null) {
+                        LOG.debug("message [message ID: {}] rejected by peer", messageId);
+                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+                    } else {
+                        LOG.debug("message [message ID: {}] rejected by peer: {}, {}", messageId,
+                                rejected.getError().getCondition(), rejected.getError().getDescription());
+                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getDescription()));
+                    }
+                } else {
+                    LOG.debug("message [message ID: {}] not accepted by peer: {}", messageId, deliveryUpdated.getRemoteState());
+                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+                }
+            } else {
+                LOG.warn("peer did not settle message, failing delivery [new remote state: {}]", deliveryUpdated.getRemoteState());
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
+            }
+        });
+        LOG.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+
+        return result;
+    }
+
 }

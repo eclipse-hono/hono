@@ -141,6 +141,15 @@ public class AbstractSenderTest {
                 return Future.succeededFuture(mock(ProtonDelivery.class));
             }
 
+            /**
+             * @return an incomplete future.
+             */
+            @Override
+            public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
+                protonSender.send(message);
+                return Future.future();
+            }
+
             @Override
             protected String getTo(final String deviceId) {
                 return null;

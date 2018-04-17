@@ -13,14 +13,17 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TelemetryConstants;
 
 import io.vertx.core.AsyncResult;
@@ -36,8 +39,6 @@ import io.vertx.proton.ProtonSender;
  * A Vertx-Proton based client for uploading telemetry data to a Hono server.
  */
 public final class TelemetrySenderImpl extends AbstractSender {
-
-    private static final AtomicLong MESSAGE_COUNTER = new AtomicLong();
 
     TelemetrySenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
             final String targetAddress, final Context context) {
@@ -109,6 +110,43 @@ public final class TelemetrySenderImpl extends AbstractSender {
         }).setHandler(creationHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<ProtonDelivery> sendAndWaitForOutcome(final Message rawMessage) {
+
+        Objects.requireNonNull(rawMessage);
+
+        if (!isRegistrationAssertionRequired()) {
+            MessageHelper.getAndRemoveRegistrationAssertion(rawMessage);
+        }
+        final Future<ProtonDelivery> result = Future.future();
+        context.runOnContext(send -> {
+            if (sender.sendQueueFull()) {
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available"));
+            } else {
+                sendMessageAndWaitForOutcome(rawMessage).setHandler(result.completer());
+            }
+        });
+        return result;
+    }
+
+    /**
+     * Sends an AMQP 1.0 message to the peer this client is configured for.
+     * 
+     * @param message The message to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been sent to the peer.
+     *         The delivery contained in the future will represent the delivery
+     *         state at the time the future has been succeeded, i.e. it will be
+     *         locally <em>unsettled</em> without any outcome yet.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         message could not be sent.
+     * @throws NullPointerException if the message is {@code null}.
+     */
     @Override
     protected Future<ProtonDelivery> sendMessage(final Message message) {
 
@@ -132,10 +170,10 @@ public final class TelemetrySenderImpl extends AbstractSender {
                     LOG.debug("message [message ID: {}] not accepted by peer: {}", messageId, deliveryUpdated.getRemoteState());
                 }
             } else {
-                LOG.warn("peer did not settle telemetry message [message ID: {}, remote state: {}]", messageId, deliveryUpdated.getRemoteState());
+                LOG.warn("peer did not settle message [message ID: {}, remote state: {}]", messageId, deliveryUpdated.getRemoteState());
             }
         });
-        LOG.trace("sent telemetry message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+        LOG.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
 
         return Future.succeededFuture(result);
     }

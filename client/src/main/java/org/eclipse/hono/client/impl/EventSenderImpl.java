@@ -14,16 +14,11 @@
 
 package org.eclipse.hono.client.impl;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.qpid.proton.amqp.messaging.Accepted;
-import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.EventConstants;
 
@@ -40,8 +35,6 @@ import io.vertx.proton.ProtonSender;
  * A Vertx-Proton based client for publishing event messages to a Hono server.
  */
 public final class EventSenderImpl extends AbstractSender {
-
-    private static final AtomicLong MESSAGE_COUNTER = new AtomicLong();
 
     EventSenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
             final String targetAddress, final Context context) {
@@ -120,41 +113,47 @@ public final class EventSenderImpl extends AbstractSender {
         msg.setDurable(true);
     }
 
+    /**
+     * Sends an AMQP 1.0 message to the peer this client is configured for
+     * and waits for the outcome of the transfer.
+     * <p>
+     * This method simply invokes {@link #sendMessageAndWaitForOutcome(Message)}.
+     * 
+     * @param message The message to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been accepted (and settled)
+     *         by the peer.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         message could not be sent or has not been accepted by the peer.
+     * @throws NullPointerException if the message is {@code null}.
+     */
     @Override
     protected Future<ProtonDelivery> sendMessage(final Message message) {
 
-        Objects.requireNonNull(message);
-
-        final Future<ProtonDelivery> result = Future.future();
-        final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
-        message.setMessageId(messageId);
-        sender.send(message, deliveryUpdated -> {
-            if (deliveryUpdated.remotelySettled()) {
-                if (Accepted.class.isInstance(deliveryUpdated.getRemoteState())) {
-                    LOG.trace("event [message ID: {}] accepted by peer", messageId);
-                    result.complete(deliveryUpdated);
-                } else if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
-                    Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
-                    if (rejected.getError() == null) {
-                        LOG.debug("event [message ID: {}] rejected by peer", messageId);
-                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-                    } else {
-                        LOG.debug("event [message ID: {}] rejected by peer: {}, {}", messageId,
-                                rejected.getError().getCondition(), rejected.getError().getDescription());
-                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getDescription()));
-                    }
-                } else {
-                    LOG.debug("event [message ID: {}] not accepted by peer: {}", messageId, deliveryUpdated.getRemoteState());
-                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-                }
-            } else {
-                LOG.warn("peer did not settle event, failing delivery [new remote state: {}]", deliveryUpdated.getRemoteState());
-                result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
-            }
-        });
-        LOG.trace("sent event [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
-
-        return result;
+        return sendMessageAndWaitForOutcome(message);
     }
 
+    /**
+     * Sends an AMQP 1.0 message to the peer this client is configured for
+     * and waits for the outcome of the transfer.
+     * <p>
+     * This method simply invokes {@link #sendMessageAndWaitForOutcome(Message)}.
+     * 
+     * @param message The message to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been accepted (and settled)
+     *         by the peer.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         message could not be sent or has not been accepted by the peer.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    @Override
+    public Future<ProtonDelivery> sendAndWaitForOutcome(Message message) {
+
+        return sendMessageAndWaitForOutcome(message);
+    }
 }

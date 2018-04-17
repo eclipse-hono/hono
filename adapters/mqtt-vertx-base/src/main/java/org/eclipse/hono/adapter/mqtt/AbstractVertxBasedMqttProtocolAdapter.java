@@ -476,6 +476,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
                 if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+
+                    final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             String.format("%s/%s", endpointName, tenant),
                             deviceId,
@@ -483,8 +485,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                             ctx.contentType(),
                             payload,
                             tokenTracker.result());
+
                     customizeDownstreamMessage(downstreamMessage, ctx);
-                    return senderTracker.result().send(downstreamMessage);
+
+                    if (ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                        return sender.sendAndWaitForOutcome(downstreamMessage);
+                    } else {
+                        return sender.send(downstreamMessage);
+                    }
                 } else {
                     // this adapter is not enabled for the tenant
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
