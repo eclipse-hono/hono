@@ -1,0 +1,219 @@
+kind: Template
+apiVersion: v1
+
+metadata:
+
+  name: grafana-openshift
+
+parameters:
+
+- name:           GIT_URI
+  displayName:      Git repository URI
+  description:      location of the grafana git repo
+  value:            https://github.com/OpenShiftDemos/grafana-openshift
+- name:           ADMIN_PASSWORD
+  displayName:      Initial admin password
+  description:      The password which will initially be set for the admin user
+  generate:         expression
+  from:             "[a-zA-Z0-9]{12}"
+  required:         true
+- name:           GRAFANA_VERSION
+  displayName:      Grafana version
+  description:      The version of Grafana to use
+  value:            4.6.2
+- name:           VOLUME_SIZE
+  displayName:      Volume Size
+  description:      Size of persistent volume used for Grafana datastore
+  required:         true
+  value:            1Gi
+- name:           DATA_DIR
+  displayName:      Data directory
+  description:      Path to Grafana data directory
+  required:         true
+  value:            /usr/share/grafana/data
+
+objects:
+
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: grafana-pvc
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: ${VOLUME_SIZE}
+
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: centos
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - name: "7"
+      from:
+        kind: DockerImage
+        name: docker.io/centos:7
+      importPolicy:
+        scheduled: true
+      referencePolicy:
+        type: Source
+
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: grafana
+
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    name: grafana
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: grafana:latest
+    runPolicy: Serial
+    triggers:
+    - type: ImageChange
+    - type: ConfigChange
+    source:
+      git:
+        uri: ${GIT_URI}
+      type: Git
+    strategy:
+      type: Docker
+      dockerStrategy:
+        env:
+        - name: GRAFANA_VERSION
+          value: ${GRAFANA_VERSION}
+        from:
+          kind: ImageStreamTag
+          name: centos:7
+
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: grafana-config
+  data:
+    custom.ini: |+
+      [analytics]
+      reporting_enabled=false
+      check_for_updates=false
+
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: grafana
+    labels:
+      app: hono-metrics
+      deploymentconfig: grafana
+  spec:
+    replicas: 1
+    selector:
+      app: hono-metrics
+      deploymentconfig: grafana
+    strategy:
+      activeDeadlineSeconds: 21600
+      recreateParams:
+        timeoutSeconds: 600
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: hono-metrics
+          deploymentconfig: grafana
+      spec:
+        containers:
+        - name: grafana
+          image: grafana
+          env:
+          - name: GF_INSTALL_PLUGINS
+            value: hawkular-datasource
+          - name: DATAD
+            value: ${DATA_DIR}
+          - name: PLGND
+            value: ${DATA_DIR}/plugins
+          - name: CONF_FILE
+            value: /etc/config/custom.ini
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            value: ${ADMIN_PASSWORD}
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 3000
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /login
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /login
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 9
+            successThreshold: 1
+            timeoutSeconds: 1
+          volumeMounts:
+          - mountPath: ${DATA_DIR}
+            name: data
+          - mountPath: /etc/config
+            name: conf
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: conf
+          configMap:
+            name: grafana-config
+    test: false
+    triggers:
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+        - grafana
+        from:
+          kind: ImageStreamTag
+          name: grafana:latest
+    - type: ConfigChange
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: grafana
+  spec:
+    ports:
+    - name: 3000-tcp
+      port: 3000
+      protocol: TCP
+      targetPort: 3000
+    selector:
+      app: hono-metrics
+      deploymentconfig: grafana
+
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: grafana
+  spec:
+    port:
+      targetPort: 3000-tcp
+    to:
+      kind: Service
+      name: grafana
