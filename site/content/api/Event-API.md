@@ -9,8 +9,13 @@ The *Event* API is used by *Devices* to send event messages downstream.
 
 The Event API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use *AMQP* when referring to AMQP 1.0.
 
-The *Event* API is identical to the [*Telemetry* API]({{< relref "Telemetry-API.md" >}}) regarding the provided operations, the message format and the message flow. 
-However it provides a different quality of service for messages sent to the *Event* endpoint by routing them via a persistent message broker to guarantee *AT LEAST ONCE* delivery.
+The *Event* API is identical to the [*Telemetry* API]({{< relref "Telemetry-API.md" >}}) regarding the provided operations and the message flow.
+
+Events provide a different quality of service for messages sent to the *Event* endpoint by 
+setting the <em>durable</em> property of the message header to {@code true}.
+
+There are well-known events that are distinguished by their *content-type* which are defined [here]({{< relref "#well-known-event-message-types" >}}).   
+
 
 # Southbound Operations
 
@@ -76,4 +81,66 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 
 **Message Format**
 
+**Arbitrary events from the device**
+
 See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of message format. 
+
+## Well-known event message types
+
+Hono defines *well-known* events that are of a specific *content-type*.
+
+NB: currently there is only one such *well-known* event.
+
+### Lifecycle Notifications
+
+To enable *Business Applications* to execute any functionality as soon as a device belonging to a specific tenant connects or disconnects to a protocol adapter, a special type of event - named *lifecycle notification* - is predefined.
+Such a notification may be sent by protocol adapters or even by the device itself. The purpose of the following is to specify the *format* of these notifications,
+without stating which part of the system publishes such events.
+
+*Lifecycle notifications* may be decided to not being durable, but this is left to the setup of the *AMQP network* and is not further specified in the following.
+
+
+***Lifecycle Notification Payload***
+
+The following table provides an overview of the properties a client needs to set for a *lifecycle notification* event.
+
+| Name           | Mandatory | Location                 | Type      | Description |
+| :------------- | :-------: | :----------------------- | :-------- | :---------- |
+| *content-type* | yes       | *properties*             | *symbol*  | Must be set to *application/vnd.eclipse-hono-notification+json* |
+
+The body of the event request MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following members:
+
+| Name               | Mandatory | Type       | Description |
+| :----------------- | :-------: | :--------- | :---------- |
+| *tenant-id*        | *yes*     | *string*   | The tenant identifier to send the notification for. |
+| *device-id*        | *yes*     | *string*   | The device identifier to send the notification for. |
+| *cause*            | *yes*     | *string*   | Value must be either `connected` or `disconnected` . |
+| *source*           | *no*      | *string*   | Value can be either the name of a protocol adapter (`hono-mqtt`, `hono-http`, `hono-kura`), if the device connected/disconnected to the appropriate protocol adapter,  or `device`, if the device sent the notfication itself.
+
+
+Examples:
+
+The following notification payload may be sent if a device connects to an *MQTT adapter* :
+
+~~~json
+{
+  "tenant-id": "my-tenant",
+  "device-id": "my-device",
+  "cause": "connect",
+  "source": "hono-mqtt"
+}
+~~~
+
+The following notification payload may be sent if a device itself sends a lifecycle notification, e.g. to signal that it may
+now is able to receive a command:
+
+~~~json
+{
+  "tenant-id": "my-tenant",
+  "device-id": "sensor1",
+  "cause": "connect",
+  "source": "device"
+}
+~~~
+NB: note that a device does not necessarily know its *device-id*, but only its *auth-id* (please refer to the 
+[Credentials API]({{< relref "Credentials-API.md" >}}) for details). 
