@@ -1,0 +1,46 @@
+participant Device
+
+participant HTTP Protocol Adapter
+participant AMQP 1.0 Network
+participant Consumer Application
+
+note left of Device
+sending telemetry data with explicit value
+for ttd set to 60 seconds
+end note
+
+Device->HTTP Protocol Adapter: telemetry(hono-ttd="60", payload)
+note over Device
+The HTTP specific header "hono-ttd" is used to provide
+the value for ttd by the device itself
+end note
+
+
+
+note over HTTP Protocol Adapter
+Set AMQP 1.0 properties:
+tenant-id: "TENANT",
+device-id: "4711",
+creation-time: NOW (in epoch milliseconds)
+end note
+
+HTTP Protocol Adapter->AMQP 1.0 Network: 1.0 transfer("telemetry/TENANT", "4711", , creation-time, ttd)
+AMQP 1.0 Network->Consumer Application: 1.2 transfer("telemetry/TENANT", ...)
+Consumer Application->AMQP 1.0 Network: 2.0 disposition("accepted")
+AMQP 1.0 Network->HTTP Protocol Adapter: 2.0 disposition("accepted")
+
+HTTP Protocol Adapter->Device: HTTP/1.1 202 Accepted
+
+participant
+note over Consumer Application
+Processing the telemetry data.
+end note
+
+
+
+Consumer Application->Consumer Application: callbackIfValid(creation-time, ttd)
+note over Consumer Application
+React if message indicates that currently the device
+is ready to receive a command
+(e.g. by trying to send a command)
+end note

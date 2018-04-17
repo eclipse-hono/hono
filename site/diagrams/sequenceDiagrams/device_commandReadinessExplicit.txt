@@ -1,0 +1,39 @@
+participant Device
+
+participant HTTP Protocol Adapter
+participant AMQP 1.0 Network
+participant Consumer Application
+
+note left of Device
+sending explicit event to signal command readiness
+for the next 60 seconds
+end note
+note over Device
+The HTTP specific header "hono-ttd" is used to provide
+the value for ttd by the device itself
+end note
+
+Device->HTTP Protocol Adapter: POST event(hono-ttd="60", Content-Type="application/vnd.eclipse-hono-empty-notification")
+
+note over HTTP Protocol Adapter
+Set AMQP 1.0 properties:
+tenant-id: "TENANT",
+device-id: "4711",
+creation-time: NOW (in epoch milliseconds)
+ttd: value from http-ttd
+end note
+
+HTTP Protocol Adapter->AMQP 1.0 Network: 1.0 transfer("event/TENANT", "4711", , creation-time, ttd)
+AMQP 1.0 Network->Consumer Application: 1.2 transfer("event/TENANT", ...)
+Consumer Application->AMQP 1.0 Network: 2.0 disposition("accepted")
+AMQP 1.0 Network->HTTP Protocol Adapter: 2.0 disposition("accepted")
+
+
+HTTP Protocol Adapter->Device: HTTP/1.1 202 Accepted
+
+Consumer Application->Consumer Application: callbackIfValid(creation-time, ttd)
+note over Consumer Application
+React if message indicates that currently the device
+is ready to receive a command
+(e.g. by trying to send a command)
+end note
