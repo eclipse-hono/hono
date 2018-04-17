@@ -1,15 +1,19 @@
 +++
-title = "OpenShift"
+title = "OpenShift with EnMasse"
 weight = 475
 +++
+
+This guide describes how to deploy Eclipse Hono™ using EnMasse as messaging
+backend on a single-master/single-node local OpenShift installation using
+"minishift".
+
+<!--more-->
 
 All the Eclipse Hono&trade; components can be deployed on OpenShift, thanks to
 the resources YAML files that are provided through the repository. These files
 describe such components in terms of _deployments_ and _services_ in order to
 have the right pods running in the OpenShift cluster so that they are able
 to communicate with each other.
-
-<!--more-->
 
 {{% warning title="Use for demos only" %}}
 The intention of this deployment example is to provide a very simple to
@@ -173,25 +177,10 @@ components deployed as part of Hono.
 
 The screenshots below show Hono's components deployed to OpenShift:
 
-![Eclipse Hono on OpenShift](../openshift_01.png)
-
-![Eclipse Hono on OpenShift](../openshift_02.png)
-
-![Eclipse Hono on OpenShift](../openshift_03.png)
-
-![Eclipse Hono on OpenShift](../openshift_04.png)
-
-![Eclipse Hono on OpenShift](../openshift_05.png)
-
-![Eclipse Hono on OpenShift](../openshift_06.png)
-
-![Eclipse Hono on OpenShift](../openshift_07.png)
-
-![Eclipse Hono on OpenShift](../openshift_08.png)
-
-![Eclipse Hono on OpenShift](../openshift_grafana.png)
-
-![Eclipse Hono on OpenShift](../openshift_influxdb.png)
+{{< figure src="../openshift_01_hono_ready.png"
+ caption="Hono dashbaord in OpenShift"
+ alt="Screenshot of OpenShift showing Hono deployment state"
+ >}}
 
 ## Undeploying Hono
 
@@ -222,61 +211,126 @@ use to connect the Hono consumer.
 
 ## Access to Hono services
 
-The OpenShift deployment provides access to Eclipse Hono by means of *services* and the main ones are:
+The OpenShift deployment provides access to Eclipse Hono by means of
+*services*, the main ones are:
 
-* **hono-dispatch-router-ext**: router network for the business application in order to consume data
+* **messaging**: router network for the business application in order to consume data
 * **hono-adapter-mqtt-vertx**: protocol adapter for publishing telemetry data and events using the MQTT protocol
-* **hono-adapter-rest-vertx**: protocol adapter for publishing telemetry data and events using the HTTP protocol
+* **hono-adapter-http-vertx**: protocol adapter for publishing telemetry data and events using the HTTP protocol
 * **hono-service-device-registry**: component for registering and managing devices
 
 You can check these services through the `oc get services` command having the following output :
 
-~~~sh
-NAME                           CLUSTER-IP       EXTERNAL-IP   PORT(S)                                      AGE
-grafana                        172.30.104.165   <nodes>       3000:31000/TCP                               2m
-hono-adapter-mqtt-vertx        172.30.3.63      <nodes>       1883:31883/TCP,8883:30883/TCP                2m
-hono-adapter-rest-vertx        172.30.205.239   <nodes>       8080:30080/TCP,8443:30443/TCP                2m
-hono-artemis                   172.30.21.155    <none>        5672/TCP                                     2m
-hono-dispatch-router           172.30.140.127   <none>        5673/TCP                                     2m
-hono-dispatch-router-ext       172.30.12.86     <nodes>       5671:30671/TCP,5672:30672/TCP                2m
-hono-service-auth              172.30.155.8     <none>        5671/TCP                                     2m
-hono-service-device-registry   172.30.177.150   <none>        5671:31671/TCP,8080:31080/TCP,8443:31443/TCP 2m
-hono-service-messaging         172.30.114.146   <none>        5671/TCP                                     2m
-influxdb                       172.30.203.114   <none>        2003/TCP,8083/TCP,8086/TCP                   2m
+~~~
+NAME                           CLUSTER-IP       EXTERNAL-IP   PORT(S)                                           AGE
+address-controller             172.30.40.104    <none>        8080/TCP,8081/TCP,5672/TCP                        2h
+configuration                  172.30.28.244    <none>        5671/TCP                                          2h
+console                        172.30.104.176   <none>        5672/TCP,8080/TCP                                 2h
+grafana                        172.30.206.225   <none>        3000/TCP                                          2h
+hono-adapter-http-vertx        172.30.206.33    <nodes>       8080:30080/TCP,8443:30443/TCP                     2h
+hono-adapter-kura              172.30.119.55    <nodes>       1883:31884/TCP,8883:30884/TCP                     2h
+hono-adapter-mqtt-vertx        172.30.33.184    <nodes>       1883:31883/TCP,8883:30883/TCP                     2h
+hono-service-auth              172.30.25.62     <none>        5671/TCP                                          2h
+hono-service-device-registry   172.30.219.76    <nodes>       5671:31671/TCP,8080:31080/TCP,8443:31443/TCP      2h
+hono-service-messaging         172.30.60.68     <nodes>       5671:32671/TCP                                    2h
+influxdb                       172.30.234.72    <none>        2003/TCP,8083/TCP,8086/TCP                        2h
+messaging                      172.30.86.158    <none>        5672/TCP,5671/TCP,55671/TCP,56671/TCP,55672/TCP   2h
+mqtt                           172.30.29.31     <none>        1883/TCP,8883/TCP                                 2h
+none-authservice               172.30.202.44    <none>        5671/TCP                                          2h
+queue-scheduler                172.30.196.224   <none>        5672/TCP                                          2h
+ragent                         172.30.182.52    <none>        5671/TCP                                          2h
+subscription                   172.30.91.190    <none>        5672/TCP                                          2h
 ~~~
 
-Using the *Minishift* way, you have to use the Minishift VM's IP address (that you can get with the `minishift ip` command) and the so called *node ports* (i.e. 30080, 30671, ...).
-In the following sections the `$(minishift ip)` is used  in order to put the IP address of the Minishift VM into the command to execute.
+Services are accessed from the "outside" of OpenShift using "routes", which
+map external traffic to internal services. You can get a list of all routes
+from the project by executing `oc get routes`, which should give you the
+following output:
+
+~~~
+NAME                                 HOST/PORT                                                     PATH      SERVICES                       PORT          TERMINATION   WILDCARD
+console                              console-hono.192.168.42.2.nip.io                                        console                        http                        None
+grafana                              grafana-hono.192.168.42.2.nip.io                                        grafana                        3000-tcp                    None
+hono-adapter-http-vertx              hono-adapter-http-vertx-hono.192.168.42.2.nip.io                        hono-adapter-http-vertx        8080                        None
+hono-adapter-http-vertx-sec          hono-adapter-http-vertx-sec-hono.192.168.42.2.nip.io                    hono-adapter-http-vertx        8443          passthrough   None
+hono-adapter-kura                    hono-adapter-kura-hono.192.168.42.2.nip.io                              hono-adapter-kura              1883                        None
+hono-adapter-kura-sec                hono-adapter-kura-sec-hono.192.168.42.2.nip.io                          hono-adapter-kura              8883          passthrough   None
+hono-adapter-mqtt-vertx              hono-adapter-mqtt-vertx-hono.192.168.42.2.nip.io                        hono-adapter-mqtt-vertx        1883                        None
+hono-adapter-mqtt-vertx-sec          hono-adapter-mqtt-vertx-sec-hono.192.168.42.2.nip.io                    hono-adapter-mqtt-vertx        8883          passthrough   None
+hono-service-auth                    hono-service-auth-hono.192.168.42.2.nip.io                              hono-service-auth              5671          passthrough   None
+hono-service-device-registry-amqps   hono-service-device-registry-amqps-hono.192.168.42.2.nip.io             hono-service-device-registry   5671          passthrough   None
+hono-service-device-registry-http    hono-service-device-registry-http-hono.192.168.42.2.nip.io              hono-service-device-registry   8080                        None
+hono-service-device-registry-https   hono-service-device-registry-https-hono.192.168.42.2.nip.io             hono-service-device-registry   8443          passthrough   None
+hono-service-messaging               hono-service-messaging-hono.192.168.42.2.nip.io                         hono-service-messaging         5671          passthrough   None
+messaging                            messaging-hono.192.168.42.2.nip.io                                      messaging                      amqps         passthrough   None
+mqtt                                 mqtt-hono.192.168.42.2.nip.io                                           mqtt                           secure-mqtt   passthrough   None
+restapi                              restapi-hono.192.168.42.2.nip.io                              /v1       address-controller             http                        None
+~~~
+
+In the following sections, when using a hostname, we will be using the hostnames
+as provided by the "get routes" command above. Using Minishift or a real
+OpenShift cluster, it works the same way.
 
 ### Starting a Consumer
 
-As described in the [Getting Started]({{< relref "getting-started.md" >}}) guide, data produced by devices is usually consumed by downstream applications which connect directly to the router network service.
-You can start the client from the `example` folder as follows:
+As described in the [Getting Started]({{< relref "getting-started.md" >}})
+guide, data produced by devices is usually consumed by downstream applications
+which connect directly to the router network service. You can start the client
+from the `example` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(minishift ip),--hono.client.port=30671,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc get route messaging --template='{{.spec.host}}'),--hono.client.port=443,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/server-cert.pem
 ~~~
 
-### Uploading Telemetry
+### Uploading Telemetry with HTTP
 
-In order to upload telemetry data to Hono, the device needs to be registered with the system. You can register the device using the
-*Device Registry* by running the following command (i.e. for a device with ID `4711`):
+In order to upload telemetry data to Hono, the device needs to be registered
+with the system. You can register the device using the *Device Registry* by
+running the following command (i.e. for a device with ID `4711`):
 
 ~~~sh
-$ curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' http://$(minishift ip):31080/registration/DEFAULT_TENANT
+$ curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' http://$(oc get route hono-service-device-registry-http --template='{{.spec.host}}')/registration/DEFAULT_TENANT
 ~~~
 
-After having the device registered, uploading telemetry is just a simple HTTP POST command to the *HTTP Adapter*:
+After having the device registered, uploading telemetry is just a simple
+HTTP POST command to the *HTTP Adapter*:
 
 ~~~sh
-$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$(minishift ip):30080/telemetry
+$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$(oc get route hono-adapter-http-vertx --template='{{.spec.host}}')/telemetry
 ~~~
 
-Other than using the *HTTP Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
+{{% note title="503 Service unavailable" %}}
+You might run into the issue that the previous HTTP POST operation returns
+`503 Service Unavailable`. In this case the HTTP protocol adapter has no
+"credit", meaning it has no downstream consumer which would accept the message.
+
+This will be the case when you have no consumer running. So before uploading
+telemetry data you need to ensure that at least one consumer is running as
+described in [Starting a consumer](#starting-a-consumer).
+{{% /note %}}
+
+### Uploading Telemetry with MQTT
+
+Other than using the *HTTP Adapter*, it's possible to upload telemetry data
+using the *MQTT Adapter* as well:
 
 ~~~sh
-mosquitto_pub -h $(minishift ip) -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
+$ mosquitto_pub -h $(minishift ip) -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
 ~~~
 
-The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for an explanation of how devices are identified in Hono and how device identity is related to authentication.
+{{% note title="Mosquitto TLS SNI support" %}}
+As of writing Mosquitto (which provides the `mosquitto_pub`) command doesn't
+support TLS SNI, which is however required when using MQTT with OpenShift
+routes. The workaround is to use the "Node port" as in the example above.
 
+Other MQTT clients do not have this limitations so using TLS with SNI should
+be preferred in this case.
+{{% /note %}}
+
+### Usernames & passwords
+
+The username and password used above for device `4711` are part of the example
+configuration that comes with Hono.
+See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for an
+explanation of how devices are identified in Hono and how device identity is
+related to authentication.

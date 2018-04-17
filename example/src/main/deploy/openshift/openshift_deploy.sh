@@ -18,6 +18,8 @@ CERTS=$CONFIG/hono-demo-certs-jar
 HONO_HOME=$SCRIPTPATH/../../../..
 OPENSHIFT_MASTER=${1:-"https://$(minishift ip):8443"}
 
+set -e
+
 source $SCRIPTPATH/common.sh
 
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
@@ -38,9 +40,7 @@ echo "Deploying influxDB & Grafana ..."
 oc create secret generic influxdb-conf --from-file=$SCRIPTPATH/../influxdb.conf
 oc create -f $SCRIPTPATH/../influxdb-deployment.yml
 oc create -f $SCRIPTPATH/../influxdb-svc.yml
-oc create -f $SCRIPTPATH/../grafana-deployment.yml
-oc create -f $SCRIPTPATH/../grafana-svc.yml
-oc create -f $SCRIPTPATH/grafana-route.yml
+oc process -f $SCRIPTPATH/grafana-template.yml -p ADMIN_PASSWORD=admin | oc create -f -
 echo ... done
 
 echo "Deploying Authentication Server ..."
@@ -109,12 +109,8 @@ echo
 echo "Configuring Grafana with data source & dashboard ..."
 
 chmod +x $SCRIPTPATH/../configure_grafana.sh
-HOST=$(oc get nodes --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}' --as system:admin)
-GRAFANA_PORT='NaN'
-until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do
-  GRAFANA_PORT=$(oc get service grafana --output='jsonpath={.spec.ports[0].nodePort}' --as system:admin); sleep 1;
-done
-$SCRIPTPATH/../configure_grafana.sh $HOST $GRAFANA_PORT
+
+$SCRIPTPATH/../configure_grafana.sh "$(oc get route grafana --template='{{.spec.host}}')" 80
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED ON OPENSHIFT
