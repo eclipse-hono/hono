@@ -1,0 +1,17 @@
+participant Protocol Adapter
+participant AMQP 1.0 Network
+participant Business Application
+
+Business Application->AMQP 1.0 Network: attach("sender","control/${tenant_id}/${device_id}")
+Business Application->AMQP 1.0 Network: attach("receiver","control-reply/${tenant_id}/${device_id}")
+Protocol Adapter->AMQP 1.0 Network: attach("receiver","control/${tenant_id}/${device_id}")
+
+Business Application->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command)
+activate Business Application
+AMQP 1.0 Network->Protocol Adapter: transfer("control/${tenant_id}/${device_id}", command)
+activate Protocol Adapter
+Protocol Adapter->AMQP 1.0 Network: attach("sender","control-reply/${tenant_id}/${device_id}")
+Protocol Adapter->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command-reply)
+deactivate Protocol Adapter
+AMQP 1.0 Network->Business Application: transfer("control/${tenant_id}/${device_id}", command-reply)
+deactivate Business Application
