@@ -300,8 +300,6 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     }
 
     /**
-<<<<<<< Upstream, based on dummy
-=======
      * {@inheritDoc}
      *
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
@@ -313,7 +311,6 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     }
 
     /**
->>>>>>> 784db0b remaining changes
      * {@inheritDoc}
      *
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).

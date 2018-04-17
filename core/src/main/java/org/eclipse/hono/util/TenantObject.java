@@ -222,8 +222,8 @@ public final class TenantObject {
      * the JSON object of the <em>trusted-ca</em> property.
      * The value of the JSON object's <em>cert</em> property is expected to contain
      * the Base64 encoded <em>binary</em> DER-encoding of the certificate, i.e. the same
-     * value as the <em>printable</em> form but without the leading {@code -----BEGIN CERTIFICATE-----}
-     * and trailing {@code -----END CERTIFICATE-----}.
+     * value as the <em>printable</em> form but without the leading
+     * {@code -----BEGIN CERTIFICATE-----} and trailing {@code -----END CERTIFICATE-----}.
      * 
      * @return The certificate or {@code null} if no certificate authority
      *         has been set or the certificate is not DER encoded.
@@ -256,13 +256,12 @@ public final class TenantObject {
      * <p>
      * This method tries to create the trust anchor based on the information
      * from the JSON object contained in the <em>trusted-ca</em> property.
-     * <p>
      * <ol>
      * <li>If the object contains a <em>cert</em> property then its content is
      * expected to contain the Base64 encoded (binary) DER encoding of the
      * trusted certificate. The returned trust anchor will contain this certificate.</li>
-     * <li>Otherwise, if the object contains <em>public-key</em> and <em>subject-dn</em>
-     * properties, then the public key property is expected to contain the Base64 encoded
+     * <li>Otherwise, if the object contains a <em>public-key</em> and a <em>subject-dn</em>
+     * property, then the public key property is expected to contain the Base64 encoded
      * DER encoding of the trusted certificate's public key. The returned trust anchor
      * will contain this public key.</li>
      * <li>Otherwise, this method returns {@code null}.</li>
