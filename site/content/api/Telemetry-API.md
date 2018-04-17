@@ -60,11 +60,14 @@ The following sequence diagram illustrates the flow of messages involved in the 
 
 The following table provides an overview of the properties a client needs to set on an *Upload Telemetry Data* message.
 
-| Name           | Mandatory | Location                 | Type      | Description |
-| :------------- | :-------: | :----------------------- | :-------- | :---------- |
-| *content-type* | yes       | *properties*             | *symbol*  | SHOULD be set to *application/octet-stream* if the message payload is to be considered *opaque* binary data. In most cases though, the client should be able to set a more specific content type indicating the type and characteristics of the data contained in the payload, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. |
-| *device_id*    | yes       | *application-properties* | *string*  | MUST contain the ID of the device the data in the payload has been reported by. |
-| *reg_assertion*| yes       | *application-properties* | *string*  | A [JSON Web Token](https://jwt.io/introduction/) issued by the [Device Registration service]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}) asserting the device's registration status. |
+| Name            | Mandatory       | Location                 | Type        | Description |
+| :-------------- | :-------------: | :----------------------- | :---------- | :---------- |
+| *content-type*  | yes             | *properties*             | *symbol*    | SHOULD be set to *application/octet-stream* if the message payload is to be considered *opaque* binary data. In most cases though, the client should be able to set a more specific content type indicating the type and characteristics of the data contained in the payload, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. |
+| *device_id*     | yes             | *application-properties* | *string*    | MUST contain the ID of the device the data in the payload has been reported by. |
+| *reg_assertion* | yes             | *application-properties* | *string*    | A [JSON Web Token](https://jwt.io/introduction/) issued by the [Device Registration service]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}) asserting the device's registration status. |
+| *ttd*           | no              | *application-properties* | *int*       | 'time til disconnect' : in context with the `creation-time` of the AMQP 1.0 message it defines the time interval in seconds in which a device should be available for receiving upstream data. If this property is missing, it shall be considered as not being known if the device is ready for receiving a message. If it has the value -1, the device shall be considered as being always ready to receive a message. | 
+| *creation-time* | see description | *properties*             | *timestamp* | the time when this message was created (see the [AMQP 1.0 specification](http://docs.oasis-open.org/amqp/core/v1.0/amqp-core-messaging-v1.0.html) for details). This is mandatory if *ttd* is set. 
+
 
 The body of the message MUST consist of a single AMQP *Data* section containing the telemetry data. The format and encoding of the data MUST be indicated by the *content-type* and (optional) *content-encoding* properties of the message.
 

@@ -9,8 +9,13 @@ The *Event* API is used by *Devices* to send event messages downstream.
 
 The Event API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use *AMQP* when referring to AMQP 1.0.
 
-The *Event* API is identical to the [*Telemetry* API]({{< relref "Telemetry-API.md" >}}) regarding the provided operations, the message format and the message flow. 
-However it provides a different quality of service for messages sent to the *Event* endpoint by routing them via a persistent message broker to guarantee *AT LEAST ONCE* delivery.
+The *Event* API is identical to the [*Telemetry* API]({{< relref "Telemetry-API.md" >}}) regarding the provided operations and the message flow.
+
+Events provide a different quality of service for messages sent to the *Event* endpoint by 
+setting the <em>durable</em> property of the message header to `true`.
+
+There are well-known events that are distinguished by their *content-type* which are defined [here]({{< relref "#well-known-event-message-types" >}}).   
+
 
 # Southbound Operations
 
@@ -77,3 +82,25 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 **Message Format**
 
 See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of message format. 
+
+
+# Well-known event message types
+
+Hono defines *well-known* events that are of a specific *content-type*. In the following these events (currently one) are specified in detail.
+
+## Empty notification
+
+An event of this type does not have any payload so the body of the event MUST be empty (different from other messages sent downstream).
+It only carries AMQP 1.0 properties.
+
+The AMQP 1.0 properties an event sender needs to set for an *empty notification* event are defined in the [*Telemetry API*]({{< relref "Telemetry-API.md" >}}). 
+
+The relevant properties are listed again in the following table:
+
+| Name           | Mandatory        | Location                 | Type      | Description |
+| :------------- | :--------------: | :----------------------- | :-------- | :---------- |
+| *content-type* | yes              | *properties*             | *symbol*  | Must be set to *application/vnd.eclipse-hono-empty-notification* |
+| *ttd*          | no               | *application-properties* | *int*     | 'time til disconnect' : see [*Telemetry API*]({{< relref "Telemetry-API.md" >}}). | 
+
+NB: An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. The application receiving the notification can verify if the notification is not expired and then may decide to send an upstream message to the device.
+ 

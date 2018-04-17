@@ -21,6 +21,7 @@ There is a subtle difference between the *device identifier* (*device-id*) and t
 * Request Headers:
   * (required) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -48,6 +49,7 @@ Publish some JSON data for device `4711`:
 * Method: `PUT`
 * Request Headers:
   * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -75,6 +77,7 @@ Publish some JSON data for device `4711`:
 * Request Headers:
   * (required) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -106,6 +109,7 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 * Request Headers:
   * (required) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -133,6 +137,7 @@ Publish some JSON data for device `4711`:
 * Method: `PUT`
 * Request Headers:
   * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -160,6 +165,7 @@ Publish some JSON data for device `4711`:
 * Request Headers:
   * (required) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617).
   * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
@@ -196,6 +202,36 @@ The adapter includes the following meta data in the application properties of me
 The adapter also considers [*defaults* registered for the device]({{< relref "api/Device-Registration-API.md#payload-format" >}}). For each default value the adapter checks if a corresponding property is already set on the message and if not, sets the message's property to the registered default value or adds a corresponding application property.
 
 Note that of the standard AMQP 1.0 message properties only the *content-type* can be set this way to a registered default value.
+
+## Specifying the time a device will wait for a response
+
+The adapter lets devices specify the number of seconds they will wait for a response by setting a header or a query parameter.
+
+### Use a specific HTTP header 
+
+The optional header `hono-ttd` can be set for any downstream message.
+
+Example:
+
+    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 60' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
+    
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+### Use a query parameter
+
+Alternatively the value for `hono-ttd` can be set by using a query parameter.
+
+Example:
+
+    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=60
+    
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+
 
 ## Tenant specific Configuration
 
