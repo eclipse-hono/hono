@@ -27,6 +27,8 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>coap-vertx-base</module>
+    <module>coap-vertx</module>
     <module>http-vertx-base</module>
     <module>http-vertx</module>
     <module>mqtt-vertx</module>

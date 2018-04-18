@@ -1,0 +1,11 @@
+spec:
+  type: NodePort
+  ports:
+  - port: 5683
+    protocol: UDP
+    targetPort: 5683
+    nodePort: 5683
+  - port: 5684
+    protocol: UDP
+    targetPort: 5684
+    nodePort: 5684

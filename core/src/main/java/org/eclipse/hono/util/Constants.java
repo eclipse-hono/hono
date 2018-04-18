@@ -51,6 +51,11 @@ public final class Constants {
     public static final String PROTOCOL_ADAPTER_TYPE_KURA= "hono-kura-mqtt";
 
     /**
+     * The type of the Eclipse coap adapter.
+     */
+    public static final String PROTOCOL_ADAPTER_TYPE_COAP= "hono-coap";
+
+    /**
      * The default number of milliseconds to wait before trying to reconnect to a service.
      */
     public static final long DEFAULT_RECONNECT_INTERVAL_MILLIS = 500;
