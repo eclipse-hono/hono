@@ -1,6 +1,6 @@
 +++
 title = "Kubernetes"
-weight = 475
+weight = 474
 +++
 
 All the Eclipse Hono&trade; components can be deployed on Kubernetes, thanks to the resources YAML files that are provided through the repository.
