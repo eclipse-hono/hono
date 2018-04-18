@@ -30,6 +30,7 @@
   <properties>
     <artemis.image.name>enmasseproject/activemq-artemis:2.2.0-4</artemis.image.name>
     <assertj-core.version>3.2.0</assertj-core.version>
+    <californium.version>2.0.0-M11</californium.version>
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:1.1.0</dispatch-router.image.name>
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
     <grafana.version>5.1.4</grafana.version>
@@ -67,6 +68,21 @@
         <artifactId>logback-classic</artifactId>
         <version>${logback.version}</version>
         <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.californium</groupId>
+        <artifactId>californium-core</artifactId>
+        <version>${californium.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.californium</groupId>
+        <artifactId>element-connector</artifactId>
+        <version>${californium.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.californium</groupId>
+        <artifactId>scandium</artifactId>
+        <version>${californium.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>

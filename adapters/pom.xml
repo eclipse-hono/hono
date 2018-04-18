@@ -27,11 +27,13 @@
 
   <modules>
     <module>amqp-vertx</module>
-    <module>http-vertx-base</module>
+    <module>coap-vertx</module>
+    <module>coap-vertx-base</module>
     <module>http-vertx</module>
+    <module>http-vertx-base</module>
+    <module>kura</module>
     <module>mqtt-vertx</module>
     <module>mqtt-vertx-base</module>
-    <module>kura</module>
   </modules>
 
   <name>Hono Protocol Adapters</name>

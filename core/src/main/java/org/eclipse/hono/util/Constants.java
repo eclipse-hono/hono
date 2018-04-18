@@ -67,6 +67,11 @@ public final class Constants {
     public static final String PROTOCOL_ADAPTER_TYPE_AMQP= "hono-amqp";
 
     /**
+     * The type of the Eclipse coap adapter.
+     */
+    public static final String PROTOCOL_ADAPTER_TYPE_COAP= "hono-coap";
+
+    /**
      * The "QoS-Level" request header indicating the quality of service level supported by the HTTP Adapter.
      * The HTTP adapter supports QoS level AT_LEAST_ONCE when uploading telemetry messages.
      */
