@@ -1,0 +1,97 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.eclipse.hono</groupId>
+    <artifactId>hono-adapters</artifactId>
+    <version>0.7-SNAPSHOT</version>
+  </parent>
+  <artifactId>hono-adapter-coap-vertx</artifactId>
+  <name>Hono COAP Adapter</name>
+
+  <description>A protocol adapter exposing Hono's Telemetry &amp; Event APIs via COAP.</description>
+  <url>https://www.eclipse.org/hono</url>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-adapter-coap-vertx-base</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <activation>
+        <property>
+          <name>docker.host</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <configuration>
+              <images>
+                <image>
+                  <build>
+                    <from>${java-base-image.name}</from>
+                    <ports>
+                      <port>5683/udp</port>
+                      <port>5684/udp</port>
+                      <port>${vertx.health.port}</port>
+                    </ports>
+                    <cmd>
+                      <exec>
+                        <arg>java</arg>
+                        <arg>-XX:+UnlockExperimentalVMOptions</arg>
+                        <arg>-XX:+UseCGroupMemoryLimitForHeap</arg>
+                        <arg>-Dvertx.cacheDirBase=/tmp</arg>
+                        <arg>-jar</arg>
+                        <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
+                      </exec>
+                    </cmd>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}</directory>
+                            <outputDirectory>opt/hono</outputDirectory>
+                            <includes>
+                              <include>${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
