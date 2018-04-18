@@ -1,0 +1,20 @@
+{
+    "apiVersion": "enmasse.io/v1",
+    "kind": "AddressList",
+    "items": [
+      {
+        "spec": {
+          "address": "event/DEFAULT_TENANT",
+          "type": "queue",
+          "plan": "pooled-queue"
+        }
+      },
+      {
+        "spec": {
+          "address": "telemetry/DEFAULT_TENANT",
+          "type": "anycast",
+          "plan": "standard-anycast"
+        }
+      }
+    ]
+}
