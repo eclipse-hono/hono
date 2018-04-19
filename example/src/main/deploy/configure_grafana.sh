@@ -16,7 +16,7 @@ HOST=${1:-localhost}
 PORT=${2:-3000}
 
 while true; do echo "Waiting for Grafana service at ${HOST}:${PORT} to come up...";
-wget http://${HOST}:${PORT} -q -T 1 -O /dev/null >/dev/null 2>/dev/null && break; sleep 1;
+curl http://${HOST}:${PORT} --connect-timeout 1 -o /dev/null >/dev/null 2>/dev/null && break; sleep 5;
 done;
 
 echo .. Grafana is up, set its datasource and dashboard
