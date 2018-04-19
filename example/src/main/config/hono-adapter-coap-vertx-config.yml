@@ -1,0 +1,54 @@
+hono:
+  app:
+    maxInstances: 1
+    healthCheckPort: 8088
+    healthCheckBindAddress: 0.0.0.0
+  coap:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    keyStorePath: file:///run/secrets/coap-adapter-keyStore.jks
+    keyStorePassword: endPass
+    keyStoreAlias: server
+    trustStorePath: file:///run/secrets/coap-adapter-trustStore.jks
+    trustStorePassword: rootPass
+    preferRawPublicKey: true
+  messaging:
+    name: 'Hono COAP Adapter'
+    host: ${hono.messaging.host}
+    port: 5671
+    username: ${hono.adapter.coap.username}
+    password: ${hono.adapter.coap.password}
+    trustStorePath: ${hono.trustStore.path}
+  registration:
+    name: 'Hono COAP Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.coap.username}
+    password: ${hono.adapter.coap.password}
+    trustStorePath: ${hono.trustStore.path}
+  credentials:
+    name: 'Hono COAP Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.coap.username}
+    password: ${hono.adapter.coap.password}
+    trustStorePath: ${hono.trustStore.path}
+  tenant:
+    name: 'Hono COAP Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    username: ${hono.adapter.coap.username}
+    password: ${hono.adapter.coap.password}
+    trustStorePath: ${hono.trustStore.path}
+  metric:
+    reporter:
+      graphite:
+        active: true
+        host: influxdb.hono
+        port: 2003
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: true

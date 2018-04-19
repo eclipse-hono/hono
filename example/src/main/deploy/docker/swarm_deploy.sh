@@ -197,6 +197,23 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
 echo ... done
 
 echo
+echo Deploying Coap adapter ...
+docker secret create -l project=$NS coap-adapter-keyStore.jks $CERTS/coap-adapter-keyStore.jks
+docker secret create -l project=$NS coap-adapter-trustStore.jks $CERTS/coap-adapter-trustStore.jks
+docker secret create -l project=$NS hono-adapter-coap-vertx-config.yml $CONFIG/hono-adapter-coap-vertx-config.yml
+docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:5683/udp -p 5684:5684/udp \
+  --secret coap-adapter-keyStore.jks \
+  --secret coap-adapter-trustStore.jks \
+  --secret trusted-certs.pem \
+  --secret hono-adapter-coap-vertx-config.yml \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
+  --env SPRING_PROFILES_ACTIVE=prod \
+  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env _JAVA_OPTIONS=-Xmx256m \
+  ${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
+echo ... done
+
+echo
 echo Configuring Grafana ...
 chmod +x $SCRIPTPATH/../configure_grafana.sh
 $SCRIPTPATH/../configure_grafana.sh ${DOCKER_IP}

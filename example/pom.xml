@@ -40,6 +40,8 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
      -->
     <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
     <hono.auth.validation.certPath>/run/secrets/auth-server-cert.pem</hono.auth.validation.certPath>
+    <hono.adapter.coap.username>coap-adapter@HONO</hono.adapter.coap.username>
+    <hono.adapter.coap.password>coap-secret</hono.adapter.coap.password>
     <hono.adapter.mqtt.username>mqtt-adapter@HONO</hono.adapter.mqtt.username>
     <hono.adapter.mqtt.password>mqtt-secret</hono.adapter.mqtt.password>
     <hono.adapter.http.username>http-adapter@HONO</hono.adapter.http.username>
@@ -117,6 +119,11 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
       <artifactId>hono-adapter-kura</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-adapter-coap-vertx</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -175,6 +182,7 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                 hono-service-auth,
                 hono-service-messaging,
                 hono-service-device-registry,
+                hono-adapter-coap-vertx,
                 hono-adapter-http-vertx,
                 hono-adapter-mqtt-vertx,
                 hono-adapter-kura,
