@@ -30,6 +30,7 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.util.Constants;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -227,7 +228,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
-                .putHeader("QoS-Level", String.valueOf(2))
+                .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(2))
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.statusCode());
                     async.complete();
@@ -255,7 +256,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
-                .putHeader("QoS-Level", String.valueOf(1))
+                .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(1))
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
                     async.complete();

@@ -52,6 +52,12 @@ public final class Constants {
     public static final String PROTOCOL_ADAPTER_TYPE_KURA= "hono-kura-mqtt";
 
     /**
+     * The "QoS-Level" request header indicating the quality of service level supported by the HTTP Adapter.
+     * The HTTP adapter supports QoS level AT_LEAST_ONCE when uploading telemetry messages.
+     */
+    public static final String HEADER_QOS_LEVEL = "QoS-Level";
+
+    /**
      * The AMQP capability indicating support for validating registration assertions
      * issued by a Device Registration service.
      */

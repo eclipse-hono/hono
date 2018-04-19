@@ -56,7 +56,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
-    private static final String HEADER_QOS_LEVEL = "QoS-Level";
     private static final int AT_LEAST_ONCE = 1;
     private static final int HEADER_QOS_INVALID = -1;
 
@@ -482,12 +481,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType, final Future<MessageSender> senderTracker, final String endpointName) {
 
-        final Integer qosHeader = getQoSLevel(ctx.request().getHeader(HEADER_QOS_LEVEL));
+        final Integer qosHeader = getQoSLevel(ctx.request().getHeader(Constants.HEADER_QOS_LEVEL));
         if (contentType == null) {
             HttpUtils.badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
         } else if (payload == null || payload.length() == 0) {
             HttpUtils.badRequest(ctx, "missing body");
-        } else if (qosHeader != null && (qosHeader == HEADER_QOS_INVALID || qosHeader != AT_LEAST_ONCE)) {
+        } else if (qosHeader != null && qosHeader == HEADER_QOS_INVALID) {
             HttpUtils.badRequest(ctx, "Bad QoS Header Value");
         } else {
 
@@ -541,10 +540,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private static Integer getQoSLevel(final String qosValue) {
         try {
-            if (qosValue == null)
+            if (qosValue == null) {
                 return null;
-            else
-                return Integer.parseInt(qosValue);
+            } else {
+                return Integer.parseInt(qosValue) != AT_LEAST_ONCE ? HEADER_QOS_INVALID : AT_LEAST_ONCE;
+            }
         } catch (NumberFormatException e) {
             return HEADER_QOS_INVALID;
         }
