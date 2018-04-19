@@ -17,10 +17,12 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
-
+import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.config.ClientConfigProperties;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -281,4 +283,18 @@ public interface HonoClient {
      *         AMQP <em>open</em> frame, {@code false} otherwise.
      */
     boolean supportsCapability(Symbol capability);
+
+    /**
+     * Create a new {@link HonoClient} using the default implementation.
+     * <p>
+     * <strong>Note:</strong> Instances of {@link ClientConfigProperties} are not thread safe and not immutable. They
+     * must not be modified after calling this method.
+     *
+     * @param vertx The vertx instance to use. May be {@code null}, in which case a new instance will be created.
+     * @param clientConfigProperties The client properties to use. Must not be {@code null}.
+     * @return A new instance of a <em>Hono Client</em>.
+     */
+    static HonoClient newClient (final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+        return new HonoClientImpl(vertx, clientConfigProperties);
+    }
 }

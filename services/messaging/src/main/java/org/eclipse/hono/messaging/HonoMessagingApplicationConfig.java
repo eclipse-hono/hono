@@ -14,7 +14,7 @@ package org.eclipse.hono.messaging;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;

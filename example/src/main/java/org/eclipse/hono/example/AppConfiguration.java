@@ -17,7 +17,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

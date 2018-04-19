@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.connection;
+package org.eclipse.hono.connection.impl;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -18,6 +18,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.proton.ProtonConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

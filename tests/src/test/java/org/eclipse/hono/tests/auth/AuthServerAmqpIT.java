@@ -15,7 +15,7 @@ package org.eclipse.hono.tests.auth;
 import org.eclipse.hono.client.impl.AuthenticationServerClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.ConnectionFactoryImpl;
+import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.BeforeClass;
 import org.junit.Test;
