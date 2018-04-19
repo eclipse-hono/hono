@@ -3,107 +3,68 @@ title = "Command & Control API"
 weight = 440
 +++
 
-The *Command and Control* API is used by *Business Applications* to send commands to devices connected to Hono. Control messages can be used to
+The *Command and Control* API is used by *Business Applications* to send commands to devices connected to Hono. Command messages can be used to
 execute operations on devices, e.g. updating a configuration property, installing a software component or activating an actuator.
 <!--more-->
 
-{{% warning %}}
-THIS IS A FIRST DRAFT VERSION OF THE API SPEC AND THUS STILL SUBJECT TO DISCUSSION. IN PARTICULAR, THE COMMAND AND CONTROL API IS NOT YET IMPLEMENTED IN HONO.
-IF YOU THINK THAT THE SPEC SHOULD BE CHANGED OR CAN BE IMPROVED PLEASE DO NOT HESITATE TO OPEN AN ISSUE OR DROP US A LINE ON THE MAILING LIST.
-{{% /warning %}}
+{{% note %}}
+This API has been added in Hono 0.7. Previous versions do not support nor implement the Command % Control API.
+{{% /note %}}
 
-A client can be a device connected to Hono directly (using an AMQP connection) or via a *Protocol Adapter* (for example via MQTT,
-LWM2M, etc). Devices and *Protocol Adapters* can also poll Hono periodically in order check for new command & control messages without
-maintaining a constant connection to Hono infrastructure.
+The Command & Control API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use AMQP when referring to AMQP 1.0.
 
-The Command & Control API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in 
-order to invoke operations of the API as described in the following sections.
+# Operations
 
-# Southbound Operations
+The following API defines operations that can be used by *Business Applications* to send commands to devices over an AMQP 1.0 Network and get a response in return.
 
-The following operations can be used by *Devices* and/or *Protocol Adapters* to receive command & control messages sent by *Business Applications*.
+## Send a Command
 
-## Receive Control Message
+### Preconditions
 
-**Preconditions**
+1. *Business Application* has established an AMQP connection with the AMQP 1.0 Network.  
+2. *Business Application* has established an AMQP link in role *sender* with the target address `control/${tenant_id}/${device_id}`. Where `${device_id}` is the ID of the device to send messages to and `${tenant_id}` is the ID of the tenant that the device belongs to.
+3. *Business Application* has established an AMQP link in role *receiver* with the source address `control/${tenant_id}/${device_id}/${reply-to}`. Where `${reply-to}` may be any arbitrary string chosen by the client. This link is used by the client to receive the response of the executed command. This link’s source address is also referred to as the reply-to address for the request messages.
 
-1. Client has established an AMQP connection with Hono.
-2. Client has established an AMQP link in role *receiver* with Hono using target address `control/${tenant_id}/${device_id}`. Where `${device_id}` is the ID of the device to receive control messages for and `${tenant_id}` is the ID of the tenant the device belongs to.
+**Link establishment and Message Flow**
 
-**Message Flow**
+The following sequence diagram shows the whole message exchange including the response being sent back to the Business Application.
 
-*TODO* add sequence diagram
+![Send Command](../command_control_Success.png)
 
 **Message Format**
 
-The following table provides an overview of the properties a client needs to set on a *Control* message.
+The following table provides an overview of the properties the *Business Application* needs to set on a command message.
 
 | Name | Mandatory | Location | Type      | Description |
 | :--- | :-------: | :------- | :-------- | :---------- |
-| *message-id* | yes | *properties* | UTF-8 *string* | MUST contain the message ID used to match incoming control message with the response message containing result of execution. |
-| *device_id* | yes | *application-properties* | UTF-8 *string* | MUST contain the ID of the device the data in the payload has been reported by. |
-| *tenant_id* | yes | *application-properties* | UTF-8 *string* | MAY be set by the client to indicate which tenant the the device belongs to. |
-| *command* | no | *application-properties* | UTF-8 *string* | MUST contain the command to be executed by a device. |
-|*ttl* | no | *properties* | *int* | Indicates the timeout value (in milliseconds) indicating when server can assume that command has not been executed because of the lack of the response from the client. Default timeout is *60000* (1 minute). |
-|*durable* | no | *properties* | *boolean* | Indicates if the message should be persisted (*store and forward*) by the underlying message transport middleware. By default command&control messages are durable.  |
+| *subject*        | yes       | *properties*             | *string*     | MUST contain the command name to be executed by a device. |
+| *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
+| *message-id*     | yes       | *properties*             | *string*     | MUST contain an identifier that uniquely identifies the message at the sender side. |
+| *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to receive response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
 
-If a control message requires additional data to be properly executed (like command parameters), the body of the message MUST consist of a single AMQP *Data* section containing a control 
-message data. The format and encoding of the data is indicated by the *command*. It is up to the device to interpret the incoming body by taking `command` into 
-consideration.
+A command message MAY contain arbitrary payload to be sent to the device in an AMQP Data section. The value of the command message's *subject* value may provide a hint to the device regarding the format, encoding and semantics of the payload data.
 
-## Sending back control message execution result
+## Receiving the Command's execution result
 
-After execution of a control message on a device, device MUST send a response message indicating a status of that execution.
-
-**Preconditions**
-
-1. Client has established an AMQP connection with Hono.
-2. Client has established an AMQP link in role *sender* with Hono using target address `control-reply/${tenant_id}/{$device_id}`. Where `${device_id}` is an ID of the
-device that received the control message and `${tenant_id}` is the ID of the tenant the device belongs to.
-
-**Message Flow**
-
-*TODO* add sequence diagram
+After execution of a command on a device, the device MUST send a response message indicating the outcome of executing the command.
 
 **Message Format**
 
-The following table provides an overview of the properties a client needs to set on a *Control* message.
+The following table provides an overview of the properties set on a Command's response message.
 
 | Name | Mandatory | Location | Type | Description |
 | :--- | :-------: | :------- | :-------- | :---------- |
-| *correlation-id* | yes | *properties* | UTF-8 *string* | MUST contain the correlation ID used to match incoming control message with the response message containing result of execution. |
-| *status* | yes | *application-properties* | *integer* | MUST indicates the status of the execution. See table below for possible values. |
+| *correlation-id* | yes | *properties* | *message-id* | MUST contain the correlation ID used to match the command message with the response message containing the result of execution on the device. |
+| *status* | yes | *application-properties* | *integer* | MUST indicate the status of the execution. See table below for possible values. |
 
 The status property must contain a valid HTTP status code:
 
 | Code | Description |
 | :--- | :---------- |
-| *200* | The command was successfully processed and the response message contains a result. |
-| *202* | The command was accepted and will be processed. A response will be sent once the command is processed. |
-| *204* | The command was successfully processed with an empty result. |
-| *400* | The command could not be processed due to a malformed message. |
+| *2xx* | Indicating success; the codes are dependent on the adapter and device, which handles the command. |
+| *4xx* | Indicating failure; the codes are dependent on the adapter and device, which handles the command. |
+| *503* | The command cannot be sent to the target device. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-If a control message response contains some additional diagnostic information, the body of the message MUST consist of a single AMQP *Data* section containing a control 
-message data. The body must be a descriptive message indicating what happened during the control message execution. It is primarily used for monitoring and debugging purposes.
-The format and encoding of the data MUST be indicated by the *content-type* and (optional) *content-encoding* properties of the message.
-
-# Northbound Operations
-
-### Send control message
-
-**Preconditions**
-
-1. Client has established an AMQP connection with Hono.
-2. Client has established an AMQP link in role *sender* with Hono using target address `control/${tenant_id}/${device_id}` where `${device_id}` is the ID of the device the message should be sent to and `${tenant_id}` is the ID of the tenant the device belongs to.
-
-**Message Flow**
-
-*TODO* add sequence diagram
-
-**Message Format**
-
-The format of the messages containing the control message is the same as for the *Receiving control message* operation.
-
-*TODO* specify delivery states used to signal successful transmission of data.
+If a command message response contains a payload, the body of the message MUST consist of a single AMQP *Data* section containing the response message data. 
