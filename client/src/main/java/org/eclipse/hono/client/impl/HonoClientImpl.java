@@ -87,7 +87,7 @@ public class HonoClientImpl implements HonoClient {
      * Creates a new client for a set of configuration properties.
      * <p>
      * This constructor creates a connection factory using {@link ConnectionFactoryBuilder}.
-     * 
+     *
      * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
      * @param clientConfigProperties The configuration properties to use.
      */
@@ -99,14 +99,15 @@ public class HonoClientImpl implements HonoClient {
     /**
      * Creates a new client for a set of configuration properties.
      * <p>
-     * <em>NB</em> Make sure to always use the same set of configuration properties for both
-     * the connection factory as well as the Hono client in order to prevent unexpected behavior.
-     * 
+     * <em>NB</em> Make sure to always use the same set of configuration properties for both the connection factory as
+     * well as the Hono client in order to prevent unexpected behavior.
+     *
      * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
      * @param connectionFactory The factory to use for creating an AMQP connection to the Hono server.
      * @param clientConfigProperties The configuration properties to use.
      */
-    public HonoClientImpl(final Vertx vertx, final ConnectionFactory connectionFactory, final ClientConfigProperties clientConfigProperties) {
+    public HonoClientImpl(final Vertx vertx, final ConnectionFactory connectionFactory,
+            final ClientConfigProperties clientConfigProperties) {
 
         if (vertx != null) {
             this.vertx = vertx;
@@ -116,7 +117,8 @@ public class HonoClientImpl implements HonoClient {
         if (connectionFactory != null) {
             this.connectionFactory = connectionFactory;
         } else {
-            this.connectionFactory = ConnectionFactoryBuilder.newBuilder(clientConfigProperties).vertx(this.vertx).build();
+            this.connectionFactory = ConnectionFactoryBuilder.newBuilder(clientConfigProperties).vertx(this.vertx)
+                    .build();
         }
         this.context = this.vertx.getOrCreateContext();
         this.clientConfigProperties = clientConfigProperties;
@@ -124,7 +126,7 @@ public class HonoClientImpl implements HonoClient {
 
     /**
      * Sets a provider for creating cache instances to be used in Hono clients.
-     * 
+     *
      * @param cacheProvider The cache provider.
      * @throws NullPointerException if manager is {@code null}.
      */
@@ -151,7 +153,7 @@ public class HonoClientImpl implements HonoClient {
 
     /**
      * Checks if this client is currently connected to the server.
-     * 
+     *
      * @return A succeeded future if this client is connected.
      */
     protected final Future<Void> checkConnected() {
@@ -188,9 +190,8 @@ public class HonoClientImpl implements HonoClient {
     }
 
     /**
-     * Gets the underlying connection object that this client
-     * uses to interact with the server.
-     * 
+     * Gets the underlying connection object that this client uses to interact with the server.
+     *
      * @return The connection.
      */
     protected final ProtonConnection getConnection() {
@@ -259,7 +260,8 @@ public class HonoClientImpl implements HonoClient {
         context.runOnContext(connect -> {
 
             if (isConnectedInternal()) {
-                LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(),
+                        connectionFactory.getPort());
                 connectionHandler.handle(Future.succeededFuture(this));
             } else if (connecting.compareAndSet(false, true)) {
 
@@ -283,7 +285,8 @@ public class HonoClientImpl implements HonoClient {
                                 if (conAttempt.cause() instanceof SecurityException) {
                                     // SASL handshake has failed
                                     connectionHandler.handle(Future.failedFuture(
-                                            new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with server")));
+                                            new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
+                                                    "failed to authenticate with server")));
                                 } else {
                                     reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
                                 }
@@ -298,7 +301,8 @@ public class HonoClientImpl implements HonoClient {
                                     newConnection.disconnectHandler(null);
                                     newConnection.close();
                                     connectionHandler.handle(Future.failedFuture(
-                                            new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down")));
+                                            new ClientErrorException(HttpURLConnection.HTTP_CONFLICT,
+                                                    "client is already shut down")));
                                 } else {
                                     setConnection(newConnection);
                                     connectionHandler.handle(Future.succeededFuture(this));
@@ -313,13 +317,15 @@ public class HonoClientImpl implements HonoClient {
         });
     }
 
-    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose, final Handler<ProtonConnection> connectionLossHandler) {
+    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose,
+            final Handler<ProtonConnection> connectionLossHandler) {
 
         if (remoteClose.failed()) {
             LOG.info("remote server [{}:{}] closed connection with error condition: {}",
                     connectionFactory.getHost(), connectionFactory.getPort(), remoteClose.cause().getMessage());
         } else {
-            LOG.info("remote server [{}:{}] closed connection", connectionFactory.getHost(), connectionFactory.getPort());
+            LOG.info("remote server [{}:{}] closed connection", connectionFactory.getHost(),
+                    connectionFactory.getPort());
         }
         connection.disconnectHandler(null);
         connection.close();
@@ -353,19 +359,21 @@ public class HonoClientImpl implements HonoClient {
         if (connectionLossHandler != null) {
             connectionLossHandler.handle(failedConnection);
         } else {
-            reconnect(attempt -> {}, null);
+            reconnect(attempt -> {
+            }, null);
         }
     }
 
     private void failAllCreationRequests() {
 
-        for (Iterator<Handler<Void>> iter = creationRequests.iterator(); iter.hasNext(); ) {
+        for (Iterator<Handler<Void>> iter = creationRequests.iterator(); iter.hasNext();) {
             iter.next().handle(null);
             iter.remove();
         }
     }
 
-    private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler, final Handler<ProtonConnection> disconnectHandler) {
+    private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler,
+            final Handler<ProtonConnection> disconnectHandler) {
         reconnect(null, connectionHandler, disconnectHandler);
     }
 
@@ -386,7 +394,8 @@ public class HonoClientImpl implements HonoClient {
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
             } else {
                 connectionHandler.handle(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect", connectionFailureCause)));
+                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect",
+                                connectionFailureCause)));
             }
         } else {
             LOG.trace("scheduling attempt to re-connect ...");
@@ -427,10 +436,10 @@ public class HonoClientImpl implements HonoClient {
         return checkConnected().compose(connected -> {
             final Future<MessageSender> result = Future.future();
             TelemetrySenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
-                        onSenderClosed -> {
-                            activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, deviceId));
-                        },
-                        result.completer());
+                    onSenderClosed -> {
+                        activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, deviceId));
+                    },
+                    result.completer());
             return result;
         });
     }
@@ -464,10 +473,10 @@ public class HonoClientImpl implements HonoClient {
         return checkConnected().compose(connected -> {
             Future<MessageSender> result = Future.future();
             EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
-                        onSenderClosed -> {
-                            activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
-                        },
-                        result.completer());
+                    onSenderClosed -> {
+                        activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
+                    },
+                    result.completer());
             return result;
         });
     }
@@ -489,7 +498,8 @@ public class HonoClientImpl implements HonoClient {
                 final Handler<Void> connectionFailureHandler = connectionLost -> {
                     // remove lock so that next attempt to open a sender doesn't fail
                     creationLocks.remove(key);
-                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+                    result.tryFail(
+                            new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
                 };
                 creationRequests.add(connectionFailureHandler);
                 creationLocks.put(key, Boolean.TRUE);
@@ -541,7 +551,7 @@ public class HonoClientImpl implements HonoClient {
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
             TelemetryConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                        connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
+                    connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
                     closeHook -> closeHandler.handle(null));
             return result;
         });
@@ -597,7 +607,8 @@ public class HonoClientImpl implements HonoClient {
             // register a handler to be notified if the underlying connection to the server fails
             // so that we can fail the result handler passed in
             final Handler<Void> connectionFailureHandler = connectionLost -> {
-                result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost"));
+                result.tryFail(
+                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost"));
             };
             creationRequests.add(connectionFailureHandler);
 
@@ -641,7 +652,7 @@ public class HonoClientImpl implements HonoClient {
      * Custom implementation of {@link CredentialsClient} can be instantiated by overriding this method. Any such
      * instance should be scoped to the given tenantId. Custom extension of {@link HonoClientImpl} must invoke
      * {@link #removeCredentialsClient(String)} to cleanup when finished with the client.
-     *  
+     *
      * @param tenantId tenant scope for which the client is instantiated
      * @return a future containing an instance of {@link CredentialsClient}
      * @see CredentialsClient
@@ -666,11 +677,9 @@ public class HonoClientImpl implements HonoClient {
     /**
      * Removes a credentials client from the list of active clients.
      * <p>
-     * Once a client has been removed, the next invocation
-     * of the corresponding <em>getOrCreateCredentialsClient</em>
-     * method will result in a new client being created
-     * (and added to the list of active clients).
-     * 
+     * Once a client has been removed, the next invocation of the corresponding <em>getOrCreateCredentialsClient</em>
+     * method will result in a new client being created (and added to the list of active clients).
+     *
      * @param tenantId The tenant that the client is scoped to.
      */
     protected final void removeCredentialsClient(final String tenantId) {
@@ -683,7 +692,8 @@ public class HonoClientImpl implements HonoClient {
 
         final RequestResponseClient client = activeRequestResponseClients.remove(targetAddress);
         if (client != null) {
-            client.close(s -> {});
+            client.close(s -> {
+            });
             LOG.debug("closed and removed client for [{}]", targetAddress);
         }
     }
@@ -745,11 +755,9 @@ public class HonoClientImpl implements HonoClient {
     /**
      * Removes a registration client from the list of active clients.
      * <p>
-     * Once a client has been removed, the next invocation
-     * of the corresponding <em>getOrCreateRegistrationClient</em>
-     * method will result in a new client being created
-     * (and added to the list of active clients).
-     * 
+     * Once a client has been removed, the next invocation of the corresponding <em>getOrCreateRegistrationClient</em>
+     * method will result in a new client being created (and added to the list of active clients).
+     *
      * @param tenantId The tenant that the client is scoped to.
      */
     protected final void removeRegistrationClient(final String tenantId) {
@@ -828,13 +836,13 @@ public class HonoClientImpl implements HonoClient {
 
     /**
      * Gets an existing or creates a new request-response client for a particular service.
-     * 
+     *
      * @param key The key to look-up the client by.
      * @param clientSupplier A consumer for an attempt to create a new client.
      * @param resultHandler The handler to inform about the outcome of the operation.
      */
     void getOrCreateRequestResponseClient(
-            final String key, 
+            final String key,
             final Supplier<Future<RequestResponseClient>> clientSupplier,
             final Handler<AsyncResult<RequestResponseClient>> resultHandler) {
 
@@ -912,7 +920,8 @@ public class HonoClientImpl implements HonoClient {
                 if (isConnectedInternal()) {
                     shutdownConnection(completionHandler);
                 } else {
-                    LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
+                    LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(),
+                            connectionFactory.getPort());
                     completionHandler.handle(Future.succeededFuture());
                 }
             });
@@ -927,9 +936,11 @@ public class HonoClientImpl implements HonoClient {
         connection.disconnectHandler(null); // make sure we are not trying to re-connect
         connection.closeHandler(closedCon -> {
             if (closedCon.succeeded()) {
-                LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                        connectionFactory.getPort());
             } else {
-                LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort(), closedCon.cause());
+                LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                        connectionFactory.getPort(), closedCon.cause());
             }
             connection.disconnect();
             if (completionHandler != null) {
